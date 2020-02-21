@@ -12,6 +12,7 @@ Cities:
 - Fences
 * Mesh simplificaton for cars and peds for shadow pass
 * Planet water reflection map
+* Better ambient occlusion
 
 * Building interiors:
   * More hallways for office buildings

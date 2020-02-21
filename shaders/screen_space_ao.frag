@@ -15,6 +15,10 @@ void main() {
 	// http://www.digitalrune.com/Support/Blog/tabid/719/EntryId/178/Decal-Rendering-Preview.aspx
 	// https://mtnphil.wordpress.com/2014/05/24/decals-deferred-rendering/
 	// http://john-chapman-graphics.blogspot.ca/2013/01/ssao-tutorial.html
+	// newer:
+	// https://old.reddit.com/r/opengl/comments/96api8/has_anyone_successfully_implemented_groundtruth_ao/
+	// https://pastebin.com/bKxFnN5i
+	// https://github.com/xenko3d/xenko/blob/master/sources/engine/Xenko.Rendering/Rendering/Images/AmbientOcclusion/AmbientOcclusionRawAOShader.xksl
 	//vec3 normal = normalize(cross(dFdy(position), dFdx(position))); 
 	
 	for (int d = 0; d < NUM_DIRS; d++) {
