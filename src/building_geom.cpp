@@ -1430,9 +1430,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (is_house) {color = colorRGBA(1.0, 1.0, 0.85);} // house - yellowish
 				else if (r->is_hallway || r->is_office) {color = colorRGBA(0.85, 0.85, 1.0);} // office building - blueish
 				else {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
+				unsigned num_lights(r->num_lights);
 				
-				if (r->is_hallway) { // place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
-					unsigned const num_lights((r->has_elevator && r->has_stairs) ? 3 : 2);
+				if (r->is_hallway && num_lights > 1) { // place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
+					if (r->has_elevator && r->has_stairs) {num_lights = 3;} // we really should have 3 lights in this case
 					float const offset(((num_lights == 3) ? 0.3 : 0.2)*r->get_sz_dim(light_dim)); // closer to the ends in the 3 lights case
 					cube_t valid_bounds(*r);
 					valid_bounds.expand_by_xy(-0.1*window_vspacing); // add some padding

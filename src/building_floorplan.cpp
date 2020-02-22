@@ -207,7 +207,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						s_hall.d[!min_dim][ 1] = p->d[!min_dim][1] - hall_offset;
 						c_hall.d[ min_dim][ d] = hall_inner;
 						c_hall.d[ min_dim][!d] = hall_wall_pos[d];
-						add_room(s_hall, part_id, 1); // add sec hallway as room
+						add_room(s_hall, part_id, 3, 1, 0); // add sec hallway as room with 3 lights
 
 						// walls along sec hallway
 						cube_t long_swall(s_hall); // sec outer
@@ -228,7 +228,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							float const other_edge(p->d[!min_dim][e]), offset_outer(other_edge + esign*hall_offset), offset_inner(offset_outer + esign*sh_width);
 							c_hall.d[!min_dim][ e] = offset_outer;
 							c_hall.d[!min_dim][!e] = offset_inner;
-							add_room(c_hall, part_id, 1); // add sec hallway as room
+							unsigned const num_lights((c_hall.get_sz_dim(min_dim) > 0.25*s_hall.get_sz_dim(!min_dim)) ? 2 : 1); // 2 lights if it's long enough
+							add_room(c_hall, part_id, num_lights, 1, 0); // add conn hallway as room
 
 							for (unsigned side = 0; side < 2; ++side) { // add walls along connector hallway
 								cube_t conn_wall(c_hall);
@@ -300,7 +301,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								s_hall.d[ min_dim][!d] = hall.d[min_dim][d]; // ends at main hall
 								s_hall.d[!min_dim][ 0] = hall_start_pos;
 								s_hall.d[!min_dim][ 1] = hall_end_pos;
-								add_room(s_hall, part_id, 1); // add sec hallway as room
+								add_room(s_hall, part_id, 2, 1, 0); // add sec hallway as room with 2 lights
 								
 								for (unsigned dir = 0; dir < 2; ++dir) { // add walls between hall and rooms on each side
 									sep_walls[dir] = div_wall; // copy z and min_dim from div_wall
@@ -316,11 +317,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 								if (div_room) { // interior rooms, split into 2 rooms with a wall in between
 									room.d[!min_dim][1] = div_pos; // left room
-									add_room(room, part_id, 0, 1); // office along sec hallway
+									add_room(room, part_id, 1, 0, 1); // office along sec hallway
 									room.d[!min_dim][0] = div_pos; // right room
 									room.d[!min_dim][1] = split_wall.d[!min_dim][1]; // restore orig value
 								}
-								add_room(room, part_id, 0, 1); // office along sec hallway
+								add_room(room, part_id, 1, 0, 1); // office along sec hallway
 
 								if (add_sec_hall) { // add doorways + doors
 									float const doorway_pos(0.5f*(room_split_pos + next_split_pos)); // room center
@@ -395,7 +396,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						c.d[ min_dim][!d] = hall_wall_pos[d];
 						c.d[!min_dim][ 0] = pos;
 						c.d[!min_dim][ 1] = next_pos;
-						add_room(c, part_id, 0, 1);
+						add_room(c, part_id, 1, 0, 1); // office
 						door_t door(c, min_dim, d, DRAW_OPEN_DOORS); // copy zvals and wall pos
 						door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
@@ -404,7 +405,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					pos = next_pos;
 				} // for i
 			} // end single main hallway case
-			add_room(hall, part_id, 1); // add hallway as room
+			add_room(hall, part_id, 3, 1, 0); // add hallway as room with 3 lights
 			if (p->z1() == bcube.z1() || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		} // end use_hallway
@@ -412,7 +413,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		else { // generate random walls using recursive 2D slices
 			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
 			assert(to_split.empty());
-			if (no_walls) {add_room(*p, part_id);} // add entire part as a room
+			if (no_walls) {add_room(*p, part_id, 1, 0, 0);} // add entire part as a room
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
 			
 			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
@@ -430,7 +431,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
 				
 				if (min(csz.x, csz.y) < min_wall_len) {
-					add_room(c, part_id);
+					add_room(c, part_id, 1, 0, 0);
 					continue; // not enough space to add a wall
 				}
 				float wall_pos(0.0);
@@ -444,7 +445,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					pos_valid = 1; break; // done, keep wall_pos
 				}
 				if (!pos_valid) { // no valid pos, skip this split
-					add_room(c, part_id);
+					add_room(c, part_id, 1, 0, 0);
 					continue;
 				}
 				cube_t wall(c), wall2; // copy from cube; shared zvals, but X/Y will be overwritten per wall
@@ -462,7 +463,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
 					c_sub.door_lo[!wall_dim][d] = lo_pos - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
 					c_sub.door_hi[!wall_dim][d] = hi_pos + wall_half_thick;
-					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, part_id);} // leaf case (unsplit), add a new room
+					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, part_id, 1, 0, 0);} // leaf case (unsplit), add a new room
 				}
 			} // end while()
 			// insert walls to split up parts into rectangular rooms
@@ -925,9 +926,9 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 	return 1;
 }
 
-void building_t::add_room(cube_t const &room, unsigned part_id, bool is_hallway, bool is_office) {
+void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office) {
 	assert(interior);
-	room_t r(room, part_id, is_hallway, is_office);
+	room_t r(room, part_id, num_lights, is_hallway, is_office);
 	cube_t const &part(parts[part_id]);
 	for (unsigned d = 0; d < 4; ++d) {r.ext_sides |= (unsigned(room.d[d>>1][d&1] == part.d[d>>1][d&1]) << d);} // find exterior sides
 	interior->rooms.push_back(r);

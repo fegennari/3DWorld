@@ -257,11 +257,11 @@ struct room_t : public cube_t {
 	bool has_stairs, has_elevator, no_geom, is_hallway, is_office;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	//uint8_t sides_with_doors; // is this useful/needed?
-	uint8_t part_id;
+	uint8_t part_id, num_lights;
 	uint64_t lit_by_floor;
-	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), ext_sides(0), part_id(0), lit_by_floor(0) {}
-	room_t(cube_t const &c, unsigned p, bool is_hallway_=0, bool is_office_=0) : cube_t(c), has_stairs(0), has_elevator(0), no_geom(is_hallway_),
-		is_hallway(is_hallway_), is_office(is_office_), ext_sides(0), part_id(p), lit_by_floor(0) {} // no geom in hallways
+	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), ext_sides(0), part_id(0), num_lights(0), lit_by_floor(0) {}
+	room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_) : cube_t(c), has_stairs(0), has_elevator(0), no_geom(is_hallway_),
+		is_hallway(is_hallway_), is_office(is_office_), ext_sides(0), part_id(p), num_lights(nl), lit_by_floor(0) {} // no geom in hallways
 	float get_light_amt() const;
 };
 
@@ -393,7 +393,7 @@ private:
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float dmin=0.0f) const;
 	bool is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad) const;
 	bool clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const;
-	void add_room(cube_t const &room, unsigned part_id, bool is_hallway=0, bool is_office=0);
+	void add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
