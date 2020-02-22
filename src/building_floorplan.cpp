@@ -180,16 +180,19 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			
 			if (num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway)
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
-				float const sh_width(max(min(0.4f*hall_width, max_hall_width), min_hall_width));
+				float const sh_width(max(min(0.4f*hall_width, max_hall_width), min_hall_width)), hspace(window_hspacing[!min_dim]);
 
 				if (0/*rgen.rand_bool()*/) { // ring hallway
 					float const room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
 					assert(room_depth > 2.0f*doorway_width); // I'm not sure if this can fail or what we should do in that case - no secondary hallways?
 					float const hall_offset(room_len); // outer edge of hallway to building exterior on each end
+					unsigned const num_cent_rooms(num_rooms - 2); // skip the rooms on each side
+					assert(num_cent_rooms > 0);
+					unsigned const num_offices(num_cent_rooms*num_cent_rooms); // TODO: + side rooms
 					interior->walls[ min_dim].reserve(10); // TODO: update after adding rooms/doors
 					interior->walls[!min_dim].reserve(8); // TODO: update after adding rooms/doors
-					//interior->rooms.reserve(??? + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
-					//interior->doors.reserve(???); // one per office
+					interior->rooms.reserve(num_offices + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
+					interior->doors.reserve(num_offices); // one per office
 
 					for (unsigned d = 0; d < 2; ++d) { // for each side of main hallway
 						float const dsign(d ? -1.0 : 1.0);
@@ -215,8 +218,40 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						interior->walls[min_dim].push_back(main_wall);
 						interior->walls[min_dim].push_back(long_swall);
 						interior->walls[min_dim].push_back(short_swall);
-						// TODO: add inner (windowless) and outer rooms
 
+						// add inner (windowless) and outer rooms
+						float const rooms_start(short_swall.d[!min_dim][0]), rooms_end(short_swall.d[!min_dim][1]);
+						float const span(rooms_end - rooms_start), cent_room_width(span/num_cent_rooms);
+						float room_pos(rooms_start);
+						cube_t room_outer(*p), room_inner(*p);
+						room_outer.d[min_dim][!d] = hall_outer; // other dim stays at wall_edge
+						room_inner.d[min_dim][ d] = hall_inner;
+						room_inner.d[min_dim][!d] = hall_wall_pos[d];
+
+						for (unsigned n = 0; n <= num_cent_rooms; ++n) {
+							float const start_pos(shift_val_to_not_intersect_window(*p, room_pos, hspace, window_border, !min_dim));
+
+							if (n < num_cent_rooms) { // add a room
+								float const next_pos( shift_val_to_not_intersect_window(*p, (room_pos + cent_room_width), hspace, window_border, !min_dim));
+								room_pos += cent_room_width; // move to next row
+								room_outer.d[!min_dim][0] = room_inner.d[!min_dim][0] = start_pos;
+								room_outer.d[!min_dim][1] = room_inner.d[!min_dim][1] = next_pos;
+								add_room(room_outer, part_id, 1, 0, 1); // office
+								add_room(room_inner, part_id, 1, 0, 1); // office
+								// TODO: add doors
+							}
+							// add walls separating rooms
+							cube_t wall_outer(room_outer);
+							wall_outer.d[min_dim][d] += dsign*wall_edge_spacing;
+							set_wall_width(wall_outer, start_pos, wall_half_thick, !min_dim);
+							interior->walls[!min_dim].push_back(wall_outer);
+
+							if (n > 0 && n < num_cent_rooms) { // can skip end walls adjacent to conn hallways
+								cube_t wall_inner(room_inner);
+								set_wall_width(wall_inner, start_pos, wall_half_thick, !min_dim);
+								interior->walls[!min_dim].push_back(wall_inner);
+							}
+						} // for n
 						for (unsigned e = 0; e < 2; ++e) {
 							float const esign(e ? -1.0 : 1.0);
 							float const other_edge(p->d[!min_dim][e]), offset_outer(other_edge + esign*hall_offset), offset_inner(offset_outer + esign*sh_width);
@@ -234,7 +269,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							cube_t end_wall(main_wall);
 							end_wall.d[!min_dim][ e] = hall.d[!min_dim][e] + esign*wall_edge_spacing; // end of main hall/building
 							end_wall.d[!min_dim][!e] = offset_outer + esign*wall_half_thick; // end of conn hall
-							interior->walls[min_dim].push_back(end_wall);
+							interior->walls[min_dim].push_back(end_wall); // end of main hall
 							// TODO: add building end and corner rooms
 						} // for e
 					} // for d
@@ -246,7 +281,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					int const windows_per_room_od((windows_per_side_od & 1) ? 1 : 2), rooms_per_side(windows_per_side_od/windows_per_room_od); // rooms along each sec hall
 					int const num_offices(4*rooms_per_side*num_sec_halls);
 					assert(rooms_per_side > 1); // should be guaranteed by above check
-					float const room_sub_width(sh_len/rooms_per_side), hspace(window_hspacing[!min_dim]);
+					float const room_sub_width(sh_len/rooms_per_side);
 					float const sh_spacing(cube_len/num_sec_halls - sh_width), end_spacing(0.5*sh_spacing); // half spacing at both ends
 					assert(sh_spacing > min_wall_len); // I'm not sure if this can fail or what we should do in that case - use fewer secondary hallways?
 					float room_start(p->d[!min_dim][0]), wall_pos(room_start + end_spacing); // first sec hall wall pos
