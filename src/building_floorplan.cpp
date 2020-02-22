@@ -60,18 +60,12 @@ bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spa
 	float const uv(fract((val - c.d[dim][0])/window_spacing));
 	return (uv > window_border && uv < 1.0f-window_border);
 }
-float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim, rand_gen_t &rgen) {
-	if (!is_val_inside_window(c, dim, val, hspace, window_border)) return val; // okay as is
-	unsigned const pref_dir(rgen.rand_bool());
-
-	for (unsigned n = 0; n < 20; ++n) { // try shifting in increments of 5% hspace in both dirs until the wall is between windows
-		for (unsigned dir = 0; dir < 2; ++dir) {
-			float const cand_val(val + ((dir ^ pref_dir) ? -1.0 : 1.0)*n*0.05*hspace);
-			if (cand_val < c.d[dim][0] || cand_val > c.d[dim][1]) continue; // skip values outside the cube
-			if (!is_val_inside_window(c, dim, cand_val, hspace, window_border)) return cand_val;
-		}
-	}
-	return val; // failed, return original val
+float shift_val_to_not_intersect_window(cube_t const &c, float val, float hspace, float window_border, bool dim) {
+	window_border *= 0.9; // adjust based on window frame so that wall doesn't end right at the edge; slightly narrower border here
+	float const uv(fract((val - c.d[dim][0])/hspace));
+	if (!(uv > window_border && uv < 1.0f-window_border)) return val; // okay as is
+	float const uv_target((uv < 0.5) ? window_border : 1.0f-window_border);
+	return val + (uv_target - uv)*hspace; // shift val exactly to the window border in the closer direction
 }
 
 struct split_cube_t : public cube_t {
@@ -266,19 +260,19 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						// shift the position of the hallway walls to avoid intersecting windows;
 						// this may make halls either larger (contain a window) or smaller (fit between two windows);
 						// as long as the space between windows is large enough (> doorway_width) this should be okay
-						float hall_start_pos(shift_val_to_not_intersect_window(*p, wall_pos,            hspace, window_border, !min_dim, rgen));
+						float hall_start_pos(shift_val_to_not_intersect_window(*p, wall_pos,            hspace, window_border, !min_dim));
 						float const target_hall_end_pos(wall_pos + sh_width); // use post-shifted wall for better fit to orig hall width
-						float hall_end_pos  (shift_val_to_not_intersect_window(*p, target_hall_end_pos, hspace, window_border, !min_dim, rgen));
+						float hall_end_pos  (shift_val_to_not_intersect_window(*p, target_hall_end_pos, hspace, window_border, !min_dim));
 						float const sec_hall_width(hall_end_pos - hall_start_pos);
 						bool const div_room(i > 0 && i < num_sec_halls), add_sec_hall(i < num_sec_halls);
 
 						if (add_sec_hall && sec_hall_width < min_hall_width) { // hall is too narrow, try shifting start pos
 							float const target_hall_start_pos(hall_start_pos - (min_hall_width - sec_hall_width));
-							hall_start_pos = shift_val_to_not_intersect_window(*p, target_hall_start_pos, hspace, window_border, !min_dim, rgen);
+							hall_start_pos = shift_val_to_not_intersect_window(*p, target_hall_start_pos, hspace, window_border, !min_dim);
 						}
 						if (add_sec_hall && sec_hall_width > max_hall_width) { // hall is too wide, try shifting start pos
 							float const target_hall_start_pos(hall_start_pos - (max_hall_width - sec_hall_width));
-							hall_start_pos = shift_val_to_not_intersect_window(*p, target_hall_start_pos, hspace, window_border, !min_dim, rgen);
+							hall_start_pos = shift_val_to_not_intersect_window(*p, target_hall_start_pos, hspace, window_border, !min_dim);
 						}
 						for (unsigned d = 0; d < 2; ++d) { // left, right of main hall
 							float const dsign(d ? -1.0 : 1.0);
@@ -289,7 +283,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							cube_t div_wall(*p); // sets z1/z2
 
 							if (div_room) { // divide this block of rooms into two rows, one facing the sec hallway on each side
-								div_pos = shift_val_to_not_intersect_window(*p, split_wall.get_center_dim(!min_dim), hspace, window_border, !min_dim, rgen);
+								div_pos = shift_val_to_not_intersect_window(*p, split_wall.get_center_dim(!min_dim), hspace, window_border, !min_dim);
 								set_wall_width(div_wall, div_pos, wall_half_thick, !min_dim);
 							}
 							div_wall.d[min_dim][ d] = p->  d[min_dim][d] + dsign*wall_edge_spacing;
