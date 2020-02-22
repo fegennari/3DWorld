@@ -192,9 +192,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					float const room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
 					assert(room_depth > 2.0f*doorway_width); // I'm not sure if this can fail or what we should do in that case - no secondary hallways?
 					float const hall_offset(room_len); // outer edge of hallway to building exterior on each end
-					//interior->walls[0].reserve(???);
-					//interior->walls[1].reserve(???);
-					//interior->rooms.reserve(??? + 5); // num_offices + pri hall + 2 sec hall + 4 conn hall
+					interior->walls[ min_dim].reserve(10); // TODO: update after adding rooms/doors
+					interior->walls[!min_dim].reserve(8); // TODO: update after adding rooms/doors
+					//interior->rooms.reserve(??? + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
 					//interior->doors.reserve(???); // one per office
 
 					for (unsigned d = 0; d < 2; ++d) { // for each side of main hallway
@@ -208,6 +208,19 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						c_hall.d[ min_dim][ d] = hall_inner;
 						c_hall.d[ min_dim][!d] = hall_wall_pos[d];
 						add_room(s_hall, part_id, 1); // add sec hallway as room
+
+						// walls along sec hallway
+						cube_t long_swall(s_hall); // sec outer
+						long_swall.d[!min_dim][0] -= wall_half_thick; long_swall.d[!min_dim][1] += wall_half_thick; // expand to fill the corner
+						cube_t short_swall(long_swall); // sec inner
+						short_swall.d[!min_dim][0] += sh_width; short_swall.d[!min_dim][1] -= sh_width; // shrink wall length
+						cube_t main_wall(short_swall); // also short
+						set_wall_width(main_wall,   hall.d[min_dim][d], wall_half_thick, min_dim);
+						set_wall_width(long_swall,  hall_outer, wall_half_thick, min_dim);
+						set_wall_width(short_swall, hall_inner, wall_half_thick, min_dim);
+						interior->walls[min_dim].push_back(main_wall);
+						interior->walls[min_dim].push_back(long_swall);
+						interior->walls[min_dim].push_back(short_swall);
 						// TODO: add inner (windowless) and outer rooms
 
 						for (unsigned e = 0; e < 2; ++e) {
@@ -216,8 +229,19 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							c_hall.d[!min_dim][ e] = offset_outer;
 							c_hall.d[!min_dim][!e] = offset_inner;
 							add_room(c_hall, part_id, 1); // add sec hallway as room
+
+							for (unsigned side = 0; side < 2; ++side) { // add walls along connector hallway
+								cube_t conn_wall(c_hall);
+								if (side == e) {conn_wall.d[min_dim][d] -= dsign*sh_width;} // extend long wall to connect to long wall from sec hallway
+								set_wall_width(conn_wall, c_hall.d[!min_dim][side], wall_half_thick, !min_dim);
+								interior->walls[!min_dim].push_back(conn_wall);
+							}
+							cube_t end_wall(main_wall);
+							end_wall.d[!min_dim][ e] = hall.d[!min_dim][e] + esign*wall_edge_spacing; // end of main hall/building
+							end_wall.d[!min_dim][!e] = offset_outer + esign*wall_half_thick; // end of conn hall
+							interior->walls[min_dim].push_back(end_wall);
 							// TODO: add building end and corner rooms
-						}
+						} // for e
 					} // for d
 				}
 				else { // secondary hallways with rooms on each side
