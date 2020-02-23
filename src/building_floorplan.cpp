@@ -189,7 +189,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
 				float const sh_width(max(min(0.4f*hall_width, max_hall_width), min_hall_width)), hspace(window_hspacing[!min_dim]);
 
-				if (0/*rgen.rand_bool()*/) { // ring hallway
+				if (rgen.rand_bool()) { // ring hallway
 					float const room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
 					assert(room_depth > 2.0f*doorway_width); // I'm not sure if this can fail or what we should do in that case - no secondary hallways?
 					float const hall_offset(room_len); // outer edge of hallway to building exterior on each end
@@ -197,10 +197,10 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					unsigned const num_cent_rooms(num_rooms - 2); // skip the rooms on each side
 					assert(num_cent_rooms > 0);
 					unsigned const num_offices(4*(num_cent_rooms + 4)); // X/Y mirror symmetry
-					hall_walls.reserve(14); // long dim (along hall dir) TODO: update after adding rooms/doors
-					room_walls.reserve(8); // short dim TODO: update after adding rooms/doors
+					//hall_walls.reserve(14); // long dim (along hall dir) TODO: update after adding rooms/doors
+					//room_walls.reserve(8); // short dim TODO: update after adding rooms/doors
 					interior->rooms.reserve(num_offices + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
-					interior->doors.reserve(num_offices + 2*add_doors_to_main_wall*num_cent_rooms); // at least one per office
+					interior->doors.reserve(num_offices + 2*add_doors_to_main_wall*num_cent_rooms + 4); // at least one per office
 
 					for (unsigned d = 0; d < 2; ++d) { // for each side of main hallway
 						float const dsign(d ? -1.0 : 1.0);
@@ -237,6 +237,59 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						room_inner.d[min_dim][ d] = hall_inner;
 						room_inner.d[min_dim][!d] = hall_wall_pos[d];
 
+						for (unsigned e = 0; e < 2; ++e) { // for each end of building in long dim
+							float const esign(e ? -1.0 : 1.0);
+							float const other_edge(p->d[!min_dim][e]), offset_outer(other_edge + esign*hall_offset), offset_inner(offset_outer + esign*sh_width);
+							c_hall.d[!min_dim][ e] = offset_outer;
+							c_hall.d[!min_dim][!e] = offset_inner;
+							unsigned const num_lights((c_hall.get_sz_dim(min_dim) > 0.25*s_hall.get_sz_dim(!min_dim)) ? 2 : 1); // 2 lights if it's long enough
+							add_room(c_hall, part_id, num_lights, 1, 0); // add conn hallway as room
+
+							for (unsigned side = 0; side < 2; ++side) { // add walls along connector hallway
+								cube_t conn_wall(c_hall);
+								set_wall_width(conn_wall, c_hall.d[!min_dim][side], wall_half_thick, !min_dim);
+
+								if (side == e) { // long wall, this is the one we want to extend add add doors to
+									conn_wall.d[min_dim][d] = place_area.d[min_dim][d]; // extend long wall to edge of building to create corner room
+									float const door_pos[3] = {0.5f*(wall_edge + hall_outer), 0.5f*(hall_outer + hall_inner), 0.5f*(hall_inner + hall_wall_pos[d])};
+
+									for (unsigned n = 0; n < 3; ++n) { // add doors for corner room, end room, and side room
+										float const lo_pos(door_pos[n] - doorway_hwidth), hi_pos(door_pos[n] + doorway_hwidth);
+										insert_door_in_wall_and_add_seg(conn_wall, lo_pos, hi_pos, min_dim, e, !d, room_walls, interior->doors);
+									}
+								}
+								room_walls.push_back(conn_wall);
+							} // for side
+							cube_t end_wall(main_wall);
+							end_wall.d[!min_dim][ e] = place_area.d[!min_dim][e]; // end of main hall/building
+							end_wall.d[!min_dim][!e] = offset_outer + esign*wall_half_thick; // end of conn hall
+							hall_walls.push_back(end_wall); // end of main hall
+							set_wall_width(end_wall, side_room_split, wall_half_thick, min_dim);
+							hall_walls.push_back(end_wall); // extension of sec hall short wall that separates corner office
+
+							// add 2x end of hall, corner, and side rooms
+							cube_t end_room(room_outer), cor_room(room_outer); // z and min_dim vals are the same as the outer room
+							cor_room.d[!min_dim][ e] = other_edge; // corner of building
+							cor_room.d[!min_dim][!e] = offset_outer;
+							add_room(cor_room, part_id, 1, 0, 1); // corner office
+							end_room.d[!min_dim][ e] = offset_outer; // aligned with end of conn hall
+							end_room.d[!min_dim][!e] = offset_inner;
+							add_room(end_room, part_id, 1, 0, 1); // office at end of conn hall
+							end_room = cor_room; // next to corner room, copy !min_dim values
+							end_room.d[min_dim][ d] = hall_outer;
+							end_room.d[min_dim][!d] = side_room_split;
+							add_room(end_room, part_id, 1, 0, 1); // office at end of sec hall
+							cube_t side_room(end_room); // next to end_room
+							side_room.d[min_dim][ d] = side_room_split;
+							side_room.d[min_dim][!d] = hall_wall_pos[d];
+							add_room(side_room, part_id, 1, 0, 1); // TODO: split this into multiple rooms if there's space?
+							float const door_pos[2] = {0.5f*(other_edge + offset_outer), 0.5f*(offset_outer + offset_inner)};
+
+							for (unsigned n = 0; n < 2; ++n) { // add doors for corner room and side room on each side of long_swall
+								float const lo_pos(door_pos[n] - doorway_hwidth), hi_pos(door_pos[n] + doorway_hwidth);
+								insert_door_in_wall_and_add_seg(long_swall, lo_pos, hi_pos, !min_dim, d, !e, hall_walls, interior->doors);
+							}
+						} // for e
 						for (unsigned n = 0; n <= num_cent_rooms; ++n) {
 							float const start_pos(shift_val_to_not_intersect_window(*p, room_pos, hspace, window_border, !min_dim));
 
@@ -247,7 +300,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								room_outer.d[!min_dim][1] = room_inner.d[!min_dim][1] = next_pos;
 								add_room(room_outer, part_id, 1, 0, 1); // office
 								add_room(room_inner, part_id, 1, 0, 1); // office
-								// add doors
+								// add doors to 2-3 walls
 								float const door_pos(0.5f*(start_pos + next_pos)), lo_pos(door_pos - doorway_hwidth), hi_pos(door_pos + doorway_hwidth);
 								cube_t *to_split[3] = {&long_swall, &short_swall, &main_wall};
 
@@ -267,49 +320,12 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								room_walls.push_back(wall_inner);
 							}
 						} // for n
-						for (unsigned e = 0; e < 2; ++e) { // for each end of building in long dim
-							float const esign(e ? -1.0 : 1.0);
-							float const other_edge(p->d[!min_dim][e]), offset_outer(other_edge + esign*hall_offset), offset_inner(offset_outer + esign*sh_width);
-							c_hall.d[!min_dim][ e] = offset_outer;
-							c_hall.d[!min_dim][!e] = offset_inner;
-							unsigned const num_lights((c_hall.get_sz_dim(min_dim) > 0.25*s_hall.get_sz_dim(!min_dim)) ? 2 : 1); // 2 lights if it's long enough
-							add_room(c_hall, part_id, num_lights, 1, 0); // add conn hallway as room
-
-							for (unsigned side = 0; side < 2; ++side) { // add walls along connector hallway
-								cube_t conn_wall(c_hall);
-								if (side == e) {conn_wall.d[min_dim][d] = place_area.d[min_dim][d];} // extend long wall to edge of building to create corner room
-								set_wall_width(conn_wall, c_hall.d[!min_dim][side], wall_half_thick, !min_dim);
-								room_walls.push_back(conn_wall);
-							}
-							cube_t end_wall(main_wall);
-							end_wall.d[!min_dim][ e] = place_area.d[!min_dim][e]; // end of main hall/building
-							end_wall.d[!min_dim][!e] = offset_outer + esign*wall_half_thick; // end of conn hall
-							hall_walls.push_back(end_wall); // end of main hall
-							set_wall_width(end_wall, side_room_split, wall_half_thick, min_dim);
-							hall_walls.push_back(end_wall); // extension of sec hall short wall that separates corner office
-
-							// add end of hall and corner rooms
-							cube_t end_room(room_outer), cor_room(room_outer); // z and min_dim vals are the same as the outer room
-							cor_room.d[!min_dim][ e] = other_edge; // corner of building
-							cor_room.d[!min_dim][!e] = offset_outer;
-							add_room(cor_room, part_id, 1, 0, 1); // corner office
-							end_room.d[!min_dim][ e] = offset_outer; // aligned with end of conn hall
-							end_room.d[!min_dim][!e] = offset_inner;
-							add_room(end_room, part_id, 1, 0, 1); // office at end of conn hall
-							end_room = cor_room; // next to corner room, copy !min_dim values
-							end_room.d[min_dim][ d] = hall_outer;
-							end_room.d[min_dim][!d] = side_room_split;
-							add_room(end_room, part_id, 1, 0, 1); // office at end of sec hall
-							cube_t side_room(end_room); // next to end_room
-							side_room.d[min_dim][ d] = side_room_split;
-							side_room.d[min_dim][!d] = hall_wall_pos[d];
-							add_room(side_room, part_id, 1, 0, 1); // TODO: split this into multiple rooms if there's space?
-						} // for e
 						hall_walls.push_back(main_wall  );
 						hall_walls.push_back(long_swall ); // add remaining wall segment
 						hall_walls.push_back(short_swall); // add remaining wall segment
 					} // for d
-				}
+				} // end ring hallways
+
 				else { // secondary hallways with rooms on each side
 					float const sh_len(room_width);
 					int const num_sec_halls(num_rooms/2); // round down if odd
@@ -410,7 +426,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						min_eq(wall_pos, p->d[!min_dim][1]); // clamp to far side of building to handle the final row of rooms
 					} // for i
 				} // end secondary hallways
-			}
+			} // end multiple hallways case
+
 			else { // single main hallway
 				room_walls.reserve(2*(num_rooms-1));
 				hall_walls.reserve(2*(num_rooms+1));
