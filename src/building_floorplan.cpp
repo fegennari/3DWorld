@@ -930,7 +930,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			bool stairs_added(0);
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
-			for (unsigned n = 0; n < 100; ++n) { // make 100 tries to add stairs
+			for (unsigned n = 0; n < 130; ++n) { // make 100 tries to add stairs
 				cube_t place_region((n < 10) ? pref_shared : shared); // use preferred shared area from primary hallway for first 10 iterations
 
 				if (n > 0 && n%10 == 0) { // decrease stairs size slightly every 10 iterations
