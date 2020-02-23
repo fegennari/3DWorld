@@ -315,8 +315,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//if (is_light_occluded(lpos, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
 
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
-			if (camera_in_building && room.part_id == camera_part ||
-				(room.contains_pt_xy(camera_bs) && camera_z < ceil_z+window_vspacing && camera_z > floor_z-window_vspacing))
+			if (camera_in_building && (room.part_id == camera_part ||
+				(room.contains_pt_xy(camera_bs) && camera_z < ceil_z+window_vspacing && camera_z > floor_z-window_vspacing)))
 			{
 				// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
 				if (!stairs_light) continue; // camera in building and on wrong floor, don't add light
