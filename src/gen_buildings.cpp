@@ -1998,7 +1998,7 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
 
-						if (display_mode & 0x10) { // debug visualization of ray casing
+						if (display_mode & 0x10) { // compute indirect lighting (currently incomplete)
 							point cpos;
 							colorRGBA ccolor;
 							if (b.ray_cast_camera_dir(xlate, cpos, ccolor)) {
@@ -2007,7 +2007,7 @@ public:
 								s.set_cur_color(ccolor);
 								draw_subdiv_sphere(cpos, 0.1*CAMERA_RADIUS, N_SPHERE_DIV, 0, 1);
 							}
-							indir_bcs_ix = bcs_ix; indir_bix = bi->ix; // TODO: enable when this actually works
+							indir_bcs_ix = bcs_ix; indir_bix = bi->ix;
 						}
 					} // for bi
 				} // for g

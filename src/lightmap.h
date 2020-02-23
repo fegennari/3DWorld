@@ -184,6 +184,7 @@ public:
 	float get_beamwidth()        const {return bwidth;}
 	point const &get_pos()       const {return pos;}
 	point const &get_pos2()      const {return pos2;}
+	vector3d const &get_dir()    const {return dir;}
 	sphere_t get_bsphere()       const {return sphere_t(pos, radius);}
 	float get_intensity_at(point const &p, point &updated_lpos) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;

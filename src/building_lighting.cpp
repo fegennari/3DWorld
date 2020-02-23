@@ -244,7 +244,7 @@ void building_t::clip_ray_to_walls(point const &p1, point &p2) const { // Note: 
 }
 
 void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const {
-	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205
+	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205 / no ls bcube expand: 74538
 	// starts with building bcube clipped to light bcube
 	//timer_t timer("refine_light_bcube");
 	cube_t tight_bcube;
