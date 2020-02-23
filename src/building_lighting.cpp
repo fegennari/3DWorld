@@ -8,7 +8,7 @@
 #include "cobj_bsp_tree.h"
 #include <atomic>
 
-extern int MESH_Z_SIZE;
+extern int MESH_Z_SIZE, display_mode;
 extern unsigned LOCAL_RAYS, NUM_THREADS;
 extern float indir_light_exp;
 extern vector<light_source> dl_sources;
@@ -362,6 +362,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			light_bcube = clipped_bc;
 			refine_light_bcube(lpos, light_radius, light_bcube);
 		}
+		if (!camera_pdu.cube_visible(light_bcube + xlate)) continue; // VFC - post clip
 		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
 		dl_sources.back().set_custom_bcube(light_bcube);
 
