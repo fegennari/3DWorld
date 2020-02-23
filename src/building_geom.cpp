@@ -1428,6 +1428,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
 				if (r->has_stairs) {flags |= RO_FLAG_RSTAIRS;}
+				else if ((f == 0 || top_floor) && interior->stairwells.size() > 1) { // check for stairwells connecting stacked parts
+					for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
+						if (!r->contains_cube_xy(*s)) continue; // stairs not in this room
+						// Note: here we adjust stairs zval by floor_thickness to include stairs in the floor but not in the room above
+						if (s->z1() + floor_thickness > r->z2()) continue; // stairs above the room
+						if (s->z2() + floor_thickness < r->z1()) continue; // stairs below the room
+						flags |= RO_FLAG_RSTAIRS;
+					}
+				}
 				colorRGBA color;
 				if (is_house) {color = colorRGBA(1.0, 1.0, 0.85);} // house - yellowish
 				else if (r->is_hallway || r->is_office) {color = colorRGBA(0.85, 0.85, 1.0);} // office building - blueish
