@@ -309,6 +309,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA const color(i->get_color()*1.1); // make it extra bright
+		refine_light_bcube(lpos, light_radius, clipped_bc); // FIXME: precompute and cache this
 		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
 		dl_sources.back().set_custom_bcube(clipped_bc);
 
@@ -320,6 +321,21 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			dl_sources.back().disable_shadows();
 		}
 	} // for i
+}
+
+void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const {
+	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005
+	// starts with building bcube clipped to light bcube
+	cube_t tight_bcube;
+
+	// first determine the union of all intersections with parts
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (!light_bcube.intersects(*p)) continue;
+		cube_t c(light_bcube);
+		c.intersect_with_cube(*p);
+		if (tight_bcube.is_all_zeros()) {tight_bcube = c;} else {tight_bcube.union_with_cube(c);}
+	} // for p
+	light_bcube = tight_bcube;
 }
 
 float room_t::get_light_amt() const { // Note: not normalized to 1.0

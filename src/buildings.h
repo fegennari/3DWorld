@@ -401,6 +401,7 @@ private:
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 	void gather_interior_cubes(vect_colored_cube_t &cc) const;
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
+	void refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const;
 };
 
 struct building_draw_utils {
