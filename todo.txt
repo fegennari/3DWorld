@@ -15,7 +15,6 @@ Cities:
 * Better ambient occlusion
 
 * Building interiors:
-  * More hallways for office buildings
   * Place more room objects/furniture
   - Working elevators
   - Interiors for city office towers
