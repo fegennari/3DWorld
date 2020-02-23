@@ -204,8 +204,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 					for (unsigned d = 0; d < 2; ++d) { // for each side of main hallway
 						float const dsign(d ? -1.0 : 1.0);
-						float const wall_edge(p->d[min_dim][d]), hall_outer(wall_edge + dsign*room_depth), hall_inner(hall_outer + dsign*sh_width);
-						float const conn_hall_len(dsign*(hall_wall_pos[d] - hall_inner));
+						float const wall_edge(p->d[min_dim][d]), targ_hall_outer(wall_edge + dsign*room_depth);
+						float const hall_outer(shift_val_to_not_intersect_window(*p, targ_hall_outer, window_hspacing[min_dim], window_border, min_dim));
+						float const hall_inner(hall_outer + dsign*sh_width), conn_hall_len(dsign*(hall_wall_pos[d] - hall_inner));
 						float const targ_side_room_split(hall_outer + 0.5f*dsign*(conn_hall_len + sh_width)); // split room halfway
 						float const side_room_split(shift_val_to_not_intersect_window(*p, targ_side_room_split, window_hspacing[min_dim], window_border, min_dim));
 						cube_t s_hall(*p), c_hall(*p);
