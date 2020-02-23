@@ -1358,7 +1358,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
-	unsigned tot_num_rooms(0);
+	unsigned tot_num_rooms(0), tot_num_lights(0);
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
@@ -1459,11 +1459,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 							if (!is_valid) continue; // skip adding this light
 						}
 						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
+						++tot_num_lights;
 					} // for d
 				}
 				else { // normal room
 					if (check_stairs && has_bcube_int_exp(light, interior->stairwells, fc_thick)) {is_lit = 0;} // disable if blocked by stairs
 					else {objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color);} // dir=0 (unused)
+					++tot_num_lights;
 				}
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
@@ -1478,6 +1480,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	} // for r
 	add_stairs_and_elevators(rgen);
 	objs.shrink_to_fit();
+	interior->room_geom->light_bcubes.resize(tot_num_lights); // allocate but don't fill un until needed; should this only include lit lights?
 }
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
@@ -1845,6 +1848,8 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 void building_room_geom_t::clear() {
 	for (auto m = materials.begin(); m != materials.end(); ++m) {m->clear();}
 	materials.clear();
+	objs.clear();
+	light_bcubes.clear();
 }
 
 unsigned building_room_geom_t::get_num_verts() const {

@@ -231,16 +231,60 @@ bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) co
 	if (line_int_cubes(lpos, camera_bs, interior->ceilings)) return 1;
 	return 0;
 }
+void building_t::clip_ray_to_walls(point const &p1, point &p2) const { // Note: assumes p1.z == p2.z
+	float t(1.0), tmin(0.0), tmax(1.0);
+	//cube_t ray_bcube(p1, p2); // use this as an optimization?
 
-void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const {
+	for (unsigned d = 0; d < 2; ++d) {
+		for (auto c = interior->walls[d].begin(); c != interior->walls[d].end(); ++c) {
+			if (get_line_clip_xy(p1, p2, c->d, tmin, tmax) && tmin < t) {t = tmin;} // optimization: only clip p2?
+		}
+	}
+	if (t < 1.0) {p2 = p1 + (p2 - p1)*t;} // clip to t
+}
+
+void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const {
+	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 102736
+	// starts with building bcube clipped to light bcube
+	//timer_t timer("refine_light_bcube");
+	cube_t tight_bcube;
+
+	// first determine the union of all intersections with parts
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (!light_bcube.intersects(*p)) continue;
+		cube_t c(light_bcube);
+		c.intersect_with_cube(*p);
+		if (tight_bcube.is_all_zeros()) {tight_bcube = c;} else {tight_bcube.union_with_cube(c);}
+	}
+	// next cast a number of horizontal rays in a circle around the light to see how far they reach; any walls hit occlude the light and reduce the bcube
+	unsigned const NUM_RAYS = 120; // every 3 degrees
+	if (NUM_RAYS == 0) {light_bcube = tight_bcube; return;}
+	cube_t rays_bcube(lpos, lpos);
+
+	for (unsigned n = 0; n < NUM_RAYS; ++n) {
+		float const angle(TWO_PI*n/NUM_RAYS), dx(light_radius*sin(angle)), dy(light_radius*cos(angle));
+		point p1(lpos), p2(lpos + point(dx, dy, 0.0));
+		bool const ret(do_line_clip(p1, p2, tight_bcube.d));
+		assert(ret);
+		assert(p1 == lpos);
+		clip_ray_to_walls(p1, p2);
+		rays_bcube.union_with_pt(p2);
+	} // for n
+	light_bcube = rays_bcube;
+}
+
+// Note: non const because this caches light_bcubes
+void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) {
 
 	if (!has_room_geom()) return; // error?
-	vector<room_object_t> &objs(interior->room_geom->objs);
+	vector<room_object_t> const &objs(interior->room_geom->objs);
+	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	point const camera_bs(camera_pdu.pos - xlate); // camera in building space
 	float const window_vspacing(get_window_vspace()), camera_z(camera_bs.z);
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
 	unsigned camera_part(parts.size()); // start at an invalid value
+	int cur_light_ix(-1); // start at -1 because we increment it before using it
 	bool camera_by_stairs(0), camera_near_building(camera_in_building);
 
 	if (camera_in_building) {
@@ -258,7 +302,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		camera_near_building = bcube_exp.contains_pt(camera_bs);
 	}
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
+		if (i->type != TYPE_LIGHT) continue; // not a light
+		++cur_light_ix;
+		if (!i->is_lit()) continue; // light not on
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		float const floor_z(i->z2() - window_vspacing), ceil_z(i->z2());
@@ -309,33 +355,24 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA const color(i->get_color()*1.1); // make it extra bright
-		refine_light_bcube(lpos, light_radius, clipped_bc); // FIXME: precompute and cache this
+		assert((unsigned)cur_light_ix < light_bcubes.size());
+		cube_t &light_bcube(light_bcubes[cur_light_ix]);
+
+		if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
+			light_bcube = clipped_bc;
+			refine_light_bcube(lpos, light_radius, light_bcube);
+		}
 		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
-		dl_sources.back().set_custom_bcube(clipped_bc);
+		dl_sources.back().set_custom_bcube(light_bcube);
 
 		if (camera_near_building) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
 			point const lpos_up(lpos - vector3d(0.0, 0.0, 2.0*i->dz()));
 			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, color);
-			dl_sources.back().set_custom_bcube(clipped_bc); // Note: could reduce clipped_bc further if needed
+			dl_sources.back().set_custom_bcube(light_bcube); // Note: could reduce clipped_bc further if needed
 			dl_sources.back().disable_shadows();
 		}
 	} // for i
-}
-
-void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const {
-	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005
-	// starts with building bcube clipped to light bcube
-	cube_t tight_bcube;
-
-	// first determine the union of all intersections with parts
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
-		if (!light_bcube.intersects(*p)) continue;
-		cube_t c(light_bcube);
-		c.intersect_with_cube(*p);
-		if (tight_bcube.is_all_zeros()) {tight_bcube = c;} else {tight_bcube.union_with_cube(c);}
-	} // for p
-	light_bcube = tight_bcube;
 }
 
 float room_t::get_light_amt() const { // Note: not normalized to 1.0

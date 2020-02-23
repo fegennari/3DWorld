@@ -229,6 +229,7 @@ struct building_room_geom_t {
 	unsigned stairs_start; // index of first object of TYPE_STAIR
 	vector<room_object_t> objs; // for drawing and collision detection
 	vector<rgeom_mat_t> materials;
+	vect_cube_t light_bcubes;
 
 	building_room_geom_t() : obj_scale(1.0), stairs_start(0) {}
 	bool empty() const {return objs.empty();}
@@ -377,7 +378,7 @@ struct building_t : public building_geom_t {
 	void get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist) const;
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
 	bool find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
-	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) const;
+	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube);
 	void gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only);
 	void clear_room_geom();
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
@@ -401,6 +402,7 @@ private:
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 	void gather_interior_cubes(vect_colored_cube_t &cc) const;
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
+	void clip_ray_to_walls(point const &p1, point &p2) const;
 	void refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const;
 };
 

@@ -1826,7 +1826,7 @@ public:
 		s.add_uniform_float("hemi_lighting_scale", 0.5); // reset to default
 	}
 
-	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) const {
+	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) { // Note: non const because this caches light bcubes
 		if (!ADD_ROOM_LIGHTS) return;
 		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || building_draw_windows.empty()) return; // no windows
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
@@ -1837,7 +1837,7 @@ public:
 			if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 
 			for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
-				building_t const &b(get_building(bi->ix));
+				building_t &b(get_building(bi->ix));
 				if (!b.has_room_geom()) continue; // no interior room geom, skip
 				if (!lights_bcube.intersects_xy(b.bcube)) continue; // not within light volume (too far from camera)
 				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
