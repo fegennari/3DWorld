@@ -149,7 +149,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		bool const first_part(p == parts.begin());
 		bool const use_hallway(!is_house && (first_part || (p-1)->z1() < p->z1()) && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
 		unsigned const rooms_start(interior->rooms.size()), part_id(p - parts.begin());
-		cube_t hall;
+		cube_t hall, place_area(*p);
+		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
 		float window_hspacing[2] = {0.0};
 		int num_windows_per_side[2] = {0};
 
@@ -189,8 +190,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					unsigned const num_cent_rooms(num_rooms - 2); // skip the rooms on each side
 					assert(num_cent_rooms > 0);
 					unsigned const num_offices(num_cent_rooms*num_cent_rooms); // TODO: + side rooms
-					interior->walls[ min_dim].reserve(10); // TODO: update after adding rooms/doors
-					interior->walls[!min_dim].reserve(8); // TODO: update after adding rooms/doors
+					interior->walls[ min_dim].reserve(10); // long dim (along hall dir) TODO: update after adding rooms/doors
+					interior->walls[!min_dim].reserve(8); // short dim TODO: update after adding rooms/doors
 					interior->rooms.reserve(num_offices + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
 					interior->doors.reserve(num_offices); // one per office
 
@@ -207,10 +208,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						add_room(s_hall, part_id, 3, 1, 0); // add sec hallway as room with 3 lights
 
 						// walls along sec hallway
-						cube_t long_swall(s_hall); // sec outer
-						long_swall.d[!min_dim][0] -= wall_half_thick; long_swall.d[!min_dim][1] += wall_half_thick; // expand to fill the corner
-						cube_t short_swall(long_swall); // sec inner
-						short_swall.d[!min_dim][0] += sh_width; short_swall.d[!min_dim][1] -= sh_width; // shrink wall length
+						cube_t long_swall(s_hall), short_swall(s_hall); // sec outer, sec inner
+						short_swall.d[!min_dim][0] += sh_width - wall_half_thick; // expand to fill the corner + shrink wall length
+						short_swall.d[!min_dim][1] -= sh_width - wall_half_thick;
+						long_swall. d[!min_dim][0] = place_area.d[!min_dim][0]; // crosses the entire building (creates sec hall + room on each end)
+						long_swall. d[!min_dim][1] = place_area.d[!min_dim][1];
 						cube_t main_wall(short_swall); // also short
 						set_wall_width(main_wall,   hall.d[min_dim][d], wall_half_thick, min_dim);
 						set_wall_width(long_swall,  hall_outer, wall_half_thick, min_dim);
@@ -252,7 +254,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								interior->walls[!min_dim].push_back(wall_inner);
 							}
 						} // for n
-						for (unsigned e = 0; e < 2; ++e) {
+						for (unsigned e = 0; e < 2; ++e) { // for each end of building in long dim
 							float const esign(e ? -1.0 : 1.0);
 							float const other_edge(p->d[!min_dim][e]), offset_outer(other_edge + esign*hall_offset), offset_inner(offset_outer + esign*sh_width);
 							c_hall.d[!min_dim][ e] = offset_outer;
@@ -262,12 +264,12 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 							for (unsigned side = 0; side < 2; ++side) { // add walls along connector hallway
 								cube_t conn_wall(c_hall);
-								if (side == e) {conn_wall.d[min_dim][d] -= dsign*sh_width;} // extend long wall to connect to long wall from sec hallway
+								if (side == e) {conn_wall.d[min_dim][d] = place_area.d[min_dim][d];} // extend long wall to edge of building to create corner room
 								set_wall_width(conn_wall, c_hall.d[!min_dim][side], wall_half_thick, !min_dim);
 								interior->walls[!min_dim].push_back(conn_wall);
 							}
 							cube_t end_wall(main_wall);
-							end_wall.d[!min_dim][ e] = hall.d[!min_dim][e] + esign*wall_edge_spacing; // end of main hall/building
+							end_wall.d[!min_dim][ e] = place_area.d[!min_dim][e]; // end of main hall/building
 							end_wall.d[!min_dim][!e] = offset_outer + esign*wall_half_thick; // end of conn hall
 							interior->walls[min_dim].push_back(end_wall); // end of main hall
 							// TODO: add building end and corner rooms
@@ -321,7 +323,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								div_pos = shift_val_to_not_intersect_window(*p, split_wall.get_center_dim(!min_dim), hspace, window_border, !min_dim);
 								set_wall_width(div_wall, div_pos, wall_half_thick, !min_dim);
 							}
-							div_wall.d[min_dim][ d] = p->  d[min_dim][d] + dsign*wall_edge_spacing;
+							div_wall.d[min_dim][ d] = place_area.d[min_dim][d];
 							div_wall.d[min_dim][!d] = hall.d[min_dim][d];
 							cube_t sep_walls[2];
 
@@ -401,7 +403,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				for (unsigned s = 0; s < 2; ++s) { // add half length hall walls at each end of the hallway
 					cube_t hwall(rwall); // copy to get correct zvals
 					float const hwall_len((partial_room && s == 1) ? doorway_width : hwall_extend); // hwall for partial room at end is only length doorway_width
-					hwall.d[!min_dim][ s] = p->d   [!min_dim][s] + (s ? -1.0f : 1.0f)*wall_edge_spacing; // end at the wall
+					hwall.d[!min_dim][ s] = place_area.d[!min_dim][s]; // end at the wall
 					hwall.d[!min_dim][!s] = hwall.d[!min_dim][s] + (s ? -1.0f : 1.0f)*hwall_len; // end at first doorway
 					doorway_vals[s*(2*num_rooms-1)] = hwall.d[!min_dim][!s];
 
@@ -516,8 +518,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						cube_t wall;
 						wall.z1() = max(p->z1(), p2->z1()) + fc_thick; // shared Z range
 						wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
-						wall.d[ dim][0] = p->d[dim][0] + wall_edge_spacing; // shorter part side with slight offset
-						wall.d[ dim][1] = p->d[dim][1] - wall_edge_spacing;
+						wall.d[ dim][0] = place_area.d[dim][0]; // shorter part side with slight offset
+						wall.d[ dim][1] = place_area.d[dim][1];
 						if (wall.get_sz_dim(dim) < min_split_wall_len) continue; // wall is too short to add (can this happen?)
 						wall.d[!dim][ dir] = val;
 						wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
