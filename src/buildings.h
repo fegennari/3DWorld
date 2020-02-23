@@ -190,15 +190,16 @@ unsigned char const RO_FLAG_NOCOLL  = 0x10; // no collision detection
 struct room_object_t : public cube_t {
 	bool dim, dir;
 	uint8_t flags, room_id; // for at most 256 rooms per floor
+	uint16_t obj_id; // currently only used for lights
 	room_object type;
 	room_obj_shape shape;
 	float light_amt;
 	colorRGBA color;
 
-	room_object_t() : dim(0), dir(0), flags(0), room_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
+	room_object_t() : dim(0), dir(0), flags(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, unsigned char rid,
 		bool dim_=0, bool dir_=0, unsigned char f=0, float light=1.0, room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
-		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), type(type_), shape(shape_), light_amt(light), color(color_) {}
+		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_) {}
 	bool is_lit    () const {return (flags & RO_FLAG_LIT);}
 	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}

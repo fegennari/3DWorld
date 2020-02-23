@@ -1358,7 +1358,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
-	unsigned tot_num_rooms(0), tot_num_lights(0);
+	unsigned tot_num_rooms(0), num_light_stacks(0);
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
@@ -1401,12 +1401,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		// make chair colors consistent for each part by using a few variables for a hash
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
 		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1337*num_floors) % 12]);
+		unsigned num_lights_added(0);
 
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			room_center.z = z + fc_thick; // floor height
-			bool const top_of_stairs(r->has_stairs && f+1 == num_floors);
+			bool const top_floor(f+1 == num_floors), top_of_stairs(r->has_stairs && top_floor);
+			bool const check_stairs(!is_house && parts.size() > 1 && top_floor); // top floor of building that may have stairs connecting to upper stack
 			bool is_lit(0), light_dim(room_dim);
+			if (top_of_stairs || check_stairs) {num_light_stacks += num_lights_added;} // thse cases may shift the light, so we allocate a new stack
 			cube_t light;
 			if (!blocked_by_stairs || top_of_stairs) {light = pri_light;}
 			else if (use_sec_light) {light = sec_light; light_dim ^= 1;}
@@ -1425,7 +1428,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
 				if (r->has_stairs) {flags |= RO_FLAG_RSTAIRS;}
-				bool const check_stairs(!is_house && parts.size() > 1 && f+1 == num_floors); // top floor of building that may have stairs connecting to upper stack
 				colorRGBA color;
 				if (is_house) {color = colorRGBA(1.0, 1.0, 0.85);} // house - yellowish
 				else if (r->is_hallway || r->is_office) {color = colorRGBA(0.85, 0.85, 1.0);} // office building - blueish
@@ -1443,7 +1445,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 						cube_t hall_light(light);
 						hall_light.translate_dim(delta, light_dim);
 
-						if (check_stairs) { // keep moving until not blocked by stairs
+						if (check_stairs && has_bcube_int_exp(hall_light, interior->stairwells, fc_thick)) { // keep moving until not blocked by stairs
 							cube_t const hall_light_start(hall_light);
 							bool is_valid(0);
 
@@ -1457,15 +1459,19 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 								}
 							} // for shift_dir
 							if (!is_valid) continue; // skip adding this light
-						}
+						} // end check_stairs
 						objs.emplace_back(hall_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
-						++tot_num_lights;
+						objs.back().obj_id = num_light_stacks + d;
 					} // for d
+					num_lights_added = num_lights;
 				}
 				else { // normal room
 					if (check_stairs && has_bcube_int_exp(light, interior->stairwells, fc_thick)) {is_lit = 0;} // disable if blocked by stairs
-					else {objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color);} // dir=0 (unused)
-					++tot_num_lights;
+					else {
+						objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
+						objs.back().obj_id = num_light_stacks;
+					}
+					num_lights_added = 1;
 				}
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
@@ -1477,10 +1483,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);}
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
+		num_light_stacks += num_lights_added;
 	} // for r
 	add_stairs_and_elevators(rgen);
 	objs.shrink_to_fit();
-	interior->room_geom->light_bcubes.resize(tot_num_lights); // allocate but don't fill un until needed; should this only include lit lights?
+	interior->room_geom->light_bcubes.resize(num_light_stacks); // allocate but don't fill un until needed
 }
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {

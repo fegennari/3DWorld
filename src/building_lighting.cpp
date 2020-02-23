@@ -233,10 +233,10 @@ bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) co
 }
 void building_t::clip_ray_to_walls(point const &p1, point &p2) const { // Note: assumes p1.z == p2.z
 	float t(1.0), tmin(0.0), tmax(1.0);
-	//cube_t ray_bcube(p1, p2); // use this as an optimization?
 
 	for (unsigned d = 0; d < 2; ++d) {
 		for (auto c = interior->walls[d].begin(); c != interior->walls[d].end(); ++c) {
+			if (p1.z < c->z1() || p1.z > c->z2()) continue; // no z overlap
 			if (get_line_clip_xy(p1, p2, c->d, tmin, tmax) && tmin < t) {t = tmin;} // optimization: only clip p2?
 		}
 	}
@@ -244,20 +244,22 @@ void building_t::clip_ray_to_walls(point const &p1, point &p2) const { // Note: 
 }
 
 void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const {
-	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 102736
+	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205
 	// starts with building bcube clipped to light bcube
 	//timer_t timer("refine_light_bcube");
 	cube_t tight_bcube;
 
-	// first determine the union of all intersections with parts
+	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
-		if (!light_bcube.intersects(*p)) continue;
+		if (!light_bcube.intersects_xy(*p)) continue;
 		cube_t c(light_bcube);
-		c.intersect_with_cube(*p);
-		if (tight_bcube.is_all_zeros()) {tight_bcube = c;} else {tight_bcube.union_with_cube(c);}
+		c.intersect_with_cube_xy(*p);
+		if (tight_bcube.is_all_zeros()) {tight_bcube = c;} else {tight_bcube.union_with_cube_xy(c);}
 	}
+	tight_bcube.z1() = light_bcube.z1();
+	tight_bcube.z2() = light_bcube.z2();
 	// next cast a number of horizontal rays in a circle around the light to see how far they reach; any walls hit occlude the light and reduce the bcube
-	unsigned const NUM_RAYS = 120; // every 3 degrees
+	unsigned const NUM_RAYS = 180; // every 2 degrees
 	if (NUM_RAYS == 0) {light_bcube = tight_bcube; return;}
 	cube_t rays_bcube(lpos, lpos);
 
@@ -284,7 +286,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
 	unsigned camera_part(parts.size()); // start at an invalid value
-	int cur_light_ix(-1); // start at -1 because we increment it before using it
 	bool camera_by_stairs(0), camera_near_building(camera_in_building);
 
 	if (camera_in_building) {
@@ -302,9 +303,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		camera_near_building = bcube_exp.contains_pt(camera_bs);
 	}
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type != TYPE_LIGHT) continue; // not a light
-		++cur_light_ix;
-		if (!i->is_lit()) continue; // light not on
+		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		float const floor_z(i->z2() - window_vspacing), ceil_z(i->z2());
@@ -355,22 +354,24 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA const color(i->get_color()*1.1); // make it extra bright
-		assert((unsigned)cur_light_ix < light_bcubes.size());
-		cube_t &light_bcube(light_bcubes[cur_light_ix]);
+		assert(i->obj_id < light_bcubes.size());
+		cube_t &light_bcube(light_bcubes[i->obj_id]);
 
 		if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
 			light_bcube = clipped_bc;
 			refine_light_bcube(lpos, light_radius, light_bcube);
 		}
-		if (!camera_pdu.cube_visible(light_bcube + xlate)) continue; // VFC - post clip
+		clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
+		clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
+		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC - post clip
 		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
-		dl_sources.back().set_custom_bcube(light_bcube);
+		dl_sources.back().set_custom_bcube(clipped_bc);
 
 		if (camera_near_building) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
 			point const lpos_up(lpos - vector3d(0.0, 0.0, 2.0*i->dz()));
 			dl_sources.emplace_back(0.5*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, color);
-			dl_sources.back().set_custom_bcube(light_bcube); // Note: could reduce clipped_bc further if needed
+			dl_sources.back().set_custom_bcube(clipped_bc); // Note: could reduce clipped_bc further if needed
 			dl_sources.back().disable_shadows();
 		}
 	} // for i
