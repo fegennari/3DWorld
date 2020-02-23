@@ -690,6 +690,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		adjust_part_zvals_for_floor_spacing(parts[i-1]);
 		parts[i].z1() = parts[i-1].z2(); // make top and bottom parts align
 	}
+	// TODO: what about two stacked parts of the same x/y dimensions but different interior floorplans?
 	adjust_part_zvals_for_floor_spacing(parts[num_levels-1]); // last one
 	max_eq(bcube.z2(), parts[num_levels-1].z2()); // adjust bcube if needed
 

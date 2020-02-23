@@ -308,10 +308,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		float const floor_z(i->z2() - window_vspacing), ceil_z(i->z2());
 		bool const floor_is_above(camera_z < floor_z), floor_is_below(camera_z > ceil_z);
-		// less culling if either the light or the camera is by stairs and light is on the floor above or below
-		bool const stairs_light((i->has_stairs() || camera_by_stairs) && (camera_z > floor_z-window_vspacing) && (camera_z < ceil_z+window_vspacing));
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
+		// less culling if either the light or the camera is by stairs and light is on the floor above or below
+		bool const stairs_light((i->has_stairs() || room.has_stairs || camera_by_stairs) && (camera_z > floor_z-window_vspacing) && (camera_z < ceil_z+window_vspacing));
 		//if (is_light_occluded(lpos, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
 
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
@@ -327,6 +327,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (!stairs_light && ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 1.0f*xy_dist)) continue; // light viewed at too high an angle
 
 				if (camera_in_building) { // camera and light are in different buildings/parts
+					assert(camera_part < real_num_parts);
+					cube_t const &cpart(parts[camera_part]);
+					if (cpart.z2() <= room.z1() || cpart.z1() >= room.z2()) continue; // light in a different vertical stack than the camera
 					// is it better to check if light half sphere is occluded by the floor above/below?
 					assert(room.part_id < parts.size());
 					cube_t const &part(parts[room.part_id]);
