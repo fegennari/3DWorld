@@ -466,12 +466,18 @@ struct cube_t { // size = 24
 	void union_with_cube(cube_t const &c) {
 		UNROLL_3X(d[i_][0] = min(d[i_][0], c.d[i_][0]); d[i_][1] = max(d[i_][1], c.d[i_][1]);)
 	}
+	void union_with_cube_xy(cube_t const &c) {
+		UNROLL_2X(d[i_][0] = min(d[i_][0], c.d[i_][0]); d[i_][1] = max(d[i_][1], c.d[i_][1]);)
+	}
 	void assign_or_union_with_cube(cube_t const &c) {
 		if (c.is_zero_area()) return;
 		if (is_zero_area()) {copy_from(c);} else {union_with_cube(c);}
 	}
 	void intersect_with_cube(cube_t const &c) { // Note: cube and *this must overlap
 		UNROLL_3X(d[i_][0] = max(d[i_][0], c.d[i_][0]); d[i_][1] = min(d[i_][1], c.d[i_][1]);)
+	}
+	void intersect_with_cube_xy(cube_t const &c) { // Note: cube and *this must overlap
+		UNROLL_2X(d[i_][0] = max(d[i_][0], c.d[i_][0]); d[i_][1] = min(d[i_][1], c.d[i_][1]);)
 	}
 	void normalize() {UNROLL_3X(if (d[i_][1] < d[i_][0]) swap(d[i_][0], d[i_][1]);)}
 
