@@ -403,6 +403,7 @@ private:
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
 	void gather_interior_cubes(vect_colored_cube_t &cc) const;
+	void order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const;
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
 	void clip_ray_to_walls(point const &p1, point &p2) const;
 	void refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const;

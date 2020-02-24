@@ -165,6 +165,7 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 
 void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
 
+	// TODO: run this in a background thread and update lighting incrementally over many frames
 	if (!has_room_geom()) return; // error?
 	timer_t timer("Ray Cast Building");
 	vector<room_object_t> const &objs(interior->room_geom->objs);
@@ -204,6 +205,19 @@ unsigned building_t::create_building_volume_light_texture() const {
 	float const weight(1.0);
 	ray_cast_building(&local_lmap_manager, weight);
 	return indir_light_tex_from_lmap(local_lmap_manager, MESH_X_SIZE, MESH_Y_SIZE, zsize, indir_light_exp); // indir_light_exp applies to local lighting
+}
+
+void building_t::order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const {
+
+	light_ids.clear();
+	if (!has_room_geom()) return; // error?
+	vector<room_object_t> const &objs(interior->room_geom->objs);
+
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
+		light_ids.push_back(i - objs.begin());
+	} // for i
+	// TODO: sort light_ids by distance to target
 }
 
 bool building_t::ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const {

@@ -810,6 +810,10 @@ void ped_manager_t::next_frame() {
 	}
 	for (auto i = peds.begin(); i != peds.end(); ++i) {i->next_frame(*this, peds, (i - peds.begin()), rgen, delta_dir);}
 	if (need_to_sort_peds) {sort_by_city_and_plot();}
+
+	if (!peds_b.empty()) { // TODO: move people in buildings
+		//for (auto i = peds_b.begin(); i != peds_b.end(); ++i) {i->next_frame(...);}
+	}
 	first_frame = 0;
 }
 

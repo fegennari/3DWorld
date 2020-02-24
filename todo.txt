@@ -15,7 +15,9 @@ Cities:
 * Better ambient occlusion
 
 * Building interiors:
+  * Indirect lighting
+    * Compute in background thread, prioritize nearby lights on same floor as player
+  * Moving people with collision detection and path finding
   * Place more room objects/furniture
   - Working elevators
   - Interiors for city office towers
-  - Indirect lighting
