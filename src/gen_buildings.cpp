@@ -1320,6 +1320,20 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	} // for i
 }
 
+void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
+	if (!interior || is_house || real_num_parts == 1) return; // no a stacked case
+
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		if (i->z2() == bcube.z2()) continue; // skip top roof
+
+		if (clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) {
+			for (auto c = bdraw.temp_cubes.begin(); c != bdraw.temp_cubes.end(); ++c) { // add floors after removing stairwells
+				bdraw.add_section(*this, parts, *c, tid_nm_pair_t(), BLACK, 4, 1, 0, 1, 0); // only Z dim
+			}
+		}
+	}
+}
+
 
 struct building_lights_manager_t : public city_lights_manager_t {
 	void setup_building_lights(vector3d const &xlate) {
@@ -1769,6 +1783,7 @@ public:
 		point const camera_xlated(get_camera_pos() - xlate);
 		vector<point> points; // reused temporary
 		vect_cube_t ped_bcubes; // likely not needed, maybe only in rare cases
+		building_draw_t roof_parts_draw;
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -1782,6 +1797,7 @@ public:
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
+						b.add_split_roof_shadow_quads(roof_parts_draw);
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						b.gen_and_draw_room_geom(s, ped_bcubes, bi->ix, ped_ix, 1); // shadow_only=1
 						g->has_room_geom = 1; // do we need to set this?
@@ -1796,6 +1812,7 @@ public:
 				(*i)->building_draw_vbo.draw(s, 1);
 			}
 		} // for i
+		roof_parts_draw.draw(s, 1, 1, 1);
 		if (interior_shadow_maps) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
 		fgPopMatrix();

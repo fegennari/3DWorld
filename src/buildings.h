@@ -381,6 +381,7 @@ struct building_t : public building_geom_t {
 	bool find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube);
 	void gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only);
+	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const;
