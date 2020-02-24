@@ -126,7 +126,6 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 			if (c->type == TYPE_TABLE) {cc.back().z1() += 0.85*c->dz();} // at least be a bit more accurate for tables by using only the top
 		}
 	}
-	//cout << TXT(interior->room_geom->objs.size()) << TXT(interior->room_geom->stairs_start) << TXT(cc.size()) << endl;
 }
 
 void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, cube_bvh_t const &bvh, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const {
@@ -168,7 +167,7 @@ void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
 
 	if (!has_room_geom()) return; // error?
 	timer_t timer("Ray Cast Building");
-	vector<room_object_t> &objs(interior->room_geom->objs);
+	vector<room_object_t> const &objs(interior->room_geom->objs);
 	unsigned const objs_size(interior->room_geom->stairs_start); // skip stairs
 	assert(objs_size <= objs.size());
 	std::atomic<unsigned> count(0);
