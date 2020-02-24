@@ -283,7 +283,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							cube_t side_room(end_room); // next to end_room
 							side_room.d[min_dim][ d] = side_room_split;
 							side_room.d[min_dim][!d] = hall_wall_pos[d];
-							add_room(side_room, part_id, 1, 0, 1); // TODO: split this into multiple rooms if there's space?
+							add_room(side_room, part_id, 1, 0, 1); // split this into multiple rooms if there's space? seems like there usually isn't
 							float const door_pos[2] = {0.5f*(other_edge + offset_outer), 0.5f*(offset_outer + offset_inner)};
 
 							for (unsigned n = 0; n < 2; ++n) { // add doors for corner room and side room on each side of long_swall
