@@ -195,10 +195,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					float const hall_offset(room_len); // outer edge of hallway to building exterior on each end
 					bool const add_doors_to_main_wall(rgen.rand_bool());
 					unsigned const num_cent_rooms(num_rooms - 2); // skip the rooms on each side
-					assert(num_cent_rooms > 0);
+					unsigned const num_doors_inner_rooms(add_doors_to_main_wall ? 3U : 2U);
 					unsigned const num_offices(4*(num_cent_rooms + 4)); // X/Y mirror symmetry
-					//hall_walls.reserve(14); // long dim (along hall dir) TODO: update after adding rooms/doors
-					//room_walls.reserve(8); // short dim TODO: update after adding rooms/doors
+					assert(num_cent_rooms > 0);
+					hall_walls.reserve(2*(11 + num_doors_inner_rooms*num_cent_rooms)); // long dim (along hall dir)
+					room_walls.reserve(2*(10 + 2*num_cent_rooms)); // short dim
 					interior->rooms.reserve(num_offices + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
 					interior->doors.reserve(num_offices + 2*add_doors_to_main_wall*num_cent_rooms + 4); // at least one per office
 
@@ -305,7 +306,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								float const door_pos(0.5f*(start_pos + next_pos)), lo_pos(door_pos - doorway_hwidth), hi_pos(door_pos + doorway_hwidth);
 								cube_t *to_split[3] = {&long_swall, &short_swall, &main_wall};
 
-								for (unsigned n = 0; n < (add_doors_to_main_wall ? 3U : 2U); ++n) {
+								for (unsigned n = 0; n < num_doors_inner_rooms; ++n) {
 									insert_door_in_wall_and_add_seg(*to_split[n], lo_pos, hi_pos, !min_dim, (d^(n&1)), 1, hall_walls, interior->doors);
 								}
 							}
