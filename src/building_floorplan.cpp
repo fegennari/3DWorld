@@ -682,7 +682,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			elevator_t elevator(room, long_dim, rgen.rand_bool(), rgen.rand_bool()); // elevator shaft
 			elevator.x1() = center.x - 0.5*ewidth; elevator.x2() = center.x + 0.5*ewidth;
 			elevator.y1() = center.y - 0.5*ewidth; elevator.y2() = center.y + 0.5*ewidth;
-			interior->elevators.push_back(elevator);
+			add_or_extend_elevator(elevator, 1);
 			room.has_elevator = 1;
 			elevator_cut      = elevator;
 			stairs.translate_dim(-center_shift, long_dim); // shift stairs in the opposite direction
@@ -726,7 +726,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							elevator.d[1][!y] = elevator.d[1][y] + (y ? -ewidth : ewidth);
 							elevator.expand_by_xy(-0.01*ewidth); // shrink to leave a small gap between the outer wall to prevent z-fighting
 							if (is_cube_close_to_doorway(elevator)) continue; // try again
-							interior->elevators.push_back(elevator);
+							add_or_extend_elevator(elevator, 1);
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
 						} // for x
@@ -983,6 +983,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			holes.clear();
 			subtract_cube_from_cubes(extension, interior->ceilings);
 			subtract_cube_from_cubes(extension, interior->floors, &holes); // capture holes from floors
+			if (is_above) {add_or_extend_elevator(*e, 0);} // extend only
 			
 			for (auto h = holes.begin(); h != holes.end(); ++h) {
 				landing_t landing(*h, 1, e->dim, e->dir);
@@ -1012,4 +1013,23 @@ void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lig
 	cube_t const &part(parts[part_id]);
 	for (unsigned d = 0; d < 4; ++d) {r.ext_sides |= (unsigned(room.d[d>>1][d&1] == part.d[d>>1][d&1]) << d);} // find exterior sides
 	interior->rooms.push_back(r);
+}
+
+void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
+	if (add) {interior->elevators.push_back(elevator);}
+	if (!roof_tquads.empty()) return; // sloped roof, not flat, can't add elevator cap
+	float const window_vspacing(get_material().get_floor_spacing());
+	cube_t ecap(elevator);
+	ecap.z1()  = elevator.z2();
+	ecap.z2() += 0.25*window_vspacing; // set height
+	ecap.expand_by_xy(0.1*window_vspacing);
+	
+	// check to see if the elevator is at the top of the building
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (p->z1() != elevator.z2()) continue; // not on top of the elevator
+		if (p->intersects(ecap)) return; // part over elevator - should we add some sort of cap in this case, or block off the first floor, or add something to the interior?
+	}
+	if (details.empty()) {detail_color = roof_color;} // no other details, use roof color
+	details.insert(details.begin(), ecap); // insert at the front so that it's not confused with the antenna
+	max_eq(bcube.z2(), ecap.z2()); // extend bcube z2 to contain ecap
 }
