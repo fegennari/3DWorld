@@ -394,7 +394,7 @@ private:
 	cube_t get_part_containing_pt(point const &pt) const;
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float dmin=0.0f) const;
-	bool is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad) const;
+	bool is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad, bool check_walls=1) const;
 	bool clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const;
 	void add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office);
 	void add_or_extend_elevator(elevator_t const &elevator, bool add);

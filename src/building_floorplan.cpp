@@ -834,9 +834,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
 }
 
-bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad) const {
+bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad, bool check_walls) const {
 	if (is_cube_close_to_doorway(c, stairs_pad)) return 0; // bad
 	if (interior->is_blocked_by_stairs_or_elevator(c, door_pad)) return 0; // bad
+	if (!check_walls) return 1;
 
 	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
 	for (unsigned d = 0; d < 2; ++d) {
@@ -977,7 +978,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cube_t cand_test(extension);
 			cand_test.z1() += fc_thick; cand_test.z2() -= fc_thick; // shrink slightly in Z so that we don't intersect the original elevator *e
 			cand_test.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
-			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, doorway_width)) continue; // bad placement
+			bool const allow_clip_walls(1); // optional
+			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, doorway_width, !allow_clip_walls)) continue; // bad placement
 			min_eq(e->z1(), extension.z1()); max_eq(e->z2(), extension.z2()); // perform extension in Z
 			extension.z1() -= fc_thick; extension.z2() += fc_thick; // also cut a hole in the lower ceiling/upper floor
 			holes.clear();
@@ -985,6 +987,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			subtract_cube_from_cubes(extension, interior->floors, &holes); // capture holes from floors
 			if (is_above) {add_or_extend_elevator(*e, 0);} // extend only
 			
+			if (allow_clip_walls) { // clip out walls around extended elevator
+				for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(*e, interior->walls[d]);}
+			}
 			for (auto h = holes.begin(); h != holes.end(); ++h) {
 				landing_t landing(*h, 1, e->dim, e->dir);
 				landing.z1() -= fc_thick; // since we only captured floor cutouts, extend them downward to include the ceiling below
