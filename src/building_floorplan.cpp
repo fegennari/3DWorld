@@ -770,7 +770,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					assert(cutout.is_strictly_normalized());
 					stairs_cut      = cutout;
 					room.has_stairs = 1;
-					//room.no_geom    = 1;
+					if (use_hallway || !pri_hall.is_all_zeros()) {room.no_geom = 1;} // no geom in an office with stairs for buildings with hallways
 				}
 				break; // success - done
 			} // for n

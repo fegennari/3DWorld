@@ -1407,10 +1407,20 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			room_center.z = z + fc_thick; // floor height
-			bool const top_floor(f+1 == num_floors), top_of_stairs(r->has_stairs && top_floor);
-			bool const check_stairs(!is_house && parts.size() > 1 && top_floor); // top floor of building that may have stairs connecting to upper stack
-			bool is_lit(0), light_dim(room_dim);
-			if (top_of_stairs || check_stairs) {num_light_stacks += num_lights_added;} // thse cases may shift the light, so we allocate a new stack
+			bool const top_floor(f+1 == num_floors), check_stairs(!is_house && parts.size() > 1 && top_floor); // top floor of building that may have stairs connecting to upper stack
+			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs);
+
+			if (!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) { // check for stairwells connecting stacked parts
+				for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
+					if (!r->contains_cube_xy(*s)) continue; // stairs not in this room
+					// Note: here we adjust stairs zval by floor_thickness to include stairs in the floor but not in the room above
+					if (s->z1() + floor_thickness > r->z2()) continue; // stairs above the room
+					if (s->z2() + floor_thickness < r->z1()) continue; // stairs below the room
+					has_stairs = 1;
+				}
+			}
+			bool const top_of_stairs(has_stairs && top_floor);
+			if (top_of_stairs || check_stairs) {num_light_stacks += num_lights_added;} // these cases may shift the light, so we allocate a new stack
 			cube_t light;
 			if (!blocked_by_stairs || top_of_stairs) {light = pri_light;}
 			else if (use_sec_light) {light = sec_light; light_dim ^= 1;}
@@ -1428,16 +1438,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				unsigned char flags(RO_FLAG_NOCOLL); // no collision detection with lights
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
-				if (r->has_stairs) {flags |= RO_FLAG_RSTAIRS;}
-				else if ((f == 0 || top_floor) && interior->stairwells.size() > 1) { // check for stairwells connecting stacked parts
-					for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
-						if (!r->contains_cube_xy(*s)) continue; // stairs not in this room
-						// Note: here we adjust stairs zval by floor_thickness to include stairs in the floor but not in the room above
-						if (s->z1() + floor_thickness > r->z2()) continue; // stairs above the room
-						if (s->z2() + floor_thickness < r->z1()) continue; // stairs below the room
-						flags |= RO_FLAG_RSTAIRS;
-					}
-				}
+				if (has_stairs)    {flags |= RO_FLAG_RSTAIRS;}
 				colorRGBA color;
 				if (is_house) {color = colorRGBA(1.0, 1.0, 0.85);} // house - yellowish
 				else if (r->is_hallway || r->is_office) {color = colorRGBA(0.85, 0.85, 1.0);} // office building - blueish
@@ -1486,6 +1487,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
 			if (r->no_geom) continue; // no other geometry for this room
+			if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building rooms that have stairs
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 
