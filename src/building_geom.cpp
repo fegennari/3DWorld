@@ -1198,16 +1198,20 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT);
-	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
 	bool const add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
+	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
+	unsigned const num_ac_units((flat_roof && is_cube()) ? (rgen.rand() % 4) : 0); // cube buildings only for now
 	has_antenna = (rgen.rand() & 1);
-	details.resize(num_blocks + 4*add_walls + has_antenna);
+	details.resize(num_blocks + num_ac_units + 4*add_walls + has_antenna);
 	assert(!parts.empty());
 	if (details.empty()) return; // nothing to do
 	cube_t const &top(parts.back()); // top/last part
+	float const window_vspacing(get_material().get_floor_spacing());
+	float const xy_sz(top.get_size().xy_mag()), wall_width(0.2*window_vspacing);
+	cube_t bounds(top);
+	if (add_walls) {bounds.expand_by(-wall_width);}
 
 	if (num_blocks > 0) {
-		float const xy_sz(top.get_size().xy_mag());
 		vector<point> points; // reused across calls
 
 		for (unsigned i = 0; i < num_blocks; ++i) {
@@ -1217,9 +1221,9 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 			float const height(height_scale*rgen.rand_uniform(1.0, 4.0));
 
 			while (1) {
-				c.set_from_point(point(rgen.rand_uniform(top.x1(), top.x2()), rgen.rand_uniform(top.y1(), top.y2()), 0.0));
+				c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
 				c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.08), xy_sz*rgen.rand_uniform(0.01, 0.06), 0.0));
-				if (!top.contains_cube_xy(c)) continue; // not contained
+				if (!bounds.contains_cube_xy(c)) continue; // not contained
 				if (is_simple_cube()) break; // success/done
 				bool contained(1);
 
@@ -1229,18 +1233,35 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 				}
 				if (contained) break; // success/done
 			} // end while
-			c.z1() = top.z2(); // z1
-			c.z2() = top.z2() + height; // z2
+			c.z2() += height; // z2
 		} // for i
 	}
+	if (num_ac_units > 0) {
+		float const sz_scale(xy_sz*rgen.rand_uniform(0.012, 0.02));
+		vector3d cube_sz(sz_scale, 1.5*sz_scale, 1.2*sz_scale); // consistent across all AC units (note that x and y will be doubled)
+		if (rgen.rand_bool()) {swap(cube_sz.x, cube_sz.y);} // other orientation
+
+		for (unsigned i = 0; i < num_ac_units; ++i) {
+			roof_obj_t &c(details[num_blocks + i]);
+			c.type = ROOF_OBJ_AC;
+
+			while (1) {
+				c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
+				c.expand_by_xy(cube_sz);
+				if (!bounds.contains_cube_xy(c)) continue; // not contained
+				break; // success
+			}
+			c.z2() += cube_sz.z; // z2
+		} // for n
+	}
 	if (add_walls) { // add walls around the roof; we don't need to draw all sides of all cubes, but it's probably not worth the trouble to sort it out
-		float const window_vspacing(get_material().get_floor_spacing());
-		float const height(0.4*window_vspacing), width(0.2*window_vspacing), z1(top.z2()), z2(top.z2()+height);
-		details[num_blocks+0] = cube_t(top.x1(), top.x2(), top.y1(), top.y1()+width, z1, z2);
-		details[num_blocks+1] = cube_t(top.x1(), top.x2(), top.y2()-width, top.y2(), z1, z2);
-		details[num_blocks+2] = cube_t(top.x1(), top.x1()+width, top.y1()+width, top.y2()-width, z1, z2);
-		details[num_blocks+3] = cube_t(top.x2()-width, top.x2(), top.y1()+width, top.y2()-width, z1, z2);
-		for (unsigned n = 0; n < 4; ++n) {details[num_blocks+n].type = ROOF_OBJ_WALL;}
+		float const height(0.4*window_vspacing), width(wall_width), z1(top.z2()), z2(top.z2()+height);
+		unsigned const start(num_blocks + num_ac_units);
+		details[start+0] = cube_t(top.x1(), top.x2(), top.y1(), top.y1()+width, z1, z2);
+		details[start+1] = cube_t(top.x1(), top.x2(), top.y2()-width, top.y2(), z1, z2);
+		details[start+2] = cube_t(top.x1(), top.x1()+width, top.y1()+width, top.y2()-width, z1, z2);
+		details[start+3] = cube_t(top.x2()-width, top.x2(), top.y1()+width, top.y2()-width, z1, z2);
+		for (unsigned n = 0; n < 4; ++n) {details[start+n].type = ROOF_OBJ_WALL;}
 	}
 	if (has_antenna) { // add antenna
 		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.dx() + top.dy()));

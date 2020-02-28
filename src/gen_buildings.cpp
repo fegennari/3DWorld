@@ -350,21 +350,20 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
 
 
 class building_texture_mgr_t {
-	int window_tid, hdoor_tid, bdoor_tid;
+	int window_tid, hdoor_tid, bdoor_tid, ac_unit_tid;
+
+	int ensure_tid(int &tid, const char *name) {
+		if (tid < 0) {tid = get_texture_by_name(name);}
+		if (tid < 0) {tid = WHITE_TEX;} // failed to load texture - use a simple white texture
+		return tid;
+	}
 public:
-	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1) {}
-	int get_window_tid() const {return window_tid;}
-	
-	int get_hdoor_tid() { // house door
-		if (hdoor_tid < 0) {hdoor_tid = get_texture_by_name("textures/white_door.jpg");}
-		if (hdoor_tid < 0) {hdoor_tid = WHITE_TEX;} // failed to load door texture - use a simple white texture
-		return hdoor_tid;
-	}
-	int get_bdoor_tid() { // building door
-		if (bdoor_tid < 0) {bdoor_tid = get_texture_by_name("textures/buildings/building_door.jpg");}
-		if (bdoor_tid < 0) {bdoor_tid = WHITE_TEX;} // failed to load door texture - use a simple white texture
-		return bdoor_tid;
-	}
+	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), ac_unit_tid(-1) {}
+	int get_window_tid () const {return window_tid;}
+	int get_hdoor_tid  () {return ensure_tid(hdoor_tid,   "textures/white_door.jpg");} // house door
+	int get_bdoor_tid  () {return ensure_tid(bdoor_tid,   "textures/buildings/building_door.jpg");} // building door
+	int get_ac_unit_tid() {return ensure_tid(ac_unit_tid, "textures/buildings/AC_unit1.jpg");} // AC unit
+
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
 		if (window_tid >= 0) return 1; // already generated
@@ -395,6 +394,7 @@ public:
 		register_tid(building_texture_mgr.get_window_tid());
 		register_tid(building_texture_mgr.get_hdoor_tid());
 		register_tid(building_texture_mgr.get_bdoor_tid());
+		register_tid(building_texture_mgr.get_ac_unit_tid());
 		register_tid(FENCE_TEX); // for elevators
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
@@ -1048,7 +1048,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				color = side_color;
 			}
 			else if (i->type == ROOF_OBJ_AC) {
-				// TODO: add AC unit texture
+				tex = tid_nm_pair_t(building_texture_mgr.get_ac_unit_tid(), -1, 8.0, 8.0); // TODO: set correct texture scale
 				color = WHITE;
 			}
 			else { // otherwise use roof color
