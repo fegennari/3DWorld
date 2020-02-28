@@ -858,8 +858,8 @@ void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsign
 	assert(ix < prev_sz);
 	cube_t const c(cubes[ix]); // deep copy - reference will become invalid
 	subtract_cube_from_cube(c, s, cubes);
-	assert(cubes.size() > prev_sz); // must have added at least one cube
-	cubes[ix] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes
+	//assert(cubes.size() > prev_sz); // must have added at least one cube
+	cubes[ix] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes (or move the last cube here if there are no output cubes)
 }
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2) { // XY only
 	out.clear();
@@ -883,7 +883,7 @@ void subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *
 
 	for (unsigned i = 0; i < num_cubes; ++i) {
 		cube_t const &c(cubes[i]);
-		if (!c.intersects(s)) continue; // keep it
+		if (!c.intersects_no_adj(s)) continue; // keep it
 		if (holes) {holes->push_back(c); holes->back().intersect_with_cube(s);}
 		subtract_cube_from_cube_inplace(s, cubes, i); // Note: invalidates c reference
 	}
@@ -898,11 +898,11 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 	for (unsigned i = 0; i < fsz; ++i) {
 		cube_t const &cur(fs[i]);
 		if (cur.z1() > c.z2() || cur.z2() < c.z1()) continue; // no z overlap
-		if (cur.intersects(c)) {subtract_cube_from_cube_inplace(c, fs, i);} // Note: invalidates cur reference
+		if (cur.intersects_no_adj(c)) {subtract_cube_from_cube_inplace(c, fs, i);} // Note: invalidates cur reference
 	}
 }
 
-void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) {
+void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically
 
 	float const window_vspacing(get_material().get_floor_spacing()), fc_thick(0.5*FLOOR_THICK_VAL*window_vspacing);
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
@@ -950,7 +950,13 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				}
 				cube_t cand_test(cand);
 				cand_test.z1() += 0.5*window_vspacing; cand_test.z2() += 0.5*window_vspacing; // move up a bit so that it intersects exactly the floor below and the floor above
-				if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, stairs_pad)) continue; // bad placement
+				bool const allow_clip_walls = 0; // optional
+				if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, stairs_pad, !allow_clip_walls)) continue; // bad placement
+
+				if (allow_clip_walls) { // clip out walls around stairs
+					// TODO: in this case, we only want to clip the walls on the top/bottom floor - maybe adjust zval of any intersecting wall?
+					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(cand_test, interior->walls[d]);}
+				}
 				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
 				unsigned const stairs_shape(0); // straight, for now
 				landing_t landing(cand, 0, dim, 0, stairs_shape); // dir is unused and set to 0
@@ -978,18 +984,20 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cube_t cand_test(extension);
 			cand_test.z1() += fc_thick; cand_test.z2() -= fc_thick; // shrink slightly in Z so that we don't intersect the original elevator *e
 			cand_test.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
-			bool const allow_clip_walls(1); // optional
+			bool const allow_clip_walls = 1; // optional
 			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, doorway_width, !allow_clip_walls)) continue; // bad placement
+
+			if (allow_clip_walls) { // clip out walls around extended elevator
+				for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(cand_test, interior->walls[d]);}
+			}
 			min_eq(e->z1(), extension.z1()); max_eq(e->z2(), extension.z2()); // perform extension in Z
-			extension.z1() -= fc_thick; extension.z2() += fc_thick; // also cut a hole in the lower ceiling/upper floor
+			float const shift((is_above ? -1.1 : 1.1)*fc_thick);
+			extension.z1() += shift; extension.z2() += shift; // also cut a hole in the lower ceiling/upper floor
 			holes.clear();
 			subtract_cube_from_cubes(extension, interior->ceilings);
 			subtract_cube_from_cubes(extension, interior->floors, &holes); // capture holes from floors
 			if (is_above) {add_or_extend_elevator(*e, 0);} // extend only
 			
-			if (allow_clip_walls) { // clip out walls around extended elevator
-				for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(*e, interior->walls[d]);}
-			}
 			for (auto h = holes.begin(); h != holes.end(); ++h) {
 				landing_t landing(*h, 1, e->dim, e->dir);
 				landing.z1() -= fc_thick; // since we only captured floor cutouts, extend them downward to include the ceiling below
