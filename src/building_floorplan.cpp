@@ -1030,7 +1030,7 @@ void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lig
 
 void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 	if (add) {interior->elevators.push_back(elevator);}
-	if (!roof_tquads.empty()) return; // sloped roof, not flat, can't add elevator cap
+	if (roof_type != ROOF_TYPE_FLAT) return; // sloped roof, not flat, can't add elevator cap
 	float const window_vspacing(get_material().get_floor_spacing());
 	cube_t ecap(elevator);
 	ecap.z1()  = elevator.z2();

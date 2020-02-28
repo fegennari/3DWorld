@@ -1021,6 +1021,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_CCAP); // tag as chimney cap
 		has_chimney = 1;
 	}
+	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 }
@@ -1196,8 +1197,9 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 
 void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
-	unsigned const num_blocks(roof_tquads.empty() ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
-	bool const add_walls(is_simple_cube() && roof_tquads.empty()); // simple cube buildings with flat roofs
+	bool const flat_roof(roof_type == ROOF_TYPE_FLAT);
+	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
+	bool const add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	has_antenna = (rgen.rand() & 1);
 	details.resize(num_blocks + 4*add_walls + has_antenna);
 	assert(!parts.empty());
@@ -1251,13 +1253,14 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		antenna.z2() = bcube.z2() + height; // z2 (use bcube to include sloped roof)
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) {max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
-	if (roof_tquads.empty()) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
+	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }
 
 void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supported for rotated buildings
 
 	assert(!parts.empty());
 	if (!is_simple_cube()) return; // only simple cubes are handled
+	// TODO: add dome or onion roof here
 	cube_t const &top(parts.back()); // top/last part
 	float const peak_height(rgen.rand_uniform(0.2, 0.5));
 	float const wmin(min(top.dx(), top.dy())), z1(top.z2()), z2(z1 + peak_height*wmin), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
@@ -1285,6 +1288,7 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supp
 			UNROLL_4X(roof_tquads[n].pts[i_] = pts2[ixs[n][i_]];)
 		}
 	}
+	roof_type = ROOF_TYPE_SLOPE;
 	add_roof_to_bcube(); // is max_eq(bcube.z2(), z2) good enough?
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for antenna and roof
 }
