@@ -349,10 +349,10 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
 }
 
 
-class building_window_gen_t { // and doors?
+class building_texture_mgr_t {
 	int window_tid, hdoor_tid, bdoor_tid;
 public:
-	building_window_gen_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1) {}
+	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1) {}
 	int get_window_tid() const {return window_tid;}
 	
 	int get_hdoor_tid() { // house door
@@ -373,7 +373,7 @@ public:
 		return 1;
 	}
 };
-building_window_gen_t building_window_gen;
+building_texture_mgr_t building_texture_mgr;
 
 
 class texture_id_mapper_t {
@@ -392,9 +392,9 @@ public:
 	void init() {
 		if (!tid_to_slot_ix.empty()) return; // already inited
 		tid_to_slot_ix.push_back(0); // untextured case
-		register_tid(building_window_gen.get_window_tid());
-		register_tid(building_window_gen.get_hdoor_tid());
-		register_tid(building_window_gen.get_bdoor_tid());
+		register_tid(building_texture_mgr.get_window_tid());
+		register_tid(building_texture_mgr.get_hdoor_tid());
+		register_tid(building_texture_mgr.get_bdoor_tid());
 		register_tid(FENCE_TEX); // for elevators
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
@@ -999,7 +999,7 @@ public:
 // *** Drawing ***
 
 int get_building_ext_door_tid(unsigned type) {
-	return ((type == tquad_with_ix_t::TYPE_BDOOR) ? building_window_gen.get_bdoor_tid() : building_window_gen.get_hdoor_tid());
+	return ((type == tquad_with_ix_t::TYPE_BDOOR) ? building_texture_mgr.get_bdoor_tid() : building_texture_mgr.get_hdoor_tid());
 }
 
 void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) {
@@ -1134,7 +1134,7 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, bool
 
 	float const ty(exterior ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
-	int const tid((exterior && !is_house) ? building_window_gen.get_bdoor_tid() : building_window_gen.get_hdoor_tid());
+	int const tid((exterior && !is_house) ? building_texture_mgr.get_bdoor_tid() : building_texture_mgr.get_hdoor_tid());
 	float const thickness(0.02*D.get_sz_dim(!dim));
 	unsigned const num_sides((exterior && !is_house) ? 2 : 1); // double doors for office building exterior door
 	tid_nm_pair_t const tp(tid, -1, 1.0f/num_sides, ty);
@@ -1174,7 +1174,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (!is_valid() || !global_building_params.windows_enabled()) return; // invalid building or no windows
 	building_mat_t const &mat(get_material());
 	if (lights_pass ? !mat.add_wind_lights : !mat.add_windows) return; // no windows for this material
-	int const window_tid(building_window_gen.get_window_tid());
+	int const window_tid(building_texture_mgr.get_window_tid());
 	if (window_tid < 0) return; // not allocated - error?
 	if (mat.wind_xscale == 0.0 || mat.wind_yscale == 0.0) return; // no windows for this material?
 	tid_nm_pair_t tex(window_tid, -1, mat.get_window_tx(), mat.get_window_ty(), mat.wind_xoff, mat.wind_yoff);
@@ -2303,7 +2303,7 @@ public:
 				building_draw_interior.reserve_verts(mat.floor_tex, 4*num_floors); // top surface only
 				building_draw_interior.reserve_verts(mat.ceil_tex,  4*num_ceils ); // bottom surface only
 				building_draw_interior.reserve_verts(mat.wall_tex, (16*num_walls + 36*num_elevators)); // X/Y surfaces (4 quads) + elevators (9 quads)
-				building_draw_interior.reserve_verts(tid_nm_pair_t(building_window_gen.get_hdoor_tid()), 8*num_doors ); // doors
+				building_draw_interior.reserve_verts(tid_nm_pair_t(building_texture_mgr.get_hdoor_tid()), 8*num_doors ); // doors
 				building_draw_interior.reserve_verts(tid_nm_pair_t(WHITE_TEX),  8*num_doors ); // door edges (2 quads per door)
 				building_draw_interior.reserve_verts(tid_nm_pair_t(FENCE_TEX), 12*num_doors ); // elevators  (3 quads per elevator)
 				// generate vertex data
@@ -2322,7 +2322,7 @@ public:
 		} // for pass
 	}
 	void create_vbos(bool is_tile) { // Note: non-const; building_draw is modified
-		building_window_gen.check_windows_texture();
+		building_texture_mgr.check_windows_texture();
 		tid_mapper.init();
 		timer_t timer("Create Building VBOs", !is_tile);
 		get_all_drawn_verts();
@@ -2342,7 +2342,7 @@ public:
 	}
 	void ensure_window_lights_vbos() {
 		if (!building_draw_wind_lights.empty()) return; // already calculated
-		building_window_gen.check_windows_texture();
+		building_texture_mgr.check_windows_texture();
 		get_all_window_verts(building_draw_wind_lights, 1);
 		building_draw_wind_lights.upload_to_vbos();
 	}
