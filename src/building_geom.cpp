@@ -778,7 +778,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	float const door_shift(0.01*get_material().get_floor_spacing());
 	bool const calc_center(door_center == 0.0); // door not yet calculated
-	bool const centered(door_center_shift == 0.0 || hallway_dim == (unsigned char)dim); // center doors connected to primary hallways
+	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
 	cube_t door;
 	door.z1() = base.z1(); // same bottom as house
 	door.z2() = door.z1() + door_height;
@@ -1437,7 +1437,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (!p->intersects_xy(*r)) continue; // person not in this room
 					if (p->z2() < light.z1() && p->z1() + window_vspacing > light.z2()) {is_lit = 1;} // on this floor
 				}
-				unsigned char flags(RO_FLAG_NOCOLL); // no collision detection with lights
+				uint8_t flags(RO_FLAG_NOCOLL); // no collision detection with lights
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
 				if (has_stairs)    {flags |= RO_FLAG_RSTAIRS;}

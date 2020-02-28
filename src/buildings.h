@@ -142,7 +142,7 @@ class building_draw_t;
 
 struct building_geom_t { // describes the physical shape of a building
 	unsigned num_sides;
-	unsigned char door_sides[4]; // bit mask for 4 door sides, one per base part
+	uint8_t door_sides[4]; // bit mask for 4 door sides, one per base part
 	bool half_offset, is_pointed;
 	float rot_sin, rot_cos, flat_side_amt, alt_step_factor, start_angle; // rotation in XY plane, around Z (up) axis
 	//float roof_recess;
@@ -181,11 +181,11 @@ enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEV
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U};
 
 // object flags, currently used for room lights
-unsigned char const RO_FLAG_LIT     = 0x01; // light is on
-unsigned char const RO_FLAG_TOS     = 0x02; // at top of stairs
-unsigned char const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
-unsigned char const RO_FLAG_INVIS   = 0x08; // invisible
-unsigned char const RO_FLAG_NOCOLL  = 0x10; // no collision detection
+uint8_t const RO_FLAG_LIT     = 0x01; // light is on
+uint8_t const RO_FLAG_TOS     = 0x02; // at top of stairs
+uint8_t const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
+uint8_t const RO_FLAG_INVIS   = 0x08; // invisible
+uint8_t const RO_FLAG_NOCOLL  = 0x10; // no collision detection
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
@@ -197,8 +197,8 @@ struct room_object_t : public cube_t {
 	colorRGBA color;
 
 	room_object_t() : dim(0), dir(0), flags(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
-	room_object_t(cube_t const &c, room_object type_, unsigned char rid,
-		bool dim_=0, bool dir_=0, unsigned char f=0, float light=1.0, room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
+	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, uint8_t f=0, float light=1.0,
+		room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
 		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_) {}
 	bool is_lit    () const {return (flags & RO_FLAG_LIT);}
 	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
@@ -285,9 +285,9 @@ enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC}
 enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_DOME, ROOF_TYPE_ONION};
 
 struct roof_obj_t : public cube_t {
-	unsigned char type;
+	uint8_t type;
 	roof_obj_t() : type(ROOF_OBJ_BLOCK) {}
-	roof_obj_t(cube_t const &c, unsigned char type_=ROOF_OBJ_BLOCK) : cube_t(c), type(type_) {}
+	roof_obj_t(cube_t const &c, uint8_t type_=ROOF_OBJ_BLOCK) : cube_t(c), type(type_) {}
 };
 typedef vector<roof_obj_t> vect_roof_obj_t;
 
