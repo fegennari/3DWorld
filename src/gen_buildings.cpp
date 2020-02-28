@@ -1037,9 +1037,25 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_tquad(*this, *i, bcube, (is_wall_tex ? mat.side_tex : mat.roof_tex), (is_wall_tex ? side_color : roof_color)); // use type to select roof vs. side texture
 		}
 		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
-			building_t b(building_geom_t(4, rot_sin, rot_cos, (has_antenna && i+1 == details.end()))); // cube; draw antenna as a point
+			bool const pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
+			building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
 			b.bcube = bcube;
-			bdraw.add_section(b, empty_vc, *i, mat.roof_tex.get_scaled_version(0.5), detail_color*(b.is_pointed ? 0.5 : 1.0), 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
+			tid_nm_pair_t tex;
+			colorRGBA color;
+
+			if (i->type == ROOF_OBJ_WALL && mat.add_windows) { // wall of brick/block building, use side color
+				tex   = mat.side_tex;
+				color = side_color;
+			}
+			else if (i->type == ROOF_OBJ_AC) {
+				// TODO: add AC unit texture
+				color = WHITE;
+			}
+			else { // otherwise use roof color
+				tex   = mat.roof_tex.get_scaled_version(0.5);
+				color = detail_color*(pointed ? 0.5 : 1.0);
+			}
+			bdraw.add_section(b, empty_vc, *i, tex, color, 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
 		}
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), WHITE);

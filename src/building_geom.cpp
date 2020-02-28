@@ -1209,7 +1209,8 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		vector<point> points; // reused across calls
 
 		for (unsigned i = 0; i < num_blocks; ++i) {
-			cube_t &c(details[i]);
+			roof_obj_t &c(details[i]);
+			c.type = ROOF_OBJ_BLOCK; // generic block
 			float const height_scale(0.0035f*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
 			float const height(height_scale*rgen.rand_uniform(1.0, 4.0));
 
@@ -1237,11 +1238,13 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		details[num_blocks+1] = cube_t(top.x1(), top.x2(), top.y2()-width, top.y2(), z1, z2);
 		details[num_blocks+2] = cube_t(top.x1(), top.x1()+width, top.y1()+width, top.y2()-width, z1, z2);
 		details[num_blocks+3] = cube_t(top.x2()-width, top.x2(), top.y1()+width, top.y2()-width, z1, z2);
+		for (unsigned n = 0; n < 4; ++n) {details[num_blocks+n].type = ROOF_OBJ_WALL;}
 	}
 	if (has_antenna) { // add antenna
 		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.dx() + top.dy()));
 		float const height(rgen.rand_uniform(0.25, 0.5)*top.dz());
-		cube_t &antenna(details.back());
+		roof_obj_t &antenna(details.back());
+		antenna.type = ROOF_OBJ_ANT;
 		antenna.set_from_point(top.get_cube_center());
 		antenna.expand_by(vector3d(radius, radius, 0.0));
 		antenna.z1() = top.z2(); // z1
@@ -1282,8 +1285,7 @@ void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supp
 			UNROLL_4X(roof_tquads[n].pts[i_] = pts2[ixs[n][i_]];)
 		}
 	}
-	add_roof_to_bcube();
-	//max_eq(bcube.z2(), z2);
+	add_roof_to_bcube(); // is max_eq(bcube.z2(), z2) good enough?
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for antenna and roof
 }
 

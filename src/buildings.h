@@ -281,6 +281,16 @@ struct door_t : public cube_t {
 };
 typedef vector<door_t> vect_door_t;
 
+enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC};
+enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_DOME, ROOF_TYPE_ONION};
+
+struct roof_obj_t : public cube_t {
+	unsigned char type;
+	roof_obj_t() : type(ROOF_OBJ_BLOCK) {}
+	roof_obj_t(cube_t const &c, unsigned char type_=ROOF_OBJ_BLOCK) : cube_t(c), type(type_) {}
+};
+typedef vector<roof_obj_t> vect_roof_obj_t;
+
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
 	vect_cube_t floors, ceilings, walls[2], stairwells; // walls are split by dim
@@ -314,7 +324,7 @@ struct building_t : public building_geom_t {
 	colorRGBA side_color, roof_color, detail_color;
 	cube_t bcube, pri_hall;
 	vect_cube_t parts;
-	vect_cube_t details; // cubes on the roof - antennas, AC units, etc.
+	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	std::shared_ptr<building_interior_t> interior;
 	vertex_range_t ext_side_qv_range;

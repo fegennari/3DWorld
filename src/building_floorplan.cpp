@@ -1035,6 +1035,6 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 		if (p->intersects(ecap)) return; // part over elevator - should we add some sort of cap in this case, or block off the first floor, or add something to the interior?
 	}
 	if (details.empty()) {detail_color = roof_color;} // no other details, use roof color
-	details.insert(details.begin(), ecap); // insert at the front so that it's not confused with the antenna
+	details.emplace_back(ecap, ROOF_OBJ_ECAP);
 	max_eq(bcube.z2(), ecap.z2()); // extend bcube z2 to contain ecap
 }
