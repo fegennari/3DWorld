@@ -350,7 +350,7 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
 
 
 class building_texture_mgr_t {
-	int window_tid, hdoor_tid, bdoor_tid, ac_unit_tid;
+	int window_tid, hdoor_tid, bdoor_tid, ac_unit_tid1, ac_unit_tid2;
 
 	int ensure_tid(int &tid, const char *name) {
 		if (tid < 0) {tid = get_texture_by_name(name);}
@@ -358,11 +358,12 @@ class building_texture_mgr_t {
 		return tid;
 	}
 public:
-	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), ac_unit_tid(-1) {}
-	int get_window_tid () const {return window_tid;}
-	int get_hdoor_tid  () {return ensure_tid(hdoor_tid,   "textures/white_door.jpg");} // house door
-	int get_bdoor_tid  () {return ensure_tid(bdoor_tid,   "textures/buildings/building_door.jpg");} // building door
-	int get_ac_unit_tid() {return ensure_tid(ac_unit_tid, "textures/buildings/AC_unit1.jpg");} // AC unit
+	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), ac_unit_tid1(-1), ac_unit_tid2(-1) {}
+	int get_window_tid  () const {return window_tid;}
+	int get_hdoor_tid   () {return ensure_tid(hdoor_tid,    "textures/white_door.jpg");} // house door
+	int get_bdoor_tid   () {return ensure_tid(bdoor_tid,    "textures/buildings/building_door.jpg");} // building door
+	int get_ac_unit_tid1() {return ensure_tid(ac_unit_tid1, "textures/buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
+	int get_ac_unit_tid2() {return ensure_tid(ac_unit_tid2, "textures/buildings/AC_unit2.jpg");} // AC unit
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -394,7 +395,8 @@ public:
 		register_tid(building_texture_mgr.get_window_tid());
 		register_tid(building_texture_mgr.get_hdoor_tid());
 		register_tid(building_texture_mgr.get_bdoor_tid());
-		register_tid(building_texture_mgr.get_ac_unit_tid());
+		register_tid(building_texture_mgr.get_ac_unit_tid1());
+		register_tid(building_texture_mgr.get_ac_unit_tid2());
 		register_tid(FENCE_TEX); // for elevators
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
@@ -466,6 +468,12 @@ texture_id_mapper_t tid_mapper;
 	vert.t[1] += tex.tyoff; \
 	if (apply_ao) {vert.copy_color(cw[pt.z > 0.5]);} \
 	if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
+	verts.push_back(vert);
+
+#define EMIT_VERTEX_SIMPLE() \
+	vert.v = pt*sz + llc; \
+	vert.t[ st] = tscale[ st]*pt[d]; \
+	vert.t[!st] = tscale[!st]*pt[i]; \
 	verts.push_back(vert);
 
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
@@ -773,7 +781,7 @@ public:
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
 		point const center(!bg.is_rotated() ? all_zeros : bg.bcube.get_cube_center()); // rotate about bounding cube / building center
-		vector3d const sz(cube.get_size());
+		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 
 		if (bg.num_sides != 4) { // not a cube, use cylinder
 			assert(door_ztop == 0.0); // not supported
@@ -785,7 +793,6 @@ public:
 		}
 		// else draw as a cube (optimized flow)
 		auto &verts(get_verts(tex, bg.is_pointed)); // bg.is_pointed ? tris : quads
-		vector3d const llc(cube.get_llc()); // move origin from center to min corner
 		vert_norm_comp_tc_color vert;
 		if (bg.is_pointed) {dim_mask &= 3;} // mask off z-dim since pointed objects (antenna) have no horizontal surfaces
 		float const tscale[2] = {2.0f*tex.tscale_x, 2.0f*tex.tscale_y}; // adjust for local vs. global space change
@@ -956,6 +963,36 @@ public:
 		} // for i
 	}
 
+	void add_cube(cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color, bool swap_txy, unsigned dim_mask, bool skip_bottom, bool skip_top) {
+		auto &verts(get_verts(tex));
+		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
+		vert_norm_comp_tc_color vert;
+		vert.set_c4(color);
+		float const tscale[2] = {tex.tscale_x, tex.tscale_y};
+
+		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+			unsigned const n((i+2)%3), d((i+1)%3), st(bool(i&1) ^ swap_txy); // n = dim of normal, i/d = other dims
+			if (!(dim_mask & (1<<n))) continue; // check for enabled dims
+
+			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+				if (skip_bottom && n == 2 && j == 0) continue; // skip bottom side
+				if (skip_top    && n == 2 && j == 1) continue; // skip top    side
+				vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
+				point pt; // parameteric position within cube in [vec3(0), vec3(1)]
+				pt[n] = j; // our cube face, in direction of normal
+				pt[d] = 0.0;
+				pt[i] = !j; // need to orient the vertices differently for each side
+				EMIT_VERTEX_SIMPLE(); // 0 !j
+				pt[i] = j;
+				EMIT_VERTEX_SIMPLE(); // 0 j
+				pt[d] = 1.0;
+				EMIT_VERTEX_SIMPLE(); // 1 j
+				pt[i] = !j;
+				EMIT_VERTEX_SIMPLE(); // 1 !j
+			} // for j
+		} // for i
+	}
+
 	unsigned num_verts() const {
 		unsigned num(0);
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {num += i->num_verts();}
@@ -1037,6 +1074,14 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_tquad(*this, *i, bcube, (is_wall_tex ? mat.side_tex : mat.roof_tex), (is_wall_tex ? side_color : roof_color)); // use type to select roof vs. side texture
 		}
 		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
+			if (i->type == ROOF_OBJ_AC) {
+				bool const swap_st(i->dx() > i->dy());
+				bool const tex_id((details.size() + parts.size() + mat_ix) & 1); // somewhat of a hash of various things; deterministic
+				int const ac_tid(tex_id ? building_texture_mgr.get_ac_unit_tid1() : building_texture_mgr.get_ac_unit_tid2());
+				bdraw.add_cube(*i, tid_nm_pair_t(ac_tid, -1, 1.0, 1.0), WHITE, swap_st, 4, 1, 0); // Z, skip bottom
+				bdraw.add_cube(*i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0); // XY with stretched texture
+				continue;
+			}
 			bool const pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
 			building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
 			b.bcube = bcube;
@@ -1046,10 +1091,6 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			if (i->type == ROOF_OBJ_WALL && mat.add_windows) { // wall of brick/block building, use side color
 				tex   = mat.side_tex;
 				color = side_color;
-			}
-			else if (i->type == ROOF_OBJ_AC) {
-				tex = tid_nm_pair_t(building_texture_mgr.get_ac_unit_tid(), -1, 8.0, 8.0); // TODO: set correct texture scale
-				color = WHITE;
 			}
 			else { // otherwise use roof color
 				tex   = mat.roof_tex.get_scaled_version(0.5);

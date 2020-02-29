@@ -1200,7 +1200,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT);
 	bool const add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
-	unsigned const num_ac_units((flat_roof && is_cube()) ? (rgen.rand() % 4) : 0); // cube buildings only for now
+	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
 	has_antenna = (rgen.rand() & 1);
 	details.resize(num_blocks + num_ac_units + 4*add_walls + has_antenna);
 	assert(!parts.empty());
@@ -1220,7 +1220,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 			float const height_scale(0.0035f*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
 			float const height(height_scale*rgen.rand_uniform(1.0, 4.0));
 
-			while (1) {
+			for (unsigned n = 0; n < 100; ++n) { // limited to 100 attempts to prevent infinite loop
 				c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
 				c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.08), xy_sz*rgen.rand_uniform(0.01, 0.06), 0.0));
 				if (!bounds.contains_cube_xy(c)) continue; // not contained
@@ -1232,7 +1232,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 					if (!check_part_contains_pt_xy(top, pt, points)) {contained = 0; break;}
 				}
 				if (contained) break; // success/done
-			} // end while
+			} // for n
 			c.z2() += height; // z2
 		} // for i
 	}
@@ -1245,12 +1245,19 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 			roof_obj_t &c(details[num_blocks + i]);
 			c.type = ROOF_OBJ_AC;
 
-			while (1) {
+			for (unsigned n = 0; n < 100; ++n) { // limited to 100 attempts to prevent infinite loop
 				c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
 				c.expand_by_xy(cube_sz);
 				if (!bounds.contains_cube_xy(c)) continue; // not contained
-				break; // success
-			}
+				if (has_antenna && c.contains_pt_xy(top.get_cube_center())) continue; // intersects antenna
+				bool bad_place(0);
+
+				for (unsigned j = 0; j < num_blocks+i; ++j) { // check for intersection with previously placed blocks
+					if (details[j].intersects_xy(c)) {bad_place = 1; break;}
+				}
+				if (!bad_place) {break;} // success
+			} // for n
+			if ((rgen.rand() & 7) == 0) {swap(cube_sz.x, cube_sz.y);} // swap occasionally
 			c.z2() += cube_sz.z; // z2
 		} // for n
 	}
