@@ -695,6 +695,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		}
 		room.has_stairs = 1;
 		stairs_cut      = stairs;
+		stairs_dim      = long_dim;
 	}
 	else if (!is_house || interior->stairwells.empty()) { // only add stairs to first part of a house unless we haven't added stairs yet
 		// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
@@ -786,6 +787,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	interior->floors.push_back(C); // ground floor, full area
 	z += window_vspacing; // move to next floor
 	bool const has_stairs(!stairs_cut.is_all_zeros()), has_elevator(!elevator_cut.is_all_zeros());
+	bool const stairs_dir(has_stairs ? rgen.rand_bool() : 0); // same for every floor, could maybe alternate for stairwells
 	cube_t &first_cut(has_elevator ? elevator_cut : stairs_cut); // elevator is larger
 
 	for (unsigned f = 1; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
@@ -809,7 +811,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				assert(found);
 			}
 			if (has_stairs) { // add landings and stairwells
-				landing_t landing(stairs_cut, 0, stairs_dim, 0, stairs_shape); // dir is unused and has been set to 0
+				landing_t landing(stairs_cut, 0, stairs_dim, stairs_dir, stairs_shape);
 				landing.z1() = zc; landing.z2() = zf;
 				interior->landings.push_back(landing);
 				if (f == 1) {interior->stairwells.push_back(stairs_cut);} // only add for first floor
@@ -961,6 +963,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				}
 				bool dim(rgen.rand_bool());
 				if (place_region.get_sz_dim(dim) < 1.5*len_with_pad) {dim ^= 1;} // too narrow in this dim, try other dim
+				bool const stairs_dir(rgen.rand_bool());
 
 				for (unsigned d = 0; d < 2; ++d) {
 					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
@@ -977,9 +980,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					// TODO: in this case, we only want to clip the walls on the top/bottom floor - maybe adjust zval of any intersecting wall?
 					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(cand_test, interior->walls[d]);}
 				}
+#endif
 				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
 				unsigned const stairs_shape(0); // straight, for now
-				landing_t landing(cand, 0, dim, 0, stairs_shape); // dir is unused and set to 0
+				landing_t landing(cand, 0, dim, stairs_dir, stairs_shape);
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
 				interior->stairwells.push_back(cand);

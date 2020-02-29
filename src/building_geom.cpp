@@ -1549,13 +1549,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	unsigned const num_stairs = 12;
 	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing);
 	float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
-	bool const dir(rgen.rand_bool()); // same for every floor, could alternate for stairwells if we were tracking it
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	interior->room_geom->stairs_start = objs.size();
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator) continue; // for elevator, not stairs
-		bool const dim(i->dx() < i->dy()); // longer dim
+		bool const dim(i->dim), dir(i->dir);
 		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z2() - window_vspacing);
 		float step_len((dir ? 1.0 : -1.0)*tot_len/num_stairs);
 		float z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
