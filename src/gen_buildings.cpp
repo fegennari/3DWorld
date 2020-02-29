@@ -996,7 +996,7 @@ public:
 	}
 
 	void add_roof_dome(point const &pos, float rx, float ry, tid_nm_pair_t const &tex, colorRGBA const &color, bool onion) {
-		assert(!onion); // not yet supported
+		assert(!onion); // TODO: not yet supported
 		auto &verts(get_verts(tex));
 		color_wrapper cw(color);
 		unsigned const ndiv(N_SPHERE_DIV);
@@ -1125,9 +1125,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			cube_t const &top(parts.back()); // top/last part
 			point const center(top.get_cube_center());
 			float const dx(top.dx()), dy(top.dy()), tscale(4.0f/(dx + dy));
-			tid_nm_pair_t tex(mat.roof_tex);
+			tid_nm_pair_t tex(mat.roof_tex); // use a different dome texture?
 			tex.tscale_x *= tscale; tex.tscale_y *= tscale;
-			// TODO: use a different dome texture?
 			bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
 		}
 	}

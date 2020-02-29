@@ -1293,7 +1293,7 @@ void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 		if (sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME; return;}
 	}
 	if (!is_simple_cube()) return; // only simple cubes are handled
-	//if (sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME; return;} // roughly square and not too tall; TODO: ROOF_TYPE_ONION
+	//if (sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME; return;} // roughly square and not too tall; ROOF_TYPE_ONION?
 	gen_sloped_roof(rgen, parts.back()); // sloped roof
 }
 void building_t::gen_sloped_roof(rand_gen_t &rgen, cube_t const &top) { // Note: currently not supported for rotated buildings
