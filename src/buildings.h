@@ -381,7 +381,8 @@ struct building_t : public building_geom_t {
 	void gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes);
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
-	void gen_sloped_roof(rand_gen_t &rgen);
+	void maybe_add_special_roof(rand_gen_t &rgen);
+	void gen_sloped_roof(rand_gen_t &rgen, cube_t const &top);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);

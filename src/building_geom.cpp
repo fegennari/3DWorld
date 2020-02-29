@@ -601,7 +601,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if (do_split) {split_in_xy(base, rgen);} // generate L, T, or U shape
 		else { // single part, entire cube/cylinder
 			parts.push_back(base);
-			if ((rgen.rand()&3) != 0) {gen_sloped_roof(rgen);} // 75% chance
+			if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 75% chance
 			gen_details(rgen);
 		}
 		end_add_parts();
@@ -700,7 +700,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		split_in_xy(split_cube, rgen);
 	}
 	else {
-		if ((rgen.rand()&3) != 0) {gen_sloped_roof(rgen);} // 67% chance
+		if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 67% chance
 		if (num_levels <= 3) {gen_details(rgen);}
 	}
 	end_add_parts();
@@ -1284,12 +1284,20 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }
 
-void building_t::gen_sloped_roof(rand_gen_t &rgen) { // Note: currently not supported for rotated buildings
-
+void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 	assert(!parts.empty());
+	bool const USE_DOME_ROOF = 0; // doesn't look quite right
+
+	if (USE_DOME_ROOF && num_sides >= 16 && flat_side_amt == 0.0) { // cylinder
+		vector3d const sz(parts.back().get_size()); // top/last part
+		if (sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME; return;}
+	}
 	if (!is_simple_cube()) return; // only simple cubes are handled
-	// TODO: add dome or onion roof here
-	cube_t const &top(parts.back()); // top/last part
+	//if (sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME; return;} // roughly square and not too tall; TODO: ROOF_TYPE_ONION
+	gen_sloped_roof(rgen, parts.back()); // sloped roof
+}
+void building_t::gen_sloped_roof(rand_gen_t &rgen, cube_t const &top) { // Note: currently not supported for rotated buildings
+
 	float const peak_height(rgen.rand_uniform(0.2, 0.5));
 	float const wmin(min(top.dx(), top.dy())), z1(top.z2()), z2(z1 + peak_height*wmin), x1(top.x1()), y1(top.y1()), x2(top.x2()), y2(top.y2());
 	point const pts[5] = {point(x1, y1, z1), point(x1, y2, z1), point(x2, y2, z1), point(x2, y1, z1), point(0.5f*(x1 + x2), 0.5f*(y1 + y2), z2)};

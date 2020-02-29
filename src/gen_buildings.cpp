@@ -9,6 +9,7 @@
 #include "buildings.h"
 #include "mesh.h"
 #include "draw_utils.h" // for point_sprite_drawer_sized
+#include "subdiv.h" // for sd_sphere_d
 
 using std::string;
 
@@ -607,6 +608,7 @@ class building_draw_t {
 		} else {vert.set_c4(color);} // color is shared across all verts
 	}
 	vector<vector3d> normals; // reused across add_cylinder() calls
+	vector<vert_norm_tc> sphere_verts; // reused
 	point cur_camera_pos;
 	bool is_city;
 
@@ -993,6 +995,23 @@ public:
 		} // for i
 	}
 
+	void add_roof_dome(point const &pos, float rx, float ry, tid_nm_pair_t const &tex, colorRGBA const &color, bool onion) {
+		assert(!onion); // not yet supported
+		auto &verts(get_verts(tex));
+		color_wrapper cw(color);
+		unsigned const ndiv(N_SPHERE_DIV);
+		float const ar(ry/rx);
+		sphere_verts.clear();
+		sd_sphere_d sd(all_zeros, rx, ndiv);
+		sd.gen_points_norms_static(0.0, 1.0, 0.0, 0.5); // top half hemisphere dome
+		sd.get_quad_points(sphere_verts, nullptr, 0, 0.0, 1.0, 0.0, 0.5); // quads
+			
+		for (auto i = sphere_verts.begin(); i != sphere_verts.end(); ++i) {
+			i->v.y *= ar;
+			verts.emplace_back(vert_norm_comp_tc((i->v + pos), i->n, i->t[0]*tex.tscale_x, i->t[1]*tex.tscale_y), cw);
+		}
+	}
+
 	unsigned num_verts() const {
 		unsigned num(0);
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {num += i->num_verts();}
@@ -1049,10 +1068,11 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	if (get_exterior) { // exterior building parts
 		ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.side_tex);
 		ext_side_qv_range.start   = bdraw.get_num_verts (mat.side_tex);
+		bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION);
 		
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
 			bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY
-			bool skip_top(roof_type != ROOF_TYPE_FLAT && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
+			bool skip_top(!need_top_roof && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
 			bool const is_stacked(!is_house && num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
 
@@ -1101,11 +1121,14 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), WHITE);
 		}
-		if (roof_type == ROOF_TYPE_DOME) {
-			// TODO: hemisphere
-		}
-		else if (roof_type == ROOF_TYPE_ONION) {
-			// TODO
+		if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
+			cube_t const &top(parts.back()); // top/last part
+			point const center(top.get_cube_center());
+			float const dx(top.dx()), dy(top.dy()), tscale(4.0f/(dx + dy));
+			tid_nm_pair_t tex(mat.roof_tex);
+			tex.tscale_x *= tscale; tex.tscale_y *= tscale;
+			// TODO: use a different dome texture?
+			bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
 		}
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
