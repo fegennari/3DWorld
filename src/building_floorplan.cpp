@@ -970,17 +970,25 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					cand.d[d][0] = rgen.rand_uniform(place_region.d[d][0], (place_region.d[d][1] - stairs_sz)); // LLC
 					cand.d[d][1] = cand.d[d][0] + stairs_sz; // URC
 				}
-				cube_t cand_test(cand);
-				cand_test.z1() += 0.5*window_vspacing; cand_test.z2() += 0.5*window_vspacing; // move up a bit so that it intersects exactly the floor below and the floor above
+				cube_t cand_test[2] = {cand, cand}; // {lower, upper} parts, starts on lower floor
+				cand_test[0].z1() += 0.1*window_vspacing; cand_test[0].z2() -= 0.1*window_vspacing; // shrink to lower part
+				cand_test[1].z1() += 1.1*window_vspacing; cand_test[1].z2() += 0.9*window_vspacing; // move to upper part
+				cand_test[ stairs_dir].d[dim][0] += stairs_pad; // subtract off padding on one side
+				cand_test[!stairs_dir].d[dim][1] -= stairs_pad; // subtract off padding on one side
 				bool const allow_clip_walls = 0; // optional
-				// TODO: pad on top and bottom in different directions?
-				if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, stairs_pad, !allow_clip_walls)) continue; // bad placement
+				bool bad_place(0);
+
+				for (unsigned d = 0; d < 2; ++d) {
+					if (!is_valid_stairs_elevator_placement(cand_test[d], doorway_width, stairs_pad, !allow_clip_walls)) {bad_place = 1;} // bad placement
+				}
+				if (bad_place) continue;
 
 				if (allow_clip_walls) { // clip out walls around stairs
 					// TODO: in this case, we only want to clip the walls on the top/bottom floor - maybe adjust zval of any intersecting wall?
-					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(cand_test, interior->walls[d]);}
+					for (unsigned d = 0; d < 2; ++d) {
+						for (unsigned e = 0; e < 2; ++e) {subtract_cube_from_cubes(cand_test[d], interior->walls[e]);}
+					}
 				}
-#endif
 				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
 				unsigned const stairs_shape(0); // straight, for now
 				landing_t landing(cand, 0, dim, stairs_dir, stairs_shape);
