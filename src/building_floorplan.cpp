@@ -880,7 +880,7 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub
 		out.swap(out2);
 	} // for s
 }
-void subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr) {
+void subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0) {
 	unsigned const num_cubes(cubes.size()); // capture size before splitting
 
 	for (unsigned i = 0; i < num_cubes; ++i) {
@@ -905,9 +905,15 @@ void subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *
 				}
 			} // for h
 			if (!merged) {holes->push_back(hole);}
+		} // end holes handling
+		if (clip_in_z) { // Note: remember that c reference will be invalidated below
+			cube_t shared(c);
+			shared.intersect_with_cube_xy(s);
+			if (shared.z1() < s.z1()) {cube_t bot(shared); bot.z2() = s.z1(); cubes.push_back(bot);} // bottom part
+			if (shared.z2() > s.z2()) {cube_t top(shared); top.z1() = s.z2(); cubes.push_back(top);} // top part
 		}
 		subtract_cube_from_cube_inplace(s, cubes, i); // Note: invalidates c reference
-	}
+	} // for i
 }
 template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &cubes) {
 	for (auto i = sub.begin(); i != sub.end(); ++i) {subtract_cube_from_cubes(*i, cubes);}
@@ -975,7 +981,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand_test[1].z1() += 1.1*window_vspacing; cand_test[1].z2() += 0.9*window_vspacing; // move to upper part
 				cand_test[ stairs_dir].d[dim][0] += stairs_pad; // subtract off padding on one side
 				cand_test[!stairs_dir].d[dim][1] -= stairs_pad; // subtract off padding on one side
-				bool const allow_clip_walls = 0; // optional
+				bool const allow_clip_walls = 0; // optional; doesn't look right, maybe would look better with side walls
 				bool bad_place(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
@@ -984,10 +990,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (bad_place) continue;
 
 				if (allow_clip_walls) { // clip out walls around stairs
-					// TODO: in this case, we only want to clip the walls on the top/bottom floor - maybe adjust zval of any intersecting wall?
-					for (unsigned d = 0; d < 2; ++d) {
-						for (unsigned e = 0; e < 2; ++e) {subtract_cube_from_cubes(cand_test[d], interior->walls[e]);}
-					}
+					cube_t clip_cube(cand);
+					clip_cube.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling for first floor on upper part
+					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1);} // clip_in_z=1
 				}
 				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
 				unsigned const stairs_shape(0); // straight, for now
