@@ -884,7 +884,26 @@ void subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *
 	for (unsigned i = 0; i < num_cubes; ++i) {
 		cube_t const &c(cubes[i]);
 		if (!c.intersects_no_adj(s)) continue; // keep it
-		if (holes) {holes->push_back(c); holes->back().intersect_with_cube(s);}
+		
+		if (holes) {
+			cube_t hole(c);
+			hole.intersect_with_cube(s);
+			bool merged(0);
+
+			// see if we can merge this hole with another hole to remove an interiro face
+			for (auto h = holes->begin(); h != holes->end() && !merged; ++h) {
+				if (h->z1() != hole.z1() || h->z2() != hole.z2()) continue;
+
+				for (unsigned d = 0; d < 2 && !merged; ++d) {
+					if (h->d[!d][0] != hole.d[!d][0] || h->d[!d][1] != hole.d[!d][1]) continue;
+
+					for (unsigned e = 0; e < 2; ++e) {
+						if (h->d[d][e] == hole.d[d][!e]) {h->d[d][e] = hole.d[d][e]; merged = 1; break;}
+					}
+				}
+			} // for h
+			if (!merged) {holes->push_back(hole);}
+		}
 		subtract_cube_from_cube_inplace(s, cubes, i); // Note: invalidates c reference
 	}
 }
@@ -951,6 +970,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cube_t cand_test(cand);
 				cand_test.z1() += 0.5*window_vspacing; cand_test.z2() += 0.5*window_vspacing; // move up a bit so that it intersects exactly the floor below and the floor above
 				bool const allow_clip_walls = 0; // optional
+				// TODO: pad on top and bottom in different directions?
 				if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, stairs_pad, !allow_clip_walls)) continue; // bad placement
 
 				if (allow_clip_walls) { // clip out walls around stairs
