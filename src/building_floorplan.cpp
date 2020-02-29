@@ -1067,7 +1067,7 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 	cube_t ecap(elevator);
 	ecap.z1()  = elevator.z2();
 	ecap.z2() += 0.25*window_vspacing; // set height
-	ecap.expand_by_xy(0.1*window_vspacing);
+	ecap.expand_by_xy(0.025*window_vspacing);
 	
 	// check to see if the elevator is at the top of the building
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
