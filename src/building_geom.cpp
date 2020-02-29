@@ -1202,40 +1202,40 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
 	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
 	has_antenna = (rgen.rand() & 1);
-	details.resize(num_blocks + num_ac_units + 4*add_walls + has_antenna);
+	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + has_antenna);
+	if (num_details == 0) return; // nothing to do
 	assert(!parts.empty());
-	if (details.empty()) return; // nothing to do
 	cube_t const &top(parts.back()); // top/last part
 	float const window_vspacing(get_material().get_floor_spacing());
 	float const xy_sz(top.get_size().xy_mag()), wall_width(0.2*window_vspacing);
+	if (add_walls && min(top.dx(), top.dy()) < 4.0*wall_width) return; // too small
 	cube_t bounds(top);
 	if (add_walls) {bounds.expand_by(-wall_width);}
+	details.resize(num_details);
+	vector<point> points; // reused across calls
 
-	if (num_blocks > 0) {
-		vector<point> points; // reused across calls
+	for (unsigned i = 0; i < num_blocks; ++i) {
+		roof_obj_t &c(details[i]);
+		c.type = ROOF_OBJ_BLOCK; // generic block
+		float const height_scale(0.0035f*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
+		float const height(height_scale*rgen.rand_uniform(1.0, 4.0));
 
-		for (unsigned i = 0; i < num_blocks; ++i) {
-			roof_obj_t &c(details[i]);
-			c.type = ROOF_OBJ_BLOCK; // generic block
-			float const height_scale(0.0035f*(top.dz() + bcube.dz())); // based on avg height of current section and entire building
-			float const height(height_scale*rgen.rand_uniform(1.0, 4.0));
+		for (unsigned n = 0; n < 100; ++n) { // limited to 100 attempts to prevent infinite loop
+			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
+			c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.07), xy_sz*rgen.rand_uniform(0.01, 0.07), 0.0));
+			if (!bounds.contains_cube_xy(c)) continue; // not contained
+			if (is_simple_cube()) break; // success/done
+			bool contained(1);
 
-			for (unsigned n = 0; n < 100; ++n) { // limited to 100 attempts to prevent infinite loop
-				c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
-				c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.08), xy_sz*rgen.rand_uniform(0.01, 0.06), 0.0));
-				if (!bounds.contains_cube_xy(c)) continue; // not contained
-				if (is_simple_cube()) break; // success/done
-				bool contained(1);
-
-				for (unsigned j = 0; j < 4; ++j) { // check cylinder/ellipse
-					point const pt(c.d[0][j&1], c.d[1][j>>1], 0.0); // XY only
-					if (!check_part_contains_pt_xy(top, pt, points)) {contained = 0; break;}
-				}
-				if (contained) break; // success/done
-			} // for n
-			c.z2() += height; // z2
-		} // for i
-	}
+			for (unsigned j = 0; j < 4; ++j) { // check cylinder/ellipse
+				point const pt(c.d[0][j&1], c.d[1][j>>1], 0.0); // XY only
+				if (!check_part_contains_pt_xy(top, pt, points)) {contained = 0; break;}
+			}
+			if (contained) break; // success/done
+		} // for n
+		c.intersect_with_cube_xy(bounds); // in case we exceeded the iteration limit
+		c.z2() += height; // z2
+	} // for i
 	if (num_ac_units > 0) {
 		float const sz_scale(xy_sz*rgen.rand_uniform(0.012, 0.02));
 		vector3d cube_sz(sz_scale, 1.5*sz_scale, 1.2*sz_scale); // consistent across all AC units (note that x and y will be doubled)
@@ -1280,7 +1280,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		antenna.z1() = top.z2(); // z1
 		antenna.z2() = bcube.z2() + height; // z2 (use bcube to include sloped roof)
 	}
-	for (auto i = details.begin(); i != details.end(); ++i) {max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
+	for (auto i = details.begin(); i != details.end(); ++i) {assert(i->is_strictly_normalized()); max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
 	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
 }
 
