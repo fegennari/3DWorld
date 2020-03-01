@@ -99,10 +99,10 @@ unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thi
 void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out) { // subtract r from c; ignores zvals
 	assert(c.contains_cube_xy(r));
 	for (unsigned i = 0; i < 4; ++i) {out[i] = c;}
-	out[0].y2() = r.y1(); // bottom
-	out[1].y1() = r.y2(); // top
-	out[2].y1() = r.y1(); out[2].y2() = r.y2(); out[2].x2() = r.x1(); // left center
-	out[3].y1() = r.y1(); out[3].y2() = r.y2(); out[3].x1() = r.x2(); // right center
+	out[0].y2() = r.y1(); // bottom -y
+	out[1].y1() = r.y2(); // top    +y
+	out[2].y1() = r.y1(); out[2].y2() = r.y2(); out[2].x2() = r.x1(); // left  center -x
+	out[3].y1() = r.y1(); out[3].y2() = r.y2(); out[3].x1() = r.x2(); // right center +x
 }
 
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
@@ -791,7 +791,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	cube_t &first_cut(has_elevator ? elevator_cut : stairs_cut); // elevator is larger
 
 	for (unsigned f = 1; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
-		cube_t to_add[8];
+		cube_t to_add[8]; // up to 2 cuts for stairs + elevator
 		float const zc(z - fc_thick), zf(z + fc_thick);
 
 		if (!has_stairs && !has_elevator) {to_add[0] = part;} // neither - add single cube
@@ -831,8 +831,52 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			//c.z1() = zf; c.z2() = zc + window_vspacing; // add per-floor walls, door cutouts, etc. here
 		}
 	} // for f
-	C.z1() = z - fc_thick; C.z2() = z;
-	interior->ceilings.push_back(C); // roof ceiling, full area
+	bool has_roof_access(0);
+
+	if (first_part && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT) { // add roof access for stairs
+		cube_t box(stairs_cut), hole(stairs_cut);
+		box.expand_by_xy(fc_thick);
+		hole.expand_by_xy(0.1*fc_thick); // to prevent z-fighting
+		box.z1() = z + floor_thickness; box.z2() = z + 0.667f*window_vspacing; // slightly lower than a normal floor
+
+		if (!has_bcube_int(box, parts, 0)) { // no overlap with other parts (should we check in front?)
+			box.z1() = z;
+			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
+			float const zc(z - fc_thick), zf(z + fc_thick);
+			subtract_cube_xy(part, stairs_cut, to_add);
+			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, sshape);
+			landing.z1() = zc; landing.z2() = zf;
+			interior->landings.push_back(landing);
+			interior->stairwells.back().z2() += fc_thick; // extend upward
+			interior->stairwells.back().z1() += fc_thick; // requiured to trick roof clipping into treating this as a stack connector stairwell
+
+			for (unsigned i = 0; i < 4; ++i) { // skip zero area cubes from stairs/elevator shafts along an exterior wall
+				cube_t &c(to_add[i]);
+				if (c.is_zero_area()) continue;
+				c.z1() = zc; c.z2() = z; interior->ceilings.push_back(c);
+				c.set_to_zeros();
+			}
+			// add a small 3-sided box around the stairs using roof blocks
+			subtract_cube_xy(box, hole, to_add);
+			remove_intersecting_roof_cubes(box);
+			unsigned const opening_ix(2*(1 - stairs_dim) + (stairs_dir^(sshape == SHAPE_U)));
+
+			for (unsigned i = 0; i < 4; ++i) {
+				cube_t &c(to_add[i]);
+				assert(!c.is_zero_area());
+				if (i == opening_ix) {c.z2() = zf;} // opening on this side
+				details.emplace_back(c, ROOF_OBJ_SCAP);
+			}
+			box.z1() = box.z2() - fc_thick;
+			details.emplace_back(box, ROOF_OBJ_SCAP); // top
+			max_eq(bcube.z2(), box.z2());
+			has_roof_access = 1;
+		}
+	}
+	if (!has_roof_access) { // roof ceiling, full area
+		C.z1() = z - fc_thick; C.z2() = z;
+		interior->ceilings.push_back(C);
+	}
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
 }
 
@@ -1086,15 +1130,18 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 		if (p->z1() != elevator.z2()) continue; // not on top of the elevator
 		if (p->intersects(ecap)) return; // part over elevator - should we add some sort of cap in this case, or block off the first floor, or add something to the interior?
 	}
+	remove_intersecting_roof_cubes(ecap);
+	details.emplace_back(ecap, ROOF_OBJ_ECAP);
+	max_eq(bcube.z2(), ecap.z2()); // extend bcube z2 to contain ecap
+}
+
+void building_t::remove_intersecting_roof_cubes(cube_t const &c) {
 	for (unsigned i = 0; i < details.size(); ++i) { // remove any existing objects that overlap ecap
 		auto &obj(details[i]);
 		if (obj.type != ROOF_OBJ_BLOCK && obj.type != ROOF_OBJ_AC) continue; // only remove blocks and AC units
-		if (!obj.intersects(ecap)) continue;
+		if (!obj.intersects(c)) continue;
 		swap(obj, details.back());
 		details.pop_back();
 		--i; // wraparound okay
 	}
-	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
-	details.emplace_back(ecap, ROOF_OBJ_ECAP);
-	max_eq(bcube.z2(), ecap.z2()); // extend bcube z2 to contain ecap
 }

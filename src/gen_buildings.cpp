@@ -1076,6 +1076,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
 	vect_cube_t empty_vc;
+	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
 
 	if (get_exterior) { // exterior building parts
 		ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.side_tex);
@@ -1114,7 +1115,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bdraw.add_cube(*i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0); // XY with stretched texture
 				continue;
 			}
-			bool const pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
+			bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
 			building_t b(building_geom_t(4, rot_sin, rot_cos, pointed)); // cube
 			b.bcube = bcube;
 			tid_nm_pair_t tex;
@@ -1128,7 +1129,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				tex   = mat.roof_tex.get_scaled_version(0.5);
 				color = detail_color*(pointed ? 0.5 : 1.0);
 			}
-			bdraw.add_section(b, empty_vc, *i, tex, color, 7, 1, 0, 1, 0); // all dims, skip_bottom, no AO
+			bdraw.add_section(b, empty_vc, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
 		}
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), WHITE);
