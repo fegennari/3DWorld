@@ -878,6 +878,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					side.pts[0] = pts[bot_vix[s]]; // corner
 					side.pts[1] = pts[top_vix[s]]; // bottom
 					side.pts[2] = top.pts[top_vix[s]]; // top
+					if (s) {swap(side.pts[0], side.pts[1]);} // make normal point outward for correct BFC
 					roof_tquads.emplace_back(side, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
 				} // for s
 			}
