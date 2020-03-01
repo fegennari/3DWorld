@@ -598,7 +598,16 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	bool const do_split(num_levels < 4 && is_cube() && rgen.rand_probability(mat.split_prob)); // don't split buildings with 4 or more levels, or non-cubes
 
 	if (num_levels == 1) { // single level
-		if (do_split) {split_in_xy(base, rgen);} // generate L, T, or U shape
+		if (do_split) { // generate L, T, or U shape
+			split_in_xy(base, rgen);
+
+			if (has_city_trees()) { // see if we can place a tree in the courtyard
+				point const center(bcube.get_cube_center());
+				cube_t place_area(center, center);
+				place_area.expand_by_xy(0.05f*(bcube.dx() + bcube.dy()));
+				if (!has_bcube_int(place_area, parts)) {tree_pos = place_area.get_cube_center(); tree_pos.z = bcube.z1();}
+			}
+		}
 		else { // single part, entire cube/cylinder
 			parts.push_back(base);
 			if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 75% chance

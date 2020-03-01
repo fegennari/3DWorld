@@ -1845,7 +1845,6 @@ public:
 
 	void place_building_trees(rand_gen_t &rgen) {
 		if (!has_city_trees()) return;
-		timer_t timer("Building Tree Placement");
 		vector<point> placements;
 
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
