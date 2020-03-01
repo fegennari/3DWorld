@@ -607,11 +607,12 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				place_area.expand_by_xy(0.05f*(bcube.dx() + bcube.dy()));
 				if (!has_bcube_int(place_area, parts)) {tree_pos = place_area.get_cube_center(); tree_pos.z = bcube.z1();}
 			}
+			gen_details(rgen, 0);
 		}
 		else { // single part, entire cube/cylinder
 			parts.push_back(base);
 			if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 75% chance
-			gen_details(rgen);
+			gen_details(rgen, 1);
 		}
 		end_add_parts();
 		gen_interior(rgen, 0);
@@ -658,7 +659,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			parts.shrink_to_fit(); // optional
 			std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details
 			calc_bcube_from_parts(); // update bcube
-			gen_details(rgen);
+			gen_details(rgen, 1);
 			end_add_parts();
 			gen_interior(rgen, 1);
 			gen_building_doors_if_needed(rgen);
@@ -707,10 +708,11 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		cube_t const split_cube(parts.back());
 		parts.pop_back();
 		split_in_xy(split_cube, rgen);
+		if (num_levels <= 3) {gen_details(rgen, 0);}
 	}
 	else {
 		if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 67% chance
-		if (num_levels <= 3) {gen_details(rgen);}
+		if (num_levels <= 3) {gen_details(rgen, 1);}
 	}
 	end_add_parts();
 	gen_interior(rgen, 0);
@@ -1219,22 +1221,58 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 	}
 }
 
-void building_t::gen_details(rand_gen_t &rgen) { // for the roof
+void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen) {
+
+	if (num == 0) return;
+	vector3d cube_sz(sz_scale, 1.5*sz_scale, 1.2*sz_scale); // consistent across all AC units (note that x and y will be doubled)
+	if (rgen.rand_bool()) {swap(cube_sz.x, cube_sz.y);} // other orientation
+
+	for (unsigned i = 0; i < num; ++i) {
+		roof_obj_t c(ROOF_OBJ_AC);
+		bool placed(0);
+
+		for (unsigned n = 0; n < 100 && !placed; ++n) { // limited to 100 attempts to prevent infinite loop
+			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), bounds.z2()));
+			c.expand_by_xy(cube_sz);
+			if (!bounds.contains_cube_xy(c)) continue; // not contained
+			if (has_bcube_int(c, avoid, 0) || has_bcube_int(c, details, 0)) continue; // intersects avoid cubes or other detail objects (inc_adj=0)
+			if (avoid_center && c.contains_pt_xy(bounds.get_cube_center())) continue; // intersects antenna
+			placed = 1;
+		} // for n
+		if (!placed) break; // failed, exit loop
+		if ((rgen.rand() & 7) == 0) {swap(cube_sz.x, cube_sz.y);} // swap occasionally
+		c.z2() += cube_sz.z; // z2
+		details.push_back(c);
+	} // for n
+}
+
+void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the roof
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT);
+	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
+	assert(!parts.empty());
+
+	if (!is_rectangle) { // polygon roof, can only add AC units
+		if (num_ac_units == 0) return;
+		float const xy_sz(0.75*bcube.get_size().xy_mag()*rgen.rand_uniform(0.012, 0.02)); // size based on bcube
+
+		for (auto p = parts.begin(); p != parts.end(); ++p) {
+			unsigned const num_this_part(min(num_ac_units, unsigned(num_ac_units*p->dx()*p->dy()/(bcube.dx()*bcube.dy()) + 1))); // distribute based on area
+			place_roof_ac_units(num_this_part, xy_sz, *p, parts, 0, rgen);
+		}
+		return;
+	}
 	bool const add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
-	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
 	has_antenna = ((flat_roof || roof_type == ROOF_TYPE_SLOPE) && (rgen.rand() & 1));
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + has_antenna);
 	if (num_details == 0) return; // nothing to do
-	assert(!parts.empty());
 	cube_t const &top(parts.back()); // top/last part
 	float const window_vspacing(get_material().get_floor_spacing());
-	float const xy_sz(top.get_size().xy_mag()), wall_width(0.2*window_vspacing);
+	float const xy_sz(top.get_size().xy_mag()), wall_width(0.2*window_vspacing); // better to use bcube for size?
 	if (add_walls && min(top.dx(), top.dy()) < 4.0*wall_width) return; // too small
 	cube_t bounds(top);
-	if (add_walls) {bounds.expand_by(-wall_width);}
+	if (add_walls) {bounds.expand_by_xy(-wall_width);}
 	details.reserve(num_details);
 	vector<point> points; // reused across calls
 
@@ -1260,32 +1298,8 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 		c.z2() += height; // z2
 		details.push_back(c);
 	} // for i
-	if (num_ac_units > 0) {
-		float const sz_scale(xy_sz*rgen.rand_uniform(0.012, 0.02));
-		vector3d cube_sz(sz_scale, 1.5*sz_scale, 1.2*sz_scale); // consistent across all AC units (note that x and y will be doubled)
-		if (rgen.rand_bool()) {swap(cube_sz.x, cube_sz.y);} // other orientation
+	if (num_ac_units > 0) {place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, vect_cube_t(), has_antenna, rgen);}
 
-		for (unsigned i = 0; i < num_ac_units; ++i) {
-			roof_obj_t c(ROOF_OBJ_AC);
-			bool placed(0);
-
-			for (unsigned n = 0; n < 100 && !placed; ++n) { // limited to 100 attempts to prevent infinite loop
-				c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
-				c.expand_by_xy(cube_sz);
-				if (!bounds.contains_cube_xy(c)) continue; // not contained
-				if (has_antenna && c.contains_pt_xy(top.get_cube_center())) continue; // intersects antenna
-				placed = 1;
-
-				for (unsigned j = 0; j < num_blocks+i; ++j) { // check for intersection with previously placed blocks
-					if (details[j].intersects_xy(c)) {placed = 0; break;}
-				}
-			} // for n
-			if (!placed) break; // failed, exit loop
-			if ((rgen.rand() & 7) == 0) {swap(cube_sz.x, cube_sz.y);} // swap occasionally
-			c.z2() += cube_sz.z; // z2
-			details.push_back(c);
-		} // for n
-	}
 	if (add_walls) { // add walls around the roof; we don't need to draw all sides of all cubes, but it's probably not worth the trouble to sort it out
 		float const height(0.4*window_vspacing), width(wall_width), z1(top.z2()), z2(top.z2()+height);
 		unsigned const start(num_blocks + num_ac_units);

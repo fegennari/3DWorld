@@ -379,7 +379,8 @@ struct building_t : public building_geom_t {
 	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
-	void gen_details(rand_gen_t &rgen);
+	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen);
+	void gen_details(rand_gen_t &rgen, bool is_rectangle);
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part);
@@ -464,9 +465,9 @@ inline void clip_low_high(float &t0, float &t1) {
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
 }
 
-template<typename T> bool has_bcube_int(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
+template<typename T> bool has_bcube_int(cube_t const &bcube, vector<T> const &bcubes, bool inc_adj=1) { // T must derive from cube_t
 	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
-		if (c->intersects(bcube)) return 1; // intersects_no_adj(bcube)?
+		if (inc_adj ? c->intersects(bcube) : c->intersects_no_adj(bcube)) return 1;
 	}
 	return 0;
 }
