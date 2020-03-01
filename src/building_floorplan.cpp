@@ -5,6 +5,8 @@
 #include "function_registry.h"
 #include "buildings.h"
 
+#pragma warning(disable : 26812) // prefer enum class over enum
+
 bool const DRAW_OPEN_DOORS = 1;
 
 extern building_params_t global_building_params;
