@@ -1218,7 +1218,7 @@ void tree::update_leaf_orients_wind() { // leaves move in wind (somewhat slow)
 			td.bend_leaf(i, angle);
 		}
 		if (heal_pass && (rgen.rand()&63) == 0) { // leaf heals every 64 frames
-			short &lcolor(td.get_leaves()[i].lcolor);
+			short &lcolor(td.get_leaves()[i].lcolor); // non-const, can't use <leaves>
 
 			if (lcolor > 0 && lcolor < 1000) { // partially damaged
 				lcolor = min(1000, (lcolor + int(LEAF_HEAL_RATE*fticks)));

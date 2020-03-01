@@ -50,7 +50,7 @@ hmap_brush_param_t cur_brush_param;
 tile_offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
-extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down;
+extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt, num_rnd_grass_blocks;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv;
@@ -2989,7 +2989,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	}
 	{ // draw branches
 		shader_t bs;
-		bool const enable_dlights(!shadow_pass && !reflection_pass && is_night() && have_cities()); // enable for city night lights
+		bool const enable_dlights(!shadow_pass && !reflection_pass && ((is_night() && have_cities()) || flashlight_on)); // enable for city night lights
 		tree_branch_shader_setup(bs, enable_shadow_maps, 1, shadow_pass, enable_dlights); // enable_opacity=1
 		set_tree_dither_noise_tex(bs, 1); // TU=1 (for opacity)
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
