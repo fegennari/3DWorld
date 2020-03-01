@@ -1247,13 +1247,13 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), bounds.z2()));
 			c.expand_by_xy(cube_sz);
 			if (!bounds.contains_cube_xy(c)) continue; // not contained
+			c.z2() += cube_sz.z; // z2
 			if (has_bcube_int(c, avoid, 0) || has_bcube_int(c, details, 0)) continue; // intersects avoid cubes or other detail objects (inc_adj=0)
 			if (avoid_center && c.contains_pt_xy(bounds.get_cube_center())) continue; // intersects antenna
 			placed = 1;
 		} // for n
 		if (!placed) break; // failed, exit loop
 		if ((rgen.rand() & 7) == 0) {swap(cube_sz.x, cube_sz.y);} // swap occasionally
-		c.z2() += cube_sz.z; // z2
 		details.push_back(c);
 	} // for n
 }
