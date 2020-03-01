@@ -199,7 +199,8 @@ struct room_object_t : public cube_t {
 	room_object_t() : dim(0), dir(0), flags(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, uint8_t f=0, float light=1.0,
 		room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
-		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_) {}
+		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_)
+	{assert(is_strictly_normalized());}
 	bool is_lit    () const {return (flags & RO_FLAG_LIT);}
 	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}
@@ -251,7 +252,7 @@ struct building_room_geom_t {
 struct elevator_t : public cube_t {
 	bool dim, dir, open; // door dim/dir
 	elevator_t() : dim(0), dir(0), open(0) {}
-	elevator_t(cube_t const &c, bool dim_, bool dir_, bool open_) : cube_t(c), dim(dim_), dir(dir_), open(open_) {}
+	elevator_t(cube_t const &c, bool dim_, bool dir_, bool open_) : cube_t(c), dim(dim_), dir(dir_), open(open_) {assert(is_strictly_normalized());}
 	unsigned get_door_face_id() const {return (2*dim + dir);}
 };
 
@@ -268,16 +269,18 @@ struct room_t : public cube_t {
 };
 
 struct landing_t : public cube_t {
-	bool for_elevator, dim, dir, shape; // shape: 0=straight, 1=U
-	landing_t() : for_elevator(0), dim(0), dir(0), shape(0) {}
-	landing_t(cube_t const &c, bool e, bool dim_, bool dir_, bool shape_=0) : cube_t(c), for_elevator(e), dim(dim_), dir(dir_), shape(shape_) {}
+	bool for_elevator, dim, dir;
+	stairs_shape shape;
+	landing_t() : for_elevator(0), dim(0), dir(0), shape(SHAPE_STRAIGHT) {}
+	landing_t(cube_t const &c, bool e, bool dim_, bool dir_, stairs_shape shape_=SHAPE_STRAIGHT) :
+		cube_t(c), for_elevator(e), dim(dim_), dir(dir_), shape(shape_) {assert(is_strictly_normalized());}
 	unsigned get_face_id() const {return (2*dim + dir);}
 };
 
 struct door_t : public cube_t {
 	bool dim, open_dir, open;
 	door_t() : dim(0), open_dir(0), open(0) {}
-	door_t(cube_t const &c, bool dim_, bool dir, bool open_) : cube_t(c), dim(dim_), open_dir(dir), open(open_) {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_) : cube_t(c), dim(dim_), open_dir(dir), open(open_) {assert(is_strictly_normalized());}
 };
 typedef vector<door_t> vect_door_t;
 
@@ -287,7 +290,7 @@ enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_DOME, ROOF_TY
 struct roof_obj_t : public cube_t {
 	uint8_t type;
 	roof_obj_t() : type(ROOF_OBJ_BLOCK) {}
-	roof_obj_t(cube_t const &c, uint8_t type_=ROOF_OBJ_BLOCK) : cube_t(c), type(type_) {}
+	roof_obj_t(cube_t const &c, uint8_t type_=ROOF_OBJ_BLOCK) : cube_t(c), type(type_) {assert(is_strictly_normalized());}
 };
 typedef vector<roof_obj_t> vect_roof_obj_t;
 
