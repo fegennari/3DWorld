@@ -22,7 +22,7 @@ float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
 
-extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo;
+extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
 extern int rand_gen_index, display_mode;
 extern float CAMERA_RADIUS;
 extern point sun_pos;
@@ -2156,6 +2156,10 @@ public:
 								draw_subdiv_sphere(cpos, 0.1*CAMERA_RADIUS, N_SPHERE_DIV, 0, 1);
 							}
 							indir_bcs_ix = bcs_ix; indir_bix = bi->ix;
+						}
+						if (toggle_room_light) {
+							b.toggle_room_light(camera_xlated);
+							toggle_room_light = 0;
 						}
 					} // for bi
 				} // for g

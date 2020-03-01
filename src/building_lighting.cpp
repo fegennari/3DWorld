@@ -393,6 +393,26 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	} // for i
 }
 
+bool building_t::toggle_room_light(point const &closest_to) { // Note: closest_to is in building space, not camera space
+	if (!has_room_geom()) return 0; // error?
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
+	float const window_vspacing(get_window_vspace());
+	float closest_dist_sq(0.0);
+	unsigned closest_light(0);
+
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (i->type != TYPE_LIGHT) continue; // not a light
+		if (i->z1() < closest_to.z || i->z1() > (closest_to.z + window_vspacing)) continue; // light is on the wrong floor
+		float const dist_sq(p2p_dist_sq(closest_to, i->get_cube_center()));
+		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; closest_light = (i - objs.begin());}
+	} // for i
+	if (closest_dist_sq == 0.0) return 0; // no light found
+	assert(closest_light < objs.size());
+	objs[closest_light].toggle_lit_state(); // Note: doesn't update light texture/emissive, indir lighting, or room light value
+	return 1;
+}
+
 float room_t::get_light_amt() const { // Note: not normalized to 1.0
 	float ext_perim(0.0);
 

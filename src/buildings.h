@@ -207,6 +207,7 @@ struct room_object_t : public cube_t {
 	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}
 	bool no_coll   () const {return (flags & RO_FLAG_NOCOLL);}
+	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	colorRGBA get_color() const;
 };
 
@@ -399,6 +400,7 @@ struct building_t : public building_geom_t {
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
 	bool find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube);
+	bool toggle_room_light(point const &closest_to);
 	void gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
