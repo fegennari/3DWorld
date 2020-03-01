@@ -1623,7 +1623,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				stair.d[dim][dir^is_rev^1] = pos; stair.d[dim][dir^is_rev] = pos + step_len;
 				stair.z1() = max(floor_z, z); // don't go below the floor
 				stair.z2() = z + stair_height;
-				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir^dim^is_rev^1); // Note: room_id=0, not tracked, unused
+				objs.emplace_back(stair, TYPE_STAIR, 0, dim, side^is_rev); // Note: room_id=0, not tracked, unused
 				objs.back().shape = SHAPE_STAIRS_U;
 			} // for n
 		}
