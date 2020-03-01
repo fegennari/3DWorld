@@ -3174,4 +3174,5 @@ cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
 unsigned get_city_model_gpu_mem() {return city_gen.get_model_gpu_mem();}
 void next_pedestrian_animation() {city_gen.next_ped_animation();}
 void free_city_context() {city_gen.free_context();}
+bool has_city_trees() {return (city_params.max_trees_per_plot > 0);}
 

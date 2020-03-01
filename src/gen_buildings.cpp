@@ -10,6 +10,7 @@
 #include "mesh.h"
 #include "draw_utils.h" // for point_sprite_drawer_sized
 #include "subdiv.h" // for sd_sphere_d
+#include "tree_3dw.h" // for tree_placer_t
 
 using std::string;
 
@@ -26,6 +27,7 @@ extern int rand_gen_index, display_mode;
 extern float CAMERA_RADIUS;
 extern point sun_pos;
 extern vector<light_source> dl_sources;
+extern tree_placer_t tree_placer;
 
 building_params_t global_building_params;
 
@@ -1822,7 +1824,9 @@ public:
 				buildings_bcube.assign_or_union_with_cube(bbc);
 				g->bcube.union_with_cube(bbc);
 			}
-		}
+		} // for g
+		if (!is_tile && !city_only) {place_building_trees(rgen);}
+
 		if (!is_tile) {
 			cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen
 				 << " / " << buildings.size() << " / " << (buildings.size() - num_skip) << endl;
@@ -1834,6 +1838,36 @@ public:
 		build_grid_by_tile(is_tile);
 		create_vbos(is_tile);
 	} // end gen()
+
+	struct pt_by_xval {
+		bool operator()(point const &a, point const &b) const {return (a.x < b.x);}
+	};
+
+	void place_building_trees(rand_gen_t &rgen) {
+		if (!has_city_trees()) return;
+		timer_t timer("Building Tree Placement");
+		vector<point> placements;
+
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+			if (b->tree_pos != all_zeros) {placements.push_back(b->tree_pos);}
+		}
+		if (placements.empty()) return;
+		sort(placements.begin(), placements.end(), pt_by_xval()); // sort by xval
+		float const block_xsize(X_SCENE_SIZE);
+		float cur_xval(0.0);
+		unsigned num_blocks(0);
+
+		for (auto p = placements.begin(); p != placements.end(); ++p) {
+			if (p == placements.begin() || p->x > (cur_xval + block_xsize)) {
+				tree_placer.begin_block();
+				cur_xval = p->x;
+				++num_blocks;
+			}
+			int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
+			tree_placer.add(*p, 0, ttype);
+		}
+		cout << "Num Placed Trees: " << placements.size() << ", Blocks: " << num_blocks << endl;
+	}
 
 	bool place_people(vect_building_place_t &locs, float radius, unsigned num) {
 		assert(locs.empty());

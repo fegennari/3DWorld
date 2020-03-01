@@ -2146,7 +2146,7 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 }
 
 void tree_placer_t::add(point const &pos, float size, int type) {
-	assert(!blocks.empty());
+	if (blocks.empty()) {begin_block();} // begin a new block in case user isn't creating the blocks themselves
 	tree_block &block(blocks.back());
 	if (block.trees.empty()) {block.bcube.set_from_point(pos);} else {block.bcube.union_with_pt(pos);}
 	block.trees.emplace_back(pos, size, type);

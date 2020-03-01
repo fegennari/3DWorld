@@ -371,6 +371,7 @@ unsigned get_city_model_gpu_mem();
 cube_t get_city_lights_bcube();
 void next_pedestrian_animation();
 void free_city_context();
+bool has_city_trees();
 
 // function prototypes - physics
 float get_max_t(int obj_type);

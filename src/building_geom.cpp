@@ -912,6 +912,21 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			}
 			parts.push_back(c); // support column or shed/garage
 		} // end house details
+		else if (type == 1 && has_city_trees()) { // place a tree for L-shaped house with no garage or shed
+			vect_cube_t cubes;
+			cube_t empty_space(bcube);
+
+			for (unsigned e = 0; e < 2; ++e) {
+				cubes.clear();
+				subtract_cube_from_cube(empty_space, parts[e], cubes);
+				assert(cubes.size() == 1);
+				empty_space = cubes[0];
+			}
+			tree_pos = empty_space.get_cube_center(); // centered on where the garage/shed would have been
+			vector3d const dir(tree_pos - bcube.get_cube_center());
+			tree_pos  += (0.05f*(bcube.dx() + bcube.dy())/dir.mag())*dir; // shift slightly away from house center so that it's less likely to intersect the house
+			tree_pos.z = bcube.z1();
+		}
 		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	} // end type != 0  (multi-part house)
 	else if (gen_door) { // single cube house

@@ -333,6 +333,7 @@ struct building_t : public building_geom_t {
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	std::shared_ptr<building_interior_t> interior;
 	vertex_range_t ext_side_qv_range;
+	point tree_pos; // (0,0,0) is unplaced/no tree
 	float ao_bcz2;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), is_house(0), has_antenna(0),
@@ -479,6 +480,7 @@ tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, bool dim);
+void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);
