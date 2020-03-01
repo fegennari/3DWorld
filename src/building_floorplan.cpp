@@ -835,18 +835,19 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	bool has_roof_access(0);
 
 	if (first_part && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT) { // add roof access for stairs
+		bool const is_sloped(sshape != SHAPE_U);
 		cube_t box(stairs_cut), hole(stairs_cut);
-		box.expand_by_xy(fc_thick);
-		hole.expand_by_xy(0.1*fc_thick); // to prevent z-fighting
-		box.z1() = z + floor_thickness; box.z2() = z + 0.667f*window_vspacing; // slightly lower than a normal floor
+		if (!is_sloped) {box.expand_by_xy(fc_thick);}
+		if (!is_sloped) {hole.expand_by_xy(0.1*fc_thick);} // to prevent z-fighting
+		box.z1() = z + floor_thickness; box.z2() = z + window_vspacing;
+		box.z2() -= (is_sloped ? 0.2 : 0.3)*window_vspacing; // slightly lower than a normal floor
 
 		if (!has_bcube_int(box, parts, 0)) { // no overlap with other parts (should we check in front?)
-			box.z1() = z;
-			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			float const zc(z - fc_thick), zf(z + fc_thick);
+			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
 			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, sshape);
-			landing.z1() = zc; landing.z2() = zf;
+			landing.z1() = zc; landing.z2() = z; // no floor above
 			interior->landings.push_back(landing);
 			interior->stairwells.back().z2() += fc_thick; // extend upward
 			interior->stairwells.back().z1() += fc_thick; // requiured to trick roof clipping into treating this as a stack connector stairwell
@@ -858,19 +859,41 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				c.set_to_zeros();
 			}
 			// add a small 3-sided box around the stairs using roof blocks
-			subtract_cube_xy(box, hole, to_add);
+			box.z1() = z;
 			remove_intersecting_roof_cubes(box);
 			unsigned const opening_ix(2*(1 - stairs_dim) + (stairs_dir^(sshape == SHAPE_U)));
 
-			for (unsigned i = 0; i < 4; ++i) {
-				cube_t &c(to_add[i]);
-				assert(!c.is_zero_area());
-				if (i == opening_ix) {c.z2() = zf;} // opening on this side
-				details.emplace_back(c, ROOF_OBJ_SCAP);
+			if (is_sloped) { // sloped roof
+				float const z1(box.z1()), z2(box.z2());
+				point const pts[4] = {point(box.x1(), box.y1(), z1), point(box.x2(), box.y1(), z1), point(box.x2(), box.y2(), z1), point(box.x1(), box.y2(), z1)};
+				unsigned const hi_side1[4] = {0, 2, 3, 1}, hi_side2[4] = {1, 3, 0, 2}, lo_side1[4] = {3, 1, 2, 0}, lo_side2[4] = {2, 0, 1, 3};
+				unsigned const top_vix[2] = {hi_side1[opening_ix], hi_side2[opening_ix]}, bot_vix[2] = {lo_side1[opening_ix], lo_side2[opening_ix]};
+				tquad_t top(4); // qua
+				for (unsigned n = 0; n < 4; ++n) {top.pts[n] = pts[n];}
+				top.pts[top_vix[0]].z = top.pts[top_vix[1]].z = z2; // this are the higher points
+				roof_tquads.emplace_back(top, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
+
+				for (unsigned s = 0; s < 2; ++s) {
+					tquad_t side(3); // triangle
+					side.pts[0] = pts[bot_vix[s]]; // corner
+					side.pts[1] = pts[top_vix[s]]; // bottom
+					side.pts[2] = top.pts[top_vix[s]]; // top
+					roof_tquads.emplace_back(side, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
+				} // for s
 			}
-			box.z1() = box.z2() - fc_thick;
-			details.emplace_back(box, ROOF_OBJ_SCAP); // top
-			max_eq(bcube.z2(), box.z2());
+			else { // box roof
+				subtract_cube_xy(box, hole, to_add);
+
+				for (unsigned i = 0; i < 4; ++i) {
+					cube_t &c(to_add[i]);
+					assert(!c.is_zero_area());
+					if (i == opening_ix) continue; // skip opening on this side
+					details.emplace_back(c, ROOF_OBJ_SCAP);
+				}
+				box.z1() = box.z2() - fc_thick;
+				details.emplace_back(box, ROOF_OBJ_SCAP); // top
+				max_eq(bcube.z2(), box.z2());
+			}
 			has_roof_access = 1;
 		}
 	}

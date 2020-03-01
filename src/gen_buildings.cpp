@@ -750,7 +750,7 @@ public:
 			dim = (tquad.pts[0].x == tquad.pts[1].x);
 			if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
 		}
-		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
+		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
 			float const denom(0.5f*(bcube.dx() + bcube.dy()));
 			tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
 		}
@@ -770,6 +770,10 @@ public:
 			else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
 				vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
 				vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
+			}
+			else if (tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC) { // roof access cover
+				if (fabs(normal.z) > 0.5) {vert.t[0] = vert.v.x*tsx; vert.t[1] = vert.v.y*tsy;} // facing up, use XY plane
+				else {vert.t[0] = (vert.v.x + vert.v.y)*tsx; vert.t[1] = vert.v.z*tsy;} // facing to the side, use XZ or YZ plane
 			}
 			else if (tquad.type == tquad_with_ix_t::TYPE_HDOOR || tquad.type == tquad_with_ix_t::TYPE_BDOOR || tquad.type == tquad_with_ix_t::TYPE_GDOOR) { // door - textured from (0,0) to (1,1)
 				vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
@@ -1105,7 +1109,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		ext_side_qv_range.end = bdraw.get_num_verts(mat.side_tex);
 
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-			bool const is_wall_tex(i->type != tquad_with_ix_t::TYPE_ROOF);
+			bool const is_wall_tex(i->type != tquad_with_ix_t::TYPE_ROOF && i->type != tquad_with_ix_t::TYPE_ROOF_ACC);
 			bdraw.add_tquad(*this, *i, bcube, (is_wall_tex ? mat.side_tex : mat.roof_tex), (is_wall_tex ? side_color : roof_color)); // use type to select roof vs. side texture
 		}
 		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details

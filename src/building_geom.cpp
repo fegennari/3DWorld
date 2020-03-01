@@ -1608,7 +1608,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator) continue; // for elevator, not stairs
 		bool const dim(i->dim), dir(i->dir);
-		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z2() - window_vspacing), step_len_pos(tot_len/num_stairs);
+		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
+		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i);
 

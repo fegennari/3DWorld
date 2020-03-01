@@ -159,8 +159,8 @@ struct building_geom_t { // describes the physical shape of a building
 };
 
 struct tquad_with_ix_t : public tquad_t {
-	// roof, wall, chimney cap, house door, building door, garage door, interior door
-	enum {TYPE_ROOF=0, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR, TYPE_GDOOR, TYPE_IDOOR, TYPE_IDOOR2};
+	// roof, roof access cover, wall, chimney cap, house door, building door, garage door, interior door
+	enum {TYPE_ROOF=0, TYPE_ROOF_ACC, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR, TYPE_GDOOR, TYPE_IDOOR, TYPE_IDOOR2};
 	unsigned type;
 	tquad_with_ix_t(unsigned npts_=0) : tquad_t(npts_), type(TYPE_ROOF) {}
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
