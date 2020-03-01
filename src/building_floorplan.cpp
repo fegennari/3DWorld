@@ -1086,7 +1086,15 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 		if (p->z1() != elevator.z2()) continue; // not on top of the elevator
 		if (p->intersects(ecap)) return; // part over elevator - should we add some sort of cap in this case, or block off the first floor, or add something to the interior?
 	}
-	if (details.empty()) {detail_color = roof_color;} // no other details, use roof color
+	for (unsigned i = 0; i < details.size(); ++i) { // remove any existing objects that overlap ecap
+		auto &obj(details[i]);
+		if (obj.type != ROOF_OBJ_BLOCK && obj.type != ROOF_OBJ_AC) continue; // only remove blocks and AC units
+		if (!obj.intersects(ecap)) continue;
+		swap(obj, details.back());
+		details.pop_back();
+		--i; // wraparound okay
+	}
+	if (detail_color == BLACK) {detail_color = roof_color;} // use roof color if not set
 	details.emplace_back(ecap, ROOF_OBJ_ECAP);
 	max_eq(bcube.z2(), ecap.z2()); // extend bcube z2 to contain ecap
 }
