@@ -2,6 +2,8 @@
 buildings min_sides 4 # cubes
 buildings max_sides 4
 buildings round_prob 0.0
+buildings dome_roof  0 # doesn't look very good on office buildings
+buildings onion_roof 0 # doesn't look very good on office buildings
 
 # windows
 buildings window_width  0.44

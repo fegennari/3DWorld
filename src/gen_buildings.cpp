@@ -212,6 +212,12 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "max_altitude") {
 		if (!read_float(fp, global_building_params.cur_mat.max_alt)) {buildings_file_err(str, error);}
 	}
+	else if (str == "dome_roof") {
+		if (!read_bool(fp, global_building_params.dome_roof)) {buildings_file_err(str, error);}
+	}
+	else if (str == "onion_roof") {
+		if (!read_bool(fp, global_building_params.onion_roof)) {buildings_file_err(str, error);}
+	}
 	else if (str == "no_city") {
 		if (!read_bool(fp, global_building_params.cur_mat.no_city)) {buildings_file_err(str, error);}
 	}
@@ -996,19 +1002,23 @@ public:
 	}
 
 	void add_roof_dome(point const &pos, float rx, float ry, tid_nm_pair_t const &tex, colorRGBA const &color, bool onion) {
-		assert(!onion); // TODO: not yet supported
 		auto &verts(get_verts(tex));
 		color_wrapper cw(color);
 		unsigned const ndiv(N_SPHERE_DIV);
-		float const ar(ry/rx);
+		float const ravg(0.5f*(rx + ry)), t_end(onion ? 1.0 : 0.5);
+		point center(pos);
+		if (onion) {center.z += 0.5*ravg; rx *= 1.2; ry *= 1.2;} // move up slightly and increase radius
+		float const arx(rx/ravg), ary(ry/ravg);
 		sphere_verts.clear();
-		sd_sphere_d sd(all_zeros, rx, ndiv);
-		sd.gen_points_norms_static(0.0, 1.0, 0.0, 0.5); // top half hemisphere dome
-		sd.get_quad_points(sphere_verts, nullptr, 0, 0.0, 1.0, 0.0, 0.5); // quads
+		sd_sphere_d sd(all_zeros, ravg, ndiv);
+		sd.gen_points_norms_static(0.0, 1.0, 0.0, t_end); // top half hemisphere dome
+		sd.get_quad_points(sphere_verts, nullptr, 0, 0.0, 1.0, 0.0, t_end); // quads
 			
 		for (auto i = sphere_verts.begin(); i != sphere_verts.end(); ++i) {
-			i->v.y *= ar;
-			verts.emplace_back(vert_norm_comp_tc((i->v + pos), i->n, i->t[0]*tex.tscale_x, i->t[1]*tex.tscale_y), cw);
+			i->v.y *= ary;
+			i->v.x *= arx;
+			if (onion && i->v.z > 0.0) {i->v.z += 0.05f*ravg*(1.0f/(1.01f - i->v.z/ravg) - 1.0f);} // form a point at the top
+			verts.emplace_back(vert_norm_comp_tc((i->v + center), i->n, i->t[0]*tex.tscale_x, i->t[1]*tex.tscale_y), cw);
 		}
 	}
 

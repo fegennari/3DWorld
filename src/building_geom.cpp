@@ -1201,7 +1201,7 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 	bool const add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
 	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
-	has_antenna = (rgen.rand() & 1);
+	has_antenna = ((flat_roof || roof_type == ROOF_TYPE_SLOPE) && (rgen.rand() & 1));
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + has_antenna);
 	if (num_details == 0) return; // nothing to do
 	assert(!parts.empty());
@@ -1286,15 +1286,18 @@ void building_t::gen_details(rand_gen_t &rgen) { // for the roof
 
 void building_t::maybe_add_special_roof(rand_gen_t &rgen) {
 	assert(!parts.empty());
-	bool const USE_DOME_ROOF = 0; // doesn't look quite right
+	cube_t const &top(parts.back());
+	vector3d const sz(top.get_size()); // top/last part
 
-	if (USE_DOME_ROOF && num_sides >= 16 && flat_side_amt == 0.0) { // cylinder
-		vector3d const sz(parts.back().get_size()); // top/last part
-		if (sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME; return;}
+	if (global_building_params.onion_roof && num_sides >= 16 && flat_side_amt == 0.0) { // cylinder building
+		if (sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_ONION;}
 	}
-	if (!is_simple_cube()) return; // only simple cubes are handled
-	//if (sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME; return;} // roughly square and not too tall; ROOF_TYPE_ONION?
-	gen_sloped_roof(rgen, parts.back()); // sloped roof
+	else if (is_simple_cube()) { // only simple cubes are handled
+		if (global_building_params.dome_roof && sz.x < 1.2*sz.y && sz.y < 1.2*sz.x && sz.z > max(sz.x, sz.y)) {roof_type = ROOF_TYPE_DOME;} // roughly square, not too short
+		else {gen_sloped_roof(rgen, top);} // sloped roof
+	}
+	if      (roof_type == ROOF_TYPE_DOME ) {max_eq(bcube.z2(), (top.z2() + 0.5f*(sz.x, sz.y)));}
+	else if (roof_type == ROOF_TYPE_ONION) {max_eq(bcube.z2(), (top.z2() + 1.0f*(sz.x, sz.y)));}
 }
 void building_t::gen_sloped_roof(rand_gen_t &rgen, cube_t const &top) { // Note: currently not supported for rotated buildings
 
