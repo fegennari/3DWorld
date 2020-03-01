@@ -359,7 +359,7 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
 
 
 class building_texture_mgr_t {
-	int window_tid, hdoor_tid, bdoor_tid, ac_unit_tid1, ac_unit_tid2;
+	int window_tid, hdoor_tid, bdoor_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2;
 
 	int ensure_tid(int &tid, const char *name) {
 		if (tid < 0) {tid = get_texture_by_name(name);}
@@ -367,10 +367,11 @@ class building_texture_mgr_t {
 		return tid;
 	}
 public:
-	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), ac_unit_tid1(-1), ac_unit_tid2(-1) {}
+	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), gdoor_tid(-1), ac_unit_tid1(-1), ac_unit_tid2(-1) {}
 	int get_window_tid  () const {return window_tid;}
 	int get_hdoor_tid   () {return ensure_tid(hdoor_tid,    "textures/white_door.jpg");} // house door
 	int get_bdoor_tid   () {return ensure_tid(bdoor_tid,    "textures/buildings/building_door.jpg");} // building door
+	int get_gdoor_tid   () {return ensure_tid(gdoor_tid,    "textures/buildings/garage_door.jpg");} // garage door
 	int get_ac_unit_tid1() {return ensure_tid(ac_unit_tid1, "textures/buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
 	int get_ac_unit_tid2() {return ensure_tid(ac_unit_tid2, "textures/buildings/AC_unit2.jpg");} // AC unit
 
@@ -404,6 +405,7 @@ public:
 		register_tid(building_texture_mgr.get_window_tid());
 		register_tid(building_texture_mgr.get_hdoor_tid());
 		register_tid(building_texture_mgr.get_bdoor_tid());
+		register_tid(building_texture_mgr.get_gdoor_tid());
 		register_tid(building_texture_mgr.get_ac_unit_tid1());
 		register_tid(building_texture_mgr.get_ac_unit_tid2());
 		register_tid(FENCE_TEX); // for elevators
@@ -769,7 +771,7 @@ public:
 				vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
 				vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
 			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_HDOOR || tquad.type == tquad_with_ix_t::TYPE_BDOOR) { // door - textured from (0,0) to (1,1)
+			else if (tquad.type == tquad_with_ix_t::TYPE_HDOOR || tquad.type == tquad_with_ix_t::TYPE_BDOOR || tquad.type == tquad_with_ix_t::TYPE_GDOOR) { // door - textured from (0,0) to (1,1)
 				vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
 				vert.t[1] = float((i == 2 || i == 3));
 			}
