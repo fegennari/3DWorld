@@ -179,6 +179,7 @@ struct draw_range_t {
 
 enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U};
+enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED};
 
 // object flags, currently used for room lights
 uint8_t const RO_FLAG_LIT     = 0x01; // light is on
@@ -270,10 +271,11 @@ struct room_t : public cube_t {
 
 struct landing_t : public cube_t {
 	bool for_elevator, dim, dir;
+	uint8_t floor;
 	stairs_shape shape;
-	landing_t() : for_elevator(0), dim(0), dir(0), shape(SHAPE_STRAIGHT) {}
-	landing_t(cube_t const &c, bool e, bool dim_, bool dir_, stairs_shape shape_=SHAPE_STRAIGHT) :
-		cube_t(c), for_elevator(e), dim(dim_), dir(dir_), shape(shape_) {assert(is_strictly_normalized());}
+	landing_t() : for_elevator(0), dim(0), dir(0), floor(0), shape(SHAPE_STRAIGHT) {}
+	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, stairs_shape shape_=SHAPE_STRAIGHT) :
+		cube_t(c), for_elevator(e), dim(dim_), dir(dir_), floor(f), shape(shape_) {assert(is_strictly_normalized());}
 	unsigned get_face_id() const {return (2*dim + dir);}
 };
 
@@ -476,6 +478,7 @@ template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const 
 tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened, bool swap_sides);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
+void set_wall_width(cube_t &wall, float pos, float half_thick, bool dim);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);

@@ -661,7 +661,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
 	bool stairs_dim(0), add_elevator(0);
-	unsigned stairs_shape(0); // straight by default
+	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
@@ -671,8 +671,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		assert(!interior->rooms.empty());
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
-		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {stairs_shape = 1;} // U-shape if there's enough room
-		if (stairs_shape == 1) {ewidth *= 1.6;} // increase the width of both the stairs and elevator
+		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {sshape = SHAPE_U;} // U-shape if there's enough room
+		if (sshape == SHAPE_U) {ewidth *= 1.6;} // increase the width of both the stairs and elevator
 		cube_t stairs(hall); // start as hallway
 
 		if (add_elevator) {
@@ -811,14 +811,14 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				assert(found);
 			}
 			if (has_stairs) { // add landings and stairwells
-				landing_t landing(stairs_cut, 0, stairs_dim, stairs_dir, stairs_shape);
+				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, sshape);
 				landing.z1() = zc; landing.z2() = zf;
 				interior->landings.push_back(landing);
 				if (f == 1) {interior->stairwells.push_back(stairs_cut);} // only add for first floor
 			}
 			if (has_elevator) {
 				assert(!interior->elevators.empty());
-				landing_t landing(elevator_cut, 1, interior->elevators.back().dim, interior->elevators.back().dir);
+				landing_t landing(elevator_cut, 1, f, interior->elevators.back().dim, interior->elevators.back().dir);
 				landing.z1() = zc; landing.z2() = zf;
 				interior->landings.push_back(landing);
 			}
@@ -880,8 +880,9 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub
 		out.swap(out2);
 	} // for s
 }
-void subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0) {
+bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0) {
 	unsigned const num_cubes(cubes.size()); // capture size before splitting
+	bool was_clipped(0);
 
 	for (unsigned i = 0; i < num_cubes; ++i) {
 		cube_t const &c(cubes[i]);
@@ -913,7 +914,9 @@ void subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *
 			if (shared.z2() > s.z2()) {cube_t top(shared); top.z1() = s.z2(); cubes.push_back(top);} // top part
 		}
 		subtract_cube_from_cube_inplace(s, cubes, i); // Note: invalidates c reference
+		was_clipped = 1;
 	} // for i
+	return was_clipped;
 }
 template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &cubes) {
 	for (auto i = sub.begin(); i != sub.end(); ++i) {subtract_cube_from_cubes(*i, cubes);}
@@ -959,10 +962,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			bool stairs_added(0);
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
-			for (unsigned n = 0; n < 130; ++n) { // make 100 tries to add stairs
-				cube_t place_region((n < 10) ? pref_shared : shared); // use preferred shared area from primary hallway for first 10 iterations
+			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
+			for (unsigned n = 0; n < 200; ++n) { // make 100 tries to add stairs
+				cube_t place_region((n < 20) ? pref_shared : shared); // use preferred shared area from primary hallway for first 20 iterations
 
-				if (n > 0 && n%10 == 0) { // decrease stairs size slightly every 10 iterations
+				if (n >= 40 && n < 160 && (n%10) == 0) { // decrease stairs size slightly every 10 iterations
 					stairs_width -= 0.025*doorway_width;
 					stairs_pad   -= 0.040*doorway_width;
 					len_with_pad -= 0.230*doorway_width;
@@ -981,8 +985,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand_test[1].z1() += 1.1*window_vspacing; cand_test[1].z2() += 0.9*window_vspacing; // move to upper part
 				cand_test[ stairs_dir].d[dim][0] += stairs_pad; // subtract off padding on one side
 				cand_test[!stairs_dir].d[dim][1] -= stairs_pad; // subtract off padding on one side
-				bool const allow_clip_walls = 0; // optional; doesn't look right, maybe would look better with side walls
-				bool bad_place(0);
+				bool const allow_clip_walls(n > 180); // doesn't look right in some cases and may block hallways and rooms, use as a last resort
+				bool bad_place(0), wall_clipped(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
 					if (!is_valid_stairs_elevator_placement(cand_test[d], doorway_width, stairs_pad, !allow_clip_walls)) {bad_place = 1;} // bad placement
@@ -990,13 +994,16 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				if (bad_place) continue;
 
 				if (allow_clip_walls) { // clip out walls around stairs
-					cube_t clip_cube(cand);
-					clip_cube.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling for first floor on upper part
-					for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(clip_cube, interior->walls[d], nullptr, 1);} // clip_in_z=1
+					cand_test[0].z1() = cand.z1(); cand_test[0].z2() = part.z2(); // lower
+					cand_test[1].z1() = part.z2(); cand_test[1].z2() = part.z2() + window_vspacing - fc_thick; // upper (bot of ceiling for first floor on upper part)
+
+					for (unsigned e = 0; e < 2; ++e) {
+						for (unsigned d = 0; d < 2; ++d) {wall_clipped |= subtract_cube_from_cubes(cand_test[e], interior->walls[d], nullptr, 1);} // clip_in_z=1
+					}
 				}
 				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
-				unsigned const stairs_shape(0); // straight, for now
-				landing_t landing(cand, 0, dim, stairs_dir, stairs_shape);
+				stairs_shape const sshape(wall_clipped ? SHAPE_WALLED : SHAPE_STRAIGHT); // add walls around stairs if room walls were clipped
+				landing_t landing(cand, 0, 0, dim, stairs_dir, sshape);
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
 				interior->stairwells.push_back(cand);
@@ -1036,7 +1043,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			if (is_above) {add_or_extend_elevator(*e, 0);} // extend only
 			
 			for (auto h = holes.begin(); h != holes.end(); ++h) {
-				landing_t landing(*h, 1, e->dim, e->dir);
+				landing_t landing(*h, 1, 0, e->dim, e->dir);
 				landing.z1() -= fc_thick; // since we only captured floor cutouts, extend them downward to include the ceiling below
 				interior->landings.push_back(landing);
 			}
