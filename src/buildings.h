@@ -291,7 +291,7 @@ enum {ROOF_TYPE_FLAT=0, ROOF_TYPE_SLOPE, ROOF_TYPE_PEAK, ROOF_TYPE_DOME, ROOF_TY
 
 struct roof_obj_t : public cube_t {
 	uint8_t type;
-	roof_obj_t() : type(ROOF_OBJ_BLOCK) {}
+	roof_obj_t(uint8_t type_=ROOF_OBJ_BLOCK) : type(type_) {}
 	roof_obj_t(cube_t const &c, uint8_t type_=ROOF_OBJ_BLOCK) : cube_t(c), type(type_) {assert(is_strictly_normalized());}
 };
 typedef vector<roof_obj_t> vect_roof_obj_t;
