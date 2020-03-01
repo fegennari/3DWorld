@@ -12,6 +12,8 @@ extern int display_mode;
 extern float grass_width;
 extern building_params_t global_building_params;
 
+vector3d get_nom_car_size();
+
 
 void building_t::set_z_range(float z1, float z2) {
 	bcube.z1() = z1; bcube.z2() = z2;
@@ -920,6 +922,15 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
 				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
 				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
+				vector3d const car_sz(get_nom_car_size());
+				bool const is_garage(max(c.dx(), c.dy()) > 1.2f*car_sz.x && min(c.dx(), c.dy()) > 1.2f*car_sz.y); // must be able to fit a car
+				
+				if (is_garage) { // garage
+					// TODO: add door type TYPE_GDOOR
+				}
+				else { // shed
+					// TODO: add door type TYPE_HDOOR
+				}
 			}
 			parts.push_back(c); // support column or shed/garage
 		} // end house details
