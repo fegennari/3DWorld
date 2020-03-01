@@ -580,7 +580,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				} // for dim
 			} // for p2
 		} // end wall placement
-		add_ceilings_floors_stairs(rgen, *p, hall, num_floors, rooms_start, use_hallway, first_part);
+		add_ceilings_floors_stairs(rgen, *p, hall, (p - parts.begin()), num_floors, rooms_start, use_hallway, first_part);
 	} // for p (parts)
 
 	if (has_garage) { // add garage/shed floor and ceiling
@@ -654,8 +654,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	interior->finalize();
 }
 
-void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part) {
-
+void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall,
+	unsigned part_ix, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part)
+{
 	float const window_vspacing(get_material().get_floor_spacing());
 	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
 	float ewidth(1.5*doorway_width); // for elevators
@@ -858,10 +859,19 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				c.z1() = zc; c.z2() = z; interior->ceilings.push_back(c);
 				c.set_to_zeros();
 			}
-			// add a small 3-sided box around the stairs using roof blocks
+			bool const dir(stairs_dir^(sshape == SHAPE_U));
 			box.z1() = z;
+			
+			if (is_sloped) { // add a door to the roof - too wide for U-shaped stairs door so only add for sloped roof/straight stairs
+				// TODO: make this work for U-shaped stairs, make it open (outward) for the player with HDOOR
+				cube_t door(box);
+				door.d[stairs_dim][ dir] += 0.2*(dir ? -1.0 : 1.0)*fc_thick; // shift slightly to fill the gap
+				door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];
+				add_door(door, part_ix, stairs_dim, dir, 0); // add house door
+			}
+			// add a small 3-sided box around the stairs using roof blocks
 			remove_intersecting_roof_cubes(box);
-			unsigned const opening_ix(2*(1 - stairs_dim) + (stairs_dir^(sshape == SHAPE_U)));
+			unsigned const opening_ix(2*(1 - stairs_dim) + dir);
 
 			if (is_sloped) { // sloped roof
 				float const z1(box.z1()), z2(box.z2());

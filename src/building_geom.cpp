@@ -1084,7 +1084,7 @@ tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned
 	return door;
 }
 
-bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building) {
+bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building) { // exterior doors
 
 	if (c.is_all_zeros()) return 0;
 	vector3d const sz(c.get_size());
