@@ -1066,7 +1066,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find parts above/below this elevator
-			if (!p->contains_cube_xy(*e)) continue; // elevator doesn't extend inside this cube
+			cube_t needed_space(*e);
+			needed_space.expand_by_xy(fc_thick);
+			if (!p->contains_cube_xy(needed_space)) continue; // elevator doesn't extend inside this cube
 			bool const is_above(p->z1() == e->z2()), is_below(p->z2() == e->z1());
 			if (!is_above && !is_below) continue;
 			cube_t extension(*e);
