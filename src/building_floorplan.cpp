@@ -837,9 +837,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 	if (first_part && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT) { // add roof access for stairs
 		bool const is_sloped(sshape != SHAPE_U);
-		cube_t box(stairs_cut), hole(stairs_cut);
+		cube_t box(stairs_cut);
 		if (!is_sloped) {box.expand_by_xy(fc_thick);}
-		if (!is_sloped) {hole.expand_by_xy(0.1*fc_thick);} // to prevent z-fighting
 		box.z1() = z + floor_thickness; box.z2() = z + window_vspacing;
 		box.z2() -= (is_sloped ? 0.2 : 0.3)*window_vspacing; // slightly lower than a normal floor
 
@@ -863,7 +862,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			box.z1() = z;
 			
 			if (is_sloped) { // add a door to the roof - too wide for U-shaped stairs door so only add for sloped roof/straight stairs
-				// TODO: make this work for U-shaped stairs, make it open (outward) for the player with HDOOR
+				// TODO: make this look right for U-shaped stairs and make it open (outward) for the player
 				cube_t door(box);
 				door.d[stairs_dim][ dir] += 0.2*(dir ? -1.0 : 1.0)*fc_thick; // shift slightly to fill the gap
 				door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];
@@ -893,13 +892,14 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				} // for s
 			}
 			else { // box roof
+				cube_t hole(stairs_cut);
+				if (!is_sloped) {hole.expand_by_xy(0.1*fc_thick);} // to prevent z-fighting
+				hole.d[stairs_dim][dir] = box.d[stairs_dim][dir]; // move edge flush with box to remove this wall and create an opening
 				subtract_cube_xy(box, hole, to_add);
 
 				for (unsigned i = 0; i < 4; ++i) {
 					cube_t &c(to_add[i]);
-					assert(!c.is_zero_area());
-					if (i == opening_ix) continue; // skip opening on this side
-					details.emplace_back(c, ROOF_OBJ_SCAP);
+					if (!c.is_zero_area()) {details.emplace_back(c, ROOF_OBJ_SCAP);} // skip open side
 				}
 				box.z1() = box.z2() - fc_thick;
 				details.emplace_back(box, ROOF_OBJ_SCAP); // top
