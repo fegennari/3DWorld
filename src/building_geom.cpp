@@ -153,6 +153,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 		if (zval > bcube.z1() && zval < (bcube.z1() + get_door_height())) { // on the ground floor
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
 				if (d->get_bcube().intersects_xy(sc)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
+				if (is_house) break; // player can only enter through the primary house door, not the garage/shed door (yet)
 			}
 		}
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // garages and sheds are excluded since they have no doors
@@ -847,6 +848,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	parts.push_back(base);
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
+	float const door_width_scale(0.5);
 	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);;
 	bool door_dim(rgen.rand_bool()), door_dir(0), dim(0), dir(0), dir2(0);
 	unsigned door_part(0), detail_type(0);
@@ -917,21 +919,21 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				skip_last_roof = 1;
 			}
 			else if (detail_type == 2) { // detatched garage/shed
-				has_garage = 1;
 				c.d[!dim][dir2 ]  = base.d[!dim][dir2]; // shove it into the opposite corner of the bcube
 				c.d[ dim][dir  ]  = base.d[ dim][dir ]; // shove it into the opposite corner of the bcube
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
 				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
 				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
 				vector3d const car_sz(get_nom_car_size());
-				bool const is_garage(max(c.dx(), c.dy()) > 1.2f*car_sz.x && min(c.dx(), c.dy()) > 1.2f*car_sz.y); // must be able to fit a car
-				
-				if (is_garage) { // garage
-					// TODO: add door type TYPE_GDOOR
-				}
-				else { // shed
-					// TODO: add door type TYPE_HDOOR
-				}
+				bool const is_garage(max(c.dx(), c.dy()) > 1.2f*car_sz.x && min(c.dx(), c.dy()) > 1.2f*car_sz.y && c.dz() > 1.2f*car_sz.z); // must be able to fit a car
+				(is_garage ? has_garage : has_shed) = 1;
+				// add a door
+				bool const long_dim(c.dx() < c.dy());
+				bool door_dir(c.d[long_dim][0] == bcube.d[long_dim][0]); // interior face
+				if (is_garage) {door_dir ^= 1;} // facing away from the house, not toward it
+				float const wscale(is_garage ? 0.9*c.get_sz_dim(!long_dim)/door_height : door_width_scale);
+				add_door(place_door(c, long_dim, door_dir, door_height, 0.0, 0.0, 0.0, wscale, 0, rgen), parts.size(), long_dim, door_dir, 0);
+				if (is_garage) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
 			}
 			parts.push_back(c); // support column or shed/garage
 		} // end house details
@@ -959,7 +961,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_interior(rgen, 0); // before adding door
 
 	if (gen_door) {
-		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, 0.5, 0, rgen));
+		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, rgen));
 
 		if (interior && interior->is_blocked_by_stairs_or_elevator(door, 0.5*door_height)) { // blocked by stairs - switch door to other side/dim
 			door_dim ^= 1;
@@ -971,9 +973,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				door_pos    = door_cube.d[door_dim][!door_dir];
 				door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
 			}
-			door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, 0.5, 0, rgen); // keep door_height
+			door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, rgen); // keep door_height
 		}
 		add_door(door, door_part, door_dim, door_dir, 0);
+		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
 	}
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	float roof_dz[3] = {0.0f};

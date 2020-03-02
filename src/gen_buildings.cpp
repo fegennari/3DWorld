@@ -1073,7 +1073,13 @@ public:
 // *** Drawing ***
 
 int get_building_ext_door_tid(unsigned type) {
-	return ((type == tquad_with_ix_t::TYPE_BDOOR) ? building_texture_mgr.get_bdoor_tid() : building_texture_mgr.get_hdoor_tid());
+	switch(type) {
+	case tquad_with_ix_t::TYPE_HDOOR: return building_texture_mgr.get_hdoor_tid();
+	case tquad_with_ix_t::TYPE_BDOOR: return building_texture_mgr.get_bdoor_tid();
+	case tquad_with_ix_t::TYPE_GDOOR: return building_texture_mgr.get_gdoor_tid();
+	default: assert(0);
+	}
+	return -1; // never gets here
 }
 
 void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior) {
@@ -1367,12 +1373,14 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door, 1); // clip to floor
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
-	// draw the opened door
-	building_draw_t open_door_draw;
-	vector3d const normal(door.get_norm());
-	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
-	add_door_to_bdraw(door.get_bcube(), open_door_draw, dim, dir, 1, 1); // opened=1, exterior=1
-	open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
+	
+	if (door.type != tquad_with_ix_t::TYPE_GDOOR) { // draw the opened door, but not if it's a garage door (which goes up instead of swinging open)
+		building_draw_t open_door_draw;
+		vector3d const normal(door.get_norm());
+		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
+		add_door_to_bdraw(door.get_bcube(), open_door_draw, dim, dir, 1, 1); // opened=1, exterior=1
+		open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
+	}
 	return 1;
 }
 
@@ -1391,7 +1399,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	building_mat_t const &mat(get_material());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	
-	for (auto i = parts.begin(); i != get_real_parts_end()+has_garage; ++i) { // multiple cubes/parts/levels; include house garage/shed
+	for (auto i = parts.begin(); i != get_real_parts_end()+has_sec_bldg(); ++i) { // multiple cubes/parts/levels; include house garage/shed
 		if (make_all_front || i->contains_pt(only_cont_pt)) { // part containing the point
 			bdraw_front.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			continue;

@@ -138,7 +138,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		tot_num_stairwells += (has_stairs && num_floors > 1);
 		tot_num_landings   += (has_stairs ? (num_floors - 1) : 0);
 	}
-	if (has_garage) {++tot_num_floors;}
+	if (has_sec_bldg()) {++tot_num_floors;}
 	interior->ceilings.reserve(tot_num_floors);
 	interior->floors  .reserve(tot_num_floors);
 	interior->landings.reserve(tot_num_landings);
@@ -583,7 +583,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		add_ceilings_floors_stairs(rgen, *p, hall, (p - parts.begin()), num_floors, rooms_start, use_hallway, first_part);
 	} // for p (parts)
 
-	if (has_garage) { // add garage/shed floor and ceiling
+	if (has_sec_bldg()) { // add garage/shed floor and ceiling
 		assert(num_parts < parts.size());
 		cube_t const &garage(parts[num_parts]);
 		cube_t C(garage);
