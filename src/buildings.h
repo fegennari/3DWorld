@@ -494,5 +494,6 @@ void setup_city_lights(vector3d const &xlate);
 void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only); // from city_gen.cpp
 void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes); // from city_gen.cpp
 vector3d get_nom_car_size();
+void draw_cars_in_garages(vector3d const &xlate);
 
 #endif // _BUILDING_H_

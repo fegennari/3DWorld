@@ -2773,6 +2773,7 @@ void gen_buildings() {
 }
 void draw_buildings(int shadow_only, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
+	draw_cars_in_garages(xlate); // must be done before drawing buildings because windows write to the depth buffer
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
 	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps)); // don't draw city buildings for interior shadows

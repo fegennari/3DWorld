@@ -616,6 +616,7 @@ class car_manager_t {
 	struct car_block_t {
 		unsigned start, cur_city, first_parked;
 		car_block_t(unsigned s, unsigned c) : start(s), cur_city(c), first_parked(0) {}
+		bool is_in_building() const {return (cur_city == NO_CITY_IX);}
 	};
 	city_road_gen_t const &road_gen;
 	vector<car_t> cars;
@@ -629,7 +630,7 @@ class car_manager_t {
 	unsigned first_parked_car, first_garage_car;
 	bool car_destroyed;
 
-	cube_t const get_cb_bcube(car_block_t const &cb ) const;
+	cube_t get_cb_bcube(car_block_t const &cb ) const;
 	road_isec_t const &get_car_isec(car_t const &car) const;
 	bool check_collision(car_t &c1, car_t &c2) const;
 	void register_car_at_city(car_t const &car);
@@ -657,7 +658,7 @@ public:
 	bool check_car_for_ped_colls(car_t &car) const;
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center, rand_gen_t &rgen) const;
 	void next_frame(ped_manager_t const &ped_manager, float car_speed);
-	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
+	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context();}
 }; // car_manager_t

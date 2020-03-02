@@ -587,7 +587,7 @@ void car_manager_t::finalize_cars() {
 				else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
 				city_model_t const &model(car_model_loader.get_model(i->model_id));
 				// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck)
-				if (FORCE_MODEL_ID < 0 && num_models > 1 && (i-cars.begin()) >= first_garage_car && n+1 < 20 && model.scale > 1.0) continue;
+				if (FORCE_MODEL_ID < 0 && num_models > 1 && unsigned(i-cars.begin()) >= first_garage_car && n+1 < 20 && model.scale > 1.0) continue;
 				fixed_color = model.fixed_color_id;
 				i->apply_scale(model.scale);
 				break;
@@ -926,8 +926,10 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
 }
 
-void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows) {
+void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass) {
 	if (cars.empty()) return;
+	if ( garages_pass && first_garage_car == cars.size()) return; // no cars in garages
+	if (!garages_pass && first_garage_car == 0) return; // only cars in garages
 
 	if (trans_op_mask & 1) { // opaque pass, should be first
 		if (is_dlight_shadows && !city_params.car_shadows) return;
@@ -939,6 +941,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
+			if (cb->is_in_building() != garages_pass) continue; // wrong pass
 			if (!camera_pdu.cube_visible(get_cb_bcube(*cb) + xlate)) continue; // city not visible - skip
 			unsigned const end((cb+1)->start);
 			assert(end <= cars.size());
@@ -951,7 +954,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		dstate.post_draw();
 		fgPopMatrix();
 
-		if (tt_fire_button_down && !game_mode) {
+		if (tt_fire_button_down && !game_mode && !garages_pass) {
 			point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
 			car_t const *car(get_car_at(p1, p2));
 			if (car != nullptr) {dstate.set_label_text(car->label_str(), (car->get_center() + xlate));} // car found

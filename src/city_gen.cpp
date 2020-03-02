@@ -2794,8 +2794,8 @@ public:
 
 
 // Note: the car_manager_t member functions that use road_gen are here rather than in cars.cpp
-cube_t const car_manager_t::get_cb_bcube(car_block_t const &cb ) const {
-	if (cb.cur_city == NO_CITY_IX) {return garages_bcube;}
+cube_t car_manager_t::get_cb_bcube(car_block_t const &cb ) const {
+	if (cb.is_in_building()) {return garages_bcube;}
 	return road_gen.get_city_bcube_for_cars(cb.cur_city);
 }
 road_isec_t const &car_manager_t::get_car_isec(car_t const &car) const {return road_gen.get_car_isec(car);}
@@ -3080,10 +3080,13 @@ public:
 		if (!shadow_only && !reflection_pass && (trans_op_mask & 1)) {setup_city_lights(xlate);} // setup lights on first (opaque) non-shadow pass
 		bool const use_dlights(enable_lights()), is_dlight_shadows(shadow_only == 2);
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0));} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
-		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);
+		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows, 0);
 		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
 		road_gen.draw_label(); // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
+	}
+	void draw_cars_in_garages(vector3d const &xlate) {
+		car_manager.draw(1, xlate, 0, 0, 0, 1); // opaque + garages pass, no shadows or lights
 	}
 	void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only) {
 		ped_manager.draw_peds_in_building(first_ped_ix, bix, s, xlate, dlight_shadow_only);
@@ -3183,4 +3186,5 @@ void next_pedestrian_animation() {city_gen.next_ped_animation();}
 void free_city_context() {city_gen.free_context();}
 bool has_city_trees() {return (city_params.max_trees_per_plot > 0);}
 vector3d get_nom_car_size() {return city_params.get_nom_car_size();}
+void draw_cars_in_garages(vector3d const &xlate) {city_gen.draw_cars_in_garages(xlate);}
 
