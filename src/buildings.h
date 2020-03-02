@@ -410,7 +410,7 @@ struct building_t : public building_geom_t {
 	void update_stats(building_stats_t &s) const;
 private:
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
-	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, bool dim, bool dir, bool opened, bool exterior) const;
+	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool exterior) const;
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	cube_t get_part_containing_pt(point const &pt) const;

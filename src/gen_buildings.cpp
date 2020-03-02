@@ -1211,20 +1211,20 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		} // for i
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor (1.1M T)
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-				add_door_to_bdraw(*i, bdraw, i->dim, i->open_dir, i->open, 0); // exterior=0
+				add_door_to_bdraw(*i, bdraw, tquad_with_ix_t::TYPE_HDOOR, i->dim, i->open_dir, i->open, 0); // exterior=0
 			}
 		}
 		bdraw.end_draw_range_capture(interior->draw_range);
 	} // end interior case
 }
 
-void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, bool dim, bool dir, bool opened, bool exterior) const {
+void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool exterior) const {
 
 	float const ty(exterior ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
-	int const tid((exterior && !is_house) ? building_texture_mgr.get_bdoor_tid() : building_texture_mgr.get_hdoor_tid());
+	int const tid(get_building_ext_door_tid(door_type));
 	float const thickness(0.02*D.get_sz_dim(!dim));
-	unsigned const num_sides((exterior && !is_house) ? 2 : 1); // double doors for office building exterior door
+	unsigned const num_sides((door_type == tquad_with_ix_t::TYPE_BDOOR) ? 2 : 1); // double doors for office building exterior door
 	tid_nm_pair_t const tp(tid, -1, 1.0f/num_sides, ty);
 
 	for (unsigned side = 0; side < num_sides; ++side) { // {right, left}
@@ -1378,7 +1378,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 		building_draw_t open_door_draw;
 		vector3d const normal(door.get_norm());
 		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
-		add_door_to_bdraw(door.get_bcube(), open_door_draw, dim, dir, 1, 1); // opened=1, exterior=1
+		add_door_to_bdraw(door.get_bcube(), open_door_draw, door.type, dim, dir, 1, 1); // opened=1, exterior=1
 		open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
 	}
 	return 1;
