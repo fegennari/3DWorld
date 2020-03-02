@@ -210,6 +210,11 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 			else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
 				part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr);
 			}
+			else if (!xy_only && i->contains_pt_xy_exp(pos2, radius) && (p_last2.z - 0.9f*radius) > (i->d[2][1] + xlate.z)) { // on top of building
+				pos2.z = i->d[2][1] + xlate.z + radius;
+				if (cnorm_ptr) {*cnorm_ptr = plus_z;}
+				part_coll = 1;
+			}
 			else if (sphere_cube_int_update_pos(pos2, radius, part_bc, p_last2, 1, xy_only, cnorm_ptr)) { // cube
 				part_coll = 1; // flag as colliding, continue to look for more collisions (inside corners)
 			}
