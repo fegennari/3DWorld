@@ -587,12 +587,6 @@
     <ClInclude Include="src\allocators.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\buildings.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\city.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\texture_tile_blend\jacobi.h">
       <Filter>Source Files\"Borrowed"\Header</Filter>
     </ClInclude>
@@ -601,6 +595,12 @@
     </ClInclude>
     <ClInclude Include="src\vertex_types.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\buildings.h">
+      <Filter>Source Files\City</Filter>
+    </ClInclude>
+    <ClInclude Include="src\city.h">
+      <Filter>Source Files\City</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
