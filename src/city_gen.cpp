@@ -2781,6 +2781,7 @@ public:
 	road_network_t const &get_car_rn(car_base_t const &car) const {return road_network_t::get_car_rn(car, road_networks, global_rn);}
 	
 	void update_car(car_t &car, rand_gen_t &rgen) const {
+		if (car.cur_city == NO_CITY_IX) return; // not in a city (in a garage), nothing to update
 		//update_car_seg_stats(car); // not needed - stats not yet used
 		get_car_rn(car).update_car(car, rgen, road_networks, global_rn);
 		if (city_params.enable_car_path_finding) {update_car_dest(car);}
@@ -2793,7 +2794,10 @@ public:
 
 
 // Note: the car_manager_t member functions that use road_gen are here rather than in cars.cpp
-cube_t const car_manager_t::get_cb_bcube(car_block_t const &cb ) const {return road_gen.get_city_bcube_for_cars(cb.cur_city);}
+cube_t const car_manager_t::get_cb_bcube(car_block_t const &cb ) const {
+	if (cb.cur_city == NO_CITY_IX) {return garages_bcube;}
+	return road_gen.get_city_bcube_for_cars(cb.cur_city);
+}
 road_isec_t const &car_manager_t::get_car_isec(car_t const &car) const {return road_gen.get_car_isec(car);}
 bool car_manager_t::check_collision(car_t &c1, car_t &c2)        const {return c1.check_collision(c2, road_gen);}
 void car_manager_t::register_car_at_city(car_t const &car) {road_gen.register_car_at_city(car.cur_city);}
@@ -3012,8 +3016,11 @@ public:
 		if (road_gen.empty()) return; // nothing to do - no roads or cars
 		// generate parking lots
 		vector<car_t> parked_cars;
-		road_gen.gen_parking_lots_and_place_objects(parked_cars, !car_manager.empty());
-		car_manager.add_parked_cars(parked_cars);
+		vect_cube_t garages;
+		bool const have_cars(!car_manager.empty());
+		road_gen.gen_parking_lots_and_place_objects(parked_cars, have_cars);
+		if (have_cars) {get_all_garages(garages);}
+		car_manager.add_parked_cars(parked_cars, garages);
 		car_manager.finalize_cars();
 		ped_manager.init(city_params.num_peds, city_params.num_building_peds); // must be after buildings are placed
 	}

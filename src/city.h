@@ -15,9 +15,10 @@
 using std::string;
 
 unsigned const CONN_CITY_IX((1<<16)-1); // uint16_t max
+unsigned const NO_CITY_IX(CONN_CITY_IX-1); // used for cars not in any city (in house garages)
 
 enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  NUM_RD_TIDS};
-enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, NUM_RD_TYPES};
+enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, TYPE_BUILDING, NUM_RD_TYPES};
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING};
 enum {RTYPE_ROAD=0, RTYPE_TRACKS};
@@ -624,6 +625,8 @@ class car_manager_t {
 	car_draw_state_t dstate;
 	rand_gen_t rgen;
 	vector<unsigned> entering_city;
+	cube_t garages_bcube;
+	unsigned first_parked_car, first_garage_car;
 	bool car_destroyed;
 
 	cube_t const get_cb_bcube(car_block_t const &cb ) const;
@@ -636,12 +639,12 @@ class car_manager_t {
 	void update_cars();
 	int find_next_car_after_turn(car_t &car);
 public:
-	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader), car_destroyed(0) {}
+	car_manager_t(city_road_gen_t const &road_gen_) : road_gen(road_gen_), dstate(car_model_loader), first_parked_car(0), first_garage_car(0), car_destroyed(0) {}
 	bool empty() const {return cars.empty();}
 	void clear() {cars.clear(); car_blocks.clear();}
 	unsigned get_model_gpu_mem() const {return car_model_loader.get_gpu_mem();}
 	void init_cars(unsigned num);
-	void add_parked_cars(vector<car_t> const &new_cars) {vector_add_to(new_cars, cars);}
+	void add_parked_cars(vector<car_t> const &new_cars, vect_cube_t const &garages);
 	void finalize_cars();
 	void extract_car_data(vector<car_city_vect_t> &cars_by_city) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
@@ -820,3 +823,4 @@ bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t
 point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen);
 bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, float radius);
 bool place_building_people(vect_building_place_t &locs, float radius, unsigned num); // from gen_buildings.cpp
+void get_all_garages(vect_cube_t &garages); // from gen_buildings.cpp

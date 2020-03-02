@@ -545,6 +545,35 @@ void car_manager_t::init_cars(unsigned num) {
 	cout << "Dynamic Cars: " << cars.size() << endl;
 }
 
+void car_manager_t::add_parked_cars(vector<car_t> const &new_cars, vect_cube_t const &garages) {
+	first_parked_car = cars.size(); // Note: sort may invalidate this, but okay for use in finalize_cars()
+	cars.reserve(cars.size() + new_cars.size() + garages.size());
+	vector_add_to(new_cars, cars);
+	first_garage_car = cars.size(); // Note: sort may invalidate this, but okay for use in finalize_cars()
+	if (garages.empty()) return; // done
+	vector3d const nom_car_size(city_params.get_nom_car_size());
+	car_t car; // no cur_city/cur_road/cur_segq
+	car.park();
+	car.cur_city      = NO_CITY_IX; // special value
+	car.cur_road_type = TYPE_BUILDING; // garage
+	rand_gen_t rgen;
+	
+	for (auto i = garages.begin(); i != garages.end(); ++i) {
+		if ((rgen.rand()&3) == 0) continue; // 25% of garages have no car
+		vector3d car_sz(nom_car_size);
+		car.dim    = (i->dx() < i->dy()); // long dim
+		car.dir    = rgen.rand_bool(); // Note: ignores garage dir because some cars and backed in and some are pulled in
+		car.height = car_sz.z;
+		if (car.dim) {swap(car_sz.x, car_sz.y);}
+		car.bcube.set_from_point(i->get_cube_center());
+		car.bcube.expand_by(0.5*car_sz);
+		assert(i->contains_cube(car.bcube));
+		car.bcube.z1() = i->z1(); car.bcube.z2() = i->z1() + car.height;
+		cars.push_back(car);
+		garages_bcube.assign_or_union_with_cube(car.bcube);
+	} // for i
+}
+
 void car_manager_t::finalize_cars() {
 	if (empty()) return;
 	unsigned const num_models(car_model_loader.num_models());
@@ -553,16 +582,21 @@ void car_manager_t::finalize_cars() {
 		int fixed_color(-1);
 
 		if (num_models > 0) {
-			if (FORCE_MODEL_ID >= 0) {i->model_id = (unsigned char)FORCE_MODEL_ID;}
-			else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
-			city_model_t const &model(car_model_loader.get_model(i->model_id));
-			fixed_color = model.fixed_color_id;
-			i->apply_scale(model.scale);
+			for (unsigned n = 0; n < 20; ++n) {
+				if (FORCE_MODEL_ID >= 0) {i->model_id = (unsigned char)FORCE_MODEL_ID;}
+				else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
+				city_model_t const &model(car_model_loader.get_model(i->model_id));
+				// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck)
+				if (FORCE_MODEL_ID < 0 && num_models > 1 && (i-cars.begin()) >= first_garage_car && n+1 < 20 && model.scale > 1.0) continue;
+				fixed_color = model.fixed_color_id;
+				i->apply_scale(model.scale);
+				break;
+			} // for n
 		}
 		i->color_id = ((fixed_color >= 0) ? fixed_color : (rgen.rand() % NUM_CAR_COLORS));
 		assert(i->is_valid());
 	} // for i
-	cout << "Total Cars: " << cars.size() << endl;
+	cout << "Total Cars: " << cars.size() << endl; // 4000 on the road + 4372 parked + 433 garage (out of 594) = 8805
 }
 
 void car_city_vect_t::clear_cars() {

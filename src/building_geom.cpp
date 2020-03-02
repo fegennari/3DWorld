@@ -13,8 +13,6 @@ extern int display_mode;
 extern float grass_width;
 extern building_params_t global_building_params;
 
-vector3d get_nom_car_size();
-
 
 void building_t::set_z_range(float z1, float z2) {
 	bcube.z1() = z1; bcube.z2() = z2;

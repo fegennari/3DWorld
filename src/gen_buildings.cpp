@@ -1885,6 +1885,14 @@ public:
 		cout << "Num Placed Trees: " << placements.size() << ", Blocks: " << num_blocks << endl;
 	}
 
+	void get_all_garages(vect_cube_t &garages) const {
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+			if (!b->has_garage || !b->interior) continue; // no garage, or no interior/car not visible
+			assert(b->parts.size() >= 3); // must be at least two parts + garage
+			garages.push_back(b->parts[2]); // place a car here - up to the car manager to decide on the details
+		}
+	}
+
 	bool place_people(vect_building_place_t &locs, float radius, unsigned num) {
 		assert(locs.empty());
 		if (num == 0 || empty() || !ADD_BUILDING_INTERIORS) return 0; // no people, buildings, or interiors
@@ -2835,4 +2843,9 @@ int get_building_bcube_contains_pos(point const &pos) {return building_creator_c
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
 bool place_building_people(vect_building_place_t &locs, float radius, unsigned num) {return building_creator.place_people(locs, radius, num);} // secondary buildings only for now
+
+void get_all_garages(vect_cube_t &garages) {
+	building_creator.get_all_garages(garages);
+	building_creator_city.get_all_garages(garages); // doesn't have houses/garages yet, but leave it in in case they're added in the future
+}
 
