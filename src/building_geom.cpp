@@ -154,9 +154,9 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 				if (is_house) break; // player can only enter through the primary house door, not the garage/shed door (yet)
 			}
 		}
-		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // garages and sheds are excluded since they have no doors
+		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // garages and sheds are excluded since they can't be entered (yet)
 			cube_t c(*i + xlate);
-			if (!c.contains_pt(pos2)) continue; // not interior to this part
+			if (!c.contains_pt(point(pos2.x, pos2.y, zval))) continue; // not interior to this part
 			float cont_area(0.0);
 
 			for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
