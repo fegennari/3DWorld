@@ -340,7 +340,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (!stairs_light && ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 1.0f*xy_dist)) continue; // light viewed at too high an angle
 
 				if (camera_in_building) { // camera and light are in different buildings/parts
-					assert(camera_part < real_num_parts);
+					if (camera_part >= real_num_parts) continue; // camera in garage or shed
+					assert(camera_part < parts.size());
 					cube_t const &cpart(parts[camera_part]);
 					if (cpart.z2() <= room.z1() || cpart.z1() >= room.z2()) continue; // light in a different vertical stack than the camera
 					// is it better to check if light half sphere is occluded by the floor above/below?
