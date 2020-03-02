@@ -862,7 +862,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			box.z1() = z;
 			
 			if (is_sloped) { // add a door to the roof - too wide for U-shaped stairs door so only add for sloped roof/straight stairs
-				// TODO: make this look right for U-shaped stairs and make it open (outward) for the player
+				// TODO: make this look right for U-shaped stairs and make it open for the player
 				cube_t door(box);
 				door.d[stairs_dim][ dir] += 0.2*(dir ? -1.0 : 1.0)*fc_thick; // shift slightly to fill the gap
 				door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];

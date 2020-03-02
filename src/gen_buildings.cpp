@@ -1377,7 +1377,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	if (door.type != tquad_with_ix_t::TYPE_GDOOR) { // draw the opened door, but not if it's a garage door (which goes up instead of swinging open)
 		building_draw_t open_door_draw;
 		vector3d const normal(door.get_norm());
-		bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
+		bool const opens_outward(!is_house), dim(fabs(normal.x) < fabs(normal.y)), dir((normal[dim] < 0.0)^opens_outward);
 		add_door_to_bdraw(door.get_bcube(), open_door_draw, door.type, dim, dir, 1, 1); // opened=1, exterior=1
 		open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
 	}
