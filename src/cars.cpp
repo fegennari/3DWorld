@@ -449,6 +449,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		if (emit_now) {qbds[1].draw_and_clear();} // shadowed (only emit when tile changes?)
 	}
 	if (shadow_only) return; // shadow pass - done
+	if (car.cur_road_type == TYPE_BUILDING) return; // in a garage/building, nothing else to draw
 
 	if (dist_val < 0.04 && fabs(car.dz) < 0.01) { // add AO planes when close to the camera and on a level road
 		float const length(car.get_length());

@@ -1890,6 +1890,7 @@ public:
 			if (!b->has_garage || !b->interior) continue; // no garage, or no interior/car not visible
 			assert(b->parts.size() >= 3); // must be at least two parts + garage
 			garages.push_back(b->parts[2]); // place a car here - up to the car manager to decide on the details
+			garages.back().z1() += 0.5*FLOOR_THICK_VAL*b->get_window_vspace(); // place car above the floor
 		}
 	}
 
