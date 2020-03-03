@@ -866,7 +866,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				cube_t door(box);
 				door.d[stairs_dim][ dir] += 0.2*(dir ? -1.0 : 1.0)*fc_thick; // shift slightly to fill the gap
 				door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];
-				add_door(door, part_ix, stairs_dim, dir, 0); // add house door
+				add_door(door, part_ix, stairs_dim, dir, 1);
+				doors.back().type = tquad_with_ix_t::TYPE_RDOOR;
 			}
 			// add a small 3-sided box around the stairs using roof blocks
 			remove_intersecting_roof_cubes(box);

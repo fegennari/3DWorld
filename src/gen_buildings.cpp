@@ -775,11 +775,11 @@ public:
 				if (fabs(normal.z) > 0.5) {vert.t[0] = vert.v.x*tsx; vert.t[1] = vert.v.y*tsy;} // facing up, use XY plane
 				else {vert.t[0] = (vert.v.x + vert.v.y)*tsx; vert.t[1] = vert.v.z*tsy;} // facing to the side, use XZ or YZ plane
 			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_HDOOR || tquad.type == tquad_with_ix_t::TYPE_BDOOR || tquad.type == tquad_with_ix_t::TYPE_GDOOR) { // door - textured from (0,0) to (1,1)
+			else if (tquad.is_exterior_door()) { // door - textured from (0,0) to (1,1)
 				vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
 				vert.t[1] = float((i == 2 || i == 3));
 			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_IDOOR || tquad.type == tquad_with_ix_t::TYPE_IDOOR2) { // interior door textured/stretched in Y
+			else if (tquad.is_interior_door()) { // interior door textured/stretched in Y
 				vert.t[0] = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
 				vert.t[1] = tex.tscale_y*((i == 2 || i == 3));
 			}
@@ -1075,6 +1075,7 @@ public:
 int get_building_ext_door_tid(unsigned type) {
 	switch(type) {
 	case tquad_with_ix_t::TYPE_HDOOR: return building_texture_mgr.get_hdoor_tid();
+	case tquad_with_ix_t::TYPE_RDOOR: return building_texture_mgr.get_hdoor_tid();
 	case tquad_with_ix_t::TYPE_BDOOR: return building_texture_mgr.get_bdoor_tid();
 	case tquad_with_ix_t::TYPE_GDOOR: return building_texture_mgr.get_gdoor_tid();
 	default: assert(0);

@@ -476,6 +476,7 @@ void building_t::calc_bcube_from_parts() {
 }
 
 void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const {
+	if (door.type == tquad_with_ix_t::TYPE_RDOOR) return; // not on a wall, can't move it (should caller check this?)
 	cube_t const c(door.get_bcube());
 	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0); // closest cube side dir
 	float door_shift(bcube.dz()); // start with a large value
