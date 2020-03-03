@@ -1387,6 +1387,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 
 bool building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
+		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // TODO: make roof doors open correctly and then enable this
 		cube_t c(d->get_bcube());
 		c.expand_by_xy(dist);
 		if (c.contains_pt(pos)) {door = *d; return 1;}
@@ -2157,6 +2158,8 @@ public:
 						g->has_room_geom = 1;
 						if (!transparent_windows) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
+						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
+						//cube_t bc_exp(b.bcube); bc_exp.expand_by(door_open_dist); if (!bc_exp.contains_pt(camera_xlated)) continue; // camera not near building
 						if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player
