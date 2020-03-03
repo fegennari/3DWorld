@@ -171,6 +171,18 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 			is_interior = 1;
 			break; // flag for interior collision detection
 		} // for i
+		if (!is_interior) { // not interior to a part - check roof access
+			float const floor_spacing(get_window_vspace());
+
+			for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
+				cube_t test_cube(*i);
+				test_cube.expand_by_xy(-0.5f*radius);
+				if (!test_cube.contains_pt_xy(pos2 - xlate)) continue; // pos not over stairs
+				// Note: if pos isn't inside a part, but it's at the top of these stairs, then the stairs must be on the roof
+				// Note: add floor_spacing to allow the player to enter the stairs even when on the top of the roof access
+				if (zval > i->z2() && zval < (i->z2() + radius + floor_spacing)) {is_interior = 1; break;}
+			}
+		}
 	}
 	if (is_interior) {
 		point pos2_bs(pos2 - xlate);
@@ -227,6 +239,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 				if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
 			}
 			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
+				if (check_interior && i->type == tquad_with_ix_t::TYPE_ROOF_ACC) continue; // don't allow walking on roof access tquads
 				point const pos_xlate(pos2 - xlate);
 
 				if (check_interior && had_coll && pos2.z - xlate.z > part_z2) { // player standing on top of a building with a sloped roof
