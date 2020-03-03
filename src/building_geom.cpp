@@ -1077,7 +1077,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 }
 
-tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened, bool swap_sides) {
+tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened, bool opens_out, bool swap_sides) {
 
 	tquad_with_ix_t door(4, type); // quad
 	float const pos(c.d[dim][0] + (opened ? 0.0 : pos_adj*(dir ? 1.0 : -1.0))); // move away from wall slightly (not needed if opened)
@@ -1092,7 +1092,7 @@ tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned
 		float const width(c.get_sz_dim(!dim)), offset(0.01*width*((dir ^ dim) ? 1.0 : -1.0)); // move slightly away from the wall to prevent z-fighting
 		if (swap_sides) {door.pts[0][!dim] = door.pts[3][!dim] = door.pts[1][!dim] + offset;}
 		else            {door.pts[1][!dim] = door.pts[2][!dim] = door.pts[0][!dim] + offset;}
-		door.pts[1][ dim] = door.pts[2][ dim] = pos + width*(dir ? 1.0 : -1.0);
+		door.pts[1][ dim] = door.pts[2][ dim] = pos + width*((dir ^ opens_out) ? 1.0 : -1.0);
 	}
 	return door;
 }
@@ -1103,7 +1103,7 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
 	unsigned const type(for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
-	doors.push_back(set_door_from_cube(c, dim, dir, type, 0.01*sz[!dim], 0, 0)); // opened=0, swap_sides=0
+	doors.push_back(set_door_from_cube(c, dim, dir, type, 0.01*sz[!dim], 0, 0, 0)); // opened=0, opens_out=0, swap_sides=0
 	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 	return 1;
 }
