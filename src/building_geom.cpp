@@ -151,10 +151,10 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 		if (zval > bcube.z1() && zval < (bcube.z1() + get_door_height())) { // on the ground floor
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
 				if (d->get_bcube().intersects_xy(sc)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
-				if (is_house) break; // player can only enter through the primary house door, not the garage/shed door (yet)
+				if (is_house) break; // player can only enter through the primary house door, not the garage/shed door (yet), though this is somewhat working now
 			}
 		}
-		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // garages and sheds are excluded since they can't be entered (yet)
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // include garages and sheds
 			cube_t c(*i + xlate);
 			if (!c.contains_pt(point(pos2.x, pos2.y, zval))) continue; // not interior to this part
 			float cont_area(0.0);
@@ -482,7 +482,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 	float door_shift(bcube.dz()); // start with a large value
 	if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
 
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find the part that this door was added to
+	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find the part that this door was added to (inc garages and sheds)
 		float const dist(door.pts[0][dim] - p->d[dim][dir]); // signed
 		if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
 	}

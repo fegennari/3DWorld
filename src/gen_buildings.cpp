@@ -1400,7 +1400,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	building_mat_t const &mat(get_material());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	
-	for (auto i = parts.begin(); i != get_real_parts_end()+has_sec_bldg(); ++i) { // multiple cubes/parts/levels; include house garage/shed
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
 		if (make_all_front || i->contains_pt(only_cont_pt)) { // part containing the point
 			bdraw_front.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			continue;
