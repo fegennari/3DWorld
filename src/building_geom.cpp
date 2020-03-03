@@ -233,7 +233,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 					if (point_in_polygon_2d(pos_xlate.x, pos_xlate.y, i->pts, i->npts, 0, 1)) {
 						vector3d const normal(i->get_norm());
 						float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
-						pos2.z += i->get_norm().z*(radius - rdist);
+						pos2.z += (radius - rdist)/normal.z; // determine the distance we need to move vertically to achieve this diag separation
 					}
 				}
 				else { // normal case for bouncing object, etc.
@@ -242,8 +242,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 
 					if (fabs(rdist) < radius && sphere_poly_intersect(i->pts, i->npts, pos_xlate, normal, rdist, radius)) {
 						pos2 += normal*(radius - rdist); // update current pos
-						had_coll = 1; // flag as colliding
 						if (cnorm_ptr) {*cnorm_ptr = ((normal.z < 0.0) ? -1.0 : 1.0)*normal;} // make sure normal points up
+						had_coll = 1; // flag as colliding
 						break; // only use first colliding tquad
 					}
 				}
