@@ -236,13 +236,18 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 				if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
 			}
 			for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
-				if (check_interior && i->type == tquad_with_ix_t::TYPE_ROOF_ACC) continue; // don't allow walking on roof access tquads
 				point const pos_xlate(pos2 - xlate);
 
-				if (check_interior && had_coll && pos2.z - xlate.z > part_z2) { // player standing on top of a building with a sloped roof
+				if (check_interior && had_coll && pos2.z - xlate.z > part_z2) { // player standing on top of a building with a sloped roof or roof access cover
 					if (point_in_polygon_2d(pos_xlate.x, pos_xlate.y, i->pts, i->npts, 0, 1)) {
 						vector3d const normal(i->get_norm());
+						if (normal.z == 0.0) continue; // skip vertical sides as the player can't stand on them
 						float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
+
+						if (i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // don't allow walking on roof access tquads
+							if (rdist < -radius*normal.z) continue; // player is below this tquad
+							else {pos2.x = p_last.x; pos2.y = p_last.y; break;} // block the player from walking here (can only walk through raised opening)
+						}
 						pos2.z += (radius - rdist)/normal.z; // determine the distance we need to move vertically to achieve this diag separation
 					}
 				}
