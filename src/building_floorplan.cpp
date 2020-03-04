@@ -816,7 +816,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, sshape);
 				landing.z1() = zc; landing.z2() = zf;
 				interior->landings.push_back(landing);
-				if (f == 1) {interior->stairwells.push_back(stairs_cut);} // only add for first floor
+				if (f == 1) {interior->stairwells.emplace_back(stairs_cut, num_floors, 0);} // only add for first floor
 			}
 			if (has_elevator) {
 				assert(!interior->elevators.empty());
@@ -906,6 +906,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				details.emplace_back(box, ROOF_OBJ_SCAP); // top
 				max_eq(bcube.z2(), box.z2());
 			}
+			interior->stairwells.back().roof_access = 1;
 			has_roof_access = 1;
 		}
 	}
@@ -1086,7 +1087,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				landing_t landing(cand, 0, 0, dim, stairs_dir, sshape);
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
-				interior->stairwells.push_back(cand);
+				interior->stairwells.emplace_back(cand, 1, 0);
 				// attempt to cut holes in ceiling of this part and floor of above part
 				subtract_cube_from_floor_ceil(cand, interior->floors);
 				subtract_cube_from_floor_ceil(cand, interior->ceilings);

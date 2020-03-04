@@ -172,15 +172,12 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 			break; // flag for interior collision detection
 		} // for i
 		if (!is_interior) { // not interior to a part - check roof access
-			float const floor_spacing(get_window_vspace());
-
 			for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
+				if (!i->roof_access) continue;
 				cube_t test_cube(*i);
 				test_cube.expand_by_xy(-0.5f*radius);
 				if (!test_cube.contains_pt_xy(pos2 - xlate)) continue; // pos not over stairs
-				// Note: if pos isn't inside a part, but it's at the top of these stairs, then the stairs must be on the roof
-				// Note: add floor_spacing to allow the player to enter the stairs even when on the top of the roof access
-				if (zval > i->z2() && zval < (i->z2() + radius + floor_spacing)) {is_interior = 1; break;}
+				if (zval > i->z2() && zval < (i->z2() + 1.5f*radius)) {is_interior = 1; break;}
 			}
 		}
 	}
@@ -1464,7 +1461,7 @@ void set_light_xy(cube_t &light, point const &center, float light_size, bool lig
 	light.z1() = light.z2() = center.z; // set so that valid pos can be checked
 }
 
-bool has_bcube_int_exp(cube_t const &bcube, vect_cube_t const &bcubes, float expand) {
+template<typename T> bool has_bcube_int_exp(cube_t const &bcube, vector<T> const &bcubes, float expand) {
 	cube_t bcube_exp(bcube);
 	bcube_exp.expand_by(expand); // expand in all dirs, including z
 	return has_bcube_int(bcube_exp, bcubes);

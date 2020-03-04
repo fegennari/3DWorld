@@ -301,9 +301,18 @@ struct roof_obj_t : public cube_t {
 };
 typedef vector<roof_obj_t> vect_roof_obj_t;
 
+struct stairwell_t : public cube_t {
+	uint16_t num_floors;
+	bool roof_access;
+	stairwell_t() : num_floors(0), roof_access(0) {}
+	stairwell_t(cube_t const &c, unsigned n, bool r) : cube_t(c), num_floors(n), roof_access(r) {}
+};
+typedef vector<stairwell_t> vect_stairwell_t;
+
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {
-	vect_cube_t floors, ceilings, walls[2], stairwells; // walls are split by dim
+	vect_cube_t floors, ceilings, walls[2]; // walls are split by dim
+	vect_stairwell_t stairwells;
 	vector<door_t> doors;
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
