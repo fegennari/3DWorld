@@ -1746,12 +1746,12 @@ void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &
 	float const cube_pad(4.0*grass_width), extent(bcube.get_max_extent());
 	float dmin_sq(extent*extent); // start with a large value, squared
 
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find closest part
+	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find closest part, including garages/sheds
 		if (skip.contains_cube_xy(*p)) continue; // already contained, skip
 		float const dist_sq(p2p_dist_sq(pos, p->closest_pt(pos)));
 		if (dist_sq < dmin_sq) {exclude = *p; dmin_sq = dist_sq;} // keep if closest part to pos
 	}
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // try to expand the cube to cover more parts
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // try to expand the cube to cover more parts (pri parts only)
 		if (skip.contains_cube_xy(*p)) continue; // already contained, skip
 		cube_t cand_ge(exclude);
 		cand_ge.union_with_cube(*p);
