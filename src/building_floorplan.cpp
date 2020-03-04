@@ -123,14 +123,14 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	float const wall_thick(0.5*floor_thickness), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
 	float const wwf(global_building_params.get_window_width_fract()), window_border(0.5*(1.0 - wwf)); // (0.0, 1.0)
 	// houses have at most two parts; exclude garage, shed, porch, porch support, etc.
-	unsigned const num_parts(get_real_num_parts());
+	auto parts_end(get_real_parts_end());
 	vector<split_cube_t> to_split;
 	uint64_t must_split[2] = {0,0};
 	unsigned first_wall_to_split[2] = {0,0};
 	// allocate space for all floors
 	unsigned tot_num_floors(0), tot_num_stairwells(0), tot_num_landings(0); // num floor/ceiling cubes, not number of stories; used only for reserving vectors
 
-	for (auto p = parts.begin(); p != (parts.begin() + num_parts); ++p) {
+	for (auto p = parts.begin(); p != parts_end; ++p) {
 		bool const has_stairs(!is_house || p == parts.begin()); // assumes one set of stairs or elevator per part
 		unsigned const cubes_per_floor(has_stairs ? 4 : 1); // account for stairwell cutouts
 		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
@@ -146,7 +146,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	
 	// generate walls and floors for each part;
 	// this will need to be modified to handle buildings that have overlapping parts, or skip those building types completely
-	for (auto p = parts.begin(); p != (parts.begin() + num_parts); ++p) {
+	for (auto p = parts.begin(); p != parts_end; ++p) {
 		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
 		if (num_floors == 0) continue; // not enough space to add a floor (can this happen?)
 		// for now, assume each part has the same XY bounds and can use the same floorplan; this means walls can span all floors and don't need to be duplicated for each floor
@@ -584,8 +584,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	} // for p (parts)
 
 	if (has_sec_bldg()) { // add garage/shed floor and ceiling
-		assert(num_parts < parts.size());
-		cube_t const &garage(parts[num_parts]);
+		assert(parts_end < parts.end());
+		cube_t const &garage(*parts_end);
 		cube_t C(garage);
 		C.z2() = C.z1() + fc_thick;
 		interior->floors.push_back(C);
@@ -650,7 +650,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	} // for d
 
 	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
-	for (auto p = parts.begin(); p != (parts.begin() + num_parts); ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
+	for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
 	interior->finalize();
 }
 
