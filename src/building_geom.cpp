@@ -151,7 +151,6 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 		if (zval > bcube.z1() && zval < (bcube.z1() + get_door_height())) { // on the ground floor
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
 				if (d->get_bcube().intersects_xy(sc)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
-				if (is_house) break; // player can only enter through the primary house door, not the garage/shed door (yet), though this is somewhat working now
 			}
 		}
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // include garages and sheds

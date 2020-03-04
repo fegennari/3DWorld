@@ -1356,7 +1356,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			cube_t const door_bcube(door.get_bcube());
 			bool contained(0);
 
-			for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+			for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 				if (!i->intersects(door_bcube)) continue;
 				contained = ((draw_parts_mask & (1<<(i-parts.begin()))) != 0);
 				break;
