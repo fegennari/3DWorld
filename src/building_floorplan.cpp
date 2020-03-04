@@ -840,7 +840,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		cube_t box(stairs_cut);
 		if (!is_sloped) {box.expand_by_xy(fc_thick);}
 		box.z1() = z + floor_thickness; box.z2() = z + window_vspacing;
-		box.z2() -= (is_sloped ? 0.2 : 0.3)*window_vspacing; // slightly lower than a normal floor
+		box.z2() -= (is_sloped ? 0.15 : 0.2)*window_vspacing; // slightly lower than a normal floor
 
 		if (!has_bcube_int(box, parts, 0)) { // no overlap with other parts (should we check in front?)
 			float const zc(z - fc_thick), zf(z + fc_thick);
