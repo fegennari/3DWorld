@@ -971,11 +971,11 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub
 		out.swap(out2);
 	} // for s
 }
-bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0) {
+bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes, bool clip_in_z) {
 	unsigned const num_cubes(cubes.size()); // capture size before splitting
 	bool was_clipped(0);
 
-	for (unsigned i = 0; i < num_cubes; ++i) {
+	for (unsigned i = 0; i < min(num_cubes, cubes.size()); ++i) {
 		cube_t const &c(cubes[i]);
 		if (!c.intersects_no_adj(s)) continue; // keep it
 		
@@ -1016,7 +1016,7 @@ template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &c
 void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 	unsigned const fsz(fs.size()); // capture orig size
 
-	for (unsigned i = 0; i < fsz; ++i) {
+	for (unsigned i = 0; i < min(fsz, fs.size()); ++i) {
 		cube_t const &cur(fs[i]);
 		if (cur.z1() > c.z2() || cur.z2() < c.z1()) continue; // no z overlap
 		if (cur.intersects_no_adj(c)) {subtract_cube_from_cube_inplace(c, fs, i);} // Note: invalidates cur reference
