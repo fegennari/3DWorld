@@ -1303,8 +1303,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	bool const add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
-	has_antenna = ((flat_roof || roof_type == ROOF_TYPE_SLOPE) && (rgen.rand() & 1));
-	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + has_antenna);
+	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && (rgen.rand() & 1));
+	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna);
 	if (num_details == 0) return; // nothing to do
 	cube_t const &top(parts.back()); // top/last part
 	float const window_vspacing(get_material().get_floor_spacing());
@@ -1337,7 +1337,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		c.z2() += height; // z2
 		details.push_back(c);
 	} // for i
-	if (num_ac_units > 0) {place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, vect_cube_t(), has_antenna, rgen);}
+	if (num_ac_units > 0) {place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, vect_cube_t(), add_antenna, rgen);}
 
 	if (add_walls) { // add walls around the roof; we don't need to draw all sides of all cubes, but it's probably not worth the trouble to sort it out
 		float const height(0.4*window_vspacing), width(wall_width), z1(top.z2()), z2(top.z2()+height);
@@ -1347,7 +1347,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		details.emplace_back(cube_t(top.x1(), top.x1()+width, top.y1()+width, top.y2()-width, z1, z2), ROOF_OBJ_WALL);
 		details.emplace_back(cube_t(top.x2()-width, top.x2(), top.y1()+width, top.y2()-width, z1, z2), ROOF_OBJ_WALL);
 	}
-	if (has_antenna) { // add antenna
+	if (add_antenna) { // add antenna
 		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.dx() + top.dy()));
 		float const height(rgen.rand_uniform(0.25, 0.5)*top.dz());
 		roof_obj_t antenna(ROOF_OBJ_ANT);

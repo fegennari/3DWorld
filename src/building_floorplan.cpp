@@ -1181,7 +1181,6 @@ void building_t::remove_intersecting_roof_cubes(cube_t const &c) {
 		auto &obj(details[i]);
 		if (obj.type != ROOF_OBJ_BLOCK && obj.type != ROOF_OBJ_AC && obj.type != ROOF_OBJ_ANT) continue; // only remove blocks, AC units, and antennas
 		if (!obj.intersects(c)) continue;
-		if (obj.type == ROOF_OBJ_ANT) {has_antenna = 0;}
 		swap(obj, details.back());
 		details.pop_back();
 		--i; // wraparound okay

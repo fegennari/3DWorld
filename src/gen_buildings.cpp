@@ -2379,22 +2379,25 @@ public:
 
 			for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {
 				building_t const &b(get_building(i->ix));
-				if (!b.has_antenna) continue;
+				if (b.details.empty()) continue;
 				if (!is_night((((321*i->ix) & 7)/7.0)*WIND_LIGHT_ON_RAND)) continue; // gradually turn on
 				if (!b.bcube.closest_dist_less_than(camera, draw_dist)) continue; // too far away
 				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue;
-				cube_t const &antenna(b.details.back());
-				unsigned const num_segs(max(1U, (((123*i->ix) & 3) + unsigned(6.0*antenna.dz()/max_extent.z)))); // some mix of height and randomness
-				point const center(antenna.get_cube_center());
-				point pos(point(center.x, center.y, antenna.z2()) + xlate);
-				float const radius(1.2f*(antenna.dx() + antenna.dy())), z_step(0.6*antenna.dz()/num_segs);
-				float const alpha(min(1.0f, 1.5f*(1.0f - p2p_dist(camera, center)/draw_dist))); // fade with distance
-				colorRGBA const color(light_colors[i->ix & 15], alpha);
+				
+				for (auto j = b.details.begin(); j != b.details.end(); ++j) {
+					if (j->type != ROOF_OBJ_ANT) continue; // not an antenna
+					unsigned const num_segs(max(1U, (((123*i->ix) & 3) + unsigned(6.0*j->dz()/max_extent.z)))); // some mix of height and randomness
+					point const center(j->get_cube_center());
+					point pos(point(center.x, center.y, j->z2()) + xlate);
+					float const radius(1.2f*(j->dx() + j->dy())), z_step(0.6*j->dz()/num_segs);
+					float const alpha(min(1.0f, 1.5f*(1.0f - p2p_dist(camera, center)/draw_dist))); // fade with distance
+					colorRGBA const color(light_colors[i->ix & 15], alpha);
 
-				for (unsigned n = 0; n < num_segs; ++n) { // distribute lights along top half of antenna
-					building_lights.add_pt(sized_vert_t<vert_color>(vert_color(pos, color), radius));
-					pos.z -= z_step;
-				}
+					for (unsigned n = 0; n < num_segs; ++n) { // distribute lights along top half of antenna
+						building_lights.add_pt(sized_vert_t<vert_color>(vert_color(pos, color), radius));
+						pos.z -= z_step;
+					}
+				} // for j
 			} // for i
 		} // for g
 		building_lights.draw_and_clear(BLUR_TEX, 0.0, 0, 1, 0.005); // use geometry shader for unlimited point size
