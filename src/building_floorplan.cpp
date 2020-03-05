@@ -860,15 +860,15 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			}
 			bool const dir(stairs_dir^(sshape == SHAPE_U));
 			box.z1() = z;
-			
-			if (is_sloped) { // add a door to the roof - too wide for U-shaped stairs door so only add for sloped roof/straight stairs
-				// TODO: make this look right for U-shaped stairs and make it open for the player
-				cube_t door(box);
-				door.d[stairs_dim][ dir] += 0.2*(dir ? -1.0 : 1.0)*fc_thick; // shift slightly to fill the gap
-				door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];
-				add_door(door, part_ix, stairs_dim, dir, 1);
-				doors.back().type = tquad_with_ix_t::TYPE_RDOOR;
-			}
+			// add a door to the roof
+			// TODO: make the door open for the player
+			cube_t door(box);
+			door.d[stairs_dim][ dir] += 0.2*(dir ? -1.0 : 1.0)*fc_thick; // shift slightly to fill the gap
+			door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];
+			if (!is_sloped) {door.d[!stairs_dim][1] = door.get_center_dim(!stairs_dim);} // only the open half
+			add_door(door, part_ix, stairs_dim, dir, 1);
+			doors.back().type = tquad_with_ix_t::TYPE_RDOOR;
+			// clear any roof objects that are in the way
 			cube_t clear_cube(box);
 			clear_cube.d[stairs_dim][dir] += (dir ? 1.0 : -1.0)*window_vspacing; // clear out space in front of the door
 			remove_intersecting_roof_cubes(clear_cube);
@@ -895,17 +895,20 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				} // for s
 			}
 			else { // box roof
-				cube_t hole(stairs_cut);
-				if (!is_sloped) {hole.expand_by_xy(0.1*fc_thick);} // to prevent z-fighting
-				hole.d[stairs_dim][dir] = box.d[stairs_dim][dir]; // move edge flush with box to remove this wall and create an opening
+				cube_t hole(stairs_cut), front(box);
+				hole.expand_by_xy(0.1*fc_thick); // to prevent z-fighting
+				front.d[ stairs_dim][!dir] = hole.d[stairs_dim][dir];
+				hole .d[ stairs_dim][ dir] = box. d[stairs_dim][dir]; // move edge flush with box to remove this wall and create an opening
+				front.d[!stairs_dim][   0] = front.get_center_dim(!stairs_dim); // block off the non-opening half
 				subtract_cube_xy(box, hole, to_add);
 
 				for (unsigned i = 0; i < 4; ++i) {
 					cube_t &c(to_add[i]);
 					if (!c.is_zero_area()) {details.emplace_back(c, ROOF_OBJ_SCAP);} // skip open side
 				}
-				box.z1() = box.z2() - fc_thick;
-				details.emplace_back(box, ROOF_OBJ_SCAP); // top
+				box.z1() = front.z2() = box.z2() - fc_thick;
+				details.emplace_back(box,   ROOF_OBJ_SCAP); // top
+				details.emplace_back(front, ROOF_OBJ_SCAP); // front half
 				max_eq(bcube.z2(), box.z2());
 			}
 			interior->stairwells.back().roof_access = 1;
