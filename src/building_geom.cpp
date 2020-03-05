@@ -640,6 +640,15 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		else { // single part, entire cube/cylinder
 			parts.push_back(base);
 			if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 75% chance
+			
+			if (0 && interior_enabled()) { // while this works, it doesn't seem to add much value, it only creates odd geometry and connecting stairs/elevators
+				// two stacked parts of the same x/y dimensions but different interior floorplans
+				float const dz(base.dz()), split_zval(rgen.rand_uniform(0.4, 0.6));
+				parts.push_back(base);
+				parts[0].z2() = parts[0].z1() + split_zval*dz; // split in Z: parts[0] is the bottom, parts[1] is the top
+				adjust_part_zvals_for_floor_spacing(parts[0]);
+				parts[1].z1() = parts[0].z2();
+			}
 			gen_details(rgen, 1);
 		}
 		end_add_parts();
@@ -728,7 +737,6 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		adjust_part_zvals_for_floor_spacing(parts[i-1]);
 		parts[i].z1() = parts[i-1].z2(); // make top and bottom parts align
 	}
-	// TODO: what about two stacked parts of the same x/y dimensions but different interior floorplans?
 	adjust_part_zvals_for_floor_spacing(parts[num_levels-1]); // last one
 	max_eq(bcube.z2(), parts[num_levels-1].z2()); // adjust bcube if needed
 
