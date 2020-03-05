@@ -176,7 +176,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 				cube_t test_cube(*i);
 				test_cube.expand_by_xy(-0.5f*radius);
 				if (!test_cube.contains_pt_xy(pos2 - xlate)) continue; // pos not over stairs
-				if (zval > i->z2() && zval < (i->z2() + 1.5f*radius)) {is_interior = 1; break;}
+				if (zval < i->z2() + 1.5f*radius) {is_interior = 1; break;} // Note: don't have to check zval > i->z2() because we know that !is_interior
 			}
 		}
 	}
