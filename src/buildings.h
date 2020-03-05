@@ -398,6 +398,7 @@ struct building_t : public building_geom_t {
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
 	int get_num_windows_on_side(float xy1, float xy2) const;
+	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);

@@ -106,15 +106,20 @@ void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out) { // subtra
 	out[3].y1() = r.y1(); out[3].y2() = r.y2(); out[3].x1() = r.x2(); // right center +x
 }
 
+bool building_t::interior_enabled() const {
+	if (!ADD_BUILDING_INTERIORS) return 0; // disabled
+	if (world_mode != WMODE_INF_TERRAIN) return 0; // tiled terrain mode only
+	if (!global_building_params.windows_enabled()) return 0; // no windows, can't assign floors and generate interior
+	//if (has_overlapping_cubes) return; // overlapping cubes buildings are more difficult to handle
+	if (!is_cube()) return 0; // only generate interiors for cube buildings for now
+	if (!get_material().add_windows) return 0; // not a building type that has generated windows (skip office buildings with windows baked into textures)
+	return 1;
+}
+
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 
-	if (!ADD_BUILDING_INTERIORS) return; // disabled
-	if (world_mode != WMODE_INF_TERRAIN) return; // tiled terrain mode only
-	if (!global_building_params.windows_enabled()) return; // no windows, can't assign floors and generate interior
-	//if (has_overlapping_cubes) return; // overlapping cubes buildings are more difficult to handle
-	if (!is_cube()) return; // only generate interiors for cube buildings for now
+	if (!interior_enabled()) return;
 	building_mat_t const &mat(get_material());
-	if (!mat.add_windows) return; // not a building type that has generated windows (skip office buildings with windows baked into textures)
 	// defer this until the building is close to the player?
 	interior.reset(new building_interior_t);
 	float const window_vspacing(mat.get_floor_spacing());
