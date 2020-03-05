@@ -869,8 +869,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				add_door(door, part_ix, stairs_dim, dir, 1);
 				doors.back().type = tquad_with_ix_t::TYPE_RDOOR;
 			}
+			cube_t clear_cube(box);
+			clear_cube.d[stairs_dim][dir] += (dir ? 1.0 : -1.0)*window_vspacing; // clear out space in front of the door
+			remove_intersecting_roof_cubes(clear_cube);
 			// add a small 3-sided box around the stairs using roof blocks
-			remove_intersecting_roof_cubes(box);
 			unsigned const opening_ix(2*(1 - stairs_dim) + dir);
 
 			if (is_sloped) { // sloped roof
@@ -1177,8 +1179,9 @@ void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 void building_t::remove_intersecting_roof_cubes(cube_t const &c) {
 	for (unsigned i = 0; i < details.size(); ++i) { // remove any existing objects that overlap ecap
 		auto &obj(details[i]);
-		if (obj.type != ROOF_OBJ_BLOCK && obj.type != ROOF_OBJ_AC) continue; // only remove blocks and AC units
+		if (obj.type != ROOF_OBJ_BLOCK && obj.type != ROOF_OBJ_AC && obj.type != ROOF_OBJ_ANT) continue; // only remove blocks, AC units, and antennas
 		if (!obj.intersects(c)) continue;
+		if (obj.type == ROOF_OBJ_ANT) {has_antenna = 0;}
 		swap(obj, details.back());
 		details.pop_back();
 		--i; // wraparound okay
