@@ -1295,7 +1295,7 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 
 void building_t::add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]) {
 	// add walls around the roof; we don't need to draw all sides of all cubes, but it's probably not worth the trouble to sort it out
-	float const height(2.0f*wall_width), width(wall_width), shorten(overlap_corners ? 0.0f : wall_width), z1(c.z2()), z2(c.z2()+height);
+	float const height(6.0f*wall_width), width(wall_width), shorten(overlap_corners ? 0.0f : wall_width), z1(c.z2()), z2(c.z2()+height);
 	out[0] = cube_t(c.x1(), c.x2(), c.y1(), c.y1()+width, z1, z2);
 	out[1] = cube_t(c.x1(), c.x2(), c.y2()-width, c.y2(), z1, z2);
 	out[2] = cube_t(c.x1(), c.x1()+width, c.y1()+shorten, c.y2()-shorten, z1, z2);
@@ -1335,11 +1335,11 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
-	float const window_vspacing(get_material().get_floor_spacing()), wall_width(0.2*window_vspacing);
+	float const window_vspacing(get_material().get_floor_spacing()), wall_width(0.05*window_vspacing);
 	assert(!parts.empty());
 
 	if (!is_rectangle) { // polygon roof, can only add AC units
-		if (add_walls) {
+		if (add_walls && rgen.rand_bool()) { // 50% of the time
 			cube_t temp[4];
 			vect_cube_t cubes, to_add;
 
