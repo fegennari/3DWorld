@@ -396,6 +396,7 @@ struct building_t : public building_geom_t {
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen);
+	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	bool interior_enabled() const;
@@ -501,6 +502,7 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, bool dim);
 void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out);
+void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsigned &ix, unsigned &iter_end);
 bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,

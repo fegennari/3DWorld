@@ -946,13 +946,13 @@ void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out)
 	if (c.x1() < s.x1()) {C = c; max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x2() = s.x1(); out.push_back(C);} // left center
 	if (c.x2() > s.x2()) {C = c; max_eq(C.y1(), s.y1()); min_eq(C.y2(), s.y2()); C.x1() = s.x2(); out.push_back(C);} // right center
 }
-void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsigned ix) { // Note: ix is an index to cubes
+void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsigned &ix, unsigned &iter_end) { // Note: ix is an index to cubes
 	unsigned const prev_sz(cubes.size());
 	assert(ix < prev_sz);
 	cube_t const c(cubes[ix]); // deep copy - reference will become invalid
 	subtract_cube_from_cube(c, s, cubes);
-	//assert(cubes.size() > prev_sz); // must have added at least one cube
 	cubes[ix] = cubes.back(); cubes.pop_back(); // reuse this slot for one of the output cubes (or move the last cube here if there are no output cubes)
+	if (cubes.size() <= prev_sz) {--ix; --iter_end;} // no cubes added, last cube was swapped into this slot and needs to be reprocessed
 }
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2) { // XY only
 	out.clear();
@@ -972,10 +972,10 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub
 	} // for s
 }
 bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes, bool clip_in_z) {
-	unsigned const num_cubes(cubes.size()); // capture size before splitting
+	unsigned iter_end(cubes.size()); // capture size before splitting
 	bool was_clipped(0);
 
-	for (unsigned i = 0; i < min(num_cubes, cubes.size()); ++i) {
+	for (unsigned i = 0; i < iter_end; ++i) {
 		cube_t const &c(cubes[i]);
 		if (!c.intersects_no_adj(s)) continue; // keep it
 		
@@ -1004,7 +1004,7 @@ bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *
 			if (shared.z1() < s.z1()) {cube_t bot(shared); bot.z2() = s.z1(); cubes.push_back(bot);} // bottom part
 			if (shared.z2() > s.z2()) {cube_t top(shared); top.z1() = s.z2(); cubes.push_back(top);} // top part
 		}
-		subtract_cube_from_cube_inplace(s, cubes, i); // Note: invalidates c reference
+		subtract_cube_from_cube_inplace(s, cubes, i, iter_end); // Note: invalidates c reference
 		was_clipped = 1;
 	} // for i
 	return was_clipped;
@@ -1014,12 +1014,12 @@ template<typename T> void subtract_cubes_from_cubes(T const &sub, vect_cube_t &c
 }
 
 void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
-	unsigned const fsz(fs.size()); // capture orig size
+	unsigned iter_end(fs.size()); // capture orig size
 
-	for (unsigned i = 0; i < min(fsz, fs.size()); ++i) {
+	for (unsigned i = 0; i < iter_end; ++i) {
 		cube_t const &cur(fs[i]);
 		if (cur.z1() > c.z2() || cur.z2() < c.z1()) continue; // no z overlap
-		if (cur.intersects_no_adj(c)) {subtract_cube_from_cube_inplace(c, fs, i);} // Note: invalidates cur reference
+		if (cur.intersects_no_adj(c)) {subtract_cube_from_cube_inplace(c, fs, i, iter_end);} // Note: invalidates cur reference
 	}
 }
 
