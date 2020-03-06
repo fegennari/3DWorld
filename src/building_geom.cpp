@@ -1293,34 +1293,103 @@ void building_t::place_roof_ac_units(unsigned num, float sz_scale, cube_t const 
 	} // for n
 }
 
+void building_t::add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]) {
+	// add walls around the roof; we don't need to draw all sides of all cubes, but it's probably not worth the trouble to sort it out
+	float const height(2.0f*wall_width), width(wall_width), shorten(overlap_corners ? 0.0f : wall_width), z1(c.z2()), z2(c.z2()+height);
+	out[0] = cube_t(c.x1(), c.x2(), c.y1(), c.y1()+width, z1, z2);
+	out[1] = cube_t(c.x1(), c.x2(), c.y2()-width, c.y2(), z1, z2);
+	out[2] = cube_t(c.x1(), c.x1()+width, c.y1()+shorten, c.y2()-shorten, z1, z2);
+	out[3] = cube_t(c.x2()-width, c.x2(), c.y1()+shorten, c.y2()-shorten, z1, z2);
+}
+
+void subtract_part_from_walls(cube_t const &s, vect_cube_t &cubes, float wall_width) {
+	unsigned iter_end(cubes.size()); // capture size before splitting
+
+	for (unsigned i = 0; i < iter_end; ++i) {
+		cube_t const &c(cubes[i]);
+		if (!c.intersects_no_adj(s)) continue; // keep it
+		cube_t shared(c);
+		shared.intersect_with_cube(s);
+		if (shared.dx() < 1.1*wall_width && shared.dy() < 1.1*wall_width) continue; // clipped off only the end of the wall (inside corner), keep entire wall
+		subtract_cube_from_cube_inplace(s, cubes, i, iter_end); // Note: invalidates c reference
+	} // for i
+}
+
+void merge_cubes_xy(vect_cube_t &cubes) {
+	for (unsigned i = 0; i < cubes.size(); ++i) {
+		for (unsigned j = 0; j < cubes.size(); ++j) {
+			if (i == j) continue; // skip self
+			cube_t &a(cubes[i]), &b(cubes[j]);
+			if (a.is_all_zeros() || b.is_all_zeros()) continue; // one of the cubes has already been removed
+			if (a.z1() != b.z1() || a.z2() != b.z2()) continue; // zvals not shared (doesn't actually happen for building walls)
+
+			for (unsigned d = 0; d < 2; ++d) { // try to merge b into a
+				if (a.d[!d][0] != b.d[!d][0] || a.d[!d][1] != b.d[!d][1]) continue; // range not shared in this dim
+				if (a.d[d][1] >= b.d[d][0] && a.d[d][0] <= b.d[d][1]) {min_eq(a.d[d][0], b.d[d][0]); max_eq(a.d[d][1], b.d[d][1]); b = cube_t(); break;}
+			}
+		} // for j
+	} // for i
+}
+
 void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the roof
 
-	bool const flat_roof(roof_type == ROOF_TYPE_FLAT);
+	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
+	float const window_vspacing(get_material().get_floor_spacing()), wall_width(0.2*window_vspacing);
 	assert(!parts.empty());
 
 	if (!is_rectangle) { // polygon roof, can only add AC units
-		if (num_ac_units == 0) return;
-		float const xy_sz(0.75*bcube.get_size().xy_mag()*rgen.rand_uniform(0.012, 0.02)); // size based on bcube
+		if (add_walls) {
+			cube_t temp[4];
+			vect_cube_t cubes, to_add;
 
-		for (auto p = parts.begin(); p != parts.end(); ++p) {
-			unsigned const num_this_part(min(num_ac_units, unsigned(num_ac_units*p->dx()*p->dy()/(bcube.dx()*bcube.dy()) + 1))); // distribute based on area
-			place_roof_ac_units(num_this_part, xy_sz, *p, parts, 0, rgen);
+			for (auto p = parts.begin(); p != parts.end(); ++p) {
+				if (p->z2() < bcube.z2()) continue; // not the top floor
+				add_roof_walls(*p, wall_width, 1, temp); // overlap_corners=1 so that clipping works correctly
+				cubes.resize(4);
+				for (unsigned i = 0; i < 4; ++i) {cubes[i] = temp[i];}
+				float const z2(cubes[0].z2());
+
+				for (auto p2 = parts.begin(); p2 != parts.end(); ++p2) { // remove any interior wall sections that overlap another top part
+					if (p2 == p || p2->z2() < p->z2()) continue; // skip self and non-top floors
+					
+					for (unsigned d = 0; d < 2; ++d) {
+						cube_t clip_cube(*p2);
+						clip_cube.z2() = z2;
+						float const exp(d ? wall_width : -wall_width);
+						clip_cube.expand_by(exp, -exp, 0.0);
+						subtract_part_from_walls(clip_cube, cubes, wall_width);
+					}
+				} // for p2
+				vector_add_to(cubes, to_add);
+			} // for p
+			merge_cubes_xy(to_add); // optimization
+
+			for (auto i = to_add.begin(); i != to_add.end(); ++i) {
+				if (!i->is_all_zeros()) {details.emplace_back(*i, ROOF_OBJ_WALL);}
+			}
 		}
+		if (num_ac_units > 0) {
+			float const xy_sz(0.75*bcube.get_size().xy_mag()*rgen.rand_uniform(0.012, 0.02)); // size based on bcube
+
+			for (auto p = parts.begin(); p != parts.end(); ++p) {
+				unsigned const num_this_part(min(num_ac_units, unsigned(num_ac_units*p->dx()*p->dy()/(bcube.dx()*bcube.dy()) + 1))); // distribute based on area
+				place_roof_ac_units(num_this_part, xy_sz, *p, parts, 0, rgen);
+			}
+		}
+		details.shrink_to_fit();
 		return;
 	}
-	bool const add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
 	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && (rgen.rand() & 1));
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna);
 	if (num_details == 0) return; // nothing to do
 	cube_t const &top(parts.back()); // top/last part
-	float const window_vspacing(get_material().get_floor_spacing());
-	float const xy_sz(top.get_size().xy_mag()), wall_width(0.2*window_vspacing); // better to use bcube for size?
 	if (add_walls && min(top.dx(), top.dy()) < 4.0*wall_width) return; // too small
+	float const xy_sz(top.get_size().xy_mag()); // better to use bcube for size?
 	cube_t bounds(top);
 	if (add_walls) {bounds.expand_by_xy(-wall_width);}
-	details.reserve(num_details);
+	details.reserve(details.size() + num_details);
 	vector<point> points; // reused across calls
 
 	for (unsigned i = 0; i < num_blocks; ++i) {
@@ -1347,13 +1416,10 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	} // for i
 	if (num_ac_units > 0) {place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, vect_cube_t(), add_antenna, rgen);}
 
-	if (add_walls) { // add walls around the roof; we don't need to draw all sides of all cubes, but it's probably not worth the trouble to sort it out
-		float const height(0.4*window_vspacing), width(wall_width), z1(top.z2()), z2(top.z2()+height);
-		unsigned const start(num_blocks + num_ac_units);
-		details.emplace_back(cube_t(top.x1(), top.x2(), top.y1(), top.y1()+width, z1, z2), ROOF_OBJ_WALL);
-		details.emplace_back(cube_t(top.x1(), top.x2(), top.y2()-width, top.y2(), z1, z2), ROOF_OBJ_WALL);
-		details.emplace_back(cube_t(top.x1(), top.x1()+width, top.y1()+width, top.y2()-width, z1, z2), ROOF_OBJ_WALL);
-		details.emplace_back(cube_t(top.x2()-width, top.x2(), top.y1()+width, top.y2()-width, z1, z2), ROOF_OBJ_WALL);
+	if (add_walls) {
+		cube_t cubes[4];
+		add_roof_walls(top, wall_width, 0, cubes); // overlap_corners=0
+		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], ROOF_OBJ_WALL);}
 	}
 	if (add_antenna) { // add antenna
 		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.dx() + top.dy()));
