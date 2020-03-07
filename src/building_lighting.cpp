@@ -212,12 +212,21 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	light_ids.clear();
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> const &objs(interior->room_geom->objs);
+	vector<pair<float, unsigned>> to_sort;
+	float const window_vspacing(get_window_vspace());
+	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
-		light_ids.push_back(i - objs.begin());
+		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
+		
+		if (i->z1() < target.z || i->z2() > (target.z + window_vspacing)) { // penalty if on a different floor
+			dist_sq += (i->has_stairs() ? 0.25 : 1.0)*other_floor_penalty; // less penalty for lights on stairs
+		}
+		to_sort.emplace_back(dist_sq, (i - objs.begin()));
 	} // for i
-	// TODO: sort light_ids by distance to target
+	sort(to_sort.begin(), to_sort.end()); // sort by increasing distance
+	for (auto i = to_sort.begin(); i != to_sort.end(); ++i) {light_ids.push_back(i->second);}
 }
 
 bool building_t::ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const {
