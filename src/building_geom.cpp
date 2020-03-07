@@ -186,8 +186,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 	}
 	else {
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
-			if (xy_only && i->d[2][0] > bcube.d[2][0]) break; // only need to check first level in this mode
-			if (!xy_only && ((pos2.z + radius < i->d[2][0] + xlate.z) || (pos2.z - radius > i->d[2][1] + xlate.z))) continue; // test z overlap
+			if (xy_only && i->z1() > bcube.z1()) break; // only need to check first level in this mode
+			if (!xy_only && ((pos2.z + radius < i->z1() + xlate.z) || (pos2.z - radius > i->z2() + xlate.z))) continue; // test z overlap
 			if (radius == 0.0 && !(xy_only ? i->contains_pt_xy(pos2) : i->contains_pt(pos2))) continue; // no intersection; ignores p_last
 			cube_t const part_bc(*i + xlate);
 			bool part_coll(0);
@@ -198,7 +198,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 				if (!dist_xy_less_than(pos2, cc, r_sum)) continue; // no intersection
 
 				if (fabs(crx - cry) < radius) { // close to a circle
-					if (p_last2.z > part_bc.d[2][1] && dist_xy_less_than(pos2, cc, max(crx, cry))) {
+					if (p_last2.z > part_bc.z2() && dist_xy_less_than(pos2, cc, max(crx, cry))) {
 						pos2.z = part_bc.z2() + radius; // make sure it doesn't intersect the roof
 						if (cnorm_ptr) {*cnorm_ptr = plus_z;}
 					}
@@ -218,8 +218,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 			else if (num_sides != 4) { // triangle, hexagon, octagon, etc.
 				part_coll |= test_coll_with_sides(pos2, p_last2, radius, part_bc, points, cnorm_ptr);
 			}
-			else if (!xy_only && i->contains_pt_xy_exp(pos2, radius) && (p_last2.z - 0.9f*radius) > (i->d[2][1] + xlate.z)) { // on top of building
-				pos2.z = i->d[2][1] + xlate.z + radius;
+			else if (!xy_only && i->contains_pt_xy_exp(pos2, radius) && (p_last2.z - 0.9f*radius) > (i->z2() + xlate.z)) { // on top of building
+				pos2.z = i->z2() + xlate.z + radius;
 				if (cnorm_ptr) {*cnorm_ptr = plus_z;}
 				part_coll = 1;
 			}
@@ -422,7 +422,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			if (vert) {coll = 2;} // roof
 			else {
 				float const zval(p1.z + t*(p2.z - p1.z));
-				coll = ((fabs(zval - i->d[2][1]) < 0.0001*i->dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
+				coll = ((fabs(zval - i->z2()) < 0.0001*i->dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
 			}
 			if (ret_any_pt) return coll;
 		}
