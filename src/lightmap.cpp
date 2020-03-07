@@ -214,6 +214,10 @@ lmcell *lmap_manager_t::get_lmcell(point const &p) { // round to center
 	return (is_valid_cell(x, y, z) ? &vlmap[y][x][z] : NULL);
 }
 
+void lmap_manager_t::reset_all(lmcell const &init_lmcell) {
+	for (auto i = vldata_alloc.begin(); i != vldata_alloc.end(); ++i) {*i = init_lmcell;}
+}
+
 template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned xsize, unsigned ysize, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell) {
 
 	lm_xsize = xsize; lm_ysize = ysize; lm_zsize = zsize;

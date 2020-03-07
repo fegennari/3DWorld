@@ -2028,11 +2028,11 @@ public:
 		bool enabled() const {return (tid > 0);}
 		void free_context() {free_texture(tid); bix = 0;}
 
-		bool create_for_building(building_creator_t const &bc, unsigned new_bix) {
+		bool create_for_building(building_creator_t const &bc, unsigned new_bix, point const &target) {
 			if (tid > 0 && new_bix == bix) return 0; // nothing else to do
 			free_context(); // could reuse the texture, but this is more work
 			bix = new_bix;
-			tid = bc.get_building(bix).create_building_volume_light_texture();
+			tid = bc.get_building(bix).create_building_volume_light_texture(target);
 			return 1;
 		}
 		bool setup_for_building(building_creator_t const &bc, shader_t &s) const {
@@ -2047,7 +2047,7 @@ public:
 		}
 	};
 	indir_tex_mgr_t indir_tex_mgr;
-	void create_indir_texture_for_building(unsigned bix) {indir_tex_mgr.create_for_building(*this, bix);}
+	void create_indir_texture_for_building(unsigned bix, point const &camera) {indir_tex_mgr.create_for_building(*this, bix, camera);}
 	bool setup_indir_texture_for_building(shader_t &s) const {return indir_tex_mgr.setup_for_building(*this, s);}
 	bool have_indir_texture() const {return indir_tex_mgr.enabled();}
 
@@ -2176,7 +2176,7 @@ public:
 						if (display_mode & 0x10) { // compute indirect lighting (currently incomplete)
 							point cpos;
 							colorRGBA ccolor;
-							if (b.ray_cast_camera_dir(xlate, cpos, ccolor)) {
+							if (b.ray_cast_camera_dir(camera_xlated, cpos, ccolor)) {
 								tid_nm_pair_t tex; tex.emissive = 1;
 								tex.set_gl(s); // untextured emissive
 								s.set_cur_color(ccolor);
@@ -2196,7 +2196,7 @@ public:
 			camera_in_building = this_frame_camera_in_building; // update once; non-interior buildings (such as city buildings) won't update this
 			reset_interior_lighting(s);
 			s.end_shader();
-			if (indir_bcs_ix >= 0 && indir_bix >= 0) {bcs[indir_bcs_ix]->create_indir_texture_for_building(indir_bix);}
+			if (indir_bcs_ix >= 0 && indir_bix >= 0) {bcs[indir_bcs_ix]->create_indir_texture_for_building(indir_bix, camera_xlated);}
 
 			if (transparent_windows) { // write to stencil buffer, use stencil test for back facing building walls
 				shader_t holes_shader;

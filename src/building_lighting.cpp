@@ -13,6 +13,8 @@ extern unsigned LOCAL_RAYS, NUM_THREADS;
 extern float indir_light_exp;
 extern vector<light_source> dl_sources;
 
+void alut_sleep(float seconds);
+
 
 bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &cnorm, float &t) {
 	float tmin(0.0), tmax(1.0);
@@ -163,48 +165,127 @@ void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor,
 	} // for n
 }
 
-void building_t::ray_cast_building(lmap_manager_t *lmgr, float weight) const {
-
-	// TODO: run this in a background thread and update lighting incrementally over many frames
-	if (!has_room_geom()) return; // error?
-	timer_t timer("Ray Cast Building");
-	vector<room_object_t> const &objs(interior->room_geom->objs);
-	unsigned const objs_size(interior->room_geom->stairs_start); // skip stairs
-	assert(objs_size <= objs.size());
-	std::atomic<unsigned> count(0);
+class building_indir_light_mgr_t {
+	bool is_running, is_done, kill_thread, lighting_updated;
+	int cur_bix, cur_light;
+	vector<unsigned> light_ids;
+	set<unsigned> lights_complete;
 	cube_bvh_t bvh;
-	gather_interior_cubes(bvh.get_objs());
-	bvh.build_tree_top(0); // verbose=0
-	weight *= 100.0f/LOCAL_RAYS; // normalize to the number of rays
+	lmap_manager_t lmgr;
+	// TODO: fold indir_tex_mgr_t functionality into here
 
-#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
-	for (int i = 0; i < (int)objs_size; ++i) {
-		room_object_t const &ro(objs[i]);
-		if (ro.type != TYPE_LIGHT || !ro.is_lit()) continue; // not a light, or light not on
+	void init_lmgr(bool clear_lighting) {
+		if (clear_lighting) {lmgr.reset_all();}
+		if (lmgr.is_allocated()) return; // already setup
+		unsigned const tot_sz(XY_MULT_SIZE*MESH_SIZE[2]); // Note: MESH_SIZE[2], not MESH_Z_SIZE; want clipped size that lmap uses rather than user-specified size
+		lmcell init_lmcell;
+		lmgr.alloc(tot_sz, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], (unsigned char **)nullptr, init_lmcell);
+	}
+	void start_lighting_compute(building_t const &b) {
+		assert(cur_light >= 0);
+		init_lmgr(0); // clear_lighting=0
+		is_running = 1;
+		lighting_updated = 1;
+		// TODO: start a thread to compute cur_light for building b
+		cast_light_ray(b, cur_light);
+		is_running = 0;
+	}
+public:
+	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), cur_bix(-1), cur_light(-1) {}
+
+	void clear() {
+		is_done = lighting_updated = 0;
+		cur_bix = cur_light = -1;
+		lights_complete.clear();
+		lmgr.reset_all(); // clear lighting values back to 0
+		wait_for_finish(1); // force_kill=1
+	}
+	void wait_for_finish(bool force_kill) {
+		// Note: for now the time taken to process a light should be pretty fast so we just block until finished; set kill_thread=1 to be faster
+		if (force_kill) {kill_thread = 1;}
+		while (is_running) {alut_sleep(0.01);}
+		kill_thread = 0;
+	}
+	void register_cur_building(building_t const &b, unsigned bix, point const &target) { // target is in building space
+		if ((int)bix != cur_bix) { // change to a different building
+			clear();
+			cur_bix = bix;
+			assert(!is_running);
+		}
+		if (is_done) return; // nothing else to do
+		if (is_running) return; // still running, let it continue
+
+		if (lighting_updated) {
+			// TODO: update lighting texture based on incremental progress
+			//create_volume_light_texture();
+			lighting_updated = 0;
+		}
+		// nothing is running and there is more work to do, find the nearest light to the target and process it
+		if (cur_light >= 0) {lights_complete.insert(cur_light); cur_light = -1;} // mark the most recent light as complete
+		b.order_lights_by_priority(target, light_ids);
+
+		for (auto i = light_ids.begin(); i != light_ids.end(); ++i) {
+			if (lights_complete.find(*i) == lights_complete.end()) {cur_light = *i; break;} // find an incomplete light
+		}
+		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
+		else {is_done = 1;} // no more lights to process
+		light_ids.clear();
+	}
+	void build_bvh(building_t const &b) {
+		bvh.clear();
+		b.gather_interior_cubes(bvh.get_objs());
+		bvh.build_tree_top(0); // verbose=0
+	}
+	cube_bvh_t const &get_bvh() const {return bvh;}
+
+	void cast_light_ray(building_t const &b, unsigned light_ix) {
+		// Note: modifies lmgr, but otherwise thread safe
+		float const weight(100.0f/LOCAL_RAYS); // normalize to the number of rays
+		vector<room_object_t> const &objs(b.interior->room_geom->objs);
+		assert(light_ix < objs.size());
+		room_object_t const &ro(objs[light_ix]);
 		point lpos(ro.get_cube_center());
 		lpos.z = ro.z1() - 0.01*ro.dz(); // set slightly below bottom of light
 		rand_gen_t rgen;
-		rgen.set_state(i, 123);
-		ray_cast_room_light(lpos, ro.get_color(), bvh, rgen, lmgr, weight);
-		++count;
-	} // for i
-	cout << "Lights: " << count << endl;
+		rgen.set_state(light_ix, 123);
+		b.ray_cast_room_light(lpos, ro.get_color(), bvh, rgen, &lmgr, weight);
+	}
+	unsigned ray_cast_entire_building(building_t const &b) {
+		timer_t timer("Ray Cast Building");
+		vector<room_object_t> const &objs(b.interior->room_geom->objs);
+		unsigned const objs_size(b.interior->room_geom->stairs_start); // skip stairs
+		assert(objs_size <= objs.size());
+		std::atomic<unsigned> count(0);
+		build_bvh(b);
+		init_lmgr(1); // clear_lighting=1
+
+#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
+		for (int i = 0; i < (int)objs_size; ++i) {
+			room_object_t const &ro(objs[i]);
+			if (ro.type != TYPE_LIGHT || !ro.is_lit()) continue; // not a light, or light not on
+			cast_light_ray(b, i);
+			++count;
+		} // for i
+		cout << "Lights: " << count << endl;
+		return create_volume_light_texture();
+	}
+	unsigned create_volume_light_texture() {
+		// TODO: reuse 3D texture instead of re-allocating each time?
+		return indir_light_tex_from_lmap(lmgr, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp); // indir_light_exp applies to local lighting
+	}
+};
+
+building_indir_light_mgr_t building_indir_light_mgr;
+
+unsigned building_t::create_building_volume_light_texture(point const &target) const {
+	if (!has_room_geom()) return 0; // error?
+	return building_indir_light_mgr.ray_cast_entire_building(*this);
 }
 
-unsigned building_t::create_building_volume_light_texture() const {
-
-	if (!has_room_geom()) return 0; // error?
-	lmap_manager_t local_lmap_manager; // cache and reuse this?
-	unsigned const zsize(MESH_SIZE[2]); // not MESH_Z_SIZE; we want the clipped size that lmap uses rather than the user-specified size
-
-	if (!local_lmap_manager.is_allocated()) { // first time setup
-		unsigned const tot_sz(XY_MULT_SIZE*zsize);
-		lmcell init_lmcell;
-		local_lmap_manager.alloc(tot_sz, MESH_X_SIZE, MESH_Y_SIZE, zsize, (unsigned char **)nullptr, init_lmcell);
-	}
-	float const weight(1.0);
-	ray_cast_building(&local_lmap_manager, weight);
-	return indir_light_tex_from_lmap(local_lmap_manager, MESH_X_SIZE, MESH_Y_SIZE, zsize, indir_light_exp); // indir_light_exp applies to local lighting
+bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const {
+	building_indir_light_mgr.build_bvh(*this);
+	vector3d cnorm; // unused
+	return ray_cast_interior(camera_bs, cview_dir, building_indir_light_mgr.get_bvh(), cpos, cnorm, ccolor);
 }
 
 void building_t::order_lights_by_priority(point const &target, vector<unsigned> &light_ids) const {
@@ -219,7 +300,7 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
 		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
-		
+
 		if (i->z1() < target.z || i->z2() > (target.z + window_vspacing)) { // penalty if on a different floor
 			dist_sq += (i->has_stairs() ? 0.25 : 1.0)*other_floor_penalty; // less penalty for lights on stairs
 		}
@@ -227,14 +308,6 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	} // for i
 	sort(to_sort.begin(), to_sort.end()); // sort by increasing distance
 	for (auto i = to_sort.begin(); i != to_sort.end(); ++i) {light_ids.push_back(i->second);}
-}
-
-bool building_t::ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const {
-	cube_bvh_t bvh;
-	gather_interior_cubes(bvh.get_objs());
-	bvh.build_tree_top(0); // verbose=0
-	vector3d cnorm; // unused
-	return ray_cast_interior((get_camera_pos() - xlate), cview_dir, bvh, cpos, cnorm, ccolor);
 }
 
 bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes) {

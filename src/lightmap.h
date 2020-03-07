@@ -70,6 +70,7 @@ public:
 	lmcell &get_lmcell(int x, int y, int z) {return get_column(x, y)[z];} // Note: no bounds checking
 	lmcell *get_lmcell_round_down(point const &p);
 	lmcell *get_lmcell(point const &p);
+	void reset_all(lmcell const &init_lmcell=lmcell());
 	template<typename T> void alloc(unsigned nbins, unsigned xsize, unsigned ysize, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell);
 	void init_from(lmap_manager_t const &src);
 	void copy_data(lmap_manager_t const &src, float blend_weight=1.0);

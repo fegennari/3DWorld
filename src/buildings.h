@@ -334,6 +334,7 @@ struct building_stats_t {
 struct colored_cube_t;
 typedef vector<colored_cube_t> vect_colored_cube_t;
 class cube_bvh_t;
+class building_indir_light_mgr_t;
 
 struct building_t : public building_geom_t {
 
@@ -349,6 +350,8 @@ struct building_t : public building_geom_t {
 	vertex_range_t ext_side_qv_range;
 	point tree_pos; // (0,0,0) is unplaced/no tree
 	float ao_bcz2;
+
+	friend class building_indir_light_mgr_t;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), is_house(0),
 		has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {}
@@ -384,9 +387,8 @@ struct building_t : public building_geom_t {
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const;
 	void ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, cube_bvh_t const &bvh, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const;
-	void ray_cast_building(lmap_manager_t *lmgr, float weight) const;
-	unsigned create_building_volume_light_texture() const;
-	bool ray_cast_camera_dir(vector3d const &xlate, point &cpos, colorRGBA &ccolor) const;
+	unsigned create_building_volume_light_texture(point const &target) const;
+	bool ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const;
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
