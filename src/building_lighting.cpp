@@ -6,7 +6,6 @@
 #include "buildings.h"
 #include "lightmap.h" // for light_source
 #include "cobj_bsp_tree.h"
-#include <atomic>
 
 extern int MESH_Z_SIZE, display_mode;
 extern unsigned LOCAL_RAYS, NUM_THREADS;
@@ -128,14 +127,17 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	}
 }
 
-void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, cube_bvh_t const &bvh, rand_gen_t &rgen, lmap_manager_t *lmgr, float weight) const {
+void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, cube_bvh_t const &bvh, rand_gen_t &rgen_, lmap_manager_t *lmgr, float weight) const {
 
 	// see ray_trace_local_light_source()
 	float const tolerance(1.0E-5*bcube.get_max_extent());
 	cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 	point const ray_scale(scene_bounds.get_size()/bcube.get_size()), llc_shift(scene_bounds.get_llc() - bcube.get_llc()*ray_scale);
 
-	for (unsigned n = 0; n < LOCAL_RAYS; ++n) {
+#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
+	for (int n = 0; n < (int)LOCAL_RAYS; ++n) {
+		rand_gen_t rgen;
+		rgen.set_state(n+1, n+1);
 		vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
 		dir.z = -fabs(dir.z); // make sure dir points down
 		point pos(lpos), cpos;
@@ -261,13 +263,11 @@ public:
 		vector<room_object_t> const &objs(b.interior->room_geom->objs);
 		unsigned const objs_size(b.interior->room_geom->stairs_start); // skip stairs
 		assert(objs_size <= objs.size());
-		std::atomic<unsigned> count(0);
+		unsigned count(0);
 		build_bvh(b);
 		init_lmgr(1); // clear_lighting=1
 
-		// TODO: move omp loop into ray_cast_room_light()
-#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
-		for (int i = 0; i < (int)objs_size; ++i) {
+		for (unsigned i = 0; i < objs_size; ++i) {
 			room_object_t const &ro(objs[i]);
 			if (ro.type != TYPE_LIGHT || !ro.is_lit()) continue; // not a light, or light not on
 			cast_light_ray(b, i);
