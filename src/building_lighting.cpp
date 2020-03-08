@@ -10,9 +10,10 @@
 
 bool const USE_BKG_THREAD = 1;
 
-extern int MESH_Z_SIZE, display_mode;
+extern int MESH_Z_SIZE, display_mode, display_framerate;
 extern unsigned LOCAL_RAYS, NUM_THREADS;
 extern float indir_light_exp;
+extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
 
 
@@ -252,6 +253,12 @@ public:
 			build_bvh(b);
 		}
 		if (cur_tid > 0 && is_done) return; // nothing else to do
+
+		if (display_framerate && (is_running || lighting_updated)) { // show progress to the user
+			std::ostringstream oss;
+			oss << "Lights: " << lights_complete.size() << " / " << light_ids.size();
+			lighting_update_text = oss.str();
+		}
 		if (is_running) return; // still running, let it continue
 
 		if (lighting_updated) { // update lighting texture based on incremental progress
@@ -268,8 +275,7 @@ public:
 		}
 		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
 		else {is_done = 1;} // no more lights to process
-		cout << "Process light " << lights_complete.size() << " of " << light_ids.size() << endl;
-		light_ids.clear();
+		//cout << "Process light " << lights_complete.size() << " of " << light_ids.size() << endl;
 		tid = cur_tid;
 	}
 	void build_bvh(building_t const &b) {

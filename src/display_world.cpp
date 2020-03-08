@@ -41,6 +41,7 @@ float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_rat
 double tfticks(0.0), sim_ticks(0.0);
 upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY), sunlight_color(SUN_LT_C);
+string lighting_update_text;
 
 
 extern bool combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
@@ -1023,7 +1024,14 @@ void display() {
 			draw_compass_and_alt();
 		}
 		if (camera_mode == 1 && camera_surf_collide) {show_player_keycards();}
-		if (indir_lighting_updated()) {draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");}
+		
+		if (display_framerate) { // notify the user of lighting progress
+			if (indir_lighting_updated()) {draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");}
+			else if (!lighting_update_text.empty()) {
+				draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, lighting_update_text.c_str());
+				lighting_update_text.clear();
+			}
+		}
 		tt_fire_button_down = 0;
 		if (TIMETEST) PRINT_TIME("X");
 

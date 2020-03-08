@@ -21,15 +21,15 @@ bool const DRAW_INTERIOR_DOORS   = 1;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
+building_params_t global_building_params;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
-extern int rand_gen_index, display_mode;
+extern int rand_gen_index, display_mode, window_width, window_height;
 extern float CAMERA_RADIUS;
 extern point sun_pos;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
 
-building_params_t global_building_params;
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
