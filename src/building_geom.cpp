@@ -290,7 +290,10 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	}
 	// for now, players aren't allowed in elevators
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
-		if (e->open) {} // maybe they should be allowed to fall down elevator shafts if the elevator door is open?
+		if (e->open) {
+			// TODO: at least allow the player to enter the elevator on the first floor; call e->get_coll_cubes()
+			// maybe they should be allowed to fall down elevator shafts if the elevator door is open?
+		}
 		if (obj_z < e->z1() || obj_z > e->z2()) continue; // wrong part/floor
 		had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, 0, cnorm); // skip_z=0
 	}

@@ -1180,7 +1180,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		}
 		for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 			bool const dim(i->dim), dir(i->dir);
-			float const width(i->get_sz_dim(!dim)), spacing(0.02*width), frame_width(0.2*width); // space between inner and outer elevator surfaces + frame around door
+			float const width(i->get_sz_dim(!dim)), spacing(i->get_wall_thickness()), frame_width(i->get_frame_width()); // space between inner/outer walls + frame around door
 			unsigned dim_mask(3); // x and y dims enabled
 			dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
 			bdraw.add_section(*this, empty_vc, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls

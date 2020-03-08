@@ -105,6 +105,21 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 	return 1;
 }
 
+unsigned elevator_t::get_coll_cubes(cube_t cubes[5]) const {
+	if (!open) {cubes[0] = *this; return 1;} // closed, entire elevator is 1 cube
+	float const wwidth(get_wall_thickness()), fwidth(get_frame_width());
+	for (unsigned i = 0; i < 5; ++i) {cubes[i] = *this;} // start with full cube
+	cubes[0].d[dim][dir] = cubes[0].d[dim][!dir] + (dir ? 1.0 : -1.0)*wwidth; // back
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t &side(cubes[d+1]), &front(cubes[d+3]);
+		side.d[!dim][d] = side.d[!dim][!d] + (d ? 1.0 : -1.0)*wwidth; // sides
+		front.d[dim][!dir] = front.d[dim][dir] + (dir ? -1.0 : 1.0)*wwidth; // front side parts
+		front.d[!dim][d] = front.d[!dim][!d] + (d ? 1.0 : -1.0)*fwidth;
+	}
+	return 5; // back + 2 sides + 2 front parts
+}
+
 template<typename T> void add_colored_cubes(vector<T> const &cubes, colorRGBA const &color, vect_colored_cube_t &cc) {
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {cc.emplace_back(*c, color);}
 }
@@ -114,7 +129,13 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	building_mat_t const &mat(get_material());
 	colorRGBA const wall_color(mat.wall_color.modulate_with(mat.wall_tex.get_avg_color()));
 	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, cc);}
-	add_colored_cubes(interior->elevators, wall_color, cc); // for now elevators are treated the same as walls TODO: make them hollow
+
+	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
+		cube_t cubes[5];
+		unsigned const num_cubes(e->get_coll_cubes(cubes));
+		// for now elevators are treated the same as walls with the same color, even though the inside of open elevators is wood
+		for (unsigned n = 0; n < num_cubes; ++n) {cc.emplace_back(cubes[n], wall_color);} // can only assign the same color to all sides of the cube
+	}
 	add_colored_cubes(interior->ceilings, mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color()), cc);
 	add_colored_cubes(interior->floors,   mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()), cc);
 	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), cc); // should this be included?
