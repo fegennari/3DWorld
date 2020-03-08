@@ -2171,15 +2171,16 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
 
-						if (display_mode & 0x10) { // compute indirect lighting (currently incomplete)
+						if (display_mode & 0x10) { // compute indirect lighting
+#if 0
 							point cpos;
 							colorRGBA ccolor;
-							if (b.ray_cast_camera_dir(camera_xlated, cpos, ccolor)) {
-								tid_nm_pair_t tex; tex.emissive = 1;
-								tex.set_gl(s); // untextured emissive
+							if (b.ray_cast_camera_dir(camera_xlated, cpos, ccolor)) { // for debugging
+								tid_nm_pair_t tex; tex.emissive = 1; tex.set_gl(s); // untextured emissive
 								s.set_cur_color(ccolor);
 								draw_subdiv_sphere(cpos, 0.1*CAMERA_RADIUS, N_SPHERE_DIV, 0, 1);
 							}
+#endif
 							indir_bcs_ix = bcs_ix; indir_bix = bi->ix;
 						}
 						if (toggle_room_light) {

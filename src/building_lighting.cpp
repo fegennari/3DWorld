@@ -6,6 +6,9 @@
 #include "buildings.h"
 #include "lightmap.h" // for light_source
 #include "cobj_bsp_tree.h"
+#include <thread>
+
+bool const USE_BKG_THREAD = 1;
 
 extern int MESH_Z_SIZE, display_mode;
 extern unsigned LOCAL_RAYS, NUM_THREADS;
@@ -127,7 +130,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 
 
 class building_indir_light_mgr_t {
-	bool is_running, is_done, kill_thread, lighting_updated;
+	bool is_running, is_done, kill_thread, lighting_updated, needs_to_join;
 	int cur_bix, cur_light;
 	unsigned cur_tid;
 	vector<unsigned char> tex_data;
@@ -135,6 +138,7 @@ class building_indir_light_mgr_t {
 	set<unsigned> lights_complete;
 	cube_bvh_t bvh;
 	lmap_manager_t lmgr;
+	std::thread rt_thread;
 
 	void init_lmgr(bool clear_lighting) {
 		if (clear_lighting) {lmgr.reset_all();}
@@ -148,16 +152,22 @@ class building_indir_light_mgr_t {
 		init_lmgr(0); // clear_lighting=0
 		is_running = 1;
 		lighting_updated = 1;
-		// TODO: start a thread to compute cur_light for building b
-		cast_light_ray(b, cur_light);
+
+		if (USE_BKG_THREAD) { // start a thread to compute cur_light for building b
+			rt_thread = std::thread(&building_indir_light_mgr_t::cast_light_ray, this, b);
+			needs_to_join = 1;
+		}
+		else {
+			timer_t timer("Ray Cast Building Light");
+			cast_light_ray(b);
+		}
 	}
-	void cast_light_ray(building_t const &b, unsigned light_ix) {
-		timer_t timer("Ray Cast Building Light");
+	void cast_light_ray(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
 		float const weight(100.0f/LOCAL_RAYS); // normalize to the number of rays
 		vector<room_object_t> const &objs(b.interior->room_geom->objs);
-		assert(light_ix < objs.size());
-		room_object_t const &ro(objs[light_ix]);
+		assert((unsigned)cur_light < objs.size());
+		room_object_t const &ro(objs[cur_light]);
 		point lpos(ro.get_cube_center());
 		lpos.z = ro.z1() - 0.01*ro.dz(); // set slightly below bottom of light
 		colorRGBA const lcolor(ro.get_color());
@@ -169,7 +179,7 @@ class building_indir_light_mgr_t {
 		for (int n = 0; n < (int)LOCAL_RAYS; ++n) {
 			if (kill_thread) continue;
 			rand_gen_t rgen;
-			rgen.set_state(n+1, light_ix);
+			rgen.set_state(n+1, cur_light);
 			vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
 			dir.z = -fabs(dir.z); // make sure dir points down
 			point pos(lpos), cpos;
@@ -207,15 +217,22 @@ class building_indir_light_mgr_t {
 		//timer_t timer("Lighting Tex Update");
 		indir_light_tex_from_lmap(cur_tid, lmgr, tex_data, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp); // indir_light_exp applies to local lighting
 	}
+	void maybe_join_thread() {
+		if (needs_to_join) {rt_thread.join(); needs_to_join = 0;}
+	}
 public:
-	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}
+	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}
 
 	void clear() {
 		is_done = lighting_updated = 0;
 		cur_bix = cur_light = -1;
+		tex_data.clear();
+		light_ids.clear();
 		lights_complete.clear();
-		lmgr.reset_all(); // clear lighting values back to 0
 		wait_for_finish(1); // force_kill=1
+		maybe_join_thread();
+		lmgr.reset_all(); // clear lighting values back to 0
+		bvh.clear();
 	}
 	void free_indir_texture() {free_texture(cur_tid);}
 	void register_outside_building() {kill_thread = 1;} // lighting no longer needed, may as well kill the thread
@@ -225,11 +242,13 @@ public:
 			clear();
 			cur_bix = bix;
 			assert(!is_running);
+			build_bvh(b);
 		}
 		if (cur_tid > 0 && is_done) return; // nothing else to do
 		if (is_running) return; // still running, let it continue
 
 		if (lighting_updated) { // update lighting texture based on incremental progress
+			maybe_join_thread();
 			create_volume_light_texture();
 			lighting_updated = 0;
 		}
@@ -264,6 +283,7 @@ void building_t::create_building_volume_light_texture(unsigned bix, point const 
 }
 
 bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const {
+	assert(!USE_BKG_THREAD); // not legal to call when running lighting in a background thread
 	building_indir_light_mgr.build_bvh(*this);
 	vector3d cnorm; // unused
 	return ray_cast_interior(camera_bs, cview_dir, building_indir_light_mgr.get_bvh(), cpos, cnorm, ccolor);
