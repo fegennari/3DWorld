@@ -426,7 +426,8 @@ void move_camera_pos_xy(vector3d const &v, float dist) {
 	surface_pos.x += xy_scale*v.x;
 	surface_pos.y += xy_scale*v.y;
 	if (world_mode == WMODE_INF_TERRAIN) {check_legal_movement_using_model_coll(prev, surface_pos, CAMERA_RADIUS);} // collision with models
-	proc_city_sphere_coll(surface_pos, prev, CAMERA_RADIUS, prev_camera_zval, 0, 0, nullptr, PLAYER_CAN_ENTER_BUILDINGS); // use prev pos for building collisions
+	bool const include_cars = 1;
+	proc_city_sphere_coll(surface_pos, prev, CAMERA_RADIUS, prev_camera_zval, 0, include_cars, nullptr, PLAYER_CAN_ENTER_BUILDINGS); // use prev pos for building collisions
 	prev_camera_zval = surface_pos.z;
 }
 

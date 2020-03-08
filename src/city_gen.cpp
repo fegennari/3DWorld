@@ -2814,6 +2814,7 @@ void car_manager_t::update_cars() {
 void car_manager_t::get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const {
 	start = cb->start; end = (cb+1)->start;
 	assert(end <= cars.size());
+	if (cb->is_in_building()) return; // cars parked in garages - keep full start/end range
 	if (!road_gen.cube_overlaps_parking_lot_xy(bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
 	if (!road_gen.cube_overlaps_road_xy       (bc, cb->cur_city)) {start = cb->first_parked;} // parked cars only (end of range)
 	assert(start <= end);
