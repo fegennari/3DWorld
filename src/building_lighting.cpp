@@ -168,10 +168,8 @@ class building_indir_light_mgr_t {
 		vector<room_object_t> const &objs(b.interior->room_geom->objs);
 		assert((unsigned)cur_light < objs.size());
 		room_object_t const &ro(objs[cur_light]);
-		point lpos(ro.get_cube_center());
-		lpos.z = ro.z1() - 0.01*ro.dz(); // set slightly below bottom of light
 		colorRGBA const lcolor(ro.get_color());
-		float const tolerance(1.0E-5*b.bcube.get_max_extent());
+		float const tolerance(1.0E-5*b.bcube.get_max_extent()), light_zval(ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 		point const ray_scale(scene_bounds.get_size()/b.bcube.get_size()), llc_shift(scene_bounds.get_llc() - b.bcube.get_llc()*ray_scale);
 
@@ -182,10 +180,14 @@ class building_indir_light_mgr_t {
 			rgen.set_state(n+1, cur_light);
 			vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
 			dir.z = -fabs(dir.z); // make sure dir points down
-			point pos(lpos), cpos;
+			point pos, cpos;
 			vector3d cnorm, v_ref;
 			colorRGBA cur_color(lcolor), ccolor(WHITE);
+			// select a random point on the light cube (close enough for (ro.shape == SHAPE_CYLIN))
+			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(ro.d[d][0], ro.d[d][1]);}
+			pos.z = light_zval;
 
+			// TODO: more splits after first bounce
 			for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
 				cpos = pos; // init value
 				bool const hit(b.ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
