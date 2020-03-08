@@ -191,6 +191,7 @@ class building_indir_light_mgr_t {
 		is_running = 0;
 	}
 	void cast_light_ray(building_t const &b, unsigned light_ix) {
+		timer_t timer("Ray Cast Building Light");
 		// Note: modifies lmgr, but otherwise thread safe
 		float const weight(100.0f/LOCAL_RAYS); // normalize to the number of rays
 		vector<room_object_t> const &objs(b.interior->room_geom->objs);
@@ -220,21 +221,21 @@ public:
 		lights_complete.clear();
 		lmgr.reset_all(); // clear lighting values back to 0
 		wait_for_finish(1); // force_kill=1
-		free_indir_texture();
 	}
 	void free_indir_texture() {free_texture(cur_tid);}
 	void register_outside_building() {kill_thread = 1;} // lighting no longer needed, may as well kill the thread
 
-	void register_cur_building(building_t const &b, unsigned bix, point const &target) { // target is in building space
+	void register_cur_building(building_t const &b, unsigned bix, point const &target, unsigned &tid) { // target is in building space
 		if ((int)bix != cur_bix) { // change to a different building
 			clear();
 			cur_bix = bix;
 			assert(!is_running);
 		}
-		if (is_done) return; // nothing else to do
+		if (cur_tid > 0 && is_done) return; // nothing else to do
 		if (is_running) return; // still running, let it continue
 
 		if (lighting_updated) { // update lighting texture based on incremental progress
+			timer_t timer("Update Texture");
 			create_volume_light_texture();
 			lighting_updated = 0;
 		}
@@ -247,7 +248,9 @@ public:
 		}
 		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
 		else {is_done = 1;} // no more lights to process
+		cout << "Process light " << lights_complete.size() << " of " << light_ids.size() << endl;
 		light_ids.clear();
+		tid = cur_tid;
 	}
 	void build_bvh(building_t const &b) {
 		bvh.clear();
@@ -255,28 +258,6 @@ public:
 		bvh.build_tree_top(0); // verbose=0
 	}
 	cube_bvh_t const &get_bvh() const {return bvh;}
-
-	void ray_cast_entire_building(building_t const &b, unsigned bix, unsigned &tid) {
-		if ((int)bix == cur_bix) return; // same building, nothing to do
-		cur_bix = bix;
-		timer_t timer("Ray Cast Building");
-		vector<room_object_t> const &objs(b.interior->room_geom->objs);
-		unsigned const objs_size(b.interior->room_geom->stairs_start); // skip stairs
-		assert(objs_size <= objs.size());
-		unsigned count(0);
-		build_bvh(b);
-		init_lmgr(1); // clear_lighting=1
-
-		for (unsigned i = 0; i < objs_size; ++i) {
-			room_object_t const &ro(objs[i]);
-			if (ro.type != TYPE_LIGHT || !ro.is_lit()) continue; // not a light, or light not on
-			cast_light_ray(b, i);
-			++count;
-		} // for i
-		cout << "Lights: " << count << endl;
-		create_volume_light_texture();
-		tid = cur_tid;
-	}
 };
 
 building_indir_light_mgr_t building_indir_light_mgr;
@@ -285,7 +266,7 @@ void free_building_indir_texture() {building_indir_light_mgr.free_indir_texture(
 
 void building_t::create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const {
 	if (!has_room_geom()) return; // error?
-	building_indir_light_mgr.ray_cast_entire_building(*this, bix, tid);
+	building_indir_light_mgr.register_cur_building(*this, bix, target, tid);
 }
 
 bool building_t::ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const {
