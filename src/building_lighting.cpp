@@ -171,6 +171,7 @@ class building_indir_light_mgr_t {
 	unsigned cur_tid;
 	vector<unsigned> light_ids;
 	set<unsigned> lights_complete;
+	vector<unsigned char> tex_data;
 	cube_bvh_t bvh;
 	lmap_manager_t lmgr;
 
@@ -209,8 +210,9 @@ class building_indir_light_mgr_t {
 		while (is_running) {alut_sleep(0.01);}
 		kill_thread = 0;
 	}
-	void create_volume_light_texture() { // 7.2ms
-		indir_light_tex_from_lmap(cur_tid, lmgr, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp); // indir_light_exp applies to local lighting
+	void create_volume_light_texture() { // 5.86ms
+		//timer_t timer("Lighting Tex Update");
+		indir_light_tex_from_lmap(cur_tid, lmgr, tex_data, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp); // indir_light_exp applies to local lighting
 	}
 public:
 	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}

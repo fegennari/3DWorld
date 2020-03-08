@@ -214,12 +214,12 @@ light_volume_local &get_local_light_volume(int ltype) {
 }
 
 
-void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
+unsigned add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
 
 	bool const dynamic(is_ltype_dynamic(ltype));
-	if (first_pt && dynamic) return; // since dynamic lights already have a direct lighting component, we skip the first ray here to avoid double counting it
+	if (first_pt && dynamic) return 0; // since dynamic lights already have a direct lighting component, we skip the first ray here to avoid double counting it
 	if (first_pt) {weight *= first_ray_weight[ltype];} // lower weight - handled by direct illumination
-	if (fabs(weight) < TOLERANCE) return;
+	if (fabs(weight) < TOLERANCE) return 0;
 	weight *= ray_step_size_mult;
 	colorRGBA const cw(color*weight);
 	unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)/get_step_size())); // round up (dist can be 0)
@@ -254,8 +254,7 @@ void add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const
 		}
 		lmgr->was_updated = 1;
 	}
-	cells_touched += nsteps;
-	++num_hits;
+	return nsteps;
 }
 
 
@@ -337,7 +336,8 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	if (!coll) return; // more efficient to do this up here and let a reverse ray from the sky light this path
 
 	// walk from p1 to p2, adding light to all lightmap cells encountered
-	add_path_to_lmcs(lmgr, bcube, p1, p2, weight, color, ltype, (depth == 0));
+	cells_touched += add_path_to_lmcs(lmgr, bcube, p1, p2, weight, color, ltype, (depth == 0));
+	++num_hits;
 	//if (!coll)    return;
 	if (p1 == p2) return; // line must have started inside a cobj - this is bad, but what can we do?
 
@@ -440,8 +440,11 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 						// test for collision with reversed ray to get the other intersection point
 						if (cobj.line_int_exact(p_end, p2, t, cnorm2)) { // not sure what to do if fails or tmax >= 1.0
 							point const p_int(p_end + (p2 - p_end)*t);
-							if (!dist_less_than(p2, p_int, get_step_size())) {add_path_to_lmcs(lmgr, bcube, p2, p_int, weight, color, ltype, (depth == 0));}
-							
+
+							if (!dist_less_than(p2, p_int, get_step_size())) {	
+								cells_touched += add_path_to_lmcs(lmgr, bcube, p2, p_int, weight, color, ltype, (depth == 0));
+								++num_hits;
+							}
 							if (calc_refraction_angle(v_refract, v_refract2, -cnorm2, cobj.cp.refract_ix, 1.0)) {
 								p2    = p_int;
 								p_end = p2 + v_refract2*line_length;
