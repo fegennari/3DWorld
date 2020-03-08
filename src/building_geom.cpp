@@ -288,14 +288,15 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, 0, cnorm); // skip_z=0 (required for stacked parts that have diff walls)
 		}
 	}
-	// for now, players aren't allowed in elevators
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
-		if (e->open) {
-			// TODO: at least allow the player to enter the elevator on the first floor; call e->get_coll_cubes()
-			// maybe they should be allowed to fall down elevator shafts if the elevator door is open?
-		}
 		if (obj_z < e->z1() || obj_z > e->z2()) continue; // wrong part/floor
-		had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, 0, cnorm); // skip_z=0
+
+		if (1/*obj_z < e->z1() + floor_spacing*/) { // should players only be allowed in elevators on the ground floor?
+			cube_t cubes[5];
+			unsigned const num_cubes(e->get_coll_cubes(cubes));
+			for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
+		}
+		else {had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, 0, cnorm);} // skip_z=0
 	}
 	/*for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // doors tend to block the player, don't collide with them
 		if (obj_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
