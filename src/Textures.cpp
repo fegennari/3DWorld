@@ -226,8 +226,6 @@ void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
 bool endswith(string const &value, string const &ending);
 
-void free_building_indir_texture();
-
 
 bool is_tex_disabled(int i) {
 	return (i == GEN_TEX || (universe_only && (i == CLOUD_RAW_TEX || i == WIND_TEX || i == LANDSCAPE_TEX || i == TREE_END_TEX || i == TREE_HEMI_TEX)));

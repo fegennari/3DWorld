@@ -1012,6 +1012,8 @@ vector3d get_buildings_max_extent();
 void clear_building_vbos();
 void create_buildings_tile(int x, int y);
 void remove_buildings_tile(int x, int y);
+void free_building_indir_texture();
+void end_building_rt_job();
 
 // function prototypes - csg
 void expand_cubes_by_xy(vect_cube_t &cubes, float val);

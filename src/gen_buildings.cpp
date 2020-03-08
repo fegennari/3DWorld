@@ -2195,8 +2195,11 @@ public:
 			camera_in_building = this_frame_camera_in_building; // update once; non-interior buildings (such as city buildings) won't update this
 			reset_interior_lighting(s);
 			s.end_shader();
-			if (indir_bcs_ix >= 0 && indir_bix >= 0) {bcs[indir_bcs_ix]->create_indir_texture_for_building(indir_bix, camera_xlated);}
 
+			// update indir lighting using ray casting
+			if (indir_bcs_ix >= 0 && indir_bix >= 0) {bcs[indir_bcs_ix]->create_indir_texture_for_building(indir_bix, camera_xlated);}
+			else {end_building_rt_job();}
+			
 			if (transparent_windows) { // write to stencil buffer, use stencil test for back facing building walls
 				shader_t holes_shader;
 				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test

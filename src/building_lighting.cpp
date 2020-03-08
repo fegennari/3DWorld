@@ -234,13 +234,15 @@ public:
 		tex_data.clear();
 		light_ids.clear();
 		lights_complete.clear();
-		wait_for_finish(1); // force_kill=1
-		maybe_join_thread();
+		end_rt_job();
 		lmgr.reset_all(); // clear lighting values back to 0
 		bvh.clear();
 	}
+	void end_rt_job() {
+		wait_for_finish(1); // force_kill=1
+		maybe_join_thread();
+	}
 	void free_indir_texture() {free_texture(cur_tid);}
-	void register_outside_building() {kill_thread = 1;} // lighting no longer needed, may as well kill the thread
 
 	void register_cur_building(building_t const &b, unsigned bix, point const &target, unsigned &tid) { // target is in building space
 		if ((int)bix != cur_bix) { // change to a different building
@@ -281,6 +283,7 @@ public:
 building_indir_light_mgr_t building_indir_light_mgr;
 
 void free_building_indir_texture() {building_indir_light_mgr.free_indir_texture();}
+void end_building_rt_job() {building_indir_light_mgr.end_rt_job();}
 
 void building_t::create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const {
 	if (!has_room_geom()) return; // error?

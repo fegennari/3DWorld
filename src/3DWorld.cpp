@@ -239,6 +239,7 @@ void quit_3dworld() { // called once at the end for proper cleanup
 
 	cout << "quitting" << endl;
 	kill_current_raytrace_threads();
+	end_building_rt_job();
 	clear_context();
 	exit_openal();
 
