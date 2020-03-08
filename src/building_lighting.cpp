@@ -209,7 +209,7 @@ class building_indir_light_mgr_t {
 		while (is_running) {alut_sleep(0.01);}
 		kill_thread = 0;
 	}
-	void create_volume_light_texture() {
+	void create_volume_light_texture() { // 7.2ms
 		indir_light_tex_from_lmap(cur_tid, lmgr, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp); // indir_light_exp applies to local lighting
 	}
 public:
@@ -235,7 +235,6 @@ public:
 		if (is_running) return; // still running, let it continue
 
 		if (lighting_updated) { // update lighting texture based on incremental progress
-			timer_t timer("Update Texture");
 			create_volume_light_texture();
 			lighting_updated = 0;
 		}

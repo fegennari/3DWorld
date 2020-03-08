@@ -811,8 +811,10 @@ void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &local_lmap_m
 
 	unsigned const tot_sz(xsize*ysize*zsize), ncomp(4);
 	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
+	bool const apply_sqrt(lighting_exponent > 0.49 && lighting_exponent < 0.51), apply_exp(!apply_sqrt && lighting_exponent != 1.0);
 
-	for (unsigned y = 0; y < ysize; ++y) {
+#pragma omp parallel for schedule(static)
+	for (int y = 0; y < (int)ysize; ++y) {
 		for (unsigned x = 0; x < xsize; ++x) {
 			unsigned const off(zsize*(y*xsize + x));
 			lmcell const *const vlm(local_lmap_manager.get_column(x, y));
@@ -822,7 +824,8 @@ void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &local_lmap_m
 				unsigned const off2(ncomp*(off + z));
 				colorRGB color;
 				vlm[z].get_final_color(color, 1.0, 1.0);
-				if (lighting_exponent != 1.0) {UNROLL_3X(color[i_] = pow(color[i_], lighting_exponent););}
+				if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
+				else if (apply_exp)  {UNROLL_3X(color[i_] = pow(color[i_], lighting_exponent););}
 				//color = colorRGBA(float(y)/ysize, float(x)/xsize, float(z)/zsize, 1.0); // for debugging
 				UNROLL_3X(tex_data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));)
 			} // for z
