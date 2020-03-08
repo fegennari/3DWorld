@@ -13,8 +13,6 @@ extern unsigned LOCAL_RAYS, NUM_THREADS;
 extern float indir_light_exp;
 extern vector<light_source> dl_sources;
 
-void alut_sleep(float seconds);
-
 
 bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &cnorm, float &t) {
 	float tmin(0.0), tmax(1.0);
