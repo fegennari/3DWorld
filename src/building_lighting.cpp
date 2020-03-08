@@ -114,64 +114,25 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	add_colored_cubes(interior->ceilings, mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color()), cc);
 	add_colored_cubes(interior->floors,   mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()), cc);
 	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), cc); // should this be included?
-
-	if (has_room_geom()) {
-		vector<room_object_t> const &objs(interior->room_geom->objs);
-		cc.reserve(cc.size() + objs.size());
+	if (!has_room_geom()) return; // nothing else to add
+	vector<room_object_t> const &objs(interior->room_geom->objs);
+	cc.reserve(cc.size() + objs.size());
 		
-		for (auto c = objs.begin(); c != objs.end(); ++c) {
-			if (c->shape == SHAPE_CYLIN) continue; // cylinders (lights) are not cubes
-			cc.emplace_back(*c, c->get_color()); // TODO: to be more accurate, we should use the actual cubes of tables and chairs (which adds a lot of complexity)
-			if (c->type == TYPE_TABLE) {cc.back().z1() += 0.85*c->dz();} // at least be a bit more accurate for tables by using only the top
-		}
+	for (auto c = objs.begin(); c != objs.end(); ++c) {
+		if (c->shape == SHAPE_CYLIN) continue; // cylinders (lights) are not cubes
+		cc.emplace_back(*c, c->get_color()); // TODO: to be more accurate, we should use the actual cubes of tables and chairs (which adds a lot of complexity)
+		if (c->type == TYPE_TABLE) {cc.back().z1() += 0.85*c->dz();} // at least be a bit more accurate for tables by using only the top
 	}
 }
 
-void building_t::ray_cast_room_light(point const &lpos, colorRGBA const &lcolor, cube_bvh_t const &bvh, rand_gen_t &rgen_, lmap_manager_t *lmgr, float weight) const {
-
-	// see ray_trace_local_light_source()
-	float const tolerance(1.0E-5*bcube.get_max_extent());
-	cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
-	point const ray_scale(scene_bounds.get_size()/bcube.get_size()), llc_shift(scene_bounds.get_llc() - bcube.get_llc()*ray_scale);
-
-#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
-	for (int n = 0; n < (int)LOCAL_RAYS; ++n) {
-		rand_gen_t rgen;
-		rgen.set_state(n+1, n+1);
-		vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
-		dir.z = -fabs(dir.z); // make sure dir points down
-		point pos(lpos), cpos;
-		vector3d cnorm, v_ref;
-		colorRGBA cur_color(lcolor), ccolor(WHITE);
-
-		for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
-			cpos = pos; // init value
-			bool const hit(ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
-			
-			if (lmgr != nullptr && cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
-				point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
-				add_path_to_lmcs(lmgr, nullptr, p1, p2, weight, cur_color, LIGHTING_LOCAL, (bounce == 0)); // local light, no bcube
-			}
-			if (!hit) break; // done
-			cur_color = cur_color.modulate_with(ccolor);
-			if (cur_color.get_luminance() < 0.05) break; // done
-			calc_reflection_angle(dir, v_ref, cnorm);
-			v_ref.normalize();
-			vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
-			dir = (v_ref + rand_dir).get_norm(); // diffuse reflection: new dir is mix 50% specular with 50% random
-			if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
-			pos = cpos + tolerance*dir; // move slightly away from the surface
-		} // for bounce
-	} // for n
-}
 
 class building_indir_light_mgr_t {
 	bool is_running, is_done, kill_thread, lighting_updated;
 	int cur_bix, cur_light;
 	unsigned cur_tid;
+	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
 	set<unsigned> lights_complete;
-	vector<unsigned char> tex_data;
 	cube_bvh_t bvh;
 	lmap_manager_t lmgr;
 
@@ -189,7 +150,6 @@ class building_indir_light_mgr_t {
 		lighting_updated = 1;
 		// TODO: start a thread to compute cur_light for building b
 		cast_light_ray(b, cur_light);
-		is_running = 0;
 	}
 	void cast_light_ray(building_t const &b, unsigned light_ix) {
 		timer_t timer("Ray Cast Building Light");
@@ -200,9 +160,42 @@ class building_indir_light_mgr_t {
 		room_object_t const &ro(objs[light_ix]);
 		point lpos(ro.get_cube_center());
 		lpos.z = ro.z1() - 0.01*ro.dz(); // set slightly below bottom of light
-		rand_gen_t rgen;
-		rgen.set_state(light_ix, 123);
-		b.ray_cast_room_light(lpos, ro.get_color(), bvh, rgen, &lmgr, weight);
+		colorRGBA const lcolor(ro.get_color());
+		float const tolerance(1.0E-5*b.bcube.get_max_extent());
+		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
+		point const ray_scale(scene_bounds.get_size()/b.bcube.get_size()), llc_shift(scene_bounds.get_llc() - b.bcube.get_llc()*ray_scale);
+
+#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
+		for (int n = 0; n < (int)LOCAL_RAYS; ++n) {
+			if (kill_thread) continue;
+			rand_gen_t rgen;
+			rgen.set_state(n+1, light_ix);
+			vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
+			dir.z = -fabs(dir.z); // make sure dir points down
+			point pos(lpos), cpos;
+			vector3d cnorm, v_ref;
+			colorRGBA cur_color(lcolor), ccolor(WHITE);
+
+			for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
+				cpos = pos; // init value
+				bool const hit(b.ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
+
+				if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
+					point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
+					add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, cur_color, LIGHTING_LOCAL, (bounce == 0)); // local light, no bcube
+				}
+				if (!hit) break; // done
+				cur_color = cur_color.modulate_with(ccolor);
+				if (cur_color.get_luminance() < 0.05) break; // done
+				calc_reflection_angle(dir, v_ref, cnorm);
+				v_ref.normalize();
+				vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
+				dir = (v_ref + rand_dir).get_norm(); // diffuse reflection: new dir is mix 50% specular with 50% random
+				if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
+				pos = cpos + tolerance*dir; // move slightly away from the surface
+			} // for bounce
+		} // for n
+		is_running = 0;
 	}
 	void wait_for_finish(bool force_kill) {
 		// Note: for now the time taken to process a light should be pretty fast so we just block until finished; set kill_thread=1 to be faster
