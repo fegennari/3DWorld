@@ -119,11 +119,9 @@ bool building_t::interior_enabled() const {
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 
 	if (!interior_enabled()) return;
-	building_mat_t const &mat(get_material());
 	// defer this until the building is close to the player?
 	interior.reset(new building_interior_t);
-	float const window_vspacing(mat.get_floor_spacing());
-	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const doorway_width(0.5*window_vspacing), doorway_hwidth(0.5*doorway_width);
 	float const wall_thick(0.5*floor_thickness), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
 	float const wwf(global_building_params.get_window_width_fract()), window_border(0.5*(1.0 - wwf)); // (0.0, 1.0)
@@ -662,8 +660,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall,
 	unsigned part_ix, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part)
 {
-	float const window_vspacing(get_material().get_floor_spacing());
-	float const floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
+	// increase floor thickness if !is_house? but then we would probably have to increase the space between floors as well, which involves changing the texture scale
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
 	float ewidth(1.5*doorway_width); // for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
@@ -1025,7 +1023,7 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically
 
-	float const window_vspacing(get_material().get_floor_spacing()), fc_thick(0.5*FLOOR_THICK_VAL*window_vspacing);
+	float const window_vspacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it

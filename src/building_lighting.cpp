@@ -113,7 +113,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	building_mat_t const &mat(get_material());
 	colorRGBA const wall_color(mat.wall_color.modulate_with(mat.wall_tex.get_avg_color()));
 	for (unsigned d = 0; d < 2; ++d) {add_colored_cubes(interior->walls[d], wall_color, cc);}
-	add_colored_cubes(interior->elevators, wall_color, cc); // for now elevators are treated the same as walls
+	add_colored_cubes(interior->elevators, wall_color, cc); // for now elevators are treated the same as walls TODO: make them hollow
 	add_colored_cubes(interior->ceilings, mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color()), cc);
 	add_colored_cubes(interior->floors,   mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()), cc);
 	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), cc); // should this be included?

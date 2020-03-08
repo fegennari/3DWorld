@@ -517,7 +517,7 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor
 	float const dz(clip_cube.dz());
 	float const border((door.type == tquad_with_ix_t::TYPE_BDOOR) ? 0.04 : 0.08);
 	// clip off bottom for floor if clip_to_floor==1; somewhat arbitrary, should we use interior->floors.back().z2() instead?
-	float const clip_bot(clip_to_floor ? 0.7*FLOOR_THICK_VAL*get_material().get_floor_spacing() : 0.04*dz);
+	float const clip_bot(clip_to_floor ? 0.7*get_floor_thickness() : 0.04*dz);
 	clip_cube.z1() += clip_bot;
 	clip_cube.z2() -= 0.5*border*dz;
 	bool const dim(clip_cube.dx() < clip_cube.dy()); // border dim
@@ -1553,7 +1553,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	//timer_t timer("Gen Room Details");
 	interior->room_geom.reset(new building_room_geom_t);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0), num_light_stacks(0);
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
@@ -1701,7 +1701,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	unsigned const num_stairs = 12;
-	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
 	float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	interior->room_geom->stairs_start = objs.size();
@@ -1786,7 +1786,7 @@ void building_t::clear_room_geom() {
 
 bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const {
 	if (!interior || interior->rooms.empty()) return 0; // should be error case
-	float const window_vspacing(get_window_vspace()), floor_thickness(FLOOR_THICK_VAL*window_vspacing), fc_thick(0.5*floor_thickness);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 
 	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts
 		room_t const &room(interior->rooms[rgen.rand() % interior->rooms.size()]); // select a random room

@@ -365,8 +365,9 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const;
-	float get_window_vspace() const {return get_material().get_floor_spacing();}
-	float get_door_height  () const {return 0.9f*get_window_vspace();} // set height based on window spacing, 90% of a floor height (may be too large)
+	float get_window_vspace  () const {return get_material().get_floor_spacing();}
+	float get_floor_thickness() const {return FLOOR_THICK_VAL*get_window_vspace();}
+	float get_door_height    () const {return 0.9f*get_window_vspace();} // set height based on window spacing, 90% of a floor height (may be too large)
 	unsigned get_real_num_parts() const {return (is_house ? min(2U, unsigned(parts.size() - has_chimney)) : parts.size());}
 	void gen_rotation(rand_gen_t &rgen);
 	void set_z_range(float z1, float z2);
