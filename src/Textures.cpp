@@ -226,6 +226,8 @@ void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
 bool endswith(string const &value, string const &ending);
 
+void free_building_indir_texture();
+
 
 bool is_tex_disabled(int i) {
 	return (i == GEN_TEX || (universe_only && (i == CLOUD_RAW_TEX || i == WIND_TEX || i == LANDSCAPE_TEX || i == TREE_END_TEX || i == TREE_HEMI_TEX)));
@@ -448,6 +450,7 @@ void reset_textures() {
 	free_texture(skybox_tid);
 	free_texture(skybox_cube_tid);
 	free_texture(univ_reflection_tid);
+	free_building_indir_texture();
 	free_font_texture_atlas();
 	for (texture_map_t::iterator i = noise_tex_3ds.begin(); i != noise_tex_3ds.end(); ++i) {free_texture(i->second);}
 	noise_tex_3ds.clear();

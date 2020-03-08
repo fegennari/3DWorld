@@ -2021,27 +2021,25 @@ public:
 		} // for g
 	}
 
-	struct indir_tex_mgr_t {
-		unsigned tid, bix;
-
-		indir_tex_mgr_t() : tid(0), bix(0) {}
+	class indir_tex_mgr_t {
+		unsigned tid; // Note: owned by building_indir_light_mgr, not us
+		cube_t lighting_bcube;
+	public:
+		indir_tex_mgr_t() : tid(0) {}
 		bool enabled() const {return (tid > 0);}
-		void free_context() {free_texture(tid); bix = 0;}
 
-		bool create_for_building(building_creator_t const &bc, unsigned new_bix, point const &target) {
-			if (tid > 0 && new_bix == bix) return 0; // nothing else to do
-			free_context(); // could reuse the texture, but this is more work
-			bix = new_bix;
-			tid = bc.get_building(bix).create_building_volume_light_texture(target);
+		bool create_for_building(building_creator_t const &bc, unsigned bix, point const &target) {
+			building_t const &b(bc.get_building(bix));
+			b.create_building_volume_light_texture(bix, target, tid);
+			lighting_bcube = b.bcube;
 			return 1;
 		}
 		bool setup_for_building(building_creator_t const &bc, shader_t &s) const {
 			if (!enabled()) return 0; // no texture set
-			cube_t const &bcube(bc.get_building(bix).bcube);
-			float const dx(bcube.dx()/MESH_X_SIZE), dy(bcube.dy()/MESH_Y_SIZE), dxy_offset(0.5f*(dx + dy));
+			float const dx(lighting_bcube.dx()/MESH_X_SIZE), dy(lighting_bcube.dy()/MESH_Y_SIZE), dxy_offset(0.5f*(dx + dy));
 			set_3d_texture_as_current(tid, 1); // indir texture uses TU_ID=1
-			s.add_uniform_vector3d("alt_scene_llc",   bcube.get_llc());
-			s.add_uniform_vector3d("alt_scene_scale", bcube.get_size());
+			s.add_uniform_vector3d("alt_scene_llc",   lighting_bcube.get_llc());
+			s.add_uniform_vector3d("alt_scene_scale", lighting_bcube.get_size());
 			s.add_uniform_float("half_dxy", dxy_offset);
 			return 1;
 		}
@@ -2495,7 +2493,6 @@ public:
 		building_draw_windows.clear_vbos();
 		building_draw_wind_lights.clear_vbos();
 		building_draw_interior.clear_vbos();
-		indir_tex_mgr.free_context();
 	}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {

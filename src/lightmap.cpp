@@ -807,7 +807,7 @@ void update_flow_for_voxels(vector<cube_t> const &cubes) {
 	//PRINT_TIME("Update Flow");
 }
 
-unsigned indir_light_tex_from_lmap(lmap_manager_t const &local_lmap_manager, unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent) {
+void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &local_lmap_manager, unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent) {
 
 	unsigned const tot_sz(xsize*ysize*zsize), ncomp(4);
 	vector<unsigned char> tex_data(ncomp*tot_sz, 0);
@@ -828,7 +828,8 @@ unsigned indir_light_tex_from_lmap(lmap_manager_t const &local_lmap_manager, uns
 			} // for z
 		} // for x
 	} // for y
-	return create_3d_texture(zsize, xsize, ysize, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE); // see update_smoke_indir_tex_range
+	if (tid == 0) {tid = create_3d_texture(zsize, xsize, ysize, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);} // see update_smoke_indir_tex_range
+	else {update_3d_texture(tid, 0, 0, 0, zsize, xsize, ysize, ncomp, tex_data.data());}
 }
 
 
