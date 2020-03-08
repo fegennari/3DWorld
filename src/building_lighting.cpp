@@ -164,14 +164,17 @@ class building_indir_light_mgr_t {
 	}
 	void cast_light_ray(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
-		float const weight(100.0f/LOCAL_RAYS); // normalize to the number of rays
 		vector<room_object_t> const &objs(b.interior->room_geom->objs);
 		assert((unsigned)cur_light < objs.size());
 		room_object_t const &ro(objs[cur_light]);
 		colorRGBA const lcolor(ro.get_color());
-		float const tolerance(1.0E-5*b.bcube.get_max_extent()), light_zval(ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 		point const ray_scale(scene_bounds.get_size()/b.bcube.get_size()), llc_shift(scene_bounds.get_llc() - b.bcube.get_llc()*ray_scale);
+		float const tolerance(1.0E-5*b.bcube.get_max_extent()), light_zval(ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
+		float const surface_area(ro.dx()*ro.dy() + 2.0f*(ro.dx() + ro.dy())*ro.dz()); // bottom + 4 sides (top is occluded), 0.0003 for houses
+		float weight(100.0f*(surface_area/0.0003f)/LOCAL_RAYS); // normalize to the number of rays
+		if (b.has_pri_hall()) {weight *= 0.8;} // floorplan is open and well lit, indir lighting value seems too high
+		if (b.is_house) {weight *= 2.0;} // houses have dimmer lights and seem to work better with more indir
 
 #pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
 		for (int n = 0; n < (int)LOCAL_RAYS; ++n) {

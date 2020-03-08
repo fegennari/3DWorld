@@ -836,7 +836,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 			door_center = offset*base.d[!dim][0] + (1.0 - offset)*base.d[!dim][1];
 			door_pos    = base.d[dim][dir];
 		}
-		if (interior && hallway_dim == 2) { // not on a hallway
+		if (interior && !has_pri_hall()) { // not on a hallway
 			vect_cube_t const &walls(interior->walls[!dim]); // perpendicular to door
 			float const door_lo(door_center - 1.2*door_half_width), door_hi(door_center + 1.2*door_half_width); // pos along wall with a small expand
 			float const dpos_lo(door_pos    -     door_half_width), dpos_hi(door_pos    +     door_half_width); // expand width of the door
@@ -1219,7 +1219,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 	assert(!parts.empty());
 	float const door_height(1.1*get_door_height()), wscale(0.7); // a bit taller and a lot wider than house doors
 
-	if (hallway_dim < 2) { // building has primary hallway, place doors at both ends of first part
+	if (has_pri_hall()) { // building has primary hallway, place doors at both ends of first part
 		for (unsigned d = 0; d < 2; ++d) {
 			add_door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, 0, rgen), 0, bool(hallway_dim), d, 1);
 		}

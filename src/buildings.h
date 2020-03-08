@@ -361,6 +361,7 @@ struct building_t : public building_geom_t {
 	bool has_interior () const {return bool(interior);}
 	bool has_room_geom() const {return (has_interior() && interior->room_geom);}
 	bool has_sec_bldg () const {return (has_garage || has_shed);}
+	bool has_pri_hall () const {return (hallway_dim <= 1);} // otherswise == 2
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
