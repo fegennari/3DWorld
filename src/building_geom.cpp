@@ -244,7 +244,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 						if (normal.z == 0.0) continue; // skip vertical sides as the player can't stand on them
 						float const rdist(dot_product_ptv(normal, pos_xlate, i->pts[0]));
 
-						if (i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // don't allow walking on roof access tquads
+						if (draw_building_interiors && i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // don't allow walking on roof access tquads
 							if (rdist < -radius*normal.z) continue; // player is below this tquad
 							else {pos2.x = p_last.x; pos2.y = p_last.y; break;} // block the player from walking here (can only walk through raised opening)
 						}
