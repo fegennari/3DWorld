@@ -97,7 +97,9 @@ void add_ssao() {
 	bind_depth_buffer();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
-	s.set_frag_shader("depth_utils.part+screen_space_ao");
+	s.set_frag_shader("depth_utils.part+screen_space_ao"); // too blocky, doesn't work on transparent objects, sky/clouds, or grass
+	//s.set_frag_shader("depth_utils.part+screen_space_ao_v2"); // black checkerboard patterns, needs blurring
+	//s.set_frag_shader("depth_utils.part+screen_space_ao_xenko"); // ported from HLSL, doesn't work
 	s.begin_shader();
 	setup_depth_tex(s, 0);
 	draw_white_quad_and_end_shader(s);
@@ -215,12 +217,13 @@ void add_2d_bloom() {
 
 void run_postproc_effects() {
 
+	bool const enable_ssao = 0;
 	point const camera(get_camera_pos());
 	bool const camera_underwater(world_mode != WMODE_UNIVERSE && is_underwater(camera));
 	int index(-1);
 	static xform_matrix prev_mvm, prev_pjm; // previous frame's matrices, for use with motion blur, etc.
 	static bool prev_mat_valid(0);
-	//if (display_mode & 0x20) {add_ssao();}
+	if (enable_ssao && (display_mode & 0x20)) {add_ssao();} // key '6'
 	
 	if (cur_explosion_sphere.radius > 0.0 && camera_pdu.sphere_visible_test(cur_explosion_sphere.pos, cur_explosion_sphere.radius)) {
 		if (dist_less_than(camera, cur_explosion_sphere.pos, max(40.0*cur_explosion_sphere.radius, 8.0*CAMERA_RADIUS))) { // close/large on the screen
@@ -240,7 +243,7 @@ void run_postproc_effects() {
 		if      (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
 		else if (dist_to_lava > 0.0 && dist_to_lava < lava_max_dist) {add_color_only_effect("heat_waves", (lava_max_dist - dist_to_lava)/lava_max_dist);}
 	}
-	if (display_mode & 0x80) { // DOF
+	if (display_mode & 0x80) { // DOF, key '8'
 		point const pos2(camera + cview_dir*FAR_CLIP);
 		point cpos(pos2);
 		vector3d cnorm; // unused
@@ -253,7 +256,7 @@ void run_postproc_effects() {
 	}
 	if (show_fog && world_mode == WMODE_GROUND && !camera_underwater && !is_rain_enabled()) {add_god_rays();}
 	
-	if ((display_mode & 0x20) && !camera_underwater) { // add bloom last
+	if (!enable_ssao && (display_mode & 0x20) && !camera_underwater) { // add bloom last, key '6'
 		if (world_mode != WMODE_INF_TERRAIN) {add_bloom();}
 		else if (have_buildings() && is_night()) {add_2d_bloom();} // allow bloom for building windows at night in TT mode
 	}

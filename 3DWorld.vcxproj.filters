@@ -1344,6 +1344,12 @@
     <None Include="shaders\recolor.frag">
       <Filter>Shaders\frag\Fullscreen</Filter>
     </None>
+    <None Include="shaders\screen_space_ao_v2.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
+    <None Include="shaders\screen_space_ao_xenko.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
