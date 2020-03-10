@@ -1368,12 +1368,13 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	}
 }
 
-bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist) const {
+bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) const {
 	tquad_with_ix_t door;
 	if (!find_door_close_to_point(door, pos, dist)) return 0; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door, 1); // clip to floor
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
+	door_type = door.type;
 	
 	if (door.type != tquad_with_ix_t::TYPE_GDOOR) { // draw the opened door, but not if it's a garage door (which goes up instead of swinging open)
 		building_draw_t open_door_draw;
@@ -1387,7 +1388,6 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 
 bool building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
-		if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // TODO: make roof doors open correctly and then enable this
 		cube_t c(d->get_bcube());
 		c.expand_by_xy(dist);
 		if (c.contains_pt(pos)) {door = *d; return 1;}
@@ -2066,7 +2066,7 @@ public:
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0), have_indir(0);
-		unsigned max_draw_ix(0);
+		unsigned max_draw_ix(0), door_type(0);
 		shader_t s;
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
@@ -2091,7 +2091,7 @@ public:
 		building_draw_t interior_wind_draw, ext_door_draw;
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
-		bool this_frame_camera_in_building(0);
+		bool this_frame_camera_in_building(0), has_ext_non_roof_door(0);
 		cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
 		int const interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
 
@@ -2157,9 +2157,10 @@ public:
 						if (!transparent_windows) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
-						//cube_t bc_exp(b.bcube); bc_exp.expand_by(door_open_dist); if (!bc_exp.contains_pt(camera_xlated)) continue; // camera not near building
-						if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
-						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
+						if (!b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist)) continue; // camera not near building
+						//if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
+						bool const found_door(b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, door_type)); // and draw opened door
+						has_ext_non_roof_door |= (found_door && door_type != tquad_with_ix_t::TYPE_RDOOR);
 						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) {continue;} // camera not in building
@@ -2254,13 +2255,14 @@ public:
 			reset_interior_lighting(s);
 			s.end_shader();
 
-			if (ext_door_draw.empty()) { // if we're not by an exterior door, draw the back sides of exterior doors as closed
+			if (!has_ext_non_roof_door) { // if we're not by an exterior door, draw the back sides of exterior doors as closed
 				city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0
 				set_interior_lighting(s);
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, 2);} // ext_walls_mode=2 (all but exterior walls)
 				reset_interior_lighting(s);
 				s.end_shader();
 			}
+			// TODO: else if !ext_door_draw.empty(), make open doors look correct from the inside of the building
 			glCullFace(GL_BACK); // draw front faces
 			// draw windows and doors in depth pass to create holes
 			shader_t holes_shader;
