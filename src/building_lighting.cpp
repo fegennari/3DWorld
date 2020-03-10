@@ -11,7 +11,7 @@
 bool const USE_BKG_THREAD = 1;
 
 extern int MESH_Z_SIZE, display_mode, display_framerate;
-extern unsigned LOCAL_RAYS, NUM_THREADS;
+extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
 extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
@@ -213,7 +213,7 @@ class building_indir_light_mgr_t {
 			pos.z = light_zval;
 
 			// TODO: more splits after first bounce
-			for (unsigned bounce = 0; bounce < 4; ++bounce) { // allow up to 4 bounces
+			for (unsigned bounce = 0; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to 4 bounces
 				cpos = pos; // init value
 				bool const hit(b.ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
 
