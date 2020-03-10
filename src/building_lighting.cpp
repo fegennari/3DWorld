@@ -336,10 +336,12 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
 		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
+		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
 
 		if (i->z1() < target.z || i->z2() > (target.z + window_vspacing)) { // penalty if on a different floor
 			dist_sq += (i->has_stairs() ? 0.25 : 1.0)*other_floor_penalty; // less penalty for lights on stairs
 		}
+		// reduce distance for lights visible to target?
 		to_sort.emplace_back(dist_sq, (i - objs.begin()));
 	} // for i
 	sort(to_sort.begin(), to_sort.end()); // sort by increasing distance
