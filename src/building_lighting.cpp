@@ -186,6 +186,7 @@ class building_indir_light_mgr_t {
 	}
 	void cast_light_ray(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
+		unsigned const num_rt_threads(NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)); // reserve a thread for the main thread if running in the background
 		vector<room_object_t> const &objs(b.interior->room_geom->objs);
 		assert((unsigned)cur_light < objs.size());
 		room_object_t const &ro(objs[cur_light]);
@@ -198,7 +199,7 @@ class building_indir_light_mgr_t {
 		if (b.has_pri_hall()) {weight *= 0.8;} // floorplan is open and well lit, indir lighting value seems too high
 		if (b.is_house) {weight *= 2.0;} // houses have dimmer lights and seem to work better with more indir
 
-#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
+#pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
 		for (int n = 0; n < (int)LOCAL_RAYS; ++n) {
 			if (kill_thread) continue;
 			rand_gen_t rgen;
