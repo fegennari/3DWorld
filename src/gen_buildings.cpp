@@ -24,9 +24,10 @@ bool camera_in_building(0), interior_shadow_maps(0);
 building_params_t global_building_params;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
-extern int rand_gen_index, display_mode, window_width, window_height;
+extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide;
 extern float CAMERA_RADIUS;
-extern point sun_pos;
+extern double camera_zh;
+extern point sun_pos, pre_smap_player_pos;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
 
@@ -1936,14 +1937,13 @@ public:
 		shader_t s;
 		s.begin_color_only_shader(); // really don't even need colors
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
-		point const camera_xlated(get_camera_pos() - xlate);
 		vector<point> points; // reused temporary
 		vect_cube_t ped_bcubes; // likely not needed, maybe only in rare cases
 		building_draw_t roof_parts_draw;
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
-				point const lpos(get_camera_pos() - xlate);
+				point const lpos(get_camera_pos() - xlate); // Note: camera_pos is actually the light pos
 
 				// draw interior for the building containing the light
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
@@ -1957,9 +1957,16 @@ public:
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						b.gen_and_draw_room_geom(s, ped_bcubes, bi->ix, ped_ix, 1); // shadow_only=1
 						g->has_room_geom = 1; // do we need to set this?
+						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
+						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
+						if (ped_ix < 0 && !add_player_shadow) continue; // nothing else to draw
+						bool const camera_in_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
 
-						if (ped_ix >= 0 && b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) { // camera in this building
+						if (ped_ix >= 0 && (camera_in_building || player_close)) {
 							draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1); // draw people in this building
+						}
+						if (add_player_shadow && camera_in_building) { // use a smaller radius, shift to center of player height
+							draw_sphere_vbo((pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)), 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0);
 						}
 					} // for bi
 				} // for g
