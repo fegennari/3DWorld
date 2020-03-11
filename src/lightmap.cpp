@@ -809,23 +809,20 @@ void update_flow_for_voxels(vector<cube_t> const &cubes) {
 	//PRINT_TIME("Update Flow");
 }
 
-void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &local_lmap_manager, vector<unsigned char> &tex_data,
-	unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent)
+void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned char> &tex_data,
+	unsigned xsize, unsigned y1, unsigned y2, unsigned zsize, float lighting_exponent, bool mt)
 {
-	unsigned const tot_sz(xsize*ysize*zsize), ncomp(4);
-	tex_data.clear();
-	tex_data.resize(ncomp*tot_sz, 0);
 	bool const apply_sqrt(lighting_exponent > 0.49 && lighting_exponent < 0.51), apply_exp(!apply_sqrt && lighting_exponent != 1.0);
 
-#pragma omp parallel for schedule(static)
-	for (int y = 0; y < (int)ysize; ++y) {
+#pragma omp parallel for schedule(static) if (mt)
+	for (int y = y1; y < (int)y2; ++y) {
 		for (unsigned x = 0; x < xsize; ++x) {
 			unsigned const off(zsize*(y*xsize + x));
-			lmcell const *const vlm(local_lmap_manager.get_column(x, y));
+			lmcell const *const vlm(lmap.get_column(x, y));
 			assert(vlm != nullptr); // not supported in this flow
 
 			for (unsigned z = 0; z < zsize; ++z) {
-				unsigned const off2(ncomp*(off + z));
+				unsigned const off2(4*(off + z));
 				colorRGB color;
 				vlm[z].get_final_color(color, 1.0, 1.0);
 				if      (apply_sqrt) {UNROLL_3X(color[i_] = sqrt(color[i_]););}
@@ -835,8 +832,14 @@ void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &local_lmap_m
 			} // for z
 		} // for x
 	} // for y
-	if (tid == 0) {tid = create_3d_texture(zsize, xsize, ysize, ncomp, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);} // see update_smoke_indir_tex_range
-	else {update_3d_texture(tid, 0, 0, 0, zsize, xsize, ysize, ncomp, tex_data.data());}
+}
+void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, vector<unsigned char> &tex_data,
+	unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent)
+{
+	tex_data.resize(4*xsize*ysize*zsize, 0);
+	update_indir_light_tex_range(lmap, tex_data, xsize, 0, ysize, zsize, lighting_exponent, 1); // mt=1
+	if (tid == 0) {tid = create_3d_texture(zsize, xsize, ysize, 4, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);} // see update_smoke_indir_tex_range
+	else {update_3d_texture(tid, 0, 0, 0, zsize, xsize, ysize, 4, tex_data.data());} // stored {Z,X,Y}
 }
 
 

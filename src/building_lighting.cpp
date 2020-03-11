@@ -8,7 +8,8 @@
 #include "cobj_bsp_tree.h"
 #include <thread>
 
-bool const USE_BKG_THREAD = 1;
+bool const USE_BKG_THREAD    = 1;
+bool const INCR_LIGHT_UPDATE = 0; // slower average FPS but less variation
 
 extern int MESH_Z_SIZE, display_mode, display_framerate;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
@@ -154,7 +155,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 class building_indir_light_mgr_t {
 	bool is_running, is_done, kill_thread, lighting_updated, needs_to_join;
 	int cur_bix, cur_light;
-	unsigned cur_tid;
+	unsigned cur_tid, cur_y_range_bix;
 	vector<unsigned char> tex_data;
 	vector<unsigned> light_ids;
 	set<unsigned> lights_complete;
@@ -241,19 +242,33 @@ class building_indir_light_mgr_t {
 		while (is_running) {alut_sleep(0.01);}
 		kill_thread = 0;
 	}
-	void create_volume_light_texture() { // 5.86ms
-		//timer_t timer("Lighting Tex Update");
+	void update_volume_light_texture() { // full update, 5.86ms (z=64) | 11ms (z=128)
+		//timer_t timer("Lighting Tex Create");
 		indir_light_tex_from_lmap(cur_tid, lmgr, tex_data, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp); // indir_light_exp applies to local lighting
+	}
+	void update_volume_light_texture_incr() {
+		//timer_t timer("Lighting Tex Update"); // 2.1ms
+		unsigned const xsz(MESH_X_SIZE), ysz(MESH_Y_SIZE), zsz(MESH_SIZE[2]);
+		unsigned const num_blocks(32), block_size(ysz/num_blocks), y_start(cur_y_range_bix*block_size);
+		if (tex_data.empty()) {tex_data.resize(4*xsz*ysz*zsz, 0);}
+		assert((ysz % num_blocks) == 0); // must divide evenly
+		update_indir_light_tex_range(lmgr, tex_data, xsz, y_start, y_start+block_size, zsz, indir_light_exp, 0); // mt=0
+		if (cur_tid == 0) {cur_tid = create_3d_texture(zsz, xsz, ysz, 4, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);} // create texture
+		else {update_3d_texture(cur_tid, 0, 0, y_start, zsz, xsz, block_size, 4, (tex_data.data() + 4*xsz*y_start*zsz));} // stored {Z,X,Y}
+		++cur_y_range_bix;
+		if (cur_y_range_bix == num_blocks) {cur_y_range_bix = 0;} // wrap around for next pass
 	}
 	void maybe_join_thread() {
 		if (needs_to_join) {rt_thread.join(); needs_to_join = 0;}
 	}
 public:
-	building_indir_light_mgr_t() : is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0), cur_bix(-1), cur_light(-1), cur_tid(0) {}
+	building_indir_light_mgr_t() :
+		is_running(0), is_done(0), kill_thread(0), lighting_updated(0), needs_to_join(0), cur_bix(-1), cur_light(-1), cur_tid(0), cur_y_range_bix(0) {}
 
 	void clear() {
 		is_done = lighting_updated = 0;
 		cur_bix = cur_light = -1;
+		cur_y_range_bix = 0;
 		tex_data.clear();
 		light_ids.clear();
 		lights_complete.clear();
@@ -281,11 +296,12 @@ public:
 			oss << "Lights: " << lights_complete.size() << " / " << light_ids.size();
 			lighting_update_text = oss.str();
 		}
+		if (INCR_LIGHT_UPDATE && lighting_updated) {update_volume_light_texture_incr();}
 		if (is_running) return; // still running, let it continue
 
 		if (lighting_updated) { // update lighting texture based on incremental progress
 			maybe_join_thread();
-			create_volume_light_texture();
+			if (!INCR_LIGHT_UPDATE) {update_volume_light_texture();}
 			lighting_updated = 0;
 		}
 		// nothing is running and there is more work to do, find the nearest light to the target and process it
@@ -296,7 +312,10 @@ public:
 			if (lights_complete.find(*i) == lights_complete.end()) {cur_light = *i; break;} // find an incomplete light
 		}
 		if (cur_light >= 0) {start_lighting_compute(b);} // this light is next
-		else {is_done = 1;} // no more lights to process
+		else { // no more lights to process
+			if (INCR_LIGHT_UPDATE) {update_volume_light_texture();} // full/slow update to ensure texture is finished
+			is_done = 1;
+		}
 		//cout << "Process light " << lights_complete.size() << " of " << light_ids.size() << endl;
 		tid = cur_tid;
 	}

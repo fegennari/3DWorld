@@ -328,7 +328,9 @@ void check_for_lighting_finished();
 void compute_ray_trace_lighting(unsigned ltype, bool verbose);
 unsigned add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt);
 // from lightmap.cpp
-void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &local_lmap_manager, vector<unsigned char> &tex_data,
+void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned char> &tex_data,
+	unsigned xsize, unsigned y1, unsigned y2, unsigned zsize, float lighting_exponent, bool mt);
+void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, vector<unsigned char> &tex_data,
 	unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent=1.0);
 
 
