@@ -242,17 +242,17 @@ class building_indir_light_mgr_t {
 		while (is_running) {alut_sleep(0.01);}
 		kill_thread = 0;
 	}
-	void update_volume_light_texture() { // full update, 5.86ms (z=64) | 11ms (z=128)
+	void update_volume_light_texture() { // full update, 6.6ms for z=128
 		//timer_t timer("Lighting Tex Create");
-		indir_light_tex_from_lmap(cur_tid, lmgr, tex_data, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp); // indir_light_exp applies to local lighting
+		indir_light_tex_from_lmap(cur_tid, lmgr, tex_data, MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[2], indir_light_exp, 1); // local_only=1
 	}
 	void update_volume_light_texture_incr() {
-		//timer_t timer("Lighting Tex Update"); // 2.1ms
+		//timer_t timer("Lighting Tex Update");
 		unsigned const xsz(MESH_X_SIZE), ysz(MESH_Y_SIZE), zsz(MESH_SIZE[2]);
 		unsigned const num_blocks(32), block_size(ysz/num_blocks), y_start(cur_y_range_bix*block_size);
 		if (tex_data.empty()) {tex_data.resize(4*xsz*ysz*zsz, 0);}
 		assert((ysz % num_blocks) == 0); // must divide evenly
-		update_indir_light_tex_range(lmgr, tex_data, xsz, y_start, y_start+block_size, zsz, indir_light_exp, 0); // mt=0
+		update_indir_light_tex_range(lmgr, tex_data, xsz, y_start, y_start+block_size, zsz, indir_light_exp, 1, 0); // local_only=1, mt=0
 		if (cur_tid == 0) {cur_tid = create_3d_texture(zsz, xsz, ysz, 4, tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);} // create texture
 		else {update_3d_texture(cur_tid, 0, 0, y_start, zsz, xsz, block_size, 4, (tex_data.data() + 4*xsz*y_start*zsz));} // stored {Z,X,Y}
 		++cur_y_range_bix;

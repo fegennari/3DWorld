@@ -39,6 +39,7 @@ struct lmcell { // size = 52
 	float const *get_offset(int ltype) const {return (sc + lmcell_ltype_off[ltype]);}
 	static unsigned get_dsz(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? 3 : 4);}
 	void get_final_color(colorRGB &color, float max_indir, float indir_scale=1.0, float extra_ambient=0.0) const;
+	void get_final_color_local(colorRGB &color) const;
 	void set_outside_colors();
 	void mix_lighting_with(lmcell const &lmc, float val);
 };
@@ -329,9 +330,9 @@ void compute_ray_trace_lighting(unsigned ltype, bool verbose);
 unsigned add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt);
 // from lightmap.cpp
 void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned char> &tex_data,
-	unsigned xsize, unsigned y1, unsigned y2, unsigned zsize, float lighting_exponent, bool mt);
+	unsigned xsize, unsigned y1, unsigned y2, unsigned zsize, float lighting_exponent=1.0, bool local_only=0, bool mt=0);
 void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, vector<unsigned char> &tex_data,
-	unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent=1.0);
+	unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent=1.0, bool local_only=0);
 
 
 #endif
