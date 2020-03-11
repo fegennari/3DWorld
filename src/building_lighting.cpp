@@ -184,6 +184,15 @@ class building_indir_light_mgr_t {
 			cast_light_ray(b);
 		}
 	}
+	void calc_reflect_ray(point &pos, point const &cpos, vector3d &dir, vector3d const &cnorm, rand_gen_t &rgen, float tolerance) const {
+		vector3d v_ref;
+		calc_reflection_angle(dir, v_ref, cnorm);
+		v_ref.normalize();
+		vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
+		dir = (v_ref + rand_dir).get_norm(); // diffuse reflection: new dir is mix 50% specular with 50% random
+		if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
+		pos = cpos + tolerance*dir; // move slightly away from the surface
+	}
 	void cast_light_ray(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const num_rt_threads(NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)); // reserve a thread for the main thread if running in the background
@@ -198,40 +207,47 @@ class building_indir_light_mgr_t {
 		float weight(100.0f*(surface_area/0.0003f)/LOCAL_RAYS); // normalize to the number of rays
 		if (b.has_pri_hall()) {weight *= 0.8;} // floorplan is open and well lit, indir lighting value seems too high
 		if (b.is_house) {weight *= 2.0;} // houses have dimmer lights and seem to work better with more indir
+		unsigned const NUM_PRI_SPLITS = 16;
+		int const num_rays(LOCAL_RAYS/NUM_PRI_SPLITS);
 
 #pragma omp parallel for schedule(dynamic) num_threads(num_rt_threads)
-		for (int n = 0; n < (int)LOCAL_RAYS; ++n) {
+		for (int n = 0; n < num_rays; ++n) {
 			if (kill_thread) continue;
 			rand_gen_t rgen;
 			rgen.set_state(n+1, cur_light);
-			vector3d dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
-			dir.z = -fabs(dir.z); // make sure dir points down
-			point pos, cpos;
-			vector3d cnorm, v_ref;
-			colorRGBA cur_color(lcolor), ccolor(WHITE);
+			vector3d pri_dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
+			pri_dir.z = -fabs(pri_dir.z); // make sure dir points down
+			point origin, init_cpos, cpos;
+			vector3d init_cnorm, cnorm;
+			colorRGBA ccolor(WHITE);
 			// select a random point on the light cube (close enough for (ro.shape == SHAPE_CYLIN))
-			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(ro.d[d][0], ro.d[d][1]);}
-			pos.z = light_zval;
+			for (unsigned d = 0; d < 2; ++d) {origin[d] = rgen.rand_uniform(ro.d[d][0], ro.d[d][1]);}
+			origin.z = light_zval;
+			init_cpos = origin; // init value
+			if (!b.ray_cast_interior(origin, pri_dir, bvh, init_cpos, init_cnorm, ccolor)) break;
+			colorRGBA const init_color(lcolor.modulate_with(ccolor));
+			if (init_color.get_luminance() < 0.1) break; // done
 
-			// TODO: more splits after first bounce
-			for (unsigned bounce = 0; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to 4 bounces
-				cpos = pos; // init value
-				bool const hit(b.ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
+			for (unsigned splits = 0; splits < NUM_PRI_SPLITS; ++splits) {
+				point pos(origin);
+				vector3d dir(pri_dir);
+				colorRGBA cur_color(init_color);
+				calc_reflect_ray(pos, init_cpos, dir, init_cnorm, rgen, tolerance);
 
-				if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
-					point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
-					add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, cur_color, LIGHTING_LOCAL, (bounce == 0)); // local light, no bcube
-				}
-				if (!hit) break; // done
-				cur_color = cur_color.modulate_with(ccolor);
-				if (cur_color.get_luminance() < 0.05) break; // done
-				calc_reflection_angle(dir, v_ref, cnorm);
-				v_ref.normalize();
-				vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
-				dir = (v_ref + rand_dir).get_norm(); // diffuse reflection: new dir is mix 50% specular with 50% random
-				if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
-				pos = cpos + tolerance*dir; // move slightly away from the surface
-			} // for bounce
+				for (unsigned bounce = 1; bounce < MAX_RAY_BOUNCES; ++bounce) { // allow up to MAX_RAY_BOUNCES bounces
+					cpos = pos; // init value
+					bool const hit(b.ray_cast_interior(pos, dir, bvh, cpos, cnorm, ccolor));
+
+					if (cpos != pos) { // accumulate light along the ray from pos to cpos (which is always valid) with color cur_color
+						point const p1(pos*ray_scale + llc_shift), p2(cpos*ray_scale + llc_shift); // transform building space to global scene space
+						add_path_to_lmcs(&lmgr, nullptr, p1, p2, weight, cur_color, LIGHTING_LOCAL, 0); // local light, no bcube
+					}
+					if (!hit) break; // done
+					cur_color = cur_color.modulate_with(ccolor);
+					if (cur_color.get_luminance() < 0.1) break; // done
+					calc_reflect_ray(pos, cpos, dir, cnorm, rgen, tolerance);
+				} // for bounce
+			} // for splits
 		} // for n
 		is_running = 0;
 	}
