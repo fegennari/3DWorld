@@ -501,7 +501,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 	if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
 
 	if (door.type == tquad_with_ix_t::TYPE_RDOOR) { // not on a wall, use shift relative to floor/wall thickness
-		door_shift = 0.001*(dir ? 1.0 : -1.0)*get_material().get_floor_spacing();
+		door_shift = 0.01*(dir ? 1.0 : -1.0)*get_material().get_floor_spacing();
 	}
 	else {
 		door_shift = bcube.dz(); // start with a large value
@@ -521,9 +521,8 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor
 	cube_t clip_cube(door.get_bcube());
 	float const dz(clip_cube.dz());
 	float const border((door.type == tquad_with_ix_t::TYPE_BDOOR) ? 0.04 : 0.08);
-	// clip off bottom for floor if clip_to_floor==1; somewhat arbitrary, should we use interior->floors.back().z2() instead?
-	float const clip_bot(clip_to_floor ? 0.7*get_floor_thickness() : 0.04*dz);
-	clip_cube.z1() += clip_bot;
+	// clip off bottom for floor if clip_to_floor==1 and not a roof door; somewhat arbitrary, should we use interior->floors.back().z2() instead?
+	if (door.type != tquad_with_ix_t::TYPE_RDOOR) {clip_cube.z1() += (clip_to_floor ? 0.7*get_floor_thickness() : 0.04*dz);}
 	clip_cube.z2() -= 0.5*border*dz;
 	bool const dim(clip_cube.dx() < clip_cube.dy()); // border dim
 	float const xy_border(border*clip_cube.get_sz_dim(dim));
