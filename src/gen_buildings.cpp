@@ -383,6 +383,7 @@ public:
 		window_tid = BLDG_WINDOW_TEX;
 		return 1;
 	}
+	bool is_door_tid(int tid) const {return (tid >= 0 && (tid == hdoor_tid || tid == bdoor_tid || tid == gdoor_tid));}
 };
 building_texture_mgr_t building_texture_mgr;
 
@@ -1047,10 +1048,11 @@ public:
 	unsigned get_num_draw_blocks() const {return to_draw.size();}
 	void finalize(unsigned num_tiles) {for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->finalize(num_tiles);}}
 	
-	// ext_walls_mode: 0=draw everything, 1=draw exterior walls only, 2=draw everything but exterior walls
-	void draw(shader_t &s, bool shadow_only, bool no_set_texture=0, bool direct_draw_no_vbo=0, int ext_walls_mode=0, vertex_range_t const *const exclude=nullptr) {
+	// tex_filt_mode: 0=draw everything, 1=draw exterior walls only, 2=draw everything but exterior walls, 3=draw everything but exterior walls and doors
+	void draw(shader_t &s, bool shadow_only, bool no_set_texture=0, bool direct_draw_no_vbo=0, int tex_filt_mode=0, vertex_range_t const *const exclude=nullptr) {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
-			if (ext_walls_mode && (tid_mapper.is_ext_wall_tid(i->tex.tid) != (ext_walls_mode == 1))) continue; // not a wall texture, skip
+			if (tex_filt_mode && (tid_mapper.is_ext_wall_tid(i->tex.tid) != (tex_filt_mode == 1))) continue; // not an ext wall texture, skip
+			if (tex_filt_mode == 3 && building_texture_mgr.is_door_tid(i->tex.tid)) continue; // door texture, skip
 			bool const use_exclude(exclude && exclude->draw_ix == int(i - to_draw.begin()));
 			i->draw_all_geom(s, shadow_only, no_set_texture, direct_draw_no_vbo, (use_exclude ? exclude : nullptr));
 		}
@@ -2072,7 +2074,7 @@ public:
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), have_indir(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), have_indir(0), this_frame_camera_in_building(0);
 		unsigned max_draw_ix(0), door_type(0);
 		shader_t s;
 
@@ -2098,7 +2100,6 @@ public:
 		building_draw_t interior_wind_draw, ext_door_draw;
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
-		bool this_frame_camera_in_building(0), has_ext_non_roof_door(0);
 		cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
 		int const interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
 
@@ -2166,8 +2167,7 @@ public:
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist)) continue; // camera not near building
 						//if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
-						bool const found_door(b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, door_type)); // and draw opened door
-						has_ext_non_roof_door |= (found_door && door_type != tquad_with_ix_t::TYPE_RDOOR);
+						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, door_type); // and draw opened door
 						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) {continue;} // camera not in building
@@ -2257,20 +2257,20 @@ public:
 						int_wall_draw_back [bcs_ix].draw(s, shadow_only, force_wall_tex, 1); // draw back facing walls for back part of building without stencil test
 					}
 				}
-				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, 1, exclude); // ext_walls_mode=1 (exterior walls only); no stencil test
+				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, 1, exclude); // tex_filt_mode=1 (exterior walls only); no stencil test
 			} // for i
 			reset_interior_lighting(s);
 			s.end_shader();
 
-			if (!has_ext_non_roof_door) { // if we're not by an exterior door, draw the back sides of exterior doors as closed
-				city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0
-				set_interior_lighting(s);
-				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, 2);} // ext_walls_mode=2 (all but exterior walls)
-				reset_interior_lighting(s);
-				s.end_shader();
-			}
-			// TODO: else if !ext_door_draw.empty(), make open doors look correct from the inside of the building
+			// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
+			int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
+			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0
+			set_interior_lighting(s);
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, tex_filt_mode);}
+			reset_interior_lighting(s);
+			s.end_shader();
 			glCullFace(GL_BACK); // draw front faces
+
 			// draw windows and doors in depth pass to create holes
 			shader_t holes_shader;
 			setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting

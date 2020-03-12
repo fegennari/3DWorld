@@ -15,7 +15,6 @@ Cities:
 
 * Building interiors:
   - Improve Indirect lighting
-  - Roof access doors open for player
   - Moving people with collision detection and path finding
   - Place more room objects/furniture
   - Working elevators

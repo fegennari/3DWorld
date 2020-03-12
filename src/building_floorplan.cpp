@@ -864,7 +864,6 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			bool const dir(stairs_dir^(sshape == SHAPE_U));
 			box.z1() = z;
 			// add a door to the roof
-			// TODO: make the door open for the player
 			cube_t door(box);
 			door.d[stairs_dim][ dir] += 0.2*(dir ? -1.0 : 1.0)*fc_thick; // shift slightly to fill the gap
 			door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];

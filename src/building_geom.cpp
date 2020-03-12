@@ -498,13 +498,13 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 	cube_t const c(door.get_bcube());
 	bool const dim(c.dy() < c.dx()), dir(door.get_norm()[dim] > 0.0); // closest cube side dir
 	float door_shift(0.0);
+	if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
 
-	if (door.type == tquad_with_ix_t::TYPE_RDOOR) { // not on a wall, can't move it (should caller check this?)
+	if (door.type == tquad_with_ix_t::TYPE_RDOOR) { // not on a wall, use shift relative to floor/wall thickness
 		door_shift = 0.001*(dir ? 1.0 : -1.0)*get_material().get_floor_spacing();
 	}
 	else {
 		door_shift = bcube.dz(); // start with a large value
-		if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
 
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find the part that this door was added to (inc garages and sheds)
 			float const dist(door.pts[0][dim] - p->d[dim][dir]); // signed
