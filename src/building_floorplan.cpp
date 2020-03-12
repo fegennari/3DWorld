@@ -864,8 +864,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			bool const dir(stairs_dir^(sshape == SHAPE_U));
 			box.z1() = z;
 			// add a door to the roof
+			float const door_shift(0.2*(dir ? -1.0 : 1.0)*fc_thick);
 			cube_t door(box);
-			door.d[stairs_dim][ dir] += 0.2*(dir ? -1.0 : 1.0)*fc_thick; // shift slightly to fill the gap
+			door.d[stairs_dim][ dir] += door_shift; // shift slightly to fill the gap
 			door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];
 			if (!is_sloped) {door.d[!stairs_dim][1] = door.get_center_dim(!stairs_dim);} // only the open half
 			add_door(door, part_ix, stairs_dim, dir, 1);
@@ -882,7 +883,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				point const pts[4] = {point(box.x1(), box.y1(), z1), point(box.x2(), box.y1(), z1), point(box.x2(), box.y2(), z1), point(box.x1(), box.y2(), z1)};
 				unsigned const hi_side1[4] = {0, 2, 3, 1}, hi_side2[4] = {1, 3, 0, 2}, lo_side1[4] = {3, 1, 2, 0}, lo_side2[4] = {2, 0, 1, 3};
 				unsigned const top_vix[2] = {hi_side1[opening_ix], hi_side2[opening_ix]}, bot_vix[2] = {lo_side1[opening_ix], lo_side2[opening_ix]};
-				tquad_t top(4); // qua
+				tquad_t top(4); // quad
 				for (unsigned n = 0; n < 4; ++n) {top.pts[n] = pts[n];}
 				top.pts[top_vix[0]].z = top.pts[top_vix[1]].z = z2; // this are the higher points
 				roof_tquads.emplace_back(top, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
@@ -894,6 +895,14 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					side.pts[2] = top.pts[top_vix[s]]; // top
 					if (s) {swap(side.pts[0], side.pts[1]);} // make normal point outward for correct BFC
 					roof_tquads.emplace_back(side, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
+
+					tquad_t frame(4); // quads on sides of door frame
+					frame.pts[0] = frame.pts[3] = pts[top_vix[s]]; // bottom
+					frame.pts[1] = frame.pts[2] = top.pts[top_vix[s]]; // top
+					float const frame_width(0.08*((bool(s)^dir^stairs_dim^1) ? -1.0 : 1.0)*box.get_sz_dim(!stairs_dim));
+					for (unsigned d = 0; d < 2; ++d) {frame.pts[(s<<1)+d][!stairs_dim] += frame_width;} // move toward center of door
+					for (unsigned n = 0; n < 4; ++n) {frame.pts[n][stairs_dim] += 1.5*door_shift;} // shift back behind the door
+					roof_tquads.emplace_back(frame, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
 				} // for s
 			}
 			else { // box roof
