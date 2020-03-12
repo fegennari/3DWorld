@@ -14,7 +14,6 @@ Cities:
 * Mesh simplificaton for cars and peds for shadow pass
 
 * Building interiors:
-  - Improve Indirect lighting
   - Moving people with collision detection and path finding
   - Place more room objects/furniture
   - Working elevators

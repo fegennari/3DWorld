@@ -145,7 +145,8 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) {
 		if (c->shape == SHAPE_CYLIN) continue; // cylinders (lights) are not cubes
-		cc.emplace_back(*c, c->get_color()); // TODO: to be more accurate, we should use the actual cubes of tables and chairs (which adds a lot of complexity)
+		// to be more accurate, we could use the actual cubes of tables and chairs, but this adds a lot of complexity, increases lighting time, and makes little difference
+		cc.emplace_back(*c, c->get_color());
 		if (c->type == TYPE_TABLE) {cc.back().z1() += 0.85*c->dz();} // at least be a bit more accurate for tables by using only the top
 	}
 }
