@@ -333,9 +333,16 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		} // for c
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with
 			if (c->no_coll()) continue;
+
+			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
+				if (!c->contains_pt_xy(pos)) continue;
+				if      (obj_z - radius >= c->z2()) {max_eq(pos.z, (c->z2() + radius)); had_coll = 1;} // standing on the roof of the elevator
+				else if (obj_z - radius >= c->z1()) {max_eq(pos.z, (c->z1() + radius)); had_coll = 1;} // inside the elevator
+				continue;
+			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 			had_coll |= sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, cnorm); // skip_z=0
-		}
+		} // for c
 	}
 	for (auto i = ped_bcubes.begin(); i != ped_bcubes.end(); ++i) {
 		float const ped_radius(0.5*max(i->dx(), i->dy())); // determine radius from bcube X/Y
@@ -1922,7 +1929,7 @@ void building_interior_t::finalize() {
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
-void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces) {
+void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces, bool swap_tex_st) {
 	vertex_t v;
 	v.set_c4(color);
 
@@ -1937,14 +1944,14 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
 				v.v[d[1]] = c.d[d[1]][s1];
-				v.t[0] = tex.tscale_x*v.v[d[1]];
+				v.t[swap_tex_st] = tex.tscale_x*v.v[d[1]];
 
 				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 					v.v[d[0]] = c.d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
-					v.t[1] = tex.tscale_y*v.v[d[0]];
+					v.t[!swap_tex_st] = tex.tscale_y*v.v[d[0]];
 					quad_verts.push_back(v);
 				}
-			}
+			} // for s1
 		} // for j
 	} // for i
 }
@@ -2050,14 +2057,24 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale)).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
 }
 
+unsigned get_face_mask(bool dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
+
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { // elevator car
 	float const thickness(0.051*c.dz());
-	cube_t floor(c), ceil(c);
+	cube_t floor(c), ceil(c), back(c);
 	floor.z2() = floor.z1() + thickness;
 	ceil. z1() = ceil. z2() - thickness;
-	get_material(tid_nm_pair_t(TILE_TEX, 1.0*tscale)).add_cube_to_verts(floor, WHITE, 60); // Z faces only
-	get_material(tid_nm_pair_t(get_rect_panel_tid(), 1.0*tscale)).add_cube_to_verts(ceil,  WHITE, 60); // Z faces only
-	// TODO: walls using PANELING_TEX
+	back.d[c.dim][c.dir] = back.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*thickness;
+	tid_nm_pair_t const paneling(PANELING_TEX, 2.0f*tscale);
+	get_material(tid_nm_pair_t(TILE_TEX, tscale)).add_cube_to_verts(floor, WHITE, 60); // Z faces only
+	get_material(tid_nm_pair_t(get_rect_panel_tid(), tscale)).add_cube_to_verts(ceil, WHITE, 60); // Z faces only
+	get_material(paneling).add_cube_to_verts(back, WHITE, get_face_mask(c.dim, c.dir), !c.dim);
+
+	for (unsigned d = 0; d < 2; ++d) { // side walls
+		cube_t side(c);
+		side.d[!c.dim][!d] = side.d[!c.dim][d] + (d ? -1.0 : 1.0)*thickness;
+		get_material(paneling).add_cube_to_verts(side, WHITE, get_face_mask(!c.dim, !d), c.dim);
+	}
 }
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
