@@ -1763,7 +1763,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
-		// add any internal elevator parts with type=TYPE_ELEVATOR here
+		cube_t elevator_car(*i);
+		elevator_car.z2() = i->z1() + window_vspacing; // currently at the bottom floor
+		objs.emplace_back(elevator_car, TYPE_ELEVATOR, 0, i->dim, i->dir, (i->open ? RO_FLAG_OPEN : 0));
 	}
 }
 
@@ -2048,8 +2050,14 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale)).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
 }
 
-void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
-	assert(0); // not yet implemented
+void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { // elevator car
+	float const thickness(0.051*c.dz());
+	cube_t floor(c), ceil(c);
+	floor.z2() = floor.z1() + thickness;
+	ceil. z1() = ceil. z2() - thickness;
+	get_material(tid_nm_pair_t(TILE_TEX, 1.0*tscale)).add_cube_to_verts(floor, WHITE, 60); // Z faces only
+	get_material(tid_nm_pair_t(get_rect_panel_tid(), 1.0*tscale)).add_cube_to_verts(ceil,  WHITE, 60); // Z faces only
+	// TODO: walls using PANELING_TEX
 }
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {

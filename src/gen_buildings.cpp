@@ -387,6 +387,8 @@ public:
 };
 building_texture_mgr_t building_texture_mgr;
 
+int get_rect_panel_tid() {return building_texture_mgr.get_gdoor_tid();} // use garage doors
+
 
 class texture_id_mapper_t {
 	vector<unsigned> tid_to_slot_ix;
