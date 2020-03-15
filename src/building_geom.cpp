@@ -2091,11 +2091,14 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
 	cube_t floor(c), ceil(c), back(c);
 	floor.z2() = floor.z1() + thickness;
 	ceil. z1() = ceil. z2() - thickness;
+	floor.expand_by_xy(-0.5f*thickness);
+	ceil .expand_by_xy(-0.5f*thickness);
 	back.d[c.dim][c.dir] = back.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*thickness;
+	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), floor_ceil_face_mask(front_face_mask & 60); // +Z faces
 	tid_nm_pair_t const paneling(PANELING_TEX, 2.0f*tscale);
-	get_material(tid_nm_pair_t(TILE_TEX, tscale), 1).add_cube_to_verts(floor, WHITE, 60); // Z faces only
-	get_material(tid_nm_pair_t(get_rect_panel_tid(), tscale), 1).add_cube_to_verts(ceil, WHITE, 60); // Z faces only
-	get_material(paneling, 1).add_cube_to_verts(back, WHITE, get_face_mask(c.dim, c.dir), !c.dim);
+	get_material(tid_nm_pair_t(TILE_TEX, tscale), 1).add_cube_to_verts(floor, WHITE, floor_ceil_face_mask);
+	get_material(tid_nm_pair_t(get_rect_panel_tid(), tscale), 1).add_cube_to_verts(ceil, WHITE, floor_ceil_face_mask);
+	get_material(paneling, 1).add_cube_to_verts(back, WHITE, front_face_mask, !c.dim);
 
 	for (unsigned d = 0; d < 2; ++d) { // side walls
 		cube_t side(c);
