@@ -678,6 +678,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 
 	if (!do_split && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3)) {
 		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
+		has_complex_floorplan = 1;
 		point const llc(base.get_llc()), sz(base.get_size());
 		parts.reserve(num_levels); // at least this many
 
@@ -1640,6 +1641,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				light.z2() = z + floor_height - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
+				//is_lit |= r->is_sec_bldg; // lit for garages and sheds
 
 				// check ped_bcubes and set is_lit if any are people are in this floor of this room
 				for (auto p = ped_bcubes.begin(); p != ped_bcubes.end() && !is_lit; ++p) {
