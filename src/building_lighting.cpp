@@ -83,7 +83,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 	cpos = p2; // use far clip point for clip cube if there is no hit
 
 	// check parts (exterior walls); should chimneys and porch roofs be included?
-	if (follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end(), parts.end(), cnorm, t)) { // interior ray - find furthest exit point
+	if (follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), cnorm, t)) { // interior ray - find furthest exit point
 		ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());
 		p2  = p1 + (p2 - p1)*t; t = 1.0; // clip p2 to t (minor optimization)
 		hit = 1;
@@ -402,7 +402,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	cube_t tight_bcube;
 
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 		if (!light_bcube.intersects_xy(*p)) continue;
 		cube_t c(light_bcube);
 		c.intersect_with_cube_xy(*p);
@@ -441,7 +441,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	bool camera_by_stairs(0), camera_near_building(camera_in_building);
 
 	if (camera_in_building) {
-		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (i->contains_pt(camera_bs)) {camera_part = (i - parts.begin()); break;}
 		}
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient

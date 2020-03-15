@@ -1573,7 +1573,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		float const light_amt(window_vspacing*r->get_light_amt()); // multiply perimeter/area by window spacing to make unitless
-		unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
+		float const floor_height(r->is_sec_bldg ? r->dz() : window_vspacing); // secondary buildings are always one floor
+		unsigned const num_floors(calc_num_floors(*r, floor_height, floor_thickness));
 		unsigned const room_id(r - interior->rooms.begin());
 		point room_center(r->get_cube_center());
 		// determine light pos and size for this stack of rooms
@@ -1612,7 +1613,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		unsigned num_lights_added(0);
 
 		// place objects on each floor for this room
-		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
+		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
 			room_center.z = z + fc_thick; // floor height
 			bool const top_floor(f+1 == num_floors), check_stairs(!is_house && parts.size() > 1 && top_floor); // top floor of building that may have stairs connecting to upper stack
 			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs);
@@ -1633,14 +1634,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			else if (use_sec_light) {light = sec_light; light_dim ^= 1;}
 
 			if (!light.is_all_zeros()) { // add a light to the center of the ceiling of this room if there's space (always for top of stairs)
-				light.z2() = z + window_vspacing - fc_thick;
+				light.z2() = z + floor_height - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
 
 				// check ped_bcubes and set is_lit if any are people are in this floor of this room
 				for (auto p = ped_bcubes.begin(); p != ped_bcubes.end() && !is_lit; ++p) {
 					if (!p->intersects_xy(*r)) continue; // person not in this room
-					if (p->z2() < light.z1() && p->z1() + window_vspacing > light.z2()) {is_lit = 1;} // on this floor
+					if (p->z2() < light.z1() && p->z1() + floor_height > light.z2()) {is_lit = 1;} // on this floor
 				}
 				uint8_t flags(RO_FLAG_NOCOLL); // no collision detection with lights
 				if (is_lit)        {flags |= RO_FLAG_LIT;}
@@ -1656,7 +1657,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (r->has_elevator && r->has_stairs) {num_lights = 3;} // we really should have 3 lights in this case
 					float const offset(((num_lights == 3) ? 0.3 : 0.2)*r->get_sz_dim(light_dim)); // closer to the ends in the 3 lights case
 					cube_t valid_bounds(*r);
-					valid_bounds.expand_by_xy(-0.1*window_vspacing); // add some padding
+					valid_bounds.expand_by_xy(-0.1*floor_height); // add some padding
 
 					for (unsigned d = 0; d < num_lights; ++d) {
 						float const delta((d == 2) ? 0.0 : (d ? -1.0 : 1.0)*offset); // last light is in the center

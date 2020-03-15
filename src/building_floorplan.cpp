@@ -595,6 +595,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		C.z2() = garage.z2();
 		C.z1() = C.z2() - fc_thick;
 		interior->ceilings.push_back(C);
+		add_room(garage, (parts_end - parts.begin()), 1, 0, 0, 1); // is_sec_bldg=1
+		interior->rooms.back().no_geom = 1;
 	}
 	// attempt to cut extra doorways into long walls if there's space to produce a more connected floorplan
 	for (unsigned d = 0; d < 2; ++d) { // x,y: dim in which the wall partitions the room (wall runs in dim !d)
@@ -1162,10 +1164,10 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 	return 1;
 }
 
-void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office) {
+void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office, bool is_sec_bldg) {
 	assert(interior);
 	assert(room.is_strictly_normalized());
-	room_t r(room, part_id, num_lights, is_hallway, is_office);
+	room_t r(room, part_id, num_lights, is_hallway, is_office, is_sec_bldg);
 	cube_t const &part(parts[part_id]);
 	for (unsigned d = 0; d < 4; ++d) {r.ext_sides |= (unsigned(room.d[d>>1][d&1] == part.d[d>>1][d&1]) << d);} // find exterior sides
 	interior->rooms.push_back(r);
