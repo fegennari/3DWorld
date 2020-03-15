@@ -1692,7 +1692,7 @@ void play_camera_footstep_sound() {
 	if (dist_less_than(pos, prev_frame_pos, 0.001*CAMERA_RADIUS)) {fs_time = tfticks;} // reset timer if camera hasn't moved
 	prev_frame_pos = pos;
 	if (tfticks - fs_time < 0.36*TICKS_PER_SECOND) return; // too soon
-	if (dist_less_than(pos, last_pos, 0.5*CAMERA_RADIUS)) return;
+	if (dist_xy_less_than(pos, last_pos, 0.5*CAMERA_RADIUS)) return;
 	last_pos = pos;
 	fs_time  = tfticks;
 	gen_sound(SOUND_SNOW_STEP, pos, 0.05, 1.25);
