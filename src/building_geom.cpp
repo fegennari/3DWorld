@@ -1716,6 +1716,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	interior->room_geom->stairs_start = objs.size();
+	interior->room_geom->has_elevators = (!interior->elevators.empty());
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator) continue; // for elevator, not stairs
@@ -2060,21 +2061,22 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 
 unsigned get_face_mask(bool dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 
-void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { // elevator car
+void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
+	// elevator car, all materials are dynamic
 	float const thickness(0.051*c.dz());
 	cube_t floor(c), ceil(c), back(c);
 	floor.z2() = floor.z1() + thickness;
 	ceil. z1() = ceil. z2() - thickness;
 	back.d[c.dim][c.dir] = back.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*thickness;
 	tid_nm_pair_t const paneling(PANELING_TEX, 2.0f*tscale);
-	get_material(tid_nm_pair_t(TILE_TEX, tscale)).add_cube_to_verts(floor, WHITE, 60); // Z faces only
-	get_material(tid_nm_pair_t(get_rect_panel_tid(), tscale)).add_cube_to_verts(ceil, WHITE, 60); // Z faces only
-	get_material(paneling).add_cube_to_verts(back, WHITE, get_face_mask(c.dim, c.dir), !c.dim);
+	get_material(tid_nm_pair_t(TILE_TEX, tscale), 1).add_cube_to_verts(floor, WHITE, 60); // Z faces only
+	get_material(tid_nm_pair_t(get_rect_panel_tid(), tscale), 1).add_cube_to_verts(ceil, WHITE, 60); // Z faces only
+	get_material(paneling, 1).add_cube_to_verts(back, WHITE, get_face_mask(c.dim, c.dir), !c.dim);
 
 	for (unsigned d = 0; d < 2; ++d) { // side walls
 		cube_t side(c);
 		side.d[!c.dim][!d] = side.d[!c.dim][d] + (d ? -1.0 : 1.0)*thickness;
-		get_material(paneling).add_cube_to_verts(side, WHITE, get_face_mask(!c.dim, !d), c.dim);
+		get_material(paneling, 1).add_cube_to_verts(side, WHITE, get_face_mask(!c.dim, !d), c.dim);
 	}
 }
 
@@ -2090,19 +2092,24 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::clear() {
-	for (auto m = materials.begin(); m != materials.end(); ++m) {m->clear();}
-	materials.clear();
+	for (auto m = materials_s.begin(); m != materials_s.end(); ++m) {m->clear();}
+	for (auto m = materials_d.begin(); m != materials_d.end(); ++m) {m->clear();}
+	materials_s.clear();
+	materials_d.clear();
 	objs.clear();
 	light_bcubes.clear();
+	has_elevators = 0;
 }
 
 unsigned building_room_geom_t::get_num_verts() const {
 	unsigned num_verts(0);
-	for (auto m = materials.begin(); m != materials.end(); ++m) {num_verts += m->num_qverts + m->num_tverts;}
+	for (auto m = materials_s.begin(); m != materials_s.end(); ++m) {num_verts += m->num_qverts + m->num_tverts;}
+	for (auto m = materials_d.begin(); m != materials_d.end(); ++m) {num_verts += m->num_qverts + m->num_tverts;}
 	return num_verts;
 }
 
-rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex) {
+rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool dynamic) {
+	vector<rgeom_mat_t> &materials(dynamic ? materials_d : materials_s);
 	// for now we do a simple linear search because there shouldn't be too many unique materials
 	for (auto m = materials.begin(); m != materials.end(); ++m) {
 		if (m->tex == tex) {return *m;}
@@ -2127,8 +2134,7 @@ colorRGBA room_object_t::get_color() const {
 	return color; // default case - probably should always set color so that we can return it here
 }
 
-void building_room_geom_t::create_vbos() {
-	if (empty()) return; // no geom
+void building_room_geom_t::create_static_vbos() {
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
@@ -2139,23 +2145,35 @@ void building_room_geom_t::create_vbos() {
 		case TYPE_TABLE: add_table(*i, tscale); break;
 		case TYPE_CHAIR: add_chair(*i, tscale); break;
 		case TYPE_STAIR: add_stair(*i, tscale); break;
-		case TYPE_ELEVATOR: add_elevator(*i, tscale); break;
 		case TYPE_LIGHT: add_light(*i, tscale); break; // light fixture
 		case TYPE_BOOK:  assert(0); break; // book - WRITE
 		case TYPE_BCASE: assert(0); break; // bookcase - WRITE
 		case TYPE_DESK:  assert(0); break; // desk - WRITE
 		case TYPE_TCAN:  assert(0); break; // trashcan - WRITE
+		case TYPE_ELEVATOR: break; // not handled here
 		default: assert(0); // undefined type
 		}
 	} // for i
-	// Note: verts are temporary, but cubes are likely needed for things such as collision detection with the player (if it ever gets implemented)
-	for (auto m = materials.begin(); m != materials.end(); ++m) {m->create_vbo();}
+	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
+	for (auto m = materials_s.begin(); m != materials_s.end(); ++m) {m->create_vbo();}
+}
+
+void building_room_geom_t::create_dynamic_vbos() {
+	if (!has_elevators) return; // currently only elevators are dynamic, can skip this step if there are no elevators
+
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (!i->is_visible() || i->type != TYPE_ELEVATOR) continue; // only elevators for now
+		add_elevator(*i, 2.0/obj_scale);
+	}
+	for (auto m = materials_d.begin(); m != materials_d.end(); ++m) {m->create_vbo();}
 }
 
 void building_room_geom_t::draw(shader_t &s, bool shadow_only) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
-	if (materials.empty()) {create_vbos();} // create materials if needed
-	for (auto m = materials.begin(); m != materials.end(); ++m) {m->draw(s, shadow_only);}
+	if (materials_s.empty()) {create_static_vbos ();} // create static  materials if needed
+	if (materials_d.empty()) {create_dynamic_vbos();} // create dynamic materials if needed
+	for (auto m = materials_s.begin(); m != materials_s.end(); ++m) {m->draw(s, shadow_only);}
+	for (auto m = materials_d.begin(); m != materials_d.end(); ++m) {m->draw(s, shadow_only);}
 	vbo_wrap_t::post_render();
 }
 
