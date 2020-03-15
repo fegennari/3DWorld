@@ -2011,6 +2011,30 @@ void rgeom_mat_t::draw(shader_t &s, bool shadow_only) {
 	tex.unset_gl(s);
 }
 
+void building_materials_t::clear() {
+	for (iterator m = begin(); m != end(); ++m) {m->clear();}
+	vector<rgeom_mat_t>::clear();
+}
+unsigned building_materials_t::count_all_verts() const {
+	unsigned num_verts(0);
+	for (const_iterator m = begin(); m != end(); ++m) {num_verts += m->num_qverts + m->num_tverts;}
+	return num_verts;
+}
+rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex) {
+	// for now we do a simple linear search because there shouldn't be too many unique materials
+	for (iterator m = begin(); m != end(); ++m) {
+		if (m->tex == tex) return *m;
+	}
+	emplace_back(tex); // not found, add a new material
+	return back();
+}
+void building_materials_t::create_vbos() {
+	for (iterator m = begin(); m != end(); ++m) {m->create_vbo();}
+}
+void building_materials_t::draw(shader_t &s, bool shadow_only) {
+	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only);}
+}
+
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
 	for (unsigned y = 0; y < 2; ++y) {
 		for (unsigned x = 0; x < 2; ++x) {
@@ -2092,8 +2116,6 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::clear() {
-	for (auto m = materials_s.begin(); m != materials_s.end(); ++m) {m->clear();}
-	for (auto m = materials_d.begin(); m != materials_d.end(); ++m) {m->clear();}
 	materials_s.clear();
 	materials_d.clear();
 	objs.clear();
@@ -2101,22 +2123,6 @@ void building_room_geom_t::clear() {
 	has_elevators = 0;
 }
 
-unsigned building_room_geom_t::get_num_verts() const {
-	unsigned num_verts(0);
-	for (auto m = materials_s.begin(); m != materials_s.end(); ++m) {num_verts += m->num_qverts + m->num_tverts;}
-	for (auto m = materials_d.begin(); m != materials_d.end(); ++m) {num_verts += m->num_qverts + m->num_tverts;}
-	return num_verts;
-}
-
-rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool dynamic) {
-	vector<rgeom_mat_t> &materials(dynamic ? materials_d : materials_s);
-	// for now we do a simple linear search because there shouldn't be too many unique materials
-	for (auto m = materials.begin(); m != materials.end(); ++m) {
-		if (m->tex == tex) {return *m;}
-	}
-	materials.emplace_back(tex); // not found, add a new material
-	return materials.back();
-}
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
 	return get_material(tid_nm_pair_t(WOOD2_TEX, tscale)); // hard-coded for common material
 }
@@ -2155,7 +2161,7 @@ void building_room_geom_t::create_static_vbos() {
 		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
-	for (auto m = materials_s.begin(); m != materials_s.end(); ++m) {m->create_vbo();}
+	materials_s.create_vbos();
 }
 
 void building_room_geom_t::create_dynamic_vbos() {
@@ -2165,15 +2171,15 @@ void building_room_geom_t::create_dynamic_vbos() {
 		if (!i->is_visible() || i->type != TYPE_ELEVATOR) continue; // only elevators for now
 		add_elevator(*i, 2.0/obj_scale);
 	}
-	for (auto m = materials_d.begin(); m != materials_d.end(); ++m) {m->create_vbo();}
+	materials_d.create_vbos();
 }
 
 void building_room_geom_t::draw(shader_t &s, bool shadow_only) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	if (materials_s.empty()) {create_static_vbos ();} // create static  materials if needed
 	if (materials_d.empty()) {create_dynamic_vbos();} // create dynamic materials if needed
-	for (auto m = materials_s.begin(); m != materials_s.end(); ++m) {m->draw(s, shadow_only);}
-	for (auto m = materials_d.begin(); m != materials_d.end(); ++m) {m->draw(s, shadow_only);}
+	materials_s.draw(s, shadow_only);
+	materials_d.draw(s, shadow_only);
 	vbo_wrap_t::post_render();
 }
 

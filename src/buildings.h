@@ -232,20 +232,28 @@ public:
 	void draw(shader_t &s, bool shadow_only);
 };
 
+struct building_materials_t : public vector<rgeom_mat_t> {
+	void clear();
+	unsigned count_all_verts() const;
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex);
+	void create_vbos();
+	void draw(shader_t &s, bool shadow_only);
+};
+
 struct building_room_geom_t {
 
 	bool has_elevators;
 	float obj_scale;
 	unsigned stairs_start; // index of first object of TYPE_STAIR
 	vector<room_object_t> objs; // for drawing and collision detection
-	vector<rgeom_mat_t> materials_s, materials_d; // {static, dynamic} materials
+	building_materials_t materials_s, materials_d; // {static, dynamic} materials
 	vect_cube_t light_bcubes;
 
 	building_room_geom_t() : has_elevators(0), obj_scale(1.0), stairs_start(0) {}
 	bool empty() const {return objs.empty();}
 	void clear();
-	unsigned get_num_verts() const;
-	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool dynamic=0);
+	unsigned get_num_verts() const {return (materials_s.count_all_verts() + materials_d.count_all_verts());}
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool dynamic=0) {return (dynamic ? materials_d : materials_s).get_material(tex);}
 	rgeom_mat_t &get_wood_material(float tscale);
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale);
