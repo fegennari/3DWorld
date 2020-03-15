@@ -103,4 +103,5 @@ texture_tile_blend.o
 building_geom.o
 building_lighting.o
 building_floorplan.o
+building_navigation.o
 simplifier.o

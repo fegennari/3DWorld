@@ -441,6 +441,7 @@ struct building_t : public building_geom_t {
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const;
 	void update_stats(building_stats_t &s) const;
+	void build_nav_graph();
 private:
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
 	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior) const;
