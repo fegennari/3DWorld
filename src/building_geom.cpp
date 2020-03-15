@@ -10,7 +10,7 @@ cube_t grass_exclude1, grass_exclude2;
 
 extern bool draw_building_interiors;
 extern int display_mode;
-extern float grass_width;
+extern float grass_width, fticks;
 extern building_params_t global_building_params;
 
 
@@ -2181,5 +2181,27 @@ void building_room_geom_t::draw(shader_t &s, bool shadow_only) { // non-const be
 	materials_s.draw(s, shadow_only);
 	materials_d.draw(s, shadow_only);
 	vbo_wrap_t::post_render();
+}
+
+bool building_interior_t::update_elevators(point const &player_pos) { // Note: player_pos is in building space
+	// Note: the player can only be in one elevator at a time, so we can exit when we find the first containing elevator
+	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
+		if (!e->contains_pt(player_pos)) continue; // player not in this elevator
+		unsigned const elevator_id(e - elevators.begin());
+
+		for (auto i = room_geom->objs.begin(); i != room_geom->objs.end(); ++i) { // find elevator car and see if player is in it
+			if (i->type != TYPE_ELEVATOR || i->room_id != elevator_id || !i->contains_pt(player_pos)) continue;
+			bool const move_dir(player_pos[!i->dim] < i->get_center_dim(!i->dim)); // player controls up/down direction based on which side of the elevator they stand on
+			float dist(0.04*i->dz()*fticks*(move_dir ? 1.0 : -1.0));
+			if (move_dir) {min_eq(dist, (e->z2() - i->z2()));} // going up
+			else          {max_eq(dist, (e->z1() - i->z1()));} // going down
+			if (dist == 0.0) break; // no movement, at top or bottom of elevator shaft
+			i->z1() += dist; i->z2() += dist;
+			room_geom->materials_d.clear(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
+			return 1; // done
+		} // for i
+		return 0; // player in elevator shaft (on top of elevator?) but not inside elevator car
+	} // for e
+	return 0;
 }
 

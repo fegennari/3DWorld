@@ -338,6 +338,7 @@ struct building_interior_t {
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
+	bool update_elevators(point const &player_pos);
 };
 
 struct building_stats_t {

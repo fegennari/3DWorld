@@ -16,5 +16,4 @@ Cities:
 * Building interiors:
   - Moving people with collision detection and path finding
   - Place more room objects/furniture
-  - Working elevators
   - Interiors for city office towers
