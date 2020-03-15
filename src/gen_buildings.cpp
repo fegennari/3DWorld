@@ -24,7 +24,7 @@ bool camera_in_building(0), interior_shadow_maps(0);
 building_params_t global_building_params;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
-extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide;
+extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
 extern float CAMERA_RADIUS;
 extern double camera_zh;
 extern point sun_pos, pre_smap_player_pos;
@@ -2197,7 +2197,7 @@ public:
 							b.toggle_room_light(camera_xlated);
 							toggle_room_light = 0;
 						}
-						b.interior->update_elevators(camera_xlated); // update elevators if the player is in the building
+						if (animate2) {b.interior->update_elevators(camera_xlated);} // update elevators if the player is in the building
 					} // for bi
 				} // for g
 			} // for i
