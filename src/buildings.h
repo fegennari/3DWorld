@@ -346,10 +346,18 @@ struct building_stats_t {
 	building_stats_t() : nbuildings(0), nparts(0), ndetails(0), ntquads(0), ndoors(0), ninterior(0), nrooms(0), nceils(0), nfloors(0), nwalls(0), nrgeom(0), nobjs(0), nverts(0) {}
 };
 
+struct building_loc_t {
+	int part_ix, room_ix, stairs_ix; // -1 is not contained; what about elevator_ix?
+	unsigned floor;
+	building_loc_t() : part_ix(-1), room_ix(-1), stairs_ix(-1), floor(0) {}
+	bool operator==(building_loc_t const &loc) const {return (part_ix == loc.part_ix && room_ix == loc.room_ix && stairs_ix == loc.stairs_ix && floor == loc.floor);}
+};
+
 struct colored_cube_t;
 typedef vector<colored_cube_t> vect_colored_cube_t;
 class cube_bvh_t;
 class building_indir_light_mgr_t;
+class building_nav_graph_t;
 
 struct building_t : public building_geom_t {
 
@@ -441,7 +449,10 @@ struct building_t : public building_geom_t {
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const;
 	void update_stats(building_stats_t &s) const;
-	void build_nav_graph();
+	void build_nav_graph(building_nav_graph_t &ng) const;
+	unsigned count_connected_room_components() const;
+	bool find_route_to_point(point const &from, point const &to, vector<point> &path) const;
+	building_loc_t get_building_loc_for_pt(point const &pt) const;
 private:
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
 	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior) const;

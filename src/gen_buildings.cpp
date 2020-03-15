@@ -1841,6 +1841,19 @@ public:
 #pragma omp parallel for schedule(static,1) if (!is_tile)
 			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i, 1337*i+rseed);}
 		} // close the scope
+		if (0 && non_city_only) { // perform room graph analysis
+			timer_t timer3("Building Room Graph Analysis");
+			for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+				if (b->has_complex_floorplan) continue; // room graph isn't really valid for this building type
+				if (!b->is_house) continue;
+				unsigned num_comp(b->count_connected_room_components());
+				if (b->has_sec_bldg()) {--num_comp;} // exclude garage/shed
+				//cout << num_comp;
+				if (num_comp > 1) {cout << b->bcube.get_cube_center().str() << endl;}
+			}
+			cout << endl;
+		}
+		//count_connected_room_components()
 		for (auto g = grid.begin(); g != grid.end(); ++g) { // update grid bcube zvals to include building roofs
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
 				cube_t &bbc(*b);
