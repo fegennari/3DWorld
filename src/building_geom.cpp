@@ -10,7 +10,7 @@ cube_t grass_exclude1, grass_exclude2;
 
 extern bool draw_building_interiors;
 extern int display_mode;
-extern float grass_width, fticks;
+extern float grass_width, fticks, CAMERA_RADIUS;
 extern building_params_t global_building_params;
 
 
@@ -2195,7 +2195,7 @@ bool building_interior_t::update_elevators(point const &player_pos) { // Note: p
 		for (auto i = room_geom->objs.begin(); i != room_geom->objs.end(); ++i) { // find elevator car and see if player is in it
 			if (i->type != TYPE_ELEVATOR || i->room_id != elevator_id || !i->contains_pt(player_pos)) continue;
 			bool const move_dir(player_pos[!i->dim] < i->get_center_dim(!i->dim)); // player controls up/down direction based on which side of the elevator they stand on
-			float dist(0.04*i->dz()*fticks*(move_dir ? 1.0 : -1.0));
+			float dist(min(0.5f*CAMERA_RADIUS, 0.04f*i->dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
 			if (move_dir) {min_eq(dist, (e->z2() - i->z2()));} // going up
 			else          {max_eq(dist, (e->z1() - i->z1()));} // going down
 			if (dist == 0.0) break; // no movement, at top or bottom of elevator shaft
