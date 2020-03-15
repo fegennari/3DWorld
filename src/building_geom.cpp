@@ -336,8 +336,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
 				if (!c->contains_pt_xy(pos)) continue;
-				if      (obj_z - radius >= c->z2()) {max_eq(pos.z, (c->z2() + radius)); had_coll = 1;} // standing on the roof of the elevator
-				else if (obj_z - radius >= c->z1()) {max_eq(pos.z, (c->z1() + radius)); had_coll = 1;} // inside the elevator
+				if      (obj_z >= c->z2()) {max_eq(pos.z, (c->z2() + radius)); had_coll = 1;} // standing on the roof of the elevator
+				else if (obj_z >= c->z1()) {max_eq(pos.z, (c->z1() + radius)); had_coll = 1;} // inside the elevator
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
@@ -1770,9 +1770,10 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
 		cube_t elevator_car(*i);
 		elevator_car.z2() = i->z1() + window_vspacing; // currently at the bottom floor
-		objs.emplace_back(elevator_car, TYPE_ELEVATOR, 0, i->dim, i->dir, (i->open ? RO_FLAG_OPEN : 0));
+		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, (i->open ? RO_FLAG_OPEN : 0));
 	}
 }
 
@@ -2118,7 +2119,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_TABLE: return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));
 	case TYPE_CHAIR: return (color + WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX)))*0.5; // 50% seat color / 50% wood legs color
 	case TYPE_STAIR: return LT_GRAY; // close enough
-	case TYPE_ELEVATOR: return LT_GRAY; // ???
+	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_BCASE: return WOOD_COLOR;
 	case TYPE_DESK:  return WOOD_COLOR;
 	case TYPE_TCAN:  return BLACK;
