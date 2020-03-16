@@ -553,36 +553,37 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				}
 			} // end while()
 			// insert walls to split up parts into rectangular rooms
-			float const min_split_wall_len(0.75*min_wall_len); // allow a shorter than normal wall because these walls have higher priority
-			bool const too_small(min(p->dx(), p->dy()) < min_split_wall_len);
+			float const min_split_wall_len(0.5*min_wall_len); // allow a shorter than normal wall because these walls have higher priority
+			
+			if (min(p->dx(), p->dy()) > min_split_wall_len) { // if not too small
+				for (auto p2 = parts.begin(); p2 != get_real_parts_end(); ++p2) {
+					if (p2 == p) continue; // skip self
+					if (min(p2->dx(), p2->dy()) < min_split_wall_len) continue; // too small, skip
 
-			for (auto p2 = parts.begin(); p2 != get_real_parts_end() && !too_small; ++p2) {
-				if (p2 == p) continue; // skip self
-				if (min(p2->dx(), p2->dy()) < min_split_wall_len) continue; // too small, skip
+					for (unsigned dim = 0; dim < 2; ++dim) {
+						for (unsigned dir = 0; dir < 2; ++dir) {
+							float const val(p->d[!dim][dir]);
+							if (p2->d[!dim][!dir] != val) continue; // not adjacent
+							if (p2->z1() >= p->z2() || p2->z2() <= p->z1()) continue; // no overlap in Z
+							if (p2->d[dim][0] > p->d[dim][0] || p2->d[dim][1] < p->d[dim][1]) continue; // not contained in dim (don't have to worry about Z-shaped case)
 
-				for (unsigned dim = 0; dim < 2; ++dim) {
-					for (unsigned dir = 0; dir < 2; ++dir) {
-						float const val(p->d[!dim][dir]);
-						if (p2->d[!dim][!dir] != val) continue; // not adjacent
-						if (p2->z1() >= p->z2() || p2->z2() <= p->z1()) continue; // no overlap in Z
-						if (p2->d[dim][0] > p->d[dim][0] || p2->d[dim][1] < p->d[dim][1]) continue; // not contained in dim (don't have to worry about Z-shaped case)
-
-						if (p2->d[dim][0] == p->d[dim][0] && p2->d[dim][1] == p->d[dim][1]) { // same xy values, must only vary in z
-							if (p2->z2() < p->z2()) continue; // add wall only on one side (arbitrary)
-						}
-						cube_t wall;
-						wall.z1() = max(p->z1(), p2->z1()) + fc_thick; // shared Z range
-						wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
-						wall.d[ dim][0] = place_area.d[dim][0]; // shorter part side with slight offset
-						wall.d[ dim][1] = place_area.d[dim][1];
-						if (wall.get_sz_dim(dim) < min_split_wall_len) continue; // wall is too short to add (can this happen?)
-						wall.d[!dim][ dir] = val;
-						wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
-						must_split[!dim] |= (1ULL << (interior->walls[!dim].size() & 63)); // flag this wall for extra splitting
-						interior->walls[!dim].push_back(wall);
-					} // for dir
-				} // for dim
-			} // for p2
+							if (p2->d[dim][0] == p->d[dim][0] && p2->d[dim][1] == p->d[dim][1]) { // same xy values, must only vary in z
+								if (p2->z2() < p->z2()) continue; // add wall only on one side (arbitrary)
+							}
+							cube_t wall;
+							wall.z1() = max(p->z1(), p2->z1()) + fc_thick; // shared Z range
+							wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
+							wall.d[ dim][0] = place_area.d[dim][0]; // shorter part side with slight offset
+							wall.d[ dim][1] = place_area.d[dim][1];
+							if (wall.get_sz_dim(dim) < min_split_wall_len) continue; // wall is too short to add (can this happen?)
+							wall.d[!dim][ dir] = val;
+							wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
+							must_split[!dim] |= (1ULL << (interior->walls[!dim].size() & 63)); // flag this wall for extra splitting
+							interior->walls[!dim].push_back(wall);
+						} // for dir
+					} // for dim
+				} // for p2
+			} // end !too_small
 		} // end wall placement
 		add_ceilings_floors_stairs(rgen, *p, hall, (p - parts.begin()), num_floors, rooms_start, use_hallway, first_part);
 	} // for p (parts)
