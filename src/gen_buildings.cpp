@@ -1364,6 +1364,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 				if (!i->intersects(door_bcube)) continue;
 				contained = ((draw_parts_mask & (1<<(i-parts.begin()))) != 0);
+				if (only_cont_pt->z > (door_bcube.z1() + floor_spacing) && !i->contains_pt(*only_cont_pt)) {contained = 0;} // camera in a different part on a floor above the door
 				break;
 			}
 			if (!contained) continue; // part skipped, skip door as well
