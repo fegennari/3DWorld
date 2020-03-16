@@ -921,6 +921,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			for (unsigned d = 0; d < 2; ++d) {
 				if (rgen.rand_bool()) {shrink[d] = rgen.rand_uniform(0.2, 0.35)*(d ? -1.0 : 1.0);}
 			}
+			float const tot_shrink(shrink[0] - shrink[1]), un_shrink_each(0.5*(tot_shrink - 0.6)); // max shrink summed across each side is 0.6 to prevent too-small parts
+			if (un_shrink_each > 0.0) {shrink[0] -= un_shrink_each; shrink[1] += un_shrink_each;}
 		}
 		vector3d const sz(base.get_size());
 		parts[0].d[ dim][ dir] += split*sz[dim]; // split in dim
@@ -1906,10 +1908,11 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin) 
 	}
 	return 0;
 }
-bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin) const {
+bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only) const {
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
 	if (has_bcube_int(tc, elevators)) return 1;
+	if (elevators_only) return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
 	return has_bcube_int(tc, stairwells); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }

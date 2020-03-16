@@ -33,9 +33,10 @@ void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim,
 float cube_rand_side_pos(cube_t const &c, int dim, float min_dist_param, float min_dist_abs, rand_gen_t &rgen) {
 	assert(dim < 3);
 	assert(min_dist_param < 0.5f); // aplies to both ends
-	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta));
-	//if ((hi-gap) <= (lo+gap)) {cout << TXT(dim) << TXT(lo) << TXT(hi) << TXT(min_dist_abs) << TXT(delta) << TXT(gap) << endl;}
-	return rgen.rand_uniform((lo + gap), (hi - gap));
+	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta)), v1(lo + gap), v2(hi - gap);
+	//if (v2 <= v1) {cout << TXT(dim) << TXT(lo) << TXT(hi) << TXT(min_dist_abs) << TXT(delta) << TXT(gap) << endl;}
+	assert(v1 <= v2);
+	return rgen.rand_uniform(v1, v2);
 }
 
 // see global_building_params.window_xspace/window_width
@@ -609,13 +610,14 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 			for (unsigned nsplits = 0; nsplits < 4; ++nsplits) { // at most 4 splits
 				cube_t &wall(walls[w]); // take a reference here because a prev iteration push_back() may have invalidated it
-				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.75 : 1.5)*min_wall_len);
+				float const len(wall.get_sz_dim(!d)), min_split_len((pref_split ? 0.5 : 1.5)*min_wall_len); // = 2.0/6.0 * doorway_width
 				if (len < min_split_len) break; // not long enough to split - done
+				float const min_dist_abs(min(1.5f*doorway_width, 0.5f*min_split_len));
 				// walls currently don't run along the inside of exterior building walls, so we don't need to handle that case yet
 				bool was_split(0);
 
-				for (unsigned ntries = 0; ntries < (pref_split ? 10U : 4U); ++ntries) { // choose random doorway positions and check against perp_walls for occlusion
-					float const doorway_pos(cube_rand_side_pos(wall, !d, 0.2, 1.5*doorway_width, rgen));
+				for (unsigned ntries = 0; ntries < (pref_split ? 40U : 10U); ++ntries) { // choose random doorway positions and check against perp_walls for occlusion
+					float const doorway_pos(cube_rand_side_pos(wall, !d, 0.2, min_dist_abs, rgen));
 					float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 					bool valid(1);
 
@@ -642,7 +644,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					if (!valid) continue;
 					cube_t cand(wall);
 					cand.d[!d][0] = lo_pos; cand.d[!d][1] = hi_pos;
-					if (interior->is_blocked_by_stairs_or_elevator(wall, doorway_width)) continue; // stairs in the way, skip; should we assert !pref_split?
+					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
+					if (interior->is_blocked_by_stairs_or_elevator(wall, doorway_width, elevators_only)) continue; // stairs in the way, skip; should we assert !pref_split?
 					bool const open_dir(wall.get_center_dim(d) > bcube.get_center_dim(d)); // doors open away from the building center
 					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0, walls, interior->doors); // Note: modifies wall
 					was_split = 1;
