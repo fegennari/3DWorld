@@ -508,7 +508,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				interior->doors.reserve(4*parts.size());
 			}
 			while (!to_split.empty()) {
-				split_cube_t c(to_split.back()); // Note: non-const because door_lo/door_hi is modified during T-junction insert
+				split_cube_t const c(to_split.back()); // Note: non-const because door_lo/door_hi is modified during T-junction insert
 				to_split.pop_back();
 				vector3d const csz(c.get_size());
 				bool wall_dim(0); // which dim the room is split by
