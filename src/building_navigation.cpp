@@ -137,9 +137,18 @@ void building_t::build_nav_graph(building_nav_graph_t &ng) const {
 				if (dc.intersects_no_adj(interior->rooms[r2])) {ng.connect_rooms(r, r2, *d); break;}
 			}
 		} // for d
-		for (unsigned s = 0; s < num_stairs; ++s) {
+		for (unsigned s = 0; s < num_stairs; ++s) { // stairs
 			stairwell_t const &stairwell(interior->stairwells[s]);
 			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir);}
+		}
+		if (room.is_hallway) { // check for connected hallways
+			for (unsigned r2 = 0; r2 < num_rooms; ++r2) {
+				room_t const &room2(interior->rooms[r2]);
+				if (!room2.is_hallway || room2.z1() != room.z1() || !room2.intersects(c)) continue; // not a connected hallway
+				cube_t conn_cube(c);
+				c.intersect_with_cube(room2);
+				ng.connect_rooms(r, r2, conn_cube);
+			} // for r2
 		}
 		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are not yet used by AIs so are ignored here
 	} // for r
