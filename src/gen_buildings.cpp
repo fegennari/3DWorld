@@ -443,13 +443,30 @@ public:
 	}
 	unsigned get_slot_ix(int tid) const {
 		if (tid < 0) return 0; // untextured - slot 0
-		assert(tid < (int)tid_to_slot_ix.size());
+		assert(tid < (int)get_num_slots());
 		assert(tid_to_slot_ix[tid] > 0);
 		return tid_to_slot_ix[tid];
 	}
+	unsigned get_num_slots() const {return tid_to_slot_ix.size();}
 	bool is_ext_wall_tid(unsigned tid) const {return (ext_wall_tids.find(tid) != ext_wall_tids.end());}
 };
 texture_id_mapper_t tid_mapper;
+
+class tid_vert_counter_t {
+	vector<unsigned> counts;
+public:
+	tid_vert_counter_t() {counts.resize(tid_mapper.get_num_slots(), 0);} // resized to max tid
+	void update_count(int tid, unsigned num) {
+		if (tid < 0) return;
+		assert((unsigned)tid < counts.size());
+		counts[tid] += num;
+	}
+	unsigned get_count(int tid) const {
+		if (tid < 0) return 0;
+		assert((unsigned)tid < counts.size());
+		return counts[tid];
+	}
+};
 
 
 /*static*/ void building_draw_utils::calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
@@ -2488,25 +2505,24 @@ public:
 			}
 			else if (pass == 1) { // interior pass
 				// pre-allocate interior wall, celing, and floor verts, assuming all buildings have the same materials
-				// FIXME: rework this to include multiple house floor/ceil textures (t=767ms)
-				unsigned num_floors(0), num_ceils(0), num_walls(0), num_doors(0), num_elevators(0);
-				building_mat_t const &mat(buildings.front().get_material());
-				
+				tid_vert_counter_t vert_counter;
+
 				for (auto b = buildings.begin(); b != buildings.end(); ++b) {
 					if (!b->interior) continue; // no interior
-					building_mat_t const &mat2(b->get_material());
-					if (mat2.floor_tex == mat.floor_tex) {num_floors += b->interior->floors.size();}
-					if (mat2.ceil_tex  == mat.ceil_tex ) {num_ceils  += b->interior->ceilings.size();}
-					if (mat2.wall_tex  == mat.wall_tex ) {num_walls  += b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size();}
-					if (DRAW_INTERIOR_DOORS) {num_doors += b->interior->doors.size();}
-					num_elevators += b->interior->elevators.size();
-				} // for b
-				building_draw_interior.reserve_verts(mat.floor_tex, 4*num_floors); // top surface only
-				building_draw_interior.reserve_verts(mat.ceil_tex,  4*num_ceils ); // bottom surface only
-				building_draw_interior.reserve_verts(mat.wall_tex, (16*num_walls + 36*num_elevators)); // X/Y surfaces (4 quads) + elevators (9 quads)
-				building_draw_interior.reserve_verts(tid_nm_pair_t(building_texture_mgr.get_hdoor_tid()), 8*num_doors ); // doors
-				building_draw_interior.reserve_verts(tid_nm_pair_t(WHITE_TEX),  8*num_doors ); // door edges (2 quads per door)
-				building_draw_interior.reserve_verts(tid_nm_pair_t(FENCE_TEX), 12*num_doors ); // elevators  (3 quads per elevator)
+					building_mat_t const &mat(b->get_material());
+					unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size()) + 36*b->interior->elevators.size());
+					vert_counter.update_count((b->is_house ? mat.house_floor_tex.tid : mat.floor_tex.tid), 4*b->interior->floors  .size());
+					vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid  : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
+					vert_counter.update_count(mat.wall_tex.tid, nv_wall);
+					vert_counter.update_count(FENCE_TEX, 12*b->interior->elevators.size());
+					if (!DRAW_INTERIOR_DOORS) continue;
+					vert_counter.update_count(building_texture_mgr.get_hdoor_tid(), 8*b->interior->doors.size());
+					vert_counter.update_count(WHITE_TEX, 8*b->interior->doors.size());
+				}
+				for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) {
+					unsigned const count(vert_counter.get_count(i));
+					if (count > 0) {building_draw_interior.reserve_verts(tid_nm_pair_t(i), count);}
+				}
 				// generate vertex data
 				building_draw_interior.clear();
 
