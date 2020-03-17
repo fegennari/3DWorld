@@ -242,18 +242,25 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "wall_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.wall_tex,  str, error);} // both X and Y
 	else if (str == "ceil_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.ceil_tex,  str, error);} // both X and Y
 	else if (str == "floor_tscale") {read_building_tscale(fp, global_building_params.cur_mat.floor_tex, str, error);} // both X and Y
+	else if (str == "house_ceil_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.house_ceil_tex,  str, error);} // both X and Y
+	else if (str == "house_floor_tscale") {read_building_tscale(fp, global_building_params.cur_mat.house_floor_tex, str, error);} // both X and Y
 	// building textures
 	// Warning: setting options such as tex_inv_y for textures that have already been loaded will have no effect!
 	else if (str == "side_tid"    ) {global_building_params.cur_mat.side_tex.tid     = read_building_texture(fp, str, error);}
 	else if (str == "side_nm_tid" ) {global_building_params.cur_mat.side_tex.nm_tid  = read_building_texture(fp, str, error);}
 	else if (str == "roof_tid"    ) {global_building_params.cur_mat.roof_tex.tid     = read_building_texture(fp, str, error);}
 	else if (str == "roof_nm_tid" ) {global_building_params.cur_mat.roof_tex.nm_tid  = read_building_texture(fp, str, error);}
+	// interiors
 	else if (str == "wall_tid"    ) {global_building_params.cur_mat.wall_tex.tid     = read_building_texture(fp, str, error);}
 	else if (str == "wall_nm_tid" ) {global_building_params.cur_mat.wall_tex.nm_tid  = read_building_texture(fp, str, error);}
 	else if (str == "floor_tid"   ) {global_building_params.cur_mat.floor_tex.tid    = read_building_texture(fp, str, error);}
 	else if (str == "floor_nm_tid") {global_building_params.cur_mat.floor_tex.nm_tid = read_building_texture(fp, str, error);}
 	else if (str == "ceil_tid"    ) {global_building_params.cur_mat.ceil_tex.tid     = read_building_texture(fp, str, error);}
 	else if (str == "ceil_nm_tid" ) {global_building_params.cur_mat.ceil_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "house_floor_tid"   ) {global_building_params.cur_mat.house_floor_tex.tid    = read_building_texture(fp, str, error);}
+	else if (str == "house_floor_nm_tid") {global_building_params.cur_mat.house_floor_tex.nm_tid = read_building_texture(fp, str, error);}
+	else if (str == "house_ceil_tid"    ) {global_building_params.cur_mat.house_ceil_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "house_ceil_nm_tid" ) {global_building_params.cur_mat.house_ceil_tex.nm_tid  = read_building_texture(fp, str, error);}
 	// material colors
 	else if (str == "side_color") {
 		if (!read_color(fp, global_building_params.cur_mat.side_color.cmin)) {buildings_file_err(str, error);}
@@ -333,6 +340,12 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "floor_color") { // per-material
 		if (!read_color(fp, global_building_params.cur_mat.floor_color)) {buildings_file_err(str, error);}
+	}
+	else if (str == "house_ceil_color") { // per-material
+	if (!read_color(fp, global_building_params.cur_mat.house_ceil_color)) {buildings_file_err(str, error);}
+	}
+	else if (str == "house_floor_color") { // per-material
+	if (!read_color(fp, global_building_params.cur_mat.house_floor_color)) {buildings_file_err(str, error);}
 	}
 	// special commands
 	else if (str == "probability") {
@@ -422,6 +435,8 @@ public:
 			register_tid(i->wall_tex.tid);
 			register_tid(i->ceil_tex.tid);
 			register_tid(i->floor_tex.tid);
+			register_tid(i->house_ceil_tex.tid);
+			register_tid(i->house_floor_tex.tid);
 			ext_wall_tids.insert(i->side_tex.tid);
 		}
 		cout << "Used " << (next_slot_ix-1) << " slots for texture IDs up to " << (tid_to_slot_ix.size()-1) << endl;
@@ -1172,14 +1187,19 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
 		bdraw.begin_draw_range_capture();
+		tid_nm_pair_t const &floor_tex(is_house ? mat.house_floor_tex : mat.floor_tex);
+		tid_nm_pair_t const &ceil_tex (is_house ? mat.house_ceil_tex  : mat.ceil_tex );
+		colorRGBA const &floor_color(is_house ? mat.house_floor_color : mat.floor_color);
+		colorRGBA const &ceil_color (is_house ? mat.house_ceil_color  : mat.ceil_color );
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
-			bdraw.add_section(*this, empty_vc, *i, mat.floor_tex, mat.floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
+			bdraw.add_section(*this, empty_vc, *i, floor_tex, floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
 		}
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
-			bdraw.add_section(*this, empty_vc, *i, mat.ceil_tex, mat.ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only
+			bdraw.add_section(*this, empty_vc, *i, ceil_tex, ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only
 		}
-		bdraw.set_no_shadows_for_tex(mat.ceil_tex); // minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings
+		// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
+		if (!is_house) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
@@ -2468,6 +2488,7 @@ public:
 			}
 			else if (pass == 1) { // interior pass
 				// pre-allocate interior wall, celing, and floor verts, assuming all buildings have the same materials
+				// FIXME: rework this to include multiple house floor/ceil textures (t=767ms)
 				unsigned num_floors(0), num_ceils(0), num_walls(0), num_doors(0), num_elevators(0);
 				building_mat_t const &mat(buildings.front().get_material());
 				

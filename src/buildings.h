@@ -59,9 +59,10 @@ struct tid_nm_pair_t { // size=28
 
 struct building_tex_params_t {
 	tid_nm_pair_t side_tex, roof_tex; // exterior
-	tid_nm_pair_t wall_tex, ceil_tex, floor_tex; // interior
+	tid_nm_pair_t wall_tex, ceil_tex, floor_tex, house_ceil_tex, house_floor_tex; // interior
 
-	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0 || wall_tex.nm_tid >= 0 || ceil_tex.nm_tid >= 0 || floor_tex.nm_tid >= 0);}
+	bool has_normal_map() const {return (side_tex.nm_tid >= 0 || roof_tex.nm_tid >= 0 || wall_tex.nm_tid >= 0 ||
+		ceil_tex.nm_tid >= 0 || floor_tex.nm_tid >= 0 || house_ceil_tex.nm_tid >= 0 || house_floor_tex.nm_tid >= 0);}
 };
 
 struct color_range_t {
@@ -81,13 +82,13 @@ struct building_mat_t : public building_tex_params_t {
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
 	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color; // exterior
-	colorRGBA window_color, wall_color, ceil_color, floor_color;
+	colorRGBA window_color, wall_color, ceil_color, floor_color, house_ceil_color, house_floor_color;
 
 	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0),
 		max_delta_z(0.0), max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), house_prob(0.0), house_scale_min(1.0), house_scale_max(1.0),
 		split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0),
 		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros), sz_range(1,1,1,1,1,1),
-		window_color(GRAY), wall_color(WHITE), ceil_color(WHITE), floor_color(LT_GRAY) {}
+		window_color(GRAY), wall_color(WHITE), ceil_color(WHITE), floor_color(LT_GRAY), house_ceil_color(WHITE), house_floor_color(WHITE) {}
 	float gen_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}
 	void update_range(vector3d const &range_translate);
 	void set_pos_range(cube_t const &new_pos_range) {prev_pos_range = pos_range; pos_range = new_pos_range;}

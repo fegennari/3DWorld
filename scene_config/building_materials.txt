@@ -26,6 +26,15 @@ buildings floor_tid plaster.png
 buildings ceil_tid particleb.png
 buildings ceil_nm_tid normal_maps/particleb_NRM.jpg
 
+# house ceilings and floors
+buildings house_ceil_color  1.0 1.0 1.0 1.0 # white
+buildings house_floor_color 1.0 1.0 1.0 1.0 # white
+buildings house_ceil_tscale  16.0
+buildings house_floor_tscale 32.0
+buildings house_floor_tid fence.jpg
+buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
+buildings house_ceil_tid stucco.jpg
+buildings house_ceil_nm_tid normal_maps/stucco_NRM.jpg
 
 # brick buildings
 buildings house_prob 0.67 # 67%
@@ -40,6 +49,7 @@ buildings max_levels 3
 buildings split_prob 0.70 # 70%
 buildings size_range 0.4 0.8  0.4 0.8  0.3 1.0
 
+# bricks_tan material
 buildings texture_inv_y 1 # bricks have inverted normal maps, so invert the textures
 buildings side_tscale 2.0
 buildings side_tid bricks_tan.png
@@ -61,11 +71,15 @@ buildings add_material
 buildings side_color 0.8 0.5 0.2 1.0
 buildings add_material
 
+# brickwork material
 buildings side_tscale 3.0
 buildings side_tid brickwork.jpg
 buildings side_nm_tid normal_maps/brickwork_normal.jpg
 buildings roof_tid tile.png
 buildings roof_nm_tid normal_maps/tile_NRM.jpg
+buildings house_floor_tscale 64.0
+buildings house_floor_tid paneling.png
+buildings house_floor_nm_tid normal_maps/paneling_NRM.jpg
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
@@ -76,12 +90,18 @@ buildings add_material
 buildings side_color 0.4 0.2 0.1 1.0
 buildings add_material
 
+# brick1 material
 buildings texture_inv_y 0 # back to non-inverted normal maps
 buildings side_tscale 8.0
 buildings side_tid brick1.jpg
 buildings side_nm_tid normal_maps/brick1_NRM.png
 buildings roof_tid shingles.jpg
 buildings roof_nm_tid normal_maps/shingles_NRM.jpg
+buildings house_ceil_tid buildings/garage_door.jpg # seems okay for ceilings
+buildings house_ceil_nm_tid none # not created yet
+buildings house_floor_tscale 32.0
+buildings house_floor_tid fence.jpg
+buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
