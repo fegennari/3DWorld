@@ -2258,7 +2258,7 @@ public:
 							b.toggle_room_light(camera_xlated);
 							toggle_room_light = 0;
 						}
-						if (animate2) {b.interior->update_elevators(camera_xlated);} // update elevators if the player is in the building
+						if (animate2 && camera_surf_collide) {b.interior->update_elevators(camera_xlated);} // update elevators if the player is in the building
 					} // for bi
 				} // for g
 			} // for i
