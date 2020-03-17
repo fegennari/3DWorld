@@ -1204,12 +1204,13 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
 		bdraw.begin_draw_range_capture();
-		tid_nm_pair_t const &floor_tex(is_house ? mat.house_floor_tex : mat.floor_tex);
 		tid_nm_pair_t const &ceil_tex (is_house ? mat.house_ceil_tex  : mat.ceil_tex );
-		colorRGBA const &floor_color(is_house ? mat.house_floor_color : mat.floor_color);
 		colorRGBA const &ceil_color (is_house ? mat.house_ceil_color  : mat.ceil_color );
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
+			bool const use_house_floor(is_house && !(has_sec_bldg() && get_real_parts_end()->contains_cube(*i))); // not for garages and sheds
+			tid_nm_pair_t const &floor_tex(use_house_floor ? mat.house_floor_tex : mat.floor_tex);
+			colorRGBA const &floor_color(use_house_floor ? mat.house_floor_color : mat.floor_color);
 			bdraw.add_section(*this, empty_vc, *i, floor_tex, floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
 		}
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
@@ -2511,7 +2512,7 @@ public:
 					if (!b->interior) continue; // no interior
 					building_mat_t const &mat(b->get_material());
 					unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size()) + 36*b->interior->elevators.size());
-					vert_counter.update_count((b->is_house ? mat.house_floor_tex.tid : mat.floor_tex.tid), 4*b->interior->floors  .size());
+					vert_counter.update_count((b->is_house ? mat.house_floor_tex.tid : mat.floor_tex.tid), 4*b->interior->floors  .size()); // TODO: sec buildings use floor_tex
 					vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid  : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
 					vert_counter.update_count(mat.wall_tex.tid, nv_wall);
 					vert_counter.update_count(FENCE_TEX, 12*b->interior->elevators.size());
