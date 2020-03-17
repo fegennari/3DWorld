@@ -399,12 +399,14 @@ class texture_id_mapper_t {
 		if (tid < 0) return; // not allocated
 		if (tid >= (int)tid_to_slot_ix.size()) {tid_to_slot_ix.resize(tid+1, 0);}
 		if (tid_to_slot_ix[tid] == 0) {tid_to_slot_ix[tid] = next_slot_ix++;}
+		//cout << "register " << tid << " slot " << tid_to_slot_ix[tid] << endl;
 	}
 public:
 	texture_id_mapper_t() : next_slot_ix(1) {} // slots start at 1; slot 0 is for untextured
 
 	void init() {
 		if (!tid_to_slot_ix.empty()) return; // already inited
+		int const special_tids[4] = {WHITE_TEX, FENCE_TEX, PANELING_TEX, TILE_TEX}; // for elevators, etc.
 		tid_to_slot_ix.push_back(0); // untextured case
 		register_tid(building_texture_mgr.get_window_tid());
 		register_tid(building_texture_mgr.get_hdoor_tid());
@@ -412,7 +414,7 @@ public:
 		register_tid(building_texture_mgr.get_gdoor_tid());
 		register_tid(building_texture_mgr.get_ac_unit_tid1());
 		register_tid(building_texture_mgr.get_ac_unit_tid2());
-		register_tid(FENCE_TEX); // for elevators
+		for (unsigned i = 0; i < 4; ++i) {register_tid(special_tids[i]);}
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
 			register_tid(i->side_tex.tid);
@@ -427,6 +429,7 @@ public:
 	unsigned get_slot_ix(int tid) const {
 		if (tid < 0) return 0; // untextured - slot 0
 		assert(tid < (int)tid_to_slot_ix.size());
+		assert(tid_to_slot_ix[tid] > 0);
 		return tid_to_slot_ix[tid];
 	}
 	bool is_ext_wall_tid(unsigned tid) const {return (ext_wall_tids.find(tid) != ext_wall_tids.end());}
@@ -607,9 +610,14 @@ class building_draw_t {
 		if (block.empty()) {block.tex = tex;} // copy material first time
 		else {
 			assert(block.tex.tid == tex.tid);
-			if (block.tex.get_nm_tid() != tex.get_nm_tid()) { // else normal maps must agree
-				std::cerr << "mismatched normal map for texture ID " << block.tex.tid << " in slot " << ix << ": " << block.tex.get_nm_tid() << " vs. " << tex.get_nm_tid() << endl;
-				assert(0);
+			int const bnm(block.tex.get_nm_tid()), tnm(tex.get_nm_tid());
+
+			if (bnm != tnm) { // else normal maps must agree
+				if (bnm == FLAT_NMAP_TEX) {block.tex.nm_tid = tnm;} // assume this normal map is correct and assign it to the block
+				else if (tnm != FLAT_NMAP_TEX) { // allow if if block has normal map but tex does not - block will override the texture
+					std::cerr << "mismatched normal map for texture ID " << block.tex.tid << " in slot " << ix << ": " << bnm << " vs. " << tnm << endl;
+					assert(0);
+				}
 			}
 		}
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
