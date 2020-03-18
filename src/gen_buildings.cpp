@@ -405,6 +405,7 @@ int get_rect_panel_tid() {return building_texture_mgr.get_gdoor_tid();} // use g
 
 class texture_id_mapper_t {
 	vector<unsigned> tid_to_slot_ix;
+	vector<int> tid_to_nm_tid;
 	set<unsigned> ext_wall_tids;
 	unsigned next_slot_ix;
 
@@ -413,6 +414,14 @@ class texture_id_mapper_t {
 		if (tid >= (int)tid_to_slot_ix.size()) {tid_to_slot_ix.resize(tid+1, 0);}
 		if (tid_to_slot_ix[tid] == 0) {tid_to_slot_ix[tid] = next_slot_ix++;}
 		//cout << "register " << tid << " slot " << tid_to_slot_ix[tid] << endl;
+	}
+	void register_tex(tid_nm_pair_t const &tex) {
+		register_tid(tex.tid);
+
+		if (tex.tid > 0 && tex.nm_tid > 0 && tex.nm_tid != FLAT_NMAP_TEX) {
+			if (tex.tid >= (int)tid_to_nm_tid.size()) {tid_to_nm_tid.resize(tex.tid+1, -1);}
+			tid_to_nm_tid[tex.tid] = tex.nm_tid;
+		}
 	}
 public:
 	texture_id_mapper_t() : next_slot_ix(1) {} // slots start at 1; slot 0 is for untextured
@@ -430,15 +439,15 @@ public:
 		for (unsigned i = 0; i < 4; ++i) {register_tid(special_tids[i]);}
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
-			register_tid(i->side_tex.tid);
-			register_tid(i->roof_tex.tid);
-			register_tid(i->wall_tex.tid);
-			register_tid(i->ceil_tex.tid);
-			register_tid(i->floor_tex.tid);
-			register_tid(i->house_ceil_tex.tid);
-			register_tid(i->house_floor_tex.tid);
+			register_tex(i->side_tex);
+			register_tex(i->roof_tex);
+			register_tex(i->wall_tex);
+			register_tex(i->ceil_tex);
+			register_tex(i->floor_tex);
+			register_tex(i->house_ceil_tex);
+			register_tex(i->house_floor_tex);
 			ext_wall_tids.insert(i->side_tex.tid);
-		}
+		} // for i
 		cout << "Used " << (next_slot_ix-1) << " slots for texture IDs up to " << (tid_to_slot_ix.size()-1) << endl;
 	}
 	unsigned get_slot_ix(int tid) const {
@@ -447,10 +456,16 @@ public:
 		assert(tid_to_slot_ix[tid] > 0);
 		return tid_to_slot_ix[tid];
 	}
+	int get_normal_map_for_tid(int tid) const {
+		if (tid < 0 || (unsigned)tid >= tid_to_nm_tid.size()) return -1; // no normal map
+		return tid_to_nm_tid[tid];
+	}
 	unsigned get_num_slots() const {return tid_to_slot_ix.size();}
 	bool is_ext_wall_tid(unsigned tid) const {return (ext_wall_tids.find(tid) != ext_wall_tids.end());}
 };
 texture_id_mapper_t tid_mapper;
+
+int get_normal_map_for_bldg_tid(int tid) {return tid_mapper.get_normal_map_for_tid(tid);}
 
 class tid_vert_counter_t {
 	vector<unsigned> counts;

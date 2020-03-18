@@ -2094,6 +2094,10 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 
 unsigned get_face_mask(bool dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 
+tid_nm_pair_t get_tex_auto_nm(int tid, float tscale) {
+	return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);
+}
+
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
 	// elevator car, all materials are dynamic
 	float const thickness(0.051*c.dz());
@@ -2104,9 +2108,9 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
 	ceil .expand_by_xy(-0.5f*thickness);
 	back.d[c.dim][c.dir] = back.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*thickness;
 	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), floor_ceil_face_mask(front_face_mask & 60); // +Z faces
-	tid_nm_pair_t const paneling(PANELING_TEX, 2.0f*tscale);
-	get_material(tid_nm_pair_t(TILE_TEX, tscale), 1).add_cube_to_verts(floor, WHITE, floor_ceil_face_mask);
-	get_material(tid_nm_pair_t(get_rect_panel_tid(), tscale), 1).add_cube_to_verts(ceil, WHITE, floor_ceil_face_mask);
+	tid_nm_pair_t const paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
+	get_material(get_tex_auto_nm(TILE_TEX, tscale), 1).add_cube_to_verts(floor, WHITE, floor_ceil_face_mask);
+	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1).add_cube_to_verts(ceil, WHITE, floor_ceil_face_mask);
 	get_material(paneling, 1).add_cube_to_verts(back, WHITE, front_face_mask, !c.dim);
 
 	for (unsigned d = 0; d < 2; ++d) { // side walls
@@ -2136,7 +2140,7 @@ void building_room_geom_t::clear() {
 }
 
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
-	return get_material(tid_nm_pair_t(WOOD2_TEX, tscale)); // hard-coded for common material
+	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale)); // hard-coded for common material
 }
 
 colorRGBA room_object_t::get_color() const {
