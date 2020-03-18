@@ -1901,7 +1901,6 @@ public:
 			}
 			cout << endl;
 		}
-		//count_connected_room_components()
 		for (auto g = grid.begin(); g != grid.end(); ++g) { // update grid bcube zvals to include building roofs
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
 				cube_t &bbc(*b);
@@ -2512,8 +2511,10 @@ public:
 					if (!b->interior) continue; // no interior
 					building_mat_t const &mat(b->get_material());
 					unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size()) + 36*b->interior->elevators.size());
-					vert_counter.update_count((b->is_house ? mat.house_floor_tex.tid : mat.floor_tex.tid), 4*b->interior->floors  .size()); // TODO: sec buildings use floor_tex
-					vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid  : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
+					unsigned const nfloors(b->interior->floors.size());
+					vert_counter.update_count(mat.house_floor_tex.tid, 4*(b->is_house ? (nfloors - b->has_sec_bldg()) : 0));
+					vert_counter.update_count(mat.floor_tex.tid, 4*(b->is_house ? b->has_sec_bldg() : nfloors));
+					vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
 					vert_counter.update_count(mat.wall_tex.tid, nv_wall);
 					vert_counter.update_count(FENCE_TEX, 12*b->interior->elevators.size());
 					if (!DRAW_INTERIOR_DOORS) continue;
