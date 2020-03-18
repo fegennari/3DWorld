@@ -637,6 +637,7 @@ void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, u
 float get_texture_component(unsigned tid, float u, float v, int comp);
 float get_texture_component_grayscale_pow2(unsigned tid, float u, float v);
 colorRGBA get_texture_color(unsigned tid, float u, float v);
+int get_texture_normal_map_tid(unsigned tid);
 texture_t const &get_texture_by_id(unsigned tid);
 vector2d get_billboard_texture_uv(point const *const points, point const &pos);
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);

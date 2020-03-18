@@ -1969,6 +1969,9 @@ float get_texture_component_grayscale_pow2(unsigned tid, float u, float v) {
 colorRGBA get_texture_color(unsigned tid, float u, float v) {
 	return get_texture_by_id(tid).get_texel(u, v);
 }
+int get_texture_normal_map_tid(unsigned tid) {
+	return get_texture_by_id(tid).bump_tid;
+}
 
 void texture_t::write_pixel_16_bits(unsigned ix, float val) { // Note: no error checking
 	unsigned char const high_bits(val); // high bits - truncate
