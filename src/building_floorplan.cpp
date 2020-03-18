@@ -35,7 +35,8 @@ float cube_rand_side_pos(cube_t const &c, int dim, float min_dist_param, float m
 	assert(min_dist_param < 0.5f); // aplies to both ends
 	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta)), v1(lo + gap), v2(hi - gap);
 	//if (v2 <= v1) {cout << TXT(dim) << TXT(lo) << TXT(hi) << TXT(min_dist_abs) << TXT(delta) << TXT(gap) << endl;}
-	assert(v1 <= v2);
+	//assert(v1 <= v2); // too strong?
+	if (v1 >= v2) {return 0.5*(v1 + v2);} // if range is denormalized, use the center
 	return rgen.rand_uniform(v1, v2);
 }
 
@@ -520,12 +521,13 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					add_room(c, part_id, 1, 0, 0);
 					continue; // not enough space to add a wall
 				}
-				float wall_pos(0.0);
+				float const min_dist_abs(1.5*doorway_width + wall_thick);
 				bool const on_edge(c.d[wall_dim][0] == p->d[wall_dim][0] || c.d[wall_dim][1] == p->d[wall_dim][1]); // at edge of the building - make sure walls don't intersect windows
+				float wall_pos(0.0);
 				bool pos_valid(0);
 				
 				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window
-					wall_pos = cube_rand_side_pos(c, wall_dim, 0.25, (1.5*doorway_width + wall_thick), rgen);
+					wall_pos = cube_rand_side_pos(c, wall_dim, 0.25, min_dist_abs, rgen);
 					if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
 					if (c.bad_pos(wall_pos, wall_dim)) continue; // intersects doorway from prev wall, try a new wall_pos
 					pos_valid = 1; break; // done, keep wall_pos
