@@ -888,7 +888,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	assert(parts.empty());
 	int const type(rgen.rand()%3); // 0=single cube, 1=L-shape, 2=two-part
 	bool const two_parts(type != 0);
-	unsigned force_dim[2] = {2}; // force roof dim to this value, per part; 2 = unforced/auto
+	unsigned force_dim[2] = {2,2}; // force roof dim to this value, per part; 2 = unforced/auto
 	bool skip_last_roof(0);
 	num_sides = 4;
 	parts.reserve(two_parts ? 5 : 2); // two house sections + porch roof + porch support + chimney (upper bound)
@@ -1032,22 +1032,25 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		add_door(door, door_part, door_dim, door_dir, 0);
 		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
 	}
+	// add roof tquads
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	float roof_dz[3] = {0.0f};
 	bool hipped_roof[3] = {0};
 
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
-		unsigned const ix(i - parts.begin()), fdim(force_dim[ix]);
-		cube_t const &other(two_parts ? parts[1-ix] : *i); // == self for single part houses
+		unsigned const ix(i - parts.begin());
+		bool const main_part(ix < real_num_parts);
+		unsigned const fdim(main_part ? force_dim[ix] : 2);
+		cube_t const &other((two_parts && main_part) ? parts[1-ix] : *i); // == self for single part houses
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
-		bool const other_dim(two_parts ? ((force_dim[1-ix] < 2) ? force_dim[1-ix] : get_largest_xy_dim(other)) : 0);
+		bool const other_dim(two_parts ? ((main_part && force_dim[1-ix] < 2) ? force_dim[1-ix] : get_largest_xy_dim(other)) : 0);
 		float extend_to(0.0), max_dz(i->dz());
 
 		if (type == 1 && ix == 1 && dim != other_dim && parts[0].z2() == parts[1].z2()) { // same z2, opposite dim T-junction
 			max_dz    = peak_height*parts[0].get_sz_dim(!other_dim); // clamp roof zval to other roof's peak
 			extend_to = parts[0].get_center_dim(!other_dim); // extend lower part roof to center of upper part roof
 		}
-		bool can_be_hipped(ix < real_num_parts && extend_to == 0.0 && i->get_sz_dim(dim) > i->get_sz_dim(!dim)); // must be longer dim
+		bool can_be_hipped(main_part && extend_to == 0.0 && i->get_sz_dim(dim) > i->get_sz_dim(!dim)); // must be longer dim
 		
 		if (can_be_hipped && two_parts) {
 			float const part_roof_z (i->z2()    + min(peak_height*i->get_sz_dim(!dim), i->dz()));
@@ -1059,7 +1062,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		else {
 			unsigned skip_side_tri(2); // default = skip neither
 			
-			if (two_parts && (dim == other_dim || hipped_roof[1-ix]) && i->d[!dim][0] >= other.d[!dim][0] && i->d[!dim][1] <= other.d[!dim][1] && i->z2() <= other.z2()) {
+			if (two_parts && main_part && (dim == other_dim || hipped_roof[1-ix]) && i->d[!dim][0] >= other.d[!dim][0] && i->d[!dim][1] <= other.d[!dim][1] && i->z2() <= other.z2()) {
 				// side of i contained in other
 				if (ix == 1 && i->z2() == other.z2()) { // same height - check if we need to ajust the slope of this roof to match
 					float const roof_slope(roof_dz[0]/other.get_sz_dim(!dim));
