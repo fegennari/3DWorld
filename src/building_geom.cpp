@@ -754,9 +754,9 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	}
 	adjust_part_zvals_for_floor_spacing(parts[num_levels-1]); // last one
 	max_eq(bcube.z2(), parts[num_levels-1].z2()); // adjust bcube if needed
+	cube_t const split_cube(parts.back());
 
-	if (do_split) { // generate L, T, or U shape
-		cube_t const split_cube(parts.back());
+	if (do_split && split_cube.dx() > 0.4*bcube.dx() && split_cube.dy() > 0.4*bcube.dy()) { // generate L, T, or U shape if not too small
 		parts.pop_back();
 		split_in_xy(split_cube, rgen);
 		if (num_levels <= 3) {gen_details(rgen, 0);}
