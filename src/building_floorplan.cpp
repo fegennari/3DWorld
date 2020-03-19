@@ -517,6 +517,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				else if (csz.x > min_wall_len && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
 				
+				//if (csz[!wall_dim] < min_wall_len || csz[wall_dim] < 1.5*doorway_width) {
 				if (min(csz.x, csz.y) < min_wall_len) {
 					add_room(c, part_id, 1, 0, 0);
 					continue; // not enough space to add a wall
@@ -637,6 +638,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 							for (unsigned e = 0; e < 2; ++e) { // check both directions from the wall
 								for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+									if (r->z1() >= wall.z2() || r->z2() <= wall.z1()) continue; // no overlap in Z
+									// skip wall edges co-incident with room edges where the entire wall is contained in the room; this can happen at part boundaries
+									if (wall.d[d][e] == r->d[d][e] && wall.d[d][!e] < r->d[d][1] && wall.d[d][!e] > r->d[d][0]) continue;
 									if (wall.d[d][e] < r->d[d][0] || wall.d[d][e] > r->d[d][1]) continue; // wall not inside room in dim d/dir e
 									if (lo[s] > r->d[!d][0] && hi[s] < r->d[!d][1]) {contained[e] = 1; break;} // entire wall contained in span of room
 								}
