@@ -1115,7 +1115,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				landing_t landing(cand, 0, 0, dim, stairs_dir, sshape);
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
-				interior->stairwells.emplace_back(cand, 1, dim, stairs_dir);
+				interior->stairwells.emplace_back(cand, 1, dim, stairs_dir, 0, 1); // roof_access=0, stack_conn=1
 				// attempt to cut holes in ceiling of this part and floor of above part
 				subtract_cube_from_floor_ceil(cand, interior->floors);
 				subtract_cube_from_floor_ceil(cand, interior->ceilings);
