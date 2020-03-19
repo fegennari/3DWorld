@@ -1912,7 +1912,7 @@ public:
 				unsigned num_comp(b->count_connected_room_components());
 				if (b->has_sec_bldg()) {--num_comp;} // exclude garage/shed
 				//cout << num_comp;
-				if (num_comp > 1) {cout << b->bcube.get_cube_center().str() << endl;}
+				if (num_comp > 1) {cout << num_comp << ": " << b->bcube.get_cube_center().str() << endl;}
 			}
 			cout << endl;
 		}
