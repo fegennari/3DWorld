@@ -36,7 +36,7 @@ float cube_rand_side_pos(cube_t const &c, int dim, float min_dist_param, float m
 	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta)), v1(lo + gap), v2(hi - gap);
 	//if (v2 <= v1) {cout << TXT(dim) << TXT(lo) << TXT(hi) << TXT(min_dist_abs) << TXT(delta) << TXT(gap) << endl;}
 	//assert(v1 <= v2); // too strong?
-	if (v1 >= v2) {return 0.5*(v1 + v2);} // if range is denormalized, use the center
+	if (v1 >= v2) {return 0.5f*(v1 + v2);} // if range is denormalized, use the center
 	return rgen.rand_uniform(v1, v2);
 }
 
