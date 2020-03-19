@@ -928,10 +928,15 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		parts[0].d[ dim][ dir] += split*sz[dim]; // split in dim
 		parts[1].d[ dim][!dir]  = parts[0].d[dim][dir];
 		cube_t const pre_shrunk_p1(parts[1]); // save for use in details below
-		for (unsigned d = 0; d < 2; ++d) {parts[1].d[!dim][d] += shrink[d]*sz[!dim];} // shrink this part in the other dim
 		parts[1].z2() -= delta_height*parts[1].dz(); // lower height
 		//ao_bcz2 = parts[1].z2(); // set this lower zval as the base AO so that AO values line up with both parts and the roof triangles
 		if (ADD_BUILDING_INTERIORS) {adjust_part_zvals_for_floor_spacing(parts[1]);}
+
+		if (shrink[0] == 0.0 && shrink[1] == 0.0 && parts[0].z2() == parts[1].z2()) { // same width and height - not a valid split
+			bool const side(rgen.rand_bool()); // which side do we move
+			shrink[side] = rgen.rand_uniform(0.2, 0.35)*(side ? -1.0 : 1.0)*sz[!dim];
+		}
+		for (unsigned d = 0; d < 2; ++d) {parts[1].d[!dim][d] += shrink[d]*sz[!dim];} // shrink this part in the other dim
 		if (type == 1 && rgen.rand_bool()) {force_dim[0] = !dim; force_dim[1] = dim;} // L-shape, half the time
 		else if (type == 2) {force_dim[0] = force_dim[1] = dim;} // two-part - force both parts to have roof along split dim
 		detail_type = ((type == 1) ? (rgen.rand()%3) : 0); // 0=none, 1=porch, 2=detatched garage/shed
