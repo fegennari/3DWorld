@@ -1103,12 +1103,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 		float const center(c.get_center_dim(!dim) + shift);
 		float const chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
+		float const chimney_height(rgen.rand_uniform(1.25, 1.5)*chimney_dz - 0.4f*abs(shift));
 		c.d[dim][!dir]  = c.d[dim][ dir] + (dir ? -0.03f : 0.03f)*(sz1 + sz2); // chimney depth
 		c.d[dim][ dir] += (dir ? -0.01 : 0.01)*sz2; // slight shift from edge of house to avoid z-fighting
 		c.d[!dim][0] = center - 0.05*sz1;
 		c.d[!dim][1] = center + 0.05*sz1;
 		c.z1()  = c.z2();
-		c.z2() += rgen.rand_uniform(1.25, 1.5)*chimney_dz - 0.4f*abs(shift);
+		c.z2() += max(chimney_height, 0.75f*get_window_vspace()); // make it at least 3/4 a story in height
 		parts.push_back(c);
 		// add top quad to cap chimney (will also update bcube to contain chimney)
 		tquad_t tquad(4); // quad
