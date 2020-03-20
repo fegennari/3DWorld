@@ -138,7 +138,7 @@ const char *tga_error(const tga_result errcode)
 void checked_fclose_fg(FILE *fp) {
     if (fclose(fp) != 0) {
         printf("Error: fclose() call failed");
-        exit(0); // how fatal should this be?
+        exit(1); // how fatal should this be?
     }
 }
 
