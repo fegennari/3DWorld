@@ -52,7 +52,7 @@ FILE *open_texture_file(string const &filename) {
 
 void checked_fclose(FILE *fp) {
 	if (fclose(fp) != 0) {
-		cerr << "Error: fclose() call failed" << endl;
+		perror("Error: fclose() call failed");
 		exit(1); // how fatal should this be?
 	}
 }
