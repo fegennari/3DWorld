@@ -2,8 +2,7 @@
 // by Frank Gennari
 // Lighting/Lightmap supporting classes
 // 1/19/06
-#ifndef _LIGHTMAP_H_
-#define _LIGHTMAP_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "trigger.h"
@@ -333,7 +332,4 @@ void update_indir_light_tex_range(lmap_manager_t const &lmap, vector<unsigned ch
 	unsigned xsize, unsigned y1, unsigned y2, unsigned zsize, float lighting_exponent=1.0, bool local_only=0, bool mt=0);
 void indir_light_tex_from_lmap(unsigned &tid, lmap_manager_t const &lmap, vector<unsigned char> &tex_data,
 	unsigned xsize, unsigned ysize, unsigned zsize, float lighting_exponent=1.0, bool local_only=0);
-
-
-#endif
 

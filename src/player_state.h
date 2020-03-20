@@ -1,10 +1,7 @@
 // 3D World - Player game state classes
 // by Frank Gennari
 // 7/3/06
-
-#ifndef _PLAYER_STATE_H_
-#define _PLAYER_STATE_H_
-
+#pragma once
 
 #include "3DWorld.h"
 using std::string;
@@ -302,8 +299,4 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 bool can_make_progress(point const &pos, point const &opos, bool check_uw);
 bool is_valid_path(point const &start, point const &end, bool check_uw);
 colorRGBA get_keycard_color(unsigned color_id);
-
-
-#endif // _PLAYER_STATE_H_
-
 

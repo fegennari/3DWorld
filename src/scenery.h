@@ -1,9 +1,7 @@
 // 3D World - Scenery Classes Header (plants, rocks, logs stumps)
 // by Frank Gennari
 // 6/26/12
-
-#ifndef _SCENERY_H_
-#define _SCENERY_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "shape_line3d.h"
@@ -277,7 +275,4 @@ public:
 	void write_plants_to_cobj_file(std::ostream &out) const;
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem() + leafy_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
 };
-
-
-#endif // _SCENERY_H_
 

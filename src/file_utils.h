@@ -1,9 +1,7 @@
 // 3D World - FILE Utility Functions
 // by Frank Gennari
 // 3/6/12
-
-#ifndef _FILE_UTILS_H_
-#define _FILE_UTILS_H_
+#pragma once
 
 #include <fstream>
 #include "3DWorld.h"
@@ -77,6 +75,4 @@ bool read_int_reset_pos_on_fail(FILE *fp, int &v);
 
 struct geom_xform_t;
 unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c);
-
-#endif // _FILE_UTILS_H_
 

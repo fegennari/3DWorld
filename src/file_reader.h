@@ -1,9 +1,7 @@
 // 3D World - File Reader Base Class
 // by Frank Gennari
 // 11/1/14
-
-#ifndef _FILE_READER_H_
-#define _FILE_READER_H_
+#pragma once
 
 #include <fstream>
 #include <iostream>
@@ -74,6 +72,4 @@ public:
 	base_file_reader(std::string const &fn) : filename(fn), fp(NULL), verbose(0), file_buf_pos(0), file_buf_end(0) {assert(!fn.empty());}
 	~base_file_reader() {close_file();}
 };
-
-#endif // _FILE_READER_H_
 

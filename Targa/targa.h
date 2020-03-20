@@ -14,8 +14,7 @@
  * code.
  * -------------------------------------------------------------------------*/
 
-#ifndef _TARGA_H_
-#define _TARGA_H_
+#pragma once
 
 #include <stdio.h>
 #ifndef _MSC_VER
@@ -199,5 +198,4 @@ void tga_free_buffers(tga_image *img);
 # undef letoh16
 #endif
 
-#endif /* !_TARGA_H_ */
 /* vim:set tabstop=4 shiftwidth=4 textwidth=78 expandtab: */

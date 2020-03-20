@@ -1,9 +1,7 @@
 // 3D World - tiled terrain classes
 // by Frank Gennari
 // 4/4/13
-
-#ifndef _TILED_TERRAIN_H_
-#define _TILED_TERRAIN_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "function_registry.h"
@@ -497,5 +495,3 @@ public:
 	void add_or_remove_grass_at(point const &pos, float radius, bool add_grass, int brush_shape, float brush_weight);
 }; // tile_draw_t
 
-
-#endif // _TILED_TERRAIN_H_

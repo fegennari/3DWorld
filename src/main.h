@@ -1,15 +1,11 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 2/13/03
-
-#ifndef _MAIN_H_
-#define _MAIN_H_
-
+#pragma once
 
 #include "3DWorld.h"
 #include "u_event.h"
 #include "tree_3dw.h"
-
 
 // Global Variables
 extern bool underwater;
@@ -25,7 +21,4 @@ extern obj_group obj_groups[];
 extern double c_radius, c_theta, c_phi, up_theta, camera_y;
 extern float sun_rot, moon_rot;
 extern point cpos2;
-
-
-#endif
 

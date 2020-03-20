@@ -1,9 +1,7 @@
 // 3D World - Drawing Utility Classes
 // by Frank Gennari
 // 6/15/12
-
-#ifndef _DRAW_UTILS_H_
-#define _DRAW_UTILS_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "gl_ext_arb.h"
@@ -265,7 +263,4 @@ struct fire_drawer_t {
 	void add_fire(point const &pos, float radius, int frame_ix, float alpha=1.0);
 	void draw(shader_t &s);
 };
-
-
-#endif // _DRAW_UTILS_H_
 

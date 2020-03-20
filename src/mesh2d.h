@@ -2,8 +2,7 @@
 // by Frank Gennari
 // mesh2d class definition
 // 3/2/14
-#ifndef _MESH2D_H_
-#define _MESH2D_H_
+#pragma once
 
 #include "3DWorld.h"
 
@@ -43,7 +42,4 @@ public:
 	unsigned get_size() const {return size;}
 	void draw_perturbed_sphere(point const &pos, float radius, int ndiv, bool tex_coord) const;
 };
-
-
-#endif // _MESH2D_H_
 

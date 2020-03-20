@@ -1,9 +1,7 @@
 // 3D World - Shared shadow map related classes
 // by Frank Gennari
 // 5/23/14
-
-#ifndef _SHADOW_MAP_H_
-#define _SHADOW_MAP_H_
+#pragma once
 
 #include "transform_obj.h" // for xform_matrix
 
@@ -119,8 +117,4 @@ template<class SD> struct vect_smap_t : public vector<SD> { // one per light sou
 		}
 	}
 };
-
-
-#endif // _SHADOW_MAP_H_
-
 

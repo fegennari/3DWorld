@@ -1,8 +1,7 @@
 // 3D World Collision Object BSP/KD/Oct Tree
 // by Frank Gennari
 // 11/15/11
-#ifndef _COBJ_BSP_TREE_H_
-#define _COBJ_BSP_TREE_H_
+#pragma once
 
 #include "physics_objects.h"
 
@@ -160,8 +159,4 @@ struct colored_cube_t : public cube_t {
 	colored_cube_t() {}
 	colored_cube_t(cube_t const &cube, colorRGBA const &color_) : cube_t(cube), color(color_) {}
 };
-
-
-#endif // _COBJ_BSP_TREE_H_
-
 

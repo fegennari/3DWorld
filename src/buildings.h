@@ -1,9 +1,7 @@
 // 3D World - Buildings Interface
 // by Frank Gennari
 // 4-5-18
-
-#ifndef _BUILDING_H_
-#define _BUILDING_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "gl_ext_arb.h" // for vbo_wrap_t
@@ -547,4 +545,3 @@ void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bc
 vector3d get_nom_car_size();
 void draw_cars_in_garages(vector3d const &xlate);
 
-#endif // _BUILDING_H_

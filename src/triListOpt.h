@@ -20,8 +20,7 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef _TRI_LIST_OPT_H_
-#define _TRI_LIST_OPT_H_
+#pragma once
 
 #include "globals.h"
 #include <stdlib.h>
@@ -107,4 +106,3 @@ namespace TriListOpt
 	}
 }
 
-#endif

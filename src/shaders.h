@@ -1,9 +1,7 @@
 // 3D World - Shader Class Declaration
 // by Frank Gennari
 // 8/4/10
-
-#ifndef _SHADERS_H_
-#define _SHADERS_H_
+#pragma once
 
 #include "3DWorld.h"
 
@@ -314,8 +312,4 @@ struct tile_blend_tex_data_t {
 unsigned get_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
 void bind_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
 void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name);
-
-
-#endif // _SHADERS_H_
-
 

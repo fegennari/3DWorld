@@ -1,10 +1,7 @@
 // 3D World - OpenGL CS184 Computer Graphics Project - Explosion/blast radius header
 // by Frank Gennari
 // 10/15/05
-
-#ifndef _EXPLOSION_H_
-#define _EXPLOSION_H_
-
+#pragma once
 
 #include "3DWorld.h"
 
@@ -100,8 +97,4 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light, shader_t *shader);
 bool setup_br_light(unsigned index, point const &pos, unsigned gl_light, shader_t *shader);
 bool higher_priority(unsigned first, unsigned second);
-
-
-#endif
-
 

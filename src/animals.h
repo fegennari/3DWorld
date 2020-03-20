@@ -1,9 +1,7 @@
 // 3D World - Classes for procedural animals
 // by Frank Gennari
 // 3-17-16
-
-#ifndef _ANIMALS_H_
-#define _ANIMALS_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "function_registry.h"
@@ -109,5 +107,3 @@ struct vect_bird_t : public animal_group_t<bird_t> {
 
 bool birds_active();
 
-
-#endif // _ANIMALS_H_

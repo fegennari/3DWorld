@@ -1,17 +1,13 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 5/12/02
-
-#ifndef _TREE_H_
-#define _TREE_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "gl_ext_arb.h" // for indexed_vbo_manager_t
 
-
 float const TREE_DIST_SCALE = 100.0;
 float const TREE_DEPTH      = 0.1;
-
 
 struct blastr; // forward reference
 struct tree_type;
@@ -481,7 +477,4 @@ void remove_small_tree_cobjs();
 void gen_small_trees();
 void draw_small_trees(bool shadow_only, int reflection_pass);
 void shift_small_trees(vector3d const &vd);
-
-
-#endif // _TREE_H_
 

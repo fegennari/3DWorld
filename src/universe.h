@@ -1,9 +1,7 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 9/4/02
-
-#ifndef _UNIVERSE_H_
-#define _UNIVERSE_H_
+#pragma once
 
 #include "universe_base.h"
 #include "upsurface.h"
@@ -16,7 +14,6 @@ using std::string;
 using std::ostringstream;
 using std::ostream;
 using std::istream;
-
 
 class s_object;
 class uasteroid;
@@ -613,8 +610,4 @@ s_object get_shifted_sobj(s_object const &sobj);
 float calc_sphere_size(point const &pos, point const &camera, float radius, float d_adj=0.0);
 bool sphere_size_less_than(point const &pos, point const &camera, float radius, float num_pixels);
 float get_elliptical_orbit_radius(vector3d const &axis, vector3d const &orbit_scale, vector3d vref);
-
-
-#endif
-
 

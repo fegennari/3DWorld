@@ -1,10 +1,7 @@
 // 3D World - Ship models for universe mode - classes not in the free_obj class hierarchy
 // by Frank Gennari
 // 12/9/05
-
-#ifndef _SHIP_UTIL_H_
-#define _SHIP_UTIL_H_
-
+#pragma once
 
 #include "ship.h"
 #include "obj_sort.h"
@@ -286,7 +283,4 @@ void add_lightning_wray(float width, point const &p1, point const &p2);
 // free_obj.cpp
 void add_uparticle_cloud(point const &pos, float rmin, float rmax, colorRGBA const &ci1, colorRGBA const &co1,
 	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage, float expand_exp, float noise_scale);
-
-
-#endif
 

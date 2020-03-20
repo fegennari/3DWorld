@@ -1,9 +1,7 @@
 // 3D World - Global Function Registry Header
 // by Frank Gennari
 // 9/8/12
-
-#ifndef _FUNCTION_REGISTRY_H_
-#define _FUNCTION_REGISTRY_H_
+#pragma once
 
 #include "3DWorld.h"
 
@@ -1025,7 +1023,4 @@ bool remove_cube_if_contains_pt_xy(vect_cube_t &cubes, vector3d const &pos, unsi
 void alut_sleep(float seconds); // this is generally useful for sleep so has been added here
 
 #include "inlines.h"
-
-
-#endif // _FUNCTION_REGISTRY_H_
 

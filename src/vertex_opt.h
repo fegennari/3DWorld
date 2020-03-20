@@ -1,9 +1,7 @@
 // 3D World - GPU Indexed Vertex Optimization Algorithms Header
 // by Frank Gennari
 // 6/5/13
-
-#ifndef _VERT_OPT_H_
-#define _VERT_OPT_H_
+#pragma once
 
 #include "3DWorld.h"
 
@@ -39,4 +37,3 @@ public:
 	void run(bool full_opt, bool verbose);
 };
 
-#endif // _VERT_OPT_H_

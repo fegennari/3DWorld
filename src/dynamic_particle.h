@@ -1,8 +1,7 @@
 // 3D World Dynamic Particle class declaration
 // by Frank Gennari
 // 7/17/06
-#ifndef _DYNAMIC_PARTICLE_H_
-#define _DYNAMIC_PARTICLE_H_
+#pragma once
 
 #include "cube_map_shadow_manager.h"
 
@@ -60,8 +59,4 @@ public:
 
 
 extern dynamic_particle_system d_part_sys;
-
-
-#endif // _DYNAMIC_PARTICLE_H_
-
 

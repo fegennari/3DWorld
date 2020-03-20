@@ -1,8 +1,7 @@
 // 3D World - Voxel Header
 // by Frank Gennari
 // 2/25/12
-#ifndef _VOXELS_H_
-#define _VOXELS_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "model3d.h"
@@ -387,7 +386,4 @@ public:
 	vector<triangle> const &get_shadow_edge_tris() const {return shadow_edge_tris;}
 	void clone(voxel_model_space &dest) const;
 };
-
-
-#endif
 

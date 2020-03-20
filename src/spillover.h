@@ -1,9 +1,7 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 9/3/03
-
-#ifndef _SPILLOVER_H_
-#define _SPILLOVER_H_
+#pragma once
 
 #include "3DWorld.h" // need iterator #defs
 
@@ -34,7 +32,4 @@ private:
 	vector<unsigned> fanout;
 	unsigned cur_seen_ix, cur_connected;
 };
-
-
-#endif
 

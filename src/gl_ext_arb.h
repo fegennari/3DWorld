@@ -1,9 +1,7 @@
 // 3D World - gl_ext/gl_arb wrapper function declarations
 // by Frank Gennari
 // 7/31/06
-
-#ifndef _GL_EXT_ARB_H_
-#define _GL_EXT_ARB_H_
+#pragma once
 
 unsigned const PRIMITIVE_RESTART_IX = 0xFFFFFFFF;
 unsigned const NUM_TEX_MS_SAMPLES   = 4; // or 8
@@ -364,7 +362,4 @@ GLint64 get_timestamp();
 inline int get_2d_texture_target(bool is_array=0, bool multisample=0) {
 	return (is_array ? (multisample ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY) : (multisample ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D));
 }
-
-
-#endif // _GL_EXT_ARB_H_
 

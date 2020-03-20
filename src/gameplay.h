@@ -1,10 +1,7 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 11/2/03
-
-#ifndef _GAMEPLAY_H_
-#define _GAMEPLAY_H_
-
+#pragma once
 
 #include "3DWorld.h"
 #include "mesh.h"
@@ -157,7 +154,4 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 void do_cblade_damage_and_update_pos(point &pos, int shooter);
 bool remove_player_translocator(int player_id);
 bool pickup_player_translator(int player_id);
-
-#endif
-
 

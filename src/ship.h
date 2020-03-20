@@ -1,9 +1,7 @@
 // 3D World - Ship models for universe mode
 // by Frank Gennari
 // 8/25/05
-
-#ifndef _SHIP_H_
-#define _SHIP_H_
+#pragma once
 
 #include "universe_base.h"
 #include "mesh2d.h"
@@ -1444,6 +1442,4 @@ unsigned get_num_chars(unsigned v);
 void write_uint_pad(unsigned v, unsigned min_chars, string const &sep=" ");
 void update_maxvals(unsigned *v, unsigned n);
 void draw_universe_all(bool static_only, bool skip_closest, bool no_move, int no_distant, bool gen_only, bool no_asteroid_dust);
-
-#endif
 

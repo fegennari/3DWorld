@@ -1,9 +1,7 @@
 // 3D World - Voxel Marching Cubes Table
 // by Frank Gennari
 // 3/5/12
-
-#ifndef _MARCHING_CUBES_H_
-#define _MARCHING_CUBES_H_
+#pragma once
 
 namespace voxel_detail
 {
@@ -308,8 +306,4 @@ namespace voxel_detail
 	{{0,1}, {1,2}, {2,3}, {3,0}, {4,5}, {5,6}, {6,7}, {7,4}, {0,4}, {1,5}, {2,6}, {3,7}};
 
 } // namespace voxel_detail
-
-#endif // _MARCHING_CUBES_H_
-
-
 

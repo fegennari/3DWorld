@@ -1,14 +1,10 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 9/11/03
-
-
-#ifndef _MESH_H_
-#define _MESH_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "collision_detect.h"
-
 
 float const MESH_MIN_Z = -1.0E6; // special mesh height that is guaranteed to be smaller than any mesh zval
 
@@ -180,7 +176,4 @@ inline point get_xyz_pos(int x, int y, int z) {
 inline point get_mesh_xyz_pos(int x, int y) { // Note: not bounds checked
 	return point(get_xval(x), get_yval(y), mesh_height[y][x]);
 }
-
-
-#endif
 

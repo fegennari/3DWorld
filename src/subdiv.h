@@ -1,12 +1,10 @@
 // 3D World
 // by Frank Gennari
 // 1/8/06
-#ifndef _SUBDIV_H_
-#define _SUBDIV_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "gl_ext_arb.h"
-
 
 class sd_sphere_d; // forward reference
 class sd_sphere_vbo_d; // forward reference
@@ -88,7 +86,4 @@ public:
 	void draw_ndiv_pow2_vbo(unsigned draw_ndiv);
 	void draw_instances(unsigned draw_ndiv, instance_render_t &inst_render);
 };
-
-
-#endif
 

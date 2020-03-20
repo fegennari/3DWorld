@@ -1,9 +1,7 @@
 // 3D World - trigger classes for lights and platforms
 // by Frank Gennari
 // 5/2/15
-
-#ifndef _TRIGGER_H_
-#define _TRIGGER_H_
+#pragma once
 
 #include "3DWorld.h"
 
@@ -70,7 +68,4 @@ struct multi_sensor_t : public vector<sensor_t> { // unused
 	bool check_active() const;
 	void write_to_cobj_file(std::ostream &out) const;
 };
-
-
-#endif // _TRIGGER_H_
 

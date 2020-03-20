@@ -1,8 +1,7 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 4/9/02
-#ifndef _INLINES_H_
-#define _INLINES_H_
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -767,10 +766,7 @@ template<typename T> inline std::string make_string(T const val) {
 	return oss.str();
 }
 
-
 template<typename T> void set_bit_flag_to(T &flags, unsigned mask, bool val) {
 	if (val) {flags |= mask;} else {flags &= ~mask;}
 }
-
-#endif
 

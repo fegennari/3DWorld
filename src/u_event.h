@@ -1,11 +1,7 @@
 // 3D World - OpenGL CS184 Computer Graphics Project
 // by Frank Gennari
 // 3/17/02
-
-
-#ifndef _U_EVENT_H_
-#define _U_EVENT_H_
-
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +10,6 @@
 #include <vector>
 #include <assert.h>
 
-
 unsigned const NUM_UE_TYPES     = 9;
 unsigned const UE_MAX_PARAMS    = 4;
 unsigned const MAX_U_EVENTS     = 100000;
@@ -22,7 +17,6 @@ unsigned const MAX_EVENT_FRAMES = 1000000;
 char const *const UEL_SAVE_NAME = "ueventlist";
 
 enum {UE_SRAND = 0, UE_RESIZE, UE_MBUTTON, UE_MMOTION, UE_KEYBOARD, UE_BREAK, UE_GOTO, UE_NULL, UE_KEYBOARD_SPECIAL, UE_KEYBOARD_UP};
-
 
 int const ue_nparams[NUM_UE_TYPES] = {1, 2, 4, 2, 3, 0, 2, 0, 3};
 
@@ -59,5 +53,3 @@ void add_uevent_keyboard_up(unsigned char key, int x, int y);
 void add_uevent_keyboard_special(int key, int x, int y);
 int  check_event_ok();
 
-
-#endif

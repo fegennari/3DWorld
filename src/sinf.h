@@ -1,11 +1,9 @@
 // 3D World
 // by Frank Gennari
 // 3/19/05
-#ifndef _SINF_H_
-#define _SINF_H_
+#pragma once
 
 #include "3DWorld.h"
-
 
 unsigned const TBITS(15), TSIZE(1 << TBITS);
 float const sscale(TSIZE/TWO_PI);
@@ -20,8 +18,4 @@ extern vector<float> sin_table;
 //#define COSF(val) cosf(val)
 #define SINF(val) sinf_approx(val)
 #define COSF(val) cosf_approx(val)
-
-
-
-#endif
 

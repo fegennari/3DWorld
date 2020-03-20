@@ -1,9 +1,7 @@
 // 3D World - 3D Model Rendering Classes
 // by Frank Gennari
 // 8/17/11
-
-#ifndef _MODEL3D_H_
-#define _MODEL3D_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "collision_detect.h" // for polygon_t
@@ -649,5 +647,3 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, bool load_model_file, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose);
 
-
-#endif // _MODEL3D_H_

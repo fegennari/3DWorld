@@ -2,8 +2,7 @@
 // by Frank Gennari
 // object transformation/deformation class definitions
 // 6/11/06
-#ifndef _TRANSFORM_OBJ_H_
-#define _TRANSFORM_OBJ_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "mesh2d.h"
@@ -90,7 +89,4 @@ public:
 	unsigned size () const {return inst_xforms.size();}
 	bool     empty() const {return inst_xforms.empty();}
 };
-
-
-#endif
 

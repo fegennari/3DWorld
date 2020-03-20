@@ -1,9 +1,7 @@
 // 3D World - Universe Asteroid Header
 // by Frank Gennari
 // 12/15/12
-
-#ifndef _ASTEROID_H_
-#define _ASTEROID_H_
+#pragma once
 
 #include "universe.h"
 
@@ -175,8 +173,4 @@ public:
 	void init_rings(point const &pos);
 	virtual void apply_physics(upos_point_type const &pos_, point const &camera);
 };
-
-
-#endif // _ASTEROID_H_
-
 

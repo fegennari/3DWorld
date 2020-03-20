@@ -1,13 +1,9 @@
 // 3D World - OpenGL CS184 Computer Graphics Project - base universe class definitions
 // by Frank Gennari
 // 9/4/02
-
-#ifndef _UNIVERSE_BASE_H_
-#define _UNIVERSE_BASE_H_
-
+#pragma once
 
 #include "3DWorld.h"
-
 
 // special damage types
 int const SWCLASS_UNDEF    = -1;
@@ -26,7 +22,6 @@ float const MASS_SCALE       = 40000.0;
 float const MAX_SOBJ_GRAVITY = 5.0;
 float const UNIV_NEAR_CLIP   = DEF_NEAR_CLIP;
 float const UNIV_FAR_CLIP    = DEF_FAR_CLIP;
-
 
 // forward references
 class free_obj;
@@ -110,8 +105,4 @@ bool has_sun_lighting(point const &pos);
 int  set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point *sun_pos, colorRGBA *sun_color,
 					uobject const *&sobj, float ambient_scale_s, float ambient_scale_no_s, shader_t *shader, bool no_shadow_check=0);
 uobject *line_intersect_universe(point const &start, vector3d const &dir, float length, float line_radius, float &dist);
-
-
-#endif
-
 

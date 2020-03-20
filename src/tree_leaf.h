@@ -1,12 +1,9 @@
 // 3D World - Tree leaf texture/color definitions
 // by Frank Gennari
 // 7/5/06
-
-#ifndef _TREE_LEAF_H_
-#define _TREE_LEAF_H_
+#pragma once
 
 #include "3DWorld.h"
-
 
 enum {TREE_MAPLE = 0, TREE_LIVE_OAK, TREE_A, TREE_B, PAPAYA, NUM_TREE_TYPES};
 
@@ -25,7 +22,4 @@ struct tree_type {
 };
 
 extern tree_type tree_types[];
-
-
-#endif // _TREE_LEAF_H_
 

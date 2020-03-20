@@ -2,8 +2,7 @@
 // by Frank Gennari
 // 3/10/02
 
-#ifndef _3DWORLD_H_
-#define _3DWORLD_H_
+#pragma once
 
 // timer_t is used in types.h on linux, and also in 3DWorld, so we have to typedef it as something else for these includes
 #define timer_t stdlib_timer_t
@@ -1433,7 +1432,4 @@ class  vert_coll_detector;
 struct cobj_query_callback;
 struct user_waypt_t;
 class  voxel_model;
-
-
-#endif // _3DWORLD_H_
 

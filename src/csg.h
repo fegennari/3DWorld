@@ -2,8 +2,7 @@
 // by Frank Gennari
 // CSG class definitions
 // 1/14/06
-#ifndef _CSG_H_
-#define _CSG_H_
+#pragma once
 
 #include "3DWorld.h"
 
@@ -105,7 +104,4 @@ public:
 
 
 void clip_polygon_to_cube(cube_t const &cube, point const *const pts_in, unsigned npts_in, cube_t const &pts_bcube, vector<point> &pts_out);
-
-
-#endif
 

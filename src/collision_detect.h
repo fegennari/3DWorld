@@ -1,10 +1,7 @@
 // 3D World - collision detection/collision object classes
 // by Frank Gennari
 // 7/23/06
-
-#ifndef _COLLISION_DETECT_H_
-#define _COLLISION_DETECT_H_
-
+#pragma once
 
 #include "function_registry.h"
 #include "trigger.h"
@@ -595,7 +592,4 @@ public:
 	void set_vbo_enable(bool en) {assert(vbo == 0); use_vbo = en;} // can't call while the vbo is valid
 	bool vbo_enabled() const {return use_vbo;}
 };
-
-
-#endif // _COLLISION_DETECT_H_
 

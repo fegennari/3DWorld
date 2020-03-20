@@ -1,13 +1,10 @@
 // 3D World - grass_t and grass_manager classes
 // by Frank Gennari
 // 7/9/12
-
-#ifndef _GRASS_H_
-#define _GRASS_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "gl_ext_arb.h"
-
 
 unsigned const NUM_GRASS_LODS    = 6;
 unsigned const GRASS_BLOCK_SZ    = 4;
@@ -124,5 +121,3 @@ public:
 	void clear_within(point const &pos, float radius, bool is_square);
 };
 
-
-#endif // _GRASS_H_

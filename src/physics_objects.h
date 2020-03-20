@@ -1,10 +1,7 @@
 // 3D World - physics ojbects classes
 // by Frank Gennari
 // 7/23/06
-
-#ifndef _PHYSICS_OBJECTS_H_
-#define _PHYSICS_OBJECTS_H_
-
+#pragma once
 
 #include "3DWorld.h"
 #include "collision_detect.h"
@@ -548,7 +545,4 @@ public:
 
 unsigned const XYZ_STOPPED(XY_STOPPED | Z_STOPPED);
 unsigned const ALL_COLL_STOPPED(XYZ_STOPPED | STATIC_COBJ_COLL);
-
-
-#endif // _PHYSICS_OBJECTS_H_
 

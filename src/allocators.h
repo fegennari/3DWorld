@@ -1,8 +1,7 @@
 // 3D World
 // by Frank Gennari
 // 3/19/05
-#ifndef _ALLOCATORS_H_
-#define _ALLOCATORS_H_
+#pragma once
 
 template <typename T>
 class single_free_list_allocator {
@@ -34,6 +33,4 @@ public:
 	void construct(pointer p) {new(static_cast<void*>(p)) T();}
 	void destroy(pointer p) {p->~T();}
 };
-
-#endif // _ALLOCATORS_H_
 

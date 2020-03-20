@@ -11,9 +11,7 @@
 //     to ensure long numbers are handled correctly
 // ------------------------------------------------------------------------------------
 
-
-#ifndef __FAST_A_TO_F_H_INCLUDED__
-#define __FAST_A_TO_F_H_INCLUDED__
+#pragma once
 
 #include <math.h>
 #include <climits> // for UINT_MAX
@@ -332,6 +330,4 @@ inline double fast_atod( const char** inout)
 }
 
 } // end of namespace Assimp
-
-#endif
 

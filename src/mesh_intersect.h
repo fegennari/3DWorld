@@ -1,8 +1,7 @@
 // 3D World - Mesh Intersection classes header
 // by Frank Gennari
 // 6/30/06
-#ifndef _MESH_INTERSECT_H_
-#define _MESH_INTERSECT_H_
+#pragma once
 
 #include "3DWorld.h"
 
@@ -19,7 +18,6 @@ struct mesh_query_ret {
 
 
 class mesh_bsp_tree; // forward reference
-
 
 class mesh_intersector {
 
@@ -62,8 +60,4 @@ public:
 	bool search(point const &v1, point const &v2, mesh_query_ret &ret) const {return search_recur(v1, v2, 0, 0, 0, ret);} // Note: thread safe
 	bsp_tree_node const &get_root() const {assert(!tree.empty()); return tree[0][0];}
 };
-
-
-#endif // _MESH_INTERSECT_H_
-
 

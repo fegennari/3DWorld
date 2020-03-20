@@ -1,10 +1,7 @@
 // 3D World - shape3d, line3d, and scenery objects
 // by Frank Gennari
 // 4/5/07
-
-#ifndef _SHAPE_LINE3D_H_
-#define _SHAPE_LINE3D_H_
-
+#pragma once
 
 #include "3DWorld.h"
 
@@ -95,7 +92,4 @@ public:
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	void clear_vbo();
 };
-
-
-#endif // _SHAPE_LINE3D_H_
 

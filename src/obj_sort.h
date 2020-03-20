@@ -1,9 +1,7 @@
 // 3D World - Object performance wrappers/caching and sorting code for universe model
 // by Frank Gennari
 // 11/01/05
-
-#ifndef _OBJ_SORT_H_
-#define _OBJ_SORT_H_
+#pragma once
 
 #include "ship.h"
 
@@ -48,8 +46,4 @@ struct comp_co_fast_x {
 		return (o1.pos.x < o2.pos.x);
 	}
 };
-
-
-
-#endif
 

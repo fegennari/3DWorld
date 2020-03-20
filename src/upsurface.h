@@ -1,13 +1,10 @@
 // 3D World - upsurface class, used for planets, moons, asteroids, etc.
 // by Frank Gennari
 // 4/5/07
-
-#ifndef _UPSURFACE_H_
-#define _UPSURFACE_H_
+#pragma once
 
 #include "3DWorld.h"
 #include "subdiv.h"
-
 
 unsigned const MAX_TEXTURE_SIZE  = 256; // must be a power of 2
 unsigned const SINES_PER_FREQ    = 12;
@@ -91,8 +88,4 @@ public:
 };
 
 typedef std::shared_ptr<upsurface> p_upsurface;
-
-
-#endif // _UPSURFACE_H_
-
 

@@ -1,12 +1,9 @@
 // 3D World - Heightmap Texture Managment
 // by Frank Gennari
 // 10/19/13
-
-#ifndef _HEIGHTMAP_H_
-#define _HEIGHTMAP_H_
+#pragma once
 
 #include "3DWorld.h"
-
 
 float const HMAP_DETAIL_SCALE = 16.0;
 float const HMAP_DETAIL_MAG   = 0.01;
@@ -151,5 +148,3 @@ struct hmap_brush_param_t {
 	float get_delta_mag() const {return 0.001*pow(2.0f, (float)delta_exp);}
 };
 
-
-#endif // _HEIGHTMAP_H_

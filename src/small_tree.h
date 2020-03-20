@@ -1,13 +1,10 @@
 // 3D World - Small Tree (Low-Detail Tree) Code
 // by Frank Gennari
 // 6/16/12
-
-#ifndef _SMALL_TREE_H_
-#define _SMALL_TREE_H_
+#pragma once
 
 #include "tree_3dw.h"
 #include "draw_utils.h"
-
 
 enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
 
@@ -151,7 +148,4 @@ struct small_tree_group : public vector<small_tree> {
 float calc_tree_size();
 bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max);
 bool can_have_decid_trees_in_zrange(float z_min, float z_max);
-
-
-#endif // _SMALL_TREE_H_
 
