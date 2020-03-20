@@ -18,6 +18,7 @@ using namespace std;
 
 int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char const *const data, bool invert_y);
 bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors);
+void checked_fclose(FILE *fp);
 
 
 FILE *open_screenshot_file(char const *const file_path, string const &extension, unsigned &id) {
@@ -91,7 +92,7 @@ int screenshot(unsigned window_width, unsigned window_height, char const *const 
 			assert(num_write == (int)window_width);
 		}
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	return ret;
 }
 

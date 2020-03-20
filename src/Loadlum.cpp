@@ -13,6 +13,7 @@ unsigned const MAX_IR_CHARS = 256;
 
 FILE *open_texture_file(std::string const &filename);
 void checked_fseek_to(FILE *fp, long fpos);
+void checked_fclose(FILE *fp);
 
 
 struct ImageRec {
@@ -98,7 +99,7 @@ static ImageRec *ImageOpen(std::string const &filename) {
 
 static void ImageClose(ImageRec * image) {
 
-	fclose(image->file);
+	checked_fclose(image->file);
 	delete [] image->rowStart;
 	delete [] image->rowSize;
 	delete [] image->tmp;

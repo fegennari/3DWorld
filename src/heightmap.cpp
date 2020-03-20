@@ -208,7 +208,7 @@ bool tex_mod_map_manager_t::read_mod(string const &fn) {
 		cerr << "Error: incorrect trailer found in terrain height mod map " << fn << "." << endl;
 		return 0;
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	return 1;
 }
 
@@ -235,7 +235,7 @@ bool tex_mod_map_manager_t::write_mod(string const &fn) const {
 		assert(elem_write == brush_vect.size()); // add error checking?
 	}
 	write_binary_uint(fp, trailer_sig);
-	fclose(fp);
+	checked_fclose(fp);
 	return 1;
 }
 

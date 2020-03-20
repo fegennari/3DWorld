@@ -2120,7 +2120,7 @@ int load_config(string const &config_file) {
 		if (error) {cout << "Parse error in config file." << endl; break;}
 	} // while read
 	if (universe_only && disable_universe) {cout << "Error: universe_only and disable_universe are mutually exclusive" << endl; error = 1;}
-	fclose(fp);
+	checked_fclose(fp);
 	temperature    = init_temperature;
 	num_dodgeballs = max(num_dodgeballs, 1); // have to have at least 1
 	num_trees      = max(num_trees,      0);

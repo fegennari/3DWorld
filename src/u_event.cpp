@@ -17,6 +17,7 @@ int read_eventlist(0), make_eventlist(0), curr_event(0), n_events(0), n_frames(0
 vector<uevent> eventlist;
 
 bool open_file(FILE *&fp, char const *const fn, std::string const &file_type, char const *const mode="r");
+void checked_fclose(FILE *fp);
 
 
 int read_ueventlist(char *arg) {
@@ -31,7 +32,7 @@ int read_ueventlist(char *arg) {
 
 	if (fscanf(fp, "%i%i", &n_events, &n_frames) != 2 || n_events < 0 || n_frames < 0) {
 		cout << "Error reading user event list header." << endl;
-		fclose(fp);
+		checked_fclose(fp);
 		return 0;
 	}
 	while (fscanf(fp, "%i %i", &(cur_event.type), &(cur_event.frame)) == 2) {
@@ -42,7 +43,7 @@ int read_ueventlist(char *arg) {
 				if (fscanf(fp, "%i", &(cur_event.params[i])) != 1) {
 					cout << "Error reading user event file: event # " << eventlist.size() << ", type " << cur_event.type << ", param " << i << endl;
 					eventlist.clear();
-					fclose(fp);
+					checked_fclose(fp);
 					return 0;
 				}
 			}
@@ -50,7 +51,7 @@ int read_ueventlist(char *arg) {
 		}
 	}
 	read_eventlist = 1;
-	fclose(fp);
+	checked_fclose(fp);
 	return 1;
 }
 
@@ -63,7 +64,7 @@ int save_ueventlist() {
 
 	if (!fprintf(fp, "%zi %i\n", eventlist.size(), frame_counter)) {
 		cout << "Error writing user event list header." << endl;
-		fclose(fp);
+		checked_fclose(fp);
 		return 0;
 	}
 	for (unsigned i = 0; i < eventlist.size(); ++i) {
@@ -75,7 +76,7 @@ int save_ueventlist() {
 		}
 		fprintf(fp, "\n");
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	cout << "Ueventlist saved as '" << UEL_SAVE_NAME << "'." << endl;
 	return 1;
 }

@@ -893,14 +893,14 @@ void add_all_coll_objects(const char *filename, bool re_add) {
 
 int read_error(FILE *fp, const char *param, const char *filename) {
 	cout << "*** Error reading " << param << " from file '" << filename << "'. ***" << endl;
-	fclose(fp);
+	checked_fclose(fp);
 	return 0;
 }
 int read_error(FILE *fp, string const &param, const char *filename) {return read_error(fp, param.c_str(), filename);}
 
 int read_error(FILE *fp, const char *param, const char *filename, unsigned line_num) {
 	cout << "*** Error reading " << param << " from file '" << filename << "' on line " << line_num << ". ***" << endl;
-	fclose(fp);
+	checked_fclose(fp);
 	return 0;
 }
 int read_error(FILE *fp, string const &param, const char *filename, unsigned line_num) {return read_error(fp, param.c_str(), filename, line_num);}
@@ -1828,7 +1828,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 			if (npoints < 3) {
 				cout << "Error: Collision polygon must have at least 3 points: " << npoints << "." << endl;
-				fclose(fp);
+				checked_fclose(fp);
 				return 0;
 			}
 			cobj.npoints = npoints;
@@ -1837,7 +1837,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			for (unsigned i = 0; i < npoints; ++i) {
 				if (!read_vector(fp, poly[i].v)) {
 					cout << "Error reading collision polygon point " << i << " from file '" << coll_obj_file << "'." << endl;
-					fclose(fp);
+					checked_fclose(fp);
 					return 0;
 				}
 				xf.xform_pos(poly[i].v);
@@ -1957,7 +1957,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			if (fscanf(fp, "%f%f%f%f%f%255s", &cobj.cp.elastic, &cobj.cp.color.R, &cobj.cp.color.G, &cobj.cp.color.B, &cobj.cp.color.A, str) != 6) {
 				return read_error(fp, "layer/material properties", coll_obj_file);
 			}
-			if (!read_texture(str, line_num, cobj.cp.tid, 0)) {fclose(fp); return 0;}
+			if (!read_texture(str, line_num, cobj.cp.tid, 0)) {checked_fclose(fp); return 0;}
 			has_layer    = 1;
 			cobj.cp.draw = (read_int(fp, ivals[0]) ? (ivals[0] != 0) : 1); // optional
 			if (!read_float(fp, cobj.cp.refract_ix )) {cobj.cp.refract_ix  = 1.0;} // optional
@@ -1972,7 +1972,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				material_map_t::const_iterator it(materials.find(str));
 				if (it == materials.end()) {
 					cout << "*** Error: material '" << str << "' not defined in file '" << coll_obj_file << "'. ***" << endl;
-					fclose(fp);
+					checked_fclose(fp);
 					return 0;
 				}
 				cobj.cp = it->second;
@@ -1988,7 +1988,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				int invert_y(0), swap_bns(0);
 				if (fscanf(fp, "%255s%i%i", str, &invert_y, &swap_bns) < 1) {return read_error(fp, "normal map texture", coll_obj_file);}
 				cobj.cp.set_swap_tcs_flag(SWAP_TCS_NM_BS, (swap_bns != 0));
-				if (!read_texture(str, line_num, cobj.cp.normal_map, 1, (invert_y != 0))) {fclose(fp); return 0;}
+				if (!read_texture(str, line_num, cobj.cp.normal_map, 1, (invert_y != 0))) {checked_fclose(fp); return 0;}
 			}
 			break;
 
@@ -2064,19 +2064,19 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'q': // quit reading object file
-			fclose(fp);
+			checked_fclose(fp);
 			fp  = NULL;
 			end = 1;
 			break;
 
 		default:
 			cerr << "Error: unrecognized symbol in collision object file " << coll_obj_file << " line " << line_num << ": " << char(letter) << " (ASCII " << letter << ")." << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			exit(1);
 			return 0;
 		}
 	}
-	if (fp != NULL) {fclose(fp);}
+	if (fp != NULL) {checked_fclose(fp);}
 	return 1;
 }
 

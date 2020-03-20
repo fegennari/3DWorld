@@ -897,25 +897,25 @@ bool read_mesh(const char *filename, float zmm) {
 
 	if (fscanf(fp, "%i%i", &xsize, &ysize) != 2) {
 		cout << "Error reading size header in input file '" << filename << "'." << endl;
-		fclose(fp);
+		checked_fclose(fp);
 		return 0;
 	}
 	if (xsize != MESH_X_SIZE || ysize != MESH_Y_SIZE) {
 		cout << "Error: Mesh size in file is " << xsize << "x" << ysize << " but should be " << MESH_X_SIZE << "x" << MESH_Y_SIZE << "." << endl;
-		fclose(fp);
+		checked_fclose(fp);
 		return 0;
 	}
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			if (fscanf(fp, "%f", &height) != 1) {
 				cout << "Error reading mesh heights from file at position (" << j << ", " << i << ")." << endl;
-				fclose(fp);
+				checked_fclose(fp);
 				return 0;
 			}
 			mesh_height[i][j] = mesh_file_scale*height + mesh_file_tz;
 		}
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	update_disabled_mesh_height();
 	calc_zminmax();
 	set_zmax_est((zmm != 0.0) ? zmm : max(-zmin, zmax));
@@ -938,20 +938,20 @@ bool write_mesh(const char *filename) {
 
 	if (!fprintf(fp, "%i %i\n", MESH_X_SIZE, MESH_Y_SIZE)) {
 		cout << "Error writing size header for mesh file '" << filename << "'." << endl;
-		fclose(fp);
+		checked_fclose(fp);
 		return 0;
 	}
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			if (!fprintf(fp, "%f ", mesh_height[i][j])) {
 				cout << "Error writing mesh heights to file at position " << j << ", " << i << endl;
-				fclose(fp);
+				checked_fclose(fp);
 				return 0;
 			}
 		}
 		fprintf(fp, "\n");
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	cout << "Wrote mesh file '" << filename << "'." << endl;
 	return 1;
 }
@@ -973,24 +973,24 @@ bool load_state(const char *filename) {
 		&rand_gen_index, &global_rand_gen.rseed1, &global_rand_gen.rseed2, &v1, &v2, &v3, &v4) != 20)
 	{
 		cout << "Error reading state header." << endl;
-		fclose(fp);
+		checked_fclose(fp);
 		return 0;
 	}
 	if (v1 != MESH_X_SIZE || v2 != MESH_Y_SIZE || v3 != NUM_FREQ_COMP || v4 != N_RAND_SIN2) {
 		cout << "Error: Saved state is incompatible with current configuration." << endl;
-		fclose(fp);
+		checked_fclose(fp);
 		return 0;
 	}
 	for (int i = 0; i < F_TABLE_SIZE; ++i) {
 		for (int k = 0; k < 5; ++k) {
 			if (fscanf(fp, "%f ", &(sinTable[i][k])) != 1) {
 				cout << "Error reading state table entry (" << i << ", " << k << ")." << endl;
-				fclose(fp);
+				checked_fclose(fp);
 				return 0;
 			}
 		}
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	mesh_rgen_index = rand_gen_index;
 	update_cpos();
 	if (world_mode == WMODE_GROUND) {gen_scene(1, (world_mode == WMODE_GROUND), 1, 1, 0);}
@@ -1013,20 +1013,20 @@ bool save_state(const char *filename) {
 		xoff, yoff, xoff2, yoff2, rand_gen_index, global_rand_gen.rseed1, global_rand_gen.rseed2, MESH_X_SIZE, MESH_Y_SIZE, NUM_FREQ_COMP, N_RAND_SIN2))
 	{
 		cout << "Error writing state header." << endl;
-		fclose(fp);
+		checked_fclose(fp);
 		return 0;
 	}
 	for (unsigned i = 0; i < (unsigned)F_TABLE_SIZE; ++i) {
 		for (unsigned k = 0; k < 5; ++k) {
 			if (!fprintf(fp, "%f ", sinTable[i][k])) {
 				cout << "Error writing state table entry (" << i << ", " << k << ")." << endl;
-				fclose(fp);
+				checked_fclose(fp);
 				return 0;
 			}
 		}
 		fprintf(fp, "\n");
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	cout << "State file '" << filename << "' has been saved." << endl;
 	return 1;
 }

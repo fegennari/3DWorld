@@ -32,7 +32,7 @@ bool base_file_reader::open_file(bool binary) {
 }
 
 void base_file_reader::close_file() {
-	if (fp) {fclose(fp);}
+	if (fp) {checked_fclose(fp);}
 	fp = NULL;
 }
 

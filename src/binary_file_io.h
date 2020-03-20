@@ -26,8 +26,17 @@ public:
 	}
 	bool is_valid() const {return (fp || gzf);}
 	void close() {
-		if (fp ) {fclose(fp); fp = nullptr;}
-		if (gzf) {gzclose(gzf); gzf = nullptr;}
+		if (fp ) {
+			checked_fclose(fp);
+			fp = nullptr;
+		}
+		if (gzf) {
+			if (gzclose(gzf) != 0) {
+				std::cerr << "Error: gzclose() call failed" << std::endl;
+				exit(0); // how fatal should this be?
+			}
+			gzf = nullptr;
+		}
 	}
 	static string get_extension(string const &filename) {return filename.substr(filename.find_last_of(".") + 1);}
 	static bool   is_gz_file   (string const &filename) {return (get_extension(filename) == "gz");}

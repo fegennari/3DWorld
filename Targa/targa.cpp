@@ -135,7 +135,12 @@ const char *tga_error(const tga_result errcode)
     }
 }
 
-
+void checked_fclose_fg(FILE *fp) {
+    if (fclose(fp) != 0) {
+        printf("Error: fclose() call failed");
+        exit(0); // how fatal should this be?
+    }
+}
 
 /* ---------------------------------------------------------------------------
  * Read a Targa image from a file named <filename> to <dest>.  This is just a
@@ -149,7 +154,7 @@ tga_result tga_read(tga_image *dest, const char *filename)
     FILE *fp = fopen(filename, "rb");
     if (fp == NULL) return TGAERR_FOPEN;
     result = tga_read_from_FILE(dest, fp);
-    fclose(fp);
+    checked_fclose_fg(fp);
     return result;
 }
 
@@ -343,7 +348,7 @@ tga_result tga_write(const char *filename, const tga_image *src)
     FILE *fp = fopen(filename, "wb");
     if (fp == NULL) return TGAERR_FOPEN;
     result = tga_write_to_FILE(fp, src);
-    fclose(fp);
+    checked_fclose_fg(fp);
     return result;
 }
 

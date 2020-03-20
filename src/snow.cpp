@@ -303,7 +303,7 @@ bool voxel_map::read(char const *const fn) {
 		assert(nr == 1);
 		data.add_to_map(*this);
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	return 1;
 }
 
@@ -326,7 +326,7 @@ bool voxel_map::write(char const *const fn) const {
 		size_t const nw(fwrite(&data, sizeof(data_block), 1, fp));
 		assert(nw == 1);
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	return 1;
 }
 

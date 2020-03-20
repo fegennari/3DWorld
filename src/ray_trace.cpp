@@ -159,7 +159,7 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		FILE *fp(fopen(filename.c_str(), "rb")); // read a binary file
 		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for reading" << endl; exit(1);}
 		bool const success(read(fp));
-		fclose(fp);
+		checked_fclose(fp);
 		if (!success) {cerr << "failed to read file '" << filename << "'" << endl; exit(1);}
 		cout << "Read cobj accum lighting file " << filename << endl;
 		if (show_stats) {stats();}
@@ -168,7 +168,7 @@ struct cobj_ray_accum_map_t : public map<unsigned, cobj_ray_accum_t> {
 		FILE *fp(fopen(filename.c_str(), "wb")); // write a binary file
 		if (fp == nullptr) {cerr << "failed to open file '" << filename << "' for writing" << endl; exit(1);}
 		bool const success(write(fp));
-		fclose(fp);
+		checked_fclose(fp);
 		if (!success) {cerr << "failed to write file '" << filename << "'" << endl; exit(1);}
 		cout << "Wrote cobj accum lighting file " << filename << endl;
 		if (show_stats) {stats();}

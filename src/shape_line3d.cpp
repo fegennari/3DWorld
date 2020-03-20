@@ -40,7 +40,7 @@ bool shape3d::read_from_file(const char *filename) {
 	if (fscanf(fp, "%c", &letter) == 1 && letter == 'n') {	
 		if (fscanf(fp, "%u%u%u\n", &ncolors, &nverts, &nfaces) != 3) {
 			cout << "Error reading number of vertices and faces from file '" << filename << "'." << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			return 0;
 		}
 	}
@@ -50,7 +50,7 @@ bool shape3d::read_from_file(const char *filename) {
 		while(!feof(fp)) {
 			if (fscanf(fp, "%c%f%f%f", &letter, &x, &y, &z) != 4) {
 				cout << "Error reading entry from file '" << filename << "'." << endl;
-				fclose(fp);
+				checked_fclose(fp);
 				return 0;
 			}
 			switch (letter) {
@@ -59,18 +59,18 @@ bool shape3d::read_from_file(const char *filename) {
 			case 'c': ncolors++; break;
 			default:
 				cout << "Error: Invalid letter in input file: " << letter << endl;
-				fclose(fp);
+				checked_fclose(fp);
 				return 0;
 			}
 		}
-		fclose(fp);
+		checked_fclose(fp);
 		fp = fopen(filename, "r");
 	}
 	assert(fp);
 	
 	if (nverts < 3 || nfaces < 1) {
 		cout << "Error: Mesh in file '" << filename << "' must have at least three vertices and one face: " << nverts << ", " << nfaces << "." << endl;
-		fclose(fp);
+		checked_fclose(fp);
 		return 0;
 	}
 	assert(alloc_shape(nverts, nfaces, ncolors));
@@ -79,12 +79,12 @@ bool shape3d::read_from_file(const char *filename) {
 	for(unsigned i = 0; i < ncolors; i++) {
 		if (fscanf(fp, "%c%f%f%f%f%f%f%i\n", &letter, &color.R, &color.G, &color.B, &color.A, &colors[i].spec1, &colors[i].spec2, &colors[i].tid) != 8) {
 			cout << "Error reading color from file '" << filename << "'." << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			return 0;
 		}
 		if (letter != 'c') {
 			cout << "Error: Expecting color " << i << " in input file but got character " << letter << " <" << int((unsigned char)letter) << ">" << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			return 0;
 		}
 		colors[i].c = color;
@@ -94,12 +94,12 @@ bool shape3d::read_from_file(const char *filename) {
 	for(unsigned i = 0; i < nverts; i++) {
 		if (fscanf(fp, "%c%f%f%f\n", &letter, &points[i].x, &points[i].y, &points[i].z) != 4) {
 			cout << "Error reading vertex from file '" << filename << "'." << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			return 0;
 		}
 		if (letter != 'v') { // in case vertices and faces are mixed together
 			cout << "Error: Expecting vertex " << i << " in input file but got character " << letter << " <" << int((unsigned char)letter) << ">" << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			return 0;
 		}
 	}
@@ -108,22 +108,22 @@ bool shape3d::read_from_file(const char *filename) {
 	for(unsigned i = 0; i < nfaces; i++) {
 		if (fscanf(fp, "%c%u%u%u%u\n", &letter, &ix, &iy, &iz, &color_id) != 5) {
 			cout << "Error reading face from file '" << filename << "'." << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			return 0;
 		}
 		if (letter != 'f') { // in case vertices and faces are mixed together
 			cout << "Error: Expecting face " << i << " in input file." << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			return 0;
 		}
 		if (color_id >= max(1U, ncolors)) {
 			cout << "Illegal type: " << color_id << "." << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			return 0;
 		}
 		if (ix < 1 || iy < 1 || iz < 1 || ix > nverts || iy > nverts || iz > nverts) {
 			cout << "Error: Face " << i << " references nonexistant vertex (" << ix << ", " << iy << ", " << iz << ")." << endl;
-			fclose(fp);
+			checked_fclose(fp);
 			return 0;
 		}
 		faces[i].v[2]     = ix-1;
@@ -131,7 +131,7 @@ bool shape3d::read_from_file(const char *filename) {
 		faces[i].v[0]     = iz-1;
 		faces[i].color_id = color_id;
 	}
-	fclose(fp);
+	checked_fclose(fp);
 	return 1;
 }
 

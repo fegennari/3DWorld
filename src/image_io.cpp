@@ -50,6 +50,13 @@ FILE *open_texture_file(string const &filename) {
 	return fp;
 }
 
+void checked_fclose(FILE *fp) {
+	if (fclose(fp) != 0) {
+		cerr << "Error: fclose() call failed" << endl;
+		exit(0); // how fatal should this be?
+	}
+}
+
 
 string get_file_extension(string const &filename, unsigned level, bool make_lower) {
 
@@ -266,7 +273,7 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height, bool allow
 		}
 	}
 	if (format == 1) {maybe_swap_rb(data);}
-	fclose(file);
+	checked_fclose(file);
 }
 
 
@@ -341,7 +348,7 @@ int texture_t::write_to_bmp(string const &fn) const {
 	}
 	vector<unsigned char> data_swap_rb(data, data+num_bytes());
 	bool const ret(write_rgb_bmp_image(fp, fn, &data_swap_rb.front(), width, height, ncolors));
-	fclose(fp);
+	checked_fclose(fp);
 	return ret;
 }
 
@@ -424,7 +431,7 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 	}
 	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
-	fclose(fp);
+	checked_fclose(fp);
 
 	if (want_alpha_channel) {
 		add_alpha_channel();
@@ -462,7 +469,7 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	}
 	jpeg_finish_compress(&cinfo);
 	jpeg_destroy_compress(&cinfo);
-	fclose(fp);
+	checked_fclose(fp);
 	return 1;
 #else
   cerr << "Error: JPEG writing support is not enabled." << endl;
@@ -537,7 +544,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	png_read_image(png_ptr, &rows.front());
 	png_read_end(png_ptr, end_info);
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-	fclose(fp);
+	checked_fclose(fp);
 
 	if (want_alpha_channel) {
 		add_alpha_channel();
@@ -596,7 +603,7 @@ int texture_t::write_to_png(string const &fn) const {
 	png_write_end(png_ptr, NULL);
 	png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
 	png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
-	fclose(fp);
+	checked_fclose(fp);
 	return 1;
 #else
 	cerr << "Error: PNG writing support is not enabled." << endl;

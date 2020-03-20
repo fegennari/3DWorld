@@ -249,7 +249,7 @@ bool voxel_model::from_file(string const &fn) {
 		return 0;
 	}
 	bool const success(read(fp) && outside.read(fp) && ao_lighting.read(fp)); // should ao_lighting be read or recalculated?
-	fclose(fp);
+	checked_fclose(fp);
 	return success;
 }
 
@@ -263,7 +263,7 @@ bool voxel_model::to_file(string const &fn) const {
 		return 0;
 	}
 	bool const success(write(fp) && outside.write(fp) && ao_lighting.write(fp)); // should ao_lighting be read or recalculated?
-	fclose(fp);
+	checked_fclose(fp);
 	return success;
 }
 
@@ -2202,7 +2202,7 @@ public:
 			cerr << "Error: incorrect trailer found in voxel brush file " << fn << "." << endl;
 			return 0;
 		}
-		fclose(fp);
+		checked_fclose(fp);
 		return 1;
 	}
 	bool write(string const &fn) const {
@@ -2223,7 +2223,7 @@ public:
 			assert(elem_write == brush_vect.size()); // add error checking?
 		}
 		write_binary_uint(fp, vtrailer_sig);
-		fclose(fp);
+		checked_fclose(fp);
 		return 1;
 	}
 };
