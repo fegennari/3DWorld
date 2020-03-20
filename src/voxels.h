@@ -335,9 +335,6 @@ class voxel_model_ground : public voxel_model {
 	};
 	vector<data_block_t> data_blocks;
 
-	void calc_indir_lighting_for_block(point const &cur_sun_pos, unsigned block_ix);
-	void calc_indir_lighting(point const &cur_sun_pos);
-
 	virtual bool clear_block(unsigned block_ix);
 	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments, bool directly_from_update) const;
 	virtual void create_block_hook(unsigned block_ix);
