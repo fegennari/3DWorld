@@ -50,7 +50,7 @@ namespace TriListOpt
 		S32 *triIndex;
 
 		VertData() : cachePosition(-1), score(0.0f), numReferences(0), numUnaddedReferences(0), triIndex(NULL) {}
-		~VertData() { if(triIndex != NULL) delete [] triIndex; triIndex = NULL; }
+		~VertData() { delete [] triIndex; triIndex = NULL; }
 	};
 
 	struct TriData
