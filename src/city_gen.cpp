@@ -1203,7 +1203,7 @@ class city_road_gen_t : public road_gen_base_t {
 		bool gen_road_grid(float road_width, float road_spacing) {
 			if (city_params.road_width > 0.5*city_params.road_spacing) {
 				cerr << "Error: City road_width should not be set larger than half the road spacing" << endl;
-				exit(0);
+				exit(1);
 			}
 			cube_t const &region(bcube); // use our bcube as the region to process
 			vector3d const size(region.get_size());

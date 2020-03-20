@@ -162,7 +162,7 @@ protected:
 	void skip_chunk(unsigned chunk_len) {
 		if (fseek(fp, chunk_len-6, SEEK_CUR) != 0) {
 			cerr << "Error: fseek() call failed" << endl;
-			exit(0); // not sure if/when this can fail; if it does, it's likely an internal error
+			exit(1); // not sure if/when this can fail; if it does, it's likely an internal error
 		}
 	}
 

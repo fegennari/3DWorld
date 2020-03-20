@@ -1152,7 +1152,7 @@ int add_model_transform(FILE *fp, model3d_xform_t const &model_xf, vector<coll_t
 void checked_fseek_to(FILE *fp, long fpos) {
 	if (fseek(fp, fpos, SEEK_SET) != 0) {
 		cerr << "Error: fseek() call failed" << endl;
-		exit(0); // not sure if/when this can fail; if it does, it's likely an internal error
+		exit(1); // not sure if/when this can fail; if it does, it's likely an internal error
 	}
 }
 
