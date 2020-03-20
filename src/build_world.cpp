@@ -1149,17 +1149,23 @@ int add_model_transform(FILE *fp, model3d_xform_t const &model_xf, vector<coll_t
 	return read_error(fp, error_str.c_str(), coll_obj_file);
 }
 
+void checked_fseek_to(FILE *fp, long fpos) {
+	if (fseek(fp, fpos, SEEK_SET) != 0) {
+		cerr << "Error: fseek() call failed" << endl;
+		exit(0); // not sure if/when this can fail; if it does, it's likely an internal error
+	}
+}
 
 bool read_float_reset_pos_on_fail(FILE *fp, float &v) {
 	long const fpos(ftell(fp));
 	if (read_float(fp, v)) return 1;
-	fseek(fp, fpos, SEEK_SET);
+	checked_fseek_to(fp, fpos);
 	return 0;
 }
-bool read_int_reset_pos_on_fail(FILE *fp, int &v) {
+bool read_int_reset_pos_on_fail(FILE *fp, int &v) { // Note: unused
 	long const fpos(ftell(fp));
 	if (read_int(fp, v)) return 1;
-	fseek(fp, fpos, SEEK_SET);
+	checked_fseek_to(fp, fpos);
 	return 0;
 }
 
@@ -1598,7 +1604,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				int const num_read(fscanf(fp, "%f%f%f", &dir.x, &dir.y, &dir.z));
 				unsigned num_dlight_rays(0);
 
-				if (num_read == 0) {fseek(fp, fpos, SEEK_SET);}
+				if (num_read == 0) {checked_fseek_to(fp, fpos);}
 				else if (num_read == 3) { // try to read additional optional values
 					int const num_read2(fscanf(fp, "%f%f%i%i%u", &beamwidth, &r_inner, &ivals[0], &use_smap, &num_dlight_rays));
 					if (use_smap < 0 || use_smap > 2) {return read_error(fp, "light source use_smap (must be 0, 1, or 2)", coll_obj_file);}
@@ -1651,7 +1657,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				ivals[2] = -1; // Note: req_keycard_or_obj_id is optional; if player_only==1, then req_keycard_or_obj_id is a keycard ID; else, req_keycard_or_obj_id is an object ID
 				int const num_read(fscanf(fp, "%f%f%f%f%f%f%i%i%i", &trigger.act_pos.x, &trigger.act_pos.y, &trigger.act_pos.z,
 					&trigger.act_dist, &trigger.auto_on_time, &trigger.auto_off_time, &ivals[0], &ivals[1], &ivals[2]));
-				if (num_read == 0) {fseek(fp, fpos, SEEK_SET); triggers.clear(); break;} // bare K, just reset params and disable the trigger, or EOF
+				if (num_read == 0) {checked_fseek_to(fp, fpos); triggers.clear(); break;} // bare K, just reset params and disable the trigger, or EOF
 				if (num_read < 8) {return read_error(fp, "light source trigger", coll_obj_file, line_num);}
 				xf.xform_pos(trigger.act_pos);
 				trigger.act_dist       *= xf.scale;

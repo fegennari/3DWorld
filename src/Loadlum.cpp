@@ -12,6 +12,7 @@
 unsigned const MAX_IR_CHARS = 256;
 
 FILE *open_texture_file(std::string const &filename);
+void checked_fseek_to(FILE *fp, long fpos);
 
 
 struct ImageRec {
@@ -76,7 +77,7 @@ static ImageRec *ImageOpen(std::string const &filename) {
 		image->rowStart = new unsigned[x];
 		image->rowSize  = new int[x];
 		image->rleEnd = 512 + (2 * x);
-		fseek(image->file, 512, SEEK_SET);
+		checked_fseek_to(image->file, 512);
 		num_read = fread(image->rowStart, 1, x, image->file);
 		assert(num_read == x);
 		num_read = fread(image->rowSize, 1, x, image->file);
@@ -108,7 +109,7 @@ static void ImageClose(ImageRec * image) {
 static void ImageGetRow(ImageRec * image, unsigned char *buf, int y, int z) {
 
 	if ((image->type & 0xFF00) == 0x0100) {
-		fseek(image->file, (long) image->rowStart[y + z * image->ysize], SEEK_SET);
+		checked_fseek_to(image->file, (long)image->rowStart[y + z * image->ysize]);
 		unsigned const row_sz(image->rowSize[y + z * image->ysize]);
 		size_t const num_read(fread(image->tmp, 1, row_sz, image->file));
 		assert(num_read == row_sz);
@@ -130,7 +131,7 @@ static void ImageGetRow(ImageRec * image, unsigned char *buf, int y, int z) {
 		}
 	}
 	else {
-		fseek(image->file, 512 + (y * image->xsize) + (z * image->xsize * image->ysize), SEEK_SET);
+		checked_fseek_to(image->file, (512 + (y * image->xsize) + (z * image->xsize * image->ysize)));
 		size_t const num_read(fread(buf, 1, image->xsize, image->file));
 		assert(num_read == image->xsize);
 	}

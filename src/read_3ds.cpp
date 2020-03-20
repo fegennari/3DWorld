@@ -159,7 +159,12 @@ protected:
 		return 1;
 	}
 
-	void skip_chunk(unsigned chunk_len) {fseek(fp, chunk_len-6, SEEK_CUR);}
+	void skip_chunk(unsigned chunk_len) {
+		if (fseek(fp, chunk_len-6, SEEK_CUR) != 0) {
+			cerr << "Error: fseek() call failed" << endl;
+			exit(0); // not sure if/when this can fail; if it does, it's likely an internal error
+		}
+	}
 
 	// return value: 0 = error, 1 = processed, 2 = can't handle/skip
 	virtual int proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {return 2;}
