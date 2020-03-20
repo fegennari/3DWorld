@@ -1908,7 +1908,7 @@ public:
 			timer_t timer3("Building Room Graph Analysis");
 			for (auto b = buildings.begin(); b != buildings.end(); ++b) {
 				if (b->has_complex_floorplan) continue; // room graph isn't really valid for this building type
-				if (!b->is_house) continue;
+				//if (b->is_house) continue;
 				unsigned num_comp(b->count_connected_room_components());
 				if (b->has_sec_bldg()) {--num_comp;} // exclude garage/shed
 				//cout << num_comp;

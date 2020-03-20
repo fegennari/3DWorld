@@ -132,21 +132,21 @@ void building_t::build_nav_graph(building_nav_graph_t &ng) const {
 			cube_t dc(*d);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
 
-			for (unsigned r2 = 0; r2 < num_rooms; ++r2) {
-				if (r2 == r) continue; // skip self
+			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
 				if (dc.intersects_no_adj(interior->rooms[r2])) {ng.connect_rooms(r, r2, *d); break;}
 			}
 		} // for d
 		for (unsigned s = 0; s < num_stairs; ++s) { // stairs
 			stairwell_t const &stairwell(interior->stairwells[s]);
+			//if (!stairwell.stack_conn) continue;
 			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir);}
 		}
 		if (room.is_hallway) { // check for connected hallways
-			for (unsigned r2 = 0; r2 < num_rooms; ++r2) {
+			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
 				room_t const &room2(interior->rooms[r2]);
 				if (!room2.is_hallway || room2.z1() != room.z1() || !room2.intersects(c)) continue; // not a connected hallway
 				cube_t conn_cube(c);
-				c.intersect_with_cube(room2);
+				conn_cube.intersect_with_cube(room2);
 				ng.connect_rooms(r, r2, conn_cube);
 			} // for r2
 		}
