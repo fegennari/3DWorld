@@ -1223,7 +1223,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		colorRGBA const &ceil_color (is_house ? mat.house_ceil_color  : mat.ceil_color );
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // 600K T
-			bool const use_house_floor(is_house && !(has_sec_bldg() && get_real_parts_end()->contains_cube(*i))); // not for garages and sheds
+			bool const use_house_floor(is_house && !(has_sec_bldg() && get_sec_bldg().contains_cube(*i))); // not for garages and sheds
 			tid_nm_pair_t const &floor_tex(use_house_floor ? mat.house_floor_tex : mat.floor_tex);
 			colorRGBA const &floor_color(use_house_floor ? mat.house_floor_color : mat.floor_color);
 			bdraw.add_section(*this, empty_vc, *i, floor_tex, floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
