@@ -152,7 +152,7 @@ void write_uint(ostream &out, unsigned val) {
 }
 
 unsigned read_uint(istream &in) {
-	unsigned val;
+	unsigned val(0);
 	in.read((char *)&val, sizeof(unsigned));
 	return val;
 }

@@ -1025,7 +1025,7 @@ void u_ship::ai_action() {
 		float const psd(parent->get_child_stray_dist()), fsd(is_fighter() ? specs().stray_dist : 0.0f);
 		stray_dist = ((psd > 0.0 && fsd > 0.0) ? min(psd, fsd) : max(psd, fsd));
 	}
-	bool const has_strayed(stray_dist > 0.0 && !dist_less_than(pos, parent->get_pos(), 2.0*stray_dist));
+	bool const has_strayed(parent && stray_dist > 0.0 && !dist_less_than(pos, parent->get_pos(), 2.0*stray_dist));
 
 	if (check_return_to_parent() || has_strayed) {
 		assert(parent != NULL && parent != this);

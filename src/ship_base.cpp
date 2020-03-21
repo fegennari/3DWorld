@@ -256,7 +256,7 @@ void u_ship_base::regen(float rate, u_ship_base *dock) {
 						}
 					}
 				}
-				ncrew       = unsigned((ncrew*new_size_val)/size_val);
+				if (size_val > 0) {ncrew = unsigned((ncrew*new_size_val)/size_val);}
 				size_scale += grow_amt;
 				energy     -= grow_amt/gef;
 			}

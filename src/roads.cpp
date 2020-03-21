@@ -688,7 +688,7 @@ bool tunnel_t::proc_sphere_coll(point &center, point const &prev, float sradius,
 
 void tunnel_t::calc_zvals_and_eext(float &zf, float &zb, float &end_ext) const {
 	zf = ends[0].z1(); zb = ends[1].z1();
-	end_ext = (2.0*(d ? DY_VAL : DX_VAL));
+	end_ext = (2.0*(dim ? DY_VAL : DX_VAL));
 	float const dz_ext(end_ext*(zb - zf)/get_length());
 	zf -= dz_ext; zb += dz_ext; // adjust zvals for extension
 }
@@ -698,7 +698,7 @@ bool tunnel_t::line_intersect(point const &p1, point const &p2, float &t) const 
 	if (!check_line_clip(p1, p2, bcube.d)) return 0;
 	cube_t cubes[4];
 	calc_top_bot_side_cubes(cubes);
-	float const wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*get_width(), 2.0*(d ? DX_VAL : DY_VAL)));
+	float const wall_thick(TUNNEL_WALL_THICK*city_params.road_width), width(max(0.5*get_width(), 2.0*(dim ? DX_VAL : DY_VAL)));
 	float zf, zb, end_ext;
 	calc_zvals_and_eext(zf, zb, end_ext);
 	bool const d(dim);

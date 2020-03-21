@@ -60,7 +60,7 @@ int save_ueventlist() {
 
 	if (make_eventlist == 0) return 0;
 	FILE *fp;
-	if (!open_file(fp, UEL_SAVE_NAME, "output user eventlist"), "w") return 0;
+	if (!open_file(fp, UEL_SAVE_NAME, "output user eventlist", "w")) return 0;
 
 	if (!fprintf(fp, "%zi %i\n", eventlist.size(), frame_counter)) {
 		cout << "Error writing user event list header." << endl;
