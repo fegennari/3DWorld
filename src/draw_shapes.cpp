@@ -371,7 +371,7 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 		bool const back_facing(bfc && camera_back_facing(pts[1], npoints, norm));
 		unsigned const nsides(unsigned(npoints)+2);
 		float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}; // used for was_cube case
-		float tcs[2][2] = {0.0}; // {s,t} x {min,max}
+		float tcs[2][2] = {}; // {s,t} x {min,max}
 		vector3d cube_size(zero_vector);
 
 		if (treat_as_cube) {

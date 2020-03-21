@@ -166,7 +166,7 @@ void show_stats() {
 		print_n_spaces(cwidth - (int)damage_names[i].size());
 		cout << ": " << (int)weap_damage[NUM_UWEAP+i] << "\t" << weap_kills[NUM_UWEAP+i] << endl;
 	}
-	unsigned num_ships[NUM_US_CLASS] = {0}, num_ships_align[NUM_ALIGNMENT][NUM_US_CLASS] = {0};
+	unsigned num_ships[NUM_US_CLASS] = {0}, num_ships_align[NUM_ALIGNMENT][NUM_US_CLASS] = {};
 	float of[NUM_ALIGNMENT] = {0}, de[NUM_ALIGNMENT] = {0}, val[NUM_ALIGNMENT] = {0};
 	unsigned cost[NUM_ALIGNMENT] = {0};
 

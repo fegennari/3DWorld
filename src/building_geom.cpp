@@ -2161,8 +2161,9 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BCASE: return WOOD_COLOR;
 	case TYPE_DESK:  return WOOD_COLOR;
 	case TYPE_TCAN:  return BLACK;
+	default: return color;
 	}
-	return color; // default case - probably should always set color so that we can return it here
+	return color; // Note: probably should always set color so that we can return it here
 }
 
 void building_room_geom_t::create_static_vbos() {

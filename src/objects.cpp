@@ -644,6 +644,7 @@ void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c,
 
 void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point const &p2, float radius1, float radius2, int ndiv, int draw_ends) {
 
+	assert(ndiv > 0);
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
 	vector3d v12; // (ce[1] - ce[0]).get_norm()

@@ -493,7 +493,7 @@ public:
 	}
 
 	bool place_obj_on_grass(point &pos, float radius) const {
-		int x1, y1, x2, y2;
+		int x1(0), y1(0), x2(0), y2(0);
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2)), rad_sq(rad*rad);
 		if (rad == 0.0) return 0;
 

@@ -347,7 +347,7 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 	light_loc_t &lloc(light_locs[light_id]);
 
 	if (!lloc.valid) {
-		static char ls_strs[MAX_SHADER_LIGHTS][5][40] = {0};
+		static char ls_strs[MAX_SHADER_LIGHTS][5][40] = {};
 		static bool is_setup(0);
 
 		if (!is_setup) {

@@ -16,7 +16,7 @@ float spawn_dist(1.0), global_regen(0.0), ship_build_delay(1.0), hyperspeed_mult
 unsigned gen_counts  [NUM_ALIGNMENT] = {0};
 point ustart_pos(all_zeros);
 u_ship *player_ship_ptr = NULL; // easiest to just make this global
-unsigned ship_add_prob[3][NUM_ALIGNMENT][NUM_US_CLASS] = {0}; // {gen, init, rand spawn}
+unsigned ship_add_prob[3][NUM_ALIGNMENT][NUM_US_CLASS] = {}; // {gen, init, rand spawn}
 vector<unsigned> build_types[NUM_ALIGNMENT];
 vector<string> ship_names;
 vector<us_class> sclasses;

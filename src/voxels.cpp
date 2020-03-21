@@ -742,6 +742,7 @@ void voxel_manager::flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsi
 		work.pop_back();
 		assert(cur < outside.size());
 		assert(outside[cur] & bit_mask);
+		assert(nxnz > 0 && nz > 0);
 		unsigned const y(cur/nxnz), cur_xz(cur - y*nxnz), x(cur_xz/nz), z(cur_xz - x*nz);
 		FLOOD_FILL_INNER(x, x1, x2, nz);
 		FLOOD_FILL_INNER(y, y1, y2, nxnz);

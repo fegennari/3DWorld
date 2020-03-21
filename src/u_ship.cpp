@@ -693,8 +693,8 @@ bool u_ship::check_return_to_parent() const {
 	if (parent == nullptr)       return 0; // for safety, likely unreachable
 	if (last_hit > 0)            return 0; // under attack
 	if (!can_return_to_parent()) return 0;
-	if (dock_fighters && parent != NULL && parent->is_player_ship()) return 1; // dock with parent
-	if (specs().for_boarding && ncrew <= specs().ncrew/2)            return 1; // can no longer board
+	if (dock_fighters && parent->is_player_ship())        return 1; // dock with parent
+	if (specs().for_boarding && ncrew <= specs().ncrew/2) return 1; // can no longer board
 	u_ship_base const *parent_ship(parent->get_ship_base());
 	assert(parent_ship);
 	bool const dock_allowed(player_autopilot || !parent->is_player_ship());
