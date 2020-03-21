@@ -270,7 +270,6 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	vector<int> last_occluder;
 	mutable vector<grass_data_t> vertex_data_buffer;
 	bool has_voxel_grass;
-	int last_light;
 	point last_lpos;
 
 	bool hcm_chk(int x, int y) const {
@@ -284,7 +283,7 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	}
 
 public:
-	grass_manager_dynamic_t() : has_voxel_grass(0), last_light(-1), last_lpos(all_zeros) {}
+	grass_manager_dynamic_t() : has_voxel_grass(0), last_lpos(all_zeros) {}
 	
 	void clear() {
 		grass_manager_t::clear();

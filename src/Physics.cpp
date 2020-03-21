@@ -628,7 +628,7 @@ void change_timestep(float mult_factor) {
 
 vector3d get_flow_velocity(point pos) { // has same effect as wind
 
-	int const do_tornado(0), do_swirl(0);
+	int const do_tornado(0), do_swirl(0); // disabled for now
 	if (!enable_fsource) return all_zeros;
 	vector3d v(flow_source, pos);
 	float const dist(v.mag()), dxy(do_swirl ? sqrt(v.x*v.x + v.y*v.y) : 0.0);
@@ -637,8 +637,8 @@ vector3d get_flow_velocity(point pos) { // has same effect as wind
 	v *= (vmag/dist);
 
 	if (do_tornado) {
-		if (v.z < 0)  v.z    = -0.8*v.z/(dist + 1.0);
-		if (do_swirl) vmagxy = 10.0*(0.4 + 1.0/(dxy + 0.5));
+		if (v.z < 0)  {v.z    = -0.8*v.z/(dist + 1.0);}
+		if (do_swirl) {vmagxy = 10.0*(0.4 + 1.0/(dxy + 0.5));}
 	}
 	if (do_swirl) {
 		double swirl(min(1.0f, 0.1f/(dxy + 0.1f))); // v X up = (v.y, -v.x, 0.0)

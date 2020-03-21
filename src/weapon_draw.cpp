@@ -170,8 +170,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 		}
 		break;
 
-	case W_PLASMA: {
-			radius = 0.018;
+	case W_PLASMA: { // Note: plasma ball itself is not a collision object
 			point const pos1(pos0 - dir*0.15), pos2(pos0 + dir*0.03);
 			weap_cobjs.push_back(add_coll_cylinder(pos1, pos2, 0.01,  0.01, cp));
 			weap_cobjs.push_back(add_coll_cylinder(pos2, (pos1 + dir*0.25), 0.005, 0.0,  cp));
@@ -525,7 +524,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 		}
 		case W_PLASMA:
-			radius = 0.018;
 			shader.set_cur_color(colorRGBA(BLACK, alpha));
 			shader.set_specular(0.8, 10.0);
 			rot_angle = max(0.0f, 2.0f*(fire_val - 0.7f));

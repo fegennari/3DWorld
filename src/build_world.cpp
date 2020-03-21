@@ -21,7 +21,6 @@ bool const MORE_COLL_TSTEPS       = 1; // slow
 bool const SHOW_PROC_TIME         = 0;
 bool const FIXED_COBJS_SWAP       = 1; // attempt to swap fixed_cobjs with coll_objects to reduce peak memory
 bool const EXPLODE_EVERYTHING     = 0; // for debugging/fun
-unsigned const MAX_OBJ_ON_MESH    = 4;
 unsigned const BLOOD_PER_SMILEY   = 300;
 unsigned const LG_STEPS_PER_FRAME = 10;
 unsigned const SM_STEPS_PER_FRAME = 1;

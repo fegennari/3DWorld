@@ -10,7 +10,6 @@
 #include "lightmap.h"
 
 
-bool     const DEBUG_TIME     = 0;
 bool     const ADD_DP_COBJS   = 0;
 unsigned const NUM_COLL_STEPS = 4;
 float    const TERMINAL_VEL   = 100.0;

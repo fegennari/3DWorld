@@ -9,8 +9,6 @@
 #include "textures_3dw.h"
 
 
-unsigned const ND_TEST     = 32;
-unsigned const ND_CUBE     = 16;
 float const M_ATTEN_FACTOR = 0.5;
 float const F_ATTEN_FACTOR = 0.4;
 

@@ -177,7 +177,6 @@ void text_drawer_t::draw() const {
 
 	if (strs.empty()) return;
 	vector3d const tdir(cross_product(get_vdir_all(), get_upv_all())); // screen space x
-	colorRGBA last_color(ALPHA0);
 	text_drawer td;
 	td.begin_draw();
 	for (auto i = strs.begin(); i != strs.end(); ++i) {td.add_text(i->str, i->pos, i->size, tdir, up_vector, &i->color);}

@@ -13,7 +13,6 @@
 
 
 bool const TIMETEST          = (GLOBAL_TIMETEST || 0);
-bool const ERROR_CHECK       = 0;
 unsigned const NUM_TIMESTEPS = 4;
 unsigned const NUM_EXTRA_DAM = 4;
 

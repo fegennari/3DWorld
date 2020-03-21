@@ -100,7 +100,7 @@ public:
 		path.clear();
 		//path.push_back(get_node(room1).get_center()); // center of current room
 		// if use_stairs==1, or room1 and room2 are in different stacks, the path must include stairs
-		unsigned cur(room1);
+		//unsigned cur(room1);
 		// TODO: run A* algorithm
 		//path[i] = get_node(ix).get_center();
 		return 0;

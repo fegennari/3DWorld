@@ -150,7 +150,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb, bool force_draw_al
 	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
 	bool const back_face_cull(!is_semi_trans()); // no alpha
-	point const pos(points[0]), camera(get_camera_pos());
+	point const camera(get_camera_pos());
 	bool draw_all_faces(force_draw_all_faces || !back_face_cull);
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
 

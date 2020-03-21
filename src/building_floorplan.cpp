@@ -863,7 +863,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		box.z2() -= (is_sloped ? 0.15 : 0.2)*window_vspacing; // slightly lower than a normal floor
 
 		if (!has_bcube_int(box, parts, 0)) { // no overlap with other parts (should we check in front?)
-			float const zc(z - fc_thick), zf(z + fc_thick);
+			float const zc(z - fc_thick);
 			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
 			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, sshape);
@@ -1073,7 +1073,6 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cube_t cand;
 			cand.z1() = part.z2() - window_vspacing + fc_thick; // top of top floor for this part
 			cand.z2() = part.z2() + fc_thick; // top of bottom floor of upper part *p
-			bool stairs_added(0);
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls

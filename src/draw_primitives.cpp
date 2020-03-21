@@ -767,7 +767,7 @@ void sd_sphere_d::get_triangle_vertex_list(vector<vertex_type_t> &verts) const {
 			verts.emplace_back(points[six][t], norms[six][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv));
 		}
 	}
-	assert(verts.size() < (1ULL << 8*sizeof(index_type_t)));
+	//assert(verts.size() < (1ULL << 8*sizeof(index_type_t)));
 }
 
 

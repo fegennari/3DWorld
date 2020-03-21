@@ -15,7 +15,6 @@ bool const SELF_LASER_DAMAGE = 1;
 bool const SMILEY_GAS        = 1;
 bool const FADE_MESSAGE_ALPHA= 1;
 bool const FREEZE_MODE       = 1; // for raptor
-float const SHADOW_COL_VAL   = 0.5;
 float const UWATER_FERR_ADD  = 0.05;
 float const UWATER_FERR_MUL  = 2.0; // lower accuracy
 float const ZOOM_FERR_MULT   = 0.5; // higher accuracy
@@ -1272,7 +1271,6 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		add_splash(pos, xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size, 1);
 	}
 	if (type == FREEZE_BOMB) {
-		damage  = 0.0;
 		bradius = 1.2*size;
 		add_blastr(pos, (pos - get_camera_pos()), bradius, 0.0, int(2.0*BLAST_TIME), shooter, LT_BLUE, DK_BLUE, ETYPE_STARB, nullptr, 1, 0.5); // no damage, half size sphere
 		gen_delayed_from_player_sound(SOUND_ICE_CRACK, pos, 1.0);
@@ -1757,7 +1755,7 @@ void projectile_test_delayed(point const &pos, vector3d const &dir, float firing
 {
 	float const max_range(velocity*fticks); // Note: velocity=0.0 => infinite speed/instant hit (use tstep instead of fticks here?)
 	vector3d dir_used(dir);
-	point const ret(projectile_test(pos, dir, firing_error, damage, shooter, range, intensity, ignore_cobj, max_range, &dir_used));
+	projectile_test(pos, dir, firing_error, damage, shooter, range, intensity, ignore_cobj, max_range, &dir_used);
 	if (dir_used_ptr) {*dir_used_ptr = dir_used;}
 	if (max_range == 0.0 || range < max_range) return; // inf speed, or hit something within range, done
 	point const new_pos(pos + dir_used.get_norm()*max_range); // the location of this projectile after this frame's timestep

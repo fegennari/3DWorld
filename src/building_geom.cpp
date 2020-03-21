@@ -679,7 +679,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	if (!do_split && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3)) {
 		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
 		has_complex_floorplan = 1;
-		point const llc(base.get_llc()), sz(base.get_size());
+		point const sz(base.get_size());
 		parts.reserve(num_levels); // at least this many
 
 		for (unsigned i = 0; i < num_levels; ++i) { // generate overlapping cube levels, tallest to shortest

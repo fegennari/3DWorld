@@ -29,8 +29,6 @@ typedef set<unsigned char>::iterator keyset_it;
 int const INIT_DMODE       = 0x010F;
 bool const MOUSE_LOOK_DEF  = 0;
 int const STARTING_INIT_X  = 0; // setting to 1 seems safer but less efficient
-int const MIN_TIME_MS      = 100;
-
 float const DEF_CRADIUS    = 10.0;
 float const DEF_CTHETA     = -1.0;
 float const DEF_CPHI       = 1.5;
@@ -46,7 +44,6 @@ float const MA_TOLERANCE   = 0.0001; // tolerance adjustment
 float const CAMERA_AIR_CONT= 0.5;
 float const DEF_OCEAN_WAVE_HEIGHT = 0.01;
 float const DEF_CAMERA_RADIUS     = 0.06;
-
 int const START_MODE       = WMODE_GROUND; // 0 = standard mesh, 1 = planet/universe, 2 = infinite terrain
 
 

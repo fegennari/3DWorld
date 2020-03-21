@@ -318,12 +318,11 @@ void enable_bump_map_post(shader_t &shader, unsigned tu_id, float tscale) {
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 	mutable voxel_model_space model; // const problems with draw()
-	bool have_sun_pos;
 	static noise_texture_manager_t global_asteroid_ntg;
 
 public:
 	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt)
-		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), model(&global_asteroid_ntg, NUM_VOX_AST_LODS), have_sun_pos(0)
+		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), model(&global_asteroid_ntg, NUM_VOX_AST_LODS)
 	{
 		float const gen_radius(gen_voxel_rock(model, all_zeros, 1.0, ASTEROID_VOX_SZ, AST_VOX_NUM_BLK, rseed_ix)); // will be translated to pos and scaled by radius during rendering
 		assert(gen_radius > 0.0);

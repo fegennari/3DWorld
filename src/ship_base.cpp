@@ -178,7 +178,7 @@ void u_ship_base::use_fuel(float val) {
 		float const fscale(0.0001);
 		float used_fuel(min(fuel, fticks*fscale*val));
 		fuel -= used_fuel;
-		val  -= used_fuel/fscale;
+		//val  -= used_fuel/fscale;
 	}
 	if (fuel <= 0.0) { // out of fuel
 		if (size_scale > 2.0) { // die

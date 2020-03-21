@@ -2239,7 +2239,6 @@ float tile_draw_t::get_actual_zmin() const {return min(zmin, terrain_zmin);}
 
 float const mesh_tex_cscale [NTEX_DIRT] = {1.0, 1.0, TT_GRASS_COLOR_SCALE, 0.5, 1.0}; // darker grass and rock
 float const mesh_tex_scale  [NTEX_DIRT] = {1.0, 1.0, 4.0, 1.0,  1.0};
-float const mesh_nm_scale   [NTEX_DIRT] = {1.0, 1.0, 2.0, 0.25, 1.0}; // Note: unused, currently hard-coded in tiled_mesh.frag
 int const normal_tids_dirt  [NTEX_DIRT] = {ROCK2_NORMAL_TEX, ROCK3_NORMAL_TEX, /*DIRT_NORMAL_TEX*/ROCK3_NORMAL_TEX, ROCK1_NORMAL_TEX, ROCK_NORMAL_TEX};
 bool const disable_for_grass[NTEX_DIRT] = {0, 0, 1, 0, 0};
 

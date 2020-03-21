@@ -22,12 +22,12 @@ extern colorRGBA cur_fog_color;
 bool birds_active() {return (light_factor >= 0.4);} // birds are only active whe the sun is out
 
 
-class animal_model_loader_t : public model3ds {
+class animal_model_loader_t : public model3ds { // currently for fish only
 
-	unsigned fish_id, bird_id;
+	unsigned fish_id;
 
 public:
-	animal_model_loader_t() : fish_id(0), bird_id(0) {}
+	animal_model_loader_t() : fish_id(0) {}
 
 	unsigned load_model(string const &fn, int recalc_normals=1, colorRGBA const &def_color=WHITE, int def_tid=-1) {
 		unsigned const id(size());
@@ -200,7 +200,7 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 	}
 	for (auto i = this->begin(); i != this->end(); ++i) {
 		if (!i->is_enabled()) continue;
-		vector3d sep_force(zero_vector), avg_pos(zero_vector), avg_vel(zero_vector), tot_force(zero_vector);
+		vector3d avg_pos(zero_vector), avg_vel(zero_vector), tot_force(zero_vector);
 		unsigned pcount(0), vcount(0);
 
 		for (unsigned adj_ix = 0; adj_ix < 9; ++adj_ix) {

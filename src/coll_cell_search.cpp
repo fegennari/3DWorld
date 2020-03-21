@@ -7,10 +7,6 @@
 #include "physics_objects.h"
 
 
-bool const CACHE_COBJ_LITES   = 0;
-unsigned const QLP_CACHE_SIZE = 10000;
-
-
 int cobj_counter(0);
 
 extern bool group_back_face_cull, begin_motion;

@@ -14,8 +14,6 @@ using std::cerr;
 unsigned const NUM_RAND_LTS  = 0;
 int      const START_LIGHT   = 2;
 int      const END_LIGHT     = 8; // one past the end
-unsigned const MAX_LIGHTS    = unsigned(END_LIGHT - START_LIGHT);
-
 float const DZ_VAL_SCALE     = 2.0;
 float const DARKNESS_THRESH  = 0.1;
 float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used

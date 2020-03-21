@@ -12,13 +12,8 @@
 
 float const W_TEX_SCALE0     = 1.0;
 float const WATER_WIND_EFF   = 0.0005;
-float const START_OFFSET0    = 0.05;
-float const PRESP_ANGLE_ADJ  = 1.5;
-float const VD_SCALE         = 1.0;
 float const SURF_HEAL_RATE   = 0.005;
 float const MAX_SURFD        = 20.0;
-int   const DRAW_BORDER      = 3;
-
 int   const SHOW_MESH_TIME   = 0;
 int   const SHOW_NORMALS     = 0;
 int   const DEBUG_COLLS      = 0; // 0 = disabled, 1 = lines, 2 = cubes
@@ -735,7 +730,6 @@ void water_renderer::draw() { // modifies color
 
 	select_water_ice_texture(shader, color);
 	enable_blend();
-	point const camera(get_camera_pos());
 	float const pts[4][2] = {{-X_SCENE_SIZE, 0.0}, {X_SCENE_SIZE, 0.0}, {0.0, -Y_SCENE_SIZE}, {0.0, Y_SCENE_SIZE}};
 	vector<pair<float, unsigned> > sides(4);
 

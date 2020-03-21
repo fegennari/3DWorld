@@ -737,8 +737,8 @@ void tree::burn_leaves_within_radius(point const &bpos, float bradius, float dam
 		float const dist_sq(p2p_dist_sq(rel_pos, l.pts[0]));
 		if (dist_sq > bradius_sq || dist_sq < TOLERANCE) continue;
 		if (damage_leaf(i, damage*InvSqrt(dist_sq), rgen)) {--i; --nleaves;} // force reprocess of this leaf, wraparound to -1 is OK
-	}
-	damage = min(1.0f, damage);
+	} // for i
+	//damage = min(1.0f, damage);
 }
 
 void tree::apply_fire_damage(vector<fire_damage_t> const &fire_damage, unsigned skipval) {
@@ -1810,7 +1810,6 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 	if (temp_num*branch_1_distribution >= 1.0f) {
 		if (num_2_branches_created < branch.num_branches) {
 			create_2nd_order_branch(branch_num, ++num_2_branches_created, 0, branch_deflected, rotation);
-			branch_just_created = true;
 		}
 	}
 	if (branch.num_cylins < 2) {rotate_cylin(cylin);}
@@ -1848,7 +1847,7 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 				create_2nd_order_branch(branch_num, ++num_2_branches_created, j, branch_deflected, rotation);
 			}
 		}
-	}
+	} // for j
 }
 
 

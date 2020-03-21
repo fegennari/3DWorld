@@ -392,12 +392,11 @@ smap_texture_array_t local_smap_tex_arr;
 class local_smap_manager_t {
 
 	bool use_tex_array;
-	unsigned next_tex_index;
 	vector<local_smap_data_t> smap_data;
 	vector<unsigned> free_list;
 
 public:
-	local_smap_manager_t(bool use_tex_array_) : use_tex_array(use_tex_array_), next_tex_index(0) {}
+	local_smap_manager_t(bool use_tex_array_) : use_tex_array(use_tex_array_) {}
 
 	unsigned new_smap(unsigned size=0) {
 		unsigned index(0);

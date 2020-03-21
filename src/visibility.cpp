@@ -7,9 +7,6 @@
 #include "physics_objects.h"
 
 
-// better when moving the sun/moon, with very large number of trees
-// worse with sparse cobjs, and requires tree cobjs for tree shadows
-bool const DISABLE_SHADOWS  = 0;
 int const FAST_LIGHT_VIS    = 1;
 float const NORM_VIS_EXTEND = 0.02;
 

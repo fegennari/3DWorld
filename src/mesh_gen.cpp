@@ -17,7 +17,6 @@ float    const MESH_SCALE_Z_EXP   = 0.7;
 int      const N_RAND_SIN2        = 10;
 int      const FREQ_FILTER        = 2; // higher = smoother landscape
 int      const MIN_FREQS          = 3;
-int      const NUM_LOW_FREQ       = 2;
 float    const W_PLANE_Z          = 0.42;
 float    const HEIGHT_SCALE       = 0.01;
 unsigned const EST_RAND_PARAM     = 128;
