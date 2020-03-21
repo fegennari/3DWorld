@@ -6,7 +6,7 @@
 #include "transform_obj.h"
 #include "player_state.h"
 #include "physics_objects.h"
-#include "textures_3dw.h"
+#include "Textures_3dw.h"
 #include "openal_wrap.h"
 #include "explosion.h"
 

@@ -6,7 +6,7 @@
 #include "upsurface.h"
 #include "universe.h"
 #include "sinf.h"
-#include "textures_3dw.h"
+#include "Textures_3dw.h"
 
 
 float const M_ATTEN_FACTOR = 0.5;

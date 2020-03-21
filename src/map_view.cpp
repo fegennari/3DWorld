@@ -4,7 +4,7 @@
 
 #include "3DWorld.h"
 #include "mesh.h"
-#include "textures_3dw.h"
+#include "Textures_3dw.h"
 #include "physics_objects.h"
 #include "shaders.h"
 #include "heightmap.h"

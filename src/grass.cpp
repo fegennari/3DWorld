@@ -6,7 +6,7 @@
 #include "grass.h"
 #include "mesh.h"
 #include "physics_objects.h"
-#include "textures_3dw.h"
+#include "Textures_3dw.h"
 #include "lightmap.h"
 #include "shaders.h"
 #include "draw_utils.h"
