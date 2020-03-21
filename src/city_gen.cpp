@@ -408,7 +408,7 @@ public:
 		int const x(get_x_pos(xval)), y(get_y_pos(yval));
 		return (is_inside_terrain(x, y) ? get_height(x, y) : OUTSIDE_TERRAIN_HEIGHT);
 	}
-	float any_underwater(unsigned x1, unsigned y1, unsigned x2, unsigned y2, bool check_border=0) const {
+	bool any_underwater(unsigned x1, unsigned y1, unsigned x2, unsigned y2, bool check_border=0) const {
 		min_eq(x2, xsize); min_eq(y2, ysize); // clamp upper bound
 		assert(is_valid_region(x1, y1, x2, y2));
 
@@ -676,7 +676,7 @@ public:
 			unsigned const x2(x1 + ((wmin == wmax) ? wmin : rgen.rand_int(wmin, wmax)));
 			unsigned const y2(y1 + ((hmin == hmax) ? hmin : rgen.rand_int(hmin, hmax)));
 			if (overlaps_used (x1-slope_width, y1-slope_width, x2+slope_width, y2+slope_width)) continue; // skip if plot expanded by slope_width overlaps an existing city
-			if (any_underwater(x1, y1, x2, y2, CHECK_HEIGHT_BORDER_ONLY))   continue; // skip
+			if (any_underwater(x1, y1, x2, y2, CHECK_HEIGHT_BORDER_ONLY)) continue; // skip
 			float const diff(get_rms_height_diff(x1, y1, x2, y2));
 			if (num_cands == 0 || diff < best_diff) {cx1 = x1; cy1 = y1; cx2 = x2; cy2 = y2; best_diff = diff;}
 			if (++num_cands == num_samples) break; // done
