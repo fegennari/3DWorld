@@ -54,7 +54,7 @@ extern point_sprite_drawer_sized glow_psd, smoke_psd;
 unsigned free_obj::next_obj_id = 0;
 
 
-void free_obj::reset() {
+void free_obj::init() {
 
 	status      = 0; // no longer destroyed
 	time        = 0;
@@ -932,7 +932,6 @@ uparticle_cloud::uparticle_cloud(point const &pos_, float rmin_, float rmax_, co
 	: lifetime(lt), rmin(rmin_), rmax(rmax_), damage_v(damage_), expand_exp(expand_exp_), noise_scale(noise_scale_)
 {
 	assert(rmin > 0.0 && rmin < rmax);
-	free_obj::reset();
 	colors[0][0] = ci1;
 	colors[1][0] = co1;
 	colors[0][1] = ci2;

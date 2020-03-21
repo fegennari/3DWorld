@@ -686,7 +686,7 @@ protected:
 
 public:
 	free_obj(point const &init_pos=all_zeros) : flags(OBJ_FLAGS_TARG), speed_factor(1.0), max_sfactor(1.0),
-		reset_pos(init_pos), alignment(ALIGN_NEUTRAL), c_radius(0.0) {reset();}
+		reset_pos(init_pos), alignment(ALIGN_NEUTRAL), c_radius(0.0) {init();}
 	
 	void fix_upv();
 	void accelerate(float speed, float accel);
@@ -787,7 +787,8 @@ public:
 	unsigned get_obj_id() const {return obj_id;}
 
 	virtual ~free_obj() {verify_status(); invalidate_permanently();}
-	virtual void reset();
+	void init();
+	virtual void reset() {init();}
 	virtual void check_ref_objs();
 	virtual void move_by(point const &pos_) {pos += pos_;} // reset_pos?
 	virtual void clear_context() {}
@@ -1210,7 +1211,8 @@ public:
 	static unsigned const max_type = NUM_US_CLASS;
 	u_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient);
 	virtual ~u_ship();
-	void reset();
+	void init();
+	virtual void reset() {init();}
 	void create_from(u_ship_base const &base);
 	void move_by(point const &pos_);
 	bool has_detailed_coll(free_obj const *const other_obj) const {return (!get_cobjs().empty());}

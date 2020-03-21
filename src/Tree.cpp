@@ -99,6 +99,7 @@ struct render_to_texture_shader_t : public render_to_texture_t {
 	shader_t shaders[2]; // color, normal
 
 	render_to_texture_shader_t(unsigned tsize_) : render_to_texture_t(tsize_) {}
+	~render_to_texture_shader_t() {free_context();}
 	
 	void free_context() {
 		for (unsigned d = 0; d < 2; ++d) {shaders[d].end_shader();}

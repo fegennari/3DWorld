@@ -80,7 +80,7 @@ u_ship::u_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_
 	init_align  = align;
 	is_flagship = 0;
 	child_stray_dist = 0.0;
-	reset();
+	init();
 	if (rand_orient) do_rotate(TWO_PI*rand_float(), TWO_PI*rand_float());
 }
 
@@ -93,7 +93,7 @@ u_ship::~u_ship() {
 }
 
 
-void u_ship::reset() {
+void u_ship::init() {
 
 	lhyper       = 0;
 	damaged      = 0;
@@ -151,7 +151,7 @@ void u_ship::reset() {
 	copy_weapons_from_sclass();
 	if (weapons.empty()) weapons.push_back(ship_weapon(UWEAP_NONE)); // default, so that weapons isn't empty
 	if (player_ship_ptr == NULL || !is_player_ship()) curr_weapon = 0;
-	free_obj::reset();
+	free_obj::init();
 	calc_wpt_center();
 }
 

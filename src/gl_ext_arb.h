@@ -316,8 +316,7 @@ class render_to_texture_t {
 
 public:
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}
-	virtual ~render_to_texture_t() {free_context();}
-	virtual void free_context() {} // nothing to do here
+	virtual ~render_to_texture_t() {}
 	void render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
 		colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap);
 	void render(texture_atlas_t &atlas, float xsize, float ysize, point const &center, vector3d const &view_dir,

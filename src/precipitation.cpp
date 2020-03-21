@@ -28,7 +28,7 @@ protected:
 	bool check_water_coll, check_mesh_coll, check_cobj_coll;
 
 public:
-	precip_manager_t() : prev_zmin(get_zmin()), cur_zmin(prev_zmin), prev_zmax(get_zmax()), cur_zmax(prev_zmax),
+	precip_manager_t() : prev_zmin(0.0), cur_zmin(0.0), prev_zmax(0.0), cur_zmax(0.0), precip_dist(0.0),
 		check_water_coll(1), check_mesh_coll(1), check_cobj_coll(1) {}
 	virtual ~precip_manager_t() {}
 	void clear () {verts.clear();}
