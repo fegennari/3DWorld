@@ -273,7 +273,7 @@ void small_tree_group::draw_tree_insts(shader_t &s, bool draw_all, vector3d cons
 	for (auto i = insts.begin(); i != insts.end(); ++i) {inst_pts[i-insts.begin()] = i->pt;}
 	vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail, only used for pine trees
 	if (is_pine) {vbomgr.begin_render();}
-	select_texture((draw_model != 0) ? WHITE_TEX : stt[is_pine ? T_PINE : T_PALM].leaf_tid);
+	select_texture((draw_model != 0) ? WHITE_TEX : stt[is_pine ? (unsigned)T_PINE : (unsigned)T_PALM].leaf_tid);
 	void const *vbo_ptr(get_dynamic_vbo_ptr(&inst_pts.front(), inst_pts.size()*sizeof(point)));
 	unsigned ptr_offset(0), ix(0);
 	assert(xlate_loc >= 0);
@@ -530,8 +530,8 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 	//bool const allow_palm_trees(!pine_trees_only);
 	bool const allow_palm_trees(tree_mode == 3);
 	if (allow_palm_trees && zpos < 0.85*water_plane_z && !rel_height_check(relh, 0.435, 0.2)) return TREE_CLASS_PALM;
-	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
-	return (only_pine_palm_trees ? TREE_CLASS_PINE : TREE_CLASS_DECID);
+	if (pine_trees_only) {return ((tree_mode == 3) ? (int)TREE_CLASS_NONE : (int)TREE_CLASS_PINE);}
+	return (only_pine_palm_trees ? (int)TREE_CLASS_PINE : (int)TREE_CLASS_DECID);
 }
 
 int get_tree_type_from_height(float zpos, rand_gen_t &rgen, bool for_scenery) {

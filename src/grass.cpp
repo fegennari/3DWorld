@@ -823,7 +823,7 @@ void flower_manager_t::setup_flower_shader_post(shader_t &shader) {
 void flower_manager_t::draw_triangles(shader_t &shader) const {
 
 	pre_render();
-	select_texture((draw_model == 1) ? WHITE_TEX : DAISY_TEX);
+	select_texture((draw_model == 1) ? (int)WHITE_TEX : (int)DAISY_TEX);
 
 	if (0 && world_mode == WMODE_INF_TERRAIN) {
 		sized_vert_t<vert_norm_color>::set_vbo_arrays();

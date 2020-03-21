@@ -81,7 +81,7 @@ void coll_obj::bb_union(float bb[3][2], int init) {
 void coll_obj::setup_internal_state() {
 
 	if (type == COLL_CUBE) {points[0] = get_cube_center();} // set center point
-	status = ((cp.flags & COBJ_DYNAMIC) ? COLL_DYNAMIC : COLL_STATIC);
+	status = ((cp.flags & COBJ_DYNAMIC) ? (int)COLL_DYNAMIC : (int)COLL_STATIC);
 	calc_volume();
 	set_npoints();
 	calc_bcube();

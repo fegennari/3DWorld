@@ -333,7 +333,7 @@ void draw_blasts(shader_t &s) {
 					glDisable(GL_CULL_FACE);
 					end_sphere_draw();
 					glDepthMask(GL_FALSE);
-					select_texture((br.type == ETYPE_FIRE) ? FLARE4_TEX : FLARE2_TEX);
+					select_texture((br.type == ETYPE_FIRE) ? (int)FLARE4_TEX : (int)FLARE2_TEX);
 
 					for (auto j = range_start; j != i+1; ++j) { // go back and add flares
 						draw_billboard_explosion(blastrs[j->ix], qbd, camera, 1); // aligned to the camera

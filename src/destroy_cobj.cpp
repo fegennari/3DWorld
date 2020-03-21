@@ -39,7 +39,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 	float const radius((force_radius > 0.0) ? force_radius : ((damage_type == BLAST_RADIUS) ? 4.0 : 1.0)*sqrt(damage)/650.0);
 	vector3d cdir;
 	vector<color_tid_vol> cts;
-	int const dmin((damage_type == FIRE) ? EXPLODEABLE : ((damage > 800.0) ? DESTROYABLE : ((damage > 200.0) ? SHATTERABLE : EXPLODEABLE)));
+	int const dmin((damage_type == FIRE) ? (int)EXPLODEABLE : ((damage > 800.0) ? (int)DESTROYABLE : ((damage > 200.0) ? (int)SHATTERABLE : (int)EXPLODEABLE)));
 	csg_cube cube(pos.x, pos.x, pos.y, pos.y, pos.z, pos.z);
 	cube.expand_by(radius);
 	unsigned nrem(subtract_cube(cts, cdir, cube, dmin));
@@ -132,7 +132,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 		}
 		if (shattered && tri_fragments && cts[i].maybe_is_glass()) {maybe_is_glass = 1;}
 	} // for i
-	gen_delayed_from_player_sound((maybe_is_glass ? SOUND_GLASS : SOUND_WOOD_CRACK), pos);
+	gen_delayed_from_player_sound((maybe_is_glass ? (unsigned)SOUND_GLASS : (unsigned)SOUND_WOOD_CRACK), pos);
 	//PRINT_TIME("Destroy Cobjs");
 }
 
