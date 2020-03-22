@@ -574,7 +574,7 @@ bool find_closest_waypoint(point const &pos, unsigned &closest, bool check_visib
 
 struct waypoint_cache {
 
-	vector<unsigned> open, closed; // tentative/already evaulated nodes
+	vector<unsigned> open, closed; // tentative/already evaluated nodes
 	unsigned call_ix; // incremented each run_a_star() call
 	waypoint_cache() : call_ix(0) {}
 };
@@ -667,7 +667,7 @@ public:
 			}
 			wc.open[ix] = wc.call_ix;
 			open_queue.push(make_pair(-w.f_score, ix));
-		}
+		} // for i
 		if (goal.mode >= 4) {
 			assert(goal.wpt < waypoints.size());
 			if (waypoints[goal.wpt].unreachable()) {on_a_star_return(goal, orig_has_wpt_goal); return 0.0;} // goal has no incoming edges - unreachable
@@ -690,29 +690,20 @@ public:
 			wc.open[cur]   = 0;
 
 			for (waypt_adj_vect::const_iterator i = cw.next_wpts.begin(); i != cw.next_wpts.end(); ++i) {
-				if (wc.closed[*i] == wc.call_ix) continue; // already closed (duplicate)
 				assert(*i < waypoints.size());
+				if (wc.closed[*i] == wc.call_ix) continue; // already closed (duplicate)
 				waypoint_t &wn(waypoints[*i]);
 				// if not connected by a teleporter, use distance between the waypoints; otherswise, use a small but nonzero value
 				float const new_g_score(cw.g_score + ((cw.connected_to == *i) ? CAMERA_RADIUS : p2p_dist(cw.pos, wn.pos)));
-				bool better(0);
-
-				if (wc.open[*i] != wc.call_ix) {
-					wc.open[*i] = wc.call_ix;
-					better = 1;
-				}
-				else if (new_g_score < wn.g_score) {
-					better = 1;
-				}
-				if (better) {
-					wn.came_from = cur;
-					wn.g_score   = new_g_score;
-					wn.h_score   = get_h_dist(*i);
-					wn.f_score   = wn.g_score + wn.h_score;
-					open_queue.push(make_pair(-wn.f_score, *i));
-				}
+				if (wc.open[*i] != wc.call_ix) {wc.open[*i] = wc.call_ix;}
+				else if (new_g_score >= wn.g_score) continue; // not better
+				wn.came_from = cur;
+				wn.g_score   = new_g_score;
+				wn.h_score   = get_h_dist(*i);
+				wn.f_score   = wn.g_score + wn.h_score;
+				open_queue.push(make_pair(-wn.f_score, *i));
 			} // for i
-		}
+		} // end while()
 		on_a_star_return(goal, orig_has_wpt_goal);
 		return min_dist;
 	}
