@@ -4,6 +4,7 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
+#include <queue>
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 
@@ -94,16 +95,73 @@ public:
 		return ncomp;
 	}
 	bool is_fully_connected() const {return (count_connected_components() == 1);}
+
+	struct a_star_node_state_t {
+		int came_from_ix;
+		point path_pt;
+		float g_score, h_score, f_score;
+		a_star_node_state_t() : came_from_ix(-1), g_score(0), h_score(0), f_score(0) {}
+	};
 		
-	bool find_path_points(unsigned room1, unsigned room2, bool use_stairs, vector<point> &path) const {
+	bool find_path_points(unsigned room1, unsigned room2, bool use_stairs, vector<point> &path) const { // A* algorithm
+		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // or just return an empty path?
 		path.clear();
-		//path.push_back(get_node(room1).get_center()); // center of current room
-		// if use_stairs==1, or room1 and room2 are in different stacks, the path must include stairs
-		//unsigned cur(room1);
-		// TODO: run A* algorithm
-		//path[i] = get_node(ix).get_center();
-		return 0;
+		// TODO: if use_stairs==1, or room1 and room2 are in different stacks, the path must include stairs
+		vector<a_star_node_state_t> state(nodes.size());
+		vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
+		std::priority_queue<pair<float, unsigned> > open_queue;
+		point const dest_pos(get_node(room2).get_center());
+		a_star_node_state_t &start(state[room1]);
+		start.g_score = 0.0;
+		start.h_score = start.f_score = p2p_dist(get_node(room1).get_center(), dest_pos); // estimated total cost from start to goal through current
+		open[room1]   = 1;
+		open_queue.push(make_pair(-start.f_score, room1));
+
+		while (!open_queue.empty()) {
+			unsigned const cur(open_queue.top().second);
+			open_queue.pop();
+			if (closed[cur]) continue; // already closed (duplicate)
+
+			if (cur == room2) { // done, reconstruct path
+				unsigned n(cur);
+
+				while (1) {
+					assert(n < nodes.size());
+					path.push_back(get_node(n).get_center());
+					if (state[n].came_from_ix < 0) {assert(n == room1); break;} // done
+					path.push_back(state[n].path_pt);
+					n = state[n].came_from_ix;
+				}
+				reverse(path.begin(), path.end());
+				return 1; // success
+			}
+			a_star_node_state_t const &cs(state[cur]);
+			node_t const &cur_node(get_node(cur));
+			point const center(cur_node.get_center());
+			assert(!closed[cur]);
+			closed[cur] = 1;
+			open[cur]   = 0;
+
+			for (auto i = cur_node.conn_rooms.begin(); i != cur_node.conn_rooms.end(); ++i) {
+				assert(i->ix < nodes.size());
+				if (closed[i->ix]) continue; // already closed (duplicate)
+				node_t const &conn_node(get_node(i->ix));
+				if (conn_node.is_stairs && !use_stairs) continue; // skip stairs in this mode
+				point const conn_center(conn_node.get_center());
+				a_star_node_state_t &sn(state[i->ix]);
+				float const new_g_score(sn.g_score + p2p_dist(center, i->pt) + p2p_dist(i->pt, conn_center));
+				if (!open[i->ix]) {open[i->ix] = 1;}
+				else if (new_g_score >= sn.g_score) continue; // not better
+				sn.came_from_ix = cur;
+				sn.path_pt = i->pt;
+				sn.g_score = new_g_score;
+				sn.h_score = p2p_dist(conn_center, dest_pos);
+				sn.f_score = sn.g_score + sn.h_score;
+				open_queue.push(make_pair(-sn.f_score, i->ix));
+			} // for i
+		} // end while()
+		return 0; // failed - no path from room1 to room2
 	}
 };
 
