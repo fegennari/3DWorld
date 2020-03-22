@@ -141,6 +141,7 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 	bool is_almost_stopped() const {return (cur_speed < 0.1*max_speed);}
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}
+	bool in_garage  () const {return (cur_city == NO_CITY_IX);}
 	point get_front(float dval=0.5) const;
 };
 

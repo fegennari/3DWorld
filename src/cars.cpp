@@ -960,7 +960,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		if (tt_fire_button_down && !game_mode && !garages_pass) {
 			point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
 			car_t const *car(get_car_at(p1, p2));
-			if (car != nullptr) {dstate.set_label_text(car->label_str(), (car->get_center() + xlate));} // car found
+			if (car != nullptr && !car->in_garage()) {dstate.set_label_text(car->label_str(), (car->get_center() + xlate));} // car found
 		}
 	}
 	if ((trans_op_mask & 2) && !shadow_only) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
