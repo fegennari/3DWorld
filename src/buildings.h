@@ -527,6 +527,7 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n);
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
+cube_t get_building_lights_bcube();
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened, bool opens_out, bool opens_up, bool swap_sides);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
@@ -544,5 +545,5 @@ void setup_city_lights(vector3d const &xlate);
 void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only); // from city_gen.cpp
 void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes); // from city_gen.cpp
 vector3d get_nom_car_size();
-void draw_cars_in_garages(vector3d const &xlate);
+void draw_cars_in_garages(vector3d const &xlate, bool shadow_only);
 

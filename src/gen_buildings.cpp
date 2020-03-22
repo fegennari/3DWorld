@@ -2141,10 +2141,16 @@ public:
 	}
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
-		if (shadow_only) {multi_draw_shadow(xlate, bcs); return;}
+
+		if (shadow_only) {
+			draw_cars_in_garages(xlate, 1);
+			multi_draw_shadow(xlate, bcs);
+			return;
+		}
 		interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
 		building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 		interior_shadow_maps = 0;
+		draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
@@ -2871,7 +2877,6 @@ void gen_buildings() {
 }
 void draw_buildings(int shadow_only, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
-	draw_cars_in_garages(xlate); // must be done before drawing buildings because windows write to the depth buffer
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
 	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps)); // don't draw city buildings for interior shadows
@@ -2934,6 +2939,7 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {bui
 // cars + peds
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
+cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bcube();}
 // used for pedestrians
 cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}
 cube_t get_sec_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);}

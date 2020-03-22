@@ -938,6 +938,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
 		//timer_t timer(string("Draw Cars") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
 		dstate.xlate = xlate;
+		dstate.use_building_lights = garages_pass;
 		fgPushMatrix();
 		translate_to(xlate);
 		dstate.pre_draw(xlate, use_dlights, shadow_only);

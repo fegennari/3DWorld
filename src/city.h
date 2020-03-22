@@ -390,13 +390,14 @@ namespace stoplight_ns {
 struct draw_state_t {
 	shader_t s;
 	vector3d xlate;
+	bool use_building_lights;
 protected:
 	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
 	string label_str;
 	point label_pos;
 public:
-	draw_state_t() : xlate(zero_vector), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
+	draw_state_t() : use_building_lights(0), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
  	virtual ~draw_state_t() {}
 	void set_enable_normal_map(bool val) {use_bmap = val;}
 	virtual void draw_unshadowed() {}

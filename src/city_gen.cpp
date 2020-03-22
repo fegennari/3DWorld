@@ -233,7 +233,10 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	use_smap    = (shadow_map_enabled() && !shadow_only);
 	if (!use_smap && !always_setup_shader) return;
 	if (shadow_only) {s.begin_simple_textured_shader();}
-	else {city_shader_setup(s, get_city_lights_bcube(), use_dlights, use_smap, (use_bmap && !shadow_only), 0.01, 0, 0.5);}
+	else {
+		cube_t const &lights_bcube(use_building_lights ? get_building_lights_bcube() : get_city_lights_bcube());
+		city_shader_setup(s, lights_bcube, use_dlights, use_smap, (use_bmap && !shadow_only), 0.01, 0, 0.5);
+	}
 }
 void draw_state_t::end_draw() {
 	emit_now = 0;
@@ -3086,8 +3089,8 @@ public:
 		road_gen.draw_label(); // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
-	void draw_cars_in_garages(vector3d const &xlate) {
-		car_manager.draw(1, xlate, 0, 0, 0, 1); // opaque + garages pass, no shadows or lights
+	void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {
+		car_manager.draw(1, xlate, 1, shadow_only, 0, 1); // opaque + garages pass
 	}
 	void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only) {
 		ped_manager.draw_peds_in_building(first_ped_ix, bix, s, xlate, dlight_shadow_only);
@@ -3187,5 +3190,5 @@ void next_pedestrian_animation() {city_gen.next_ped_animation();}
 void free_city_context() {city_gen.free_context();}
 bool has_city_trees() {return (city_params.max_trees_per_plot > 0);}
 vector3d get_nom_car_size() {return city_params.get_nom_car_size();}
-void draw_cars_in_garages(vector3d const &xlate) {city_gen.draw_cars_in_garages(xlate);}
+void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {city_gen.draw_cars_in_garages(xlate, shadow_only);}
 
