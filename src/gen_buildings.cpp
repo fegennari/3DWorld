@@ -1290,25 +1290,27 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 
 	float const ty(exterior ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
+	bool const opens_up(door_type == tquad_with_ix_t::TYPE_GDOOR);
+	unsigned const num_edges(opens_up ? 4 : 2);
 	int const tid(get_building_ext_door_tid(door_type));
-	float const thickness(0.02*D.get_sz_dim(!dim));
+	float const thickness(opens_up ? 0.01*D.dz() : 0.02*D.get_sz_dim(!dim));
 	unsigned const num_sides((door_type == tquad_with_ix_t::TYPE_BDOOR) ? 2 : 1); // double doors for office building exterior door
 	tid_nm_pair_t const tp(tid, -1, 1.0f/num_sides, ty);
 
 	for (unsigned side = 0; side < num_sides; ++side) { // {right, left}
 		cube_t dc(D);
 		if (num_sides == 2) {dc.d[!dim][bool(side) ^ dim ^ dir ^ 1] = 0.5f*(D.d[!dim][0] + D.d[!dim][1]);} // split door in half
-		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, opened, opens_out, (exterior && side == 0))); // swap sides for right half of exterior door
+		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, opened, opens_out, opens_up, (exterior && side == 0))); // swap sides for right half of exterior door
 		vector3d const normal(door.get_norm());
-		tquad_with_ix_t door_edges[2] = {door, door};
+		tquad_with_ix_t door_edges[4] = {door, door, door, door};
 
 		for (unsigned d = 0; d < 2; ++d) {
 			tquad_with_ix_t door_side(door);
 			vector3d const offset((d ? -1.0 : 1.0)*thickness*normal);
 			for (unsigned n = 0; n < 4; ++n) {door_side.pts[n] += offset;}
 
-			for (unsigned e = 0; e < 2; ++e) {
-				unsigned const ixs[2][2] = {{1, 2}, {3, 0}};
+			for (unsigned e = 0; e < num_edges; ++e) {
+				unsigned const ixs[4][2] = {{1, 2}, {3, 0}, {0, 1}, {2, 3}};
 				door_edges[e].pts[2*d+1] = door_side.pts[ixs[e][ d]];
 				door_edges[e].pts[2*d+0] = door_side.pts[ixs[e][!d]];
 			}
@@ -1319,7 +1321,7 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 			}
 			bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
 		} // for d
-		for (unsigned e = 0; e < 2; ++e) { // add untextured door edges
+		for (unsigned e = 0; e < num_edges; ++e) { // add untextured door edges
 			bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), WHITE); // Note: better to pick a single white texel in door tex and set tscale=0.0?
 		}
 	} // for side
@@ -1443,14 +1445,12 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	clip_door_to_interior(door, 1); // clip to floor
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
 	door_type = door.type;
-	
-	if (door.type != tquad_with_ix_t::TYPE_GDOOR) { // draw the opened door, but not if it's a garage door (which goes up instead of swinging open)
-		building_draw_t open_door_draw;
-		vector3d const normal(door.get_norm());
-		bool const opens_outward(!is_house), dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
-		add_door_to_bdraw(door.get_bcube(), open_door_draw, door.type, dim, dir, 1, opens_outward, 1); // opened=1, exterior=1
-		open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
-	}
+	// draw the opened door
+	building_draw_t open_door_draw;
+	vector3d const normal(door.get_norm());
+	bool const opens_outward(!is_house), dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
+	add_door_to_bdraw(door.get_bcube(), open_door_draw, door.type, dim, dir, 1, opens_outward, 1); // opened=1, exterior=1
+	open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
 	return 1;
 }
 
