@@ -361,7 +361,7 @@ void create_pine_tree_instances() {
 	rand_gen_t rgen;
 
 	for (unsigned i = 0; i < num_pine_unique; ++i) { // Note: pine trees not rotated
-		int const ttype((rgen.rand()%10 == 0) ? T_SH_PINE : T_PINE);
+		int const ttype((rgen.rand()%10 == 0) ? (int)T_SH_PINE : (int)T_PINE);
 		float const height(rand_tree_height(rgen));
 		tree_instances.add_tree(small_tree(all_zeros, height, height*rand_tree_width(rgen), ttype, 0, rgen));
 	}

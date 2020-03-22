@@ -11,9 +11,6 @@
 
 using std::cerr;
 
-unsigned const NUM_RAND_LTS  = 0;
-int      const START_LIGHT   = 2;
-int      const END_LIGHT     = 8; // one past the end
 float const DZ_VAL_SCALE     = 2.0;
 float const DARKNESS_THRESH  = 0.1;
 float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used
@@ -1156,7 +1153,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 		dl_smap_enabled |= i->smap_enabled();
 	}
 #if 0
-	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
+	for (unsigned i = 0; i < 10; ++i) { // add some random lights (omnidirectional)
 		point const pos(gen_rand_scene_pos());
 		dl_sources.push_back(light_source(0.94, pos, pos, BLUE, 1));
 	}

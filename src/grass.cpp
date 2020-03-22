@@ -550,7 +550,7 @@ public:
 	// burn: 0=none, 1=quadratic falloff, 2=linear falloff
 	void modify_grass(point const &pos, float radius, bool crush, int burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
 		if (!burn && !crush && !cut && !check_uw && !add_color && !remove) return; // nothing left to do
-		int x1, y1, x2, y2;
+		int x1(0), y1(0), x2(0), y2(0);
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
 		float const rad_sq(rad*rad), rad_inv(1.0/rad);
