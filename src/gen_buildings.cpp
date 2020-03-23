@@ -1546,6 +1546,7 @@ class building_creator_t {
 	vector<building_t> buildings;
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
 	vector<int> peds_by_bix; // index of first person in each building; -1 is empty
+	vector<building_ai_state_t> ai_state;
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights, building_draw_interior;
 	point_sprite_drawer_sized building_lights;
 	vector<point> points; // reused temporary
@@ -2008,6 +2009,24 @@ public:
 		return 1;
 	}
 	int get_ped_ix_for_bix(unsigned bix) const {return ((bix < peds_by_bix.size()) ? peds_by_bix[bix] : -1);}
+
+	void init_ai_state(vect_building_place_t const &locs) { // to be called after/inside place_people()
+		ai_state.resize(locs.size());
+
+		for (unsigned i = 0; i < locs.size(); ++i) {
+			ai_state[i].cur_building = locs[i].bix;
+			ai_state[i].cur_pos      = locs[i].p;
+		}
+	}
+	void update_ai_state() { // called once per frame
+		if (!animate2) return;
+		bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
+
+		for (auto i = ai_state.begin(); i != ai_state.end(); ++i) {
+			assert(i->cur_building < buildings.size());
+			buildings[i->cur_building].ai_room_update(*i, stay_on_one_floor);
+		}
+	}
 
 	static void multi_draw_shadow(vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		//timer_t timer("Draw Buildings Shadow");

@@ -185,7 +185,7 @@ public:
 		} // end while()
 		return 0; // failed - no path from room1 to room2
 	}
-};
+}; // end building_nav_graph_t
 
 void building_t::build_nav_graph(building_nav_graph_t &ng) const {
 
@@ -247,44 +247,42 @@ point building_t::get_center_of_room(unsigned room_ix) const {
 	return interior->rooms[room_ix].get_cube_center();
 }
 
-bool building_t::choose_dest_room(point const &cur_pos, bool same_floor, unsigned &cur_room, unsigned &dest_room, point &dest_pos, rand_gen_t &rgen) const {
-
-	if (!interior || interior->rooms.empty()) return 0; // error?
-	building_loc_t const loc(get_building_loc_for_pt(cur_pos));
+bool building_t::choose_dest_room(building_nav_graph_t const &ng, building_ai_state_t &state, bool same_floor) const
+{
+	assert(interior);
+	building_loc_t const loc(get_building_loc_for_pt(state.cur_pos));
 	if (loc.room_ix < 0) return 0; // not in a room
-	cur_room  = loc.room_ix;
-	dest_room = cur_room; // set to the same room and pos just in case
-	dest_pos  = cur_pos;
+	state.cur_room  = loc.room_ix;
+	state.dest_room = state.cur_room; // set to the same room and pos just in case
+	state.dest_pos  = state.cur_pos;
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
-	building_nav_graph_t ng;
-	build_nav_graph(ng);
 
 	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts at finding a valid room
-		unsigned const cand_room(rgen.rand() % interior->rooms.size());
-		if (cand_room == cur_room) continue;
+		unsigned const cand_room(state.rgen.rand() % interior->rooms.size());
+		if (cand_room == state.cur_room) continue;
 
 		if (same_floor) {
 			cube_t const room(interior->rooms[cand_room]);
-			if (cur_pos.z < room.z1() || cur_pos.z > room.z2()) continue; // room above or below the current pos
+			if (state.cur_pos.z < room.z1() || state.cur_pos.z > room.z2()) continue; // room above or below the current pos
 		}
-		if (!ng.is_room_connected_to(cur_room, cand_room)) continue;
+		if (!ng.is_room_connected_to(state.cur_room, cand_room)) continue;
 
 		if (!same_floor) {
 			// do some stuff with stairs
 		}
-		dest_room  = cand_room;
-		dest_pos   = get_center_of_room(dest_room);
-		dest_pos.z = cur_pos.z; // keep orig zval to stay on the same floor
+		state.dest_room  = cand_room;
+		state.dest_pos   = get_center_of_room(state.dest_room);
+		state.dest_pos.z = state.cur_pos.z; // keep orig zval to stay on the same floor
 		return 1;
 	} // for n
 	return 0; // failed
 }
 
-bool building_t::find_route_to_point(point const &from, point const &to, vector<point> &path) const {
+bool building_t::find_route_to_point(building_nav_graph_t const &ng, point const &from, point const &to, vector<point> &path) const {
 
+	assert(interior);
 	path.clear();
 	if (from == to) return 1; // already there???
-	if (!interior)  return 0; // error?
 	building_loc_t const loc1(get_building_loc_for_pt(from)), loc2(get_building_loc_for_pt(to));
 	if (loc1.part_ix < 0 || loc2.part_ix < 0 || loc1.room_ix < 0 || loc2.room_ix < 0) return 0; // not in a room
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
@@ -295,18 +293,17 @@ bool building_t::find_route_to_point(point const &from, point const &to, vector<
 	else if (loc1.part_ix != loc2.part_ix) {
 		if (parts[loc1.part_ix].z1() != parts[loc2.part_ix].z1()) {use_stairs = 1;} // stacked parts
 	}
-	building_nav_graph_t ng; // TODO: cache this in the building (by unique_ptr) or somewhere else?
-	build_nav_graph(ng);
 	if (!ng.find_path_points(loc1.room_ix, loc2.room_ix, use_stairs, path)) return 0; // failed to find a path
 	assert(!path.empty());
 	if (path.back() != to) {path.push_back(to);} // add dest pos if not the center of the final room
 	return 1;
 }
 
-int building_t::ai_room_update(building_ai_state_t &state, float speed, bool stay_on_one_floor) const {
+int building_t::ai_room_update(building_ai_state_t &state, bool stay_on_one_floor) const {
 
-	if (speed == 0.0) return AI_STOP; // stopped
-	float const max_dist(speed*fticks);
+	if (state.speed == 0.0) return AI_STOP; // stopped
+	assert(interior);
+	float const max_dist(state.speed*fticks);
 
 	if (dist_less_than(state.cur_pos, state.dest_pos, max_dist)) { // at dest
 		if (!stay_on_one_floor && state.cur_pos.z != state.dest_pos.z) {} // handle this case
@@ -317,9 +314,10 @@ int building_t::ai_room_update(building_ai_state_t &state, float speed, bool sta
 			state.path.pop_back();
 			return AI_NEXT_PT;
 		}
-		// TODO: save/reuse nav graph, at least between these functions
-		if (!choose_dest_room(state.cur_pos, stay_on_one_floor, state.cur_room, state.dest_room, state.dest_pos, state.rgen)) return AI_STOP;
-		if (!find_route_to_point(state.cur_pos, state.dest_pos, state.path)) return AI_STOP; // is it an error if this fails?
+		building_nav_graph_t ng; // TODO: cache this in the building (by unique_ptr) or somewhere else?
+		build_nav_graph(ng);
+		if (!choose_dest_room(ng, state, stay_on_one_floor)) return AI_STOP;
+		if (!find_route_to_point(ng, state.cur_pos, state.dest_pos, state.path)) return AI_STOP; // is it an error if this fails?
 		assert(!state.path.empty());
 		state.dest_pos = state.path.back();
 		state.path.pop_back();
