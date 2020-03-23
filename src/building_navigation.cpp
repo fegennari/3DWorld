@@ -8,6 +8,8 @@
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 
+extern float fticks;
+
 point get_cube_center_z1(cube_t const &c) {return point(c.get_center_dim(0), c.get_center_dim(1), c.z1());}
 
 // Note: this should go into building_t/buildings.h at some point, but is temporarily here
@@ -71,6 +73,25 @@ public:
 		get_node(room1).add_conn_room(room2, conn_bcube);
 		get_node(room2).add_conn_room(room1, conn_bcube);
 	}
+	bool is_room_connected_to(unsigned room1, unsigned room2) const { // Note: likely faster than running full A* algorithm
+		assert(room1 < num_rooms && room2 < num_rooms);
+		if (room1 == room2) return 1;
+		vector<uint8_t> seen(nodes.size(), 0);
+		vector<unsigned> pend;
+		pend.push_back(room1);
+		seen[room1] = 1;
+
+		while (!pend.empty()) {
+			node_t const &node(get_node(pend.back()));
+			pend.pop_back();
+
+			for (auto i = node.conn_rooms.begin(); i != node.conn_rooms.end(); ++i) {
+				if (i->ix == room2) return 1; // found, done
+				if (!seen[i->ix]) {pend.push_back(i->ix); seen[i->ix] = 1;}
+			}
+		} // end while()
+		return 0; // not found
+	}
 	unsigned count_connected_components() const {
 		if (nodes.empty()) return 0;
 		vector<uint8_t> seen(nodes.size(), 0);
@@ -102,7 +123,8 @@ public:
 		float g_score, h_score, f_score;
 		a_star_node_state_t() : came_from_ix(-1), g_score(0), h_score(0), f_score(0) {}
 	};
-		
+	
+	// Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, bool use_stairs, vector<point> &path) const { // A* algorithm
 		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // or just return an empty path?
@@ -133,7 +155,7 @@ public:
 					path.push_back(state[n].path_pt);
 					n = state[n].came_from_ix;
 				}
-				reverse(path.begin(), path.end());
+				//reverse(path.begin(), path.end());
 				return 1; // success
 			}
 			a_star_node_state_t const &cs(state[cur]);
@@ -219,6 +241,45 @@ unsigned building_t::count_connected_room_components() const {
 	return ng.count_connected_components();
 }
 
+point building_t::get_center_of_room(unsigned room_ix) const {
+	assert(interior);
+	assert(room_ix < interior->rooms.size());
+	return interior->rooms[room_ix].get_cube_center();
+}
+
+bool building_t::choose_dest_room(point const &cur_pos, bool same_floor, unsigned &cur_room, unsigned &dest_room, point &dest_pos, rand_gen_t &rgen) const {
+
+	if (!interior || interior->rooms.empty()) return 0; // error?
+	building_loc_t const loc(get_building_loc_for_pt(cur_pos));
+	if (loc.room_ix < 0) return 0; // not in a room
+	cur_room  = loc.room_ix;
+	dest_room = cur_room; // set to the same room and pos just in case
+	dest_pos  = cur_pos;
+	if (interior->rooms.size() == 1) return 0; // no other room to move to
+	building_nav_graph_t ng;
+	build_nav_graph(ng);
+
+	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts at finding a valid room
+		unsigned const cand_room(rgen.rand() % interior->rooms.size());
+		if (cand_room == cur_room) continue;
+
+		if (same_floor) {
+			cube_t const room(interior->rooms[cand_room]);
+			if (cur_pos.z < room.z1() || cur_pos.z > room.z2()) continue; // room above or below the current pos
+		}
+		if (!ng.is_room_connected_to(cur_room, cand_room)) continue;
+
+		if (!same_floor) {
+			// do some stuff with stairs
+		}
+		dest_room  = cand_room;
+		dest_pos   = get_center_of_room(dest_room);
+		dest_pos.z = cur_pos.z; // keep orig zval to stay on the same floor
+		return 1;
+	} // for n
+	return 0; // failed
+}
+
 bool building_t::find_route_to_point(point const &from, point const &to, vector<point> &path) const {
 
 	path.clear();
@@ -240,6 +301,35 @@ bool building_t::find_route_to_point(point const &from, point const &to, vector<
 	assert(!path.empty());
 	if (path.back() != to) {path.push_back(to);} // add dest pos if not the center of the final room
 	return 1;
+}
+
+int building_t::ai_room_update(building_ai_state_t &state, float speed, bool stay_on_one_floor) const {
+
+	if (speed == 0.0) return AI_STOP; // stopped
+	float const max_dist(speed*fticks);
+
+	if (dist_less_than(state.cur_pos, state.dest_pos, max_dist)) { // at dest
+		if (!stay_on_one_floor && state.cur_pos.z != state.dest_pos.z) {} // handle this case
+		state.cur_pos = state.dest_pos;
+		
+		if (!state.path.empty()) { // move to next path point
+			state.dest_pos = state.path.back();
+			state.path.pop_back();
+			return AI_NEXT_PT;
+		}
+		// TODO: save/reuse nav graph, at least between these functions
+		if (!choose_dest_room(state.cur_pos, stay_on_one_floor, state.cur_room, state.dest_room, state.dest_pos, state.rgen)) return AI_STOP;
+		if (!find_route_to_point(state.cur_pos, state.dest_pos, state.path)) return AI_STOP; // is it an error if this fails?
+		assert(!state.path.empty());
+		state.dest_pos = state.path.back();
+		state.path.pop_back();
+		return AI_AT_DEST;
+	}
+	state.dir = (state.dest_pos - state.cur_pos);
+	state.dir.z = 0.0; // XY only
+	state.dir.normalize();
+	state.cur_pos += max_dist*state.dir;
+	return AI_MOVING;
 }
 
 building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {

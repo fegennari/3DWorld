@@ -353,6 +353,17 @@ struct building_loc_t {
 	bool operator==(building_loc_t const &loc) const {return (part_ix == loc.part_ix && room_ix == loc.room_ix && stairs_ix == loc.stairs_ix && floor == loc.floor);}
 };
 
+enum {AI_STOP=0, AI_NEXT_PT, AI_AT_DEST, AI_MOVING};
+
+struct building_ai_state_t {
+	unsigned cur_room, dest_room; // are these needed?
+	point cur_pos, dest_pos, dir;
+	vector<point> path; // stored backwards, next point on path is path.back()
+	rand_gen_t rgen;
+
+	building_ai_state_t() : cur_room(0), dest_room(0) {}
+};
+
 struct colored_cube_t;
 typedef vector<colored_cube_t> vect_colored_cube_t;
 class cube_bvh_t;
@@ -452,7 +463,10 @@ struct building_t : public building_geom_t {
 	void update_stats(building_stats_t &s) const;
 	void build_nav_graph(building_nav_graph_t &ng) const;
 	unsigned count_connected_room_components() const;
+	point get_center_of_room(unsigned room_ix) const;
+	bool choose_dest_room(point const &cur_pos, bool same_floor, unsigned &cur_room, unsigned &dest_room, point &dest_pos, rand_gen_t &rgen) const;
 	bool find_route_to_point(point const &from, point const &to, vector<point> &path) const;
+	int ai_room_update(building_ai_state_t &state, float speed, bool stay_on_one_floor=1) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 private:
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
