@@ -18,6 +18,7 @@ bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const ADD_ROOM_SHADOWS      = 1;
 bool const ADD_ROOM_LIGHTS       = 1;
 bool const DRAW_INTERIOR_DOORS   = 1;
+bool const ENABLE_PEOPLE_AI      = 0;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
@@ -1542,7 +1543,7 @@ class building_creator_t {
 	unsigned grid_sz, gpu_mem_usage;
 	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range, buildings_bcube;
-	rand_gen_t rgen;
+	rand_gen_t rgen, ai_rgen;
 	vector<building_t> buildings;
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
 	vector<int> peds_by_bix; // index of first person in each building; -1 is empty
@@ -2006,25 +2007,29 @@ public:
 			assert(bix < peds_by_bix.size());
 			if (peds_by_bix[bix] < 0) {peds_by_bix[bix] = i;} // record first ped index for each building
 		}
+		if (ENABLE_PEOPLE_AI) {
+			ai_state.resize(locs.size());
+
+			for (unsigned i = 0; i < locs.size(); ++i) {
+				ai_state[i].cur_building = locs[i].bix;
+				ai_state[i].cur_pos      = locs[i].p;
+				ai_state[i].speed        = ai_rgen.rand_uniform(0.75, 1.0); // small range
+			}
+		}
 		return 1;
 	}
 	int get_ped_ix_for_bix(unsigned bix) const {return ((bix < peds_by_bix.size()) ? peds_by_bix[bix] : -1);}
 
-	void init_ai_state(vect_building_place_t const &locs) { // to be called after/inside place_people()
-		ai_state.resize(locs.size());
-
-		for (unsigned i = 0; i < locs.size(); ++i) {
-			ai_state[i].cur_building = locs[i].bix;
-			ai_state[i].cur_pos      = locs[i].p;
-		}
-	}
-	void update_ai_state() { // called once per frame
-		if (!animate2) return;
+	// called once per frame
+	void update_ai_state(vector<point> &ppl_pos) { // returns the new pos of each person; dir/orient can be determined from the delta
+		if (!ENABLE_PEOPLE_AI || !animate2) return;
 		bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
+		ppl_pos.resize(ai_state.size());
 
 		for (auto i = ai_state.begin(); i != ai_state.end(); ++i) {
 			assert(i->cur_building < buildings.size());
-			buildings[i->cur_building].ai_room_update(*i, stay_on_one_floor);
+			buildings[i->cur_building].ai_room_update(*i, ai_rgen, stay_on_one_floor);
+			ppl_pos[i - ai_state.begin()] = i->cur_pos;
 		}
 	}
 
@@ -2967,6 +2972,7 @@ int get_building_bcube_contains_pos(point const &pos) {return building_creator_c
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
 bool place_building_people(vect_building_place_t &locs, float radius, unsigned num) {return building_creator.place_people(locs, radius, num);} // secondary buildings only for now
+void update_building_ai_state(vector<point> &ppl_pos) {building_creator.update_ai_state(ppl_pos);}
 
 void get_all_garages(vect_cube_t &garages) {
 	building_creator.get_all_garages(garages);

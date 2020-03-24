@@ -794,27 +794,42 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 }
 
 void ped_manager_t::next_frame() {
-	if (!animate2 || peds.empty()) return; // nothing to do (only applies to moving peds)
-	//timer_t timer("Ped Update"); // ~3.9ms for 10K peds
+	if (!animate2) return; // nothing to do (only applies to moving peds)
 
-	// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
-#pragma omp critical(modify_car_data)
-	{car_manager.extract_car_data(cars_by_city);}
+	if (!peds.empty()) {
+		//timer_t timer("Ped Update"); // ~3.9ms for 10K peds
 
-	if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
-	static bool first_frame(1);
+		// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
+	#pragma omp critical(modify_car_data)
+		{car_manager.extract_car_data(cars_by_city);}
 
-	if (first_frame) { // choose initial ped destinations (must be after building setup, etc.)
-		for (auto i = peds.begin(); i != peds.end(); ++i) {choose_dest_building_or_parked_car(*i);}
+		if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
+		float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
+		static bool first_frame(1);
+
+		if (first_frame) { // choose initial ped destinations (must be after building setup, etc.)
+			for (auto i = peds.begin(); i != peds.end(); ++i) {choose_dest_building_or_parked_car(*i);}
+		}
+		for (auto i = peds.begin(); i != peds.end(); ++i) {i->next_frame(*this, peds, (i - peds.begin()), rgen, delta_dir);}
+		if (need_to_sort_peds) {sort_by_city_and_plot();}
+		first_frame = 0;
 	}
-	for (auto i = peds.begin(); i != peds.end(); ++i) {i->next_frame(*this, peds, (i - peds.begin()), rgen, delta_dir);}
-	if (need_to_sort_peds) {sort_by_city_and_plot();}
+	if (!peds_b.empty()) { // update people in buildings
+		timer_t timer("Building People Update");
+		update_building_ai_state(bldg_ppl_pos);
 
-	if (!peds_b.empty()) { // TODO: move people in buildings
-		//for (auto i = peds_b.begin(); i != peds_b.end(); ++i) {i->next_frame(...);}
+		if (!bldg_ppl_pos.empty()) {
+			assert(bldg_ppl_pos.size() == peds_b.size());
+
+			for (auto i = peds_b.begin(); i != peds_b.end(); ++i) {
+				point const &new_pos(bldg_ppl_pos[i - peds_b.begin()]);
+				vector3d delta(new_pos - i->pos);
+				if (delta == zero_vector) continue; // no movement
+				i->pos = new_pos;
+				i->dir = delta.get_norm();
+			}
+		}
 	}
-	first_frame = 0;
 }
 
 pedestrian_t const *ped_manager_t::get_ped_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space

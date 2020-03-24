@@ -247,7 +247,7 @@ point building_t::get_center_of_room(unsigned room_ix) const {
 	return interior->rooms[room_ix].get_cube_center();
 }
 
-bool building_t::choose_dest_room(building_nav_graph_t const &ng, building_ai_state_t &state, bool same_floor) const
+bool building_t::choose_dest_room(building_nav_graph_t const &ng, building_ai_state_t &state, rand_gen_t &rgen, bool same_floor) const
 {
 	assert(interior);
 	building_loc_t const loc(get_building_loc_for_pt(state.cur_pos));
@@ -258,7 +258,7 @@ bool building_t::choose_dest_room(building_nav_graph_t const &ng, building_ai_st
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 
 	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts at finding a valid room
-		unsigned const cand_room(state.rgen.rand() % interior->rooms.size());
+		unsigned const cand_room(rgen.rand() % interior->rooms.size());
 		if (cand_room == state.cur_room) continue;
 
 		if (same_floor) {
@@ -299,7 +299,7 @@ bool building_t::find_route_to_point(building_nav_graph_t const &ng, point const
 	return 1;
 }
 
-int building_t::ai_room_update(building_ai_state_t &state, bool stay_on_one_floor) const {
+int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, bool stay_on_one_floor) const {
 
 	if (state.speed == 0.0) return AI_STOP; // stopped
 	assert(interior);
@@ -316,17 +316,17 @@ int building_t::ai_room_update(building_ai_state_t &state, bool stay_on_one_floo
 		}
 		building_nav_graph_t ng; // TODO: cache this in the building (by unique_ptr) or somewhere else?
 		build_nav_graph(ng);
-		if (!choose_dest_room(ng, state, stay_on_one_floor)) return AI_STOP;
+		if (!choose_dest_room(ng, state, rgen, stay_on_one_floor)) return AI_STOP;
 		if (!find_route_to_point(ng, state.cur_pos, state.dest_pos, state.path)) return AI_STOP; // is it an error if this fails?
 		assert(!state.path.empty());
 		state.dest_pos = state.path.back();
 		state.path.pop_back();
 		return AI_AT_DEST;
 	}
-	state.dir = (state.dest_pos - state.cur_pos);
-	state.dir.z = 0.0; // XY only
-	state.dir.normalize();
-	state.cur_pos += max_dist*state.dir;
+	vector3d dir(state.dest_pos - state.cur_pos);
+	dir.z = 0.0; // XY only
+	dir.normalize();
+	state.cur_pos += max_dist*dir;
 	return AI_MOVING;
 }
 

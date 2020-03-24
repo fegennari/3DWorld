@@ -757,6 +757,7 @@ class ped_manager_t { // pedestrians
 	vector<unsigned> by_plot;
 	vector<unsigned char> need_to_sort_city;
 	vector<car_city_vect_t> cars_by_city;
+	vector<point> bldg_ppl_pos;
 	rand_gen_t rgen;
 	ao_draw_state_t dstate;
 	int selected_ped_ssn;
@@ -821,9 +822,11 @@ template <typename T> void remove_destroyed(vector<T> &objs) {
 	objs.erase(o, objs.end());
 }
 
-
 bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t const &c);
 point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen);
 bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, float radius);
-bool place_building_people(vect_building_place_t &locs, float radius, unsigned num); // from gen_buildings.cpp
-void get_all_garages(vect_cube_t &garages); // from gen_buildings.cpp
+
+// from gen_buildings.cpp
+bool place_building_people(vect_building_place_t &locs, float radius, unsigned num);
+void update_building_ai_state(vector<point> &ppl_pos);
+void get_all_garages(vect_cube_t &garages);
