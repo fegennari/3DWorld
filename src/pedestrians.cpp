@@ -644,7 +644,7 @@ void ped_manager_t::init(unsigned num_city, unsigned num_building) {
 
 	// place people in buildings
 	vect_building_place_t locs;
-	place_building_people(locs, radius, num_building);
+	place_building_people(locs, radius, city_params.ped_speed, num_building);
 	peds_b.reserve(locs.size());
 
 	for (auto i = locs.begin(); i != locs.end(); ++i) {
@@ -824,8 +824,9 @@ void ped_manager_t::next_frame() {
 			for (auto i = peds_b.begin(); i != peds_b.end(); ++i) {
 				point const &new_pos(bldg_ppl_pos[i - peds_b.begin()]);
 				vector3d delta(new_pos - i->pos);
+				delta.z = 0.0; // XY only
 				if (delta == zero_vector) continue; // no movement
-				i->pos = new_pos;
+				i->pos = new_pos + vector3d(0.0, 0.0, i->radius); // buildings don't know about ped radius, so we need to add it in here
 				i->dir = delta.get_norm();
 			}
 		}

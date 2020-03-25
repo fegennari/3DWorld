@@ -28,6 +28,7 @@ extern unsigned shadow_map_sz, cur_display_iter;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
+extern building_params_t global_building_params; // only needed for enable_people_ai
 
 
 void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh);
@@ -3122,9 +3123,12 @@ city_gen_t city_gen;
 
 
 bool parse_city_option(FILE *fp) {return city_params.read_option(fp);}
-bool have_cities         () {return city_params.enabled();}
+bool have_cities() {return city_params.enabled();}
 // Note: this is used for parallel car/pedestrian updates and does not include city_params.num_building_peds
-bool have_city_models    () {return (have_cities() && (city_params.num_cars > 0 || city_params.num_peds > 0 /*|| city_params.num_building_peds > 0*/));}
+bool have_city_models() {
+	return (have_cities() && (city_params.num_cars > 0 || city_params.num_peds > 0 ||
+		(global_building_params.enable_people_ai && city_params.num_building_peds > 0)));
+}
 float get_road_max_len   () {return city_params.road_spacing;}
 float get_road_max_width () {return city_params.road_width;}
 float get_min_obj_spacing() {return 4.0*ped_manager_t::get_ped_radius();} // allow a ped to walk between objects (two side-by-side)

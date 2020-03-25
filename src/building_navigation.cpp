@@ -303,9 +303,12 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, boo
 
 	if (state.speed == 0.0) return AI_STOP; // stopped
 	assert(interior);
+	assert(bcube.contains_pt(state.cur_pos)); // person must be inside the building
 	float const max_dist(state.speed*fticks);
+	bool const no_dest(state.dest_pos == all_zeros);
+	bool choose_new_dest(no_dest);
 
-	if (dist_less_than(state.cur_pos, state.dest_pos, max_dist)) { // at dest
+	if (!no_dest && dist_less_than(state.cur_pos, state.dest_pos, max_dist)) { // at dest
 		if (!stay_on_one_floor && state.cur_pos.z != state.dest_pos.z) {} // handle this case
 		state.cur_pos = state.dest_pos;
 		
@@ -314,6 +317,9 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, boo
 			state.path.pop_back();
 			return AI_NEXT_PT;
 		}
+		choose_new_dest = 1;
+	}
+	if (choose_new_dest) {
 		building_nav_graph_t ng; // TODO: cache this in the building (by unique_ptr) or somewhere else?
 		build_nav_graph(ng);
 		if (!choose_dest_room(ng, state, rgen, stay_on_one_floor)) return AI_STOP;

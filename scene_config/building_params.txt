@@ -13,4 +13,6 @@ buildings wall_split_thresh 2.5 # typically 1.0-5.0, smaller is slower with more
 buildings min_altitude 0.05 # slightly above sea level
 buildings max_altitude 4.00 # same for all buildings
 
+buildings enable_people_ai 0
+
 no_store_model_textures_in_memory 1 # Note: saves CPU side memory

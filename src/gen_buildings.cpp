@@ -18,7 +18,6 @@ bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const ADD_ROOM_SHADOWS      = 1;
 bool const ADD_ROOM_LIGHTS       = 1;
 bool const DRAW_INTERIOR_DOORS   = 1;
-bool const ENABLE_PEOPLE_AI      = 0;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
@@ -147,6 +146,9 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "infinite_buildings") {
 		if (!read_bool(fp, global_building_params.infinite_buildings)) {buildings_file_err(str, error);}
+	}
+	else if (str == "enable_people_ai") {
+		if (!read_bool(fp, global_building_params.enable_people_ai)) {buildings_file_err(str, error);}
 	}
 	// material parameters
 	else if (str == "range_translate") { // x,y only
@@ -1978,7 +1980,7 @@ public:
 		}
 	}
 
-	bool place_people(vect_building_place_t &locs, float radius, unsigned num) {
+	bool place_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
 		assert(locs.empty());
 		if (num == 0 || empty() || !ADD_BUILDING_INTERIORS) return 0; // no people, buildings, or interiors
 		vector<unsigned> cand_buildings;
@@ -2007,13 +2009,13 @@ public:
 			assert(bix < peds_by_bix.size());
 			if (peds_by_bix[bix] < 0) {peds_by_bix[bix] = i;} // record first ped index for each building
 		}
-		if (ENABLE_PEOPLE_AI) {
+		if (global_building_params.enable_people_ai) {
 			ai_state.resize(locs.size());
 
 			for (unsigned i = 0; i < locs.size(); ++i) {
 				ai_state[i].cur_building = locs[i].bix;
 				ai_state[i].cur_pos      = locs[i].p;
-				ai_state[i].speed        = ai_rgen.rand_uniform(0.75, 1.0); // small range
+				ai_state[i].speed        = speed_mult*ai_rgen.rand_uniform(0.75, 1.0); // small range
 			}
 		}
 		return 1;
@@ -2022,7 +2024,7 @@ public:
 
 	// called once per frame
 	void update_ai_state(vector<point> &ppl_pos) { // returns the new pos of each person; dir/orient can be determined from the delta
-		if (!ENABLE_PEOPLE_AI || !animate2) return;
+		if (!global_building_params.enable_people_ai || !animate2) return;
 		bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
 		ppl_pos.resize(ai_state.size());
 
@@ -2971,7 +2973,10 @@ bool check_line_coll_building(point const &p1, point const &p2, unsigned buildin
 int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
-bool place_building_people(vect_building_place_t &locs, float radius, unsigned num) {return building_creator.place_people(locs, radius, num);} // secondary buildings only for now
+
+bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
+	return building_creator.place_people(locs, radius, speed_mult, num); // secondary buildings only for now
+}
 void update_building_ai_state(vector<point> &ppl_pos) {building_creator.update_ai_state(ppl_pos);}
 
 void get_all_garages(vect_cube_t &garages) {
