@@ -295,8 +295,16 @@ bool building_t::find_route_to_point(building_nav_graph_t const &ng, point const
 	}
 	if (!ng.find_path_points(loc1.room_ix, loc2.room_ix, use_stairs, path)) return 0; // failed to find a path
 	assert(!path.empty());
-	if (path.back() != to) {path.push_back(to);} // add dest pos if not the center of the final room
+	// add dest pos if not the center of the final room, at the beginning rather than the end because path is replayed backwards
+	if (path.back() != to) {path.insert(path.begin(), to);}
 	return 1;
+}
+
+void building_ai_state_t::next_path_pt(bool same_floor) {
+	assert(!path.empty());
+	dest_pos = path.back();
+	if (same_floor) {dest_pos.z = cur_pos.z;} // make sure zvals are equal (ignore zval of room center)
+	path.pop_back();
 }
 
 int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, bool stay_on_one_floor) const {
@@ -307,14 +315,14 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, boo
 	float const max_dist(state.speed*fticks);
 	bool const no_dest(state.dest_pos == all_zeros);
 	bool choose_new_dest(no_dest);
+	//cout << TXT(no_dest) << TXT(dist_less_than(state.cur_pos, state.dest_pos, max_dist)) << TXT(state.path.size()) << endl;
 
 	if (!no_dest && dist_less_than(state.cur_pos, state.dest_pos, max_dist)) { // at dest
 		if (!stay_on_one_floor && state.cur_pos.z != state.dest_pos.z) {} // handle this case
 		state.cur_pos = state.dest_pos;
 		
 		if (!state.path.empty()) { // move to next path point
-			state.dest_pos = state.path.back();
-			state.path.pop_back();
+			state.next_path_pt(stay_on_one_floor);
 			return AI_NEXT_PT;
 		}
 		choose_new_dest = 1;
@@ -322,15 +330,15 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, boo
 	if (choose_new_dest) {
 		building_nav_graph_t ng; // TODO: cache this in the building (by unique_ptr) or somewhere else?
 		build_nav_graph(ng);
-		if (!choose_dest_room(ng, state, rgen, stay_on_one_floor)) return AI_STOP;
-		if (!find_route_to_point(ng, state.cur_pos, state.dest_pos, state.path)) return AI_STOP; // is it an error if this fails?
-		assert(!state.path.empty());
-		state.dest_pos = state.path.back();
-		state.path.pop_back();
+		// if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame
+		if (!choose_dest_room(ng, state, rgen, stay_on_one_floor)) {state.speed = 0.0; return AI_STOP;}
+		if (!find_route_to_point(ng, state.cur_pos, state.dest_pos, state.path)) {cout << "*** Bad Path ***"; state.speed = 0.0; return AI_STOP;} // is it an error if this fails?
+		state.next_path_pt(stay_on_one_floor);
 		return AI_AT_DEST;
 	}
+	//cout << TXT(state.cur_pos.str()) << TXT(state.dest_pos.str()) << endl;
 	vector3d dir(state.dest_pos - state.cur_pos);
-	dir.z = 0.0; // XY only
+	dir.z = 0.0; // XY only, even if on stairs
 	dir.normalize();
 	state.cur_pos += max_dist*dir;
 	return AI_MOVING;

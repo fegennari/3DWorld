@@ -362,6 +362,7 @@ struct building_ai_state_t {
 	vector<point> path; // stored backwards, next point on path is path.back()
 
 	building_ai_state_t() : cur_building(0), cur_room(0), dest_room(0), speed(0.0) {}
+	void next_path_pt(bool same_floor);
 };
 
 struct colored_cube_t;
