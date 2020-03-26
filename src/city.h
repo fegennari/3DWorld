@@ -827,6 +827,7 @@ point rand_xy_pt_in_cube(cube_t const &c, float radius, rand_gen_t &rgen);
 bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, float radius);
 
 // from gen_buildings.cpp
+bool enable_building_people_ai();
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num);
 void update_building_ai_state(vector<point> &ppl_pos);
 void get_all_garages(vect_cube_t &garages);

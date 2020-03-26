@@ -2973,6 +2973,7 @@ bool check_line_coll_building(point const &p1, point const &p2, unsigned buildin
 int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
+bool enable_building_people_ai() {return global_building_params.enable_people_ai;}
 
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
 	return building_creator.place_people(locs, radius, speed_mult, num); // secondary buildings only for now
