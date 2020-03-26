@@ -474,7 +474,7 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 		if (dist > radius && dot_product_xy(vel, delta) < 0.01*speed*dist) {delta_dir = min(1.0f, 4.0f*delta_dir); return;} // rotate faster
 	}
 	float const timestep(fticks*get_speed_mult());
-	pos       += vel*timestep;
+	pos       += timestep*vel;
 	anim_time += timestep*speed;
 }
 
@@ -815,7 +815,7 @@ void ped_manager_t::next_frame() {
 		first_frame = 0;
 	}
 	if (!peds_b.empty()) { // update people in buildings
-		timer_t timer("Building People Update");
+		//timer_t timer("Building People Update");
 		update_building_ai_state(bldg_ppl_pos);
 
 		if (!bldg_ppl_pos.empty()) {
@@ -826,9 +826,11 @@ void ped_manager_t::next_frame() {
 				vector3d delta(new_pos - i->pos);
 				delta.z = 0.0; // XY only
 				if (delta == zero_vector) continue; // no movement
+				float const delta_mag(delta.mag());
 				i->pos = new_pos + vector3d(0.0, 0.0, i->radius); // buildings don't know about ped radius, so we need to add it in here
-				i->dir = delta.get_norm();
-			}
+				i->dir = delta/delta_mag;
+				i->anim_time += delta_mag;
+			} // for i
 		}
 	}
 }
@@ -1113,12 +1115,13 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, unsigned bix, shader
 	float const draw_dist(dlight_shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.pos -= xlate; // adjust for local translate
+	bool const enable_animations(0 && enable_building_people_ai()); // TODO: make animations work; use animation_shader
 	bool in_sphere_draw(0);
 
 	// Note: no far clip adjustment or draw dist scale
 	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
 		if (p->dest_bldg != bix) break; // done with this building
-		draw_ped(*p, s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, dlight_shadow_only, dlight_shadow_only, 0); // no animations
+		draw_ped(*p, s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, dlight_shadow_only, dlight_shadow_only, enable_animations);
 	}
 	end_sphere_draw(in_sphere_draw);
 	s.upload_mvm(); // seems to be needed after applying model transforms, not sure why

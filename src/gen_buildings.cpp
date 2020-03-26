@@ -2024,7 +2024,7 @@ public:
 
 	// called once per frame
 	void update_ai_state(vector<point> &ppl_pos) { // returns the new pos of each person; dir/orient can be determined from the delta
-		if (!global_building_params.enable_people_ai || !animate2) return;
+		if (!global_building_params.enable_people_ai || !draw_building_interiors || !animate2) return;
 		bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
 		ppl_pos.resize(ai_state.size());
 
