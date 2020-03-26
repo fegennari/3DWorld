@@ -2322,7 +2322,6 @@ void write_def_coll_objects_file() {
 
 
 void init_models() {
-
 	build_hmv_shape();
 	gen_star_points();
 }
@@ -2334,17 +2333,10 @@ void free_models() {
 
 void gen_star_points() {
 
-	for (unsigned i = 0; i < 2*N_STAR_POINTS; ++i) {
-		float const angle(TWO_PI*((float)i/(float)N_STAR_POINTS));
-		
-		if (!(i&1)) { // outer point
-			star_pts[i].x = cosf(angle);
-			star_pts[i].y = sinf(angle);
-		}
-		else { // inner point
-			star_pts[i].x = STAR_INNER_RAD*cosf(angle);
-			star_pts[i].y = STAR_INNER_RAD*sinf(angle);
-		}
+	for (unsigned i = 0; i < 2*N_STAR_POINTS; ++i) { // alternate outside and inside points
+		float const angle(TWO_PI*((float)i/(float)N_STAR_POINTS)), scale((i&1) ? STAR_INNER_RAD : 1.0);
+		star_pts[i].x = scale*cosf(angle);
+		star_pts[i].y = scale*sinf(angle);
 		star_pts[i].z = 0.0;
 	}
 }
