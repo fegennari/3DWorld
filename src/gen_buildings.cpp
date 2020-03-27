@@ -2015,7 +2015,7 @@ public:
 			for (unsigned i = 0; i < locs.size(); ++i) {
 				ai_state[i].cur_building = locs[i].bix;
 				ai_state[i].cur_pos      = locs[i].p;
-				ai_state[i].speed        = speed_mult*ai_rgen.rand_uniform(0.75, 1.0); // small range
+				ai_state[i].speed        = speed_mult*ai_rgen.rand_uniform(0.5, 0.75); // small range, slower than outdoor city pedestrians
 			}
 		}
 		return 1;
