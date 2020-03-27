@@ -1043,7 +1043,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	dstate.set_enable_normal_map(use_models && use_model3d_bump_maps());
 	fgPushMatrix();
 	translate_to(xlate);
-	if (enable_animations) {dstate.s.add_property("animation_shader", "pedestrian_animation.part+");}
+	if (enable_animations) {enable_animations_for_shader(dstate.s);}
 	dstate.pre_draw(xlate, use_dlights, shadow_only);
 	bool in_sphere_draw(0);
 	if (enable_animations) {dstate.s.add_uniform_int("animation_id", animation_id);}
@@ -1115,8 +1115,9 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, unsigned bix, shader
 	float const draw_dist(dlight_shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
 	pdu.pos -= xlate; // adjust for local translate
-	bool const enable_animations(0 && enable_building_people_ai()); // TODO: make animations work; use animation_shader
+	bool const enable_animations(enable_building_people_ai());
 	bool in_sphere_draw(0);
+	if (enable_animations) {s.add_uniform_int("animation_id", animation_id);}
 
 	// Note: no far clip adjustment or draw dist scale
 	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
@@ -1125,6 +1126,7 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, unsigned bix, shader
 	}
 	end_sphere_draw(in_sphere_draw);
 	s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
+	if (enable_animations) {s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
 }
 
 void ped_manager_t::get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const {

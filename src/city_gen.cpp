@@ -222,6 +222,8 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	if (use_texgen) {s.add_uniform_float("tc_texgen_mix", 0.0);} // always uses texgen in this mode
 }
 
+void enable_animations_for_shader(shader_t &s) {s.add_property("animation_shader", "pedestrian_animation.part+");}
+
 void draw_state_t::begin_tile(point const &pos, bool will_emit_now) {
 	emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));
 	if (will_emit_now && !emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps

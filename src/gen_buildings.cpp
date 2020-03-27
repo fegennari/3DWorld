@@ -2068,6 +2068,7 @@ public:
 						bool const camera_in_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
 
 						if (ped_ix >= 0 && (camera_in_building || player_close)) {
+							// TODO: what about animations? needs a custom shader
 							draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1); // draw people in this building
 						}
 						if (add_player_shadow && camera_in_building) { // use a smaller radius, shift to center of player height
@@ -2234,7 +2235,12 @@ public:
 				s.end_shader();
 				glDepthFunc(GL_LEQUAL);
 			}
+			// Note: the best I can come up with is applying animations to both buildings and people, making sure to set animation_time to 0.0 for buildings;
+			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
+			bool const enable_animations(global_building_params.enable_people_ai && transparent_windows);
+			if (enable_animations) {enable_animations_for_shader(s);}
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
+			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			set_interior_lighting(s, have_indir);
 			if (have_indir) {setup_indir_lighting(bcs, s);}
 			vector<point> points; // reused temporary
