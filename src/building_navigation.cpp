@@ -145,17 +145,24 @@ public:
 			open_queue.pop();
 			if (closed[cur]) continue; // already closed (duplicate)
 
-			if (cur == room2) { // done, reconstruct path
+			if (cur == room2) { // done, reconstruct path (in reverse)
 				unsigned n(cur);
 
 				while (1) {
 					assert(n < nodes.size());
-					path.push_back(get_node(n).get_center());
+					path.push_back(get_node(n).get_center()); // room
 					if (state[n].came_from_ix < 0) {assert(n == room1); break;} // done
-					path.push_back(state[n].path_pt);
+					point const &next(state[n].path_pt);
+
+					if (path.size() > 2) {
+						// maybe straighten path by traveling from doorway to doorway without passing through the center of the room
+						point const &prev(path[path.size()-2]), &cur(path.back());
+						if (prev.x != next.x && prev.y != next.y) {path.pop_back();} // doorways on different walls, shorten path with direct line
+						//if (dot_product((cur - prev), (next - cur)) > 0.0) {path.pop_back();} // doors on opposite sides of the room, shorten path with direct line
+					}
+					path.push_back(next); // doorway
 					n = state[n].came_from_ix;
 				}
-				//reverse(path.begin(), path.end());
 				return 1; // success
 			}
 			a_star_node_state_t const &cs(state[cur]);
