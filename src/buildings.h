@@ -353,15 +353,15 @@ struct building_loc_t {
 	bool operator==(building_loc_t const &loc) const {return (part_ix == loc.part_ix && room_ix == loc.room_ix && stairs_ix == loc.stairs_ix && floor == loc.floor);}
 };
 
-enum {AI_STOP=0, AI_NEXT_PT, AI_AT_DEST, AI_MOVING};
+enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_AT_DEST, AI_MOVING};
 
 struct building_ai_state_t {
 	unsigned cur_building, cur_room, dest_room; // are these needed?
-	float speed;
+	float speed, wait_time;
 	point cur_pos, dest_pos;
 	vector<point> path; // stored backwards, next point on path is path.back()
 
-	building_ai_state_t() : cur_building(0), cur_room(0), dest_room(0), speed(0.0) {}
+	building_ai_state_t() : cur_building(0), cur_room(0), dest_room(0), speed(0.0), wait_time(0.0) {}
 	void next_path_pt(bool same_floor);
 };
 

@@ -310,14 +310,28 @@ void building_ai_state_t::next_path_pt(bool same_floor) {
 int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, bool stay_on_one_floor) const {
 
 	if (state.speed == 0.0) return AI_STOP; // stopped
+	bool choose_dest(state.dest_pos == all_zeros);
+
+	if (state.wait_time > 0) {
+		if (state.wait_time > fticks) {state.wait_time -= fticks; return AI_WAITING;} // waiting
+		state.wait_time = 0.0;
+		choose_dest = 1;
+	}
 	assert(interior);
 	assert(bcube.contains_pt(state.cur_pos)); // person must be inside the building
-	float const max_dist(state.speed*fticks);
-	bool const no_dest(state.dest_pos == all_zeros);
-	bool choose_new_dest(no_dest);
-	//cout << TXT(no_dest) << TXT(dist_less_than(state.cur_pos, state.dest_pos, max_dist)) << TXT(state.path.size()) << endl;
 
-	if (!no_dest && dist_less_than(state.cur_pos, state.dest_pos, max_dist)) { // at dest
+	if (choose_dest) { // no current destination - choose a new one
+		building_nav_graph_t ng; // TODO: cache this in the building (by unique_ptr) or somewhere else?
+		build_nav_graph(ng);
+		// if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame; movement will be stopped from now on
+		if (!choose_dest_room(ng, state, rgen, stay_on_one_floor)) {state.speed = 0.0; return AI_STOP;}
+		if (!find_route_to_point(ng, state.cur_pos, state.dest_pos, state.path)) {cout << "*** Bad Path ***"; state.speed = 0.0; return AI_STOP;} // is it an error if this fails?
+		state.next_path_pt(stay_on_one_floor);
+		return AI_AT_DEST;
+	}
+	float const max_dist(state.speed*fticks);
+
+	if (dist_less_than(state.cur_pos, state.dest_pos, max_dist)) { // at dest
 		if (!stay_on_one_floor && state.cur_pos.z != state.dest_pos.z) {} // handle this case
 		state.cur_pos = state.dest_pos;
 		
@@ -325,18 +339,12 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, boo
 			state.next_path_pt(stay_on_one_floor);
 			return AI_NEXT_PT;
 		}
-		choose_new_dest = 1;
-	}
-	if (choose_new_dest) {
-		building_nav_graph_t ng; // TODO: cache this in the building (by unique_ptr) or somewhere else?
-		build_nav_graph(ng);
-		// if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame
-		if (!choose_dest_room(ng, state, rgen, stay_on_one_floor)) {state.speed = 0.0; return AI_STOP;}
-		if (!find_route_to_point(ng, state.cur_pos, state.dest_pos, state.path)) {cout << "*** Bad Path ***"; state.speed = 0.0; return AI_STOP;} // is it an error if this fails?
-		state.next_path_pt(stay_on_one_floor);
+		state.wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
+		state.dest_pos  = state.dest_pos;
 		return AI_AT_DEST;
 	}
 	//cout << TXT(state.cur_pos.str()) << TXT(state.dest_pos.str()) << endl;
+	// TODO: add some sort of smooth turning when changing to new dest_pos
 	vector3d dir(state.dest_pos - state.cur_pos);
 	dir.z = 0.0; // XY only, even if on stairs
 	dir.normalize();

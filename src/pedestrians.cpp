@@ -825,7 +825,7 @@ void ped_manager_t::next_frame() {
 				point const &new_pos(bldg_ppl_pos[i - peds_b.begin()]);
 				vector3d delta(new_pos - i->pos);
 				delta.z = 0.0; // XY only
-				if (delta == zero_vector) continue; // no movement
+				if (delta == zero_vector) {i->anim_time = 0.0; continue;} // no movement, reset animation
 				float const delta_mag(delta.mag());
 				i->pos = new_pos + vector3d(0.0, 0.0, i->radius); // buildings don't know about ped radius, so we need to add it in here
 				i->dir = delta/delta_mag;
