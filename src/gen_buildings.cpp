@@ -2013,9 +2013,11 @@ public:
 			ai_state.resize(locs.size());
 
 			for (unsigned i = 0; i < locs.size(); ++i) {
-				ai_state[i].cur_building = locs[i].bix;
-				ai_state[i].cur_pos      = locs[i].p;
-				ai_state[i].speed        = speed_mult*ai_rgen.rand_uniform(0.5, 0.75); // small range, slower than outdoor city pedestrians
+				building_ai_state_t &state(ai_state[i]);
+				state.cur_building = locs[i].bix;
+				state.cur_pos      = locs[i].p;
+				state.speed        = speed_mult*ai_rgen.rand_uniform(0.5, 0.75); // small range, slower than outdoor city pedestrians
+				state.radius       = radius; // TODO: scale by model?
 			}
 		}
 		return 1;

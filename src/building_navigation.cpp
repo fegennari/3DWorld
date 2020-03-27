@@ -125,7 +125,7 @@ public:
 	};
 	
 	// Note: path is stored backwards
-	bool find_path_points(unsigned room1, unsigned room2, bool use_stairs, vector<point> &path) const { // A* algorithm
+	bool find_path_points(unsigned room1, unsigned room2, float radius, bool use_stairs, vector<point> &path) const { // A* algorithm
 		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // or just return an empty path?
 		path.clear();
@@ -157,12 +157,12 @@ public:
 					if (path.size() > 2) {
 						// maybe straighten path by traveling from doorway to doorway without passing through the center of the room
 						point const &prev(path[path.size()-2]), &cur(path.back());
-						if (prev.x != next.x && prev.y != next.y) {path.pop_back();} // doorways on different walls, shorten path with direct line
+						if (fabs(prev.x - next.x) > radius && fabs(prev.y - next.y) > radius) {path.pop_back();} // doorways on diff walls, shorten path with direct line
 						//if (dot_product((cur - prev), (next - cur)) > 0.0) {path.pop_back();} // doors on opposite sides of the room, shorten path with direct line
 					}
 					path.push_back(next); // doorway
 					n = state[n].came_from_ix;
-				}
+				} // end while()
 				return 1; // success
 			}
 			a_star_node_state_t const &cs(state[cur]);
@@ -285,7 +285,7 @@ bool building_t::choose_dest_room(building_nav_graph_t const &ng, building_ai_st
 	return 0; // failed
 }
 
-bool building_t::find_route_to_point(building_nav_graph_t const &ng, point const &from, point const &to, vector<point> &path) const {
+bool building_t::find_route_to_point(building_nav_graph_t const &ng, point const &from, point const &to, float radius, vector<point> &path) const {
 
 	assert(interior);
 	path.clear();
@@ -300,7 +300,7 @@ bool building_t::find_route_to_point(building_nav_graph_t const &ng, point const
 	else if (loc1.part_ix != loc2.part_ix) {
 		if (parts[loc1.part_ix].z1() != parts[loc2.part_ix].z1()) {use_stairs = 1;} // stacked parts
 	}
-	if (!ng.find_path_points(loc1.room_ix, loc2.room_ix, use_stairs, path)) return 0; // failed to find a path
+	if (!ng.find_path_points(loc1.room_ix, loc2.room_ix, radius, use_stairs, path)) return 0; // failed to find a path
 	assert(!path.empty());
 	// add dest pos if not the center of the final room, at the beginning rather than the end because path is replayed backwards
 	if (path.back() != to) {path.insert(path.begin(), to);}
@@ -332,7 +332,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, boo
 		build_nav_graph(ng);
 		// if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame; movement will be stopped from now on
 		if (!choose_dest_room(ng, state, rgen, stay_on_one_floor)) {state.speed = 0.0; return AI_STOP;}
-		if (!find_route_to_point(ng, state.cur_pos, state.dest_pos, state.path)) {cout << "*** Bad Path ***"; state.speed = 0.0; return AI_STOP;} // is it an error if this fails?
+		if (!find_route_to_point(ng, state.cur_pos, state.dest_pos, state.radius, state.path)) {cout << "*** Bad Path ***"; state.speed = 0.0; return AI_STOP;}
 		state.next_path_pt(stay_on_one_floor);
 		return AI_AT_DEST;
 	}

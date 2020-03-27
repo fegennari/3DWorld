@@ -357,11 +357,11 @@ enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_AT_DEST, AI_MOVING};
 
 struct building_ai_state_t {
 	unsigned cur_building, cur_room, dest_room; // are these needed?
-	float speed, wait_time;
+	float radius, speed, wait_time;
 	point cur_pos, dest_pos;
 	vector<point> path; // stored backwards, next point on path is path.back()
 
-	building_ai_state_t() : cur_building(0), cur_room(0), dest_room(0), speed(0.0), wait_time(0.0) {}
+	building_ai_state_t() : cur_building(0), cur_room(0), dest_room(0), radius(0.0), speed(0.0), wait_time(0.0) {}
 	void next_path_pt(bool same_floor);
 };
 
@@ -466,7 +466,7 @@ struct building_t : public building_geom_t {
 	unsigned count_connected_room_components() const;
 	point get_center_of_room(unsigned room_ix) const;
 	bool choose_dest_room(building_nav_graph_t const &ng, building_ai_state_t &state, rand_gen_t &rgen, bool same_floor) const;
-	bool find_route_to_point(building_nav_graph_t const &ng, point const &from, point const &to, vector<point> &path) const;
+	bool find_route_to_point(building_nav_graph_t const &ng, point const &from, point const &to, float radius, vector<point> &path) const;
 	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, bool stay_on_one_floor=1) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 private:
