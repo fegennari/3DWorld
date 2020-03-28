@@ -1546,7 +1546,7 @@ class building_creator_t {
 	vector3d range_sz, range_sz_inv, max_extent;
 	cube_t range, buildings_bcube;
 	rand_gen_t rgen, ai_rgen;
-	vector<building_t> buildings;
+	vect_building_t buildings;
 	vector<vector<unsigned>> bix_by_plot; // cached for use with pedestrian collisions
 	vector<int> peds_by_bix; // index of first person in each building; -1 is empty
 	vector<building_ai_state_t> ai_state;
@@ -2011,20 +2011,12 @@ public:
 		}
 		return 1;
 	}
-	void init_ai_state(vector<building_ai_state_t> &ai_state_in) {ai_state.swap(ai_state_in);}
 	int get_ped_ix_for_bix(unsigned bix) const {return ((bix < peds_by_bix.size()) ? peds_by_bix[bix] : -1);}
 
 	// called once per frame
-	void update_ai_state(vector<point> &ppl_pos) { // returns the new pos of each person; dir/orient can be determined from the delta
+	void update_ai_state(vector<pedestrian_t> &people) { // returns the new pos of each person; dir/orient can be determined from the delta
 		if (!global_building_params.enable_people_ai || !draw_building_interiors || !animate2) return;
-		bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
-		ppl_pos.resize(ai_state.size());
-
-		for (auto i = ai_state.begin(); i != ai_state.end(); ++i) {
-			assert(i->cur_building < buildings.size());
-			buildings[i->cur_building].ai_room_update(*i, ai_rgen, stay_on_one_floor);
-			ppl_pos[i - ai_state.begin()] = i->cur_pos;
-		}
+		buildings.ai_room_update(ai_state, people, ai_rgen);
 	}
 
 	static void multi_draw_shadow(vector3d const &xlate, vector<building_creator_t *> const &bcs) {
@@ -2976,8 +2968,7 @@ bool enable_building_people_ai() {return global_building_params.enable_people_ai
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
 	return building_creator.place_people(locs, radius, speed_mult, num); // secondary buildings only for now
 }
-void init_building_ai_state(vector<building_ai_state_t> &ai_state) {building_creator.init_ai_state(ai_state);}
-void update_building_ai_state(vector<point> &ppl_pos) {building_creator.update_ai_state(ppl_pos);}
+void update_building_ai_state(vector<pedestrian_t> &people) {building_creator.update_ai_state(people);}
 
 void get_all_garages(vect_cube_t &garages) {
 	building_creator.get_all_garages(garages);

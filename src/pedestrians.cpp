@@ -655,18 +655,6 @@ void ped_manager_t::init(unsigned num_city, unsigned num_building) {
 		ped.dest_bldg = i->bix; // store building index in dest_bldg field
 		peds_b.push_back(ped);
 	} // for i
-	if (enable_bp_ai /*&& city_params.ped_speed > 0.0*/) {
-		vector<building_ai_state_t> ai_state(peds_b.size());
-
-		for (unsigned i = 0; i < peds_b.size(); ++i) {
-			building_ai_state_t &state(ai_state[i]);
-			state.cur_building = peds_b[i].dest_bldg;
-			state.cur_pos      = peds_b[i].pos;
-			state.speed        = peds_b[i].speed;
-			state.radius       = peds_b[i].radius;
-		}
-		init_building_ai_state(ai_state); // Note: swaps ai_state vector, which is no longer needed here
-	}
 	cout << "City Pedestrians: " << peds.size() << ", Building Residents: " << peds_b.size() << endl; // testing
 	sort_by_city_and_plot();
 }
@@ -823,24 +811,8 @@ void ped_manager_t::next_frame() {
 		if (need_to_sort_peds) {sort_by_city_and_plot();}
 		first_frame = 0;
 	}
-	if (!peds_b.empty()) { // update people in buildings
-		//timer_t timer("Building People Update");
-		update_building_ai_state(bldg_ppl_pos);
-
-		if (!bldg_ppl_pos.empty()) {
-			assert(bldg_ppl_pos.size() == peds_b.size());
-
-			for (auto i = peds_b.begin(); i != peds_b.end(); ++i) {
-				point const &new_pos(bldg_ppl_pos[i - peds_b.begin()]);
-				vector3d delta(new_pos - i->pos);
-				delta.z = 0.0; // XY only
-				if (delta == zero_vector) {i->anim_time = 0.0; continue;} // no movement, reset animation
-				float const delta_mag(delta.mag());
-				i->pos = new_pos;
-				i->dir = delta/delta_mag;
-				i->anim_time += delta_mag;
-			} // for i
-		}
+	if (!peds_b.empty() && enable_building_people_ai()) { // update people in buildings
+		update_building_ai_state(peds_b);
 	}
 }
 

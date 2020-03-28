@@ -15,6 +15,7 @@ float const FLOOR_THICK_VAL        = 0.1; // 10% of floor spacing
 class light_source;
 class lmap_manager_t;
 class building_nav_graph_t;
+struct pedestrian_t;
 
 struct building_occlusion_state_t {
 	point pos;
@@ -359,13 +360,12 @@ struct building_loc_t {
 enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_AT_DEST, AI_MOVING};
 
 struct building_ai_state_t {
-	unsigned cur_building, cur_room, dest_room; // are these needed?
-	float radius, speed, wait_time;
-	point cur_pos, dest_pos;
+	unsigned cur_room, dest_room; // Note: cur_room and dest_room may not be needed
+	float wait_time;
 	vector<point> path; // stored backwards, next point on path is path.back()
 
-	building_ai_state_t() : cur_building(0), cur_room(0), dest_room(0), radius(0.0), speed(0.0), wait_time(0.0) {}
-	void next_path_pt(bool same_floor);
+	building_ai_state_t() : cur_room(0), dest_room(0), wait_time(0.0) {}
+	void next_path_pt(pedestrian_t &person, bool same_floor);
 };
 
 struct colored_cube_t;
@@ -467,9 +467,9 @@ struct building_t : public building_geom_t {
 	void build_nav_graph() const;
 	unsigned count_connected_room_components() const;
 	point get_center_of_room(unsigned room_ix) const;
-	bool choose_dest_room(building_ai_state_t &state, rand_gen_t &rgen, bool same_floor) const;
+	bool choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	bool find_route_to_point(point const &from, point const &to, float radius, vector<point> &path) const;
-	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, bool stay_on_one_floor=1) const;
+	int ai_room_update(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool stay_on_one_floor=1) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 private:
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
@@ -494,6 +494,10 @@ private:
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
 	void clip_ray_to_walls(point const &p1, point &p2) const;
 	void refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const;
+};
+
+struct vect_building_t : public vector<building_t> {
+	void ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, rand_gen_t &rgen) const;
 };
 
 struct building_draw_utils {

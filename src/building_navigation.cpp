@@ -4,6 +4,7 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
+#include "city.h" // for pedestrian_t
 #include <queue>
 #pragma warning(disable : 26812) // prefer enum class over enum
 
@@ -257,32 +258,32 @@ point building_t::get_center_of_room(unsigned room_ix) const {
 	return interior->rooms[room_ix].get_cube_center();
 }
 
-bool building_t::choose_dest_room(building_ai_state_t &state, rand_gen_t &rgen, bool same_floor) const
-{
+bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const {
+
 	assert(interior && interior->nav_graph);
-	building_loc_t const loc(get_building_loc_for_pt(state.cur_pos));
+	building_loc_t const loc(get_building_loc_for_pt(person.pos));
 	if (loc.room_ix < 0) return 0; // not in a room
-	state.cur_room  = loc.room_ix;
-	state.dest_room = state.cur_room; // set to the same room and pos just in case
-	state.dest_pos  = state.cur_pos;
+	state.cur_room   = loc.room_ix;
+	state.dest_room  = state.cur_room; // set to the same room and pos just in case
+	person.target_pos = person.pos; // set but not yet used
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 
 	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts at finding a valid room
 		unsigned const cand_room(rgen.rand() % interior->rooms.size());
-		if (cand_room == state.cur_room) continue;
+		if (cand_room == loc.room_ix) continue;
 
 		if (same_floor) {
 			cube_t const room(interior->rooms[cand_room]);
-			if (state.cur_pos.z < room.z1() || state.cur_pos.z > room.z2()) continue; // room above or below the current pos
+			if (person.pos.z < room.z1() || person.pos.z > room.z2()) continue; // room above or below the current pos
 		}
-		if (!interior->nav_graph->is_room_connected_to(state.cur_room, cand_room)) continue;
+		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) continue;
 
 		if (!same_floor) {
 			// do some stuff with stairs
 		}
-		state.dest_room  = cand_room;
-		state.dest_pos   = get_center_of_room(state.dest_room);
-		state.dest_pos.z = state.cur_pos.z; // keep orig zval to stay on the same floor
+		state.dest_room     = cand_room; // set but not yet used
+		person.target_pos   = get_center_of_room(cand_room);
+		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 		return 1;
 	} // for n
 	return 0; // failed
@@ -310,17 +311,17 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	return 1;
 }
 
-void building_ai_state_t::next_path_pt(bool same_floor) {
+void building_ai_state_t::next_path_pt(pedestrian_t &person, bool same_floor) {
 	assert(!path.empty());
-	dest_pos = path.back();
-	if (same_floor) {dest_pos.z = cur_pos.z;} // make sure zvals are equal (ignore zval of room center)
+	person.target_pos = path.back();
+	if (same_floor) {person.target_pos.z = person.pos.z;} // make sure zvals are equal (ignore zval of room center)
 	path.pop_back();
 }
 
-int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, bool stay_on_one_floor) const {
+int building_t::ai_room_update(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool stay_on_one_floor) const {
 
-	if (state.speed == 0.0) return AI_STOP; // stopped
-	bool choose_dest(state.dest_pos == all_zeros);
+	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
+	bool choose_dest(person.target_pos == all_zeros);
 
 	if (state.wait_time > 0) {
 		if (state.wait_time > fticks) {state.wait_time -= fticks; return AI_WAITING;} // waiting
@@ -328,37 +329,51 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, boo
 		choose_dest = 1;
 	}
 	assert(interior);
-	assert(bcube.contains_pt(state.cur_pos)); // person must be inside the building
+	assert(bcube.contains_pt(person.pos)); // person must be inside the building
 
 	if (choose_dest) { // no current destination - choose a new one
+		person.anim_time = 0.0; // reset animation
 		if (!interior->nav_graph) {build_nav_graph();}
 		// if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame; movement will be stopped from now on
-		if (!choose_dest_room(state, rgen, stay_on_one_floor)) {state.speed = 0.0; return AI_STOP;}
-		if (!find_route_to_point(state.cur_pos, state.dest_pos, state.radius, state.path)) {cout << "*** Bad Path ***"; state.speed = 0.0; return AI_STOP;}
-		state.next_path_pt(stay_on_one_floor);
+		if (!choose_dest_room(state, person, rgen, stay_on_one_floor)) {person.speed = 0.0; return AI_STOP;}
+		if (!find_route_to_point(person.pos, person.target_pos, person.radius, state.path)) {cout << "*** Bad Path ***"; person.speed = 0.0; return AI_STOP;}
+		state.next_path_pt(person, stay_on_one_floor);
 		return AI_AT_DEST;
 	}
-	float const max_dist(state.speed*fticks);
+	float const max_dist(person.speed*fticks);
 
-	if (dist_less_than(state.cur_pos, state.dest_pos, max_dist)) { // at dest
-		if (!stay_on_one_floor && state.cur_pos.z != state.dest_pos.z) {} // handle this case
-		state.cur_pos = state.dest_pos;
+	if (dist_less_than(person.pos, person.target_pos, max_dist)) { // at dest
+		if (!stay_on_one_floor && person.pos.z != person.target_pos.z) {} // handle this case
+		person.anim_time = 0.0; // reset animation
+		person.pos = person.target_pos;
 		
 		if (!state.path.empty()) { // move to next path point
-			state.next_path_pt(stay_on_one_floor);
+			state.next_path_pt(person, stay_on_one_floor);
 			return AI_NEXT_PT;
 		}
 		state.wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
-		state.dest_pos  = state.dest_pos;
 		return AI_AT_DEST;
 	}
-	//cout << TXT(state.cur_pos.str()) << TXT(state.dest_pos.str()) << endl;
-	// TODO: add some sort of smooth turning when changing to new dest_pos
-	vector3d dir(state.dest_pos - state.cur_pos);
-	dir.z = 0.0; // XY only, even if on stairs
-	dir.normalize();
-	state.cur_pos += max_dist*dir;
+	//cout << TXT(person.pos.str()) << TXT(person.target_pos.str()) << endl;
+	// TODO: add some sort of smooth turning when changing to new target_pos
+	person.dir   = person.target_pos - person.pos;
+	person.dir.z = 0.0; // XY only, even if on stairs
+	person.dir.normalize();
+	person.pos       += max_dist*person.dir;
+	person.anim_time += max_dist;
 	return AI_MOVING;
+}
+
+void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, rand_gen_t &rgen) const {
+	//timer_t timer("Building People Update"); // ~1.5ms
+	bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
+	ai_state.resize(people.size());
+
+	for (unsigned i = 0; i < people.size(); ++i) {
+		unsigned const bix(people[i].dest_bldg);
+		assert(bix < size());
+		operator[](bix).ai_room_update(ai_state[i], people[i], rgen, stay_on_one_floor); // dispatch to the correct building
+	}
 }
 
 building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
