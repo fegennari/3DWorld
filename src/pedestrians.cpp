@@ -459,10 +459,7 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cu
 }
 
 void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir) {
-	if (in_building) {
-		// TODO: add building navigation logic here
-	}
-	else { // in the city
+	if (!in_building) { // in the city
 		if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
 	}
 	reset_waiting();
@@ -481,8 +478,7 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (destroyed)    return; // destroyed
 	if (speed == 0.0) return; // not moving, no update needed
-	//assert(!is_nan(pos));
-	if (in_building)  return; // TODO: add any building update/movement logic here
+	if (in_building)  return; // building update/movement logic handled elsewhere
 
 	// navigation with destination
 	if (at_dest) {
@@ -646,6 +642,7 @@ void ped_manager_t::init(unsigned num_city, unsigned num_building) {
 	vect_building_place_t locs;
 	place_building_people(locs, radius, city_params.ped_speed, num_building);
 	peds_b.reserve(locs.size());
+	bool const enable_bp_ai(enable_building_people_ai());
 
 	for (auto i = locs.begin(); i != locs.end(); ++i) {
 		pedestrian_t ped(radius);
@@ -653,11 +650,23 @@ void ped_manager_t::init(unsigned num_city, unsigned num_building) {
 		float const angle(rgen.rand_uniform(0.0, TWO_PI));
 		ped.pos   = i->p + vector3d(0.0, 0.0, ped.radius);
 		ped.dir   = vector3d(sinf(angle), cos(angle), 0.0);
-		ped.speed = 0.0; // not moving
+		ped.speed = (enable_bp_ai ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
 		ped.ssn   = (unsigned short)(peds.size() + peds_b.size()); // may wrap
 		ped.dest_bldg = i->bix; // store building index in dest_bldg field
 		peds_b.push_back(ped);
 	} // for i
+	if (enable_bp_ai /*&& city_params.ped_speed > 0.0*/) {
+		vector<building_ai_state_t> ai_state(peds_b.size());
+
+		for (unsigned i = 0; i < peds_b.size(); ++i) {
+			building_ai_state_t &state(ai_state[i]);
+			state.cur_building = peds_b[i].dest_bldg;
+			state.cur_pos      = peds_b[i].pos;
+			state.speed        = peds_b[i].speed;
+			state.radius       = peds_b[i].radius;
+		}
+		init_building_ai_state(ai_state); // Note: swaps ai_state vector, which is no longer needed here
+	}
 	cout << "City Pedestrians: " << peds.size() << ", Building Residents: " << peds_b.size() << endl; // testing
 	sort_by_city_and_plot();
 }
@@ -827,7 +836,7 @@ void ped_manager_t::next_frame() {
 				delta.z = 0.0; // XY only
 				if (delta == zero_vector) {i->anim_time = 0.0; continue;} // no movement, reset animation
 				float const delta_mag(delta.mag());
-				i->pos = new_pos + vector3d(0.0, 0.0, i->radius); // buildings don't know about ped radius, so we need to add it in here
+				i->pos = new_pos;
 				i->dir = delta/delta_mag;
 				i->anim_time += delta_mag;
 			} // for i

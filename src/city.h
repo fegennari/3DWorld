@@ -829,5 +829,6 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 // from gen_buildings.cpp
 bool enable_building_people_ai();
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num);
+void init_building_ai_state(vector<building_ai_state_t> &ai_state);
 void update_building_ai_state(vector<point> &ppl_pos);
 void get_all_garages(vect_cube_t &garages);

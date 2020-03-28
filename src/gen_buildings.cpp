@@ -2009,19 +2009,9 @@ public:
 			assert(bix < peds_by_bix.size());
 			if (peds_by_bix[bix] < 0) {peds_by_bix[bix] = i;} // record first ped index for each building
 		}
-		if (global_building_params.enable_people_ai) {
-			ai_state.resize(locs.size());
-
-			for (unsigned i = 0; i < locs.size(); ++i) {
-				building_ai_state_t &state(ai_state[i]);
-				state.cur_building = locs[i].bix;
-				state.cur_pos      = locs[i].p;
-				state.speed        = speed_mult*ai_rgen.rand_uniform(0.5, 0.75); // small range, slower than outdoor city pedestrians
-				state.radius       = radius; // TODO: scale by model?
-			}
-		}
 		return 1;
 	}
+	void init_ai_state(vector<building_ai_state_t> &ai_state_in) {ai_state.swap(ai_state_in);}
 	int get_ped_ix_for_bix(unsigned bix) const {return ((bix < peds_by_bix.size()) ? peds_by_bix[bix] : -1);}
 
 	// called once per frame
@@ -2986,6 +2976,7 @@ bool enable_building_people_ai() {return global_building_params.enable_people_ai
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
 	return building_creator.place_people(locs, radius, speed_mult, num); // secondary buildings only for now
 }
+void init_building_ai_state(vector<building_ai_state_t> &ai_state) {building_creator.init_ai_state(ai_state);}
 void update_building_ai_state(vector<point> &ppl_pos) {building_creator.update_ai_state(ppl_pos);}
 
 void get_all_garages(vect_cube_t &garages) {
