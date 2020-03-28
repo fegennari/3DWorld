@@ -1026,8 +1026,8 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	translate_to(xlate);
 	if (enable_animations) {enable_animations_for_shader(dstate.s);}
 	dstate.pre_draw(xlate, use_dlights, shadow_only);
-	bool in_sphere_draw(0);
 	if (enable_animations) {dstate.s.add_uniform_int("animation_id", animation_id);}
+	bool in_sphere_draw(0);
 
 	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
 		if (!pdu.cube_visible(get_expanded_city_bcube_for_peds(city))) continue; // city not visible - skip

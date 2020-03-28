@@ -2023,7 +2023,7 @@ public:
 		//timer_t timer("Draw Buildings Shadow");
 		fgPushMatrix();
 		translate_to(xlate);
-		shader_t s;
+		shader_t s, person_shader;
 		s.begin_color_only_shader(); // really don't even need colors
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
 		vector<point> points; // reused temporary
@@ -2051,9 +2051,16 @@ public:
 						if (ped_ix < 0 && !add_player_shadow) continue; // nothing else to draw
 						bool const camera_in_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
 
-						if (ped_ix >= 0 && (camera_in_building || player_close)) {
-							// TODO: what about animations? needs a custom shader
-							draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1); // draw people in this building
+						if (ped_ix >= 0 && (camera_in_building || player_close)) { // draw people in this building
+							if (global_building_params.enable_people_ai) { // handle animations
+								if (!person_shader.is_setup()) {
+									enable_animations_for_shader(person_shader);
+									setup_smoke_shaders(person_shader, 0.0, 0, 0, 0, 0, 0, 0);
+								} else {person_shader.make_current();}
+								draw_peds_in_building(ped_ix, bi->ix, person_shader, xlate, 1); // draw people in this building
+								s.make_current(); // switch back to normal building shader
+							}
+							else {draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1);} // no animations
 						}
 						if (add_player_shadow && camera_in_building) { // use a smaller radius, shift to center of player height
 							draw_sphere_vbo((pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)), 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0);

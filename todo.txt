@@ -19,6 +19,5 @@ Cities:
     * Collision detection with room objects
     * Collision detection with each other
     * Handle stairs?
-    * Animated shadows?
   - Place more room objects/furniture
   - Interiors for city office towers
