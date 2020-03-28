@@ -14,6 +14,11 @@ Cities:
 * Mesh simplificaton for cars and peds for shadow pass
 
 * Building interiors:
-  - Moving people with collision detection and path finding
+  * Open doors all the way if there's space
+  * Moving people in buildings
+    * Collision detection with room objects
+    * Collision detection with each other
+    * Handle stairs?
+    * Animated shadows?
   - Place more room objects/furniture
   - Interiors for city office towers
