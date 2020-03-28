@@ -14,6 +14,7 @@ float const FLOOR_THICK_VAL        = 0.1; // 10% of floor spacing
 
 class light_source;
 class lmap_manager_t;
+class building_nav_graph_t;
 
 struct building_occlusion_state_t {
 	point pos;
@@ -332,9 +333,11 @@ struct building_interior_t {
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
 	std::unique_ptr<building_room_geom_t> room_geom;
+	std::unique_ptr<building_nav_graph_t> nav_graph;
 	draw_range_t draw_range;
 
-	building_interior_t() {}
+	building_interior_t();
+	~building_interior_t();
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	void finalize();
@@ -369,7 +372,6 @@ struct colored_cube_t;
 typedef vector<colored_cube_t> vect_colored_cube_t;
 class cube_bvh_t;
 class building_indir_light_mgr_t;
-class building_nav_graph_t;
 
 struct building_t : public building_geom_t {
 
@@ -462,11 +464,11 @@ struct building_t : public building_geom_t {
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const;
 	void update_stats(building_stats_t &s) const;
-	void build_nav_graph(building_nav_graph_t &ng) const;
+	void build_nav_graph() const;
 	unsigned count_connected_room_components() const;
 	point get_center_of_room(unsigned room_ix) const;
-	bool choose_dest_room(building_nav_graph_t const &ng, building_ai_state_t &state, rand_gen_t &rgen, bool same_floor) const;
-	bool find_route_to_point(building_nav_graph_t const &ng, point const &from, point const &to, float radius, vector<point> &path) const;
+	bool choose_dest_room(building_ai_state_t &state, rand_gen_t &rgen, bool same_floor) const;
+	bool find_route_to_point(point const &from, point const &to, float radius, vector<point> &path) const;
 	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, bool stay_on_one_floor=1) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 private:
