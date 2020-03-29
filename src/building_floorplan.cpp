@@ -950,15 +950,18 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	std::reverse(interior->floors.begin()+floors_start, interior->floors.end()); // order floors top to bottom to reduce overdraw when viewed from above
 }
 
+bool building_t::check_cube_intersect_walls(cube_t const &c) const {
+	for (unsigned d = 0; d < 2; ++d) {
+		if (has_bcube_int(c, interior->walls[d])) return 1;
+	}
+	return 0;
+}
+
 bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad, bool check_walls) const {
 	if (is_cube_close_to_doorway(c, stairs_pad)) return 0; // bad
 	if (interior->is_blocked_by_stairs_or_elevator(c, door_pad)) return 0; // bad
-	if (!check_walls) return 1;
-
 	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
-	for (unsigned d = 0; d < 2; ++d) {
-		if (has_bcube_int(c, interior->walls[d])) return 0;
-	}
+	if (check_walls && check_cube_intersect_walls(c)) return 0;
 	return 1;
 }
 

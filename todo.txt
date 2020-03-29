@@ -14,7 +14,6 @@ Cities:
 * Mesh simplificaton for cars and peds for shadow pass
 
 * Building interiors:
-  * Open doors all the way if there's space
   * Moving people in buildings
     * Collision detection with room objects
     * Collision detection with each other

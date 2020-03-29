@@ -1125,8 +1125,15 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 }
 
-tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj, bool opened, bool opens_out, bool opens_up, bool swap_sides) {
+void rotate_xy(point &pt, point const &origin, float angle) {
+	float const xv(pt.x - origin.x), yv(pt.y - origin.y), sin_term(sin(angle)), cos_term(cos(angle));
+	pt.x = cos_term*xv - sin_term*yv + origin.x;
+	pt.y = cos_term*yv + sin_term*xv + origin.y;
+}
 
+tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
+	bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const
+{
 	tquad_with_ix_t door(4, type); // quad
 	float const pos(c.d[dim][0] + (opened ? 0.0 : pos_adj*(dir ? 1.0 : -1.0))); // move away from wall slightly (not needed if opened)
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
@@ -1142,9 +1149,20 @@ tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned
 			door.pts[0][dim] = door.pts[1][dim] = pos + c.dz()*((dir ^ opens_out) ? 1.0 : -1.0);
 		}
 		else { // rotates to the side
-			float const width(c.get_sz_dim(!dim)), offset(0.01*width*((dir ^ dim) ? 1.0 : -1.0)); // move slightly away from the wall to prevent z-fighting
+			float const width(c.get_sz_dim(!dim)), signed_width(width*((dir ^ opens_out) ? 1.0 : -1.0));
+			float const offset(0.01*width*((dir ^ dim) ? 1.0 : -1.0)); // move slightly away from the wall to prevent z-fighting
 			door.pts[!swap_sides][!dim] = door.pts[2+swap_sides][!dim] = door.pts[swap_sides][!dim] + offset;
-			door.pts[1][dim] = door.pts[2][dim] = pos + width*((dir ^ opens_out) ? 1.0 : -1.0);
+			door.pts[1][dim] = door.pts[2][dim] = pos + signed_width;
+
+			if (!exterior) { // try to open the door all the way
+				tquad_with_ix_t orig_door(door); // cache orig 90 degree open door in case we need to revert it
+				float const shift(0.07*signed_width), rot_angle(-75.0*TO_RADIANS);
+				for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[swap_sides], rot_angle);}
+				for (unsigned i = 0; i < 4; ++i) {door.pts[i][dim] += shift;}
+				cube_t test_bcube(door.get_bcube());
+				test_bcube.expand_by(-0.1*width); // shrink slightly to avoid picking up adjacent walls
+				if (check_cube_intersect_walls(test_bcube)) {door = orig_door;} // bad placement, revert
+			}
 		}
 	}
 	return door;
@@ -1156,7 +1174,7 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
 	unsigned const type(for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
-	doors.push_back(set_door_from_cube(c, dim, dir, type, 0.01*sz[!dim], 0, 0, 0, 0)); // opened=0, opens_out=0, opens_up=0, swap_sides=0
+	doors.push_back(set_door_from_cube(c, dim, dir, type, 0.01*sz[!dim], 1, 0, 0, 0, 0)); // exterior=1, opened=0, opens_out=0, opens_up=0, swap_sides=0
 	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 	return 1;
 }
