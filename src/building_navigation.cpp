@@ -130,16 +130,24 @@ public:
 
 		while (1) {
 			assert(n < nodes.size());
-			path.push_back(get_node(n).get_center()); // room
+			cube_t const &room(get_node(n).bcube);
+			path.push_back(room.get_cube_center()); // room
 			if (state[n].came_from_ix < 0) {assert(n == end_ix); break;} // done
 			// TODO: handle coll_objs; may need to use room bcube
 			point const &next(state[n].path_pt);
 
 			if (path.size() > 2) {
-				// maybe straighten path by traveling from doorway to doorway without passing through the center of the room
 				point const &prev(path[path.size()-2]), &cur(path.back());
+#if 1
+				path.pop_back(); // remove room center point
+				vector3d dir1(room.closest_pt(prev) - prev), dir2(room.closest_pt(next) - cur);
+				path.push_back(prev + dir1*(radius/dir1.mag())); // walk out of doorway and into room
+				path.push_back(next - dir2*(radius/dir2.mag())); // walk from room into doorway
+#else
+				// maybe straighten path by traveling from doorway to doorway without passing through the center of the room
 				if (min(fabs(prev.x - next.x), fabs(prev.y - next.y)) > radius) {path.pop_back();} // doorways on diff walls, shorten path with direct line
 				//if (dot_product((cur - prev), (next - cur)) > 0.0) {path.pop_back();} // doors on opposite sides of the room, shorten path with direct line
+#endif
 			}
 			path.push_back(next); // doorway
 			n = state[n].came_from_ix;
