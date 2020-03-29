@@ -434,7 +434,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	vector<room_object_t> const &objs(interior->room_geom->objs);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	point const camera_bs(camera_pdu.pos - xlate); // camera in building space
-	float const window_vspacing(get_window_vspace()), camera_z(camera_bs.z);
+	float const window_vspacing(get_window_vspace()), wall_thickness(0.5*get_floor_thickness()), camera_z(camera_bs.z);
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
 	unsigned camera_part(parts.size()); // start at an invalid value
@@ -500,8 +500,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		float const light_radius(7.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius);
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
-		cube_t clipped_bc; // in building space
-		clipped_bc.set_from_sphere(lpos, cull_radius);
+		cube_t sphere_bc; // in building space
+		sphere_bc.set_from_sphere(lpos, cull_radius);
+		cube_t clipped_bc(sphere_bc);
 		clipped_bc.intersect_with_cube(bcube);
 		if (!stairs_light) {clipped_bc.z1() = floor_z; clipped_bc.z2() = ceil_z;} // clip zval to current floor if light not in a room with stairs or elevator
 		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC
@@ -519,6 +520,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 		clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
+		clipped_bc.expand_by_xy(wall_thickness); // expand by wall thickness so that offset exterior doors are properly handled
+		clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC - post clip
 		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
 		dl_sources.back().set_custom_bcube(clipped_bc);
