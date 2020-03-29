@@ -124,9 +124,30 @@ public:
 		float g_score, h_score, f_score;
 		a_star_node_state_t() : came_from_ix(-1), g_score(0), h_score(0), f_score(0) {}
 	};
+
+	void reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, float radius, unsigned start_ix, unsigned end_ix, vector<point> &path) const {
+		unsigned n(start_ix);
+
+		while (1) {
+			assert(n < nodes.size());
+			path.push_back(get_node(n).get_center()); // room
+			if (state[n].came_from_ix < 0) {assert(n == end_ix); break;} // done
+			// TODO: handle coll_objs; may need to use room bcube
+			point const &next(state[n].path_pt);
+
+			if (path.size() > 2) {
+				// maybe straighten path by traveling from doorway to doorway without passing through the center of the room
+				point const &prev(path[path.size()-2]), &cur(path.back());
+				if (min(fabs(prev.x - next.x), fabs(prev.y - next.y)) > radius) {path.pop_back();} // doorways on diff walls, shorten path with direct line
+				//if (dot_product((cur - prev), (next - cur)) > 0.0) {path.pop_back();} // doors on opposite sides of the room, shorten path with direct line
+			}
+			path.push_back(next); // doorway
+			n = state[n].came_from_ix;
+		} // end while()
+	}
 	
 	// Note: path is stored backwards
-	bool find_path_points(unsigned room1, unsigned room2, float radius, bool use_stairs, vector<point> &path) const { // A* algorithm
+	bool find_path_points(unsigned room1, unsigned room2, float radius, bool use_stairs, vect_cube_t const &avoid, vector<point> &path) const { // A* algorithm
 		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // or just return an empty path?
 		path.clear();
@@ -147,23 +168,7 @@ public:
 			if (closed[cur]) continue; // already closed (duplicate)
 
 			if (cur == room2) { // done, reconstruct path (in reverse)
-				unsigned n(cur);
-
-				while (1) {
-					assert(n < nodes.size());
-					path.push_back(get_node(n).get_center()); // room
-					if (state[n].came_from_ix < 0) {assert(n == room1); break;} // done
-					point const &next(state[n].path_pt);
-
-					if (path.size() > 2) {
-						// maybe straighten path by traveling from doorway to doorway without passing through the center of the room
-						point const &prev(path[path.size()-2]), &cur(path.back());
-						if (fabs(prev.x - next.x) > radius && fabs(prev.y - next.y) > radius) {path.pop_back();} // doorways on diff walls, shorten path with direct line
-						//if (dot_product((cur - prev), (next - cur)) > 0.0) {path.pop_back();} // doors on opposite sides of the room, shorten path with direct line
-					}
-					path.push_back(next); // doorway
-					n = state[n].came_from_ix;
-				} // end while()
+				reconstruct_path(state, avoid, radius, cur, room1, path);
 				return 1; // success
 			}
 			a_star_node_state_t const &cs(state[cur]);
@@ -289,6 +294,23 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 	return 0; // failed
 }
 
+template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vect_cube_t &out, float zval) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+		if (i->z1() < zval && i->z2() > zval) {out.push_back(*i);}
+	}
+}
+
+void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float zval) const { // for AI
+	add_bcube_if_overlaps_zval(stairwells, avoid, zval);
+	add_bcube_if_overlaps_zval(elevators, avoid, zval);
+	if (!room_geom) return; // no room objects
+
+	for (auto c = room_geom->objs.begin(); c != (room_geom->objs.begin() + room_geom->stairs_start); ++c) {
+		if (c->no_coll() || c->type == TYPE_ELEVATOR || c->type == TYPE_STAIR || c->type == TYPE_LIGHT) continue; // the object types are not collided with
+		if (c->z1() < zval && c->z2() > zval) {avoid.push_back(*c);}
+	}
+}
+
 bool building_t::find_route_to_point(point const &from, point const &to, float radius, vector<point> &path) const {
 
 	assert(interior && interior->nav_graph);
@@ -304,7 +326,10 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	else if (loc1.part_ix != loc2.part_ix) {
 		if (parts[loc1.part_ix].z1() != parts[loc2.part_ix].z1()) {use_stairs = 1;} // stacked parts
 	}
-	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, use_stairs, path)) return 0; // failed to find a path
+	static vect_cube_t avoid; // reuse across frames/people
+	avoid.clear();
+	interior->get_avoid_cubes(avoid, from.z);
+	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, use_stairs, avoid, path)) return 0; // failed to find a path
 	assert(!path.empty());
 	// add dest pos if not the center of the final room, at the beginning rather than the end because path is replayed backwards
 	if (path.back() != to) {path.insert(path.begin(), to);}
@@ -318,8 +343,10 @@ void building_ai_state_t::next_path_pt(pedestrian_t &person, bool same_floor) {
 	path.pop_back();
 }
 
-int building_t::ai_room_update(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool stay_on_one_floor) const {
+int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, unsigned person_ix, bool stay_on_one_floor) const {
 
+	assert(person_ix < people.size());
+	pedestrian_t &person(people[person_ix]);
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	bool choose_dest(person.target_pos == all_zeros);
 
@@ -356,6 +383,11 @@ int building_t::ai_room_update(building_ai_state_t &state, pedestrian_t &person,
 	}
 	//cout << TXT(person.pos.str()) << TXT(person.target_pos.str()) << endl;
 	// TODO: add some sort of smooth turning when changing to new target_pos
+	
+	for (auto p = people.begin()+person_ix+1; p != people.end(); ++p) { // check all other people in the same building after this one
+		if (p->dest_bldg != person.dest_bldg) break; // done with this building
+		// TODO: avoid other people
+	}
 	person.dir   = person.target_pos - person.pos;
 	person.dir.z = 0.0; // XY only, even if on stairs
 	person.dir.normalize();
@@ -365,14 +397,14 @@ int building_t::ai_room_update(building_ai_state_t &state, pedestrian_t &person,
 }
 
 void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, rand_gen_t &rgen) const {
-	//timer_t timer("Building People Update"); // ~1.5ms
+	//timer_t timer("Building People Update"); // ~1.8ms
 	bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
 	ai_state.resize(people.size());
 
 	for (unsigned i = 0; i < people.size(); ++i) {
 		unsigned const bix(people[i].dest_bldg);
 		assert(bix < size());
-		operator[](bix).ai_room_update(ai_state[i], people[i], rgen, stay_on_one_floor); // dispatch to the correct building
+		operator[](bix).ai_room_update(ai_state[i], rgen, people, i, stay_on_one_floor); // dispatch to the correct building
 	}
 }
 

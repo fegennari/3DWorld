@@ -343,6 +343,7 @@ struct building_interior_t {
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	void finalize();
 	bool update_elevators(point const &player_pos);
+	void get_avoid_cubes(vect_cube_t &avoid, float zval) const;
 };
 
 struct building_stats_t {
@@ -469,7 +470,7 @@ struct building_t : public building_geom_t {
 	point get_center_of_room(unsigned room_ix) const;
 	bool choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	bool find_route_to_point(point const &from, point const &to, float radius, vector<point> &path) const;
-	int ai_room_update(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool stay_on_one_floor=1) const;
+	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, unsigned person_ix, bool stay_on_one_floor=1) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 private:
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
