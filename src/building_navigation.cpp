@@ -125,21 +125,49 @@ public:
 		a_star_node_state_t() : came_from_ix(-1), g_score(0), h_score(0), f_score(0) {}
 	};
 
+	bool is_valid_pos(vect_cube_t const &avoid, point const &pos, float radius, float height) const { // Note: assumes zvals are already checked
+		cube_t c(pos, pos);
+		c.expand_by_xy(radius);
+
+		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
+			if (i->intersects_xy(c) && sphere_cube_intersect_xy(pos, radius, *i)) return 0;
+		}
+		return 1;
+	}
+	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, unsigned node_ix) const {
+		node_t const &node(get_node(node_ix));
+		cube_t place_area(node.bcube);
+		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
+		point const center(get_cube_center_z1(node.bcube));
+		if (!place_area.is_strictly_normalized()) return center; // should generally not be true
+		static unsigned call_ix(1); // unique value for every call
+		rand_gen_t rgen;
+		rgen.set_state(node_ix, call_ix++);
+		point pos(center); // first candidate is the center of the room
+
+		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
+			if (is_valid_pos(avoid, pos, radius, height)) return pos; // success
+			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);} // choose a random new point in the room
+		}
+		return center; // failed, return room center
+	}
+
 	void reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, float radius, unsigned start_ix, unsigned end_ix, vector<point> &path) const {
 		unsigned n(start_ix);
+		rand_gen_t rgen;
+		rgen.set_state(start_ix, nodes.size());
 
 		while (1) {
 			assert(n < nodes.size());
-			cube_t const &room(get_node(n).bcube);
-			path.push_back(room.get_cube_center()); // room
+			node_t const &node(get_node(n));
+			path.push_back(node.get_center()); // use room center for intermediate points; person is unlikely to go through these points anyway
 			if (state[n].came_from_ix < 0) {assert(n == end_ix); break;} // done
-			// TODO: handle coll_objs; may need to use room bcube
 			point const &next(state[n].path_pt);
 
 			if (path.size() > 2) {
 				point const &prev(path[path.size()-2]), &cur(path.back());
 				path.pop_back(); // remove room center point
-				vector3d dir1(room.closest_pt(prev) - prev), dir2(room.closest_pt(next) - cur);
+				vector3d dir1(node.bcube.closest_pt(prev) - prev), dir2(node.bcube.closest_pt(next) - cur);
 				float const dir1_mag(dir1.mag()), dir2_mag(dir2.mag());
 				if (dir1_mag > 0.01*radius) {path.push_back(prev + dir1*(radius/dir1_mag));} // walk out of doorway and into room
 				if (dir2_mag > 0.01*radius) {path.push_back(next - dir2*(radius/dir2_mag));} // walk from room into doorway
@@ -297,20 +325,20 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 	return 0; // failed
 }
 
-template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vect_cube_t &out, float zval) {
+template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vect_cube_t &out, float z1, float z2) {
 	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
-		if (i->z1() < zval && i->z2() > zval) {out.push_back(*i);}
+		if (i->z1() < z2 && i->z2() > z1) {out.push_back(*i);}
 	}
 }
 
-void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float zval) const { // for AI
-	add_bcube_if_overlaps_zval(stairwells, avoid, zval);
-	add_bcube_if_overlaps_zval(elevators, avoid, zval);
+void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2) const { // for AI
+	add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);
+	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2);
 	if (!room_geom) return; // no room objects
 
 	for (auto c = room_geom->objs.begin(); c != (room_geom->objs.begin() + room_geom->stairs_start); ++c) {
 		if (c->no_coll() || c->type == TYPE_ELEVATOR || c->type == TYPE_STAIR || c->type == TYPE_LIGHT) continue; // the object types are not collided with
-		if (c->z1() < zval && c->z2() > zval) {avoid.push_back(*c);}
+		if (c->z1() < z2 && c->z2() > z1) {avoid.push_back(*c);}
 	}
 }
 
@@ -329,13 +357,17 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	else if (loc1.part_ix != loc2.part_ix) {
 		if (parts[loc1.part_ix].z1() != parts[loc2.part_ix].z1()) {use_stairs = 1;} // stacked parts
 	}
+	float const height(0.7*get_window_vspace()); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
 	avoid.clear();
-	interior->get_avoid_cubes(avoid, from.z);
+	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height));
 	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, use_stairs, avoid, path)) return 0; // failed to find a path
 	assert(!path.empty());
 	// add dest pos if not the center of the final room, at the beginning rather than the end because path is replayed backwards
-	if (path.back() != to) {path.insert(path.begin(), to);}
+	point const target_pos(interior->nav_graph->find_valid_room_dest(avoid, radius, height, loc2.room_ix));
+	//if (path.back() != target_pos) {path.insert(path.begin(), target_pos);}
+	path.front() = target_pos; // override with new pos
+	if (path.size() > 1) {path.pop_back();} // don't need to go through the center of the first room
 	return 1;
 }
 
@@ -360,13 +392,14 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	assert(interior);
 	assert(bcube.contains_pt(person.pos)); // person must be inside the building
+	float const coll_dist(0.7*person.radius); // somewhat smaller than radius
 
 	if (choose_dest) { // no current destination - choose a new one
 		person.anim_time = 0.0; // reset animation
 		if (!interior->nav_graph) {build_nav_graph();}
 		// if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame; movement will be stopped from now on
 		if (!choose_dest_room(state, person, rgen, stay_on_one_floor)) {person.speed = 0.0; return AI_STOP;}
-		if (!find_route_to_point(person.pos, person.target_pos, person.radius, state.path)) {cout << "*** Bad Path ***"; person.speed = 0.0; return AI_STOP;}
+		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.path)) {cout << "*** Bad Path ***"; person.speed = 0.0; return AI_STOP;}
 		state.next_path_pt(person, stay_on_one_floor);
 		return AI_AT_DEST;
 	}
@@ -392,7 +425,6 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	person.dir = (delta_dir/new_dir_mag)*new_dir + (1.0 - delta_dir)*person.dir; // merge new_dir into dir gradually for smooth turning
 	person.dir.normalize();
 	point new_pos(person.pos + max_dist*person.dir);
-	float const coll_dist(0.7*person.radius); // somewhat smaller than radius
 	cube_t clip_cube(bcube);
 	clip_cube.expand_by_xy(-coll_dist); // shrink
 	clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
