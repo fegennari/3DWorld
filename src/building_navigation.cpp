@@ -138,16 +138,11 @@ public:
 
 			if (path.size() > 2) {
 				point const &prev(path[path.size()-2]), &cur(path.back());
-#if 1
 				path.pop_back(); // remove room center point
 				vector3d dir1(room.closest_pt(prev) - prev), dir2(room.closest_pt(next) - cur);
-				path.push_back(prev + dir1*(radius/dir1.mag())); // walk out of doorway and into room
-				path.push_back(next - dir2*(radius/dir2.mag())); // walk from room into doorway
-#else
-				// maybe straighten path by traveling from doorway to doorway without passing through the center of the room
-				if (min(fabs(prev.x - next.x), fabs(prev.y - next.y)) > radius) {path.pop_back();} // doorways on diff walls, shorten path with direct line
-				//if (dot_product((cur - prev), (next - cur)) > 0.0) {path.pop_back();} // doors on opposite sides of the room, shorten path with direct line
-#endif
+				float const dir1_mag(dir1.mag()), dir2_mag(dir2.mag());
+				if (dir1_mag > 0.01*radius) {path.push_back(prev + dir1*(radius/dir1_mag));} // walk out of doorway and into room
+				if (dir2_mag > 0.01*radius) {path.push_back(next - dir2*(radius/dir2_mag));} // walk from room into doorway
 			}
 			path.push_back(next); // doorway
 			n = state[n].came_from_ix;
@@ -379,6 +374,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 
 	if (dist_less_than(person.pos, person.target_pos, max_dist)) { // at dest
 		if (!stay_on_one_floor && person.pos.z != person.target_pos.z) {} // handle this case
+		assert(bcube.contains_pt(person.target_pos));
 		person.anim_time = 0.0; // reset animation
 		person.pos = person.target_pos;
 		
