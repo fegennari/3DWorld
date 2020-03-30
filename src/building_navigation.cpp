@@ -387,14 +387,43 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	vector3d new_dir(person.target_pos - person.pos);
 	new_dir.z = 0.0; // XY only, even if on stairs
-	person.dir = (delta_dir/new_dir.mag())*new_dir + (1.0 - delta_dir)*person.dir; // merge new_dir into dir gradually for smooth turning
+	float const new_dir_mag(new_dir.mag());
+	assert(new_dir_mag > TOLERANCE); // should be guaranteed by dist_less_than() test, assuming zvals are equal (which they should be)
+	person.dir = (delta_dir/new_dir_mag)*new_dir + (1.0 - delta_dir)*person.dir; // merge new_dir into dir gradually for smooth turning
 	person.dir.normalize();
-	point const new_pos(person.pos + max_dist*person.dir);
+	point new_pos(person.pos + max_dist*person.dir);
+	float const coll_dist(0.7*person.radius); // somewhat smaller than radius
+	cube_t clip_cube(bcube);
+	clip_cube.expand_by_xy(-coll_dist); // shrink
+	clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
 
-	for (auto p = people.begin()+person_ix+1; p != people.end(); ++p) { // check all other people in the same building after this one
+	for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
 		if (p->dest_bldg != person.dest_bldg) break; // done with this building
-		// TODO: avoid other people, skip pos update if new_pos is bad
-	}
+		if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
+		float const rsum(coll_dist + 0.7*p->radius);
+		if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
+		person.anim_time = 0.0; // pause animation in case this person is mid-step
+		if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
+		// if we get here, we have to actively move out of the way
+		point other_pos(p->pos.x, p->pos.y, person.pos.z); // use same zval to ignore height differences
+		int const room_ix(get_building_loc_for_pt(person.pos).room_ix);
+		float const sep_dist(p2p_dist_xy(person.pos, other_pos)), move_dist(rsum - sep_dist); // distance we have to move
+		point const orig_pos(person.pos);
+		// move away from the other person, hopefully not through a wall
+		if (sep_dist > 0.01*coll_dist) {person.pos += (move_dist/sep_dist)*(person.pos - other_pos);}
+		else {person.pos.x += rsum;} // avoid divide-by-zero, choose +X direction arbitrarily
+		cube_t clip_bounds((room_ix >= 0 && (unsigned)room_ix < interior->rooms.size()) ? interior->rooms[room_ix] : bcube);
+		clip_bounds.expand_by_xy(-coll_dist); // shrink
+		clip_bounds.union_with_pt(orig_pos); // we know this point was valid
+		clip_bounds.union_with_pt(new_pos);  // we know this point is valid
+		clip_bounds.clamp_pt_xy(person.pos); // force player into the room
+		
+		if (!bcube.contains_pt(person.pos)) {
+			cout << TXT(rsum) << TXT(sep_dist) << TXT(move_dist) << TXT(room_ix) << TXT(person.dir.str()) << TXT(p->pos.str()) << TXT(person.pos.str()) << TXT(bcube.str()) << endl;
+			assert(0);
+		}
+		return AI_MOVING; // return here, but don't update animation or dir; only handles a single collision
+	} // for p
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
 	return AI_MOVING;
