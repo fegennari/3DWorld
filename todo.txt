@@ -17,7 +17,6 @@ Cities:
   * Moving people in buildings
     * Collision detection with room objects
     * Collision detection with each other
-    * Smoother turning
     * Handle stairs?
   - Place more room objects/furniture
   - Interiors for city office towers

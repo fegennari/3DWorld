@@ -351,7 +351,7 @@ void building_ai_state_t::next_path_pt(pedestrian_t &person, bool same_floor) {
 	path.pop_back();
 }
 
-int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, unsigned person_ix, bool stay_on_one_floor) const {
+int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor) const {
 
 	assert(person_ix < people.size());
 	pedestrian_t &person(people[person_ix]);
@@ -389,22 +389,22 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		state.wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
 		return AI_AT_DEST;
 	}
-	//cout << TXT(person.pos.str()) << TXT(person.target_pos.str()) << endl;
-	// TODO: add some sort of smooth turning when changing to new target_pos
-	
+	vector3d new_dir(person.target_pos - person.pos);
+	new_dir.z = 0.0; // XY only, even if on stairs
+	person.dir = (delta_dir/new_dir.mag())*new_dir + (1.0 - delta_dir)*person.dir; // merge new_dir into dir gradually for smooth turning
+	person.dir.normalize();
+	point const new_pos(person.pos + max_dist*person.dir);
+
 	for (auto p = people.begin()+person_ix+1; p != people.end(); ++p) { // check all other people in the same building after this one
 		if (p->dest_bldg != person.dest_bldg) break; // done with this building
-		// TODO: avoid other people
+		// TODO: avoid other people, skip pos update if new_pos is bad
 	}
-	person.dir   = person.target_pos - person.pos;
-	person.dir.z = 0.0; // XY only, even if on stairs
-	person.dir.normalize();
-	person.pos       += max_dist*person.dir;
+	person.pos        = new_pos;
 	person.anim_time += max_dist;
 	return AI_MOVING;
 }
 
-void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, rand_gen_t &rgen) const {
+void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) const {
 	//timer_t timer("Building People Update"); // ~1.8ms
 	bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
 	ai_state.resize(people.size());
@@ -412,7 +412,7 @@ void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vect
 	for (unsigned i = 0; i < people.size(); ++i) {
 		unsigned const bix(people[i].dest_bldg);
 		assert(bix < size());
-		operator[](bix).ai_room_update(ai_state[i], rgen, people, i, stay_on_one_floor); // dispatch to the correct building
+		operator[](bix).ai_room_update(ai_state[i], rgen, people, delta_dir, i, stay_on_one_floor); // dispatch to the correct building
 	}
 }
 

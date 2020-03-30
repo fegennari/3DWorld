@@ -792,6 +792,7 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 
 void ped_manager_t::next_frame() {
 	if (!animate2) return; // nothing to do (only applies to moving peds)
+	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
 
 	if (!peds.empty()) {
 		//timer_t timer("Ped Update"); // ~3.9ms for 10K peds
@@ -801,7 +802,6 @@ void ped_manager_t::next_frame() {
 		{car_manager.extract_car_data(cars_by_city);}
 
 		if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
-		float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
 		static bool first_frame(1);
 
 		if (first_frame) { // choose initial ped destinations (must be after building setup, etc.)
@@ -812,7 +812,7 @@ void ped_manager_t::next_frame() {
 		first_frame = 0;
 	}
 	if (!peds_b.empty() && enable_building_people_ai()) { // update people in buildings
-		update_building_ai_state(peds_b);
+		update_building_ai_state(peds_b, delta_dir);
 	}
 }
 
