@@ -158,14 +158,23 @@ public:
 		point const &prev(path.back());
 		point const p1(walk_area.closest_pt(prev)), p2(walk_area.closest_pt(next));
 		if (p1 != prev) {path.push_back(p1);} // walk out of doorway and into room
+		bool is_path_valid(1);
 
-		vect_cube_t cubes;
-		// TODO: iterate over avoid and construct cubes
-		// TODO: find route from p1 to p2
-
+		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
+			if (i->intersects_xy(walk_area) && check_line_clip_xy(p1, p2, i->d)) {is_path_valid = 0; break;}
+		}
+		if (!is_path_valid) { // straight line not valid, need to run path finding
+			vect_cube_t keepout, nav_mesh, temp;
+			
+			for (auto i = avoid.begin(); i != avoid.end(); ++i) {
+				if (i->intersects_xy(walk_area)) {keepout.push_back(*i); keepout.back().expand_by_xy(radius);}
+			}
+			assert(!keepout.empty());
+			subtract_cubes_from_cube(walk_area, keepout, nav_mesh, temp);
+			// TODO: find route from p1 to p2
+		}
 		if (p2 != next) {path.push_back(p2);} // walk from room into doorway
 	}
-
 	void reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, float radius, unsigned start_ix, unsigned end_ix, vector<point> &path) const {
 		unsigned n(start_ix);
 		rand_gen_t rgen;

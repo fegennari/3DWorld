@@ -965,7 +965,7 @@ bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_
 	return 1;
 }
 
-void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out) {
+void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out) { // XY only
 	cube_t C;
 	if (c.y1() < s.y1()) {C = c; C.y2() = s.y1(); out.push_back(C);} // bottom
 	if (c.y2() > s.y2()) {C = c; C.y1() = s.y2(); out.push_back(C);} // top
@@ -997,6 +997,8 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub
 		out.swap(out2);
 	} // for s
 }
+template void subtract_cubes_from_cube(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2); // explicit instantiation
+
 bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes, bool clip_in_z) {
 	unsigned iter_end(cubes.size()); // capture size before splitting
 	bool was_clipped(0);
