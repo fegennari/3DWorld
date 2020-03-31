@@ -152,6 +152,20 @@ public:
 		return center; // failed, return room center
 	}
 
+	void add_path_for_room(vect_cube_t const &avoid, cube_t const &room, point const &next, float radius, vector<point> &path) const {
+		cube_t walk_area(room);
+		walk_area.expand_by_xy(-radius); // shrink by radius
+		point const &prev(path.back());
+		point const p1(walk_area.closest_pt(prev)), p2(walk_area.closest_pt(next));
+		if (p1 != prev) {path.push_back(p1);} // walk out of doorway and into room
+
+		vect_cube_t cubes;
+		// TODO: iterate over avoid and construct cubes
+		// TODO: find route from p1 to p2
+
+		if (p2 != next) {path.push_back(p2);} // walk from room into doorway
+	}
+
 	void reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, float radius, unsigned start_ix, unsigned end_ix, vector<point> &path) const {
 		unsigned n(start_ix);
 		rand_gen_t rgen;
@@ -164,13 +178,9 @@ public:
 			if (state[n].came_from_ix < 0) {assert(n == end_ix); break;} // done
 			point const &next(state[n].path_pt);
 
-			if (path.size() > 2) {
-				point const &prev(path[path.size()-2]), &cur(path.back());
+			if (path.size() > 2 && min(node.bcube.dx(), node.bcube.dy()) > 3.0*radius) { // adjust the path through a room
 				path.pop_back(); // remove room center point
-				vector3d dir1(node.bcube.closest_pt(prev) - prev), dir2(node.bcube.closest_pt(next) - cur);
-				float const dir1_mag(dir1.mag()), dir2_mag(dir2.mag());
-				if (dir1_mag > 0.01*radius) {path.push_back(prev + dir1*(radius/dir1_mag));} // walk out of doorway and into room
-				if (dir2_mag > 0.01*radius) {path.push_back(next - dir2*(radius/dir2_mag));} // walk from room into doorway
+				add_path_for_room(avoid, node.bcube, next, radius, path);
 			}
 			path.push_back(next); // doorway
 			n = state[n].came_from_ix;
