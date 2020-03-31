@@ -37,6 +37,13 @@ class building_nav_graph_t {
 			return all_zeros; // never gets here
 		}
 	};
+	struct a_star_node_state_t {
+		int came_from_ix;
+		point path_pt;
+		float g_score, h_score, f_score;
+		a_star_node_state_t() : came_from_ix(-1), g_score(0), h_score(0), f_score(0) {}
+	};
+
 	unsigned num_rooms, num_stairs;
 	vector<node_t> nodes;
 	node_t       &get_node(unsigned room)       {assert(room < nodes.size()); return nodes[room];}
@@ -117,13 +124,6 @@ public:
 		return ncomp;
 	}
 	bool is_fully_connected() const {return (count_connected_components() == 1);}
-
-	struct a_star_node_state_t {
-		int came_from_ix;
-		point path_pt;
-		float g_score, h_score, f_score;
-		a_star_node_state_t() : came_from_ix(-1), g_score(0), h_score(0), f_score(0) {}
-	};
 
 	bool is_valid_pos(vect_cube_t const &avoid, point const &pos, float radius, float height) const { // Note: assumes zvals are already checked
 		cube_t c(pos, pos);
@@ -421,14 +421,20 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	vector3d new_dir(person.target_pos - person.pos);
 	new_dir.z = 0.0; // XY only, even if on stairs
 	float const new_dir_mag(new_dir.mag());
-	assert(new_dir_mag > TOLERANCE); // should be guaranteed by dist_less_than() test, assuming zvals are equal (which they should be)
-	person.dir = (delta_dir/new_dir_mag)*new_dir + (1.0 - delta_dir)*person.dir; // merge new_dir into dir gradually for smooth turning
-	person.dir.normalize();
-	point new_pos(person.pos + max_dist*person.dir);
-	cube_t clip_cube(bcube);
-	clip_cube.expand_by_xy(-coll_dist); // shrink
-	clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
-
+	point new_pos;
+	
+	if (dot_product(new_dir, person.dir) < 0.999*new_dir_mag) { // dir not perfectly aligned
+		assert(new_dir_mag > TOLERANCE); // should be guaranteed by dist_less_than() test, assuming zvals are equal (which they should be)
+		person.dir = (delta_dir/new_dir_mag)*new_dir + (1.0 - delta_dir)*person.dir; // merge new_dir into dir gradually for smooth turning
+		person.dir.normalize();
+		new_pos = person.pos + max_dist*person.dir;
+		cube_t clip_cube(bcube);
+		clip_cube.expand_by_xy(-coll_dist); // shrink
+		clip_cube.clamp_pt_xy(new_pos); // make sure person stays within building bcube; can't clip to room because person may be exiting it
+	}
+	else { // optimization for aligned dir
+		new_pos = person.pos + max_dist*person.dir;
+	}
 	for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
 		if (p->dest_bldg != person.dest_bldg) break; // done with this building
 		if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
@@ -462,11 +468,12 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 }
 
 void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) const {
-	//timer_t timer("Building People Update"); // ~1.8ms
+	//timer_t timer("Building People Update"); // ~2.7ms
 	bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
-	ai_state.resize(people.size());
+	unsigned const num_people(people.size());
+	ai_state.resize(num_people);
 
-	for (unsigned i = 0; i < people.size(); ++i) {
+	for (unsigned i = 0; i < num_people; ++i) {
 		unsigned const bix(people[i].dest_bldg);
 		assert(bix < size());
 		operator[](bix).ai_room_update(ai_state[i], rgen, people, delta_dir, i, stay_on_one_floor); // dispatch to the correct building
