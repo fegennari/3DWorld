@@ -450,7 +450,11 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	bool choose_dest(person.target_pos == all_zeros);
 
 	if (state.wait_time > 0) {
-		if (state.wait_time > fticks) {state.wait_time -= fticks; return AI_WAITING;} // waiting
+		if (state.wait_time > fticks) { // waiting
+			// TODO: check for other people colliding with this person and handle it
+			state.wait_time -= fticks;
+			return AI_WAITING;
+		}
 		state.wait_time = 0.0;
 		choose_dest = 1;
 	}
@@ -504,8 +508,9 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
 		float const rsum(coll_dist + 0.7*p->radius);
 		if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
-		person.anim_time = 0.0; // pause animation in case this person is mid-step
+		//person.anim_time = 0.0; // pause animation in case this person is mid-step
 		if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
+		person.anim_time = 0.0; // pause animation in case this person is mid-step
 		// if we get here, we have to actively move out of the way
 		point other_pos(p->pos.x, p->pos.y, person.pos.z); // use same zval to ignore height differences
 		int const room_ix(get_building_loc_for_pt(person.pos).room_ix);
