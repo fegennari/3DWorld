@@ -53,6 +53,14 @@ class building_nav_graph_t {
 		path.push_back(get_node(room1).get_conn_pt(room2)); // door pos
 		path.push_back(get_node(room2).get_center()); // next room center
 	}
+	void remove_connection(unsigned from, unsigned to) {
+		auto &conn(get_node(from).conn_rooms);
+
+		for (auto i = conn.begin(); i != conn.end(); ++i) {
+			if (i->ix == to) {swap(*i, conn.back()); conn.pop_back(); return;}
+		}
+		assert(0); // must be found - should not get here
+	}
 public:
 	building_nav_graph_t() : num_rooms(0), num_stairs(0) {}
 
@@ -80,6 +88,11 @@ public:
 		assert(room1 < num_rooms && room2 < num_rooms);
 		get_node(room1).add_conn_room(room2, conn_bcube);
 		get_node(room2).add_conn_room(room1, conn_bcube);
+	}
+	void disconnect_room_pair(unsigned room1, unsigned room2) { // remove connections in both directions
+		assert(room1 != room2 && room1 < num_rooms && room2 < num_rooms);
+		remove_connection(room1, room2);
+		remove_connection(room2, room1);
 	}
 	bool is_room_connected_to(unsigned room1, unsigned room2) const { // Note: likely faster than running full A* algorithm
 		assert(room1 < num_rooms && room2 < num_rooms);
