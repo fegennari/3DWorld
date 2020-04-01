@@ -147,12 +147,13 @@ public:
 		}
 		return 1;
 	}
-	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, unsigned node_ix) const {
+	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, unsigned node_ix, bool &not_room_center) const {
 		node_t const &node(get_node(node_ix));
 		cube_t place_area(node.bcube);
 		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
 		point const center(get_cube_center_z1(node.bcube));
 		if (!place_area.is_strictly_normalized()) return center; // should generally not be true
+		not_room_center = 1;
 		static unsigned call_ix(1); // unique value for every call
 		rand_gen_t rgen;
 		rgen.set_state(node_ix, call_ix++);
@@ -165,30 +166,40 @@ public:
 		return center; // failed, return room center
 	}
 
-	void add_path_for_room(vect_cube_t const &avoid, cube_t const &room, point const &next, float radius, vector<point> &path) const {
+	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius, vector<point> &path) const {
+		bool is_path_valid(1);
+
+		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
+			if (!i->intersects_xy(walk_area)) continue;
+			cube_t c(*i);
+			c.expand_by_xy(radius);
+			if (check_line_clip_xy(p1, p2, c.d)) {is_path_valid = 0; break;}
+		}
+		if (is_path_valid) return 1; // done
+		// straight line not valid, need to run path finding
+		vect_cube_t keepout, nav_mesh, temp;
+
+		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
+			if (i->intersects_xy(walk_area)) {keepout.push_back(*i); keepout.back().expand_by_xy(radius);}
+		}
+		assert(!keepout.empty());
+		subtract_cubes_from_cube(walk_area, keepout, nav_mesh, temp);
+		// TODO: find route from p1 to p2
+		return 1;
+	}
+	bool add_path_for_room(vect_cube_t const &avoid, cube_t const &room, point const &next, float radius, vector<point> &path) const {
 		cube_t walk_area(room);
 		walk_area.expand_by_xy(-radius); // shrink by radius
 		point const &prev(path.back());
 		point const p1(walk_area.closest_pt(prev)), p2(walk_area.closest_pt(next));
 		if (p1 != prev) {path.push_back(p1);} // walk out of doorway and into room
-		bool is_path_valid(1);
-
-		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-			if (i->intersects_xy(walk_area) && check_line_clip_xy(p1, p2, i->d)) {is_path_valid = 0; break;}
-		}
-		if (!is_path_valid) { // straight line not valid, need to run path finding
-			vect_cube_t keepout, nav_mesh, temp;
-			
-			for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-				if (i->intersects_xy(walk_area)) {keepout.push_back(*i); keepout.back().expand_by_xy(radius);}
-			}
-			assert(!keepout.empty());
-			subtract_cubes_from_cube(walk_area, keepout, nav_mesh, temp);
-			// TODO: find route from p1 to p2
-		}
+		if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path)) return 0;
 		if (p2 != next) {path.push_back(p2);} // walk from room into doorway
+		return 1;
 	}
-	void reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, float radius, unsigned start_ix, unsigned end_ix, vector<point> &path) const {
+	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid,
+		float radius, float height, unsigned start_ix, unsigned end_ix, vector<point> &path) const
+	{
 		unsigned n(start_ix);
 		rand_gen_t rgen;
 		rgen.set_state(start_ix, nodes.size());
@@ -196,21 +207,50 @@ public:
 		while (1) {
 			assert(n < nodes.size());
 			node_t const &node(get_node(n));
-			path.push_back(node.get_center()); // use room center for intermediate points; person is unlikely to go through these points anyway
-			if (state[n].came_from_ix < 0) {assert(n == end_ix); break;} // done
 			point const &next(state[n].path_pt);
+			int const came_from(state[n].came_from_ix);
+			bool const is_first_pt(path.empty());
 
-			if (path.size() > 2 && min(node.bcube.dx(), node.bcube.dy()) > 3.0*radius) { // adjust the path through a room
+			if (is_first_pt) { // last point in path (first point in reverse path)
+				assert(came_from >= 0); // too strong?
+				cube_t walk_area(node.bcube);
+				walk_area.expand_by_xy(-radius); // shrink by radius
+				bool success(0);
+
+				for (unsigned n = 0; n < 10; ++n) { // keep retrying until we find a point that is reachable from the doorway
+					bool not_room_center(0);
+					point const end_point(find_valid_room_dest(avoid, radius, height, start_ix, not_room_center));
+					path.push_back(end_point);
+					if (connect_room_endpoints(avoid, walk_area, end_point, next, radius, path)) {success = 1; break;}
+					path.clear(); // failed, reset for next iteration
+					if (!not_room_center) break; // if we did choose the room center, and there is no path to it, we've failed
+				} // for n
+				if (!success) {assert(path.empty()); return 0;} // failed to connect to a point in dest room
+			}
+			else { // use room center for intermediate points; person is unlikely to go through these points anyway
+				path.push_back(node.get_center());
+			}
+			if (came_from < 0) {assert(n == end_ix); break;} // done
+
+			if (!is_first_pt && min(node.bcube.dx(), node.bcube.dy()) > 3.0*radius) { // adjust the path through a room
+				assert(!path.empty());
 				path.pop_back(); // remove room center point
-				add_path_for_room(avoid, node.bcube, next, radius, path);
+
+				if (!add_path_for_room(avoid, node.bcube, next, radius, path)) {
+					path.clear();
+					// TODO: try another path?
+					//disconnect_room_pair(n, came_from); // ???
+					return 0;
+				}
 			}
 			path.push_back(next); // doorway
-			n = state[n].came_from_ix;
+			n = came_from;
 		} // end while()
+		return 1;
 	}
 	
-	// Note: path is stored backwards
-	bool find_path_points(unsigned room1, unsigned room2, float radius, bool use_stairs, vect_cube_t const &avoid, vector<point> &path) const { // A* algorithm
+	// A* algorithm; Note: path is stored backwards
+	bool find_path_points(unsigned room1, unsigned room2, float radius, float height, bool use_stairs, vect_cube_t const &avoid, vector<point> &path) const {
 		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // or just return an empty path?
 		path.clear();
@@ -229,11 +269,7 @@ public:
 			unsigned const cur(open_queue.top().second);
 			open_queue.pop();
 			if (closed[cur]) continue; // already closed (duplicate)
-
-			if (cur == room2) { // done, reconstruct path (in reverse)
-				reconstruct_path(state, avoid, radius, cur, room1, path);
-				return 1; // success
-			}
+			if (cur == room2) {return reconstruct_path(state, avoid, radius, height, cur, room1, path);} // done, reconstruct path (in reverse)
 			a_star_node_state_t const &cs(state[cur]);
 			node_t const &cur_node(get_node(cur));
 			point const center(cur_node.get_center());
@@ -393,12 +429,8 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	static vect_cube_t avoid; // reuse across frames/people
 	avoid.clear();
 	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height));
-	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, use_stairs, avoid, path)) return 0; // failed to find a path
+	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, avoid, path)) return 0; // failed to find a path
 	assert(!path.empty());
-	// add dest pos if not the center of the final room, at the beginning rather than the end because path is replayed backwards
-	point const target_pos(interior->nav_graph->find_valid_room_dest(avoid, radius, height, loc2.room_ix));
-	//if (path.back() != target_pos) {path.insert(path.begin(), target_pos);}
-	path.front() = target_pos; // override with new pos
 	if (path.size() > 1) {path.pop_back();} // don't need to go through the center of the first room
 	return 1;
 }
