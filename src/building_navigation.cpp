@@ -448,10 +448,17 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	pedestrian_t &person(people[person_ix]);
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	bool choose_dest(person.target_pos == all_zeros);
+	float const coll_dist(0.7*person.radius); // somewhat smaller than radius
 
 	if (state.wait_time > 0) {
 		if (state.wait_time > fticks) { // waiting
-			// TODO: check for other people colliding with this person and handle it
+			for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check for other people colliding with this person and handle it
+				if (p->dest_bldg != person.dest_bldg) break; // done with this building
+				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
+				float const rsum(coll_dist + 0.7*p->radius);
+				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
+				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
+			} // for p
 			state.wait_time -= fticks;
 			return AI_WAITING;
 		}
@@ -460,7 +467,6 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	assert(interior);
 	assert(bcube.contains_pt(person.pos)); // person must be inside the building
-	float const coll_dist(0.7*person.radius); // somewhat smaller than radius
 
 	if (choose_dest) { // no current destination - choose a new one
 		person.anim_time = 0.0; // reset animation
@@ -508,32 +514,34 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
 		float const rsum(coll_dist + 0.7*p->radius);
 		if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
-		//person.anim_time = 0.0; // pause animation in case this person is mid-step
 		if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
 		person.anim_time = 0.0; // pause animation in case this person is mid-step
-		// if we get here, we have to actively move out of the way
-		point other_pos(p->pos.x, p->pos.y, person.pos.z); // use same zval to ignore height differences
-		int const room_ix(get_building_loc_for_pt(person.pos).room_ix);
-		float const sep_dist(p2p_dist_xy(person.pos, other_pos)), move_dist(rsum - sep_dist); // distance we have to move
-		point const orig_pos(person.pos);
-		// move away from the other person, hopefully not through a wall
-		if (sep_dist > 0.01*coll_dist) {person.pos += (move_dist/sep_dist)*(person.pos - other_pos);}
-		else {person.pos.x += rsum;} // avoid divide-by-zero, choose +X direction arbitrarily
-		cube_t clip_bounds((room_ix >= 0 && (unsigned)room_ix < interior->rooms.size()) ? interior->rooms[room_ix] : bcube);
-		clip_bounds.expand_by_xy(-coll_dist); // shrink
-		clip_bounds.union_with_pt(orig_pos); // we know this point was valid
-		clip_bounds.union_with_pt(new_pos);  // we know this point is valid
-		clip_bounds.clamp_pt_xy(person.pos); // force player into the room
-		
-		if (!bcube.contains_pt(person.pos)) {
-			cout << TXT(rsum) << TXT(sep_dist) << TXT(move_dist) << TXT(room_ix) << TXT(person.dir.str()) << TXT(p->pos.str()) << TXT(person.pos.str()) << TXT(bcube.str()) << endl;
-			assert(0);
-		}
+		move_person_to_not_collide(person, *p, new_pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
 		return AI_MOVING; // return here, but don't update animation or dir; only handles a single collision
 	} // for p
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
 	return AI_MOVING;
+}
+
+void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const {
+	point other_pos(other.pos.x, other.pos.y, person.pos.z); // use same zval to ignore height differences
+	float const sep_dist(p2p_dist_xy(person.pos, other_pos)), move_dist(rsum - sep_dist); // distance we have to move
+	// move away from the other person, hopefully not through a wall
+	point const orig_pos(person.pos);
+	if (sep_dist > 0.01*coll_dist) {person.pos += (move_dist/sep_dist)*(person.pos - other_pos);}
+	else {person.pos.x += rsum;} // avoid divide-by-zero, choose +X direction arbitrarily
+	int const room_ix(get_building_loc_for_pt(orig_pos).room_ix);
+	cube_t clip_bounds((room_ix >= 0 && (unsigned)room_ix < interior->rooms.size()) ? interior->rooms[room_ix] : bcube);
+	clip_bounds.expand_by_xy(-coll_dist); // shrink
+	clip_bounds.union_with_pt(orig_pos); // we know this point was valid
+	clip_bounds.union_with_pt(new_pos);  // we know this point is valid
+	clip_bounds.clamp_pt_xy(person.pos); // force player into the room
+
+	if (!bcube.contains_pt(person.pos)) { // this can happen on rare occasions, due to fp inaccuracy or multiple collisions
+		//cout << TXT(rsum) << TXT(sep_dist) << TXT(move_dist) << TXT(room_ix) << TXT(other.pos.str()) << TXT(person.pos.str()) << TXT(bcube.str()) << endl;
+		bcube.clamp_pt_xy(person.pos); // just clamp pos so that it doesn't assert later
+	}
 }
 
 void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) const {

@@ -471,6 +471,7 @@ struct building_t : public building_geom_t {
 	bool choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	bool find_route_to_point(point const &from, point const &to, float radius, vector<point> &path) const;
 	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor=1) const;
+	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 private:
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
