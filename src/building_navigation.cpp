@@ -166,7 +166,83 @@ public:
 		return center; // failed, return room center
 	}
 
+	class room_graph_t {
+		struct room_node_t {
+			point pt;
+			vector<unsigned> conn;
+			room_node_t() {}
+			room_node_t(point const &p) : pt(p) {}
+		};
+		vector<room_node_t> nodes;
+
+		void connect_nodes(unsigned ix1, unsigned ix2) {
+			assert(ix1 != ix2 && ix1 < nodes.size() && ix2 < nodes.size());
+			nodes[ix1].conn.push_back(ix2);
+			nodes[ix2].conn.push_back(ix1);
+		}
+	public:
+		void init_from_cubes(vect_cube_t const &cubes, float z) {
+			// we could build a real nav mesh here and use a funnel algorithm, but that's complex, difficult to test, and probably overkill for a room
+			// see https://www.gamedev.net/tutorials/programming/artificial-intelligence/navigation-meshes-and-pathfinding-r4880/
+#if 0
+			// but that's probably overkill for a room with a few objects to avoid, so instead we insert waypoints at the corners and edge centers of each cube
+			nodes.reserve(8*cubes.size());
+
+			for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+				point pts[8];
+				pts[0].assign(c->x1(), c->y1(), z);
+				pts[1].assign(c->x2(), c->y1(), z);
+				pts[2].assign(c->x2(), c->y2(), z);
+				pts[3].assign(c->x1(), c->y2(), z);
+				for (unsigned n = 0; n < 4; ++n) {pts[4+n] = 0.5*(pts[n] + pts[(n+1)&3]);} // edge centers
+				// TODO
+			} // for c
+#else
+			// but that's probably overkill for a room with a few objects to avoid, so instead we insert waypoints at the centers of each cube
+			nodes.reserve(2*cubes.size()); // just a guess
+			vector<unsigned> to_connect;
+
+			for (unsigned i = 0; i < cubes.size(); ++i) {
+				for (unsigned j = 0; j < cubes.size(); ++j) {
+					if (i == j) continue; // skip self
+					cube_t const &a(cubes[i]), &b(cubes[j]);
+
+					// find shared edges and insert nodes there
+					for (unsigned d = 0; d < 2; ++d) { // dim
+						for (unsigned e = 0; e < 2; ++e) { // dir
+							if (a.d[d][e] != b.d[d][!e]) continue; // not a shared edge
+							float const sl(max(a.d[!d][0], b.d[!d][0])), sh(min(a.d[!d][1], b.d[!d][1])); // shared edge segment low/high
+							if (sl >= sh) continue; // no shared segment
+							point p;
+							p[ d] = a.d[d][e]; // shared edge pos
+							p[!d] = 0.5f*(sl + sh); // edge midpoint
+							p.z = z;
+							unsigned const next_nix(nodes.size());
+							unsigned node_ix(next_nix);
+
+							// see if a node was already added for this point
+							for (unsigned n = 0; n < next_nix; ++n) { // TODO: skip iter if (j > i)
+								if (nodes[n].pt == p) {node_ix = n; break;}
+							}
+							assert((j < i) == (node_ix != next_nix)); // node must exist iff other cube has already been processed
+							if (node_ix == next_nix) {nodes.push_back(p);} // new node
+							for (auto m = to_connect.begin(); m != to_connect.end(); ++m) {connect_nodes(*m, node_ix);} // connect to other nodes along the edges of this cube
+							to_connect.push_back(node_ix);
+						} // for e
+					} // for d
+				} // for j
+				to_connect.clear();
+			} // for i
+#endif
+		}
+		bool connect_points(point const &p1, point const &p2, vector<point> &path) const {
+			// TODO: WRITE another A* algorithm
+			return 1;
+		}
+	}; // end room_graph_t
+
 	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius, vector<point> &path) const {
+		//assert(p1.z == p2.z); // no z-value change within a room (FIXME)
 		bool is_path_valid(1);
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
@@ -177,15 +253,21 @@ public:
 		}
 		if (is_path_valid) return 1; // done
 		// straight line not valid, need to run path finding
-		vect_cube_t keepout, nav_mesh, temp;
+		vect_cube_t keepout, nav_cubes, temp;
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (i->intersects_xy(walk_area)) {keepout.push_back(*i); keepout.back().expand_by_xy(radius);}
 		}
 		assert(!keepout.empty());
-		subtract_cubes_from_cube(walk_area, keepout, nav_mesh, temp);
-		// TODO: find route from p1 to p2
+		subtract_cubes_from_cube(walk_area, keepout, nav_cubes, temp);
+		// TODO: find route from p1 to p2 using A* nested inside A*
+#if 0
+		room_graph_t rg;
+		rg.init_from_cubes(nav_cubes, p1.z);
+		return rg.connect_points(p1, p2, path);
+#else
 		return 1;
+#endif
 	}
 	bool add_path_for_room(vect_cube_t const &avoid, cube_t const &room, point const &next, float radius, vector<point> &path) const {
 		cube_t walk_area(room);
