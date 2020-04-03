@@ -166,124 +166,6 @@ public:
 		return center; // failed, return room center
 	}
 
-	class room_graph_t {
-		struct room_node_t {
-			point pt;
-			vector<unsigned> conn;
-			room_node_t() {}
-			room_node_t(point const &p) : pt(p) {}
-		};
-		vector<room_node_t> nodes;
-
-		void connect_nodes(unsigned ix1, unsigned ix2) {
-			assert(ix1 != ix2 && ix1 < nodes.size() && ix2 < nodes.size());
-			nodes[ix1].conn.push_back(ix2);
-			nodes[ix2].conn.push_back(ix1);
-		}
-		unsigned find_closest_node(point const &p) const {
-			assert(!nodes.empty());
-			unsigned best(nodes.size());
-			float dmin_sq(0.0);
-
-			for (unsigned n = 0; n < nodes.size(); ++n) {
-				float const dist_sq(p2p_dist_xy_sq(p, nodes[n].pt));
-				if (best == nodes.size() || dist_sq < dmin_sq) {best = n; dmin_sq = dist_sq;}
-			}
-			return best;
-		}
-	public:
-		void init_from_cubes(vect_cube_t const &cubes, float z) {
-			// we could build a real nav mesh here and use a funnel algorithm, but that's complex, difficult to test, and probably overkill for a room
-			// see https://www.gamedev.net/tutorials/programming/artificial-intelligence/navigation-meshes-and-pathfinding-r4880/
-			// but that's probably overkill for a room with a few objects to avoid, so instead we insert waypoints at the centers of each cube
-			nodes.reserve(2*cubes.size()); // just a guess
-			vector<unsigned> to_connect;
-
-			for (unsigned i = 0; i < cubes.size(); ++i) {
-				for (unsigned j = 0; j < cubes.size(); ++j) {
-					if (i == j) continue; // skip self
-					cube_t const &a(cubes[i]), &b(cubes[j]);
-
-					// find shared edges and insert nodes there
-					for (unsigned d = 0; d < 2; ++d) { // dim
-						for (unsigned e = 0; e < 2; ++e) { // dir
-							if (a.d[d][e] != b.d[d][!e]) continue; // not a shared edge
-							float const sl(max(a.d[!d][0], b.d[!d][0])), sh(min(a.d[!d][1], b.d[!d][1])); // shared edge segment low/high
-							if (sl >= sh) continue; // no shared segment
-							point p;
-							p[ d] = a.d[d][e]; // shared edge pos
-							p[!d] = 0.5f*(sl + sh); // edge midpoint
-							p.z = z;
-							unsigned const next_nix(nodes.size());
-							unsigned node_ix(next_nix);
-
-							// see if a node was already added for this point
-							for (unsigned n = 0; n < next_nix; ++n) { // TODO: skip iter if (j > i)
-								if (nodes[n].pt == p) {node_ix = n; break;}
-							}
-							assert((j < i) == (node_ix != next_nix)); // node must exist iff other cube has already been processed
-							if (node_ix == next_nix) {nodes.push_back(p);} // new node
-							for (auto m = to_connect.begin(); m != to_connect.end(); ++m) {connect_nodes(*m, node_ix);} // connect to other nodes along the edges of this cube
-							to_connect.push_back(node_ix);
-						} // for e
-					} // for d
-				} // for j
-				to_connect.clear();
-			} // for i
-		}
-		bool reconstruct_path(vector<a_star_node_state_t> const &state, unsigned start_ix, unsigned end_ix, vector<point> &path) const {
-			unsigned n(start_ix);
-
-			while (1) {
-				assert(n < nodes.size());
-				bool const is_first_pt(path.empty());
-				path.push_back(nodes[n].pt);
-				if (state[n].came_from_ix < 0) {assert(n == end_ix); break;} // done
-				n = state[n].came_from_ix;
-			} // end while()
-			return 1;
-		}
-		bool connect_points(point const &p1, point const &p2, vector<point> &path) const {
-			// another A* algorithm
-			unsigned const start_node(find_closest_node(p1)), end_node(find_closest_node(p2));
-			vector<a_star_node_state_t> state(nodes.size());
-			vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
-			std::priority_queue<pair<float, unsigned> > open_queue;
-			a_star_node_state_t &start(state[start_node]);
-			start.g_score = 0.0;
-			start.h_score = start.f_score = p2p_dist_xy(p1, p2); // estimated total cost from start to goal through current
-			open[start_node] = 1;
-			open_queue.push(make_pair(-start.f_score, start_node));
-
-			while (!open_queue.empty()) {
-				unsigned const cur(open_queue.top().second);
-				open_queue.pop();
-				if (closed[cur]) continue; // already closed (duplicate)
-				if (cur == end_node) {return reconstruct_path(state, cur, start_node, path);} // done, reconstruct path (in reverse)
-				a_star_node_state_t const &cs(state[cur]);
-				room_node_t const &cur_node(nodes[cur]);
-				assert(!closed[cur]);
-				closed[cur] = 1;
-				open[cur]   = 0;
-
-				for (auto i = cur_node.conn.begin(); i != cur_node.conn.end(); ++i) {
-					assert(*i < nodes.size());
-					if (closed[*i]) continue; // already closed (duplicate)
-					a_star_node_state_t &sn(state[*i]);
-					float const new_g_score(sn.g_score + p2p_dist_xy(cur_node.pt, nodes[*i].pt));
-					if (!open[*i]) {open[*i] = 1;}
-					else if (new_g_score >= sn.g_score) continue; // not better
-					sn.came_from_ix = cur;
-					sn.g_score = new_g_score;
-					sn.h_score = p2p_dist_xy(nodes[*i].pt, p2);
-					sn.f_score = sn.g_score + sn.h_score;
-					open_queue.push(make_pair(-sn.f_score, *i));
-				} // for i
-			} // end while()
-			return 0; // failed - no path from p1 to p2
-		}
-	}; // end room_graph_t
-
 	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius, vector<point> &path, rand_gen_t &rgen) const {
 		// Note: p1.z and p2.z are ignored
 		bool is_path_valid(1);
@@ -302,7 +184,6 @@ public:
 			if (i->intersects_xy(walk_area)) {keepout.push_back(*i); keepout.back().expand_by_xy(radius);}
 		}
 		assert(!keepout.empty());
-#if 1
 		// do something simple and brute force:
 		// since rooms tend to only have objects in the middle, try to find the best point that creates the shortest non-intersecting 2-part path
 		float dmin(0.0);
@@ -324,16 +205,6 @@ public:
 		if (dmin == 0.0) return 0; // failed
 		path.push_back(best_pt); // success
 		return 1;
-#else
-		subtract_cubes_from_cube(walk_area, keepout, nav_cubes, temp);
-#if 0
-		room_graph_t rg;
-		rg.init_from_cubes(nav_cubes, p1.z);
-		return rg.connect_points(p1, p2, path); // find route from p1 to p2 using A* nested inside A*
-#else
-		return 1;
-#endif
-#endif
 	}
 	static point closest_room_pt(cube_t const &c, point const &pos) {
 		return point(max(c.x1(), min(c.x2(), pos.x)), max(c.y1(), min(c.y2(), pos.y)), pos.z);
