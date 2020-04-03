@@ -242,7 +242,7 @@ public:
 	}; // end room_graph_t
 
 	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius, vector<point> &path) const {
-		//assert(p1.z == p2.z); // no z-value change within a room (FIXME)
+		// Note: p1.z and p2.z are ignored
 		bool is_path_valid(1);
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
@@ -260,20 +260,22 @@ public:
 		}
 		assert(!keepout.empty());
 		subtract_cubes_from_cube(walk_area, keepout, nav_cubes, temp);
-		// TODO: find route from p1 to p2 using A* nested inside A*
 #if 0
 		room_graph_t rg;
 		rg.init_from_cubes(nav_cubes, p1.z);
-		return rg.connect_points(p1, p2, path);
+		return rg.connect_points(p1, p2, path); // find route from p1 to p2 using A* nested inside A*
 #else
 		return 1;
 #endif
+	}
+	static point closest_room_pt(cube_t const &c, point const &pos) {
+		return point(max(c.x1(), min(c.x2(), pos.x)), max(c.y1(), min(c.y2(), pos.y)), pos.z);
 	}
 	bool add_path_for_room(vect_cube_t const &avoid, cube_t const &room, point const &next, float radius, vector<point> &path) const {
 		cube_t walk_area(room);
 		walk_area.expand_by_xy(-radius); // shrink by radius
 		point const &prev(path.back());
-		point const p1(walk_area.closest_pt(prev)), p2(walk_area.closest_pt(next));
+		point const p1(closest_room_pt(walk_area, prev)), p2(closest_room_pt(walk_area, next));
 		if (p1 != prev) {path.push_back(p1);} // walk out of doorway and into room
 		if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path)) return 0;
 		if (p2 != next) {path.push_back(p2);} // walk from room into doorway
@@ -287,7 +289,6 @@ public:
 		rgen.set_state(start_ix, nodes.size());
 
 		while (1) {
-			assert(n < nodes.size());
 			node_t const &node(get_node(n));
 			point const &next(state[n].path_pt);
 			int const came_from(state[n].came_from_ix);
@@ -343,7 +344,7 @@ public:
 		point const dest_pos(get_node(room2).get_center());
 		a_star_node_state_t &start(state[room1]);
 		start.g_score = 0.0;
-		start.h_score = start.f_score = p2p_dist(get_node(room1).get_center(), dest_pos); // estimated total cost from start to goal through current
+		start.h_score = start.f_score = p2p_dist_xy(get_node(room1).get_center(), dest_pos); // estimated total cost from start to goal through current
 		open[room1]   = 1;
 		open_queue.push(make_pair(-start.f_score, room1));
 
@@ -366,13 +367,13 @@ public:
 				if (conn_node.is_stairs && !use_stairs) continue; // skip stairs in this mode
 				point const conn_center(conn_node.get_center());
 				a_star_node_state_t &sn(state[i->ix]);
-				float const new_g_score(sn.g_score + p2p_dist(center, i->pt) + p2p_dist(i->pt, conn_center));
+				float const new_g_score(sn.g_score + p2p_dist_xy(center, i->pt) + p2p_dist_xy(i->pt, conn_center));
 				if (!open[i->ix]) {open[i->ix] = 1;}
 				else if (new_g_score >= sn.g_score) continue; // not better
 				sn.came_from_ix = cur;
 				sn.path_pt = i->pt;
 				sn.g_score = new_g_score;
-				sn.h_score = p2p_dist(conn_center, dest_pos);
+				sn.h_score = p2p_dist_xy(conn_center, dest_pos);
 				sn.f_score = sn.g_score + sn.h_score;
 				open_queue.push(make_pair(-sn.f_score, i->ix));
 			} // for i
