@@ -180,24 +180,21 @@ public:
 			nodes[ix1].conn.push_back(ix2);
 			nodes[ix2].conn.push_back(ix1);
 		}
+		unsigned find_closest_node(point const &p) const {
+			assert(!nodes.empty());
+			unsigned best(nodes.size());
+			float dmin_sq(0.0);
+
+			for (unsigned n = 0; n < nodes.size(); ++n) {
+				float const dist_sq(p2p_dist_xy_sq(p, nodes[n].pt));
+				if (best == nodes.size() || dist_sq < dmin_sq) {best = n; dmin_sq = dist_sq;}
+			}
+			return best;
+		}
 	public:
 		void init_from_cubes(vect_cube_t const &cubes, float z) {
 			// we could build a real nav mesh here and use a funnel algorithm, but that's complex, difficult to test, and probably overkill for a room
 			// see https://www.gamedev.net/tutorials/programming/artificial-intelligence/navigation-meshes-and-pathfinding-r4880/
-#if 0
-			// but that's probably overkill for a room with a few objects to avoid, so instead we insert waypoints at the corners and edge centers of each cube
-			nodes.reserve(8*cubes.size());
-
-			for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-				point pts[8];
-				pts[0].assign(c->x1(), c->y1(), z);
-				pts[1].assign(c->x2(), c->y1(), z);
-				pts[2].assign(c->x2(), c->y2(), z);
-				pts[3].assign(c->x1(), c->y2(), z);
-				for (unsigned n = 0; n < 4; ++n) {pts[4+n] = 0.5*(pts[n] + pts[(n+1)&3]);} // edge centers
-				// TODO
-			} // for c
-#else
 			// but that's probably overkill for a room with a few objects to avoid, so instead we insert waypoints at the centers of each cube
 			nodes.reserve(2*cubes.size()); // just a guess
 			vector<unsigned> to_connect;
@@ -233,15 +230,61 @@ public:
 				} // for j
 				to_connect.clear();
 			} // for i
-#endif
+		}
+		bool reconstruct_path(vector<a_star_node_state_t> const &state, unsigned start_ix, unsigned end_ix, vector<point> &path) const {
+			unsigned n(start_ix);
+
+			while (1) {
+				assert(n < nodes.size());
+				bool const is_first_pt(path.empty());
+				path.push_back(nodes[n].pt);
+				if (state[n].came_from_ix < 0) {assert(n == end_ix); break;} // done
+				n = state[n].came_from_ix;
+			} // end while()
+			return 1;
 		}
 		bool connect_points(point const &p1, point const &p2, vector<point> &path) const {
-			// TODO: WRITE another A* algorithm
-			return 1;
+			// another A* algorithm
+			unsigned const start_node(find_closest_node(p1)), end_node(find_closest_node(p2));
+			vector<a_star_node_state_t> state(nodes.size());
+			vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
+			std::priority_queue<pair<float, unsigned> > open_queue;
+			a_star_node_state_t &start(state[start_node]);
+			start.g_score = 0.0;
+			start.h_score = start.f_score = p2p_dist_xy(p1, p2); // estimated total cost from start to goal through current
+			open[start_node] = 1;
+			open_queue.push(make_pair(-start.f_score, start_node));
+
+			while (!open_queue.empty()) {
+				unsigned const cur(open_queue.top().second);
+				open_queue.pop();
+				if (closed[cur]) continue; // already closed (duplicate)
+				if (cur == end_node) {return reconstruct_path(state, cur, start_node, path);} // done, reconstruct path (in reverse)
+				a_star_node_state_t const &cs(state[cur]);
+				room_node_t const &cur_node(nodes[cur]);
+				assert(!closed[cur]);
+				closed[cur] = 1;
+				open[cur]   = 0;
+
+				for (auto i = cur_node.conn.begin(); i != cur_node.conn.end(); ++i) {
+					assert(*i < nodes.size());
+					if (closed[*i]) continue; // already closed (duplicate)
+					a_star_node_state_t &sn(state[*i]);
+					float const new_g_score(sn.g_score + p2p_dist_xy(cur_node.pt, nodes[*i].pt));
+					if (!open[*i]) {open[*i] = 1;}
+					else if (new_g_score >= sn.g_score) continue; // not better
+					sn.came_from_ix = cur;
+					sn.g_score = new_g_score;
+					sn.h_score = p2p_dist_xy(nodes[*i].pt, p2);
+					sn.f_score = sn.g_score + sn.h_score;
+					open_queue.push(make_pair(-sn.f_score, *i));
+				} // for i
+			} // end while()
+			return 0; // failed - no path from p1 to p2
 		}
 	}; // end room_graph_t
 
-	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius, vector<point> &path) const {
+	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius, vector<point> &path, rand_gen_t &rgen) const {
 		// Note: p1.z and p2.z are ignored
 		bool is_path_valid(1);
 
@@ -259,6 +302,29 @@ public:
 			if (i->intersects_xy(walk_area)) {keepout.push_back(*i); keepout.back().expand_by_xy(radius);}
 		}
 		assert(!keepout.empty());
+#if 1
+		// do something simple and brute force:
+		// since rooms tend to only have objects in the middle, try to find the best point that creates the shortest non-intersecting 2-part path
+		float dmin(0.0);
+		point best_pt;
+
+		for (unsigned n = 0; n < 100; ++n) { // make 100 attempts
+			point pos;
+			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(walk_area.d[d][0], walk_area.d[d][1]);} // choose a random new point in the room
+			pos.z = p1.z; // not needed?
+			bool valid(1);
+
+			for (auto i = keepout.begin(); i != keepout.end(); ++i) {
+				if (check_line_clip_xy(p1, pos, i->d) || check_line_clip_xy(p2, pos, i->d)) {valid = 0; break;}
+			}
+			if (!valid) continue;
+			float const dist(p2p_dist_xy(p1, pos) + p2p_dist_xy(p2, pos));
+			if (dmin == 0.0 || dist < dmin) {best_pt = pos; dmin = dist;}
+		} // for n
+		if (dmin == 0.0) return 0; // failed
+		path.push_back(best_pt); // success
+		return 1;
+#else
 		subtract_cubes_from_cube(walk_area, keepout, nav_cubes, temp);
 #if 0
 		room_graph_t rg;
@@ -267,17 +333,18 @@ public:
 #else
 		return 1;
 #endif
+#endif
 	}
 	static point closest_room_pt(cube_t const &c, point const &pos) {
 		return point(max(c.x1(), min(c.x2(), pos.x)), max(c.y1(), min(c.y2(), pos.y)), pos.z);
 	}
-	bool add_path_for_room(vect_cube_t const &avoid, cube_t const &room, point const &next, float radius, vector<point> &path) const {
+	bool add_path_for_room(vect_cube_t const &avoid, cube_t const &room, point const &next, float radius, vector<point> &path, rand_gen_t &rgen) const {
 		cube_t walk_area(room);
 		walk_area.expand_by_xy(-radius); // shrink by radius
 		point const &prev(path.back());
 		point const p1(closest_room_pt(walk_area, prev)), p2(closest_room_pt(walk_area, next));
 		if (p1 != prev) {path.push_back(p1);} // walk out of doorway and into room
-		if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path)) return 0;
+		if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path, rgen)) return 0;
 		if (p2 != next) {path.push_back(p2);} // walk from room into doorway
 		return 1;
 	}
@@ -304,7 +371,7 @@ public:
 					bool not_room_center(0);
 					point const end_point(find_valid_room_dest(avoid, radius, height, start_ix, not_room_center));
 					path.push_back(end_point);
-					if (connect_room_endpoints(avoid, walk_area, end_point, next, radius, path)) {success = 1; break;}
+					if (connect_room_endpoints(avoid, walk_area, end_point, next, radius, path, rgen)) {success = 1; break;}
 					path.clear(); // failed, reset for next iteration
 					if (!not_room_center) break; // if we did choose the room center, and there is no path to it, we've failed
 				} // for n
@@ -319,7 +386,7 @@ public:
 				assert(!path.empty());
 				path.pop_back(); // remove room center point
 
-				if (!add_path_for_room(avoid, node.bcube, next, radius, path)) {
+				if (!add_path_for_room(avoid, node.bcube, next, radius, path, rgen)) {
 					path.clear();
 					// TODO: try another path?
 					//disconnect_room_pair(n, came_from); // ???
@@ -556,7 +623,12 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		if (!interior->nav_graph) {build_nav_graph();}
 		// if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame; movement will be stopped from now on
 		if (!choose_dest_room(state, person, rgen, stay_on_one_floor)) {person.speed = 0.0; return AI_STOP;}
-		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.path)) {cout << "*** Bad Path ***"; person.speed = 0.0; return AI_STOP;}
+
+		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.path)) {
+			person.speed    = 0.0;
+			state.wait_time = 1.0*TICKS_PER_SECOND; // stop for 1 second then try again
+			return AI_WAITING;
+		}
 		state.next_path_pt(person, stay_on_one_floor);
 		return AI_AT_DEST;
 	}
