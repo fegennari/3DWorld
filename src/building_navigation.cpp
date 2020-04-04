@@ -237,7 +237,7 @@ public:
 		return point(max(c.x1(), min(c.x2(), pos.x)), max(c.y1(), min(c.y2(), pos.y)), pos.z);
 	}
 	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, point const &cur_pt,
-		float radius, float height, unsigned start_ix, unsigned end_ix, vector<point> &path) const
+		float radius, float height, unsigned start_ix, unsigned end_ix, bool is_first_path, vector<point> &path) const
 	{
 		unsigned n(start_ix);
 		rand_gen_t rgen;
@@ -271,7 +271,11 @@ public:
 				assert(n == end_ix);
 				point const final_pt(closest_room_pt(walk_area, path.back())); // walk from room into last doorway
 				path.push_back(final_pt);
-				if (!connect_room_endpoints(avoid, walk_area, final_pt, cur_pt, radius, path, rgen)) {path.clear(); return 0;} // path to first doorway
+
+				if (!connect_room_endpoints(avoid, walk_area, final_pt, cur_pt, radius, path, rgen)) { // find path to first doorway
+					// allow a failure if this is the first path taken by this AI so that it's not stuck behind an object due to bad initial placement
+					if (!is_first_path) {path.clear(); return 0;}
+				}
 				break;
 			}
 			else { // adjust the path through a room
@@ -281,7 +285,7 @@ public:
 				point const p1(closest_room_pt(walk_area, prev)), p2(closest_room_pt(walk_area, next));
 				path.push_back(p1); // walk out of doorway and into room
 				
-				if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path, rgen)) {
+				if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path, rgen)) { // unreachable
 					path.clear();
 					// TODO: try another path?
 					//disconnect_room_pair(n, came_from); // ???
@@ -297,7 +301,7 @@ public:
 	
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, float radius, float height, bool use_stairs,
-		vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
+		bool is_first_path, vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
 	{
 		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // or just return an empty path?
@@ -317,7 +321,7 @@ public:
 			unsigned const cur(open_queue.top().second);
 			open_queue.pop();
 			if (closed[cur]) continue; // already closed (duplicate)
-			if (cur == room2) {return reconstruct_path(state, avoid, cur_pt, radius, height, cur, room1, path);} // done, reconstruct path (in reverse)
+			if (cur == room2) {return reconstruct_path(state, avoid, cur_pt, radius, height, cur, room1, is_first_path, path);} // done, reconstruct path (in reverse)
 			a_star_node_state_t const &cs(state[cur]);
 			node_t const &cur_node(get_node(cur));
 			point const center(cur_node.get_center(cur_pt.z));
@@ -459,7 +463,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	}
 }
 
-bool building_t::find_route_to_point(point const &from, point const &to, float radius, vector<point> &path) const {
+bool building_t::find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, vector<point> &path) const {
 
 	assert(interior && interior->nav_graph);
 	path.clear();
@@ -478,7 +482,7 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	static vect_cube_t avoid; // reuse across frames/people
 	avoid.clear();
 	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height));
-	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, avoid, from, path)) return 0; // failed to find a path
+	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, avoid, from, path)) return 0; // failed to find a path
 	assert(!path.empty());
 	return 1;
 }
@@ -522,13 +526,14 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		// if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame; movement will be stopped from now on
 		if (!choose_dest_room(state, person, rgen, stay_on_one_floor)) {person.speed = 0.0; return AI_STOP;}
 
-		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.path)) {
+		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.is_first_path, state.path)) {
 			person.speed    = 0.0;
 			state.wait_time = 1.0*TICKS_PER_SECOND; // stop for 1 second then try again
 			return AI_WAITING;
 		}
+		state.is_first_path = 0;
 		state.next_path_pt(person, stay_on_one_floor);
-		return AI_AT_DEST;
+		return AI_BEGIN_PATH;
 	}
 	float const max_dist(person.speed*fticks);
 

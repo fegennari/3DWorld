@@ -358,14 +358,15 @@ struct building_loc_t {
 	bool operator==(building_loc_t const &loc) const {return (part_ix == loc.part_ix && room_ix == loc.room_ix && stairs_ix == loc.stairs_ix && floor == loc.floor);}
 };
 
-enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_AT_DEST, AI_MOVING};
+enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING};
 
 struct building_ai_state_t {
+	bool is_first_path;
 	unsigned cur_room, dest_room; // Note: cur_room and dest_room may not be needed
 	float wait_time;
 	vector<point> path; // stored backwards, next point on path is path.back()
 
-	building_ai_state_t() : cur_room(0), dest_room(0), wait_time(0.0) {}
+	building_ai_state_t() : is_first_path(1), cur_room(0), dest_room(0), wait_time(0.0) {}
 	void next_path_pt(pedestrian_t &person, bool same_floor);
 };
 
@@ -469,7 +470,7 @@ struct building_t : public building_geom_t {
 	unsigned count_connected_room_components() const;
 	point get_center_of_room(unsigned room_ix) const;
 	bool choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
-	bool find_route_to_point(point const &from, point const &to, float radius, vector<point> &path) const;
+	bool find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, vector<point> &path) const;
 	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor=1) const;
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
