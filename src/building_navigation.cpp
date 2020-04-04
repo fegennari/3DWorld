@@ -146,16 +146,13 @@ public:
 	static void choose_pt_xy_in_room(point &pos, cube_t const &c, rand_gen_t &rgen) {
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
 	}
-	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, float zval, unsigned node_ix, bool &not_room_center) const {
+	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, float zval, unsigned node_ix, bool &not_room_center, rand_gen_t &rgen) const {
 		node_t const &node(get_node(node_ix));
 		cube_t place_area(node.bcube);
 		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
 		point const center(get_cube_center_zval(node.bcube, zval));
 		if (!place_area.is_strictly_normalized()) return center; // should generally not be true
 		not_room_center = 1;
-		static unsigned call_ix(1); // unique value for every call
-		rand_gen_t rgen;
-		rgen.set_state(node_ix, call_ix++);
 		point pos(center); // first candidate is the center of the room
 
 		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
@@ -244,7 +241,8 @@ public:
 	{
 		unsigned n(start_ix);
 		rand_gen_t rgen;
-		rgen.set_state(start_ix, nodes.size());
+		static unsigned call_ix(1);
+		rgen.set_state(start_ix, call_ix++);
 
 		while (1) {
 			node_t const &node(get_node(n));
@@ -260,7 +258,7 @@ public:
 
 				for (unsigned n = 0; n < 10; ++n) { // keep retrying until we find a point that is reachable from the doorway
 					bool not_room_center(0);
-					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, not_room_center));
+					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, not_room_center, rgen));
 					path.push_back(end_point);
 					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
 					if (connect_room_endpoints(avoid, walk_area, end_point, room_exit, radius, path, rgen)) {path.push_back(room_exit); success = 1; break;}
