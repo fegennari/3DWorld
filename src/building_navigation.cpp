@@ -537,14 +537,14 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	if (dist_less_than(person.pos, person.target_pos, max_dist)) { // at dest
 		if (!stay_on_one_floor && person.pos.z != person.target_pos.z) {} // handle this case
 		assert(bcube.contains_pt(person.target_pos));
-		person.anim_time = 0.0; // reset animation
 		person.pos = person.target_pos;
 		
 		if (!state.path.empty()) { // move to next path point
 			state.next_path_pt(person, stay_on_one_floor);
 			return AI_NEXT_PT;
 		}
-		state.wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
+		person.anim_time = 0.0; // reset animation
+		state.wait_time  = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
 		return AI_AT_DEST;
 	}
 	vector3d new_dir(person.target_pos - person.pos);
