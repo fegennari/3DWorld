@@ -143,6 +143,9 @@ public:
 		}
 		return 1;
 	}
+	static void choose_pt_xy_in_room(point &pos, cube_t const &c, rand_gen_t &rgen) {
+		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
+	}
 	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, float zval, unsigned node_ix, bool &not_room_center) const {
 		node_t const &node(get_node(node_ix));
 		cube_t place_area(node.bcube);
@@ -157,11 +160,23 @@ public:
 
 		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
 			if (is_valid_pos(avoid, pos, radius, height)) return pos; // success
-			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);} // choose a random new point in the room
+			choose_pt_xy_in_room(pos, place_area, rgen); // choose a random new point in the room
 		}
 		return center; // failed, return room center
 	}
 
+	static bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2) {
+		for (auto i = c.begin(); i != c.end(); ++i) {
+			if (check_line_clip_xy(p1, p2, i->d)) return 1;
+		}
+		return 0;
+	}
+	static bool check_pt_contained_xy(vect_cube_t const &c, point const &p) {
+		for (auto i = c.begin(); i != c.end(); ++i) {
+			if (i->contains_pt_xy(p)) return 1;
+		}
+		return 0;
+	}
 	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius, vector<point> &path, rand_gen_t &rgen) const {
 		assert(p1.z == p2.z);
 		bool is_path_valid(1);
@@ -181,26 +196,45 @@ public:
 		}
 		assert(!keepout.empty());
 		// do something simple and brute force:
-		// since rooms tend to only have objects in the middle, try to find the best point that creates the shortest non-intersecting 2-part path
-		float dmin(0.0);
-		point best_pt, pos;
-		pos.z = p1.z;
+		// since rooms tend to only have objects in the middle, try to find the best point that creates the shortest non-intersecting 2-part or 3-part path
+		for (unsigned npts = 1; npts <= 2; ++npts) { // try to add 1 point; if that fails, try to add 2 points
+			float dmin(0.0);
+			bool use_pos2(0);
+			point best_pt, best_pt2, pos, pos2;
+			pos.z = pos2.z = p1.z;
 
-		// TODO: if this fails, try using two points
-		for (unsigned n = 0; n < 100; ++n) { // make 100 attempts
-			bool valid(1);
-			for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(walk_area.d[d][0], walk_area.d[d][1]);} // choose a rand point in the room
-			
-			for (auto k = keepout.begin(); (k != keepout.end() && valid); ++k) {
-				if (check_line_clip_xy(p1, pos, k->d) || check_line_clip_xy(pos, p2, k->d)) {valid = 0; break;}
-			}
-			if (!valid) continue;
-			float const dist(p2p_dist_xy(p1, pos) + p2p_dist_xy(pos, p2));
-			if (dmin == 0.0 || dist < dmin) {best_pt = pos; dmin = dist;}
-		} // for n
-		if (dmin == 0.0) return 0; // failed
-		path.push_back(best_pt);
-		return 1; // success
+			for (unsigned n = 0; n < 100; ++n) { // make 100 attempts
+				choose_pt_xy_in_room(pos, walk_area, rgen); // choose a rand point in the room
+				if (check_pt_contained_xy(keepout, pos)) continue; // bad point
+
+				if (npts == 1) {
+					if (check_line_int_xy(keepout, p1, pos) || check_line_int_xy(keepout, pos, p2)) continue; // bad point
+					float const dist(p2p_dist_xy(p1, pos) + p2p_dist_xy(pos, p2));
+					if (dmin == 0.0 || dist < dmin) {best_pt = pos; dmin = dist; use_pos2 = 0;}
+				}
+				else { // npts == 2
+					bool success(0);
+
+					for (unsigned m = 0; m < 10; ++m) { // make 10 random attempts
+						choose_pt_xy_in_room(pos2, walk_area, rgen); // choose a rand point in the room
+						if (!check_pt_contained_xy(keepout, pos2)) {success = 1; break;} // good point
+					}
+					if (!success) continue; // no good point
+
+					for (unsigned ordering = 0; ordering < 2; ++ordering) { // try {p1-pos-pos2-p2} and {p1-pos2-pos-p2}
+						if (check_line_int_xy(keepout, p1, pos) || check_line_int_xy(keepout, pos, pos2) || check_line_int_xy(keepout, pos2, p2)) {swap(pos, pos2); continue;} // bad point
+						float const dist(p2p_dist_xy(p1, pos) + p2p_dist_xy(pos, pos2) + p2p_dist_xy(pos2, p2));
+						if (dmin == 0.0 || dist < dmin) {best_pt = pos; best_pt2 = pos2; dmin = dist; use_pos2 = 1;}
+						break;
+					} // for ordering
+				}
+			} // for n
+			if (dmin == 0.0) continue;
+			path.push_back(best_pt);
+			if (use_pos2) {path.push_back(best_pt2);}
+			return 1; // success
+		} // for npts
+		return 0; // failed
 	}
 	static point closest_room_pt(cube_t const &c, point const &pos) {
 		return point(max(c.x1(), min(c.x2(), pos.x)), max(c.y1(), min(c.y2(), pos.y)), pos.z);
@@ -245,9 +279,7 @@ public:
 			}
 			else if (came_from < 0) { // done
 				assert(n == end_ix);
-				point const &prev(path.back()); // last doorway
-				point const p1(closest_room_pt(walk_area, prev));
-				path.push_back(p1); // walk from room into doorway
+				path.push_back(closest_room_pt(walk_area, path.back())); // walk from room into last doorway
 				if (!connect_room_endpoints(avoid, walk_area, path.back(), cur_pt, radius, path, rgen)) {path.clear(); return 0;} // path to first doorway
 				break;
 			}
