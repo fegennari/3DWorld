@@ -413,9 +413,9 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 
 void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // Note: all quads
 	if (car.destroyed) return;
+	point const center(car.get_center());
 
 	if (is_dlight_shadows) { // dynamic spotlight shadow
-		point const center(car.get_center());
 		if (!dist_less_than(camera_pdu.pos, center, 0.6*camera_pdu.far_)) return; // optimization
 		// since we know the dlight is a spotlight with a cone shape rather than a frustum, we can do a tighter visibility test
 		if (!sphere_in_light_cone_approx(camera_pdu, center, car.bcube.get_xy_bsphere_radius())) return;
@@ -423,8 +423,8 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 		bcube.expand_by(0.1*car.height);
 		if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
 	}
+	if (!camera_pdu.sphere_visible_test((center + xlate), 0.5f*(car.bcube.dx() + car.bcube.dy() + car.bcube.dz()))) return; // use fast upper bound approx for radius
 	if (!check_cube_visible(car.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
-	point const center(car.get_center());
 	begin_tile(center); // enable shadows
 	colorRGBA const &color(car.get_color());
 	float const tile_draw_dist(get_draw_tile_dist()), dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/tile_draw_dist);
@@ -936,7 +936,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 	if (trans_op_mask & 1) { // opaque pass, should be first
 		if (is_dlight_shadows && !city_params.car_shadows) return;
 		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
-		//timer_t timer(string("Draw Cars") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
+		//timer_t timer(string("Draw Cars") + (garages_pass ? " Garages" : " City") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
 		dstate.xlate = xlate;
 		dstate.use_building_lights = garages_pass;
 		fgPushMatrix();
