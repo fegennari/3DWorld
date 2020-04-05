@@ -494,13 +494,16 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	}
 }
 
-void building_interior_t::apply_stairs_to_person(pedestrian_t &person) const {
+void building_interior_t::apply_stairs_to_person(pedestrian_t &person, float floor_spacing) const {
 	if (!room_geom) return; // nothing to do
 
+	// Note: currently only updates person.z; it's up to the path finding algorithm to correctly handle person.xy
 	for (auto c = (room_geom->objs.begin() + room_geom->stairs_start); c != room_geom->objs.end(); ++c) {
-		assert(c->type == TYPE_STAIR);
+		if (c->type != TYPE_STAIR)          continue; // skip elevators
 		if (!c->contains_pt_xy(person.pos)) continue; // not on this stair
-		// TODO
+		if (person.pos.z < c->z1())         continue; // below the stair, too high to setup up
+		if (person.pos.z - person.radius > 0.5f*(c->z1() + c->z2()) + floor_spacing) continue; // above the stair
+		person.pos.z = c->z1() + person.radius; // stand on the stair - this can happen for multiple stairs
 	} // for c
 }
 
@@ -663,7 +666,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	} // for p
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
-	if (!stay_on_one_floor) {interior->apply_stairs_to_person(person);}
+	if (!stay_on_one_floor) {interior->apply_stairs_to_person(person, get_window_vspace());}
 	return AI_MOVING;
 }
 

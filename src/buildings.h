@@ -344,7 +344,7 @@ struct building_interior_t {
 	void finalize();
 	bool update_elevators(point const &player_pos);
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, bool no_stairs) const;
-	void apply_stairs_to_person(pedestrian_t &person) const;
+	void apply_stairs_to_person(pedestrian_t &person, float floor_spacing) const;
 };
 
 struct building_stats_t {
