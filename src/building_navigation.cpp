@@ -439,19 +439,30 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts at finding a valid room
 		unsigned const cand_room(rgen.rand() % interior->rooms.size());
 		if (cand_room == loc.room_ix) continue;
+		room_t const room(interior->rooms[cand_room]);
 
-		if (same_floor) {
-			cube_t const room(interior->rooms[cand_room]);
+		if (1 || same_floor) { // for now, always do this so that we don't have to handle walking between stacked parts
 			if (person.pos.z < room.z1() || person.pos.z > room.z2()) continue; // room above or below the current pos
 		}
 		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) continue;
-
-		if (!same_floor) {
-			// do some stuff with stairs
-		}
 		state.dest_room     = cand_room; // set but not yet used
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
+
+		if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
+			assert(room.part_id < parts.size());
+			cube_t const &part(parts[room.part_id]);
+			unsigned const rand_val(rgen.rand() & 3); // 0-3
+
+			if (rand_val == 0) { // try one floor below
+				float const new_z(person.target_pos.z - get_window_vspace());
+				if (new_z > part.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
+			}
+			else if (rand_val == 1) { // try one floor above
+				float const new_z(person.target_pos.z + get_window_vspace());
+				if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
+			}
+		}
 		return 1;
 	} // for n
 	return 0; // failed
@@ -463,8 +474,8 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 	}
 }
 
-void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2) const { // for AI
-	add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);
+void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, bool no_stairs) const { // for AI
+	if (!no_stairs) {add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);}
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2);
 	if (!room_geom) return; // no room objects
 
@@ -472,6 +483,16 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 		if (c->no_coll() || c->type == TYPE_ELEVATOR || c->type == TYPE_STAIR || c->type == TYPE_LIGHT) continue; // the object types are not collided with
 		if (c->z1() < z2 && c->z2() > z1) {avoid.push_back(*c);}
 	}
+}
+
+void building_interior_t::apply_stairs_to_person(pedestrian_t &person) const {
+	if (!room_geom) return; // nothing to do
+
+	for (auto c = (room_geom->objs.begin() + room_geom->stairs_start); c != room_geom->objs.end(); ++c) {
+		assert(c->type == TYPE_STAIR);
+		if (!c->contains_pt_xy(person.pos)) continue; // not on this stair
+		// TODO
+	} // for c
 }
 
 bool building_t::find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, vector<point> &path) const {
@@ -492,7 +513,7 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	float const height(0.7*get_window_vspace()); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
 	avoid.clear();
-	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height));
+	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height), use_stairs); // if using stairs, don't avoid stairs
 	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, avoid, from, path)) return 0; // failed to find a path
 	assert(!path.empty());
 	return 1;
@@ -549,17 +570,18 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	float const max_dist(person.speed*fticks);
 
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
-		if (!stay_on_one_floor && person.pos.z != person.target_pos.z) {} // handle this case
-		assert(bcube.contains_pt(person.target_pos));
-		person.pos = person.target_pos;
+		if (stay_on_one_floor || fabs(person.pos.z - person.target_pos.z) < 0.5*person.radius) { // on the correct floor
+			assert(bcube.contains_pt(person.target_pos));
+			person.pos = person.target_pos;
 		
-		if (!state.path.empty()) { // move to next path point
-			state.next_path_pt(person, stay_on_one_floor);
-			return AI_NEXT_PT;
+			if (!state.path.empty()) { // move to next path point
+				state.next_path_pt(person, stay_on_one_floor);
+				return AI_NEXT_PT;
+			}
+			person.anim_time = 0.0; // reset animation
+			state.wait_time  = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
+			return AI_AT_DEST;
 		}
-		person.anim_time = 0.0; // reset animation
-		state.wait_time  = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
-		return AI_AT_DEST;
 	}
 	vector3d new_dir(person.target_pos - person.pos);
 	new_dir.z = 0.0; // XY only, even if on stairs
@@ -592,6 +614,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	} // for p
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
+	if (!stay_on_one_floor) {interior->apply_stairs_to_person(person);}
 	return AI_MOVING;
 }
 
