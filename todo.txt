@@ -11,11 +11,10 @@ Cities:
 - Wider connector roads/intersections
 - Railroad tracks
 - Fences
-* Mesh simplificaton for cars and peds for shadow pass
+- Mesh simplificaton for cars and peds for shadow pass?
 
 * Building interiors:
   * Moving people in buildings
-    * Collision detection with room objects
     * Handle stairs?
   - Place more room objects/furniture
   - Interiors for city office towers
