@@ -616,12 +616,15 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 }
 
 void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) const {
-	//timer_t timer("Building People Update"); // ~2.7ms
+	//timer_t timer("Building People Update"); // ~3.3ms for 50K people, 0.6ms with distance check
 	bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
+	point const camera_bs(get_camera_pos() - get_tiled_terrain_model_xlate());
+	float const dmax(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	unsigned const num_people(people.size());
 	ai_state.resize(num_people);
 
 	for (unsigned i = 0; i < num_people; ++i) {
+		if (!dist_less_than(people[i].pos, camera_bs, dmax)) continue; // too far away, no updates
 		unsigned const bix(people[i].dest_bldg);
 		assert(bix < size());
 		operator[](bix).ai_room_update(ai_state[i], rgen, people, delta_dir, i, stay_on_one_floor); // dispatch to the correct building
