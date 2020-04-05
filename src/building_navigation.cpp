@@ -543,9 +543,10 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	bool choose_dest(person.target_pos == all_zeros);
 	float const radius_scale = 0.75; // somewhat smaller than radius
 	float const coll_dist(radius_scale*person.radius);
+	float &wait_time(person.waiting_start); // reuse this field
 
-	if (state.wait_time > 0) {
-		if (state.wait_time > fticks) { // waiting
+	if (wait_time > 0) {
+		if (wait_time > fticks) { // waiting
 			for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check for other people colliding with this person and handle it
 				if (p->dest_bldg != person.dest_bldg) break; // done with this building
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
@@ -553,10 +554,10 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
 			} // for p
-			state.wait_time -= fticks;
+			wait_time -= fticks;
 			return AI_WAITING;
 		}
-		state.wait_time = 0.0;
+		wait_time = 0.0;
 		choose_dest = 1;
 	}
 	assert(interior);
@@ -570,7 +571,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 
 		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.is_first_path, state.path)) {
 			person.anim_time = 0.0;
-			state.wait_time  = 1.0*TICKS_PER_SECOND; // stop for 1 second then try again
+			wait_time = 1.0*TICKS_PER_SECOND; // stop for 1 second then try again
 			return AI_WAITING;
 		}
 		state.is_first_path = 0;
@@ -589,7 +590,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 				return AI_NEXT_PT;
 			}
 			person.anim_time = 0.0; // reset animation
-			state.wait_time  = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
+			wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
 			return AI_AT_DEST;
 		}
 	}
@@ -649,7 +650,7 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 }
 
 void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) const {
-	//timer_t timer("Building People Update"); // ~3.3ms for 50K people, 0.6ms with distance check
+	//timer_t timer("Building People Update"); // ~3.1ms for 50K people, 0.5ms with distance check
 	bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
 	point const camera_bs(get_camera_pos() - get_tiled_terrain_model_xlate());
 	float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));

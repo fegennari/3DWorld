@@ -364,10 +364,9 @@ enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING};
 struct building_ai_state_t {
 	bool is_first_path;
 	unsigned cur_room, dest_room; // Note: cur_room and dest_room may not be needed
-	float wait_time;
 	vector<point> path; // stored backwards, next point on path is path.back()
 
-	building_ai_state_t() : is_first_path(1), cur_room(0), dest_room(0), wait_time(0.0) {}
+	building_ai_state_t() : is_first_path(1), cur_room(0), dest_room(0) {}
 	void next_path_pt(pedestrian_t &person, bool same_floor);
 };
 
