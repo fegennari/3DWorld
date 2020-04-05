@@ -204,31 +204,34 @@ public:
 		// do something simple and brute force:
 		// since rooms tend to only have objects in the middle, try to find the best point that creates the shortest non-intersecting 2-part or 3-part path
 		for (unsigned npts = 1; npts <= 2; ++npts) { // try to add 1 point; if that fails, try to add 2 points
+			unsigned const num_tries((npts == 1) ? 200 : 100);
 			float dmin(0.0);
 			bool use_pos2(0);
 			point best_pt, best_pt2, pos, pos2;
 			pos.z = pos2.z = p1.z;
 
-			for (unsigned n = 0; n < 100; ++n) { // make 100 attempts
+			for (unsigned n = 0; n < num_tries; ++n) { // make num_tries attempts
 				choose_pt_xy_in_room(pos, walk_area, rgen); // choose a rand point in the room
 				if (check_pt_contained_xy(keepout, pos)) continue; // bad point
+				bool const seg1_bad(check_line_int_xy(keepout, p1, pos)), seg2_bad(check_line_int_xy(keepout, pos, p2));
 
 				if (npts == 1) {
-					if (check_line_int_xy(keepout, p1, pos) || check_line_int_xy(keepout, pos, p2)) continue; // bad point
+					if (seg1_bad || seg2_bad) continue; // bad point (either line intersects)
 					float const dist(p2p_dist_xy(p1, pos) + p2p_dist_xy(pos, p2));
 					if (dmin == 0.0 || dist < dmin) {best_pt = pos; dmin = dist; use_pos2 = 0;}
 				}
 				else { // npts == 2
+					if (seg1_bad && seg2_bad) continue; // bad point (both lines intersect)
 					bool success(0);
 
-					for (unsigned m = 0; m < 10; ++m) { // make 10 random attempts
+					for (unsigned m = 0; m < 20; ++m) { // make 20 random attempts
 						choose_pt_xy_in_room(pos2, walk_area, rgen); // choose a rand point in the room
-						if (!check_pt_contained_xy(keepout, pos2)) {success = 1; break;} // good point
+						if (!check_pt_contained_xy(keepout, pos2) && !check_line_int_xy(keepout, pos, pos2)) {success = 1; break;} // good point
 					}
 					if (!success) continue; // no good point
 
 					for (unsigned ordering = 0; ordering < 2; ++ordering) { // try {p1-pos-pos2-p2} and {p1-pos2-pos-p2}
-						if (check_line_int_xy(keepout, p1, pos) || check_line_int_xy(keepout, pos, pos2) || check_line_int_xy(keepout, pos2, p2)) {swap(pos, pos2); continue;} // bad point
+						if (check_line_int_xy(keepout, pos, p1) || check_line_int_xy(keepout, pos2, p2)) {swap(pos, pos2); continue;} // bad point (could optimize this if needed)
 						float const dist(p2p_dist_xy(p1, pos) + p2p_dist_xy(pos, pos2) + p2p_dist_xy(pos2, p2));
 						if (dmin == 0.0 || dist < dmin) {best_pt = pos; best_pt2 = pos2; dmin = dist; use_pos2 = 1;}
 						break;
@@ -642,7 +645,7 @@ void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vect
 	//timer_t timer("Building People Update"); // ~3.3ms for 50K people, 0.6ms with distance check
 	bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
 	point const camera_bs(get_camera_pos() - get_tiled_terrain_model_xlate());
-	float const dmax(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+	float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	unsigned const num_people(people.size());
 	ai_state.resize(num_people);
 
