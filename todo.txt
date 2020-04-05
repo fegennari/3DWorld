@@ -14,7 +14,6 @@ Cities:
 - Mesh simplificaton for cars and peds for shadow pass?
 
 * Building interiors:
-  * Moving people in buildings
-    * Handle stairs?
+  - Room AI handles stairs
   - Place more room objects/furniture
   - Interiors for city office towers
