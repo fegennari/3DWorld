@@ -443,6 +443,7 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 		unsigned const cand_room(rgen.rand() % interior->rooms.size());
 		if (cand_room == loc.room_ix) continue;
 		room_t const room(interior->rooms[cand_room]);
+		if (room.is_hallway) continue; // don't select a hallway
 
 		if (1 || same_floor) { // for now, always do this so that we don't have to handle walking between stacked parts
 			if (person.pos.z < room.z1() || person.pos.z > room.z2()) continue; // room above or below the current pos
