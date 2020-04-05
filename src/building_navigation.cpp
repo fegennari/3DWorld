@@ -215,7 +215,7 @@ public:
 				if (check_pt_contained_xy(keepout, pos)) continue; // bad point
 				bool const seg1_bad(check_line_int_xy(keepout, p1, pos)), seg2_bad(check_line_int_xy(keepout, pos, p2));
 
-				if (npts == 1) {
+				if (npts == 1 || !(seg1_bad || seg2_bad)) { // single point or both segments valid
 					if (seg1_bad || seg2_bad) continue; // bad point (either line intersects)
 					float const dist(p2p_dist_xy(p1, pos) + p2p_dist_xy(pos, p2));
 					if (dmin == 0.0 || dist < dmin) {best_pt = pos; dmin = dist; use_pos2 = 0;}
