@@ -174,23 +174,32 @@ public:
 		}
 		return 0;
 	}
-	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius, vector<point> &path, rand_gen_t &rgen) const {
+	bool connect_room_endpoints(vect_cube_t const &avoid, cube_t const &walk_area, point const &p1, point const &p2, float radius,
+		vector<point> &path, vect_cube_t &keepout, rand_gen_t &rgen, bool ignore_p1_coll=0, bool ignore_p2_coll=0) const
+	{
 		assert(p1.z == p2.z);
 		bool is_path_valid(1);
+		keepout.clear();
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
 			if (!i->intersects_xy(walk_area)) continue;
 			cube_t c(*i);
 			c.expand_by_xy(radius);
-			if (check_line_clip_xy(p1, p2, c.d)) {is_path_valid = 0; break;}
+
+			if (c.contains_pt_xy(p1)) {
+				if (ignore_p1_coll) continue;
+				return 0;
+			}
+			if (c.contains_pt_xy(p2)) {
+				if (ignore_p2_coll) continue;
+				return 0;
+			}
+			if (check_line_clip_xy(p1, p2, c.d)) {is_path_valid = 0;}
+			keepout.push_back(c);
 		}
 		if (is_path_valid) return 1; // done
-		// straight line not valid, need to run path finding
-		vect_cube_t keepout, nav_cubes, temp;
 
-		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-			if (i->intersects_xy(walk_area)) {keepout.push_back(*i); keepout.back().expand_by_xy(radius);}
-		}
+		// straight line not valid, need to run path finding
 		assert(!keepout.empty());
 		// do something simple and brute force:
 		// since rooms tend to only have objects in the middle, try to find the best point that creates the shortest non-intersecting 2-part or 3-part path
@@ -243,6 +252,7 @@ public:
 		rand_gen_t rgen;
 		static unsigned call_ix(1);
 		rgen.set_state(start_ix, call_ix++);
+		vect_cube_t keepout;
 
 		while (1) {
 			node_t const &node(get_node(n));
@@ -261,7 +271,7 @@ public:
 					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, not_room_center, rgen));
 					path.push_back(end_point);
 					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
-					if (connect_room_endpoints(avoid, walk_area, end_point, room_exit, radius, path, rgen)) {path.push_back(room_exit); success = 1; break;}
+					if (connect_room_endpoints(avoid, walk_area, end_point, room_exit, radius, path, keepout, rgen)) {path.push_back(room_exit); success = 1; break;}
 					path.clear(); // failed, reset for next iteration
 					if (!not_room_center) break; // if we did choose the room center, and there is no path to it, we've failed
 				} // for n
@@ -272,7 +282,8 @@ public:
 				point const final_pt(closest_room_pt(walk_area, path.back())); // walk from room into last doorway
 				path.push_back(final_pt);
 
-				if (!connect_room_endpoints(avoid, walk_area, final_pt, cur_pt, radius, path, rgen)) { // find path to first doorway
+				// find path to first doorway; ignore collisions with p2 (cur_pt) in case this person was pushed into an object by another person
+				if (!connect_room_endpoints(avoid, walk_area, final_pt, cur_pt, radius, path, keepout, rgen, 0, 1)) {
 					// allow a failure if this is the first path taken by this AI so that it's not stuck behind an object due to bad initial placement
 					if (!is_first_path) {path.clear(); return 0;}
 				}
@@ -285,7 +296,7 @@ public:
 				point const p1(closest_room_pt(walk_area, prev)), p2(closest_room_pt(walk_area, next));
 				path.push_back(p1); // walk out of doorway and into room
 				
-				if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path, rgen)) { // unreachable
+				if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path, keepout, rgen)) { // unreachable
 					path.clear();
 					// TODO: try another path?
 					//disconnect_room_pair(n, came_from); // ???
