@@ -527,8 +527,8 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		if (!choose_dest_room(state, person, rgen, stay_on_one_floor)) {person.speed = 0.0; return AI_STOP;}
 
 		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.is_first_path, state.path)) {
-			person.speed    = 0.0;
-			state.wait_time = 1.0*TICKS_PER_SECOND; // stop for 1 second then try again
+			person.anim_time = 0.0;
+			state.wait_time  = 1.0*TICKS_PER_SECOND; // stop for 1 second then try again
 			return AI_WAITING;
 		}
 		state.is_first_path = 0;
