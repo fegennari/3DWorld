@@ -587,6 +587,10 @@ void pedestrian_t::register_at_dest() {
 	//cout << get_name() << " at destination " << (has_dest_car ? "car " : (has_dest_bldg ? "building " : "")) << dest_bldg << " in plot " << dest_plot << endl; // placeholder
 }
 
+bool pedestrian_t::is_close_to_player() const { // for debug printouts, etc.
+	return dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 4.0*radius);
+}
+
 
 unsigned ped_model_loader_t::num_models() const {return city_params.ped_model_files.size();}
 

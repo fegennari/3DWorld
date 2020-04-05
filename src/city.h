@@ -704,6 +704,7 @@ struct pedestrian_t : public waiting_obj_t {
 	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
 	void register_at_dest();
 	void destroy() {destroyed = 1;} // that's it, no other effects
+	bool is_close_to_player() const;
 	void debug_draw(ped_manager_t &ped_mgr) const;
 };
 
