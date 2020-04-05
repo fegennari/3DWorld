@@ -21,7 +21,7 @@ class building_nav_graph_t {
 		pt_with_ix_t(unsigned ix_, point const &pt_) : ix(ix_), pt(pt_) {}
 	};
 	struct node_t { // represents one room or one stairwell
-		bool has_exit, is_hallway, is_stairs;
+		bool has_exit, is_hallway, is_stairs; // has_exit and is_stairs are not yet used
 		cube_t bcube;
 		vector<pt_with_ix_t> conn_rooms;
 		node_t() : has_exit(0), is_hallway(0), is_stairs(0) {}
@@ -264,7 +264,12 @@ public:
 			bool const is_first_pt(path.empty());
 			cube_t walk_area(node.bcube);
 			walk_area.expand_by_xy(-radius); // shrink by radius
-
+			
+			if (node.is_hallway) {
+				bool const min_dim(walk_area.dy() < walk_area.dx());
+				float const shrink(min(0.5f*radius, max(0.0f, 0.9f*0.5f*walk_area.get_sz_dim(min_dim)))); // shrink by an extra half radius if hallway is wide enough
+				walk_area.d[min_dim][0] += shrink; walk_area.d[min_dim][1] -= shrink;
+			}
 			if (is_first_pt) { // last point in path (first point in reverse path)
 				assert(came_from >= 0);
 				bool success(0);
@@ -536,14 +541,15 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	pedestrian_t &person(people[person_ix]);
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	bool choose_dest(person.target_pos == all_zeros);
-	float const coll_dist(0.7*person.radius); // somewhat smaller than radius
+	float const radius_scale = 0.75; // somewhat smaller than radius
+	float const coll_dist(radius_scale*person.radius);
 
 	if (state.wait_time > 0) {
 		if (state.wait_time > fticks) { // waiting
 			for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check for other people colliding with this person and handle it
 				if (p->dest_bldg != person.dest_bldg) break; // done with this building
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
-				float const rsum(coll_dist + 0.7*p->radius);
+				float const rsum(coll_dist + radius_scale*p->radius);
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
 			} // for p
@@ -609,7 +615,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
 		if (p->dest_bldg != person.dest_bldg) break; // done with this building
 		if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
-		float const rsum(coll_dist + 0.7*p->radius);
+		float const rsum(coll_dist + radius_scale*p->radius);
 		if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
 		if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
 		person.anim_time = 0.0; // pause animation in case this person is mid-step
