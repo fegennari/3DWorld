@@ -542,6 +542,7 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 
 	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts
 		room_t const &room(interior->rooms[rgen.rand() % interior->rooms.size()]); // select a random room
+		if (room.is_sec_bldg) continue; // don't place people in garages and sheds
 		if (min(room.dx(), room.dy()) < 4.0*radius) continue; // room to small to place a person
 		unsigned const num_floors(calc_num_floors(room, window_vspacing, floor_thickness));
 		assert(num_floors > 0);
