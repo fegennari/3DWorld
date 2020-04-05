@@ -1839,42 +1839,6 @@ void building_t::clear_room_geom() {
 	interior->room_geom.reset();
 }
 
-bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const {
-	if (!interior || interior->rooms.empty()) return 0; // should be error case
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
-
-	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts
-		room_t const &room(interior->rooms[rgen.rand() % interior->rooms.size()]); // select a random room
-		if (min(room.dx(), room.dy()) < 4.0*radius) continue; // room to small to place a person
-		unsigned const num_floors(calc_num_floors(room, window_vspacing, floor_thickness));
-		assert(num_floors > 0);
-		unsigned const floor_ix(rgen.rand() % num_floors); // place person on a random floor
-		// Note: people are placed before lights are assigned to rooms, so this may not work and must be handled during light placement
-		if (room.lit_by_floor && !(room.lit_by_floor & (1ULL << (floor_ix&63)))) continue; // don't place person in an unlit room
-		point pos;
-		pos.z = room.z1() + fc_thick + window_vspacing*floor_ix;
-		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(room.d[d][0]+radius, room.d[d][1]-radius);} // random XY point inside this room
-		cube_t bcube(pos);
-		bcube.expand_by(radius); // expand more in Z?
-		if (!is_valid_stairs_elevator_placement(bcube, radius, radius)) continue;
-		bool bad_place(0);
-
-		// Note: people are placed before room geom is generated for all buildings, so this may not work and will have to be handled during room geom placement
-		if (interior->room_geom) { // check placement against room geom objects
-			vector<room_object_t> const &objs(interior->room_geom->objs);
-			auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
-
-			for (auto i = objs.begin(); i != objs_end; ++i) {
-				if (i->intersects(bcube)) {bad_place = 1; break;}
-			}
-		}
-		if (bad_place) continue;
-		ppos = pos;
-		return 1;
-	} // for n
-	return 0;
-}
-
 void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const {
 	float const cube_pad(4.0*grass_width), extent(bcube.get_max_extent());
 	float dmin_sq(extent*extent); // start with a large value, squared
