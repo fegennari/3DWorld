@@ -436,7 +436,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	point const camera_bs(camera_pdu.pos - xlate); // camera in building space
 	float const window_vspacing(get_window_vspace()), wall_thickness(0.5*get_floor_thickness()), camera_z(camera_bs.z);
 	assert(interior->room_geom->stairs_start <= objs.size());
-	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_near_building(camera_in_building);
 
@@ -539,7 +539,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 bool building_t::toggle_room_light(point const &closest_to) { // Note: closest_to is in building space, not camera space
 	if (!has_room_geom()) return 0; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	float const window_vspacing(get_window_vspace());
 	float closest_dist_sq(0.0);
 	unsigned closest_light(0);
