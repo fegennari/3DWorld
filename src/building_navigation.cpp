@@ -339,8 +339,7 @@ public:
 		while (!open_queue.empty()) {
 			unsigned const cur(open_queue.top().second);
 			open_queue.pop();
-			if (closed[cur]) continue; // already closed (duplicate)
-			if (cur == room2) {return reconstruct_path(state, avoid, cur_pt, radius, height, cur, room1, is_first_path, path);} // done, reconstruct path (in reverse)
+			assert(!closed[cur]);
 			a_star_node_state_t const &cs(state[cur]);
 			node_t const &cur_node(get_node(cur));
 			point const center(cur_node.get_center(cur_pt.z));
@@ -364,6 +363,7 @@ public:
 				sn.g_score   = new_g_score;
 				sn.h_score   = p2p_dist_xy(conn_center, dest_pos);
 				sn.f_score   = sn.g_score + sn.h_score;
+				if (i->ix == room2) {return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, is_first_path, path);} // done, reconstruct path (in reverse)
 				open_queue.push(make_pair(-sn.f_score, i->ix));
 			} // for i
 		} // end while()
