@@ -9,6 +9,9 @@
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 
+bool const STAY_ON_ONE_FLOOR = 1; // Note: multi-floor movement not yet fully supported
+bool const DO_STAIRS_COLL    = 0; // Note: only applies to STAY_ON_ONE_FLOOR=0 mode
+
 extern float fticks;
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.get_center_dim(0), c.get_center_dim(1), zval);}
@@ -76,7 +79,7 @@ public:
 		unsigned const node_ix2(num_rooms + stairs);
 		node_t &n2(get_node(node_ix2));
 		cube_t entry(n2.bcube);
-		entry.d[dim][dir] = entry.d[dim][!dir]; // shrink to zero area at the entrance to the stairs when going up (need to reverse when going down)
+		if (DO_STAIRS_COLL) {entry.d[dim][dir] = entry.d[dim][!dir];} // shrink to zero area at the entrance to the stairs when going up (need to reverse when going down)
 		get_node(room).add_conn_room(node_ix2, entry);
 		n2.add_conn_room(room, entry);
 	}
@@ -151,6 +154,7 @@ public:
 		cube_t place_area(node.bcube);
 		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
 		point const center(get_cube_center_zval(node.bcube, zval));
+		if (node.is_stairs) return center; // use center of stairs; maybe should use the first step depending on direction?
 		if (!place_area.is_strictly_normalized()) return center; // should generally not be true
 		not_room_center = 1;
 		point pos(center); // first candidate is the center of the room
@@ -325,7 +329,6 @@ public:
 		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // or just return an empty path?
 		path.clear();
-		// TODO: if use_stairs==1, or room1 and room2 are in different stacks, the path must include stairs
 		vector<a_star_node_state_t> state(nodes.size());
 		vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
 		std::priority_queue<pair<float, unsigned> > open_queue;
@@ -351,7 +354,7 @@ public:
 				assert(i->ix < nodes.size());
 				if (closed[i->ix]) continue; // already closed (duplicate)
 				node_t const &conn_node(get_node(i->ix));
-				if (conn_node.is_stairs && !use_stairs) continue; // skip stairs in this mode
+				if (conn_node.is_stairs && !use_stairs && i->ix != room2) continue; // skip stairs in this mode
 				point const conn_center(conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
 				float const new_g_score(sn.g_score + p2p_dist_xy(center, i->pt) + p2p_dist_xy(i->pt, conn_center));
@@ -484,6 +487,8 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 }
 
 void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, bool no_stairs) const { // for AI
+	// Note: should we take stairs_ix and only omit the stairwell that's our current target?
+	// but why would the path finding send us to stairs that we don't plan to use? if it chooses the nearest stairs, and we're passing by these stairs, then they should be the nearest, right?
 	if (!no_stairs) {add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);}
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2);
 	if (!room_geom) return; // no room objects
@@ -507,6 +512,25 @@ void building_interior_t::apply_stairs_to_person(pedestrian_t &person, float flo
 	} // for c
 }
 
+int building_t::find_nearest_stairs(point const &p1, point const &p2, int part_ix) const { // returns -1 on failure
+	assert(interior);
+	if (interior->stairwells.empty()) return -1; // no stairs
+	assert(part_ix < 0 || (unsigned)part_ix < parts.size());
+	float const zmin(min(p1.z, p2.z)), zmax(max(p1.z, p2.z));
+	int ret(-1);
+	float dmin(0.0);
+
+	for (unsigned s = 0; s < interior->stairwells.size(); ++s) {
+		stairwell_t const &stairs(interior->stairwells[s]);
+		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
+		if (part_ix >= 0 && !parts[part_ix].contains_cube(stairs)) continue; // stairs don't belong to this part
+		point const center(stairs.get_cube_center());
+		float const dist(p2p_dist(p1, center) + p2p_dist(center, p2));
+		if (dmin == 0.0 || dist < dmin) {ret = s; dmin = dist;}
+	} // for s
+	return ret;
+}
+
 bool building_t::find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, vector<point> &path) const {
 
 	assert(interior && interior->nav_graph);
@@ -526,7 +550,24 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	static vect_cube_t avoid; // reuse across frames/people
 	avoid.clear();
 	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height), use_stairs); // if using stairs, don't avoid stairs
-	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, avoid, from, path)) return 0; // failed to find a path
+
+	if (use_stairs) { // find path from <from> to nearest stairs, then find path from stairs to <to>
+		int const stairs_ix(find_nearest_stairs(from, to, -1)); // pass in loc1.part_ix if both loc part_ix values are equal?
+		if (stairs_ix < 0) return 0; // no stairs can take us from <from> to <to>
+		assert((unsigned)stairs_ix < interior->stairwells.size());
+		point const seg2_start(get_cube_center_zval(interior->stairwells[stairs_ix], to.z));
+		unsigned stairs_room_ix(stairs_ix + interior->rooms.size()); // map to graph space
+		vector<point> from_path;
+		// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
+		if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, avoid, from, from_path))  return 0; // from => stairs
+		if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, avoid, seg2_start, path)) return 0; // stairs => to
+		assert(!from_path.empty());
+		assert(from_path.front().x == seg2_start.x && from_path.front().y == seg2_start.y);
+		vector_add_to(from_path, path); // concatenate the two path segments in reverse order
+	}
+	else {
+		if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, avoid, from, path)) return 0; // failed to find a path
+	}
 	assert(!path.empty());
 	return 1;
 }
@@ -628,6 +669,10 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		
 			if (!state.path.empty()) { // move to next path point
 				state.next_path_pt(person, stay_on_one_floor);
+
+				if (!DO_STAIRS_COLL && !stay_on_one_floor && person.pos.x == person.target_pos.x && person.pos.y == person.target_pos.y) {
+					person.pos.z = person.target_pos.z; // temp hack: move player to correct zval up or down the stairs
+				}
 				return AI_NEXT_PT;
 			}
 			person.anim_time = 0.0; // reset animation
@@ -666,7 +711,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	} // for p
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
-	if (!stay_on_one_floor) {interior->apply_stairs_to_person(person, get_window_vspace());}
+	if (DO_STAIRS_COLL && !stay_on_one_floor) {interior->apply_stairs_to_person(person, get_window_vspace());}
 	return AI_MOVING;
 }
 
@@ -692,7 +737,6 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 
 void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) const {
 	//timer_t timer("Building People Update"); // ~3.1ms for 50K people, 0.5ms with distance check
-	bool const stay_on_one_floor = 1; // multi-floor movement not yet supported
 	point const camera_bs(get_camera_pos() - get_tiled_terrain_model_xlate());
 	float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	unsigned const num_people(people.size());
@@ -702,7 +746,7 @@ void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vect
 		if (!dist_less_than(people[i].pos, camera_bs, dmax)) continue; // too far away, no updates
 		unsigned const bix(people[i].dest_bldg);
 		assert(bix < size());
-		operator[](bix).ai_room_update(ai_state[i], rgen, people, delta_dir, i, stay_on_one_floor); // dispatch to the correct building
+		operator[](bix).ai_room_update(ai_state[i], rgen, people, delta_dir, i, STAY_ON_ONE_FLOOR); // dispatch to the correct building
 	}
 }
 
