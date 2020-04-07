@@ -10,7 +10,6 @@
 
 
 bool const STAY_ON_ONE_FLOOR = 1; // Note: multi-floor movement not yet fully supported
-bool const DO_STAIRS_COLL    = 0; // Note: only applies to STAY_ON_ONE_FLOOR=0 mode
 bool const DO_STAIRS_SLIDE   = 1; // Note: only applies to STAY_ON_ONE_FLOOR=0 mode
 
 extern float fticks;
@@ -670,16 +669,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
 		assert(bcube.contains_pt(person.target_pos));
 		person.pos = person.target_pos;
-		
-		if (!state.path.empty()) { // move to next path point
-			state.next_path_pt(person, stay_on_one_floor);
-			//if (person.is_close_to_player()) {cout << TXT(person.pos.str()) << TXT(person.target_pos.str()) << TXT(max_dist) << TXT(p2p_dist_xy(person.pos, person.target_pos)) << endl;}
-
-			if (!DO_STAIRS_COLL && !DO_STAIRS_SLIDE && !stay_on_one_floor && fabs(person.pos.z - person.target_pos.z) > person.radius) {
-				person.pos = person.target_pos; // temp hack: move player to correct pos up or down the stairs
-			}
-			return AI_NEXT_PT;
-		}
+		if (!state.path.empty()) {state.next_path_pt(person, stay_on_one_floor); return AI_NEXT_PT;} // move to next path point
 		person.anim_time = 0.0; // reset animation
 		wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
 		return AI_AT_DEST;
@@ -715,7 +705,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	} // for p
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
-	if (DO_STAIRS_COLL && !stay_on_one_floor) {interior->apply_stairs_to_person(person, get_window_vspace());}
+	if (!DO_STAIRS_SLIDE && !stay_on_one_floor) {interior->apply_stairs_to_person(person, get_window_vspace());}
 	return AI_MOVING;
 }
 
