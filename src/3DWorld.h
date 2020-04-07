@@ -425,7 +425,7 @@ struct cube_t { // size = 24
 	float &y2() {return d[1][1];}
 	float &z1() {return d[2][0];}
 	float &z2() {return d[2][1];}
-	float xc() const {return 0.5f*(x1() + y2());}
+	float xc() const {return 0.5f*(x1() + x2());}
 	float yc() const {return 0.5f*(y1() + y2());}
 	float zc() const {return 0.5f*(z1() + z2());}
 	float dx() const {return (x2() - x1());}
