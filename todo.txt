@@ -15,7 +15,6 @@ Cities:
 
 * Building interiors:
   * Room AI handles stairs
-    * No U-shaped stairs
     * Move feet up a bit?
   - Place more room objects/furniture
   - Interiors for city office towers

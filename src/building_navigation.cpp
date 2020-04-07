@@ -518,7 +518,7 @@ void building_interior_t::apply_stairs_to_person(pedestrian_t &person, float flo
 	} // for c
 }
 
-int building_t::find_nearest_stairs(point const &p1, point const &p2, int part_ix) const { // returns -1 on failure
+int building_t::find_nearest_stairs(point const &p1, point const &p2, bool straight_only, int part_ix) const { // returns -1 on failure
 	assert(interior);
 	if (interior->stairwells.empty()) return -1; // no stairs
 	assert(part_ix < 0 || (unsigned)part_ix < parts.size());
@@ -528,6 +528,7 @@ int building_t::find_nearest_stairs(point const &p1, point const &p2, int part_i
 
 	for (unsigned s = 0; s < interior->stairwells.size(); ++s) {
 		stairwell_t const &stairs(interior->stairwells[s]);
+		if (straight_only && stairs.shape == SHAPE_U) continue; // skip U-shaped stairs
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
 		if (part_ix >= 0 && !parts[part_ix].contains_cube(stairs)) continue; // stairs don't belong to this part
 		point const center(stairs.get_cube_center());
@@ -558,7 +559,7 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height), (use_stairs && !DO_STAIRS_SLIDE)); // if using stairs, don't avoid stairs
 
 	if (use_stairs) { // find path from <from> to nearest stairs, then find path from stairs to <to>
-		int const stairs_ix(find_nearest_stairs(from, to, -1)); // pass in loc1.part_ix if both loc part_ix values are equal?
+		int const stairs_ix(find_nearest_stairs(from, to, 1)); // straight_only=1; pass in loc1.part_ix if both loc part_ix values are equal?
 		if (stairs_ix < 0) return 0; // no stairs can take us from <from> to <to>
 		assert((unsigned)stairs_ix < interior->stairwells.size());
 		stairwell_t const &stairs(interior->stairwells[stairs_ix]);
