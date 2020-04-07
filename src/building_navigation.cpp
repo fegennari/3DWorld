@@ -11,6 +11,7 @@
 
 bool const STAY_ON_ONE_FLOOR = 1; // Note: multi-floor movement not yet fully supported
 bool const DO_STAIRS_COLL    = 0; // Note: only applies to STAY_ON_ONE_FLOOR=0 mode
+bool const DO_STAIRS_SLIDE   = 1; // Note: only applies to STAY_ON_ONE_FLOOR=0 mode
 
 extern float fticks;
 
@@ -511,7 +512,7 @@ void building_interior_t::apply_stairs_to_person(pedestrian_t &person, float flo
 		if (!c->contains_pt_xy(person.pos)) continue; // not on this stair
 		if (person.pos.z < c->z1())         continue; // below the stair, too high to setup up
 		if (person.pos.z - person.radius > 0.5f*(c->z1() + c->z2()) + floor_spacing) continue; // above the stair
-		person.pos.z = c->z1() + person.radius; // stand on the stair - this can happen for multiple stairs
+		person.pos.z = c->z2() + person.radius; // stand on the stair - this can happen for multiple stairs
 	} // for c
 }
 
@@ -564,8 +565,8 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 		// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 		if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, up_or_down, avoid, from, from_path))  return 0; // from => stairs
 		assert(!from_path.empty());
-		point const seg2_start(from_path.front().x, from_path.front().y, to.z);
-		if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, up_or_down, avoid, seg2_start, path)) return 0; // stairs => to
+		point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, (stairs_ix + interior->rooms.size()), !up_or_down)); // other end
+		if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, !up_or_down, avoid, seg2_start, path)) return 0; // stairs => to
 		path.push_back(seg2_start); // other end of the stairs
 		vector_add_to(from_path, path); // concatenate the two path segments in reverse order
 	}
@@ -667,26 +668,24 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	float const max_dist(person.speed*fticks);
 
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
-		if (stay_on_one_floor || fabs(person.pos.z - person.target_pos.z) < 0.5*person.radius) { // on the correct floor
-			assert(bcube.contains_pt(person.target_pos));
-			person.pos = person.target_pos;
+		assert(bcube.contains_pt(person.target_pos));
+		person.pos = person.target_pos;
 		
-			if (!state.path.empty()) { // move to next path point
-				state.next_path_pt(person, stay_on_one_floor);
-				//if (person.is_close_to_player()) {cout << TXT(person.pos.str()) << TXT(person.target_pos.str()) << TXT(max_dist) << TXT(p2p_dist_xy(person.pos, person.target_pos)) << endl;}
+		if (!state.path.empty()) { // move to next path point
+			state.next_path_pt(person, stay_on_one_floor);
+			//if (person.is_close_to_player()) {cout << TXT(person.pos.str()) << TXT(person.target_pos.str()) << TXT(max_dist) << TXT(p2p_dist_xy(person.pos, person.target_pos)) << endl;}
 
-				if (!DO_STAIRS_COLL && !stay_on_one_floor && person.pos.x == person.target_pos.x && person.pos.y == person.target_pos.y) {
-					person.pos.z = person.target_pos.z; // temp hack: move player to correct zval up or down the stairs
-				}
-				return AI_NEXT_PT;
+			if (!DO_STAIRS_COLL && !DO_STAIRS_SLIDE && !stay_on_one_floor && fabs(person.pos.z - person.target_pos.z) > person.radius) {
+				person.pos = person.target_pos; // temp hack: move player to correct pos up or down the stairs
 			}
-			person.anim_time = 0.0; // reset animation
-			wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
-			return AI_AT_DEST;
+			return AI_NEXT_PT;
 		}
+		person.anim_time = 0.0; // reset animation
+		wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
+		return AI_AT_DEST;
 	}
 	vector3d new_dir(person.target_pos - person.pos);
-	new_dir.z = 0.0; // XY only, even if on stairs
+	if (!DO_STAIRS_SLIDE) {new_dir.z = 0.0;} // XY only, even if on stairs
 	float const new_dir_mag(new_dir.mag());
 	point new_pos;
 	
