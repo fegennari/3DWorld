@@ -183,10 +183,10 @@ template<typename T, typename S> inline float p2p_dist(const pointT<T> &pt1, con
 	return sqrt(p2p_dist_sq(pt1, pt2));
 }
 
-template<typename T, typename S> inline float p2p_dist_xy_sq(const pointT<T> &pt1, const pointT<S> &pt2) {
+template<typename T, typename S> inline float p2p_dist_xy_sq(const T &pt1, const S &pt2) {
 	return (pt1.x-pt2.x)*(pt1.x-pt2.x) + (pt1.y-pt2.y)*(pt1.y-pt2.y);
 }
-template<typename T, typename S> inline float p2p_dist_xy(const pointT<T> &pt1, const pointT<S> &pt2) {
+template<typename T, typename S> inline float p2p_dist_xy(const T &pt1, const S &pt2) {
 	return sqrt(p2p_dist_xy_sq(pt1, pt2));
 }
 

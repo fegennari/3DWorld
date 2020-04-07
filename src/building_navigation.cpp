@@ -14,14 +14,14 @@ bool const DO_STAIRS_COLL    = 0; // Note: only applies to STAY_ON_ONE_FLOOR=0 m
 
 extern float fticks;
 
-point get_cube_center_zval(cube_t const &c, float zval) {return point(c.get_center_dim(0), c.get_center_dim(1), zval);}
+point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
 // Note: this should go into building_t/buildings.h at some point, but is temporarily here
 class building_nav_graph_t {
-	struct pt_with_ix_t {
+	struct pt_with_ix_t { // size=12
 		unsigned ix;
-		point pt;
-		pt_with_ix_t(unsigned ix_, point const &pt_) : ix(ix_), pt(pt_) {}
+		vector2d pt;
+		pt_with_ix_t(unsigned ix_, vector2d const &pt_) : ix(ix_), pt(pt_) {}
 	};
 	struct node_t { // represents one room or one stairwell
 		bool has_exit, is_hallway, is_stairs; // has_exit and is_stairs are not yet used
@@ -32,12 +32,7 @@ class building_nav_graph_t {
 
 		void add_conn_room(unsigned room, cube_t const &c) {
 			for (auto i = conn_rooms.begin(); i != conn_rooms.end(); ++i) {if (i->ix == room) return;} // ignore duplicates
-			conn_rooms.emplace_back(room, get_cube_center_zval(c, c.z1()));
-		}
-		point get_conn_pt(unsigned room) const {
-			for (auto i = conn_rooms.begin(); i != conn_rooms.end(); ++i) {if (i->ix == room) return i->pt;}
-			assert(0);
-			return all_zeros; // never gets here
+			conn_rooms.emplace_back(room, vector2d(c.xc(), c.yc()));
 		}
 	};
 	struct a_star_node_state_t {
@@ -361,12 +356,11 @@ public:
 				if (!open[i->ix]) {open[i->ix] = 1;}
 				else if (new_g_score >= sn.g_score) continue; // not better
 				sn.came_from_ix = cur;
-				sn.path_pt   = i->pt;
-				sn.path_pt.z = cur_pt.z;
-				sn.g_score   = new_g_score;
-				sn.h_score   = p2p_dist_xy(conn_center, dest_pos);
-				sn.f_score   = sn.g_score + sn.h_score;
+				sn.path_pt.assign(i->pt.x, i->pt.y, cur_pt.z);
 				if (i->ix == room2) {return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, is_first_path, path);} // done, reconstruct path (in reverse)
+				sn.g_score = new_g_score;
+				sn.h_score = p2p_dist_xy(conn_center, dest_pos);
+				sn.f_score = sn.g_score + sn.h_score;
 				open_queue.push(make_pair(-sn.f_score, i->ix));
 			} // for i
 		} // end while()
