@@ -9,7 +9,7 @@
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 
-bool const STAY_ON_ONE_FLOOR = 1; // Note: multi-floor movement not yet fully supported
+bool const STAY_ON_ONE_FLOOR = 0; // Note: multi-floor movement not yet fully supported
 bool const DO_STAIRS_SLIDE   = 1; // Note: only applies to STAY_ON_ONE_FLOOR=0 mode
 
 extern float fticks;
@@ -43,6 +43,7 @@ class building_nav_graph_t {
 	};
 
 	unsigned num_rooms, num_stairs;
+	float stairs_extend;
 	vector<node_t> nodes;
 	node_t       &get_node(unsigned room)       {assert(room < nodes.size()); return nodes[room];}
 	node_t const &get_node(unsigned room) const {assert(room < nodes.size()); return nodes[room];}
@@ -56,7 +57,7 @@ class building_nav_graph_t {
 		assert(0); // must be found - should not get here
 	}
 public:
-	building_nav_graph_t() : num_rooms(0), num_stairs(0) {}
+	building_nav_graph_t(float stairs_extend_) : num_rooms(0), num_stairs(0), stairs_extend(stairs_extend_) {}
 
 	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_) {
 		num_rooms  = num_rooms_;
@@ -74,8 +75,9 @@ public:
 		unsigned const node_ix2(num_rooms + stairs);
 		node_t &n2(get_node(node_ix2));
 		cube_t entry_u(n2.bcube), entry_d(n2.bcube);
-		entry_u.d[dim][ dir] = entry_u.d[dim][!dir]; // shrink to zero area at the entrance to the stairs when going up
-		entry_d.d[dim][!dir] = entry_d.d[dim][ dir]; // shrink to zero area at the entrance to the stairs when going down
+		float const extend((dir ? -1.0 : 1.0)*stairs_extend); // extend away from stairs for entrance/exit area; will be denormalized in this dim
+		entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to zero area at the entrance to the stairs when going up
+		entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to zero area at the entrance to the stairs when going down
 		get_node(room).add_conn_room(node_ix2, entry_u, entry_d);
 		n2.add_conn_room(room, entry_u, entry_d);
 	}
@@ -294,6 +296,7 @@ public:
 			}
 			else if (came_from < 0) { // done (next is not valid here)
 				assert(n == end_ix);
+				if (node.is_stairs) return 1; // success
 				point const final_pt(closest_room_pt(walk_area, path.back())); // walk from room into last doorway
 				path.push_back(final_pt);
 
@@ -302,9 +305,9 @@ public:
 					// allow a failure if this is the first path taken by this AI so that it's not stuck behind an object due to bad initial placement
 					if (!is_first_path) {path.clear(); return 0;}
 				}
-				break;
+				return 1; // success
 			}
-			else { // adjust the path through a room
+			else if (!node.is_stairs) { // adjust the path through a room
 				assert(!path.empty());
 				point const &prev(path.back());
 				assert(prev.z == next.z);
@@ -322,7 +325,7 @@ public:
 			path.push_back(next); // doorway
 			n = came_from;
 		} // end while()
-		return 1;
+		return 0; // never gets here
 	}
 	
 	// A* algorithm; Note: path is stored backwards
@@ -381,7 +384,7 @@ void building_t::build_nav_graph() const {
 
 	assert(interior);
 	if (interior->nav_graph) return; // already built
-	interior->nav_graph.reset(new building_nav_graph_t);
+	interior->nav_graph.reset(new building_nav_graph_t(0.5*get_window_vspace())); // set stairs_extend == doorway width
 	building_nav_graph_t &ng(*interior->nav_graph);
 	float const wall_width(0.5*get_floor_thickness());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());
@@ -552,21 +555,25 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	float const height(0.7*get_window_vspace()); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
 	avoid.clear();
-	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height), use_stairs); // if using stairs, don't avoid stairs
+	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height), (use_stairs && !DO_STAIRS_SLIDE)); // if using stairs, don't avoid stairs
 
 	if (use_stairs) { // find path from <from> to nearest stairs, then find path from stairs to <to>
 		int const stairs_ix(find_nearest_stairs(from, to, -1)); // pass in loc1.part_ix if both loc part_ix values are equal?
 		if (stairs_ix < 0) return 0; // no stairs can take us from <from> to <to>
 		assert((unsigned)stairs_ix < interior->stairwells.size());
+		stairwell_t const &stairs(interior->stairwells[stairs_ix]);
 		bool const up_or_down(loc1.floor > loc2.floor); // 0=up, 1=down
 		unsigned stairs_room_ix(stairs_ix + interior->rooms.size()); // map to graph space
 		vector<point> from_path;
 		// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
-		if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, up_or_down, avoid, from, from_path))  return 0; // from => stairs
-		assert(!from_path.empty());
+		if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, up_or_down, avoid, from, from_path)) return 0; // from => stairs
 		point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, (stairs_ix + interior->rooms.size()), !up_or_down)); // other end
 		if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, !up_or_down, avoid, seg2_start, path)) return 0; // stairs => to
+		assert(!path.empty() && !from_path.empty());
 		path.push_back(seg2_start); // other end of the stairs
+		// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
+		path.push_back(stairs.closest_pt(path.back()));
+		path.push_back(stairs.closest_pt(from_path.front()));
 		vector_add_to(from_path, path); // concatenate the two path segments in reverse order
 	}
 	else {
