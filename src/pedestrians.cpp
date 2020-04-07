@@ -1152,7 +1152,10 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
 		if (enable_animations) {s.add_uniform_float("animation_time", ped.anim_time);}
-		ped_model_loader.draw_model(s, ped.pos, bcube, ped.dir, ALPHA0, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
+		vector3d dir_horiz(ped.dir);
+		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
+		dir_horiz.normalize();
+		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, ALPHA0, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
 	}
 	return 1;
 }
