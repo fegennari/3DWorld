@@ -20,8 +20,8 @@ point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.
 class building_nav_graph_t {
 	struct pt_with_ix_t { // size=12
 		unsigned ix;
-		vector2d pt;
-		pt_with_ix_t(unsigned ix_, vector2d const &pt_) : ix(ix_), pt(pt_) {}
+		vector2d pt[2]; // stairs store {up, down}
+		pt_with_ix_t(unsigned ix_, vector2d const &ptu, vector2d const &ptd) : ix(ix_) {pt[0] = ptu; pt[1] = ptd;}
 	};
 	struct node_t { // represents one room or one stairwell
 		bool has_exit, is_hallway, is_stairs; // has_exit and is_stairs are not yet used
@@ -30,9 +30,9 @@ class building_nav_graph_t {
 		node_t() : has_exit(0), is_hallway(0), is_stairs(0) {}
 		point get_center(float zval) const {return get_cube_center_zval(bcube, zval);}
 
-		void add_conn_room(unsigned room, cube_t const &c) {
+		void add_conn_room(unsigned room, cube_t const &cu, cube_t const &cd) {
 			for (auto i = conn_rooms.begin(); i != conn_rooms.end(); ++i) {if (i->ix == room) return;} // ignore duplicates
-			conn_rooms.emplace_back(room, vector2d(c.xc(), c.yc()));
+			conn_rooms.emplace_back(room, vector2d(cu.xc(), cu.yc()), vector2d(cd.xc(), cd.yc()));
 		}
 	};
 	struct a_star_node_state_t {
@@ -73,15 +73,16 @@ public:
 		assert(room < num_rooms && stairs < num_stairs);
 		unsigned const node_ix2(num_rooms + stairs);
 		node_t &n2(get_node(node_ix2));
-		cube_t entry(n2.bcube);
-		if (DO_STAIRS_COLL) {entry.d[dim][dir] = entry.d[dim][!dir];} // shrink to zero area at the entrance to the stairs when going up (need to reverse when going down)
-		get_node(room).add_conn_room(node_ix2, entry);
-		n2.add_conn_room(room, entry);
+		cube_t entry_u(n2.bcube), entry_d(n2.bcube);
+		entry_u.d[dim][ dir] = entry_u.d[dim][!dir]; // shrink to zero area at the entrance to the stairs when going up
+		entry_d.d[dim][!dir] = entry_d.d[dim][ dir]; // shrink to zero area at the entrance to the stairs when going down
+		get_node(room).add_conn_room(node_ix2, entry_u, entry_d);
+		n2.add_conn_room(room, entry_u, entry_d);
 	}
 	void connect_rooms(unsigned room1, unsigned room2, cube_t const &conn_bcube) { // graph is bidirectional
 		assert(room1 < num_rooms && room2 < num_rooms);
-		get_node(room1).add_conn_room(room2, conn_bcube);
-		get_node(room2).add_conn_room(room1, conn_bcube);
+		get_node(room1).add_conn_room(room2, conn_bcube, conn_bcube);
+		get_node(room2).add_conn_room(room1, conn_bcube, conn_bcube);
 	}
 	void disconnect_room_pair(unsigned room1, unsigned room2) { // remove connections in both directions
 		assert(room1 != room2 && room1 < num_rooms && room2 < num_rooms);
@@ -144,12 +145,18 @@ public:
 	static void choose_pt_xy_in_room(point &pos, cube_t const &c, rand_gen_t &rgen) {
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(c.d[d][0], c.d[d][1]);}
 	}
-	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, float zval, unsigned node_ix, bool &not_room_center, rand_gen_t &rgen) const {
+	point get_stairs_entrance_pt(float zval, unsigned node_ix, bool up_or_down) const {
 		node_t const &node(get_node(node_ix));
+		assert(!node.conn_rooms.empty());
+		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same value
+		return point(pt.x, pt.y, zval);
+	}
+	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, float zval, unsigned node_ix, bool up_or_down, bool &not_room_center, rand_gen_t &rgen) const {
+		node_t const &node(get_node(node_ix));
+		if (node.is_stairs) {return get_stairs_entrance_pt(zval, node_ix, up_or_down);}
 		cube_t place_area(node.bcube);
 		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
 		point const center(get_cube_center_zval(node.bcube, zval));
-		if (node.is_stairs) return center; // use center of stairs; maybe should use the first step depending on direction?
 		if (!place_area.is_strictly_normalized()) return center; // should generally not be true
 		not_room_center = 1;
 		point pos(center); // first candidate is the center of the room
@@ -248,7 +255,7 @@ public:
 		return point(max(c.x1(), min(c.x2(), pos.x)), max(c.y1(), min(c.y2(), pos.y)), pos.z);
 	}
 	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, point const &cur_pt,
-		float radius, float height, unsigned start_ix, unsigned end_ix, bool is_first_path, vector<point> &path) const
+		float radius, float height, unsigned start_ix, unsigned end_ix, bool is_first_path, bool up_or_down, vector<point> &path) const
 	{
 		unsigned n(start_ix);
 		rand_gen_t rgen;
@@ -262,7 +269,7 @@ public:
 			int const came_from(state[n].came_from_ix);
 			bool const is_first_pt(path.empty());
 			cube_t walk_area(node.bcube);
-			walk_area.expand_by_xy(-radius); // shrink by radius
+			if (!node.is_stairs) {walk_area.expand_by_xy(-radius);} // shrink by radius
 			
 			if (node.is_hallway) {
 				bool const min_dim(walk_area.dy() < walk_area.dx());
@@ -275,8 +282,9 @@ public:
 
 				for (unsigned n = 0; n < 10; ++n) { // keep retrying until we find a point that is reachable from the doorway
 					bool not_room_center(0);
-					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, not_room_center, rgen));
+					point const end_point(find_valid_room_dest(avoid, radius, height, cur_pt.z, start_ix, up_or_down, not_room_center, rgen));
 					path.push_back(end_point);
+					if (node.is_stairs) {success = 1; break;} // done, don't need to run code below
 					point const room_exit(closest_room_pt(walk_area, next)); // first doorway
 					if (connect_room_endpoints(avoid, walk_area, end_point, room_exit, radius, path, keepout, rgen)) {path.push_back(room_exit); success = 1; break;}
 					path.clear(); // failed, reset for next iteration
@@ -319,7 +327,7 @@ public:
 	
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, float radius, float height, bool use_stairs,
-		bool is_first_path, vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
+		bool is_first_path, bool up_or_down, vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
 	{
 		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // or just return an empty path?
@@ -327,7 +335,7 @@ public:
 		vector<a_star_node_state_t> state(nodes.size());
 		vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
 		std::priority_queue<pair<float, unsigned> > open_queue;
-		point const dest_pos(get_node(room2).get_center(cur_pt.z));
+		point const dest_pos(get_node(room2).get_center(cur_pt.z)); // Note: approximate, actual dest may be different
 		a_star_node_state_t &start(state[room1]);
 		start.g_score = 0.0;
 		start.h_score = start.f_score = p2p_dist_xy(get_node(room1).get_center(cur_pt.z), dest_pos); // estimated total cost from start to goal through current
@@ -352,12 +360,13 @@ public:
 				if (conn_node.is_stairs && !use_stairs && i->ix != room2) continue; // skip stairs in this mode
 				point const conn_center(conn_node.get_center(cur_pt.z));
 				a_star_node_state_t &sn(state[i->ix]);
-				float const new_g_score(sn.g_score + p2p_dist_xy(center, i->pt) + p2p_dist_xy(i->pt, conn_center));
+				vector2d const &pt(i->pt[up_or_down]);
+				float const new_g_score(sn.g_score + p2p_dist_xy(center, pt) + p2p_dist_xy(pt, conn_center));
 				if (!open[i->ix]) {open[i->ix] = 1;}
 				else if (new_g_score >= sn.g_score) continue; // not better
 				sn.came_from_ix = cur;
-				sn.path_pt.assign(i->pt.x, i->pt.y, cur_pt.z);
-				if (i->ix == room2) {return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, is_first_path, path);} // done, reconstruct path (in reverse)
+				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
+				if (i->ix == room2) {return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, is_first_path, up_or_down, path);} // done, reconstruct path (in reverse)
 				sn.g_score = new_g_score;
 				sn.h_score = p2p_dist_xy(conn_center, dest_pos);
 				sn.f_score = sn.g_score + sn.h_score;
@@ -549,18 +558,19 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 		int const stairs_ix(find_nearest_stairs(from, to, -1)); // pass in loc1.part_ix if both loc part_ix values are equal?
 		if (stairs_ix < 0) return 0; // no stairs can take us from <from> to <to>
 		assert((unsigned)stairs_ix < interior->stairwells.size());
-		point const seg2_start(get_cube_center_zval(interior->stairwells[stairs_ix], to.z));
+		bool const up_or_down(loc1.floor > loc2.floor); // 0=up, 1=down
 		unsigned stairs_room_ix(stairs_ix + interior->rooms.size()); // map to graph space
 		vector<point> from_path;
 		// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
-		if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, avoid, from, from_path))  return 0; // from => stairs
-		if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, avoid, seg2_start, path)) return 0; // stairs => to
+		if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, up_or_down, avoid, from, from_path))  return 0; // from => stairs
 		assert(!from_path.empty());
-		assert(from_path.front().x == seg2_start.x && from_path.front().y == seg2_start.y);
+		point const seg2_start(from_path.front().x, from_path.front().y, to.z);
+		if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, up_or_down, avoid, seg2_start, path)) return 0; // stairs => to
+		path.push_back(seg2_start); // other end of the stairs
 		vector_add_to(from_path, path); // concatenate the two path segments in reverse order
 	}
 	else {
-		if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, avoid, from, path)) return 0; // failed to find a path
+		if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, 0, avoid, from, path)) return 0; // failed to find a path
 	}
 	assert(!path.empty());
 	return 1;
@@ -663,6 +673,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		
 			if (!state.path.empty()) { // move to next path point
 				state.next_path_pt(person, stay_on_one_floor);
+				//if (person.is_close_to_player()) {cout << TXT(person.pos.str()) << TXT(person.target_pos.str()) << TXT(max_dist) << TXT(p2p_dist_xy(person.pos, person.target_pos)) << endl;}
 
 				if (!DO_STAIRS_COLL && !stay_on_one_floor && person.pos.x == person.target_pos.x && person.pos.y == person.target_pos.y) {
 					person.pos.z = person.target_pos.z; // temp hack: move player to correct zval up or down the stairs
