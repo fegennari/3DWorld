@@ -725,7 +725,7 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 }
 
 void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) const {
-	//timer_t timer("Building People Update"); // ~3.1ms for 50K people, 0.5ms with distance check
+	//timer_t timer("Building People Update"); // ~3.7ms for 50K people, 0.55ms with distance check
 	point const camera_bs(get_camera_pos() - get_tiled_terrain_model_xlate());
 	float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	unsigned const num_people(people.size());
