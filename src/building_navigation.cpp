@@ -686,16 +686,19 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	else { // optimization for aligned dir
 		new_pos = person.pos + max_dist*person.dir;
 	}
-	for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
-		if (p->dest_bldg != person.dest_bldg) break; // done with this building
-		if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
-		float const rsum(coll_dist + radius_scale*p->radius);
-		if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
-		if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
-		person.anim_time = 0.0; // pause animation in case this person is mid-step
-		move_person_to_not_collide(person, *p, new_pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
-		return AI_MOVING; // return here, but don't update animation or dir; only handles a single collision
-	} // for p
+	// don't do collision detection while on stairs because it doesn't work properly; just let people walk through each other
+	if (fabs(person.pos.z - person.target_pos.z) < 0.01*person.radius) {
+		for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
+			if (p->dest_bldg != person.dest_bldg) break; // done with this building
+			if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
+			float const rsum(coll_dist + radius_scale*p->radius);
+			if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
+			if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
+			person.anim_time = 0.0; // pause animation in case this person is mid-step
+			move_person_to_not_collide(person, *p, new_pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
+			return AI_MOVING; // return here, but don't update animation or dir; only handles a single collision
+		} // for p
+	}
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
 	return AI_MOVING;
