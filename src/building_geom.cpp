@@ -1751,9 +1751,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
-	unsigned const num_stairs = 12;
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
-	float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
+	float const stair_dz(window_vspacing/(NUM_STAIRS_PER_FLOOR+1)), stair_height(stair_dz + floor_thickness);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	interior->room_geom->stairs_start = objs.size();
 	interior->room_geom->has_elevators = (!interior->elevators.empty());
@@ -1762,12 +1761,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		if (i->for_elevator) continue; // for elevator, not stairs
 		bool const dim(i->dim), dir(i->dir);
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
-		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
+		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/NUM_STAIRS_PER_FLOOR);
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i);
 
 		if (i->shape == SHAPE_STRAIGHT || i->shape == SHAPE_WALLED) { // straight stairs
-			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
+			for (unsigned n = 0; n < NUM_STAIRS_PER_FLOOR; ++n, z += stair_dz, pos += step_len) {
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
 				stair.z1() = max(floor_z, z); // don't go below the floor
 				stair.z2() = z + stair_height;
@@ -1779,13 +1778,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			stair.d[!dim][side] = i->get_center_dim(!dim);
 			step_len *= 2.0;
 
-			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
-				if (n == num_stairs/2) { // reverse direction and switch to other side
+			for (unsigned n = 0; n < NUM_STAIRS_PER_FLOOR; ++n, z += stair_dz, pos += step_len) {
+				if (n == NUM_STAIRS_PER_FLOOR/2) { // reverse direction and switch to other side
 					step_len *= -1.0;
 					stair.d[!dim][ side] = i->d[!dim][side];
 					stair.d[!dim][!side] = i->get_center_dim(!dim);
 				}
-				bool const is_rev(n >= num_stairs/2);
+				bool const is_rev(n >= NUM_STAIRS_PER_FLOOR/2);
 				stair.d[dim][dir^is_rev^1] = pos; stair.d[dim][dir^is_rev] = pos + step_len;
 				stair.z1() = max(floor_z, z); // don't go below the floor
 				stair.z2() = z + stair_height;
