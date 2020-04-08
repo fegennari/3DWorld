@@ -537,7 +537,7 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	else if (loc1.part_ix != loc2.part_ix) {
 		if (parts[loc1.part_ix].z1() != parts[loc2.part_ix].z1()) {use_stairs = 1;} // stacked parts
 	}
-	float const height(0.7*get_window_vspace()); // approximate, since we're not tracking actual heights
+	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
 	avoid.clear();
 	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height)); // if using stairs, don't avoid stairs
@@ -557,8 +557,10 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 		assert(!path.empty() && !from_path.empty());
 		path.push_back(seg2_start); // other end of the stairs
 		// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
-		path.push_back(stairs.closest_pt(path.back()));
-		path.push_back(stairs.closest_pt(from_path.front()));
+		cube_t stairs_ext(stairs);
+		stairs_ext.d[stairs.dim][!stairs.dir] += (stairs.dir ? -1.0 : 1.0)*stairs.get_sz_dim(stairs.dim)/NUM_STAIRS_PER_FLOOR; // location of step up
+		path.push_back(stairs_ext.closest_pt(path.back()));
+		path.push_back(stairs_ext.closest_pt(from_path.front()));
 		vector_add_to(from_path, path); // concatenate the two path segments in reverse order
 	}
 	else {
