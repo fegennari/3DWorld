@@ -1131,6 +1131,13 @@ void rotate_xy(point &pt, point const &origin, float angle) {
 	pt.y = cos_term*yv + sin_term*xv + origin.y;
 }
 
+bool building_t::check_cube_contained_in_part(cube_t const &c) const {
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (p->contains_cube(c)) return 1;
+	}
+	return 0;
+}
+
 tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
 	bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const
 {
@@ -1161,7 +1168,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 				for (unsigned i = 0; i < 4; ++i) {door.pts[i][dim] += shift;}
 				cube_t test_bcube(door.get_bcube());
 				test_bcube.expand_by(-0.1*width); // shrink slightly to avoid picking up adjacent walls
-				if (check_cube_intersect_walls(test_bcube)) {door = orig_door;} // bad placement, revert
+				if (check_cube_intersect_walls(test_bcube) || !check_cube_contained_in_part(test_bcube)) {door = orig_door;} // bad placement, revert
 			}
 		}
 	}
