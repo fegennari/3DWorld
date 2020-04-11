@@ -1587,6 +1587,21 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 	return 1;
 }
 
+void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+	cube_t rug;
+	rug.z1() = zval;
+	rug.z2() = rug.z1() + 0.001*room.dz(); // almost flat
+
+	for (unsigned d = 0; d < 2; ++d) {
+		float const room_sz(room.get_sz_dim(d)), hwidth(rgen.rand_uniform(0.15, 0.35)*room_sz), min_space(max(1.2f*hwidth, 0.2f*room_sz));
+		float const pos(rgen.rand_uniform((room.d[d][0] + min_space), (room.d[d][1] - min_space)));
+		rug.d[d][0] = pos - hwidth;
+		rug.d[d][1] = pos + hwidth;
+	}
+	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
+	interior->room_geom->objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, obj_flags, tot_light_amt);
+}
+
 void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		float const sz(((light_shape == SHAPE_CYLIN) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
@@ -1747,7 +1762,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 
 			// place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
-			if (rgen.rand_float() < 0.95) {add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);}
+			bool added_tc(0);
+			if (rgen.rand_float() < 0.95) {added_tc = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);}
+			
+			if (!added_tc && is_house && !has_stairs && (rgen.rand()&3) != 0) { // maybe add a rug
+				add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
+			}
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 		num_light_stacks += num_lights_added;
@@ -2134,8 +2154,9 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	else {assert(0);}
 }
 
-void building_room_geom_t::add_rug(room_object_t const &c) {
-	//get_material(tid_nm_pair_t(get_texture_by_name("carpet/rug1.jpg"), 0.0)).add_cube_to_verts(c, WHITE, 62); // only draw top/+z face
+void building_room_geom_t::add_rug(room_object_t const &c) { // FIXME: scale texture to size of cube
+	int const tid(get_texture_by_name((c.room_id & 1) ? "carpet/rug1.jpg" : "carpet/rug2.jpg"));
+	get_material(tid_nm_pair_t(tid, 20.0)).add_cube_to_verts(c, WHITE, 61); // only draw top/+z face
 }
 
 void building_room_geom_t::clear() {
