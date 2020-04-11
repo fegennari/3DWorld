@@ -2126,6 +2126,10 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	else {assert(0);}
 }
 
+void building_room_geom_t::add_rug(room_object_t const &c) {
+	//get_material(tid_nm_pair_t(get_texture_by_name("carpet/rug1.jpg"), 0.0)).add_cube_to_verts(c, WHITE, 62); // only draw top/+z face
+}
+
 void building_room_geom_t::clear() {
 	materials_s.clear();
 	materials_d.clear();
@@ -2144,6 +2148,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CHAIR: return (color + WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX)))*0.5; // 50% seat color / 50% wood legs color
 	case TYPE_STAIR: return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
+	case TYPE_RUG:   return BROWN; // ???
 	case TYPE_BCASE: return WOOD_COLOR;
 	case TYPE_DESK:  return WOOD_COLOR;
 	case TYPE_TCAN:  return BLACK;
@@ -2164,6 +2169,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_CHAIR: add_chair(*i, tscale); break;
 		case TYPE_STAIR: add_stair(*i, tscale); break;
 		case TYPE_LIGHT: add_light(*i, tscale); break; // light fixture
+		case TYPE_RUG:   add_rug(*i); break;
 		case TYPE_BOOK:  assert(0); break; // book - WRITE
 		case TYPE_BCASE: assert(0); break; // bookcase - WRITE
 		case TYPE_DESK:  assert(0); break; // desk - WRITE
