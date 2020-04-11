@@ -15,14 +15,14 @@ buildings window_color 0.5 0.5 0.5 1.0 # gray
 # interiors
 buildings wall_color  1.0 1.0 1.0 1.0 # white
 buildings ceil_color  1.0 1.0 1.0 1.0 # white
-buildings floor_color 0.4 0.4 0.4 1.0 # gray
+buildings floor_color 1.0 1.0 1.0 1.0 # white - using carpet textures
 buildings wall_tscale  12.0
 buildings ceil_tscale  16.0
 buildings floor_tscale 16.0
 buildings wall_tid stucco.jpg
 buildings wall_nm_tid normal_maps/stucco_NRM.jpg
-buildings floor_tid plaster.png
-#buildings floor_nm_tid normal_maps/xxx
+buildings floor_tid plaster.png # default
+buildings floor_nm_tid none
 buildings ceil_tid particleb.png
 buildings ceil_nm_tid normal_maps/particleb_NRM.jpg
 
@@ -59,6 +59,8 @@ buildings roof_tid stucco.jpg
 buildings roof_nm_tid normal_maps/stucco_NRM.jpg
 buildings roof_color 0.1 0.1 0.1 1.0
 buildings roof_color_grayscale_rand 0.4
+buildings floor_tid carpet/carpet1.jpg
+buildings floor_nm_tid none
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
@@ -80,6 +82,8 @@ buildings roof_nm_tid normal_maps/tile_NRM.jpg
 buildings house_floor_tscale 64.0
 buildings house_floor_tid paneling.png
 buildings house_floor_nm_tid normal_maps/paneling_NRM.jpg
+buildings floor_tid carpet/carpet2.jpg
+buildings floor_nm_tid none
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
@@ -102,6 +106,8 @@ buildings house_ceil_nm_tid none # not created yet
 buildings house_floor_tscale 32.0
 buildings house_floor_tid fence.jpg
 buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
+buildings floor_tid carpet/office_carpet2.jpg # nice, but low contrast with walls
+buildings floor_nm_tid none
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
@@ -129,6 +135,8 @@ buildings roof_tid mossy_rock.jpg
 buildings roof_nm_tid -1
 buildings side_color_min 0.55 0.40 0.30 1.0
 buildings side_color_max 0.60 0.45 0.35 1.0
+buildings floor_tid carpet/office_carpet1.jpg # nice, even has a normal map, but low contrast with walls
+buildings floor_nm_tid carpet/office_carpet1_nrm.jpg
 buildings add_material
 
 buildings side_color 0.7 0.7 0.7 1.0
@@ -143,6 +151,8 @@ buildings window_color 0.7 0.7 0.7 1.0 # light gray for higher contrast
 buildings roof_tscale 6.0
 buildings roof_tid snow2.jpg
 buildings roof_nm_tid -1
+buildings floor_tid carpet/office_carpet3.jpg # pretty good
+buildings floor_nm_tid none
 
 buildings side_color 0.55 0.55 0.55 1.0
 buildings add_material
