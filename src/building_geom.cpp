@@ -1175,14 +1175,15 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 	return door;
 }
 
-bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building) { // exterior doors
+bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building, bool roof_access) { // exterior doors
 
 	if (c.is_all_zeros()) return 0;
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
 	unsigned const type(for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
 	doors.push_back(set_door_from_cube(c, dim, dir, type, 0.01*sz[!dim], 1, 0, 0, 0, 0)); // exterior=1, opened=0, opens_out=0, opens_up=0, swap_sides=0
-	if (part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
+	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
+	if (roof_access) {doors.back().type = tquad_with_ix_t::TYPE_RDOOR;}
 	return 1;
 }
 

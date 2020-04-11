@@ -886,8 +886,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			door.d[stairs_dim][ dir] += door_shift; // shift slightly to fill the gap
 			door.d[stairs_dim][!dir]  = door.d[stairs_dim][dir];
 			if (!is_sloped) {door.d[!stairs_dim][1] = door.get_center_dim(!stairs_dim);} // only the open half
-			add_door(door, part_ix, stairs_dim, dir, 1);
-			doors.back().type = tquad_with_ix_t::TYPE_RDOOR;
+			add_door(door, part_ix, stairs_dim, dir, 1, 1); // roof_access=1
 			// clear any roof objects that are in the way
 			cube_t clear_cube(box);
 			clear_cube.d[stairs_dim][dir] += (dir ? 1.0 : -1.0)*window_vspacing; // clear out space in front of the door

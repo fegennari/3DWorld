@@ -437,7 +437,7 @@ struct building_t : public building_geom_t {
 	void gen_geometry(int rseed1, int rseed2);
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
-	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building);
+	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building, bool roof_access=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen);

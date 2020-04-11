@@ -1006,11 +1006,11 @@ public:
 							auto &v(verts[k]);
 							float const delta(door_ztop - v.v.z);
 							if (v.v.z < door_ztop) {v.v.z = door_ztop;} // make all windows start above the door
-							v.v[n] += offset; // move slightly away from the house wall to avoid z-fighting (vertex is different from building and won't have same depth)
+							v.v[n] += offset; // move slightly away from the building wall to avoid z-fighting (vertex is different from building and won't have same depth)
 							if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
 						}
 					}
-					else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the house wall to avoid z-fighting
+					else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the building wall to avoid z-fighting
 						float const offset(0.02*(j ? 1.0 : -1.0)*offset_val);
 						for (unsigned k = ix; k < ix+4; ++k) {verts[k].v[n] += offset;}
 					}
