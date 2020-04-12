@@ -1,12 +1,11 @@
 // 3D World - Grass Generation and Rendering Code
 // by Frank Gennari
 // 9/28/10
-
 #include "3DWorld.h"
 #include "grass.h"
 #include "mesh.h"
 #include "physics_objects.h"
-#include "Textures_3dw.h"
+#include "textures.h"
 #include "lightmap.h"
 #include "shaders.h"
 #include "draw_utils.h"

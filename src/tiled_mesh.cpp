@@ -3,7 +3,7 @@
 // 9/26/10
 
 #include "tiled_mesh.h"
-#include "Textures_3dw.h"
+#include "textures.h"
 #include "shaders.h"
 #include "openal_wrap.h"
 #include "heightmap.h"

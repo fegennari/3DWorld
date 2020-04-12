@@ -1,6 +1,6 @@
 // http://www.opengl.org/resources/features/KilgardTechniques/LensFlare/
 #include "function_registry.h"
-#include "Textures_3dw.h"
+#include "textures.h"
 #include "draw_utils.h"
 #include "shaders.h"
 

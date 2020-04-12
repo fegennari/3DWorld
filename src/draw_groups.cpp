@@ -6,7 +6,7 @@
 #include "transform_obj.h"
 #include "player_state.h"
 #include "tree_leaf.h"
-#include "Textures_3dw.h"
+#include "textures.h"
 #include "dynamic_particle.h"
 #include "physics_objects.h"
 #include "shaders.h"

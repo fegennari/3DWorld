@@ -1,17 +1,15 @@
 // 3D World - upsurface class, used for planets, moons, asteroids, etc.
 // by Frank Gennari
 // 4/5/07
-
 #include "function_registry.h"
 #include "upsurface.h"
 #include "universe.h"
 #include "sinf.h"
-#include "Textures_3dw.h"
+#include "textures.h"
 
 
 float const M_ATTEN_FACTOR = 0.5;
 float const F_ATTEN_FACTOR = 0.4;
-
 
 extern int display_mode;
 

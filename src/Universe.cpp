@@ -4,7 +4,7 @@
 #include "function_registry.h"
 #include "universe.h"
 #include "explosion.h"
-#include "Textures_3dw.h"
+#include "textures.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "asteroid.h"

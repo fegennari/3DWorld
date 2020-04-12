@@ -461,9 +461,6 @@
     <ClInclude Include="src\subdiv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Textures_3dw.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\timetest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -604,6 +601,9 @@
     </ClInclude>
     <ClInclude Include="src\city.h">
       <Filter>Source Files\City</Filter>
+    </ClInclude>
+    <ClInclude Include="src\textures.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

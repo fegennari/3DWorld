@@ -2,7 +2,7 @@
 // by Frank Gennari
 // 10/14/13
 #include "targa.h"
-#include "Textures_3dw.h"
+#include "textures.h"
 #include <fstream> // for filebuf
 
 using namespace std;
