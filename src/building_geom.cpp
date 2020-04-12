@@ -2235,8 +2235,10 @@ void building_room_geom_t::draw(shader_t &s, bool shadow_only) { // non-const be
 	if (empty()) return; // no geom
 	if (materials_s.empty()) {create_static_vbos ();} // create static  materials if needed
 	if (materials_d.empty()) {create_dynamic_vbos();} // create dynamic materials if needed
+	enable_blend(); // needed for rugs
 	materials_s.draw(s, shadow_only);
 	materials_d.draw(s, shadow_only);
+	disable_blend();
 	vbo_wrap_t::post_render();
 }
 
