@@ -581,8 +581,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							cube_t wall;
 							wall.z1() = max(p->z1(), p2->z1()) + fc_thick; // shared Z range
 							wall.z2() = min(p->z2(), p2->z2()) - fc_thick;
-							wall.d[ dim][0] = place_area.d[dim][0]; // shorter part side with slight offset
-							wall.d[ dim][1] = place_area.d[dim][1];
+
+							for (unsigned d = 0; d < 2; ++d) {
+								wall.d[dim][d] = place_area.d[dim][d]; // shorter part side with slight offset
+								if (p->d[dim][d] != p2->d[dim][d]) {wall.d[dim][d] += (d ? 1.0 : -1.0)*0.8*wall_edge_spacing;} // reduce the gap at the corner between the two parts
+							}
 							if (wall.get_sz_dim(dim) < min_split_wall_len) continue; // wall is too short to add (can this happen?)
 							wall.d[!dim][ dir] = val;
 							wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
