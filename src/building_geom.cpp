@@ -2171,6 +2171,13 @@ void building_room_geom_t::add_rug(room_object_t const &c) {
 	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
 }
 
+void building_room_geom_t::add_picture(room_object_t const &c) {
+	int const picture_tid = -1; // TODO
+	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
+	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces);
+	// TODO: add a frame
+}
+
 void building_room_geom_t::clear() {
 	clear_materials();
 	objs.clear();
@@ -2193,6 +2200,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_STAIR: return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:   return texture_color(get_rug_tid());
+	case TYPE_PICTURE: return WHITE; // ???
 	case TYPE_BCASE: return WOOD_COLOR;
 	case TYPE_DESK:  return WOOD_COLOR;
 	case TYPE_TCAN:  return BLACK;
@@ -2214,6 +2222,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_STAIR: add_stair(*i, tscale); break;
 		case TYPE_LIGHT: add_light(*i, tscale); break; // light fixture
 		case TYPE_RUG:   add_rug(*i); break;
+		case TYPE_PICTURE: add_picture(*i); break;
 		case TYPE_BOOK:  assert(0); break; // book - WRITE
 		case TYPE_BCASE: assert(0); break; // bookcase - WRITE
 		case TYPE_DESK:  assert(0); break; // desk - WRITE
