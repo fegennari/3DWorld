@@ -2162,8 +2162,8 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_rug(room_object_t const &c) { // FIXME: scale texture to size of cube
-	unsigned const NUM_RUG_TIDS = 2;
-	char const *rug_textures[NUM_RUG_TIDS] = {"carpet/rug1.jpg", "carpet/rug2.jpg"};
+	unsigned const NUM_RUG_TIDS = 5;
+	char const *rug_textures[NUM_RUG_TIDS] = {"carpet/rug1.jpg", "carpet/rug2.jpg", "carpet/rug3.png", "carpet/rug4.png", "carpet/rug5.png"};
 	int const tid(get_texture_by_name(rug_textures[c.obj_id % NUM_RUG_TIDS]));
 	bool const swap_tex_st(c.dy() < c.dx()); // rug textures are oriented with the long side in X, so swap the coordinates (rotate 90 degrees) if our rug is oriented the other way
 	get_material(tid_nm_pair_t(tid, 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
