@@ -325,7 +325,7 @@ struct stairwell_t : public cube_t {
 	stairs_shape shape;
 	uint8_t num_floors;
 	bool dim, dir, roof_access, stack_conn;
-	stairwell_t() : shape(SHAPE_STRAIGHT), dim(0), dir(0), num_floors(0), roof_access(0), stack_conn(0) {}
+	stairwell_t() : shape(SHAPE_STRAIGHT), num_floors(0), dim(0), dir(0), roof_access(0), stack_conn(0) {}
 	stairwell_t(cube_t const &c, unsigned n, bool dim_, bool dir_, stairs_shape s=SHAPE_STRAIGHT, bool r=0, bool sc=0) :
 		cube_t(c), shape(s), num_floors(n), dim(dim_), dir(dir_), roof_access(r), stack_conn(sc) {}
 };

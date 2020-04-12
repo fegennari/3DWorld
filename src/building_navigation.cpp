@@ -348,7 +348,6 @@ public:
 			unsigned const cur(open_queue.top().second);
 			open_queue.pop();
 			assert(!closed[cur]);
-			a_star_node_state_t const &cs(state[cur]);
 			node_t const &cur_node(get_node(cur));
 			point const center(cur_node.get_center(cur_pt.z));
 			assert(!closed[cur]);
@@ -454,7 +453,7 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 
 	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts at finding a valid room
 		unsigned const cand_room(rgen.rand() % interior->rooms.size());
-		if (cand_room == loc.room_ix) continue;
+		if (cand_room == (unsigned)loc.room_ix) continue;
 		room_t const room(interior->rooms[cand_room]);
 		if (room.is_hallway) continue; // don't select a hallway
 
