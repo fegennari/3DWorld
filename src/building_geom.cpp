@@ -2172,11 +2172,14 @@ void building_room_geom_t::add_rug(room_object_t const &c) {
 }
 
 void building_room_geom_t::clear() {
-	materials_s.clear();
-	materials_d.clear();
+	clear_materials();
 	objs.clear();
 	light_bcubes.clear();
 	has_elevators = 0;
+}
+void building_room_geom_t::clear_materials() { // can be called to update textures, lighting state, etc.
+	materials_s.clear();
+	materials_d.clear();
 }
 
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {

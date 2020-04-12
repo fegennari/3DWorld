@@ -553,6 +553,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: closest_t
 	if (closest_dist_sq == 0.0) return 0; // no light found
 	assert(closest_light < objs.size());
 	objs[closest_light].toggle_lit_state(); // Note: doesn't update light texture/emissive, indir lighting, or room light value
+	interior->room_geom->clear_materials(); // recreate light geom with correct emissive properties
 	return 1;
 }
 

@@ -255,6 +255,7 @@ struct building_room_geom_t {
 	building_room_geom_t() : has_elevators(0), obj_scale(1.0), stairs_start(0) {}
 	bool empty() const {return objs.empty();}
 	void clear();
+	void clear_materials();
 	unsigned get_num_verts() const {return (materials_s.count_all_verts() + materials_d.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool dynamic=0) {return (dynamic ? materials_d : materials_s).get_material(tex);}
 	rgeom_mat_t &get_wood_material(float tscale);
