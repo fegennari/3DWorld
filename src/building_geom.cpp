@@ -1588,18 +1588,24 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 }
 
 void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+	vector3d const room_sz(room.get_size());
+	vector3d center(room.get_cube_center()); // Note: zvals ignored
+	bool const min_dim(room_sz.y < room_sz.x);
+	float const ar(rgen.rand_uniform(0.65, 0.85)), length(min(0.7f*room_sz[min_dim]/ar, room_sz[!min_dim]*rgen.rand_uniform(0.4, 0.7))), width(length*ar);
 	cube_t rug;
 	rug.z1() = zval;
 	rug.z2() = rug.z1() + 0.001*room.dz(); // almost flat
 
 	for (unsigned d = 0; d < 2; ++d) {
-		float const room_sz(room.get_sz_dim(d)), hwidth(rgen.rand_uniform(0.15, 0.35)*room_sz), min_space(max(1.2f*hwidth, 0.2f*room_sz));
-		float const pos(rgen.rand_uniform((room.d[d][0] + min_space), (room.d[d][1] - min_space)));
-		rug.d[d][0] = pos - hwidth;
-		rug.d[d][1] = pos + hwidth;
+		float const radius(0.5*((bool(d) == min_dim) ? width : length));
+		center[d] += 0.05*room_sz[d]*rgen.rand_uniform(-1.0, 1.0); // slight random misalignment
+		rug.d[d][0] = center[d] - radius;
+		rug.d[d][1] = center[d] + radius;
 	}
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
-	interior->room_geom->objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, obj_flags, tot_light_amt);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, obj_flags, tot_light_amt);
+	objs.back().obj_id = uint16_t(objs.size()); // determines rug color
 }
 
 void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
@@ -1765,7 +1771,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool added_tc(0);
 			if (rgen.rand_float() < 0.95) {added_tc = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);}
 			
-			if (!added_tc && is_house && !has_stairs && (rgen.rand()&3) != 0) { // maybe add a rug
+			if (is_house && !has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
 				add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 			}
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
@@ -1978,11 +1984,12 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
 				v.v[d[1]] = c.d[d[1]][s1];
-				v.t[swap_tex_st] = tex.tscale_x*v.v[d[1]];
+				v.t[swap_tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : tex.tscale_x*v.v[d[1]]); // tscale==0.0 => fit texture to cube
 
 				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-					v.v[d[0]] = c.d[d[0]][k^j^s1^1]; // need to orient the vertices differently for each side
-					v.t[!swap_tex_st] = tex.tscale_y*v.v[d[0]];
+					bool const s2(k^j^s1^1); // need to orient the vertices differently for each side
+					v.v[d[0]] = c.d[d[0]][s2];
+					v.t[!swap_tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : tex.tscale_y*v.v[d[0]]);
 					quad_verts.push_back(v);
 				}
 			} // for s1
@@ -2155,8 +2162,11 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_rug(room_object_t const &c) { // FIXME: scale texture to size of cube
-	int const tid(get_texture_by_name((c.room_id & 1) ? "carpet/rug1.jpg" : "carpet/rug2.jpg"));
-	get_material(tid_nm_pair_t(tid, 20.0)).add_cube_to_verts(c, WHITE, 61); // only draw top/+z face
+	unsigned const NUM_RUG_TIDS = 2;
+	char const *rug_textures[NUM_RUG_TIDS] = {"carpet/rug1.jpg", "carpet/rug2.jpg"};
+	int const tid(get_texture_by_name(rug_textures[c.obj_id % NUM_RUG_TIDS]));
+	bool const swap_tex_st(c.dy() < c.dx()); // rug textures are oriented with the long side in X, so swap the coordinates (rotate 90 degrees) if our rug is oriented the other way
+	get_material(tid_nm_pair_t(tid, 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
 }
 
 void building_room_geom_t::clear() {
