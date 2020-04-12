@@ -321,11 +321,9 @@ unsigned get_loaded_textures_gpu_mem() { // Note: ignores texture compression
 
 
 int texture_lookup(string const &name) {
-	
 	name_map_t::const_iterator it(texture_name_map.find(name));
 	return ((it != texture_name_map.end()) ? it->second : -1);
 }
-
 
 int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, int wrap_mir, float aniso) {
 

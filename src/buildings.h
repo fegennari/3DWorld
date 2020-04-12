@@ -214,6 +214,7 @@ struct room_object_t : public cube_t {
 	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}
 	bool no_coll   () const {return (flags & RO_FLAG_NOCOLL);}
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
+	int get_rug_tid() const;
 	colorRGBA get_color() const;
 };
 

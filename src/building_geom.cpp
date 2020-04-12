@@ -2161,12 +2161,14 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	else {assert(0);}
 }
 
-void building_room_geom_t::add_rug(room_object_t const &c) {
+int room_object_t::get_rug_tid() const {
 	unsigned const NUM_RUG_TIDS = 5;
 	char const *rug_textures[NUM_RUG_TIDS] = {"carpet/rug1.jpg", "carpet/rug2.jpg", "carpet/rug3.png", "carpet/rug4.png", "carpet/rug5.png"};
-	int const tid(get_texture_by_name(rug_textures[c.obj_id % NUM_RUG_TIDS]));
+	return get_texture_by_name(rug_textures[obj_id % NUM_RUG_TIDS]);
+}
+void building_room_geom_t::add_rug(room_object_t const &c) {
 	bool const swap_tex_st(c.dy() < c.dx()); // rug textures are oriented with the long side in X, so swap the coordinates (rotate 90 degrees) if our rug is oriented the other way
-	get_material(tid_nm_pair_t(tid, 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
+	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
 }
 
 void building_room_geom_t::clear() {
@@ -2187,7 +2189,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CHAIR: return (color + WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX)))*0.5; // 50% seat color / 50% wood legs color
 	case TYPE_STAIR: return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
-	case TYPE_RUG:   return BROWN; // ???
+	case TYPE_RUG:   return texture_color(get_rug_tid());
 	case TYPE_BCASE: return WOOD_COLOR;
 	case TYPE_DESK:  return WOOD_COLOR;
 	case TYPE_TCAN:  return BLACK;
