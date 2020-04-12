@@ -2161,7 +2161,7 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	else {assert(0);}
 }
 
-void building_room_geom_t::add_rug(room_object_t const &c) { // FIXME: scale texture to size of cube
+void building_room_geom_t::add_rug(room_object_t const &c) {
 	unsigned const NUM_RUG_TIDS = 5;
 	char const *rug_textures[NUM_RUG_TIDS] = {"carpet/rug1.jpg", "carpet/rug2.jpg", "carpet/rug3.png", "carpet/rug4.png", "carpet/rug5.png"};
 	int const tid(get_texture_by_name(rug_textures[c.obj_id % NUM_RUG_TIDS]));

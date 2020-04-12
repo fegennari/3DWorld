@@ -315,7 +315,7 @@ public:
 				
 				if (!connect_room_endpoints(avoid, walk_area, p1, p2, radius, path, keepout, rgen)) { // unreachable
 					path.clear();
-					// TODO: try another path?
+					// try another path? this case is rare; on failure, the person will wait a second then choose a different destination room
 					//disconnect_room_pair(n, came_from); // ???
 					return 0;
 				}
