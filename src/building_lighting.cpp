@@ -226,9 +226,9 @@ class building_indir_light_mgr_t {
 			for (unsigned d = 0; d < 2; ++d) {origin[d] = rgen.rand_uniform(ro.d[d][0], ro.d[d][1]);}
 			origin.z = light_zval;
 			init_cpos = origin; // init value
-			if (!b.ray_cast_interior(origin, pri_dir, bvh, init_cpos, init_cnorm, ccolor)) break;
+			if (!b.ray_cast_interior(origin, pri_dir, bvh, init_cpos, init_cnorm, ccolor)) continue;
 			colorRGBA const init_color(lcolor.modulate_with(ccolor));
-			if (init_color.get_luminance() < 0.1) break; // done
+			if (init_color.get_luminance() < 0.1) continue; // done
 
 			for (unsigned splits = 0; splits < NUM_PRI_SPLITS; ++splits) {
 				point pos(origin);
