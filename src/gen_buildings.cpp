@@ -2230,7 +2230,8 @@ public:
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && transparent_windows);
 			if (enable_animations) {enable_animations_for_shader(s);}
-			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
+			float const min_alpha_int = 0.01; // we need alpha testing for rugs
+			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha_int, 0, pcf_scale, 0, have_indir); // force_tsl=0
 			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			set_interior_lighting(s, have_indir);
 			if (have_indir) {setup_indir_lighting(bcs, s);}
