@@ -30,8 +30,7 @@ void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim,
 	if (keep_high_side) {swap(wall, wall2);} // swap left and right
 	walls.push_back(wall2);
 }
-float cube_rand_side_pos(cube_t const &c, int dim, float min_dist_param, float min_dist_abs, rand_gen_t &rgen) {
-	assert(dim < 3);
+float cube_rand_side_pos(cube_t const &c, bool dim, float min_dist_param, float min_dist_abs, rand_gen_t &rgen) {
 	assert(min_dist_param < 0.5f); // aplies to both ends
 	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta)), v1(lo + gap), v2(hi - gap);
 	//if (v2 <= v1) {cout << TXT(dim) << TXT(lo) << TXT(hi) << TXT(min_dist_abs) << TXT(delta) << TXT(gap) << endl;}
