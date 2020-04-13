@@ -33,6 +33,10 @@ buildings add_rug_texture carpet/rug3.png
 buildings add_rug_texture carpet/rug4.png
 buildings add_rug_texture carpet/rug5.png
 
+buildings add_picture_texture skybox/water_scene/back.jpg
+#buildings add_picture_texture earth.png # Earth is upside down
+#buildings add_picture_texture buildings/pixelcity_windows.jpg
+
 # house ceilings and floors
 buildings house_ceil_color  1.0 1.0 1.0 1.0 # white
 buildings house_floor_color 1.0 1.0 1.0 1.0 # white

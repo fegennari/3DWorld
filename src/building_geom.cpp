@@ -1606,7 +1606,39 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, obj_flags, tot_light_amt);
-	objs.back().obj_id = uint16_t(objs.size()); // determines rug color
+	objs.back().obj_id = uint16_t(objs.size()); // determines rug texture
+}
+
+void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+	if (!room_object_t::enable_pictures()) return; // disabled
+	if (room.is_sec_bldg) return; // no pictures in secondary buildings
+	if (room.is_hallway ) return; // no pictures in hallways (yet)
+	assert(room.part_id < parts.size());
+	cube_t const &part(parts[room.part_id]);
+	float const floor_height(get_window_vspace()), wall_thickness(0.5*get_floor_thickness());
+	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			float const wall_pos(room.d[dim][dir]);
+			if (wall_pos == part.d[dim][dir]) continue; // on part boundary, likely exterior wall where there may be windows, skip
+			if (rgen.rand_bool()) continue;
+			float const height(floor_height*rgen.rand_uniform(0.25, 0.6)), width(height*rgen.rand_uniform(1.0, 2.0)); // width > height
+			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
+			point center;
+			center[ dim] = wall_pos;
+			center[!dim] = room.get_center_dim(!dim);
+			center.z     = zval + rgen.rand_uniform(0.5, 0.6)*floor_height; // move up
+			cube_t c(center, center);
+			c.z1() -= 0.5*height; c.z2() += 0.5*height;
+			c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
+			c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
+			if (is_cube_close_to_doorway(c)) continue; // bad placement
+			objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
+			objs.back().obj_id = uint16_t(objs.size()); // determines picture texture
+		} // for dir
+	} // for dim
 }
 
 void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
@@ -1775,6 +1807,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (is_house && !has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
 				add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 			}
+			if (is_house) {hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);} // houses only for now
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 		num_light_stacks += num_lights_added;
@@ -2170,7 +2203,7 @@ void building_room_geom_t::add_rug(room_object_t const &c) {
 void building_room_geom_t::add_picture(room_object_t const &c) {
 	int const picture_tid(c.get_picture_tid()); // TODO: add an option for the player to take custom screenshots to use as pictures
 	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
-	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces);
+	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim);
 	// TODO: add a frame
 }
 
@@ -2196,7 +2229,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_STAIR: return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:   return texture_color(get_rug_tid());
-	case TYPE_PICTURE: return WHITE; // ???
+	case TYPE_PICTURE: return texture_color(get_picture_tid());
 	case TYPE_BCASE: return WOOD_COLOR;
 	case TYPE_DESK:  return WOOD_COLOR;
 	case TYPE_TCAN:  return BLACK;
