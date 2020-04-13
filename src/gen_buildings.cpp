@@ -113,6 +113,10 @@ int read_building_texture(FILE *fp, string const &str, int &error) {
 	//cout << "texture filename: " << str << ", ID: " << ret << endl;
 	return ret;
 }
+void read_texture_and_add_if_valid(FILE *fp, string const &str, int &error, vector<unsigned> &tids) {
+	int const tid(read_building_texture(fp, str, error));
+	if (tid >= 0) {tids.push_back(tid);}
+}
 void read_building_tscale(FILE *fp, tid_nm_pair_t &tex, string const &str, int &error) {
 	if (!read_float(fp, tex.tscale_x)) {buildings_file_err(str, error);}
 	tex.tscale_y = tex.tscale_x; // uniform
@@ -350,6 +354,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "house_floor_color") { // per-material
 	if (!read_color(fp, global_building_params.cur_mat.house_floor_color)) {buildings_file_err(str, error);}
 	}
+	// room objects/textures
+	else if (str == "add_rug_texture"    ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.rug_tids    );}
+	else if (str == "add_picture_texture") {read_texture_and_add_if_valid(fp, str, error, global_building_params.picture_tids);}
 	// special commands
 	else if (str == "probability") {
 		if (!read_uint(fp, global_building_params.cur_prob)) {buildings_file_err(str, error);}
@@ -362,6 +369,17 @@ bool parse_buildings_option(FILE *fp) {
 	return !error;
 }
 
+bool room_object_t::enable_rugs    () {return !global_building_params.rug_tids    .empty();}
+bool room_object_t::enable_pictures() {return !global_building_params.picture_tids.empty();}
+
+int room_object_t::get_rug_tid() const {
+	unsigned const num_tids(global_building_params.rug_tids.size());
+	return ((num_tids == 0) ? -1 : global_building_params.rug_tids[obj_id % num_tids]);
+}
+int room_object_t::get_picture_tid() const {
+	unsigned const num_tids(global_building_params.picture_tids.size());
+	return ((num_tids == 0) ? -1 : global_building_params.picture_tids[obj_id % num_tids]);
+}
 
 void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos) {
 	float const x(pos.x - center.x), y(pos.y - center.y); // translate to center

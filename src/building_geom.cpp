@@ -1588,6 +1588,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 }
 
 void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+	if (!room_object_t::enable_rugs()) return; // disabled
 	vector3d const room_sz(room.get_size());
 	vector3d center(room.get_cube_center()); // Note: zvals ignored
 	bool const min_dim(room_sz.y < room_sz.x);
@@ -2161,18 +2162,13 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	else {assert(0);}
 }
 
-int room_object_t::get_rug_tid() const {
-	unsigned const NUM_RUG_TIDS = 5;
-	char const *rug_textures[NUM_RUG_TIDS] = {"carpet/rug1.jpg", "carpet/rug2.jpg", "carpet/rug3.png", "carpet/rug4.png", "carpet/rug5.png"};
-	return get_texture_by_name(rug_textures[obj_id % NUM_RUG_TIDS]);
-}
 void building_room_geom_t::add_rug(room_object_t const &c) {
 	bool const swap_tex_st(c.dy() < c.dx()); // rug textures are oriented with the long side in X, so swap the coordinates (rotate 90 degrees) if our rug is oriented the other way
 	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
 }
 
 void building_room_geom_t::add_picture(room_object_t const &c) {
-	int const picture_tid = -1; // TODO
+	int const picture_tid(c.get_picture_tid()); // TODO: add an option for the player to take custom screenshots to use as pictures
 	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
 	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces);
 	// TODO: add a frame

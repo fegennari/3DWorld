@@ -112,6 +112,7 @@ struct building_params_t {
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity; // {any, city_only, non_city}
+	vector<unsigned> rug_tids, picture_tids;
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), dome_roof(0),
 		onion_roof(0), enable_people_ai(0), num_place(num), num_tries(10), cur_prob(1), ao_factor(0.0), sec_extra_spacing(0.0), window_width(0.0), window_height(0.0),
@@ -214,7 +215,10 @@ struct room_object_t : public cube_t {
 	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}
 	bool no_coll   () const {return (flags & RO_FLAG_NOCOLL);}
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
+	static bool enable_rugs();
+	static bool enable_pictures();
 	int get_rug_tid() const;
+	int get_picture_tid() const;
 	colorRGBA get_color() const;
 };
 
@@ -500,6 +504,7 @@ private:
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit);
 	void add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
+	void hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;

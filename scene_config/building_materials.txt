@@ -26,6 +26,13 @@ buildings floor_nm_tid none
 buildings ceil_tid particleb.png
 buildings ceil_nm_tid normal_maps/particleb_NRM.jpg
 
+# interior detail textures
+buildings add_rug_texture carpet/rug1.jpg
+buildings add_rug_texture carpet/rug2.jpg
+buildings add_rug_texture carpet/rug3.png
+buildings add_rug_texture carpet/rug4.png
+buildings add_rug_texture carpet/rug5.png
+
 # house ceilings and floors
 buildings house_ceil_color  1.0 1.0 1.0 1.0 # white
 buildings house_floor_color 1.0 1.0 1.0 1.0 # white
