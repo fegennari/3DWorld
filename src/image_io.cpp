@@ -35,26 +35,33 @@ string const texture_dir("textures");
 string append_texture_dir(string const &filename) {return (texture_dir + "/" + filename);}
 
 
-FILE *open_texture_file(string const &filename) {
-
-	FILE *fp = fopen(append_texture_dir(filename).c_str(), "rb");
-	if (fp != NULL) return fp;
-
-	// if not in the texture directory, then look in the current directory
-	fp = fopen(filename.c_str(), "rb");
-
-	if (fp == NULL) {
-		cerr << endl << "Error loading image " << filename << endl;
-		exit(1);
-	}
-	return fp;
-}
-
 void checked_fclose(FILE *fp) {
 	if (fclose(fp) != 0) {
 		perror("Error: fclose() call failed");
 		exit(1); // how fatal should this be?
 	}
+}
+
+FILE *open_texture_file_no_check(string const &filename) {
+	FILE *fp = fopen(append_texture_dir(filename).c_str(), "rb");
+	if (fp != nullptr) return fp;
+	// if not in the texture directory, look in the current directory
+	return fopen(filename.c_str(), "rb");
+}
+FILE *open_texture_file(string const &filename) {
+	FILE *fp(open_texture_file_no_check(filename));
+
+	if (fp == nullptr) {
+		cerr << endl << "Error loading image " << filename << endl;
+		exit(1);
+	}
+	return fp;
+}
+bool check_texture_file_exists(string const &filename) {
+	FILE *fp(open_texture_file_no_check(filename));
+	if (fp == nullptr) return 0;
+	checked_fclose(fp);
+	return 1;
 }
 
 

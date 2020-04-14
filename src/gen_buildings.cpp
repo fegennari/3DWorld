@@ -106,15 +106,23 @@ void buildings_file_err(string const &str, int &error) {
 }
 bool check_01(float v) {return (v >= 0.0 && v <= 1.0);}
 
-int read_building_texture(FILE *fp, string const &str, int &error) {
+bool check_texture_file_exists(string const &filename);
+
+int read_building_texture(FILE *fp, string const &str, int &error, bool check_filename=0) {
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) {buildings_file_err(str, error);}
+
+	if (check_filename && !check_texture_file_exists(strc)) {
+		std::cerr << "Warning: Skipping texture '" << strc << "' that can't be loaded" << endl;
+		return -1; // texture filename doesn't exist
+	}
 	int const ret(get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir()));
 	//cout << "texture filename: " << str << ", ID: " << ret << endl;
 	return ret;
 }
 void read_texture_and_add_if_valid(FILE *fp, string const &str, int &error, vector<unsigned> &tids) {
-	int const tid(read_building_texture(fp, str, error));
+	// Note: this version doesn't accept numbered texture IDs, but it also doesn't fail on missing files
+	int const tid(read_building_texture(fp, str, error, 1)); // check_filename=1
 	if (tid >= 0) {tids.push_back(tid);}
 }
 void read_building_tscale(FILE *fp, tid_nm_pair_t &tex, string const &str, int &error) {
