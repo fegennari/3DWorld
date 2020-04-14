@@ -26,16 +26,26 @@ buildings floor_nm_tid none
 buildings ceil_tid particleb.png
 buildings ceil_nm_tid normal_maps/particleb_NRM.jpg
 
-# interior detail textures
+# interior detail rug textures
 buildings add_rug_texture carpet/rug1.jpg
 buildings add_rug_texture carpet/rug2.jpg
 buildings add_rug_texture carpet/rug3.png
 buildings add_rug_texture carpet/rug4.png
 buildings add_rug_texture carpet/rug5.png
 
+# interior detail picture textures
 buildings add_picture_texture skybox/water_scene/back.jpg
-#buildings add_picture_texture earth.png # Earth is upside down
-#buildings add_picture_texture buildings/pixelcity_windows.jpg
+# 3DWorld screenshots - not committed to git repo, but should be nonfatal if not found
+buildings add_picture_texture pictures/forest.jpg
+buildings add_picture_texture pictures/gas_giant.jpg
+buildings add_picture_texture pictures/mirror_balls.jpg
+buildings add_picture_texture pictures/mountain.jpg
+buildings add_picture_texture pictures/museum.jpg
+buildings add_picture_texture pictures/nebula.jpg
+buildings add_picture_texture pictures/planet.jpg
+buildings add_picture_texture pictures/san_miguel.jpg
+buildings add_picture_texture pictures/spheres.jpg
+buildings add_picture_texture pictures/sponza.jpg
 
 # house ceilings and floors
 buildings house_ceil_color  1.0 1.0 1.0 1.0 # white

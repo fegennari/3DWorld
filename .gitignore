@@ -28,6 +28,7 @@ shaders/generated/*
 textures/skybox/skybox*.png
 textures/skybox/craterlake
 textures/skybox/ely_hills
+textures/pictures
 dependencies/meshoptimizer/src/*.o
 TAGS
 *~

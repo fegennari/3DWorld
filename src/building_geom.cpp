@@ -1606,11 +1606,12 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, obj_flags, tot_light_amt);
-	objs.back().obj_id = uint16_t(objs.size()); // determines rug texture
+	objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
 }
 
 void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
 	if (!room_object_t::enable_pictures()) return; // disabled
+	if (!is_house)        return; // houses only for now
 	if (room.is_sec_bldg) return; // no pictures in secondary buildings
 	if (room.is_hallway ) return; // no pictures in hallways (yet)
 	assert(room.part_id < parts.size());
@@ -1636,7 +1637,7 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 			c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
 			if (is_cube_close_to_doorway(c)) continue; // bad placement
 			objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
-			objs.back().obj_id = uint16_t(objs.size()); // determines picture texture
+			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines picture texture
 		} // for dir
 	} // for dim
 }
@@ -1807,7 +1808,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (is_house && !has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
 				add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 			}
-			if (is_house) {hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);} // houses only for now
+			hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 		num_light_stacks += num_lights_added;
