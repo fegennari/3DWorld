@@ -1624,20 +1624,20 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
 			if (wall_pos == part.d[dim][dir]) continue; // on part boundary, likely exterior wall where there may be windows, skip
-			if (rgen.rand_bool()) continue;
-			float const height(floor_height*rgen.rand_uniform(0.25, 0.6)), width(height*rgen.rand_uniform(1.0, 2.0)); // width > height
+			if ((rgen.rand() & 3) == 0) continue; // skip 25% of the time
+			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)), width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
 			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
 			point center;
 			center[ dim] = wall_pos;
 			center[!dim] = room.get_center_dim(!dim);
-			center.z     = zval + rgen.rand_uniform(0.5, 0.6)*floor_height; // move up
+			center.z     = zval + rgen.rand_uniform(0.45, 0.6)*floor_height; // move up
 			cube_t c(center, center);
 			c.z1() -= 0.5*height; c.z2() += 0.5*height;
 			c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
 			c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
-			if (is_cube_close_to_doorway(c)) continue; // bad placement
+			if (is_cube_close_to_doorway(c) || interior->is_blocked_by_stairs_or_elevator(c, 4.0*wall_thickness)) continue; // bad placement
 			objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
-			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines picture texture
+			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
 		} // for dir
 	} // for dim
 }
@@ -2201,11 +2201,20 @@ void building_room_geom_t::add_rug(room_object_t const &c) {
 	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
 }
 
-void building_room_geom_t::add_picture(room_object_t const &c) {
-	int const picture_tid(c.get_picture_tid()); // TODO: add an option for the player to take custom screenshots to use as pictures
+void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards
+	// TODO: add an option for the player to take custom screenshots to use as pictures
+	int const picture_tid((c.type == TYPE_WBOARD) ? WHITE_TEX : c.get_picture_tid());
 	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
 	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim);
-	// TODO: add a frame
+	
+	if (c.type != TYPE_WBOARD) { // add a frame
+		cube_t frame(c);
+		vector3d exp;
+		exp.z = exp[!c.dim] = 0.06*c.dz(); // frame width
+		exp[c.dim] = -0.5*c.get_sz_dim(c.dim); // shrink in this dim
+		frame.expand_by(exp);
+		get_material(tid_nm_pair_t(-1)).add_cube_to_verts(frame, BLACK, skip_faces, !c.dim);
+	}
 }
 
 void building_room_geom_t::clear() {
@@ -2225,15 +2234,16 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
 
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
-	case TYPE_TABLE: return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));
-	case TYPE_CHAIR: return (color + WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX)))*0.5; // 50% seat color / 50% wood legs color
-	case TYPE_STAIR: return LT_GRAY; // close enough
+	case TYPE_TABLE:    return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));
+	case TYPE_CHAIR:    return (color + WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX)))*0.5; // 50% seat color / 50% wood legs color
+	case TYPE_STAIR:    return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
-	case TYPE_RUG:   return texture_color(get_rug_tid());
-	case TYPE_PICTURE: return texture_color(get_picture_tid());
-	case TYPE_BCASE: return WOOD_COLOR;
-	case TYPE_DESK:  return WOOD_COLOR;
-	case TYPE_TCAN:  return BLACK;
+	case TYPE_RUG:      return texture_color(get_rug_tid());
+	case TYPE_PICTURE:  return texture_color(get_picture_tid());
+	case TYPE_WBOARD:   return WHITE;
+	case TYPE_BCASE:    return WOOD_COLOR;
+	case TYPE_DESK:     return WOOD_COLOR;
+	case TYPE_TCAN:     return BLACK;
 	default: return color;
 	}
 	return color; // Note: probably should always set color so that we can return it here
@@ -2253,6 +2263,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_LIGHT: add_light(*i, tscale); break; // light fixture
 		case TYPE_RUG:   add_rug(*i); break;
 		case TYPE_PICTURE: add_picture(*i); break;
+		case TYPE_WBOARD:  add_picture(*i); break;
 		case TYPE_BOOK:  assert(0); break; // book - WRITE
 		case TYPE_BCASE: assert(0); break; // bookcase - WRITE
 		case TYPE_DESK:  assert(0); break; // desk - WRITE
