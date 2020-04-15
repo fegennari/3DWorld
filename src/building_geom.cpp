@@ -1611,7 +1611,7 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 
 void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
 	if (!room_object_t::enable_pictures()) return; // disabled
-	if (!is_house)        return; // houses only for now
+	if (!is_house && !room.is_office) return; // houses and offices only for now
 	if (room.is_sec_bldg) return; // no pictures in secondary buildings
 	if (room.is_hallway ) return; // no pictures in hallways (yet)
 	assert(room.part_id < parts.size());
@@ -1620,10 +1620,29 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
+	if (room.is_office) {
+		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
+
+		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
+			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {
+				bool const dim(bool(dim2) ^ pref_dim), dir(bool(dir2) ^ pref_dir);
+				if (fabs(room.d[dim][dir] - part.d[dim][dir]) < wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
+				float const xy_space(0.1*room.get_sz_dim(!dim));
+				cube_t c(room);
+				c.z1() = zval + 0.2*floor_height; c.z2() = zval + 0.85*floor_height;
+				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.55*wall_thickness; // Note: offset by an additional half wall thickness
+				c.d[!dim][0] += xy_space; c.d[!dim][1] -= xy_space;
+				if (is_cube_close_to_doorway(c)) continue; // bad placement
+				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
+				return; // done, only need to add one
+			} // for dir
+		} // for dim
+		return;
+	}
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
-			if (wall_pos == part.d[dim][dir]) continue; // on part boundary, likely exterior wall where there may be windows, skip
+			if (fabs(room.d[dim][dir] - part.d[dim][dir]) < wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
 			if ((rgen.rand() & 3) == 0) continue; // skip 25% of the time
 			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)), width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
 			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
@@ -1633,7 +1652,7 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 			center.z     = zval + rgen.rand_uniform(0.45, 0.6)*floor_height; // move up
 			cube_t c(center, center);
 			c.z1() -= 0.5*height; c.z2() += 0.5*height;
-			c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
+			c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.05*wall_thickness;
 			c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
 			if (is_cube_close_to_doorway(c) || interior->is_blocked_by_stairs_or_elevator(c, 4.0*wall_thickness)) continue; // bad placement
 			objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
@@ -2207,13 +2226,19 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
 	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim);
 	
-	if (c.type != TYPE_WBOARD) { // add a frame
+	if (c.type == TYPE_WBOARD) { // add a marker ledge
+		cube_t frame(c);
+		frame.z2() = frame.z1() + 0.02*c.dz(); // along the bottom edge
+		frame.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*2.0*c.get_sz_dim(c.dim); // extrude outward
+		get_material(tid_nm_pair_t(-1)).add_cube_to_verts(frame, GRAY, (1 << (2*(2-c.dim) + !c.dir)), 0);
+	}
+	else { // add a frame
 		cube_t frame(c);
 		vector3d exp;
 		exp.z = exp[!c.dim] = 0.06*c.dz(); // frame width
 		exp[c.dim] = -0.5*c.get_sz_dim(c.dim); // shrink in this dim
 		frame.expand_by(exp);
-		get_material(tid_nm_pair_t(-1)).add_cube_to_verts(frame, BLACK, skip_faces, !c.dim);
+		get_material(tid_nm_pair_t(-1)).add_cube_to_verts(frame, BLACK, skip_faces, 0);
 	}
 }
 
