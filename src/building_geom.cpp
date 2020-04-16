@@ -1621,16 +1621,17 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
 	if (room.is_office) {
+		if ((rgen.rand() & 3) == 0) return; // skip 25% of the time
 		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
 
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
 			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {
 				bool const dim(bool(dim2) ^ pref_dim), dir(bool(dir2) ^ pref_dir);
 				if (fabs(room.d[dim][dir] - part.d[dim][dir]) < wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
-				float const xy_space(0.1*room.get_sz_dim(!dim));
+				float const xy_space(0.2*room.get_sz_dim(!dim));
 				cube_t c(room);
-				c.z1() = zval + 0.2*floor_height; c.z2() = zval + 0.85*floor_height;
-				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.55*wall_thickness; // Note: offset by an additional half wall thickness
+				c.z1() = zval + 0.25*floor_height; c.z2() = zval + 0.8*floor_height;
+				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
 				c.d[!dim][0] += xy_space; c.d[!dim][1] -= xy_space;
 				if (is_cube_close_to_doorway(c)) continue; // bad placement
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
@@ -1652,7 +1653,7 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 			center.z     = zval + rgen.rand_uniform(0.45, 0.6)*floor_height; // move up
 			cube_t c(center, center);
 			c.z1() -= 0.5*height; c.z2() += 0.5*height;
-			c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.05*wall_thickness;
+			c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
 			c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
 			if (is_cube_close_to_doorway(c) || interior->is_blocked_by_stairs_or_elevator(c, 4.0*wall_thickness)) continue; // bad placement
 			objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
@@ -2222,23 +2223,23 @@ void building_room_geom_t::add_rug(room_object_t const &c) {
 
 void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards
 	// TODO: add an option for the player to take custom screenshots to use as pictures
-	int const picture_tid((c.type == TYPE_WBOARD) ? WHITE_TEX : c.get_picture_tid());
+	bool const whiteboard(c.type == TYPE_WBOARD);
+	int const picture_tid(whiteboard ? WHITE_TEX : c.get_picture_tid());
 	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
 	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim);
+	// add a frame
+	cube_t frame(c);
+	vector3d exp;
+	exp.z = exp[!c.dim] = (whiteboard ? 0.04 : 0.06)*c.dz(); // frame width
+	exp[c.dim] = -0.1*c.get_sz_dim(c.dim); // shrink in this dim
+	frame.expand_by(exp);
+	get_material(tid_nm_pair_t()).add_cube_to_verts(frame, (whiteboard ? GRAY : BLACK), skip_faces, 0);
 	
-	if (c.type == TYPE_WBOARD) { // add a marker ledge
-		cube_t frame(c);
-		frame.z2() = frame.z1() + 0.02*c.dz(); // along the bottom edge
-		frame.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*2.0*c.get_sz_dim(c.dim); // extrude outward
-		get_material(tid_nm_pair_t(-1)).add_cube_to_verts(frame, GRAY, (1 << (2*(2-c.dim) + !c.dir)), 0);
-	}
-	else { // add a frame
-		cube_t frame(c);
-		vector3d exp;
-		exp.z = exp[!c.dim] = 0.06*c.dz(); // frame width
-		exp[c.dim] = -0.5*c.get_sz_dim(c.dim); // shrink in this dim
-		frame.expand_by(exp);
-		get_material(tid_nm_pair_t(-1)).add_cube_to_verts(frame, BLACK, skip_faces, 0);
+	if (whiteboard) { // add a marker ledge
+		cube_t ledge(c);
+		ledge.z2() = ledge.z1() + 0.02*c.dz(); // along the bottom edge
+		ledge.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*2.0*c.get_sz_dim(c.dim); // extrude outward
+		get_material(tid_nm_pair_t()).add_cube_to_verts(ledge, GRAY, (1 << (2*(2-c.dim) + !c.dir)), 0);
 	}
 }
 
