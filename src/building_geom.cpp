@@ -1162,13 +1162,17 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 			door.pts[1][dim] = door.pts[2][dim] = pos + signed_width;
 
 			if (!exterior) { // try to open the door all the way
-				tquad_with_ix_t orig_door(door); // cache orig 90 degree open door in case we need to revert it
-				float const shift(0.07*signed_width), rot_angle(-75.0*TO_RADIANS);
-				for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[swap_sides], rot_angle);}
-				for (unsigned i = 0; i < 4; ++i) {door.pts[i][dim] += shift;}
-				cube_t test_bcube(door.get_bcube());
-				test_bcube.expand_by(-0.1*width); // shrink slightly to avoid picking up adjacent walls
-				if (check_cube_intersect_walls(test_bcube) || !check_cube_contained_in_part(test_bcube)) {door = orig_door;} // bad placement, revert
+				for (unsigned angle = 75; angle > 0; angle -= 15) { // try to open door as much as 75 degrees in steps of 15 degrees
+					tquad_with_ix_t orig_door(door); // cache orig 90 degree open door in case we need to revert it
+					float const shift(0.07*signed_width), rot_angle(-float(angle)*TO_RADIANS);
+					for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[swap_sides], rot_angle);}
+					for (unsigned i = 0; i < 4; ++i) {door.pts[i][dim] += shift;}
+					cube_t test_bcube(door.get_bcube());
+					if (!check_cube_contained_in_part(test_bcube)) {door = orig_door; continue;} // bad placement, revert
+					test_bcube.expand_by(-0.05*width); // shrink slightly to avoid picking up adjacent walls
+					if (check_cube_intersect_walls(test_bcube)) {door = orig_door; continue;} // bad placement, revert
+					break; // done
+				} // for angle
 			}
 		}
 	}
