@@ -2241,8 +2241,8 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	
 	if (whiteboard) { // add a marker ledge
 		cube_t ledge(c);
-		ledge.z2() = ledge.z1() + 0.02*c.dz(); // along the bottom edge
-		ledge.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*2.0*c.get_sz_dim(c.dim); // extrude outward
+		ledge.z2() = ledge.z1() + 0.016*c.dz(); // along the bottom edge
+		ledge.d[c.dim][c.dir] += (c.dir ? 1.5 : -1.5)*c.get_sz_dim(c.dim); // extrude outward
 		get_material(tid_nm_pair_t()).add_cube_to_verts(ledge, GRAY, (1 << (2*(2-c.dim) + !c.dir)), 0);
 	}
 }
