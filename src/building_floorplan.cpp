@@ -405,6 +405,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							for (int r = 0; r < rooms_per_side; ++r) {
 								float const next_split_pos(room_split_pos + dsign*room_sub_width);
 								cube_t room(split_wall);
+								room.d[!min_dim][0] = room_start; // end exactly at part bcube
+								room.d[!min_dim][1] = hall_start_pos; // end exactly at part bcube
 								room.d[min_dim][ d] = room_split_pos;
 								room.d[min_dim][!d] = next_split_pos;
 
