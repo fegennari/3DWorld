@@ -391,9 +391,11 @@ void building_t::build_nav_graph() const {
 
 	for (unsigned r = 0; r < num_rooms; ++r) {
 		room_t const &room(interior->rooms[r]);
-		if (room.is_hallway) {ng.mark_hallway(r);}
-		ng.set_room_bcube(r, room);
 		cube_t c(room);
+		// Note: regular house rooms start and end at the walls; offices and hallways tile exactly and include half the walls, so we have to subtract those back off
+		if (room.is_hallway || room.is_office) {c.expand_by_xy(-0.5*wall_width);}
+		if (room.is_hallway) {ng.mark_hallway(r);}
+		ng.set_room_bcube(r, c);
 		c.expand_by_xy(wall_width); // to include adjacent doors
 
 		for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
