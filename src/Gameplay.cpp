@@ -2562,10 +2562,12 @@ void show_other_messages() {
 }
 
 void print_text_onscreen(string const &text, colorRGBA const &color, float size, int time, int priority) {
-
 	if (msg_params.mtime > 0 && msg_params.priority > priority) return; // do this before the strcpy
 	message    = text;
 	msg_params = text_message_params(time, size, color, priority, FADE_MESSAGE_ALPHA);
+}
+void print_text_onscreen_default(string const &text) {
+	print_text_onscreen(text, WHITE, 1.0, MESSAGE_TIME);
 }
 
 void print_weapon(int weapon_id) {

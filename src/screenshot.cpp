@@ -20,6 +20,8 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors);
 void checked_fclose(FILE *fp);
 
+void print_text_onscreen_default(string const &text);
+
 
 FILE *open_screenshot_file(char const *const file_path, string const &extension, unsigned &id) {
 
@@ -40,6 +42,7 @@ FILE *open_screenshot_file(char const *const file_path, string const &extension,
 		printf("Error writing screenshot '%s'.\n", basename.c_str());
 		return NULL;
 	}
+	print_text_onscreen_default("Writing screenshot " + basename);
 	return fp;
 }
 
