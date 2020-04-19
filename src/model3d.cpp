@@ -598,19 +598,17 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		if (!this->ivbo) {
 			vector<unsigned> tixs;
 			convert_quad_ixs_to_tri_ixs(indices, tixs); // Note: can use geometry shader, see http://github.prideout.net/quad-meshes
-			this->create_and_upload(*this, tixs);
+			this->create_and_upload(*this, tixs, is_shadow_pass, 0, 1); // dynamic_level=0, setup_pointers=1
 		}
 		ixn = 6; ixd = 4; // convert quads to 2 triangles
 	}
 	else {
 		if (npts == 4) {prim_type = GL_QUADS;}
-		this->create_and_upload(*this, indices);
+		this->create_and_upload(*this, indices, is_shadow_pass, 0, 1); // dynamic_level=0, setup_pointers=1
 	}
-	this->pre_render(1, 1); // using_index=1, do_bind_vbo=1 (due to below issue)
-	// Note: we need this call here because we don't know if the VAO was created with the same enables/locations: consider normal vs. shadow pass
-	//if (is_shadow_pass) {T::set_vbo_arrays_shadow(0);} else
-	T::set_vbo_arrays(); // calls check_mvm_update()
-
+	this->pre_render(is_shadow_pass);
+	check_mvm_update();
+	
 	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
 		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)(ixn*end_ix/ixd), GL_UNSIGNED_INT, 0);
 	}

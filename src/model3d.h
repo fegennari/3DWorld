@@ -223,7 +223,7 @@ template<typename T> cube_t get_polygon_bbox(vector<T> const &p) {
 }
 
 
-template<typename T> class vntc_vect_t : public vector<T>, public indexed_vao_manager_t {
+template<typename T> class vntc_vect_t : public vector<T>, public indexed_vao_manager_with_shadow_t {
 
 protected:
 	bool has_tangents, finalized;

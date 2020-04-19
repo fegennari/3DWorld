@@ -109,6 +109,27 @@ struct vbo_wrap_t { // Note: not for use with index vbo
 	static void post_render() {bind_vbo(0);}
 };
 
+struct vao_wrap_t {
+
+	unsigned vao;
+
+	vao_wrap_t() : vao(0) {}
+	void clear() {delete_and_zero_vao(vao);}
+
+	void ensure_vao_bound() {
+		if (!vao) {vao = create_vao();}
+		enable_vao();
+	}
+	void enable_vao() const {check_bind_vao(vao);}
+	static void disable_vao() {bind_vao(0);}
+
+	template<typename vert_type_t> void create_from_vbo(vbo_wrap_t const &vbo, bool setup_pointers=0, bool always_bind=0) {
+		if (vao) {if (always_bind) {enable_vao();} return;} // already set
+		ensure_vao_bound();
+		vbo.pre_render();
+		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
+	}
+};
 
 struct indexed_vbo_manager_t : public vbo_wrap_t {
 
@@ -123,6 +144,13 @@ struct indexed_vbo_manager_t : public vbo_wrap_t {
 		vbo_wrap_t::create_and_upload(data, dynamic_level, end_with_bind0);
 		if (!vbo ) {gpu_mem += data.size() *sizeof(vert_type_t );}
 		if (!ivbo && !idata.empty()) {create_vbo_and_upload(ivbo, idata, 1, end_with_bind0, dynamic_level); gpu_mem += idata.size()*sizeof(index_type_t);}
+	}
+	template<typename vert_type_t, typename index_type_t>
+	void create_and_upload_vbo_with_vao(vector<vert_type_t> const &data, vector<index_type_t> const &idata, vao_wrap_t &vao_wrap, int dynamic_level=0, bool setup_pointers=0) {
+		if (vao_wrap.vao) return; // already set
+		vao_wrap.ensure_vao_bound();
+		if (vbo) {indexed_vbo_manager_t::pre_render(1);} else {indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);}
+		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
 	}
 	void clear_vbos() {
 		vbo_wrap_t::clear();
@@ -140,30 +168,6 @@ struct indexed_vbo_manager_t : public vbo_wrap_t {
 	}
 };
 
-
-struct vao_wrap_t {
-
-	unsigned vao;
-
-	vao_wrap_t() : vao(0) {}
-	void clear() {delete_and_zero_vao(vao);}
-	
-	void ensure_vao_bound() {
-		if (!vao) {vao = create_vao();}
-		enable_vao();
-	}
-	void enable_vao() const {check_bind_vao(vao);}
-	static void disable_vao() {bind_vao(0);}
-
-	template<typename vert_type_t> void create_from_vbo(vbo_wrap_t const &vbo, bool setup_pointers=0, bool always_bind=0) {
-		if (vao) {if (always_bind) {enable_vao();} return;} // already set
-		ensure_vao_bound();
-		vbo.pre_render();
-		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
-	}
-};
-
-
 struct vao_manager_t : public vbo_wrap_t, public vao_wrap_t {
 
 	template<typename vert_type_t> void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool setup_pointers=0) {
@@ -177,18 +181,14 @@ struct vao_manager_t : public vbo_wrap_t, public vao_wrap_t {
 	static void post_render() {disable_vao(); vbo_wrap_t::post_render();}
 };
 
-
 struct indexed_vao_manager_t : public indexed_vbo_manager_t, public vao_wrap_t {
 
 	void reset_vbos_to_zero() {indexed_vbo_manager_t::reset_vbos_to_zero(); vao = 0;} // virtual?
-	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); vao_wrap_t::clear();}
+	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); vao_wrap_t::clear();} // and VAO
 
 	template<typename vert_type_t, typename index_type_t>
 	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0) {
-		if (vao) return; // already set
-		ensure_vao_bound();
-		if (vbo) {indexed_vbo_manager_t::pre_render(1);} else {indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);}
-		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
+		create_and_upload_vbo_with_vao(data, idata, *this, dynamic_level, setup_pointers);
 	}
 	void pre_render(bool using_index=1, bool do_bind_vbo=0) const {
 		enable_vao();
@@ -197,6 +197,23 @@ struct indexed_vao_manager_t : public indexed_vbo_manager_t, public vao_wrap_t {
 	static void post_render() {disable_vao(); indexed_vbo_manager_t::post_render();}
 };
 
+struct indexed_vao_manager_with_shadow_t : public indexed_vbo_manager_t {
+private:
+	vao_wrap_t vaos[2]; // {regular, shadow}
+public:
+	void reset_vbos_to_zero() {indexed_vbo_manager_t::reset_vbos_to_zero(); vaos[0].vao = vaos[1].vao = 0;} // virtual?
+	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); vaos[0].clear(); vaos[1].clear();} // and VAOs
+
+	template<typename vert_type_t, typename index_type_t>
+	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, bool shadow, int dynamic_level=0, bool setup_pointers=0) {
+		create_and_upload_vbo_with_vao(data, idata, vaos[shadow], dynamic_level, setup_pointers);
+	}
+	void pre_render(bool shadow, bool using_index=1, bool do_bind_vbo=0) const {
+		vaos[shadow].enable_vao();
+		if (do_bind_vbo) {indexed_vbo_manager_t::pre_render(using_index);}
+	}
+	static void post_render() {bind_vao(0); indexed_vbo_manager_t::post_render();}
+};
 
 template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_manager_t { // unused
 
@@ -213,10 +230,7 @@ template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_man
 	template<typename vert_type_t, typename index_type_t>
 	void create_and_upload(unsigned ix, vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0) {
 		assert(ix < N);
-		if (vaos[ix]) return; // already set
-		ensure_vao_bound(ix);
-		if (vbo) {indexed_vbo_manager_t::pre_render(1);} else {indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);}
-		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
+		create_and_upload_vbo_with_vao(data, idata, vaos[ix], dynamic_level, setup_pointers);
 	}
 	void enable_vao(unsigned ix) const {assert(ix < N); vaos[ix].enable_vao();}
 	void pre_render(unsigned ix, bool using_index=1) const {enable_vao(ix); indexed_vbo_manager_t::pre_render(using_index);}
