@@ -2032,7 +2032,7 @@ void building_interior_t::finalize() {
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
-void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces, bool swap_tex_st) {
+void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces, bool swap_tex_st, bool mirror_x) {
 	vertex_t v;
 	v.set_c4(color);
 
@@ -2054,7 +2054,8 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 					v.v[d[0]] = c.d[d[0]][s2];
 					v.t[!swap_tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : tex.tscale_y*v.v[d[0]]);
 					quad_verts.push_back(v);
-				}
+					if (mirror_x) {quad_verts.back().t[0] = 1.0 - v.t[0];} // use for pictures
+				} // for k
 			} // for s1
 		} // for j
 	} // for i
@@ -2234,14 +2235,14 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	int picture_tid(WHITE_TEX);
 
 	if (!whiteboard) { // picture
-		picture_tid = c.get_picture_tid();
-		int const user_tid(get_rand_screenshot_texture(1337*picture_tid));
-		if (user_tid >= 0) {picture_tid = user_tid;} // user texture is valid, use that instead
+		int const user_tid(get_rand_screenshot_texture(c.obj_id));
+		picture_tid  = ((user_tid >= 0) ? (unsigned)user_tid : c.get_picture_tid()); // if user texture is valid, use that instead
 		num_pic_tids = get_num_screenshot_tids();
 		has_pictures = 1;
 	}
 	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
-	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim);
+	bool const mirror_x(!whiteboard && !(c.dim ^ c.dir));
+	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim, mirror_x);
 	// add a frame
 	cube_t frame(c);
 	vector3d exp;
