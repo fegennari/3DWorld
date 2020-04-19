@@ -1146,6 +1146,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 	bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const
 {
 	tquad_with_ix_t door(4, type); // quad
+	float const wall_thickness(0.5*get_floor_thickness());
 	float const pos(c.d[dim][0] + (opened ? 0.0 : pos_adj*(dir ? 1.0 : -1.0))); // move away from wall slightly (not needed if opened)
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 	door.pts[2].z = door.pts[3].z = c.z2(); // top
@@ -1172,9 +1173,9 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[swap_sides], rot_angle);}
 					for (unsigned i = 0; i < 4; ++i) {door.pts[i][dim] += shift;}
 					cube_t test_bcube(door.get_bcube());
-					if (!check_cube_contained_in_part(test_bcube)) {door = orig_door; continue;} // bad placement, revert
-					test_bcube.expand_by(-0.05*width); // shrink slightly to avoid picking up adjacent walls
-					if (check_cube_intersect_walls(test_bcube)) {door = orig_door; continue;} // bad placement, revert
+					test_bcube.expand_by_xy(wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
+					if (!check_cube_contained_in_part(test_bcube))        {door = orig_door; continue;} // bad placement (extends outside part), revert
+					if (has_bcube_int(test_bcube, interior->walls[!dim])) {door = orig_door; continue;} // bad placement (hits perp wall), revert
 					break; // done
 				} // for angle
 			}
