@@ -166,10 +166,9 @@ void free_universe_context();
 void free_animal_context();
 
 void setup_linear_fog(colorRGBA const &color, float fog_end);
-
 void write_map_mode_heightmap_image();
-
 void apply_grass_scale();
+void take_screenshot_texture();
 
 
 // all OpenGL error handling goes through these functions
@@ -1018,7 +1017,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		}
 		break;
 
-	case 'S': // ship stop / fog mode / TT room lights
+	case 'S': // ship stop / fog mode / toggle TT room lights
 		if (world_mode == WMODE_UNIVERSE) {toggle_player_ship_stop(); break;}
 		else if (world_mode == WMODE_GROUND) {use_smoke_for_fog = (use_smoke_for_fog+1) % 3;} // {normal smoke, smoke with noise, fog as smoke}
 		else if (world_mode == WMODE_INF_TERRAIN) {toggle_room_light = 1;}
@@ -1088,8 +1087,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		}
 		else if (world_mode == WMODE_INF_TERRAIN) {write_default_hmap_modmap();}
 		break;
-	case 'J': // load mesh state
+	case 'J': // load mesh state / take TT screenshot
 		if (world_mode == WMODE_GROUND) {load_state(state_file);}
+		else if (world_mode == WMODE_INF_TERRAIN) {take_screenshot_texture();}
 		break;
 	case 'I': // write mesh points / toggle building interiors
 		if (world_mode == WMODE_GROUND) {write_mesh(mesh_file);}

@@ -605,6 +605,7 @@ void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t,
 	bool mirror_s=0, bool mirror_t=0, bool nearest=0, float anisotropy=1.0, bool is_array=0, bool multisample=0);
 void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool nearest);
 void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, bool use_mipmaps=0, float aniso=1.0);
+void frame_buffer_to_texture(unsigned &tid, bool is_depth);
 void depth_buffer_to_texture(unsigned &tid);
 void frame_buffer_RGB_to_texture(unsigned &tid);
 void free_textures();

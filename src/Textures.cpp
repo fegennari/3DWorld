@@ -2051,3 +2051,36 @@ void texture_atlas_t::ensure_tid(unsigned base_tsize, bool mipmap) {
 }
 
 
+// Note: currently used for pictures hanging on building room walls, but could be made more generally useful
+class screenshot_manager_t {
+	vector<unsigned> tids; // indices into textures array
+public:
+	unsigned size() const {return tids.size();}
+	bool empty   () const {return tids.empty();}
+	void clear() {tids.clear();}
+	int get_rand_tid(unsigned rand_ix) const {return (empty() ? -1 : tids[rand_ix%size()]);}
+
+	void add_screenshot() {
+		print_text_onscreen("Screenshot Saved as Texture", WHITE, 1.0, 2*TICKS_PER_SECOND, 0);
+		unsigned tid(0);
+		frame_buffer_to_texture(tid, 0);
+		//tids.push_back(tid);
+		unsigned const tex_ix(textures.size());
+		std::ostringstream oss;
+		oss << "screenshot_" << tids.size();
+		string const name(oss.str());
+		// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
+		texture_t new_tex(0, 9, window_width, window_height, 0, 3, 0, name, 0, def_tex_compress, def_tex_aniso, 1.0, 0);
+		new_tex.set_existing_tid(tid, WHITE); // not sure what to set the color to
+		textures.push_back(new_tex);
+		texture_name_map[name] = tex_ix;
+		tids.push_back(tex_ix);
+	}
+};
+
+screenshot_manager_t screenshot_manager;
+
+void take_screenshot_texture() {screenshot_manager.add_screenshot();}
+int get_rand_screenshot_texture(unsigned rand_ix) {return screenshot_manager.get_rand_tid(rand_ix);}
+
+
