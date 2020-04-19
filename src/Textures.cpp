@@ -2082,5 +2082,6 @@ screenshot_manager_t screenshot_manager;
 
 void take_screenshot_texture() {screenshot_manager.add_screenshot();}
 int get_rand_screenshot_texture(unsigned rand_ix) {return screenshot_manager.get_rand_tid(rand_ix);}
+unsigned get_num_screenshot_tids() {return screenshot_manager.size();}
 
 

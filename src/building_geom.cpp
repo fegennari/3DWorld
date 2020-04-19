@@ -14,6 +14,10 @@ extern float grass_width, fticks, CAMERA_RADIUS;
 extern building_params_t global_building_params;
 
 
+int get_rand_screenshot_texture(unsigned rand_ix);
+unsigned get_num_screenshot_tids();
+
+
 void building_t::set_z_range(float z1, float z2) {
 	bcube.z1() = z1; bcube.z2() = z2;
 	adjust_part_zvals_for_floor_spacing(bcube);
@@ -2225,8 +2229,6 @@ void building_room_geom_t::add_rug(room_object_t const &c) {
 	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
 }
 
-int get_rand_screenshot_texture(unsigned rand_ix);
-
 void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards
 	bool const whiteboard(c.type == TYPE_WBOARD);
 	int picture_tid(WHITE_TEX);
@@ -2235,6 +2237,8 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 		picture_tid = c.get_picture_tid();
 		int const user_tid(get_rand_screenshot_texture(1337*picture_tid));
 		if (user_tid >= 0) {picture_tid = user_tid;} // user texture is valid, use that instead
+		num_pic_tids = get_num_screenshot_tids();
+		has_pictures = 1;
 	}
 	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
 	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim);
@@ -2325,6 +2329,12 @@ void building_room_geom_t::create_dynamic_vbos() {
 
 void building_room_geom_t::draw(shader_t &s, bool shadow_only) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
+	unsigned const num_screenshot_tids(get_num_screenshot_tids());
+
+	if (has_pictures && num_pic_tids != num_screenshot_tids) {
+		clear_materials(); // user created a new screenshot texture, and this building has pictures - recreate room geom
+		num_pic_tids = num_screenshot_tids;
+	}
 	if (materials_s.empty()) {create_static_vbos ();} // create static  materials if needed
 	if (materials_d.empty()) {create_dynamic_vbos();} // create dynamic materials if needed
 	enable_blend(); // needed for rugs

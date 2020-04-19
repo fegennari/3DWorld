@@ -249,14 +249,15 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 
 struct building_room_geom_t {
 
-	bool has_elevators;
+	bool has_elevators, has_pictures;
+	unsigned char num_pic_tids;
 	float obj_scale;
 	unsigned stairs_start; // index of first object of TYPE_STAIR
 	vector<room_object_t> objs; // for drawing and collision detection
 	building_materials_t materials_s, materials_d; // {static, dynamic} materials
 	vect_cube_t light_bcubes;
 
-	building_room_geom_t() : has_elevators(0), obj_scale(1.0), stairs_start(0) {}
+	building_room_geom_t() : has_elevators(0), has_pictures(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
