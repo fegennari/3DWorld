@@ -384,7 +384,7 @@ void building_t::build_nav_graph() const {
 	if (interior->nav_graph) return; // already built
 	interior->nav_graph.reset(new building_nav_graph_t(0.5*get_window_vspace())); // set stairs_extend == doorway width
 	building_nav_graph_t &ng(*interior->nav_graph);
-	float const wall_width(0.5*get_floor_thickness());
+	float const wall_width(get_wall_thickness());
 	unsigned const num_rooms(interior->rooms.size()), num_stairs(interior->stairwells.size());
 	ng.set_num_rooms(num_rooms, num_stairs);
 	for (unsigned s = 0; s < num_stairs; ++s) {ng.set_stairs_bcube(s, interior->stairwells[s]);}

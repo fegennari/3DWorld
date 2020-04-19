@@ -434,7 +434,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	vector<room_object_t> const &objs(interior->room_geom->objs);
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	point const camera_bs(camera_pdu.pos - xlate); // camera in building space
-	float const window_vspacing(get_window_vspace()), wall_thickness(0.5*get_floor_thickness()), camera_z(camera_bs.z);
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), camera_z(camera_bs.z);
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	unsigned camera_part(parts.size()); // start at an invalid value

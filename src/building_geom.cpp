@@ -1146,7 +1146,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 	bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const
 {
 	tquad_with_ix_t door(4, type); // quad
-	float const wall_thickness(0.5*get_floor_thickness());
+	float const wall_thickness(get_wall_thickness());
 	float const pos(c.d[dim][0] + (opened ? 0.0 : pos_adj*(dir ? 1.0 : -1.0))); // move away from wall slightly (not needed if opened)
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 	door.pts[2].z = door.pts[3].z = c.z2(); // top
@@ -1563,7 +1563,7 @@ void building_t::gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float 
 bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit)
 {
-	float const window_vspacing(get_window_vspace()), wall_thickness(0.5*get_floor_thickness()), room_pad(4.0f*wall_thickness);
+	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness());
 	uint8_t const obj_flags(is_lit ? RO_FLAG_LIT : 0);
 	vector3d const room_sz(room.get_size());
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1625,7 +1625,7 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	if (room.is_hallway ) return; // no pictures in hallways (yet)
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
-	float const floor_height(get_window_vspace()), wall_thickness(0.5*get_floor_thickness());
+	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
