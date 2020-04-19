@@ -2225,10 +2225,17 @@ void building_room_geom_t::add_rug(room_object_t const &c) {
 	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
 }
 
+int get_rand_screenshot_texture(unsigned rand_ix);
+
 void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards
-	// TODO: add an option for the player to take custom screenshots to use as pictures
 	bool const whiteboard(c.type == TYPE_WBOARD);
-	int const picture_tid(whiteboard ? WHITE_TEX : c.get_picture_tid());
+	int picture_tid(WHITE_TEX);
+
+	if (!whiteboard) { // picture
+		picture_tid = c.get_picture_tid();
+		int const user_tid(get_rand_screenshot_texture(1337*picture_tid));
+		if (user_tid >= 0) {picture_tid = user_tid;} // user texture is valid, use that instead
+	}
 	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
 	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim);
 	// add a frame
