@@ -1563,7 +1563,7 @@ void building_t::gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float 
 bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit)
 {
-	float const window_vspacing(get_window_vspace());
+	float const window_vspacing(get_window_vspace()), wall_thickness(0.5*get_floor_thickness()), room_pad(4.0f*wall_thickness);
 	uint8_t const obj_flags(is_lit ? RO_FLAG_LIT : 0);
 	vector3d const room_sz(room.get_size());
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1575,7 +1575,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 	llc.z = table_pos.z; // bottom
 	urc.z = table_pos.z + 0.2*window_vspacing;
 	cube_t table(llc, urc);
-	if (!is_valid_placement_for_room(table, room, blockers)) return 0; // check proximity to doors
+	if (!is_valid_placement_for_room(table, room, blockers, room_pad)) return 0; // check proximity to doors
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, obj_flags, tot_light_amt);
 	float const chair_sz(0.1*window_vspacing); // half size
 
@@ -1588,7 +1588,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 			cube_t chair(chair_pos, chair_pos);
 			chair.z2() += 0.4*window_vspacing; // chair height
 			chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
-			if (!is_valid_placement_for_room(chair, room, blockers)) continue; // check proximity to doors
+			if (!is_valid_placement_for_room(chair, room, blockers, room_pad)) continue; // check proximity to doors
 			objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, obj_flags, tot_light_amt);
 			objs.back().color = chair_color;
 		} // for dir
@@ -2009,12 +2009,12 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
 	return has_bcube_int(tc, stairwells); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
-bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float dmin) const {
+bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float room_pad) const {
 	cube_t place_area(room);
-	if (dmin != 0.0f) {place_area.expand_by_xy(-dmin);} // shrink by dmin
-	if (!place_area.contains_cube_xy(c))   return 0; // not contained in interior part of the room
-	if (is_cube_close_to_doorway(c, dmin)) return 0; // too close to a doorway
-	if (interior && interior->is_blocked_by_stairs_or_elevator(c, dmin)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
+	if (room_pad != 0.0f) {place_area.expand_by_xy(-room_pad);} // shrink by dmin
+	if (!place_area.contains_cube_xy(c)) return 0; // not contained in interior part of the room
+	if (is_cube_close_to_doorway    (c)) return 0; // too close to a doorway
+	if (interior && interior->is_blocked_by_stairs_or_elevator(c)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
 	if (has_bcube_int(c, blockers)) return 0; // Note: ignores dmin
 	return 1;
 }

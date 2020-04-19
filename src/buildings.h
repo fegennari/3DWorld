@@ -494,7 +494,7 @@ private:
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	cube_t get_part_containing_pt(point const &pt) const;
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0) const;
-	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float dmin=0.0f) const;
+	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float room_pad) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;
 	bool is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad, bool check_walls=1) const;
