@@ -529,10 +529,10 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					continue; // not enough space to add a wall
 				}
 				float const min_dist_abs(1.5*doorway_width + wall_thick);
-				bool const on_edge(c.d[wall_dim][0] == p->d[wall_dim][0] || c.d[wall_dim][1] == p->d[wall_dim][1]); // at edge of the building - make sure walls don't intersect windows
+				bool const on_edge(c.d[!wall_dim][0] == p->d[!wall_dim][0] || c.d[!wall_dim][1] == p->d[!wall_dim][1]); // at edge of the building - make sure walls don't intersect windows
 				float wall_pos(0.0);
 				bool pos_valid(0);
-				
+
 				for (unsigned num = 0; num < 20; ++num) { // 20 tries to choose a wall pos that's not inside a window
 					wall_pos = cube_rand_side_pos(c, wall_dim, 0.25, min_dist_abs, rgen);
 					if (on_edge && is_val_inside_window(*p, wall_dim, wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
