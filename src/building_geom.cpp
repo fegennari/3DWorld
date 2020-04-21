@@ -1664,7 +1664,9 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 			c.z1() -= 0.5*height; c.z2() += 0.5*height;
 			c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
 			c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
-			if (is_cube_close_to_doorway(c) || interior->is_blocked_by_stairs_or_elevator(c, 4.0*wall_thickness)) continue; // bad placement
+			cube_t tc(c);
+			tc.d[!dim][0] -= 0.1*width; tc.d[!dim][1] += 0.1*width; // expand slightly to account for frame
+			if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) continue; // bad placement
 			objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
 			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
 		} // for dir
