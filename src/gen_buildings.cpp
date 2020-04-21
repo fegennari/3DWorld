@@ -1513,12 +1513,12 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 			
 			for (unsigned e = 0; e < 2; ++e) { // check for coplanar sides (wall extensions)
 				unsigned const disable_bit(1 << (3 + 2*(1-d) + e));
-				if (i->d[!d][e] != cont_part.d[!d][e]) {front_dim_mask |= disable_bit; continue;} // not coplanar, disable this edge from front
+				if (i->d[!d][e] != cont_part.d[!d][e] && ((i->d[!d][e] < cont_part.d[!d][e]) ^ e)) {front_dim_mask |= disable_bit; continue;} // not coplanar, disable edge from front
 				front_dim_mask |= (1<<(1-d)); // coplanar, make other edge dim a front dim
 				back_dim_mask  |= disable_bit; // disable this edge from back
 			}
 			for (unsigned e = 0; e < 2; ++e) { // check for extensions outside cont_part where back walls could be viewed through a window and split them out
-				if ((i->d[!d][e] < cont_part.d[!d][e]) ^ e) {
+				if (i->d[!d][e] != cont_part.d[!d][e] && ((i->d[!d][e] < cont_part.d[!d][e]) ^ e)) {
 					cube_t back_clip_cube(*i);
 					front_clip_cube.d[!d][e] = back_clip_cube.d[!d][!e] = cont_part.d[!d][e]; // split point
 					bdraw_back.add_section(*this, parts, *i, mat.side_tex, side_color, back_dim_mask, 0, 0, 0, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
