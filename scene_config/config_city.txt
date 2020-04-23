@@ -38,6 +38,9 @@ city min_park_density 0.0
 city max_park_density 0.8
 city max_benches_per_plot 15
 
+no_subdiv_model 1
+merge_model_objects 1 # optimization for large instance counts
+
 # cars
 city num_cars 4000
 city car_speed 10.0

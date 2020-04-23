@@ -25,7 +25,7 @@ bool model_calc_tan_vect(1); // slower and more memory but sometimes better qual
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, enable_model3d_bump_maps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass, all_model3d_ref_update;
 extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt_model_indir, no_subdiv_model, auto_calc_tt_model_zvals, use_model_lod_blocks;
-extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, disable_model_textures, allow_model3d_quads;
+extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, disable_model_textures, allow_model3d_quads, merge_model_objects;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, light_int_scale[];
@@ -901,6 +901,27 @@ template<typename T> void vntc_vect_block_t<T>::simplify_indices(float reduce_ta
 	for (auto i = begin(); i != end(); ++i) {i->simplify_indices(reduce_target);}
 }
 
+template<typename T> void vntc_vect_block_t<T>::merge_into_single_vector() {
+	if (size() <= 1) return; // nothing to merge
+	unsigned tot_verts(0), tot_ixs(0);
+
+	for (auto i = begin(); i != end(); ++i) {
+		for (auto j = i->indices.begin(); j != i->indices.end(); ++j) {*j += tot_verts;} // offset indices by current vertex offset
+		tot_verts += i->size();
+		tot_ixs   += i->indices.size();
+	}
+	auto &dest(front());
+	dest.reserve(tot_verts);
+	dest.indices.reserve(tot_ixs);
+
+	for (auto i = begin()+1; i != end(); ++i) { // skip first block
+		vector_add_to(*i, dest); // merge verts
+		vector_add_to(i->indices, dest.indices); // merge indices
+	}
+	dest.calc_bounding_volumes(); // can be optimized
+	resize(1); // remove all but the first block
+}
+
 template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 
 	write_uint(out, (unsigned)this->size());
@@ -913,6 +934,7 @@ template<typename T> bool vntc_vect_block_t<T>::read(istream &in) {
 	this->clear();
 	this->resize(read_uint(in));
 	for (auto i = begin(); i != end(); ++i) {i->read(in);}
+	if (merge_model_objects) {merge_into_single_vector();} // model was split per object, and we don't want that; merge into a single vector
 	return 1;
 }
 
@@ -940,9 +962,9 @@ template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow
 
 template<typename T> void geometry_t<T>::add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id) const {
 
-	if (v.empty() || v.back().size() > MAX_VMAP_SIZE || obj_id > v.back().obj_id) {
+	if (v.empty() || v.back().size() > MAX_VMAP_SIZE || (!merge_model_objects && obj_id > v.back().obj_id)) {
 		vmap.clear();
-		v.push_back(indexed_vntc_vect_t<T>(obj_id));
+		if (!merge_model_objects || v.empty()) {v.push_back(indexed_vntc_vect_t<T>(obj_id));}
 	}
 	v.back().add_poly(poly, vmap);
 }

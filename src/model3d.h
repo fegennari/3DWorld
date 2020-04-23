@@ -253,7 +253,9 @@ public:
 
 template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 
-	vector<unsigned> indices;
+public:
+	vector<unsigned> indices; // needs to be public for merging operation
+private:
 	bool need_normalize, optimized, prev_ucc;
 	float avg_area_per_tri, amin, amax;
 
@@ -336,6 +338,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	void invert_tcy();
 	void simplify_indices(float reduce_target);
+	void merge_into_single_vector();
 	bool write(ostream &out) const;
 	bool read(istream &in);
 };
