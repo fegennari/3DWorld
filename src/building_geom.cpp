@@ -1660,15 +1660,24 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 			center[ dim] = wall_pos;
 			center[!dim] = room.get_center_dim(!dim);
 			center.z     = zval + rgen.rand_uniform(0.45, 0.6)*floor_height; // move up
-			cube_t c(center, center);
-			c.z1() -= 0.5*height; c.z2() += 0.5*height;
-			c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
-			c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
-			cube_t tc(c);
-			tc.d[!dim][0] -= 0.1*width; tc.d[!dim][1] += 0.1*width; // expand slightly to account for frame
-			if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) continue; // bad placement
-			objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
-			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
+
+			for (unsigned n = 0; n < 2; ++n) { // make 2 attempts to choose a position along the wall; first iteration is the center
+				if (n > 0) {
+					float const lo(room.d[!dim][0] + 0.7*width), hi(room.d[!dim][1] - 0.7*width);
+					if (hi - lo < width) break; // not enough space to shift, can't place this picture
+					center[!dim] = rgen.rand_uniform(lo, hi);
+				}
+				cube_t c(center, center);
+				c.z1() -= 0.5*height; c.z2() += 0.5*height;
+				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
+				c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
+				cube_t tc(c);
+				tc.d[!dim][0] -= 0.1*width; tc.d[!dim][1] += 0.1*width; // expand slightly to account for frame
+				if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) continue; // bad placement
+				objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
+				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
+				break; // success
+			} // for n
 		} // for dir
 	} // for dim
 }
