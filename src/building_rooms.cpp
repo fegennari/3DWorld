@@ -148,6 +148,7 @@ colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
 	if (display_mode & 0x10) return c; // disable this when using indir lighting
 	return c * (0.5f + 0.5f*min(sqrt(o.light_amt), 1.5f)); // use c.light_amt as an approximation for ambient lighting due to sun/moon
 }
+colorRGBA apply_light_color(room_object_t const &o) {return apply_light_color(o, o.color);} // use object color
 
 void building_room_geom_t::add_table(room_object_t const &c, float tscale) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
 	cube_t top(c), legs_bcube(c);
@@ -165,7 +166,7 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
 	legs_bcube.z2() = seat.z1();
 	back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)).add_cube_to_verts(seat, apply_light_color(c, c.color)); // all faces drawn
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale)).add_cube_to_verts(seat, apply_light_color(c)); // all faces drawn
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	get_wood_material(tscale).add_cube_to_verts(back, color, EF_Z1); // skip bottom face
 	add_tc_legs(legs_bcube, color, 0.15, tscale);
@@ -249,16 +250,29 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 }
 
 void building_room_geom_t::add_book(room_object_t const &c) {
-	// TODO - WRITE
+	// TODO - two cubes, use c.color for cover and WHITE for interior pages
+	get_material(tid_nm_pair_t()).add_cube_to_verts(c, apply_light_color(c)); // untextured?, all faces
 }
-void building_room_geom_t::add_bookcase(room_object_t const &c) {
+void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale) {
+	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	rgeom_mat_t &mat(get_wood_material(tscale));
 	// TODO - WRITE
+	mat.add_cube_to_verts(c, color); // all faces drawn
 }
-void building_room_geom_t::add_desk(room_object_t const &c) {
-	// TODO - WRITE
+void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
+	// desk top and legs, similar to add_table()
+	cube_t top(c), legs_bcube(c);
+	top.z1() += 0.5*c.dz();
+	top.z2()  = top.z1() + 0.1*c.dz();
+	legs_bcube.z2() = top.z1();
+	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	get_wood_material(tscale).add_cube_to_verts(top, color); // all faces drawn
+	add_tc_legs(legs_bcube, color, 0.10, tscale);
+	// TODO - add back/top
 }
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
-	// TODO - WRITE
+	// TODO - draw truncated cone
+	get_material(tid_nm_pair_t()).add_vcylin_to_verts(c, apply_light_color(c), 1, 0); // untextured, bottom only
 }
 
 void building_room_geom_t::clear() {
@@ -309,8 +323,8 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_PICTURE: add_picture (*i); break;
 		case TYPE_WBOARD:  add_picture (*i); break;
 		case TYPE_BOOK:    add_book    (*i); break;
-		case TYPE_BCASE:   add_bookcase(*i); break;
-		case TYPE_DESK:    add_desk    (*i); break;
+		case TYPE_BCASE:   add_bookcase(*i, tscale); break;
+		case TYPE_DESK:    add_desk    (*i, tscale); break;
 		case TYPE_TCAN:    add_trashcan(*i); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		default: assert(0); // undefined type
