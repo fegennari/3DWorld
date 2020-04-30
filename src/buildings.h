@@ -234,7 +234,7 @@ public:
 	rgeom_mat_t(tid_nm_pair_t const &tex_) : tex(tex_), num_tverts(0), num_qverts(0) {}
 	void clear() {vbo.clear(); tri_verts.clear(); quad_verts.clear(); num_tverts = num_qverts = 0;}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0);
-	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color);
+	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top);
 	void create_vbo();
 	void draw(shader_t &s, bool shadow_only);
 };

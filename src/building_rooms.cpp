@@ -45,7 +45,7 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 	} // for i
 }
 
-void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color) {
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top) {
 	float const radius(0.5*min(c.dx(), c.dy())); // should be equal/square
 	point const center(c.get_cube_center());
 	point const ce[2] = {point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2())};
@@ -67,13 +67,18 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color) {
 		}
 	} // for i
 	assert(qix == quad_verts.size());
-	// add bottom end cap using triangles, currently using all TCs=0.0
-	tri_verts.resize(tix + 3*ndiv);
+	// maybe add top and bottom end cap using triangles, currently using all TCs=0.0
+	tri_verts.resize(tix + 3*ndiv*((unsigned)draw_top + (unsigned)draw_bot));
 
-	for (unsigned i = 0; i < ndiv; ++i) {
-		for (unsigned j = 0; j < 2; ++j) {tri_verts[tix++].assign(vpn.p[((i + j)%ndiv)<<1], -plus_z, 0.0, 0.0, cw.c);}
-		tri_verts[tix++].assign(ce[0], -plus_z, 0.0, 0.0, cw.c); // center
-	}
+	for (unsigned bt = 0; bt < 2; ++bt) {
+		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
+		vector3d const normal(bt ? plus_z : -plus_z);
+
+		for (unsigned i = 0; i < ndiv; ++i) {
+			for (unsigned j = 0; j < 2; ++j) {tri_verts[tix++].assign(vpn.p[(((i + j)%ndiv)<<1) + bt], normal, 0.0, 0.0, cw.c);}
+			tri_verts[tix++].assign(ce[bt], normal, 0.0, 0.0, cw.c); // center
+		}
+	} // for bt
 	assert(tix == tri_verts.size());
 }
 
@@ -204,8 +209,8 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	tid_nm_pair_t tp((is_on ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = is_on;
 	rgeom_mat_t &mat(get_material(tp));
-	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, EF_Z2);} //untextured, skip top face
-	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts(c, c.color);}
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, EF_Z2);} // untextured, skip top face
+	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts(c, c.color, 1, 0);} // bottom only
 	else {assert(0);}
 }
 
