@@ -2271,6 +2271,19 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	}
 }
 
+void building_room_geom_t::add_book(room_object_t const &c) {
+	// TODO - WRITE
+}
+void building_room_geom_t::add_bookcase(room_object_t const &c) {
+	// TODO - WRITE
+}
+void building_room_geom_t::add_desk(room_object_t const &c) {
+	// TODO - WRITE
+}
+void building_room_geom_t::add_trashcan(room_object_t const &c) {
+	// TODO - WRITE
+}
+
 void building_room_geom_t::clear() {
 	clear_materials();
 	objs.clear();
@@ -2311,17 +2324,17 @@ void building_room_geom_t::create_static_vbos() {
 		assert(i->is_strictly_normalized());
 		switch (i->type) {
 		case TYPE_NONE:  assert(0); // not supported
-		case TYPE_TABLE: add_table(*i, tscale); break;
-		case TYPE_CHAIR: add_chair(*i, tscale); break;
-		case TYPE_STAIR: add_stair(*i, tscale); break;
-		case TYPE_LIGHT: add_light(*i, tscale); break; // light fixture
-		case TYPE_RUG:   add_rug(*i); break;
-		case TYPE_PICTURE: add_picture(*i); break;
-		case TYPE_WBOARD:  add_picture(*i); break;
-		case TYPE_BOOK:  assert(0); break; // book - WRITE
-		case TYPE_BCASE: assert(0); break; // bookcase - WRITE
-		case TYPE_DESK:  assert(0); break; // desk - WRITE
-		case TYPE_TCAN:  assert(0); break; // trashcan - WRITE
+		case TYPE_TABLE:   add_table   (*i, tscale); break;
+		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
+		case TYPE_STAIR:   add_stair   (*i, tscale); break;
+		case TYPE_LIGHT:   add_light   (*i, tscale); break; // light fixture
+		case TYPE_RUG:     add_rug     (*i); break;
+		case TYPE_PICTURE: add_picture (*i); break;
+		case TYPE_WBOARD:  add_picture (*i); break;
+		case TYPE_BOOK:    add_book    (*i); break;
+		case TYPE_BCASE:   add_bookcase(*i); break;
+		case TYPE_DESK:    add_desk    (*i); break;
+		case TYPE_TCAN:    add_trashcan(*i); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		default: assert(0); // undefined type
 		}

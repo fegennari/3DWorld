@@ -272,6 +272,10 @@ struct building_room_geom_t {
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);
 	void add_picture(room_object_t const &c);
+	void add_book(room_object_t const &c);
+	void add_bookcase(room_object_t const &c);
+	void add_desk(room_object_t const &c);
+	void add_trashcan(room_object_t const &c);
 	void create_static_vbos();
 	void create_dynamic_vbos();
 	void draw(shader_t &s, bool shadow_only);
