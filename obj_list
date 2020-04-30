@@ -104,4 +104,5 @@ building_geom.o
 building_lighting.o
 building_floorplan.o
 building_navigation.o
+building_rooms.o
 simplifier.o
