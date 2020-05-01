@@ -434,7 +434,17 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 	} // for i
 }
 
-void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top) {
+template<typename T> void add_inverted_triangles(T &verts, unsigned verts_start) {
+	unsigned const verts_end(verts.size());
+
+	for (unsigned i = verts_start; i < verts_end; ++i) {
+		verts.push_back(verts[i]);
+		verts.back().invert_normal();
+	}
+	std::reverse(verts.begin()+verts_end, verts.end()); // reverse the order to swap triangle winding order
+}
+
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided) {
 	float const radius(0.5*min(c.dx(), c.dy())); // should be equal/square
 	point const center(c.get_cube_center());
 	point const ce[2] = {point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2())};
@@ -442,7 +452,8 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
 	float const ndiv_inv(1.0/ndiv);
-	unsigned qix(quad_verts.size()), tix(tri_verts.size());
+	unsigned const quads_start(quad_verts.size()), tris_start(tri_verts.size());
+	unsigned qix(quads_start), tix(tris_start);
 	quad_verts.resize(qix + 4*ndiv);
 	color_wrapper cw(color);
 
@@ -469,6 +480,11 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 		}
 	} // for bt
 	assert(tix == tri_verts.size());
+
+	if (two_sided) { // room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
+		add_inverted_triangles(quad_verts, quads_start);
+		add_inverted_triangles(tri_verts,  tris_start );
+	}
 }
 
 void rgeom_mat_t::create_vbo() {
@@ -661,7 +677,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 }
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	// TODO - draw truncated cone
-	get_material(tid_nm_pair_t()).add_vcylin_to_verts(c, apply_light_color(c), 1, 0); // untextured, bottom only
+	get_material(tid_nm_pair_t()).add_vcylin_to_verts(c, apply_light_color(c), 1, 0, 1); // untextured, bottom only, two_sided
 }
 
 void building_room_geom_t::clear() {
