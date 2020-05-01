@@ -13,12 +13,24 @@ int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
 
 
+bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const {
+	assert(interior && interior->room_geom);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	assert(objs_start <= objs.size());
+
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (i->intersects(c)) return 1;
+	}
+	return 0;
+}
+
 bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit)
 {
 	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness());
 	uint8_t const obj_flags(is_lit ? RO_FLAG_LIT : 0);
 	vector3d const room_sz(room.get_size());
+	assert(interior && interior->room_geom);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	point table_pos(place_pos);
 	vector3d table_sz;
@@ -47,6 +59,31 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 		} // for dir
 	} // for dim
 	return 1;
+}
+
+void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+	unsigned const NUM_COLORS = 6;
+	colorRGBA const colors[NUM_COLORS] = {BLACK, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
+	float const radius(0.08f*get_window_vspace()), height(2.0f*radius); // TODO: different sizes for house/office, maybe random
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
+	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
+	point center;
+	center.z = zval + 0.001*room.dz(); // slightly above the floor to avoid z-fighting
+
+	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a trashcan
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+		center[ dim] = room_bounds.d[dim][dir]; // against this wall
+		center[!dim] = rgen.rand_uniform(room_bounds.d[!dim][0], room_bounds.d[!dim][1]);
+		cube_t c(center, center);
+		c.expand_by_xy(radius);
+		c.z2() += height;
+		if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
+		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		objs.back().color = colors[rgen.rand()%NUM_COLORS];
+		return; // done
+	} // for n
 }
 
 void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
@@ -293,13 +330,30 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building rooms that have stairs
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
+			unsigned const objs_start(objs.size());
 
 			// place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
 			bool added_tc(0);
-			if (rgen.rand_float() < 0.95) {added_tc = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);}
 
-			if (is_house && !has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
-				add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
+			if (rgen.rand_float() < 0.95) { // 95% of the time
+				added_tc = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
+				
+				if (!added_tc) {
+					// TODO: try to place a desk instead
+				}
+				if (objs.size() > objs_start) { // an object was placed
+					// TODO: maybe add a book on top of objs[objs_start]
+				}
+			}
+			if (is_house) { // place house-specific items
+				// TODO: bookcase
+
+				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
+					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
+				}
+			}
+			if (rgen.rand_float() < 0.6) { // 60% of the time
+				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
 			}
 			hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
