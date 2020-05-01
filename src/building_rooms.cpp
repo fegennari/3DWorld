@@ -70,7 +70,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
 	point center;
-	center.z = zval + 0.001*room.dz(); // slightly above the floor to avoid z-fighting
+	center.z = zval + 0.001*get_window_vspace(); // slightly above the floor to avoid z-fighting
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a trashcan
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
@@ -94,7 +94,7 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 	float const ar(rgen.rand_uniform(0.65, 0.85)), length(min(0.7f*room_sz[min_dim]/ar, room_sz[!min_dim]*rgen.rand_uniform(0.4, 0.7))), width(length*ar);
 	cube_t rug;
 	rug.z1() = zval;
-	rug.z2() = rug.z1() + 0.001*room.dz(); // almost flat
+	rug.z2() = rug.z1() + 0.001*get_window_vspace(); // almost flat
 
 	for (unsigned d = 0; d < 2; ++d) {
 		float const radius(0.5*((bool(d) == min_dim) ? width : length));
