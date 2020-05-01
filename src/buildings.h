@@ -354,7 +354,7 @@ struct building_interior_t {
 
 	building_interior_t();
 	~building_interior_t();
-	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f) const;
+	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f, bool inc_open=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	void finalize();
 	bool update_elevators(point const &player_pos);
@@ -498,7 +498,7 @@ private:
 		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	cube_t get_part_containing_pt(point const &pt) const;
-	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0) const;
+	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0, bool inc_open=0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float room_pad) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;

@@ -95,7 +95,7 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				c.z1() = zval + 0.25*floor_height; c.z2() = zval + 0.8*floor_height;
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
 				c.d[!dim][0] += xy_space; c.d[!dim][1] -= xy_space;
-				if (is_cube_close_to_doorway(c)) continue; // bad placement
+				if (is_cube_close_to_doorway(c)) continue; // bad placement (TODO: inc_open=1?)
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
 				return; // done, only need to add one
 			} // for dir
