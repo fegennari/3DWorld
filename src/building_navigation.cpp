@@ -378,6 +378,13 @@ public:
 	}
 }; // end building_nav_graph_t
 
+cube_t building_t::get_walkable_room_bounds(room_t const &room) const {
+	cube_t c(room);
+	// Note: regular house rooms start and end at the walls; offices and hallways tile exactly and include half the walls, so we have to subtract those back off
+	if (room.is_hallway || room.is_office) {c.expand_by_xy(-0.5*get_wall_thickness());}
+	return c;
+}
+
 void building_t::build_nav_graph() const {
 
 	assert(interior);
@@ -391,9 +398,7 @@ void building_t::build_nav_graph() const {
 
 	for (unsigned r = 0; r < num_rooms; ++r) {
 		room_t const &room(interior->rooms[r]);
-		cube_t c(room);
-		// Note: regular house rooms start and end at the walls; offices and hallways tile exactly and include half the walls, so we have to subtract those back off
-		if (room.is_hallway || room.is_office) {c.expand_by_xy(-0.5*wall_width);}
+		cube_t c(get_walkable_room_bounds(room));
 		if (room.is_hallway) {ng.mark_hallway(r);}
 		ng.set_room_bcube(r, c);
 		c.expand_by_xy(wall_width); // to include adjacent doors
