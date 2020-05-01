@@ -27,6 +27,7 @@ struct norm_comp { // size = 4
 	void set_norm(vector3d const &n_) {UNROLL_3X(n[i_] = char(max(-128, min(127, int(127.0*n_[i_]))));)}
 	void set_norm_no_clamp(vector3d const &n_) {UNROLL_3X(n[i_] = int(127.0*n_[i_]);)}
 	vector3d get_norm() const {return vector3d(n[0]/127.0, n[1]/127.0, n[2]/127.0);}
+	void invert_normal() {UNROLL_3X(n[i_] = ((n[i_] == -128) ? 127 : ((n[i_] == 127) ? -128 : -n[i_]));)} // careful to not wraparound for -128 => 128
 };
 
 
