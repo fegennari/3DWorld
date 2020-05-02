@@ -63,7 +63,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 
 void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	unsigned const NUM_COLORS = 6;
-	colorRGBA const colors[NUM_COLORS] = {BLACK, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
+	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	float const radius(0.08f*get_window_vspace()), height(2.0f*radius); // TODO: different sizes for house/office, maybe random
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -80,7 +80,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 		c.expand_by_xy(radius);
 		c.z2() += height;
 		if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CYLIN);
 		objs.back().color = colors[rgen.rand()%NUM_COLORS];
 		return; // done
 	} // for n
@@ -501,13 +501,13 @@ template<typename T> void add_inverted_triangles(T &verts, unsigned verts_start)
 	std::reverse(verts.begin()+verts_end, verts.end()); // reverse the order to swap triangle winding order
 }
 
-void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided) {
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, float rs_bot, float rs_top) {
 	float const radius(0.5*min(c.dx(), c.dy())); // should be equal/square
 	point const center(c.get_cube_center());
 	point const ce[2] = {point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2())};
 	unsigned const ndiv(N_CYL_SIDES);
 	vector3d v12;
-	vector_point_norm const &vpn(gen_cylinder_data(ce, radius, radius, ndiv, v12));
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius*rs_bot, radius*rs_top, ndiv, v12));
 	float const ndiv_inv(1.0/ndiv);
 	unsigned const quads_start(quad_verts.size()), tris_start(tri_verts.size());
 	unsigned qix(quads_start), tix(tris_start);
@@ -739,9 +739,9 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	// TODO - add back/top
 }
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
-	// TODO - draw truncated cone
-	// Note: unshadowed to improve framerate
-	get_material(tid_nm_pair_t()).add_vcylin_to_verts(c, apply_light_color(c), 1, 0, 1); // untextured, bottom only, two_sided
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t())); // Note: unshadowed to improve framerate
+	if (c.shape == room_obj_shape::SHAPE_CYLIN) {mat.add_vcylin_to_verts(c, apply_light_color(c), 1, 0, 1, 0.7, 1.0);} // untextured, bottom only, two_sided cylinder
+	else {} // TODO: rounded cube
 }
 
 void building_room_geom_t::clear() {

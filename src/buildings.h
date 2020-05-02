@@ -237,7 +237,7 @@ public:
 	void enable_shadows() {en_shadows = 1;}
 	void clear() {vbo.clear(); tri_verts.clear(); quad_verts.clear(); num_tverts = num_qverts = 0;}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0);
-	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided=0);
+	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided=0, float rs_bot=1.0, float rs_top=1.0);
 	void create_vbo();
 	void draw(shader_t &s, bool shadow_only);
 };
