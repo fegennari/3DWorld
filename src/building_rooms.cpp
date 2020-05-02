@@ -433,6 +433,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	}
 }
 
+void building_t::draw_room_geom(shader_t &s, bool shadow_only) {
+	if (interior && interior->room_geom) {interior->room_geom->draw(s, shadow_only);}
+}
 void building_t::gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only) {
 	if (!interior) return;
 	if (is_rotated()) return; // no room geom for rotated buildings
@@ -445,7 +448,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, un
 		gen_room_details(rgen, ped_bcubes); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	interior->room_geom->draw(s, shadow_only);
+	draw_room_geom(s, shadow_only);
 }
 
 void building_t::clear_room_geom() {

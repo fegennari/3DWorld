@@ -2052,7 +2052,6 @@ public:
 		s.begin_color_only_shader(); // really don't even need colors
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
 		vector<point> points; // reused temporary
-		vect_cube_t ped_bcubes; // likely not needed, maybe only in rare cases
 		building_draw_t roof_parts_draw;
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
@@ -2068,11 +2067,10 @@ public:
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(roof_parts_draw);
-						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
-						b.gen_and_draw_room_geom(s, ped_bcubes, bi->ix, ped_ix, 1); // shadow_only=1
-						g->has_room_geom = 1; // do we need to set this?
+						b.draw_room_geom(s, 1); // shadow_only=1
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
+						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						if (ped_ix < 0 && !add_player_shadow) continue; // nothing else to draw
 						bool const camera_in_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
 
