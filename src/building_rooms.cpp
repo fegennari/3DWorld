@@ -64,7 +64,8 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	unsigned const NUM_COLORS = 6;
 	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
-	float const radius(0.08f*get_window_vspace()), height(2.0f*radius); // TODO: different sizes for house/office, maybe random
+	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
+	float const radius(0.02f*(3 + rr)*get_window_vspace()), height(0.5f*(3 + rar)*radius);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
