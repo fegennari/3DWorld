@@ -50,6 +50,7 @@ struct tid_nm_pair_t { // size=28
 	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0) : tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), emissive(0) {}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
 	bool operator==(tid_nm_pair_t const &t) const {return (tid == t.tid && nm_tid == t.nm_tid && tscale_x == t.tscale_x && tscale_y == t.tscale_y);}
+	bool operator!=(tid_nm_pair_t const &t) const {return !operator==(t);}
 	int get_nm_tid() const {return ((nm_tid < 0) ? FLAT_NMAP_TEX : nm_tid);}
 	colorRGBA get_avg_color() const {return texture_color(tid);}
 	tid_nm_pair_t get_scaled_version(float scale) const {return tid_nm_pair_t(tid, nm_tid, scale*tscale_x, scale*tscale_y);}
@@ -230,8 +231,10 @@ public:
 	tid_nm_pair_t tex;
 	vector<vertex_t> tri_verts, quad_verts;
 	unsigned num_tverts, num_qverts; // for drawing
+	bool en_shadows;
 
-	rgeom_mat_t(tid_nm_pair_t const &tex_) : tex(tex_), num_tverts(0), num_qverts(0) {}
+	rgeom_mat_t(tid_nm_pair_t const &tex_) : tex(tex_), num_tverts(0), num_qverts(0), en_shadows(0) {}
+	void enable_shadows() {en_shadows = 1;}
 	void clear() {vbo.clear(); tri_verts.clear(); quad_verts.clear(); num_tverts = num_qverts = 0;}
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0);
 	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided=0);
@@ -242,7 +245,7 @@ public:
 struct building_materials_t : public vector<rgeom_mat_t> {
 	void clear();
 	unsigned count_all_verts() const;
-	rgeom_mat_t &get_material(tid_nm_pair_t const &tex);
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos();
 	void draw(shader_t &s, bool shadow_only);
 };
@@ -262,7 +265,7 @@ struct building_room_geom_t {
 	void clear();
 	void clear_materials();
 	unsigned get_num_verts() const {return (materials_s.count_all_verts() + materials_d.count_all_verts());}
-	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool dynamic=0) {return (dynamic ? materials_d : materials_s).get_material(tex);}
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0) {return (dynamic ? materials_d : materials_s).get_material(tex, inc_shadows);}
 	rgeom_mat_t &get_wood_material(float tscale);
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale);
