@@ -42,7 +42,7 @@ no_subdiv_model 1
 merge_model_objects 1 # optimization for large instance counts
 
 # cars
-#city num_cars 4000
+city num_cars 4000
 city car_speed 10.0
 city traffic_balance_val 0.9
 city new_city_prob 0.5
@@ -67,8 +67,8 @@ model_mat_lod_thresh 0.008
 allow_model3d_quads 1 # 0 is slightly faster for drawing but uses more memory (must recreate model3d files to change this)
 
 # pedestrians
-#city num_peds 10000
-#city num_building_peds 50000
+city num_peds 10000
+city num_building_peds 50000
 city ped_speed 0.001
 city ped_respawn_at_dest 1
 # ped_model: filename body_material_id fixed_color_id xy_rot scale lod_mult shadow_mat_ids
