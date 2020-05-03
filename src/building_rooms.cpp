@@ -752,7 +752,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	// TODO - add back/top
 }
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t())); // Note: unshadowed to improve framerate
+	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
 
 	if (c.shape == room_obj_shape::SHAPE_CYLIN) {
 		mat.add_vcylin_to_verts(c, apply_light_color(c), 1, 0, 1, 0, 1, 0.7, 1.0); // untextured, bottom only, two_sided cylinder with inverted bottom normal
