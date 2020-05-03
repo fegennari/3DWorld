@@ -529,7 +529,7 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 	for (unsigned i = 0; i <= ndiv; ++i) { // vertex data
 		unsigned const s(i%ndiv);
 		float const ts(1.0f - i*ndiv_inv);
-		vector3d const normal(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv]); // normalize?
+		norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
 		indexed_tri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, ts, 0.0, cw.c);
 		indexed_tri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw.c);
 	}
@@ -541,7 +541,7 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 
 	for (unsigned bt = 0; bt < 2; ++bt) {
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
-		vector3d const normal((bool(bt) ^ inv_tb) ? plus_z : -plus_z);
+		norm_comp const normal((bool(bt) ^ inv_tb) ? plus_z : -plus_z);
 
 		for (unsigned i = 0; i < ndiv; ++i) {
 			for (unsigned j = 0; j < 2; ++j) {tri_verts[tix++].assign(vpn.p[(((i + j)%ndiv)<<1) + bt], normal, 0.0, 0.0, cw.c);}

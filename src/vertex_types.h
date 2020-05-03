@@ -249,7 +249,7 @@ struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper 
 	typedef vert_norm_tc non_color_class;
 	vert_norm_comp_tc_color() {}
 	vert_norm_comp_tc_color(vert_norm_comp_tc const &vntc, color_wrapper const &cw) : vert_norm_comp_tc(vntc), color_wrapper(cw) {}
-	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_) {
+	template<typename T> void assign(point const &v_, T const &n_, float ts, float tt, unsigned char const *const c_) { // T can be vector3d or norm_comp
 		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
 	}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
