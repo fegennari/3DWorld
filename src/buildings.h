@@ -229,16 +229,19 @@ struct room_object_t : public cube_t {
 class rgeom_mat_t { // simplified version of building_draw_t::draw_block_t
 
 	vbo_wrap_t vbo;
+	unsigned ivbo;
 public:
 	typedef vert_norm_comp_tc_color vertex_t;
 	tid_nm_pair_t tex;
-	vector<vertex_t> tri_verts, quad_verts;
-	unsigned num_tverts, num_qverts; // for drawing
+	vector<unsigned> indices; // for indexed_quad_verts
+	vector<vertex_t> tri_verts, quad_verts, indexed_tri_verts;
+	unsigned num_tverts, num_qverts, num_itverts, num_ixs; // for drawing
 	bool en_shadows;
 
-	rgeom_mat_t(tid_nm_pair_t const &tex_) : tex(tex_), num_tverts(0), num_qverts(0), en_shadows(0) {}
+	rgeom_mat_t(tid_nm_pair_t const &tex_) : ivbo(0), tex(tex_), num_tverts(0), num_qverts(0), num_itverts(0), num_ixs(0), en_shadows(0) {}
+	unsigned get_tot_vert_count() const {return (num_tverts + num_qverts + num_itverts);}
 	void enable_shadows() {en_shadows = 1;}
-	void clear() {vbo.clear(); tri_verts.clear(); quad_verts.clear(); num_tverts = num_qverts = 0;}
+	void clear();
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0);
 	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided=0, bool ts_tb=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0);
 	void create_vbo();
