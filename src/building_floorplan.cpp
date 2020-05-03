@@ -592,6 +592,12 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							wall.d[!dim][!dir] = val + (dir ? -1.0 : 1.0)*wall_thick;
 							must_split[!dim] |= (1ULL << (interior->walls[!dim].size() & 63)); // flag this wall for extra splitting
 							interior->walls[!dim].push_back(wall);
+							assert(rooms_start < interior->rooms.size()); // must have added at least one room
+
+							for (auto r = (interior->rooms.begin() + rooms_start); r != interior->rooms.end(); ++r) {
+								assert(p->contains_cube(*r));
+								if (r->d[!dim][dir] == val) {r->d[!dim][dir] = wall.d[!dim][!dir];} // clip room to exclude this newly added wall
+							}
 						} // for dir
 					} // for dim
 				} // for p2
