@@ -512,7 +512,8 @@ template<typename T> void add_inverted_triangles(T &verts, unsigned verts_start)
 	std::reverse(verts.begin()+verts_end, verts.end()); // reverse the order to swap triangle winding order
 }
 
-void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, float rs_bot, float rs_top) {
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool ts_tb, bool inv_tb, float rs_bot, float rs_top) {
+	assert(!(ts_tb && inv_tb));
 	float const radius(0.5*min(c.dx(), c.dy())); // should be equal/square
 	point const center(c.get_cube_center());
 	point const ce[2] = {point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2())};
@@ -540,7 +541,7 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 
 	for (unsigned bt = 0; bt < 2; ++bt) {
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
-		vector3d const normal(bt ? plus_z : -plus_z);
+		vector3d const normal((bool(bt) ^ inv_tb) ? plus_z : -plus_z);
 
 		for (unsigned i = 0; i < ndiv; ++i) {
 			for (unsigned j = 0; j < 2; ++j) {tri_verts[tix++].assign(vpn.p[(((i + j)%ndiv)<<1) + bt], normal, 0.0, 0.0, cw.c);}
@@ -548,11 +549,11 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 		}
 	} // for bt
 	assert(tix == tri_verts.size());
+	if (inv_tb) {std::reverse(tri_verts.begin()+tris_start, tri_verts.end());} // reverse the order to swap triangle winding order
 
-	if (two_sided) { // room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
-		add_inverted_triangles(quad_verts, quads_start);
-		add_inverted_triangles(tri_verts,  tris_start );
-	}
+	// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
+	if (two_sided) {add_inverted_triangles(quad_verts, quads_start);}
+	if (ts_tb    ) {add_inverted_triangles(tri_verts,  tris_start );}
 }
 
 void rgeom_mat_t::create_vbo() {
@@ -751,7 +752,10 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 }
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t())); // Note: unshadowed to improve framerate
-	if (c.shape == room_obj_shape::SHAPE_CYLIN) {mat.add_vcylin_to_verts(c, apply_light_color(c), 1, 0, 1, 0.7, 1.0);} // untextured, bottom only, two_sided cylinder
+
+	if (c.shape == room_obj_shape::SHAPE_CYLIN) {
+		mat.add_vcylin_to_verts(c, apply_light_color(c), 1, 0, 1, 0, 1, 0.7, 1.0); // untextured, bottom only, two_sided cylinder with inverted bottom normal
+	}
 	else {} // TODO: rounded cube
 }
 
