@@ -61,7 +61,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 	return 1;
 }
 
-void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool check_last_obj) {
 	unsigned const NUM_COLORS = 6;
 	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
@@ -72,9 +72,15 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
 	point center;
 	center.z = zval + 0.001*get_window_vspace(); // slightly above the floor to avoid z-fighting
+	unsigned skip_wall(4); // start at an invalid value
 
+	if (check_last_obj) {
+		assert(!objs.empty());
+		skip_wall = 2*objs.back().dim + (!objs.back().dir); // don't place trashcan on same wall as whiteboard (dir is opposite)
+	}
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a trashcan
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+		if ((2*dim + dir) == skip_wall) continue; // don't place a trashcan on this wall
 		center[ dim] = room_bounds.d[dim][dir]; // against this wall
 		center[!dim] = rgen.rand_uniform(room_bounds.d[!dim][0], room_bounds.d[!dim][1]);
 		cube_t c(center, center);
@@ -109,19 +115,20 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 	objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
 }
 
-void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
-	if (!room_object_t::enable_pictures()) return; // disabled
-	if (!is_house && !room.is_office) return; // houses and offices only for now
-	if (room.is_sec_bldg) return; // no pictures in secondary buildings
-	if (room.is_hallway ) return; // no pictures in hallways (yet)
+bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+	if (!room_object_t::enable_pictures()) return 0; // disabled
+	if (!is_house && !room.is_office) return 0; // houses and offices only for now
+	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
+	if (room.is_hallway ) return 0; // no pictures in hallways (yet)
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	bool was_hung(0);
 
 	if (room.is_office) { // add whiteboards
-		if ((rgen.rand() & 3) == 0) return; // skip 25% of the time
+		if ((rgen.rand() & 3) == 0) return 0; // skip 25% of the time
 		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
 
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
@@ -135,10 +142,10 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				c.d[!dim][0] += xy_space; c.d[!dim][1] -= xy_space;
 				if (is_cube_close_to_doorway(c)) continue; // bad placement (TODO: inc_open=1?)
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
-				return; // done, only need to add one
+				return 1; // done, only need to add one
 			} // for dir
 		} // for dim
-		return;
+		return 0;
 	}
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
@@ -167,10 +174,12 @@ void building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) continue; // bad placement
 				objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
 				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
+				was_hung = 1;
 				break; // success
 			} // for n
 		} // for dir
 	} // for dim
+	return was_hung;
 }
 
 void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
@@ -353,10 +362,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 				}
 			}
+			bool const was_hung(hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit));
+
 			if (rgen.rand_float() < 0.6) { // 60% of the time
-				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && r->is_office)); // no trashcans on same wall as office whiteboard
 			}
-			hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 		num_light_stacks += num_lights_added;
