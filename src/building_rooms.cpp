@@ -573,8 +573,9 @@ void rgeom_mat_t::draw(shader_t &s, bool shadow_only) {
 	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
 	vbo.pre_render();
 	vertex_t::set_vbo_arrays();
+	// hack: since we know that all triangles are currently the bottom surface of objects, we don't need to draw them in the shadow pass; also, we know that there will be quads for this mat
 	if (num_qverts > 0) {draw_quads_as_tris(num_qverts);}
-	if (num_tverts > 0) {glDrawArrays(GL_TRIANGLES, num_qverts, num_tverts);}
+	if (num_tverts > 0 && !shadow_only) {glDrawArrays(GL_TRIANGLES, num_qverts, num_tverts);}
 	tex.unset_gl(s);
 }
 
