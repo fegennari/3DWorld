@@ -563,11 +563,51 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 	if (ts_tb) {add_inverted_triangles(tri_verts, tris_start, 1);}
 }
 
+class rgeom_alloc_t {
+	deque<rgeom_storage_t> free_list; // one per unique texture ID/material
+public:
+	void alloc(rgeom_storage_t &s) { // attempt to use free_list entry to reuse existing capacity
+		if (free_list.empty()) return; // no pre-alloc
+		//cout << TXT(free_list.size()) << TXT(free_list.back().get_tot_vert_capacity()) << endl;
+
+		// try to find a free list element with the same tex so that we balance out material memory usage/capacity better
+		for (unsigned i = 0; i < free_list.size(); ++i) {
+			if (free_list[i].tex.tid != s.tex.tid) continue;
+			s.swap(free_list[i]);
+			free_list[i].swap(free_list.back());
+			free_list.pop_back();
+			return; // done
+		}
+		//s.swap(free_list.back());
+		//free_list.pop_back();
+	}
+	void free(rgeom_storage_t &s) {
+		s.clear(); // in case the caller didn't clear it
+		free_list.push_back(rgeom_storage_t(s.tex)); // record tex of incoming element
+		s.swap(free_list.back()); // transfer existing capacity to free list; clear capacity from s
+	}
+};
+
+rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all buildings; not thread safe
+
+void rgeom_storage_t::clear() {
+	tri_verts.clear();
+	quad_verts.clear();
+	indexed_tri_verts.clear();
+	indices.clear();
+}
+void rgeom_storage_t::swap(rgeom_storage_t &s) {
+	tri_verts.swap(s.tri_verts);
+	quad_verts.swap(s.quad_verts);
+	indexed_tri_verts.swap(s.indexed_tri_verts);
+	indices.swap(s.indices);
+	std::swap(tex, s.tex);
+}
+
 void rgeom_mat_t::clear() {
 	vbo.clear();
 	delete_and_zero_vbo(ivbo);
-	tri_verts.clear();
-	quad_verts.clear();
+	rgeom_storage_t::clear();
 	num_tverts = num_qverts = num_itverts = num_ixs = 0;
 }
 
@@ -581,14 +621,11 @@ void rgeom_mat_t::create_vbo() {
 	vbo.create_and_upload(quad_verts);
 
 	if (!indices.empty()) { // we have some indexed quads
-		for (auto i = indices.begin(); i != indices.end(); ++i) {*i += (num_qverts + num_tverts);} // shift indices to match the new vertex location
+		unsigned const ix_off(num_qverts + num_tverts);
+		for (auto i = indices.begin(); i != indices.end(); ++i) {*i += ix_off;} // shift indices to match the new vertex location
 		create_vbo_and_upload(ivbo, indices, 1, 1);
 	}
-	// vertex and index data is no longer needed and can be cleared
-	clear_container(tri_verts);
-	clear_container(quad_verts);
-	clear_container(indexed_tri_verts);
-	clear_container(indices);
+	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be cleared
 }
 
 void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool skip_small_objs) {
@@ -632,6 +669,7 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 	}
 	emplace_back(tex); // not found, add a new material
 	if (inc_shadows) {back().enable_shadows();}
+	rgeom_alloc.alloc(back());
 	return back();
 }
 void building_materials_t::create_vbos() {
