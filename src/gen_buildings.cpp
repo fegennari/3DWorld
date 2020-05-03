@@ -2067,7 +2067,8 @@ public:
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(roof_parts_draw);
-						b.draw_room_geom(s, 1); // shadow_only=1
+						bool const skip_small_objs(!b.bcube.contains_pt(pre_smap_player_pos)); // skip small objects if the player is not in this building
+						b.draw_room_geom(s, 1, skip_small_objs); // shadow_only=1
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
