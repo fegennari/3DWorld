@@ -503,11 +503,12 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 }
 
 template<typename T> void add_inverted_triangles(T &verts, unsigned verts_start, bool reverse_winding_order) {
-	unsigned const verts_end(verts.size());
+	unsigned const verts_end(verts.size()), num(verts_end - verts_start);
+	verts.resize(verts_end + num);
 
 	for (unsigned i = verts_start; i < verts_end; ++i) {
-		verts.push_back(verts[i]);
-		verts.back().invert_normal();
+		verts[i+num] = verts[i];
+		verts[i+num].invert_normal();
 	}
 	if (reverse_winding_order) {std::reverse(verts.begin()+verts_end, verts.end());} // reverse the order to swap triangle winding order
 }
@@ -534,7 +535,8 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 		indexed_tri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw.c);
 	}
 	for (unsigned i = 0; i < ndiv; ++i) { // index data
-		for (unsigned j = 0; j < 6; ++j) {indices[iix++] = itris_start + 2*i + ixs_off[j];}
+		unsigned const ix0(itris_start + 2*i);
+		for (unsigned j = 0; j < 6; ++j) {indices[iix++] = ix0 + ixs_off[j];}
 	}
 	// maybe add top and bottom end cap using triangles, currently using all TCs=0.0
 	tri_verts.resize(tix + 3*ndiv*((unsigned)draw_top + (unsigned)draw_bot));
@@ -554,9 +556,9 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 	// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
 	if (two_sided) {
 		add_inverted_triangles(indexed_tri_verts, itris_start, 0);
-		unsigned const ixs_end(indices.size());
-		for (unsigned i = ixs_start; i < ixs_end; ++i) {indices.push_back(indices[i] + new_verts);}
-		std::reverse(indices.begin()+ixs_end, indices.end()); // reverse indices to invert triangle order
+		unsigned const ixs_end(indices.size()), num(ixs_end - ixs_start);
+		indices.resize(ixs_end + num);
+		for (unsigned i = 0; i < num; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + new_verts);} // copy in reverse order
 	}
 	if (ts_tb) {add_inverted_triangles(tri_verts, tris_start, 1);}
 }
