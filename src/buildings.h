@@ -228,7 +228,7 @@ struct room_object_t : public cube_t {
 
 struct rgeom_storage_t {
 	typedef vert_norm_comp_tc_color vertex_t;
-	vector<vertex_t> tri_verts, quad_verts, indexed_tri_verts;
+	vector<vertex_t> quad_verts, itri_verts;
 	vector<unsigned> indices; // for indexed_quad_verts
 	tid_nm_pair_t tex; // used sort of like a map key
 
@@ -236,7 +236,7 @@ struct rgeom_storage_t {
 	rgeom_storage_t(tid_nm_pair_t const &tex_) : tex(tex_) {}
 	void clear();
 	void swap(rgeom_storage_t &s);
-	unsigned get_tot_vert_capacity() const {return (tri_verts.capacity() + quad_verts.capacity() + indexed_tri_verts.capacity());}
+	unsigned get_tot_vert_capacity() const {return (quad_verts.capacity() + itri_verts.capacity());}
 };
 
 class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_draw_t::draw_block_t
@@ -244,11 +244,11 @@ class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_d
 	vbo_wrap_t vbo;
 	unsigned ivbo;
 public:
-	unsigned num_tverts, num_qverts, num_itverts, num_ixs; // for drawing
+	unsigned num_qverts, num_itverts, num_ixs; // for drawing
 	bool en_shadows;
 
-	rgeom_mat_t(tid_nm_pair_t const &tex_) : ivbo(0), rgeom_storage_t(tex_), num_tverts(0), num_qverts(0), num_itverts(0), num_ixs(0), en_shadows(0) {}
-	unsigned get_tot_vert_count() const {return (num_tverts + num_qverts + num_itverts);}
+	rgeom_mat_t(tid_nm_pair_t const &tex_) : ivbo(0), rgeom_storage_t(tex_), num_qverts(0), num_itverts(0), num_ixs(0), en_shadows(0) {}
+	unsigned get_tot_vert_count() const {return (num_qverts + num_itverts);}
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0);

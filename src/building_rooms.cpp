@@ -524,8 +524,8 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius*rs_bot, radius*rs_top, ndiv, v12));
 	color_wrapper const cw(color);
-	unsigned itris_start(indexed_tri_verts.size()), ixs_start(indices.size()), itix(itris_start), iix(ixs_start);
-	indexed_tri_verts.resize(itris_start + 2*(ndiv+1));
+	unsigned itris_start(itri_verts.size()), ixs_start(indices.size()), itix(itris_start), iix(ixs_start);
+	itri_verts.resize(itris_start + 2*(ndiv+1));
 	indices.resize(ixs_start + 6*ndiv);
 	unsigned const ixs_off[6] = {1,2,0, 3,2,1}; // 1 quad = 2 triangles
 
@@ -533,36 +533,36 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 		unsigned const s(i%ndiv);
 		float const ts(1.0f - i*ndiv_inv);
 		norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
-		indexed_tri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, ts, 0.0, cw.c);
-		indexed_tri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw.c);
+		itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, ts, 0.0, cw.c);
+		itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw.c);
 	}
 	for (unsigned i = 0; i < ndiv; ++i) { // index data
 		unsigned const ix0(itris_start + 2*i);
 		for (unsigned j = 0; j < 6; ++j) {indices[iix++] = ix0 + ixs_off[j];}
 	}
 	// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
-	if (two_sided) {add_inverted_triangles(indexed_tri_verts, indices, itris_start, ixs_start);}
+	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
 	// maybe add top and bottom end cap using triangles, currently using all TCs=0.0
-	itris_start = itix = indexed_tri_verts.size();
+	itris_start = itix = itri_verts.size();
 	ixs_start   = iix  = indices.size();
-	indexed_tri_verts.resize(itris_start + (ndiv + 1)*num_ends);
+	itri_verts.resize(itris_start + (ndiv + 1)*num_ends);
 	indices.resize(ixs_start + 3*ndiv*num_ends);
 
 	for (unsigned bt = 0; bt < 2; ++bt) {
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
 		norm_comp const normal((bool(bt) ^ inv_tb) ? plus_z : -plus_z);
 		unsigned const center_ix(itix);
-		indexed_tri_verts[itix++].assign(ce[bt], normal, 0.0, 0.0, cw.c); // center
+		itri_verts[itix++].assign(ce[bt], normal, 0.0, 0.0, cw.c); // center
 
 		for (unsigned i = 0; i < ndiv; ++i) {
-			indexed_tri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, 0.0, 0.0, cw.c);
+			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, 0.0, 0.0, cw.c);
 			indices[iix++] = center_ix; // center
 			indices[iix++] = center_ix + i + 1;
 			indices[iix++] = center_ix + ((i+1)%ndiv) + 1;
 		}
 	} // for bt
 	if (inv_tb) {std::reverse(indices.begin()+ixs_start, indices.end());} // reverse the order to swap triangle winding order
-	if (two_sided) {add_inverted_triangles(indexed_tri_verts, indices, itris_start, ixs_start);}
+	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
 }
 
 class rgeom_alloc_t {
@@ -593,15 +593,13 @@ public:
 rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all buildings; not thread safe
 
 void rgeom_storage_t::clear() {
-	tri_verts.clear();
 	quad_verts.clear();
-	indexed_tri_verts.clear();
+	itri_verts.clear();
 	indices.clear();
 }
 void rgeom_storage_t::swap(rgeom_storage_t &s) {
-	tri_verts.swap(s.tri_verts);
 	quad_verts.swap(s.quad_verts);
-	indexed_tri_verts.swap(s.indexed_tri_verts);
+	itri_verts.swap(s.itri_verts);
 	indices.swap(s.indices);
 	std::swap(tex, s.tex);
 }
@@ -610,25 +608,22 @@ void rgeom_mat_t::clear() {
 	vbo.clear();
 	delete_and_zero_vbo(ivbo);
 	rgeom_storage_t::clear();
-	num_tverts = num_qverts = num_itverts = num_ixs = 0;
+	num_qverts = num_itverts = num_ixs = 0;
 }
 
 void rgeom_mat_t::create_vbo() {
-	num_tverts  = tri_verts.size();
 	num_qverts  = quad_verts.size();
-	num_itverts = indexed_tri_verts.size();
+	num_itverts = itri_verts.size();
 	num_ixs     = indices.size();
-	unsigned qsz(num_qverts*sizeof(vertex_t)), tsz(num_tverts*sizeof(vertex_t)), itsz(num_itverts*sizeof(vertex_t));
+	unsigned qsz(num_qverts*sizeof(vertex_t)), itsz(num_itverts*sizeof(vertex_t));
 	vbo.vbo = ::create_vbo();
 	check_bind_vbo(vbo.vbo);
 	upload_vbo_data(nullptr, get_tot_vert_count()*sizeof(vertex_t));
 	upload_vbo_sub_data(quad_verts.data(), 0, qsz);
-	upload_vbo_sub_data(tri_verts.data(), qsz, tsz);
-	upload_vbo_sub_data(indexed_tri_verts.data(), (qsz + tsz), itsz);
+	upload_vbo_sub_data(itri_verts.data(), qsz, itsz);
 
 	if (!indices.empty()) { // we have some indexed quads
-		unsigned const ix_off(num_qverts + num_tverts);
-		for (auto i = indices.begin(); i != indices.end(); ++i) {*i += ix_off;} // shift indices to match the new vertex location
+		for (auto i = indices.begin(); i != indices.end(); ++i) {*i += num_qverts;} // shift indices to match the new vertex location
 		create_vbo_and_upload(ivbo, indices, 1, 1);
 	}
 	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be cleared
@@ -638,19 +633,17 @@ void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool skip_small_objs) {
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows
 	assert(vbo.vbo_valid());
-	assert(num_tverts > 0 || num_qverts > 0 || num_itverts > 0);
+	assert(num_qverts > 0 || num_itverts > 0);
 	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
 	vbo.pre_render();
 	vertex_t::set_vbo_arrays();
-	// hack: since we know that all triangles are currently the bottom surface of objects, we don't need to draw them in the shadow pass; also, we know that there will be quads for this mat
 	if (num_qverts > 0) {draw_quads_as_tris(num_qverts);}
-	if (num_tverts > 0 && !shadow_only) {glDrawArrays(GL_TRIANGLES, num_qverts, num_tverts);}
 
 	if (num_itverts > 0 && !skip_small_objs) { // index quads, used for cylinders; treated as small objects
 		assert(ivbo > 0);
 		bind_vbo(ivbo, 1);
 		//glDisable(GL_CULL_FACE); // two sided lighting requires fewer verts (no duplicates), but must be set in the shader
-		glDrawRangeElements(GL_TRIANGLES, (num_qverts + num_tverts), (num_qverts + num_tverts + num_itverts), num_ixs, GL_UNSIGNED_INT, nullptr);
+		glDrawRangeElements(GL_TRIANGLES, num_qverts, (num_qverts + num_itverts), num_ixs, GL_UNSIGNED_INT, nullptr);
 		//glEnable(GL_CULL_FACE);
 		bind_vbo(0, 1);
 	}
