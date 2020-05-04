@@ -616,9 +616,13 @@ void rgeom_mat_t::create_vbo() {
 	num_qverts  = quad_verts.size();
 	num_itverts = indexed_tri_verts.size();
 	num_ixs     = indices.size();
-	vector_add_to(tri_verts, quad_verts);
-	vector_add_to(indexed_tri_verts, quad_verts);
-	vbo.create_and_upload(quad_verts);
+	unsigned qsz(num_qverts*sizeof(vertex_t)), tsz(num_tverts*sizeof(vertex_t)), itsz(num_itverts*sizeof(vertex_t));
+	vbo.vbo = ::create_vbo();
+	check_bind_vbo(vbo.vbo);
+	upload_vbo_data(nullptr, get_tot_vert_count()*sizeof(vertex_t));
+	upload_vbo_sub_data(quad_verts.data(), 0, qsz);
+	upload_vbo_sub_data(tri_verts.data(), qsz, tsz);
+	upload_vbo_sub_data(indexed_tri_verts.data(), (qsz + tsz), itsz);
 
 	if (!indices.empty()) { // we have some indexed quads
 		unsigned const ix_off(num_qverts + num_tverts);
@@ -866,6 +870,7 @@ colorRGBA room_object_t::get_color() const {
 }
 
 void building_room_geom_t::create_static_vbos() {
+	//timer_t timer("Gen Room Geom"); // 6.1ms
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
@@ -889,6 +894,7 @@ void building_room_geom_t::create_static_vbos() {
 		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
+	//timer_t timer2("Create VBOs"); // 3.5ms
 	materials_s.create_vbos();
 }
 
