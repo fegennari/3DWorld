@@ -502,28 +502,30 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 	} // for i
 }
 
-template<typename T> void add_inverted_triangles(T &verts, unsigned verts_start, bool reverse_winding_order) {
-	unsigned const verts_end(verts.size()), num(verts_end - verts_start);
-	verts.resize(verts_end + num);
+template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start) {
+	unsigned const verts_end(verts.size()), numv(verts_end - verts_start);
+	verts.resize(verts_end + numv);
 
 	for (unsigned i = verts_start; i < verts_end; ++i) {
-		verts[i+num] = verts[i];
-		verts[i+num].invert_normal();
+		verts[i+numv] = verts[i];
+		verts[i+numv].invert_normal();
 	}
-	if (reverse_winding_order) {std::reverse(verts.begin()+verts_end, verts.end());} // reverse the order to swap triangle winding order
+	unsigned const ixs_end(indices.size()), numi(ixs_end - ixs_start);
+	indices.resize(ixs_end + numi);
+	for (unsigned i = 0; i < numi; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + numv);} // copy in reverse order
 }
 
 void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool ts_tb, bool inv_tb, float rs_bot, float rs_top) {
 	assert(!(ts_tb && inv_tb));
 	point const center(c.get_cube_center());
 	point const ce[2] = {point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2())};
-	unsigned const ndiv(N_CYL_SIDES), itris_start(indexed_tri_verts.size()), tris_start(tri_verts.size()), ixs_start(indices.size()), new_verts(2*(ndiv+1));
+	unsigned const ndiv(N_CYL_SIDES), num_ends((unsigned)draw_top + (unsigned)draw_bot);
 	float const radius(0.5*min(c.dx(), c.dy())), ndiv_inv(1.0/ndiv); // cube X/Y size should be equal/square
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius*rs_bot, radius*rs_top, ndiv, v12));
 	color_wrapper const cw(color);
-	unsigned itix(itris_start), tix(tris_start), iix(ixs_start);
-	indexed_tri_verts.resize(itix + new_verts);
+	unsigned itris_start(indexed_tri_verts.size()), ixs_start(indices.size()), itix(itris_start), iix(ixs_start);
+	indexed_tri_verts.resize(itris_start + 2*(ndiv+1));
 	indices.resize(ixs_start + 6*ndiv);
 	unsigned const ixs_off[6] = {1,2,0, 3,2,1}; // 1 quad = 2 triangles
 
@@ -538,29 +540,29 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 		unsigned const ix0(itris_start + 2*i);
 		for (unsigned j = 0; j < 6; ++j) {indices[iix++] = ix0 + ixs_off[j];}
 	}
+	// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
+	if (two_sided) {add_inverted_triangles(indexed_tri_verts, indices, itris_start, ixs_start);}
 	// maybe add top and bottom end cap using triangles, currently using all TCs=0.0
-	tri_verts.resize(tix + 3*ndiv*((unsigned)draw_top + (unsigned)draw_bot));
+	itris_start = itix = indexed_tri_verts.size();
+	ixs_start   = iix  = indices.size();
+	indexed_tri_verts.resize(itris_start + (ndiv + 1)*num_ends);
+	indices.resize(ixs_start + 3*ndiv*num_ends);
 
 	for (unsigned bt = 0; bt < 2; ++bt) {
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
 		norm_comp const normal((bool(bt) ^ inv_tb) ? plus_z : -plus_z);
+		unsigned const center_ix(itix);
+		indexed_tri_verts[itix++].assign(ce[bt], normal, 0.0, 0.0, cw.c); // center
 
 		for (unsigned i = 0; i < ndiv; ++i) {
-			for (unsigned j = 0; j < 2; ++j) {tri_verts[tix++].assign(vpn.p[(((i + j)%ndiv)<<1) + bt], normal, 0.0, 0.0, cw.c);}
-			tri_verts[tix++].assign(ce[bt], normal, 0.0, 0.0, cw.c); // center
+			indexed_tri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, 0.0, 0.0, cw.c);
+			indices[iix++] = center_ix; // center
+			indices[iix++] = center_ix + i + 1;
+			indices[iix++] = center_ix + ((i+1)%ndiv) + 1;
 		}
 	} // for bt
-	assert(tix == tri_verts.size());
-	if (inv_tb) {std::reverse(tri_verts.begin()+tris_start, tri_verts.end());} // reverse the order to swap triangle winding order
-
-	// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
-	if (two_sided) {
-		add_inverted_triangles(indexed_tri_verts, itris_start, 0);
-		unsigned const ixs_end(indices.size()), num(ixs_end - ixs_start);
-		indices.resize(ixs_end + num);
-		for (unsigned i = 0; i < num; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + new_verts);} // copy in reverse order
-	}
-	if (ts_tb) {add_inverted_triangles(tri_verts, tris_start, 1);}
+	if (inv_tb) {std::reverse(indices.begin()+ixs_start, indices.end());} // reverse the order to swap triangle winding order
+	if (two_sided) {add_inverted_triangles(indexed_tri_verts, indices, itris_start, ixs_start);}
 }
 
 class rgeom_alloc_t {
@@ -870,7 +872,7 @@ colorRGBA room_object_t::get_color() const {
 }
 
 void building_room_geom_t::create_static_vbos() {
-	//timer_t timer("Gen Room Geom"); // 6.1ms
+	//timer_t timer("Gen Room Geom"); // 6.5ms
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
@@ -894,7 +896,7 @@ void building_room_geom_t::create_static_vbos() {
 		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
-	//timer_t timer2("Create VBOs"); // 3.5ms
+	//timer_t timer2("Create VBOs"); // 3.8ms
 	materials_s.create_vbos();
 }
 
