@@ -364,7 +364,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			bool const was_hung(hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit));
 
-			if (rgen.rand_float() < 0.6) { // 60% of the time
+			if (rgen.rand_float() < 0.75) { // 75% of the time
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && r->is_office)); // no trashcans on same wall as office whiteboard
 			}
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
