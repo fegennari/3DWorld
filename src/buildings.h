@@ -203,7 +203,7 @@ uint8_t const RO_FLAG_OPEN    = 0x20; // open, for elevators and maybe eventuall
 struct room_object_t : public cube_t {
 	bool dim, dir;
 	uint8_t flags, room_id; // for at most 256 rooms per floor
-	uint16_t obj_id; // currently only used for lights
+	uint16_t obj_id; // currently only used for lights and random property hashing
 	room_object type;
 	room_obj_shape shape;
 	float light_amt;
@@ -531,6 +531,7 @@ private:
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit);
 	void add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool check_last_obj);
+	void add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
 	void add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
