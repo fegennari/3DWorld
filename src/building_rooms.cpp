@@ -621,6 +621,7 @@ void rgeom_mat_t::create_vbo() {
 	upload_vbo_data(nullptr, get_tot_vert_count()*sizeof(vertex_t));
 	upload_vbo_sub_data(quad_verts.data(), 0, qsz);
 	upload_vbo_sub_data(itri_verts.data(), qsz, itsz);
+	bind_vbo(0);
 
 	if (!indices.empty()) { // we have some indexed quads
 		for (auto i = indices.begin(); i != indices.end(); ++i) {*i += num_qverts;} // shift indices to match the new vertex location
@@ -647,7 +648,7 @@ void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool skip_small_objs) {
 		//glEnable(GL_CULL_FACE);
 		bind_vbo(0, 1);
 	}
-	tex.unset_gl(s);
+	if (!shadow_only) {tex.unset_gl(s);}
 }
 
 void building_materials_t::clear() {
