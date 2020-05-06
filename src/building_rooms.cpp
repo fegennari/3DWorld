@@ -187,7 +187,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, cub
 			point center;
 			center[ dim] = wall_pos;
 			center[!dim] = room.get_center_dim(!dim);
-			center.z     = zval + rgen.rand_uniform(0.45, 0.6)*floor_height; // move up
+			center.z     = zval + rgen.rand_uniform(0.45, 0.55)*floor_height; // move up
 
 			for (unsigned n = 0; n < 2; ++n) { // make 2 attempts to choose a position along the wall; first iteration is the center
 				if (n > 0) {
