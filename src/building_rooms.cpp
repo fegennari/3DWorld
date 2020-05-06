@@ -93,12 +93,12 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	} // for n
 }
 
-void building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
-	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return; // room is too small
-	float const width(0.35*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.1*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen.rand_uniform(1.0, 1.2));
+	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
+	float const width(0.4*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen.rand_uniform(1.0, 1.2));
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
 
@@ -115,8 +115,10 @@ void building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		c.d[!dim][1] = pos + 0.5*width;
 		if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt); // Note: dir faces into the room, not the wall
-		return; // done
+		objs.back().obj_id = (uint16_t)objs.size();
+		return 1; // done/success
 	} // for n
+	return 0; // not placed
 }
 
 void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
@@ -141,7 +143,7 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 	objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
 }
 
-bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, cube_t const &avoid_cube, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
 	if (!room_object_t::enable_pictures()) return 0; // disabled
 	if (!is_house && !room.is_office) return 0; // houses and offices only for now
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
@@ -149,6 +151,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
+	bool const use_avoid_cube(!avoid_cube.is_all_zeros());
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool was_hung(0);
@@ -166,7 +169,8 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				c.z1() = zval + 0.25*floor_height; c.z2() = zval + 0.8*floor_height;
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
 				c.d[!dim][0] += xy_space; c.d[!dim][1] -= xy_space;
-				if (is_cube_close_to_doorway(c)) continue; // bad placement (TODO: inc_open=1?)
+				if (use_avoid_cube && c.intersects_no_adj(avoid_cube)) continue;
+				if (is_cube_close_to_doorway(c)) continue; // bad placement (inc_open=1?)
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
 				return 1; // done, only need to add one
 			} // for dir
@@ -197,8 +201,8 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
 				cube_t tc(c);
 				tc.d[!dim][0] -= 0.1*width; tc.d[!dim][1] += 0.1*width; // expand slightly to account for frame
+				if (use_avoid_cube && c.intersects_no_adj(avoid_cube)) continue;
 				if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) continue; // bad placement
-				// TODO: check for blocking objects such as bookcases
 				objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
 				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
 				was_hung = 1;
@@ -368,11 +372,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 			unsigned const objs_start(objs.size());
-
-			// place a table and maybe some chairs near the center of the room 95% of the time if it's not a hallway
 			bool added_tc(0);
+			cube_t avoid_cube;
 
+			// place room objects
 			if (rgen.rand_float() < 0.95) { // 95% of the time
+				// place a table and maybe some chairs near the center of the room if it's not a hallway
 				added_tc = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
 				
 				if (!added_tc) {
@@ -383,13 +388,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 			if (is_house) { // place house-specific items
-				if (rgen.rand_float() < 0.8) {add_bookcase_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);}
-
+				if (rgen.rand_float() < 0.8) { // 80% of the time
+					bool const added(add_bookcase_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
+					if (added) {assert(!objs.empty()); avoid_cube = objs.back();}
+				}
 				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 				}
 			}
-			bool const was_hung(hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit));
+			bool const was_hung(hang_pictures_in_room(rgen, *r, avoid_cube, room_center.z, room_id, tot_light_amt, is_lit));
 
 			if (rgen.rand_float() < 0.75) { // 75% of the time
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && r->is_office)); // no trashcans on same wall as office whiteboard
@@ -835,7 +842,7 @@ void building_room_geom_t::add_book(room_object_t const &c) {
 	get_material(untex_shad_mat).add_cube_to_verts(c, apply_light_color(c)); // untextured?, all faces
 }
 
-void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale) {
+void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bool no_shelves) {
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	rgeom_mat_t &mat(get_wood_material(tscale));
 	unsigned const skip_faces(!get_face_mask(c.dim, !c.dir)); // skip back face
@@ -847,7 +854,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale) {
 	top.z1() += 0.96*c.dz();
 	rest.z2() = top.z1();
 	mat.add_cube_to_verts(top, color, skip_faces);
-	unsigned const num_shelves(3 + (c.obj_id%3)); // 3-5
+	unsigned const num_shelves(no_shelves ? 0 : (3 + (c.obj_id%3))); // 3-5
 	cube_t middle(rest);
 	
 	for (unsigned d = 0; d < 2; ++d) { // left/right sides
@@ -858,9 +865,10 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale) {
 	}
 	for (unsigned i = 0; i < num_shelves; ++i) {
 		cube_t shelf(middle);
-		shelf.z1() += (i+1)*c.dz()/(num_shelves+1);
+		shelf.z1() += (i+0.25)*c.dz()/(num_shelves+0.25);
 		shelf.z2()  = shelf.z1() + 0.03*c.dz();
 		mat.add_cube_to_verts(shelf, color, skip_faces);
+		// TODO: add books to this shelf using add_book()
 	}
 }
 
@@ -874,7 +882,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	get_wood_material(tscale).add_cube_to_verts(top, color); // all faces drawn
 	add_tc_legs(legs_bcube, color, 0.10, tscale);
 	// TODO - add back/top
-	//add_bookcase(c_top_back, tscale);
+	//add_bookcase(c_top_back, tscale, 1); // no_shelves=1
 }
 
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
@@ -935,7 +943,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_PICTURE: add_picture (*i); break;
 		case TYPE_WBOARD:  add_picture (*i); break;
 		case TYPE_BOOK:    add_book    (*i); break;
-		case TYPE_BCASE:   add_bookcase(*i, tscale); break;
+		case TYPE_BCASE:   add_bookcase(*i, tscale, 0); break;
 		case TYPE_DESK:    add_desk    (*i, tscale); break;
 		case TYPE_TCAN:    add_trashcan(*i); break;
 		case TYPE_ELEVATOR: break; // not handled here

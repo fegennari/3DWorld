@@ -291,7 +291,7 @@ struct building_room_geom_t {
 	void add_rug(room_object_t const &c);
 	void add_picture(room_object_t const &c);
 	void add_book(room_object_t const &c);
-	void add_bookcase(room_object_t const &c, float tscale);
+	void add_bookcase(room_object_t const &c, float tscale, bool no_shelves);
 	void add_desk(room_object_t const &c, float tscale);
 	void add_trashcan(room_object_t const &c);
 	void create_static_vbos();
@@ -531,9 +531,9 @@ private:
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit);
 	void add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool check_last_obj);
-	void add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
+	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
 	void add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
-	bool hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
+	bool hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, cube_t const &avoid_cube, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
