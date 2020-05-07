@@ -846,16 +846,24 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	rgeom_mat_t &mat(get_wood_material(tscale));
 	unsigned const skip_faces(!get_face_mask(c.dim, !c.dir)); // skip back face
+	float const depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed
 	cube_t back(c), rest(c);
-	back.d[c.dim] [c.dir] += 0.94*(c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim);
+	back.d[c.dim] [c.dir] += 0.94*depth;
 	rest.d[c.dim][!c.dir]  = back.d[c.dim][c.dir];
 	mat.add_cube_to_verts(back, color, skip_faces);
 	cube_t top(rest);
 	top.z1() += 0.96*c.dz();
 	rest.z2() = top.z1();
 	mat.add_cube_to_verts(top, color, skip_faces);
-	unsigned const num_shelves(no_shelves ? 0 : (3 + (c.obj_id%3))); // 3-5
+	rand_gen_t rgen;
+	rgen.set_state(c.obj_id+1, c.room_id+1);
+	unsigned const num_shelves(no_shelves ? 0 : (3 + ((rgen.rand() + c.obj_id)%3))); // 3-5
+	float const shelf_dz(c.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
+	unsigned const NUM_COLORS = 10;
+	colorRGBA const book_colors[NUM_COLORS] = {BLACK, BLACK, WHITE, BLUE, BLUE, RED, ORANGE, GRAY, GREEN, BROWN};
 	cube_t middle(rest);
+	room_object_t book(c); // copy properties from bookcase
+	book.type = TYPE_BOOK;
 	
 	for (unsigned d = 0; d < 2; ++d) { // left/right sides
 		cube_t lr(rest);
@@ -865,11 +873,27 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 	}
 	for (unsigned i = 0; i < num_shelves; ++i) {
 		cube_t shelf(middle);
-		shelf.z1() += (i+0.25)*c.dz()/(num_shelves+0.25);
-		shelf.z2()  = shelf.z1() + 0.03*c.dz();
-		mat.add_cube_to_verts(shelf, color, skip_faces);
-		// TODO: add books to this shelf using add_book()
-	}
+		shelf.z1() += (i+0.25)*shelf_dz;
+		shelf.z2()  = shelf.z1() + shelf_thick;
+		get_wood_material(tscale).add_cube_to_verts(shelf, color, skip_faces); // Note: mat reference may be invalidated by adding books
+		unsigned const num_spaces(12 + (rgen.rand()%9));
+		float const book_space(shelf.get_sz_dim(!c.dim)/num_spaces);
+		float pos(shelf.d[!c.dim][0]);
+
+		for (unsigned n = 0; n < num_spaces; ++n) {
+			float const width(book_space*rgen.rand_uniform(0.8, 1.2));
+			if (rgen.rand_float() < 0.25) {pos += width; continue;} // skip this book
+			book.z1() = shelf.z2();
+			book.z2() = shelf.z2() + (shelf_dz - shelf_thick)*rgen.rand_uniform(0.6, 0.95);
+			book.d[c.dim][ c.dir] = shelf.d[c.dim][ c.dir] + depth*rgen.rand_uniform(-0.1, 0.4); // facing out
+			book.d[c.dim][!c.dir] = shelf.d[c.dim][!c.dir]; // facing in
+			book.d[!c.dim][0] = pos;
+			book.d[!c.dim][1] = pos + width;
+			book.color = book_colors[rgen.rand() % NUM_COLORS];
+			add_book(book);
+			pos += width;
+		}
+	} // for i
 }
 
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
