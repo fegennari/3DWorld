@@ -839,60 +839,88 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 
 void building_room_geom_t::add_book(room_object_t const &c) {
 	// TODO - two cubes, use c.color for cover and WHITE for interior pages
-	get_material(untex_shad_mat).add_cube_to_verts(c, apply_light_color(c)); // untextured?, all faces
+	get_material(untex_shad_mat, 1).add_cube_to_verts(c, apply_light_color(c)); // untextured?, all faces
 }
 
 void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bool no_shelves) {
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	rgeom_mat_t &mat(get_wood_material(tscale));
-	unsigned const skip_faces(!get_face_mask(c.dim, !c.dir)); // skip back face
+	rgeom_mat_t &wood_mat(get_wood_material(tscale));
+	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
 	float const depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed
 	cube_t back(c), rest(c);
 	back.d[c.dim] [c.dir] += 0.94*depth;
 	rest.d[c.dim][!c.dir]  = back.d[c.dim][c.dir];
-	mat.add_cube_to_verts(back, color, skip_faces);
+	wood_mat.add_cube_to_verts(back, color, skip_faces);
 	cube_t top(rest);
 	top.z1() += 0.96*c.dz();
 	rest.z2() = top.z1();
-	mat.add_cube_to_verts(top, color, skip_faces);
+	wood_mat.add_cube_to_verts(top, color, skip_faces);
+	// add shelves
 	rand_gen_t rgen;
 	rgen.set_state(c.obj_id+1, c.room_id+1);
 	unsigned const num_shelves(no_shelves ? 0 : (3 + ((rgen.rand() + c.obj_id)%3))); // 3-5
-	float const shelf_dz(c.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
-	unsigned const NUM_COLORS = 10;
-	colorRGBA const book_colors[NUM_COLORS] = {BLACK, BLACK, WHITE, BLUE, BLUE, RED, ORANGE, GRAY, GREEN, BROWN};
+	float const shelf_dz(rest.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
 	cube_t middle(rest);
-	room_object_t book(c); // copy properties from bookcase
-	book.type = TYPE_BOOK;
+	cube_t shelves[5];
 	
 	for (unsigned d = 0; d < 2; ++d) { // left/right sides
 		cube_t lr(rest);
 		lr.d[!c.dim][d] += 0.94*(d ? -1.0 : 1.0)*c.get_sz_dim(!c.dim);
-		mat.add_cube_to_verts(lr, color, skip_faces);
+		wood_mat.add_cube_to_verts(lr, color, skip_faces);
 		middle.d[!c.dim][!d] = lr.d[!c.dim][d];
 	}
 	for (unsigned i = 0; i < num_shelves; ++i) {
-		cube_t shelf(middle);
+		cube_t &shelf(shelves[i]);
+		shelf = middle; // copy XY parts
 		shelf.z1() += (i+0.25)*shelf_dz;
 		shelf.z2()  = shelf.z1() + shelf_thick;
-		get_wood_material(tscale).add_cube_to_verts(shelf, color, skip_faces); // Note: mat reference may be invalidated by adding books
-		unsigned const num_spaces(12 + (rgen.rand()%9));
+		wood_mat.add_cube_to_verts(shelf, color, skip_faces); // Note: mat reference may be invalidated by adding books
+	}
+	// add books; may invalidate wood_mat
+	unsigned const NUM_COLORS = 16;
+	colorRGBA const book_colors[NUM_COLORS] = {BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
+	rgeom_mat_t &book_mat(get_material(untex_shad_mat, 1)); // shadowed?
+	unsigned const book_skip_faces(skip_faces | 1); // skip back face and bottom
+
+	for (unsigned i = 0; i < num_shelves; ++i) {
+		if (rgen.rand_float() < 0.2) continue; // no books on this shelf
+		cube_t const &shelf(shelves[i]);
+		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 books per shelf
 		float const book_space(shelf.get_sz_dim(!c.dim)/num_spaces);
-		float pos(shelf.d[!c.dim][0]);
+		float pos(shelf.d[!c.dim][0]), last_book_pos(pos);
+		unsigned skip_mask(0);
 
 		for (unsigned n = 0; n < num_spaces; ++n) {
-			float const width(book_space*rgen.rand_uniform(0.8, 1.2));
-			if (rgen.rand_float() < 0.25) {pos += width; continue;} // skip this book
-			book.z1() = shelf.z2();
-			book.z2() = shelf.z2() + (shelf_dz - shelf_thick)*rgen.rand_uniform(0.6, 0.95);
-			book.d[c.dim][ c.dir] = shelf.d[c.dim][ c.dir] + depth*rgen.rand_uniform(-0.1, 0.4); // facing out
-			book.d[c.dim][!c.dir] = shelf.d[c.dim][!c.dir]; // facing in
-			book.d[!c.dim][0] = pos;
-			book.d[!c.dim][1] = pos + width;
-			book.color = book_colors[rgen.rand() % NUM_COLORS];
-			add_book(book);
-			pos += width;
+			if (rgen.rand_float() < 0.12) {
+				unsigned const skip_end(n + (rgen.rand()%8) + 1); // skip 1-8 books
+				for (; n < skip_end; ++n) {skip_mask |= (1<<n);}
+			}
 		}
+		for (unsigned n = 0; n < num_spaces; ++n) {
+			float const width(book_space*rgen.rand_uniform(0.7, 1.3));
+			if (skip_mask & (1<<n)) {pos += width; continue;} // skip this book
+			float const height((shelf_dz - shelf_thick)*rgen.rand_uniform(0.6, 0.98));
+			float const right_pos(min((pos + width), shelf.d[!c.dim][1]));
+			cube_t book;
+			book.d[c.dim][ c.dir] = shelf.d[c.dim][ c.dir] + depth*rgen.rand_uniform(0.0, 0.25); // facing out
+			book.d[c.dim][!c.dir] = shelf.d[c.dim][!c.dir]; // facing in
+
+			if ((right_pos - last_book_pos) > 1.1f*height && rgen.rand_float() < 0.5) { // book has space to fall over 50% of the time
+				book.d[!c.dim][0] = last_book_pos + rgen.rand_uniform(0.0, (right_pos - last_book_pos - height)); // shift a random amount within the gap
+				book.d[!c.dim][1] = book.d[!c.dim][0] + height;
+				book.z2() = shelf.z2() + width;
+			}
+			else { // upright
+				book.d[!c.dim][0] = pos;
+				book.d[!c.dim][1] = right_pos; // clamp to edge of bookcase interior
+				book.z2() = shelf.z2() + height;
+			}
+			book.z1() = shelf.z2();
+			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_COLORS]);
+			book_mat.add_cube_to_verts(book, apply_light_color(c, book_color), book_skip_faces); // what about slight random rotation/tilt?
+			pos += width;
+			last_book_pos = pos;
+		} // for n
 	} // for i
 }
 
