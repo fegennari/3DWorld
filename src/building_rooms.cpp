@@ -714,11 +714,13 @@ void building_materials_t::draw(shader_t &s, bool shadow_only, bool skip_small_o
 }
 
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
+	float const leg_width(0.5f*width*(c.dx() + c.dy())); // make legs square
+
 	for (unsigned y = 0; y < 2; ++y) {
 		for (unsigned x = 0; x < 2; ++x) {
 			cube_t leg(c);
-			leg.d[0][x] += (1.0f - width)*(x ? -1.0f : 1.0f)*c.dx();
-			leg.d[1][y] += (1.0f - width)*(y ? -1.0f : 1.0f)*c.dy();
+			leg.d[0][x] += (x ? -1.0f : 1.0f)*(c.dx() - leg_width);
+			leg.d[1][y] += (y ? -1.0f : 1.0f)*(c.dy() - leg_width);
 			cubes[2*y+x] = leg;
 		}
 	}
