@@ -23,7 +23,33 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) c
 	}
 	return 0;
 }
+bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad) const {
+	cube_t place_area(room);
+	if (room_pad != 0.0f) {place_area.expand_by_xy(-room_pad);} // shrink by dmin
+	if (!place_area.contains_cube_xy(c)) return 0; // not contained in interior part of the room
+	if (is_cube_close_to_doorway(c, 0.0, inc_open_doors)) return 0; // too close to a doorway
+	if (interior && interior->is_blocked_by_stairs_or_elevator(c)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
+	if (has_bcube_int(c, blockers)) return 0; // Note: ignores dmin
+	return 1;
+}
 
+bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
+	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool is_lit)
+{
+	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_sz(0.1*window_vspacing); // half size
+	point chair_pos(place_pos); // same starting center and z1
+	chair_pos[dim] += (dir ? -1.0f : 1.0f)*rgen.rand_uniform(-0.5, 1.2)*chair_sz;
+	cube_t chair(chair_pos, chair_pos);
+	chair.z2() += 0.4*get_window_vspace(); // chair height
+	chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
+	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0; // check proximity to doors
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+	objs.back().color = chair_color;
+	return 1;
+}
+
+// Note: must be first placed object
 bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit)
 {
@@ -40,7 +66,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 	llc.z = table_pos.z; // bottom
 	urc.z = table_pos.z + 0.2*window_vspacing;
 	cube_t table(llc, urc);
-	if (!is_valid_placement_for_room(table, room, blockers, room_pad)) return 0; // check proximity to doors
+	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, obj_flags, tot_light_amt);
 	float const chair_sz(0.1*window_vspacing); // half size
 
@@ -49,15 +75,10 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (rgen.rand_bool()) continue; // 50% of the time
 			point chair_pos(table_pos); // same starting center and z1
-			chair_pos[dim] += (dir ? -1.0f : 1.0f)*(rgen.rand_uniform(-0.5, 1.2)*chair_sz + table_sz[dim]);
-			cube_t chair(chair_pos, chair_pos);
-			chair.z2() += 0.4*window_vspacing; // chair height
-			chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
-			if (!is_valid_placement_for_room(chair, room, blockers, room_pad)) continue; // check proximity to doors
-			objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, obj_flags, tot_light_amt);
-			objs.back().color = chair_color;
-		} // for dir
-	} // for dim
+			chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
+			add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, is_lit);
+		}
+	}
 	return 1;
 }
 
@@ -93,6 +114,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	} // for n
 }
 
+// Note: no blockers for people
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -101,13 +123,13 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 	float const width(0.4*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen.rand_uniform(1.0, 1.2));
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
+	cube_t c;
+	c.z1() = zval;
+	c.z2() = zval + height;
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bookcase
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 		if (room.d[dim][dir] == part.d[dim][dir]) continue; // don't place against an exterior wall/window (though check is too strong)
-		cube_t c;
-		c.z1() = zval;
-		c.z2() = zval + height;
 		c.d[dim][ dir] = room_bounds.d[dim][dir]; // against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
@@ -116,6 +138,44 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt); // Note: dir faces into the room, not the wall
 		objs.back().obj_id = (uint16_t)objs.size();
+		return 1; // done/success
+	} // for n
+	return 0; // not placed
+}
+
+// Note: must be first placed object
+// Note: no blockers for people
+bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
+	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
+{
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	float const vspace(get_window_vspace());
+	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
+	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.36*vspace*rgen.rand_uniform(1.0, 1.2));
+	assert(room.part_id < parts.size());
+	cube_t const &part(parts[room.part_id]);
+	cube_t c;
+	c.z1() = zval;
+	c.z2() = zval + height;
+
+	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a desk
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+		bool const against_ext_wall(room.d[dim][dir] == part.d[dim][dir]); // make short if against an exterior wall (TODO: conservative)
+		c.d[dim][ dir] = room_bounds.d[dim][dir] + rgen.rand_uniform(0.1, 1.0)*(dir ? -1.0 : 1.0)*get_wall_thickness(); // almost against this wall
+		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
+		c.d[!dim][0] = pos - 0.5*width;
+		c.d[!dim][1] = pos + 0.5*width;
+		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
+		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (against_ext_wall ? SHAPE_CUBE : SHAPE_TALL));
+		objs.back().obj_id = (uint16_t)objs.size();
+		if (rgen.rand_float() < 0.1) return 1; // 10% chance of no chair
+		point chair_pos;
+		chair_pos.z = zval;
+		chair_pos[dim]  = c.d[dim][!dir];
+		chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
+		add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, is_lit);
 		return 1; // done/success
 	} // for n
 	return 0; // not placed
@@ -376,16 +436,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			cube_t avoid_cube;
 
 			// place room objects
-			if (rgen.rand_float() < 0.95) { // 95% of the time
+			if (rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) { // 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				// place a table and maybe some chairs near the center of the room if it's not a hallway
 				added_tc = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
-				
-				if (!added_tc) {
-					// TODO: try to place a desk instead
-				}
-				if (objs.size() > objs_start) { // an object was placed
-					// TODO: maybe add a book on top of objs[objs_start]
-				}
+			}
+			if (!added_tc) {add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);} // try to place a desk if there's no table
+
+			if (objs.size() > objs_start) { // an object was placed
+				// TODO: maybe add a book on top of objs[objs_start]
 			}
 			if (is_house) { // place house-specific items
 				if (rgen.rand_float() < 0.8) { // 80% of the time
@@ -935,8 +993,11 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	get_wood_material(tscale).add_cube_to_verts(top, color); // all faces drawn
 	add_tc_legs(legs_bcube, color, 0.10, tscale);
-	// TODO - add back/top
-	//add_bookcase(c_top_back, tscale, 1); // no_shelves=1
+
+	if (c.shape == SHAPE_TALL) {
+		// TODO - add back/top
+		//add_bookcase(c_top_back, tscale, 1); // no_shelves=1
+	}
 }
 
 void building_room_geom_t::add_trashcan(room_object_t const &c) {

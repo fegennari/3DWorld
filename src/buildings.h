@@ -189,7 +189,7 @@ struct draw_range_t {
 };
 
 enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, NUM_TYPES};
-enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U};
+enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U, SHAPE_TALL};
 enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED};
 
 // object flags, currently used for room lights
@@ -519,7 +519,7 @@ private:
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	cube_t get_part_containing_pt(point const &pt) const;
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0, bool inc_open=0) const;
-	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float room_pad) const;
+	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad=0.0) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;
 	bool is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad, bool check_walls=1) const;
@@ -528,10 +528,13 @@ private:
 	void add_or_extend_elevator(elevator_t const &elevator, bool add);
 	void remove_intersecting_roof_cubes(cube_t const &c);
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const;
+	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
+		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool is_lit);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit);
 	void add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool check_last_obj);
 	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
+	bool add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	void add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, cube_t const &avoid_cube, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;

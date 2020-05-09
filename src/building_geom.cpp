@@ -1629,15 +1629,6 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
 	return has_bcube_int(tc, stairwells); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
-bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, float room_pad) const {
-	cube_t place_area(room);
-	if (room_pad != 0.0f) {place_area.expand_by_xy(-room_pad);} // shrink by dmin
-	if (!place_area.contains_cube_xy(c)) return 0; // not contained in interior part of the room
-	if (is_cube_close_to_doorway    (c)) return 0; // too close to a doorway
-	if (interior && interior->is_blocked_by_stairs_or_elevator(c)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
-	if (has_bcube_int(c, blockers)) return 0; // Note: ignores dmin
-	return 1;
-}
 
 void building_interior_t::finalize() {
 	remove_excess_cap(floors);
