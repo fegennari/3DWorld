@@ -1171,6 +1171,8 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					test_bcube.expand_by_xy(wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
 					if (!check_cube_contained_in_part(test_bcube))        {door = orig_door; continue;} // bad placement (extends outside part), revert
 					if (has_bcube_int(test_bcube, interior->walls[!dim])) {door = orig_door; continue;} // bad placement (hits perp wall), revert
+					if (has_bcube_int(test_bcube, interior->stairwells))  {door = orig_door; continue;} // bad placement (hits stairs), revert
+					if (has_bcube_int(test_bcube, interior->elevators))   {door = orig_door; continue;} // bad placement (hits elevator), revert
 					break; // done
 				} // for angle
 			}
