@@ -937,9 +937,9 @@ void building_room_geom_t::add_book(room_object_t const &c) {
 	pages.expand_by_xy(-indent);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
 	colorRGBA const color(apply_light_color(c));
-	mat.add_cube_to_verts(bot,   color, 1); // untextured, skip bottom face
+	mat.add_cube_to_verts(bot,   color, EF_Z1); // untextured, skip bottom face
 	mat.add_cube_to_verts(top,   color, 0); // untextured, all faces
-	mat.add_cube_to_verts(spine, color, 3); // untextured, skip top/bottom face
+	mat.add_cube_to_verts(spine, color, (EF_Z1 | EF_Z2)); // untextured, skip top/bottom face
 	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), 3); // untextured, skip top/bottom face (could also skip face facing spine)
 }
 
@@ -947,30 +947,31 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
+	unsigned const skip_faces_shelves(skip_faces | (c.dir ? (EF_X1 | EF_X2) : (EF_Y1 | EF_Y2))); // skip back face and sides
 	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
 	float const side_thickness(0.06*sides_scale*width);
-	cube_t back(c), rest(c);
-	back.d[c.dim] [c.dir] += 0.94*depth;
-	rest.d[c.dim][!c.dir]  = back.d[c.dim][c.dir];
-	wood_mat.add_cube_to_verts(back, color, skip_faces);
-	cube_t top(rest);
-	top.z1() += c.dz() - side_thickness; // make same width as sides
-	rest.z2() = top.z1();
-	wood_mat.add_cube_to_verts(top, color, skip_faces);
-	cube_t middle(rest);
+	cube_t middle(c);
 
 	for (unsigned d = 0; d < 2; ++d) { // left/right sides
-		cube_t lr(rest);
+		cube_t lr(c);
 		lr.d[!c.dim][d] += (d ? -1.0f : 1.0f)*(width - side_thickness);
-		wood_mat.add_cube_to_verts(lr, color, skip_faces);
+		wood_mat.add_cube_to_verts(lr, color, (skip_faces | EF_Z1)); // side
 		middle.d[!c.dim][!d] = lr.d[!c.dim][d];
 	}
+	cube_t top(middle);
+	top.z1()   += c.dz() - side_thickness; // make same width as sides
+	middle.z2() = top.z1();
+	wood_mat.add_cube_to_verts(top, color, skip_faces_shelves); // top
+	cube_t back(middle);
+	back.d[c.dim] [c.dir]  += 0.94*depth;
+	middle.d[c.dim][!c.dir] = back.d[c.dim][c.dir];
+	wood_mat.add_cube_to_verts(back, color, get_face_mask(c.dim, c.dir)); // back - only face oriented outward
 	if (no_shelves) return;
 	// add shelves
 	rand_gen_t rgen;
 	rgen.set_state(c.obj_id+1, c.room_id+1);
 	unsigned const num_shelves(3 + ((rgen.rand() + c.obj_id)%3)); // 3-5
-	float const shelf_dz(rest.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
+	float const shelf_dz(middle.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
 	cube_t shelves[5];
 	
 	for (unsigned i = 0; i < num_shelves; ++i) {
@@ -978,13 +979,13 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 		shelf = middle; // copy XY parts
 		shelf.z1() += (i+0.25)*shelf_dz;
 		shelf.z2()  = shelf.z1() + shelf_thick;
-		wood_mat.add_cube_to_verts(shelf, color, skip_faces); // Note: mat reference may be invalidated by adding books
+		wood_mat.add_cube_to_verts(shelf, color, skip_faces_shelves); // Note: mat reference may be invalidated by adding books
 	}
 	// add books; may invalidate wood_mat
 	unsigned const NUM_COLORS = 16;
 	colorRGBA const book_colors[NUM_COLORS] = {BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 	rgeom_mat_t &book_mat(get_material(untex_shad_mat, 1)); // shadowed?
-	unsigned const book_skip_faces(skip_faces | 1); // skip back face and bottom
+	unsigned const book_skip_faces(skip_faces | EF_Z1); // skip back face and bottom
 
 	for (unsigned i = 0; i < num_shelves; ++i) {
 		if (rgen.rand_float() < 0.2) continue; // no books on this shelf
