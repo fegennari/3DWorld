@@ -166,23 +166,23 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
-	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.36*vspace*rgen.rand_uniform(1.0, 1.2));
+	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
 	cube_t c;
 	c.z1() = zval;
 	c.z2() = zval + height;
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a desk
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		bool const against_ext_wall(is_exterior_room_wall(room, zval, dim, dir)); // make short if against an exterior wall
 		c.d[dim][ dir] = room_bounds.d[dim][dir] + rgen.rand_uniform(0.1, 1.0)*(dir ? -1.0 : 1.0)*get_wall_thickness(); // almost against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
 		c.d[!dim][0] = pos - 0.5*width;
 		c.d[!dim][1] = pos + 0.5*width;
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
-		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (against_ext_wall ? SHAPE_CUBE : SHAPE_TALL));
+		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && !is_exterior_room_wall(room, zval, dim, dir)); // make short if against an exterior wall or in an office
+		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		objs.back().obj_id = (uint16_t)objs.size();
-		if (rgen.rand_float() < 0.1) return 1; // 10% chance of no chair
+		if (rgen.rand_float() < 0.05) return 1; // 5% chance of no chair
 		point chair_pos;
 		chair_pos.z = zval;
 		chair_pos[dim]  = c.d[dim][!dir];
@@ -914,33 +914,36 @@ void building_room_geom_t::add_book(room_object_t const &c) {
 	get_material(untex_shad_mat, 1).add_cube_to_verts(c, apply_light_color(c)); // untextured?, all faces
 }
 
-void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bool no_shelves) {
+void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bool no_shelves, float sides_scale) {
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
-	float const depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed
+	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
+	float const side_thickness(0.06*sides_scale*width);
 	cube_t back(c), rest(c);
 	back.d[c.dim] [c.dir] += 0.94*depth;
 	rest.d[c.dim][!c.dir]  = back.d[c.dim][c.dir];
 	wood_mat.add_cube_to_verts(back, color, skip_faces);
 	cube_t top(rest);
-	top.z1() += 0.96*c.dz();
+	top.z1() += c.dz() - side_thickness; // make same width as sides
 	rest.z2() = top.z1();
 	wood_mat.add_cube_to_verts(top, color, skip_faces);
-	// add shelves
-	rand_gen_t rgen;
-	rgen.set_state(c.obj_id+1, c.room_id+1);
-	unsigned const num_shelves(no_shelves ? 0 : (3 + ((rgen.rand() + c.obj_id)%3))); // 3-5
-	float const shelf_dz(rest.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
 	cube_t middle(rest);
-	cube_t shelves[5];
-	
+
 	for (unsigned d = 0; d < 2; ++d) { // left/right sides
 		cube_t lr(rest);
-		lr.d[!c.dim][d] += 0.94*(d ? -1.0 : 1.0)*c.get_sz_dim(!c.dim);
+		lr.d[!c.dim][d] += (d ? -1.0 : 1.0)*(width - side_thickness);
 		wood_mat.add_cube_to_verts(lr, color, skip_faces);
 		middle.d[!c.dim][!d] = lr.d[!c.dim][d];
 	}
+	if (no_shelves) return;
+	// add shelves
+	rand_gen_t rgen;
+	rgen.set_state(c.obj_id+1, c.room_id+1);
+	unsigned const num_shelves(3 + ((rgen.rand() + c.obj_id)%3)); // 3-5
+	float const shelf_dz(rest.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
+	cube_t shelves[5];
+	
 	for (unsigned i = 0; i < num_shelves; ++i) {
 		cube_t &shelf(shelves[i]);
 		shelf = middle; // copy XY parts
@@ -999,16 +1002,18 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	// desk top and legs, similar to add_table()
 	cube_t top(c), legs_bcube(c);
-	top.z1() += 0.5*c.dz();
-	top.z2()  = top.z1() + 0.1*c.dz();
+	top.z1() += 0.8*c.dz();
 	legs_bcube.z2() = top.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	get_wood_material(tscale).add_cube_to_verts(top, color); // all faces drawn
 	add_tc_legs(legs_bcube, color, 0.10, tscale);
 
-	if (c.shape == SHAPE_TALL) {
-		// TODO - add back/top
-		//add_bookcase(c_top_back, tscale, 1); // no_shelves=1
+	if (c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
+		room_object_t c_top_back(c);
+		c_top_back.z1() = top.z2();
+		c_top_back.z2() = top.z2() + 1.8*c.dz();
+		c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim);
+		add_bookcase(c_top_back, tscale, 1, 0.4); // no_shelves=1, side_width=0.4
 	}
 }
 
