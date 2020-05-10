@@ -23,6 +23,7 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) c
 	}
 	return 0;
 }
+
 bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad) const {
 	cube_t place_area(room);
 	if (room_pad != 0.0f) {place_area.expand_by_xy(-room_pad);} // shrink by dmin
@@ -30,6 +31,21 @@ bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room
 	if (is_cube_close_to_doorway(c, 0.0, inc_open_doors)) return 0; // too close to a doorway
 	if (interior && interior->is_blocked_by_stairs_or_elevator(c)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
 	if (has_bcube_int(c, blockers)) return 0; // Note: ignores dmin
+	return 1;
+}
+
+bool building_t::is_exterior_room_wall(room_t const &room, float zval, bool dim, bool dir) const { // Note: zval is for the floor
+	if (room.d[dim][dir] == bcube.d[dim][dir]) return 1; // at bcube border
+	assert(room.part_id < parts.size());
+	cube_t const &part(parts[room.part_id]);
+	if (room.d[dim][dir] != part.d[dim][dir]) return 0; // interior to part
+	if (real_num_parts == 1) return 1;
+	
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (p->d[dim][!dir] != room.d[dim][dir]) continue; // not opposite wall
+		if (p->d[!dim][0] > room.d[!dim][0] || p->d[!dim][1] < room.d[!dim][1]) continue; // wall not contained
+		if (zval + get_floor_thickness() < p->z2()) return 0; // this part covers the wall in z (assuming no overhangs), so wall is interior
+	}
 	return 1;
 }
 
@@ -121,15 +137,13 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.4*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen.rand_uniform(1.0, 1.2));
-	assert(room.part_id < parts.size());
-	cube_t const &part(parts[room.part_id]);
 	cube_t c;
 	c.z1() = zval;
 	c.z2() = zval + height;
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bookcase
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		if (room.d[dim][dir] == part.d[dim][dir]) continue; // don't place against an exterior wall/window (though check is too strong)
+		if (is_exterior_room_wall(room, zval, dim, dir)) continue; // don't place against an exterior wall/window
 		c.d[dim][ dir] = room_bounds.d[dim][dir]; // against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
@@ -153,15 +167,13 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.36*vspace*rgen.rand_uniform(1.0, 1.2));
-	assert(room.part_id < parts.size());
-	cube_t const &part(parts[room.part_id]);
 	cube_t c;
 	c.z1() = zval;
 	c.z2() = zval + height;
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a desk
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		bool const against_ext_wall(room.d[dim][dir] == part.d[dim][dir]); // make short if against an exterior wall (TODO: conservative)
+		bool const against_ext_wall(is_exterior_room_wall(room, zval, dim, dir)); // make short if against an exterior wall
 		c.d[dim][ dir] = room_bounds.d[dim][dir] + rgen.rand_uniform(0.1, 1.0)*(dir ? -1.0 : 1.0)*get_wall_thickness(); // almost against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
