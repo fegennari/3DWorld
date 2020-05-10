@@ -167,7 +167,8 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
-	cube_t c;
+	unsigned num_placed(0);
+	cube_t c, placed_desk;
 	c.z1() = zval;
 	c.z2() = zval + height;
 
@@ -178,19 +179,30 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
 		c.d[!dim][0] = pos - 0.5*width;
 		c.d[!dim][1] = pos + 0.5*width;
+		if (num_placed > 0 && c.intersects(placed_desk)) continue; // intersects previously placed desk
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && !is_exterior_room_wall(room, zval, dim, dir)); // make short if against an exterior wall or in an office
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		objs.back().obj_id = (uint16_t)objs.size();
-		if (rgen.rand_float() < 0.05) return 1; // 5% chance of no chair
-		point chair_pos;
-		chair_pos.z = zval;
-		chair_pos[dim]  = c.d[dim][!dir];
-		chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
-		add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, is_lit);
-		return 1; // done/success
+		cube_t bc(c);
+
+		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
+			point chair_pos;
+			chair_pos.z = zval;
+			chair_pos[dim]  = c.d[dim][!dir];
+			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
+			
+			if (add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, is_lit)) {
+				cube_t const &chair(objs.back());
+				if (num_placed > 0 && chair.intersects(placed_desk)) {objs.pop_back();} // intersects previously placed desk, remove it
+				else {bc.union_with_cube(chair);} // include the chair
+			}
+		}
+		++num_placed;
+		if (room.is_office && num_placed == 1 && rgen.rand_float() < 0.5) {placed_desk = bc; continue;} // allow two desks in one office
+		break; // done/success
 	} // for n
-	return 0; // not placed
+	return (num_placed > 0);
 }
 
 void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
