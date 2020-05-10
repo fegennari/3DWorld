@@ -102,11 +102,12 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	unsigned const NUM_COLORS = 6;
 	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
-	float const radius(0.02f*(3 + rr)*get_window_vspace()), height(0.5f*(3 + rar)*radius);
+	float const radius(0.02f*(3 + rr)*get_window_vspace()), height(0.54f*(3 + rar)*radius);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
+	bool const cylin((mat_ix + 13*real_num_parts + 5*hallway_dim + int((zval - room.z1())/get_window_vspace())) & 1); // varies per-building, per-floor
 	point center;
 	center.z = zval + 0.001*get_window_vspace(); // slightly above the floor to avoid z-fighting
 	unsigned skip_wall(4); // start at an invalid value
@@ -124,7 +125,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 		c.expand_by_xy(radius);
 		c.z2() += height;
 		if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CYLIN);
+		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (cylin ? room_obj_shape::SHAPE_CYLIN : room_obj_shape::SHAPE_CUBE));
 		objs.back().color = colors[rgen.rand()%NUM_COLORS];
 		return; // done
 	} // for n
@@ -485,7 +486,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			bool const was_hung(hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
-			if (rgen.rand_float() < 0.75) { // 75% of the time
+			if (rgen.rand_float() < 0.8) { // 80% of the time
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && r->is_office)); // no trashcans on same wall as office whiteboard
 			}
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
@@ -1049,11 +1050,42 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
+	colorRGBA const color(apply_light_color(c));
 
 	if (c.shape == room_obj_shape::SHAPE_CYLIN) {
-		mat.add_vcylin_to_verts(c, apply_light_color(c), 1, 0, 1, 0, 1, 0.7, 1.0); // untextured, bottom only, two_sided cylinder with inverted bottom normal
+		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 0, 1, 0.7, 1.0); // untextured, bottom only, two_sided cylinder with inverted bottom normal
 	}
-	else {} // TODO: rounded cube
+	else { // sloped cube; this shape is rather unique, so is drawn inline; untextured
+		cube_t base(c);
+		base.expand_by_xy(vector3d(-0.2*c.dx(), -0.2*c.dy(), 0.0)); // shrink base by 40%
+		auto &verts(mat.quad_verts);
+		rgeom_mat_t::vertex_t v;
+		v.set_c4(color);
+		v.set_ortho_norm(2, 1); // +z
+		
+		for (unsigned i = 0; i < 4; ++i) { // bottom
+			v.v.assign(base.d[0][i==0||i==1], base.d[1][i==1||i==2], base.z1());
+			verts.push_back(v);
+		}
+		for (unsigned dim = 0; dim < 2; ++dim) { // x,y
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				unsigned const six(verts.size());
+
+				for (unsigned i = 0; i < 4; ++i) {
+					bool const tb(i==1||i==2);
+					v.v[ dim] = (tb ? c : base).d[ dim][dir];
+					v.v[!dim] = (tb ? c : base).d[!dim][i==0||i==1];
+					v.v.z = c.d[2][tb];
+					verts.push_back(v);
+				}
+				for (unsigned i = 0; i < 4; ++i) {verts.push_back(verts[six+3-i]);} // add reversed quad for opposing face
+				norm_comp n(cross_product((verts[six].v - verts[six+1].v), (verts[six].v - verts[six+2].v)).get_norm());
+				for (unsigned i = 0; i < 4; ++i) {verts[six+i].set_norm(n);} // front face
+				n.invert_normal();
+				for (unsigned i = 4; i < 8; ++i) {verts[six+i].set_norm(n);} // back face
+			} // for dir
+		} // for dim
+	}
 }
 
 void building_room_geom_t::clear() {
