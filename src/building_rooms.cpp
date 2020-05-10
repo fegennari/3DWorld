@@ -1036,7 +1036,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	legs_bcube.z2() = top.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	get_wood_material(tscale).add_cube_to_verts(top, color); // all faces drawn
-	add_tc_legs(legs_bcube, color, 0.10, tscale);
+	add_tc_legs(legs_bcube, color, 0.06, tscale);
 
 	if (c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
 		room_object_t c_top_back(c);
