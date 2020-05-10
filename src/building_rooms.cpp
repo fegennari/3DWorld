@@ -215,21 +215,20 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 	objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
 }
 
-bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, cube_t const &avoid_cube, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	if (!room_object_t::enable_pictures()) return 0; // disabled
 	if (!is_house && !room.is_office) return 0; // houses and offices only for now
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
 	if (room.is_hallway ) return 0; // no pictures in hallways (yet)
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
-	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
-	bool const use_avoid_cube(!avoid_cube.is_all_zeros());
+	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness);
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool was_hung(0);
 
 	if (room.is_office) { // add whiteboards
-		if ((rgen.rand() & 3) == 0) return 0; // skip 25% of the time
+		if (rgen.rand_float() < 0.2) return 0; // skip 20% of the time
 		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
 
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
@@ -241,7 +240,10 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, cub
 				c.z1() = zval + 0.25*floor_height; c.z2() = zval + 0.8*floor_height;
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
 				c.d[!dim][0] += xy_space; c.d[!dim][1] -= xy_space;
-				if (use_avoid_cube && c.intersects_no_adj(avoid_cube)) continue;
+				cube_t keepout(c);
+				keepout.z1() = zval; // extend to the floor
+				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
+				if (overlaps_other_room_obj(keepout, objs_start)) continue;
 				if (is_cube_close_to_doorway(c)) continue; // bad placement (inc_open=1?)
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
 				return 1; // done, only need to add one
@@ -253,7 +255,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, cub
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
 			if (fabs(room.d[dim][dir] - part.d[dim][dir]) < wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
-			if ((rgen.rand() & 3) == 0) continue; // skip 25% of the time
+			if (rgen.rand_float() < 0.2) continue; // skip 20% of the time
 			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)), width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
 			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
 			point center;
@@ -273,7 +275,10 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, cub
 				c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
 				cube_t tc(c);
 				tc.d[!dim][0] -= 0.1*width; tc.d[!dim][1] += 0.1*width; // expand slightly to account for frame
-				if (use_avoid_cube && c.intersects_no_adj(avoid_cube)) continue;
+				cube_t keepout(c);
+				keepout.z1() = zval; // extend to the floor
+				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
+				if (overlaps_other_room_obj(keepout, objs_start)) continue;
 				if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) continue; // bad placement
 				objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
 				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
@@ -466,7 +471,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 				}
 			}
-			bool const was_hung(hang_pictures_in_room(rgen, *r, avoid_cube, room_center.z, room_id, tot_light_amt, is_lit));
+			bool const was_hung(hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
 			if (rgen.rand_float() < 0.75) { // 75% of the time
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && r->is_office)); // no trashcans on same wall as office whiteboard
@@ -932,7 +937,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 
 	for (unsigned d = 0; d < 2; ++d) { // left/right sides
 		cube_t lr(rest);
-		lr.d[!c.dim][d] += (d ? -1.0 : 1.0)*(width - side_thickness);
+		lr.d[!c.dim][d] += (d ? -1.0f : 1.0f)*(width - side_thickness);
 		wood_mat.add_cube_to_verts(lr, color, skip_faces);
 		middle.d[!c.dim][!d] = lr.d[!c.dim][d];
 	}
