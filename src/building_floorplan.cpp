@@ -664,10 +664,10 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						} // for s
 					}
 					if (!valid) continue;
-					cube_t cand(wall);
+					cube_t cand(wall); // sub-section of wall that will become a doorway
 					cand.d[!d][0] = lo_pos; cand.d[!d][1] = hi_pos;
 					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
-					if (interior->is_blocked_by_stairs_or_elevator(wall, doorway_width, elevators_only)) continue; // stairs in the way, skip; should we assert !pref_split?
+					if (interior->is_blocked_by_stairs_or_elevator(cand, doorway_width, elevators_only)) continue; // stairs in the way, skip; should we assert !pref_split?
 					bool const open_dir(wall.get_center_dim(d) > bcube.get_center_dim(d)); // doors open away from the building center
 					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0, walls, interior->doors); // Note: modifies wall
 					was_split = 1;
