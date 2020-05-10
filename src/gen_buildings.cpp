@@ -2580,7 +2580,7 @@ public:
 					building_mat_t const &mat(b->get_material());
 					unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size()) + 36*b->interior->elevators.size());
 					unsigned const nfloors(b->interior->floors.size());
-					vert_counter.update_count(mat.house_floor_tex.tid, 4*(b->is_house ? (nfloors - b->has_sec_bldg()) : 0));
+					vert_counter.update_count(mat.house_floor_tex.tid, 4*((b->is_house && nfloors > 0) ? (nfloors - b->has_sec_bldg()) : 0));
 					vert_counter.update_count(mat.floor_tex.tid, 4*(b->is_house ? b->has_sec_bldg() : nfloors));
 					vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
 					vert_counter.update_count(mat.wall_tex.tid, nv_wall);
