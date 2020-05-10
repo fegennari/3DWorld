@@ -927,8 +927,20 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 }
 
 void building_room_geom_t::add_book(room_object_t const &c) {
-	// TODO - two cubes, use c.color for cover and WHITE for interior pages
-	get_material(untex_shad_mat, 1).add_cube_to_verts(c, apply_light_color(c)); // untextured?, all faces
+	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
+	float const cov_thickness(0.05*c.dz()), indent(0.05*c.get_sz_dim(c.dim));
+	cube_t bot(c), top(c), spine(c), pages(c);
+	bot.z2() = c.z1() + cov_thickness;
+	top.z1() = c.z2() - cov_thickness;
+	pages.z1() = spine.z1() = bot.z2();
+	pages.z2() = spine.z2() = top.z1();
+	pages.expand_by_xy(-indent);
+	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
+	colorRGBA const color(apply_light_color(c));
+	mat.add_cube_to_verts(bot,   color, 1); // untextured, skip bottom face
+	mat.add_cube_to_verts(top,   color, 0); // untextured, all faces
+	mat.add_cube_to_verts(spine, color, 3); // untextured, skip top/bottom face
+	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), 3); // untextured, skip top/bottom face (could also skip face facing spine)
 }
 
 void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bool no_shelves, float sides_scale) {
