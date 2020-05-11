@@ -949,7 +949,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
-	unsigned const skip_faces_shelves(skip_faces | (c.dir ? (EF_X1 | EF_X2) : (EF_Y1 | EF_Y2))); // skip back face and sides
+	unsigned const skip_faces_shelves(skip_faces | (c.dim ? (EF_X1 | EF_X2) : (EF_Y1 | EF_Y2))); // skip back face and sides
 	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
 	float const side_thickness(0.06*sides_scale*width);
 	cube_t middle(c);
