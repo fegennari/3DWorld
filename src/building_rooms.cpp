@@ -107,7 +107,8 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
-	bool const cylin((mat_ix + 13*real_num_parts + 5*hallway_dim + int((zval - room.z1())/get_window_vspace())) & 1); // varies per-building, per-floor
+	int const floor_ix(int((zval - room.z1())/get_window_vspace()));
+	bool const cylin(((mat_ix + 13*real_num_parts + 5*hallway_dim + 131*floor_ix) % 7) < 4); // varies per-building, per-floor
 	point center;
 	center.z = zval + 0.001*get_window_vspace(); // slightly above the floor to avoid z-fighting
 	unsigned skip_wall(4); // start at an invalid value
