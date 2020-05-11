@@ -985,7 +985,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 	}
 	// add books; may invalidate wood_mat
 	unsigned const NUM_COLORS = 16;
-	colorRGBA const book_colors[NUM_COLORS] = {BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
+	colorRGBA const book_colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 	rgeom_mat_t &book_mat(get_material(untex_shad_mat, 1)); // shadowed?
 	unsigned const book_skip_faces(skip_faces | EF_Z1); // skip back face and bottom
 
