@@ -9,6 +9,9 @@
 
 extern int display_mode;
 
+unsigned const NUM_BOOK_COLORS = 16;
+colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
+
 int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
 
@@ -473,8 +476,17 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (!added_tc) {add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);} // try to place a desk if there's no table
 
-			if (objs.size() > objs_start) { // an object was placed
-				// TODO: maybe add a book on top of objs[objs_start]
+			if (objs.size() > objs_start) { // an object was placed, add a book on top of it
+				cube_t const &desk_or_table(objs[objs_start]);
+				point const center(desk_or_table.get_cube_center());
+				float const book_sz(0.07*get_window_vspace());
+				cube_t book;
+				book.set_from_point(point(center.x, center.y, desk_or_table.z2()));
+				book.expand_by(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
+				book.z2() += book_sz*rgen.rand_uniform(0.1, 0.3);
+				colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
+				uint8_t const flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
+				objs.emplace_back(book, TYPE_BOOK, room_id, rgen.rand_bool(), rgen.rand_bool(), flags, tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
 			}
 			if (is_house) { // place house-specific items
 				if (rgen.rand_float() < 0.8) { // 80% of the time
@@ -930,7 +942,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 
 void building_room_geom_t::add_book(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
-	float const cov_thickness(0.05*c.dz()), indent(0.05*c.get_sz_dim(c.dim));
+	float const cov_thickness(0.125*c.dz()), indent(0.02*c.get_sz_dim(c.dim));
 	cube_t bot(c), top(c), spine(c), pages(c);
 	bot.z2() = c.z1() + cov_thickness;
 	top.z1() = c.z2() - cov_thickness;
@@ -984,8 +996,6 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 		wood_mat.add_cube_to_verts(shelf, color, skip_faces_shelves); // Note: mat reference may be invalidated by adding books
 	}
 	// add books; may invalidate wood_mat
-	unsigned const NUM_COLORS = 16;
-	colorRGBA const book_colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 	rgeom_mat_t &book_mat(get_material(untex_shad_mat, 1)); // shadowed?
 	unsigned const book_skip_faces(skip_faces | EF_Z1); // skip back face and bottom
 
@@ -1023,7 +1033,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 				book.z2() = shelf.z2() + height;
 			}
 			book.z1() = shelf.z2();
-			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_COLORS]);
+			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 			book_mat.add_cube_to_verts(book, apply_light_color(c, book_color), book_skip_faces); // what about slight random rotation/tilt?
 			pos += width;
 			last_book_pos = pos;
