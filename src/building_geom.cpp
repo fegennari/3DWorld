@@ -1169,10 +1169,9 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					for (unsigned i = 0; i < 4; ++i) {door.pts[i][dim] += shift;}
 					cube_t test_bcube(door.get_bcube());
 					test_bcube.expand_by_xy(wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
-					if (!check_cube_contained_in_part(test_bcube))        {door = orig_door; continue;} // bad placement (extends outside part), revert
-					if (has_bcube_int(test_bcube, interior->walls[!dim])) {door = orig_door; continue;} // bad placement (hits perp wall), revert
-					if (has_bcube_int(test_bcube, interior->stairwells))  {door = orig_door; continue;} // bad placement (hits stairs), revert
-					if (has_bcube_int(test_bcube, interior->elevators))   {door = orig_door; continue;} // bad placement (hits elevator), revert
+					if (!check_cube_contained_in_part(test_bcube))              {door = orig_door; continue;} // bad placement (extends outside part), revert
+					if (has_bcube_int(test_bcube, interior->walls[!dim]))       {door = orig_door; continue;} // bad placement (hits perp wall), revert
+					if (interior->is_blocked_by_stairs_or_elevator(test_bcube)) {door = orig_door; continue;} // bad placement (hits stairs or elevator), revert
 					break; // done
 				} // for angle
 			}
@@ -1623,13 +1622,31 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin, 
 	}
 	return 0;
 }
+
+bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width) {
+	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
+		cube_t tc(*s);
+		tc.d[s->dim][0] -= doorway_width; tc.d[s->dim][1] += doorway_width; // add extra space at both ends of stairs
+		if (tc.intersects(bcube)) return 1;
+	}
+	return 0;
+}
+bool has_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, float doorway_width) {
+	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
+		cube_t tc(*e);
+		tc.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
+		if (tc.intersects(bcube)) return 1;
+	}
+	return 0;
+}
 bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only) const {
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
-	if (has_bcube_int(tc, elevators)) return 1;
-	if (elevators_only) return 0;
+	float const doorway_width(doors.empty() ? 0.0 : max(doors.front().dx(), doors.front().dy())); // calculate doorway width from first door
+	if (has_bcube_int(tc, elevators, doorway_width)) return 1;
+	if (elevators_only || stairwells.empty()) return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
-	return has_bcube_int(tc, stairwells); // must check zval to exclude stairs and elevators in parts with other z-ranges
+	return has_bcube_int(tc, stairwells, doorway_width); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
 
 void building_interior_t::finalize() {
