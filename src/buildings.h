@@ -236,6 +236,7 @@ struct rgeom_storage_t {
 	rgeom_storage_t() {}
 	rgeom_storage_t(tid_nm_pair_t const &tex_) : tex(tex_) {}
 	void clear();
+	void swap_vectors(rgeom_storage_t &s);
 	void swap(rgeom_storage_t &s);
 	unsigned get_tot_vert_capacity() const {return (quad_verts.capacity() + itri_verts.capacity());}
 };
@@ -248,7 +249,7 @@ public:
 	unsigned num_qverts, num_itverts, num_ixs; // for drawing
 	bool en_shadows;
 
-	rgeom_mat_t(tid_nm_pair_t const &tex_) : ivbo(0), rgeom_storage_t(tex_), num_qverts(0), num_itverts(0), num_ixs(0), en_shadows(0) {}
+	rgeom_mat_t(tid_nm_pair_t const &tex_) : rgeom_storage_t(tex_), ivbo(0), num_qverts(0), num_itverts(0), num_ixs(0), en_shadows(0) {}
 	unsigned get_tot_vert_count() const {return (num_qverts + num_itverts);}
 	void enable_shadows() {en_shadows = 1;}
 	void clear();

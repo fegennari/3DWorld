@@ -718,7 +718,7 @@ public:
 		// try to find a free list element with the same tex so that we balance out material memory usage/capacity better
 		for (unsigned i = 0; i < free_list.size(); ++i) {
 			if (free_list[i].tex.tid != s.tex.tid) continue;
-			s.swap(free_list[i]);
+			s.swap_vectors(free_list[i]); // transfer existing capacity from free list
 			free_list[i].swap(free_list.back());
 			free_list.pop_back();
 			return; // done
@@ -729,7 +729,7 @@ public:
 	void free(rgeom_storage_t &s) {
 		s.clear(); // in case the caller didn't clear it
 		free_list.push_back(rgeom_storage_t(s.tex)); // record tex of incoming element
-		s.swap(free_list.back()); // transfer existing capacity to free list; clear capacity from s
+		s.swap_vectors(free_list.back()); // transfer existing capacity to free list; clear capacity from s
 	}
 };
 
@@ -740,10 +740,13 @@ void rgeom_storage_t::clear() {
 	itri_verts.clear();
 	indices.clear();
 }
-void rgeom_storage_t::swap(rgeom_storage_t &s) {
+void rgeom_storage_t::swap_vectors(rgeom_storage_t &s) { // Note: doesn't swap tex
 	quad_verts.swap(s.quad_verts);
 	itri_verts.swap(s.itri_verts);
 	indices.swap(s.indices);
+}
+void rgeom_storage_t::swap(rgeom_storage_t &s) {
+	swap_vectors(s);
 	std::swap(tex, s.tex);
 }
 
