@@ -210,6 +210,21 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	return (num_placed > 0);
 }
 
+void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
+	point center(place_on.get_cube_center());
+	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
+	float const book_sz(0.07*get_window_vspace());
+	// book is randomly oriented for tables and rotated 90 degrees from desk orient
+	bool const dim(use_dim_dir ? !place_on.dim : rgen.rand_bool()), dir(use_dim_dir ? (place_on.dir^place_on.dim) : rgen.rand_bool());
+	cube_t book;
+	book.set_from_point(point(center.x, center.y, place_on.z2()));
+	book.expand_by(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
+	book.z2() += book_sz*rgen.rand_uniform(0.1, 0.3);
+	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
+	uint8_t const flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
+	interior->room_geom->objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, flags, tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
+}
+
 void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
 	if (!room_object_t::enable_rugs()) return; // disabled
 	vector3d const room_sz(room.get_size());
@@ -476,17 +491,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (!added_tc) {add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);} // try to place a desk if there's no table
 
-			if (objs.size() > objs_start) { // an object was placed, add a book on top of it
-				cube_t const &desk_or_table(objs[objs_start]);
-				point const center(desk_or_table.get_cube_center());
-				float const book_sz(0.07*get_window_vspace());
-				cube_t book;
-				book.set_from_point(point(center.x, center.y, desk_or_table.z2()));
-				book.expand_by(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
-				book.z2() += book_sz*rgen.rand_uniform(0.1, 0.3);
-				colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
-				uint8_t const flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
-				objs.emplace_back(book, TYPE_BOOK, room_id, rgen.rand_bool(), rgen.rand_bool(), flags, tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
+			if (objs.size() > objs_start) { // an object was placed (table or desk), maybe add a book on top of it
+				if (rgen.rand_float() < (added_tc ? 0.4 : 0.75)*(is_house ? 1.0 : 0.5)*(r->is_office ? 0.75 : 1.0)) {
+					place_book_on_obj(rgen, objs[objs_start], room_id, tot_light_amt, is_lit, !added_tc);
+				}
 			}
 			if (is_house) { // place house-specific items
 				if (rgen.rand_float() < 0.8) { // 80% of the time
@@ -941,7 +949,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 }
 
 void building_room_geom_t::add_book(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0)); // unshadowed, since shadows are too small to have much effect
 	float const cov_thickness(0.125*c.dz()), indent(0.02*c.get_sz_dim(c.dim));
 	cube_t bot(c), top(c), spine(c), pages(c);
 	bot.z2() = c.z1() + cov_thickness;
