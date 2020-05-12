@@ -1067,6 +1067,12 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	}
 }
 
+void building_room_geom_t::add_bed(room_object_t const &c, float tscale) {
+	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	rgeom_mat_t &wood_mat(get_wood_material(tscale));
+	wood_mat.add_cube_to_verts(c, color); // TODO: WRITE
+}
+
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
 	colorRGBA const color(apply_light_color(c));
@@ -1133,8 +1139,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_WBOARD:   return WHITE;
 	case TYPE_BCASE:    return WOOD_COLOR;
 	case TYPE_DESK:     return WOOD_COLOR;
-	case TYPE_TCAN:     return color;
-	default: return color;
+	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	return color; // Note: probably should always set color so that we can return it here
 }
@@ -1159,6 +1164,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_BCASE:   add_bookcase(*i, tscale, 0); break;
 		case TYPE_DESK:    add_desk    (*i, tscale); break;
 		case TYPE_TCAN:    add_trashcan(*i); break;
+		case TYPE_BED:     add_bed     (*i, tscale); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		default: assert(0); // undefined type
 		}

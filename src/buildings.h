@@ -188,7 +188,8 @@ struct draw_range_t {
 	vertex_range_t vr[MAX_DRAW_BLOCKS]; // quad verts only for now
 };
 
-enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, NUM_TYPES};
+enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
+	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U, SHAPE_TALL};
 enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED};
 
@@ -293,6 +294,7 @@ struct building_room_geom_t {
 	void add_book(room_object_t const &c);
 	void add_bookcase(room_object_t const &c, float tscale, bool no_shelves=0, float sides_scale=1.0);
 	void add_desk(room_object_t const &c, float tscale);
+	void add_bed(room_object_t const &c, float tscale);
 	void add_trashcan(room_object_t const &c);
 	void create_static_vbos();
 	void create_dynamic_vbos();
