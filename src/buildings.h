@@ -480,7 +480,8 @@ struct building_t : public building_geom_t {
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
-	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part);
+	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix,
+		unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part_this_stack);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
 	void gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes);
 	void add_stairs_and_elevators(rand_gen_t &rgen);
