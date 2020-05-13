@@ -10,11 +10,13 @@
 
 bool const USE_BKG_THREAD = 1;
 
-extern int MESH_Z_SIZE, display_mode, display_framerate;
+extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
 extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
+
+bool enable_building_people_ai();
 
 
 bool ray_cast_cube(point const &p1, point const &p2, cube_t const &c, vector3d &cnorm, float &t) {
@@ -428,7 +430,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 }
 
 // Note: non const because this caches light_bcubes
-void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube) {
+void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube) {
 
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> const &objs(interior->room_geom->objs);
@@ -439,6 +441,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_near_building(camera_in_building);
+	ped_bcubes.clear();
 
 	if (camera_in_building) {
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
@@ -523,7 +526,21 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		clipped_bc.expand_by_xy(wall_thickness); // expand by wall thickness so that offset exterior doors are properly handled
 		clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC - post clip
-		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
+		bool dynamic_shadows(0);
+
+#if 0 // enable when the dynamic shadows flag is used/shadows are cached
+		if (camera_near_building) {
+			if (camera_surf_collide && camera_in_building && lpos.z > camera_bs.z && clipped_bc.contains_pt(camera_bs)) {dynamic_shadows = 1;} // camera shadow
+			else if (animate2 && enable_building_people_ai()) { // check moving people
+				if (ped_ix >= 0 && ped_bcubes.empty()) {get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes);} // get cubes on first light
+
+				for (auto c = ped_bcubes.begin(); c != ped_bcubes.end(); ++c) {
+					if (lpos.z > c->z2() && c->intersects(clipped_bc)) {dynamic_shadows = 1; break;}
+				}
+			}
+		}
+#endif
+		dl_sources.emplace_back(light_radius, lpos, lpos, color, dynamic_shadows, -plus_z, bwidth); // points down, white for now
 		dl_sources.back().set_custom_bcube(clipped_bc);
 
 		if (camera_near_building && lpos.z > camera_bs.z) { // only when the player is near/inside a building and can't see the light bleeding through the floor

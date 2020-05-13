@@ -494,7 +494,7 @@ struct building_t : public building_geom_t {
 	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) const;
 	bool find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
-	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, cube_t &lights_bcube);
+	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
 	void draw_room_geom(shader_t &s, bool shadow_only, bool skip_small_objs);
 	void gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only);

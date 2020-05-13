@@ -2132,6 +2132,7 @@ public:
 		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || building_draw_windows.empty()) return; // no windows
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		vector<point> points; // reused temporary
+		vect_cube_t ped_bcubes; // reused temporary
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 			if (!lights_bcube.intersects_xy(g->bcube)) continue; // not within light volume (too far from camera)
@@ -2144,7 +2145,7 @@ public:
 				bool const camera_in_this_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
 				// limit room lights to when the player is in a building because we can restrict them to a single floor, otherwise it's too slow
 				if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-				b.add_room_lights(xlate, bi->ix, camera_in_this_building, lights_bcube);
+				b.add_room_lights(xlate, bi->ix, camera_in_this_building, get_ped_ix_for_bix(bi->ix), ped_bcubes, lights_bcube);
 			} // for bi
 		} // for g
 	}
