@@ -746,10 +746,13 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		stairs_dim      = long_dim;
 	}
 	else if (!is_house || interior->stairwells.empty()) { // only add stairs to first part of a house unless we haven't added stairs yet
-		// add elevator half of the time to building parts, but not the first part (to guarantee we have at least one set of stairs)
+		// sometimes add an elevator to building parts, but not the first part in a stack (to guarantee we have at least one set of stairs)
 		// it might not be possible to place an elevator a part with no interior rooms, but that should be okay, because some other part will still have stairs
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
-		add_elevator = (!is_house && !first_part_this_stack && rgen.rand_bool());
+		if (!is_house && !first_part_this_stack) {
+			float const elevator_prob[4] = {0.9, 0.5, 0.3, 0.1}; // higher chance of adding an elevator if there are more existing elevators
+			add_elevator = (rgen.rand_float() < elevator_prob[min(interior->elevators.size(), 3U)]);
+		}
 		unsigned const rooms_end(interior->rooms.size()), num_avail_rooms(rooms_end - rooms_start);
 		assert(num_avail_rooms > 0); // must have added at least one room
 		float stairs_scale(1.0);
