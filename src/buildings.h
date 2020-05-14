@@ -192,6 +192,7 @@ enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEV
 	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U, SHAPE_TALL};
 enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED};
+enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
 
 // object flags, currently used for room lights
 uint8_t const RO_FLAG_LIT     = 0x01; // light is on
@@ -532,7 +533,7 @@ private:
 	void add_or_extend_elevator(elevator_t const &elevator, bool add);
 	void remove_intersecting_roof_cubes(cube_t const &c);
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const;
-	bool is_exterior_room_wall(room_t const &room, float zval, bool dim, bool dir) const;
+	int classify_room_wall(room_t const &room, float zval, bool dim, bool dir) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool is_lit);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,

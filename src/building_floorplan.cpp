@@ -117,6 +117,22 @@ bool building_t::interior_enabled() const {
 	return 1;
 }
 
+int building_t::classify_room_wall(room_t const &room, float zval, bool dim, bool dir) const { // Note: zval is for the floor
+	if (room.d[dim][dir] == bcube.d[dim][dir]) return ROOM_WALL_EXT; // at bcube border
+	assert(room.part_id < parts.size());
+	cube_t const &part(parts[room.part_id]);
+	float const wall_thickness(get_wall_thickness()), max_gap(1.5*wall_thickness), part_edge(part.d[dim][dir]);
+	if (dir ? (room.d[dim][1] + max_gap < part_edge) : (room.d[dim][0] - max_gap > part_edge)) return ROOM_WALL_INT; // interior to part, allowing for wall_thickness of gap
+	if (real_num_parts == 1) return ROOM_WALL_EXT; // optimization
+
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		if (p->d[dim][!dir] != part_edge) continue; // not opposite wall
+		if (p->d[!dim][0] > room.d[!dim][0] || p->d[!dim][1] < room.d[!dim][1]) continue; // wall not contained
+		if (zval + get_floor_thickness() < p->z2()) return ROOM_WALL_SEP; // this part covers the wall in z (assuming no overhangs), so wall is interior split between parts
+	}
+	return ROOM_WALL_EXT; // exterior
+}
+
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 
 	if (!interior_enabled()) return;
@@ -752,19 +768,14 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 					for (unsigned y = 0; y < 2 && !placed; ++y) { // try all 4 corners
 						for (unsigned x = 0; x < 2 && !placed; ++x) {
-							bool const at_edge_x(room.d[0][x] == part.d[0][x]), at_edge_y(room.d[1][y] == part.d[1][y]);
+							int const wtype_x(classify_room_wall(room, room.z1(), 0, x)), wtype_y(classify_room_wall(room, room.z1(), 1, y));
+							if (wtype_x == ROOM_WALL_SEP || wtype_y == ROOM_WALL_SEP) continue; // don't place elevators between parts where they could block doorways
 							float const xval(room.d[0][x] + (x ? -ewidth : ewidth)), yval(room.d[1][y] + (y ? -ewidth : ewidth));
-
-							if (at_edge_x) {
-								if (!is_exterior_room_wall(room, room.z1(), 0, x)) continue; // don't place elevators between parts where they could block doorways
-								if (is_val_inside_window(part, 0, xval, window_hspacing[0], window_border)) continue; // check room interior edge for intersection with windows
-							}
-							if (at_edge_y) {
-								if (!is_exterior_room_wall(room, room.z1(), 1, y)) continue; // don't place elevators between parts where they could block doorways
-								if (is_val_inside_window(part, 1, yval, window_hspacing[1], window_border)) continue; // check room interior edge for intersection with windows
-							}
+							// check room interior edge for intersection with windows
+							if (wtype_x == ROOM_WALL_EXT && is_val_inside_window(part, 0, xval, window_hspacing[0], window_border)) continue;
+							if (wtype_y == ROOM_WALL_EXT && is_val_inside_window(part, 1, yval, window_hspacing[1], window_border)) continue;
 							bool const dim(rgen.rand_bool()), is_open(rgen.rand_bool());
-							elevator_t elevator(room, dim, !(dim ? y : x), is_open, (at_edge_x || at_edge_y)); // elevator shaft
+							elevator_t elevator(room, dim, !(dim ? y : x), is_open, (wtype_x == ROOM_WALL_EXT || wtype_y == ROOM_WALL_EXT)); // elevator shaft
 							elevator.d[0][!x] = xval;
 							elevator.d[1][!y] = yval;
 							elevator.expand_by_xy(-0.01*ewidth); // shrink to leave a small gap between the outer wall to prevent z-fighting
