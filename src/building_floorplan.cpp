@@ -603,7 +603,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				} // for p2
 			} // end !too_small
 		} // end wall placement
-		add_ceilings_floors_stairs(rgen, *p, hall, (p - parts.begin()), num_floors, rooms_start, use_hallway, first_part_this_stack);
+		add_ceilings_floors_stairs(rgen, *p, hall, (p - parts.begin()), num_floors, rooms_start, use_hallway, first_part_this_stack, window_hspacing, window_border);
 	} // for p (parts)
 
 	if (has_sec_bldg()) { // add garage/shed floor and ceiling
@@ -684,8 +684,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	interior->finalize();
 }
 
-void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall,
-	unsigned part_ix, unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part_this_stack)
+void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
+	unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border)
 {
 	// increase floor thickness if !is_house? but then we would probably have to increase the space between floors as well, which involves changing the texture scale
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
@@ -711,7 +711,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			point center(room.get_cube_center());
 			float const center_shift(0.125*room.get_sz_dim(long_dim)*(rgen.rand_bool() ? -1.0 : 1.0));
 			center[long_dim] += center_shift; // make elevator off-center
-			elevator_t elevator(room, long_dim, rgen.rand_bool(), rgen.rand_bool()); // elevator shaft
+			elevator_t elevator(room, long_dim, rgen.rand_bool(), rgen.rand_bool(), 0); // elevator shaft
 			elevator.x1() = center.x - 0.5*ewidth; elevator.x2() = center.x + 0.5*ewidth;
 			elevator.y1() = center.y - 0.5*ewidth; elevator.y2() = center.y + 0.5*ewidth;
 			add_or_extend_elevator(elevator, 1);
@@ -744,6 +744,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			for (unsigned n = 0; n < num_avail_rooms; ++n) { // try all available rooms starting with the selected one to see if we can fit a stairwell/elevator in any of them
 				unsigned const stairs_room(rooms_start + (rand_ix + n)%num_avail_rooms);
 				room_t &room(interior->rooms[stairs_room]);
+				assert(room.part_id == part_ix); // sanity check
 
 				if (add_elevator) {
 					if (min(room.dx(), room.dy()) < 2.0*ewidth) continue; // room is too small to place an elevator
@@ -751,12 +752,21 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 					for (unsigned y = 0; y < 2 && !placed; ++y) { // try all 4 corners
 						for (unsigned x = 0; x < 2 && !placed; ++x) {
-							// don't place elevators on building exteriors blocking windows or between parts where they would block doorways
-							if (room.d[0][x] == part.d[0][x] || room.d[1][y] == part.d[1][y]) continue;
+							bool const at_edge_x(room.d[0][x] == part.d[0][x]), at_edge_y(room.d[1][y] == part.d[1][y]);
+							float const xval(room.d[0][x] + (x ? -ewidth : ewidth)), yval(room.d[1][y] + (y ? -ewidth : ewidth));
+
+							if (at_edge_x) {
+								if (!is_exterior_room_wall(room, room.z1(), 0, x)) continue; // don't place elevators between parts where they could block doorways
+								if (is_val_inside_window(part, 0, xval, window_hspacing[0], window_border)) continue; // check room interior edge for intersection with windows
+							}
+							if (at_edge_y) {
+								if (!is_exterior_room_wall(room, room.z1(), 1, y)) continue; // don't place elevators between parts where they could block doorways
+								if (is_val_inside_window(part, 1, yval, window_hspacing[1], window_border)) continue; // check room interior edge for intersection with windows
+							}
 							bool const dim(rgen.rand_bool()), is_open(rgen.rand_bool());
-							elevator_t elevator(room, dim, !(dim ? y : x), is_open); // elevator shaft
-							elevator.d[0][!x] = elevator.d[0][x] + (x ? -ewidth : ewidth);
-							elevator.d[1][!y] = elevator.d[1][y] + (y ? -ewidth : ewidth);
+							elevator_t elevator(room, dim, !(dim ? y : x), is_open, (at_edge_x || at_edge_y)); // elevator shaft
+							elevator.d[0][!x] = xval;
+							elevator.d[1][!y] = yval;
 							elevator.expand_by_xy(-0.01*ewidth); // shrink to leave a small gap between the outer wall to prevent z-fighting
 							if (is_cube_close_to_doorway(elevator)) continue; // try again
 							add_or_extend_elevator(elevator, 1);
@@ -1204,12 +1214,12 @@ void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lig
 
 void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 	if (add) {interior->elevators.push_back(elevator);}
-	if (roof_type != ROOF_TYPE_FLAT) return; // sloped roof, not flat, can't add elevator cap
+	if (is_house || roof_type != ROOF_TYPE_FLAT) return; // sloped roof, not flat, can't add elevator cap
 	float const window_vspacing(get_material().get_floor_spacing());
 	cube_t ecap(elevator);
 	ecap.z1()  = elevator.z2();
 	ecap.z2() += 0.25*window_vspacing; // set height
-	ecap.expand_by_xy(0.025*window_vspacing);
+	if (!elevator.at_edge) {ecap.expand_by_xy(0.025*window_vspacing);}
 	
 	// check to see if the elevator is at the top of the building
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {

@@ -303,9 +303,9 @@ struct building_room_geom_t {
 };
 
 struct elevator_t : public cube_t {
-	bool dim, dir, open; // door dim/dir
-	elevator_t() : dim(0), dir(0), open(0) {}
-	elevator_t(cube_t const &c, bool dim_, bool dir_, bool open_) : cube_t(c), dim(dim_), dir(dir_), open(open_) {assert(is_strictly_normalized());}
+	bool dim, dir, open, at_edge; // door dim/dir
+	elevator_t() : dim(0), dir(0), open(0), at_edge(0) {}
+	elevator_t(cube_t const &c, bool dim_, bool dir_, bool open_, bool at_edge_) : cube_t(c), dim(dim_), dir(dir_), open(open_), at_edge(at_edge_) {assert(is_strictly_normalized());}
 	float get_wall_thickness() const {return 0.02*get_sz_dim(!dim);}
 	float get_frame_width   () const {return 0.20*get_sz_dim(!dim);}
 	unsigned get_door_face_id() const {return (2*dim + dir);}
@@ -480,8 +480,8 @@ struct building_t : public building_geom_t {
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
-	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix,
-		unsigned num_floors, unsigned rooms_start, bool use_hallway, bool first_part_this_stack);
+	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
+		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
 	void gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes);
 	void add_stairs_and_elevators(rand_gen_t &rgen);
