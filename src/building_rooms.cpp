@@ -251,7 +251,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
 			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {
 				bool const dim(bool(dim2) ^ pref_dim), dir(bool(dir2) ^ pref_dir);
-				if (fabs(room.d[dim][dir] - part.d[dim][dir]) < wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
+				if (fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
 				float const xy_space(0.2*room.get_sz_dim(!dim));
 				cube_t c(room);
 				c.z1() = zval + 0.25*floor_height; c.z2() = zval + 0.8*floor_height;
@@ -271,7 +271,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
-			if (fabs(room.d[dim][dir] - part.d[dim][dir]) < wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
+			if (fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
 			if (rgen.rand_float() < 0.2) continue; // skip 20% of the time
 			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)), width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
 			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space

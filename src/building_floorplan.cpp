@@ -118,6 +118,7 @@ bool building_t::interior_enabled() const {
 }
 
 int building_t::classify_room_wall(room_t const &room, float zval, bool dim, bool dir) const { // Note: zval is for the floor
+	if (room.ext_sides & (1 << (2*dim + dir))) return ROOM_WALL_EXT; // use ext_sides (if these flags have been setup properly)
 	if (room.d[dim][dir] == bcube.d[dim][dir]) return ROOM_WALL_EXT; // at bcube border
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
@@ -813,9 +814,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 							for (unsigned d = 0; d < 2; ++d) {
 								bool const dir(bool(d) ^ first_dir);
-								// if the room is on the edge of the part that's not on the building bcube exterior, then this room connects two parts and we need to place a door here later;
-								// technically, it's more accurate to check for an adjacent part, but that's somewhat difficult to do here
-								if (room.d[dim][dir] == part.d[dim][dir] && part.d[dim][dir] != bcube.d[dim][dir]) continue;
+								// if the room is on the edge of the part that's not on the building exterior, then this room connects two parts and we need to place a door here later
+								if (classify_room_wall(room, room.z1(), dim, dir) == ROOM_WALL_SEP) continue;
 								cube_t cand(cutout);
 								float const shift(0.95f*(cand.d[dim][dir] - room.d[dim][dir])); // negative if dir==1, add small gap to prevent z-fighting and FP accuracy asserts
 								cand.d[dim][0] -= shift; cand.d[dim][1] -= shift; // close the gap - flush with the wall
