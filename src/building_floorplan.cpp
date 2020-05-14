@@ -950,8 +950,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					frame.pts[0] = frame.pts[3] = pts[top_vix[s]]; // bottom
 					frame.pts[1] = frame.pts[2] = top.pts[top_vix[s]]; // top
 					float const frame_width(0.08*((bool(s)^dir^stairs_dim^1) ? -1.0 : 1.0)*box.get_sz_dim(!stairs_dim));
-					for (unsigned d = 0; d < 2; ++d) {frame.pts[(s<<1)+d][!stairs_dim] += frame_width;} // move toward center of door
-					for (unsigned n = 0; n < 4; ++n) {frame.pts[n][stairs_dim] += 1.5*door_shift;} // shift back behind the door
+					for (unsigned d = 0; d < 2; ++d) {frame.pts[(s<<1)+d][!stairs_dim] +=    frame_width;} // move toward center of door
+					for (unsigned n = 0; n < 4; ++n) {frame.pts[n]       [ stairs_dim] += 0.6*door_shift;} // shift back behind the door
 					roof_tquads.emplace_back(frame, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
 				} // for s
 			}
