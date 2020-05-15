@@ -935,7 +935,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				unsigned const top_vix[2] = {hi_side1[opening_ix], hi_side2[opening_ix]}, bot_vix[2] = {lo_side1[opening_ix], lo_side2[opening_ix]};
 				tquad_t top(4); // quad
 				for (unsigned n = 0; n < 4; ++n) {top.pts[n] = pts[n];}
-				top.pts[top_vix[0]].z = top.pts[top_vix[1]].z = z2; // this are the higher points
+				top.pts[top_vix[0]].z = top.pts[top_vix[1]].z = z2; // these are the higher points
 				roof_tquads.emplace_back(top, (unsigned)tquad_with_ix_t::TYPE_ROOF_ACC);
 
 				for (unsigned s = 0; s < 2; ++s) {
@@ -948,7 +948,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 					tquad_t frame(4); // quads on sides of door frame
 					frame.pts[0] = frame.pts[3] = pts[top_vix[s]]; // bottom
-					frame.pts[1] = frame.pts[2] = top.pts[top_vix[s]]; // top
+					frame.pts[1] = frame.pts[2] = top.pts[top_vix[s]] - vector3d(0.0, 0.0, 0.05*fc_thick); // top, shift slightly down to match the slope
 					float const frame_width(0.08*((bool(s)^dir^stairs_dim^1) ? -1.0 : 1.0)*box.get_sz_dim(!stairs_dim));
 					for (unsigned d = 0; d < 2; ++d) {frame.pts[(s<<1)+d][!stairs_dim] +=    frame_width;} // move toward center of door
 					for (unsigned n = 0; n < 4; ++n) {frame.pts[n]       [ stairs_dim] += 0.6*door_shift;} // shift back behind the door
