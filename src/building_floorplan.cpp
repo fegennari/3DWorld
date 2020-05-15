@@ -774,7 +774,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						for (unsigned x = 0; x < 2 && !placed; ++x) {
 							int const wtype_x(classify_room_wall(room, room.z1(), 0, x)), wtype_y(classify_room_wall(room, room.z1(), 1, y));
 							if (wtype_x == ROOM_WALL_SEP || wtype_y == ROOM_WALL_SEP) continue; // don't place elevators between parts where they could block doorways
-							float const xval(room.d[0][x] + (x ? -ewidth : ewidth)), yval(room.d[1][y] + (y ? -ewidth : ewidth));
+							float const xval(room.d[0][x] + (x ? -ewidth : ewidth)), yval(room.d[1][y] + (y ? -ewidth : ewidth)), shrink(0.01*ewidth);
 							// check room interior edge for intersection with windows
 							if (wtype_x == ROOM_WALL_EXT && is_val_inside_window(part, 0, xval, window_hspacing[0], window_border)) continue;
 							if (wtype_y == ROOM_WALL_EXT && is_val_inside_window(part, 1, yval, window_hspacing[1], window_border)) continue;
@@ -782,7 +782,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							elevator_t elevator(room, dim, !(dim ? y : x), is_open, (wtype_x == ROOM_WALL_EXT || wtype_y == ROOM_WALL_EXT)); // elevator shaft
 							elevator.d[0][!x] = xval;
 							elevator.d[1][!y] = yval;
-							elevator.expand_by_xy(-0.01*ewidth); // shrink to leave a small gap between the outer wall to prevent z-fighting
+							// shrink to leave a small gap between the outer wall to prevent z-fighting
+							if (wtype_x == ROOM_WALL_EXT) {elevator.d[0][x] += (x ? -shrink : shrink);}
+							if (wtype_y == ROOM_WALL_EXT) {elevator.d[1][y] += (y ? -shrink : shrink);}
 							if (is_cube_close_to_doorway(elevator)) continue; // try again
 							add_or_extend_elevator(elevator, 1);
 							elevator_cut = elevator;
