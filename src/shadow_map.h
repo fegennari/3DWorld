@@ -71,9 +71,10 @@ struct cached_dynamic_smap_data_t : public smap_data_t {
 struct local_smap_data_t : public cached_dynamic_smap_data_t {
 
 	bool used, outdoor_shadows;
+	unsigned user_smap_id;
 
 	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ, bool outdoor_shadows_=0)
-		: cached_dynamic_smap_data_t(tu_id_, smap_sz_), used(0), outdoor_shadows(outdoor_shadows_) {}
+		: cached_dynamic_smap_data_t(tu_id_, smap_sz_), used(0), outdoor_shadows(outdoor_shadows_), user_smap_id(0) {}
 	bool set_smap_shader_for_light(shader_t &s, bool &arr_tex_set) const;
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);

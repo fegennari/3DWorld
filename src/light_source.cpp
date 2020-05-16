@@ -49,7 +49,7 @@ point bind_point_t::get_updated_bind_pos() const {
 
 // radius == 0.0 is really radius == infinity (no attenuation)
 light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf, float nc) :
-	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), is_cube_light(0), no_shadows(0), smap_index(0), cube_eflags(0), num_dlight_rays(0),
+	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), is_cube_light(0), no_shadows(0), smap_index(0), user_smap_id(0), cube_eflags(0), num_dlight_rays(0),
 	radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius), r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c)
 {
 	assert(bw > 0.0 && bw <= 1.0);
@@ -395,10 +395,11 @@ class local_smap_manager_t {
 	vector<local_smap_data_t> smap_data;
 	vector<unsigned> free_list;
 
+	local_smap_data_t &get_smap(unsigned index) {assert(index < smap_data.size()); return smap_data[index];} // does bounds checking
 public:
 	local_smap_manager_t(bool use_tex_array_) : use_tex_array(use_tex_array_) {}
 
-	unsigned new_smap(unsigned size=0) {
+	unsigned new_smap(unsigned size, unsigned user_smap_id, bool &matched_smap_id) {
 		unsigned index(0);
 		
 		if (free_list.empty()) { // allocate a new smap
@@ -412,14 +413,26 @@ public:
 			smap_data.push_back(smd);
 		}
 		else { // use free list element
-			index = free_list.back(); // most recently used
+			if (user_smap_id > 0 || // caller requested a specific shadow map - see if it's available
+				get_smap(free_list.back()).user_smap_id > 0) // caller requested an unbound smap, and the last free list element is used - try to find an unused smap
+			{
+				for (unsigned i = 0; i < free_list.size(); ++i) {
+					if (get_smap(free_list[i]).user_smap_id != user_smap_id) continue; // wrong ID
+					swap(free_list[i], free_list.back());
+					break; // done
+				}
+			}
+			index = free_list.back(); // use the most recently used free list entry, which may have been moved to the back by the loop above
 			free_list.pop_back();
 		}
-		local_smap_data_t &smd(smap_data[index]);
+		local_smap_data_t &smd(get_smap(index));
+		//cout << TXT(free_list.size()) << TXT(index) << TXT(user_smap_id) << TXT(smd.user_smap_id) << endl; // TESTING
 		assert(!smd.used);
-		smd.used = 1; // mark as used (for error checking)
+		matched_smap_id      = (user_smap_id > 0 && smd.user_smap_id == user_smap_id);
+		smd.used             = 1; // mark as used (for error checking)
 		smd.last_has_dynamic = 1; // force recreation
 		smd.outdoor_shadows  = 0; // reset to default
+		smd.user_smap_id     = user_smap_id; // tag this shadow map with the caller's ID (if provided); if nonzero, this should be a unique value
 
 		if (size > 0 && smd.smap_sz != size) { // size change - free and reallocate
 			smd.free_gl_state();
@@ -537,8 +550,10 @@ bool light_source_trig::check_shadow_map() {
 
 bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdoor_shadows, bool force_update, unsigned sm_size) {
 
+	bool matched_smap_id(0);
+
 	if (smap_index == 0) {
-		smap_index = local_smap_manager.new_smap(sm_size);
+		smap_index = local_smap_manager.new_smap(sm_size, user_smap_id, matched_smap_id);
 		if (smap_index == 0) return 0; // allocation failed (at max)
 	}
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
@@ -551,7 +566,8 @@ bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdo
 		smap.pdu.draw_frustum();
 		shader.end_shader();
 	}
-	smap.create_shadow_map_for_light(pos, nullptr, 1, 0, force_update); // no bcube, in world space, no texture array (layer=nullptr)
+	// if matched_smap_id==1, we can skip the shadow map update
+	smap.create_shadow_map_for_light(pos, nullptr, 1, matched_smap_id, force_update); // no bcube, in world space, no texture array (layer=nullptr)
 	return 1;
 }
 

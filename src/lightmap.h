@@ -161,7 +161,7 @@ class light_source { // size = 116
 
 protected:
 	bool dynamic, enabled, user_placed, is_cube_face, is_cube_light, no_shadows;
-	unsigned smap_index, cube_eflags, num_dlight_rays; // index of shadow map texture/data
+	unsigned smap_index, user_smap_id, cube_eflags, num_dlight_rays; // index of shadow map texture/data
 	float radius, radius_inv, r_inner, bwidth, near_clip;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
 	vector3d dir;
@@ -171,8 +171,8 @@ protected:
 	float calc_cylin_end_radius() const;
 
 public:
-	light_source() : dynamic(0), enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), no_shadows(0), smap_index(0), cube_eflags(0), num_dlight_rays(0),
-	radius(0.0f), radius_inv(0.0f), r_inner(0.0f), bwidth(0.0f), near_clip(0.0f), pos(all_zeros), pos2(all_zeros), dir(zero_vector), color(BLACK) {}
+	light_source() : dynamic(0), enabled(0), user_placed(0), is_cube_face(0), is_cube_light(0), no_shadows(0), smap_index(0), user_smap_id(0), cube_eflags(0),
+		num_dlight_rays(0), radius(0.0f), radius_inv(0.0f), r_inner(0.0f), bwidth(0.0f), near_clip(0.0f), pos(all_zeros), pos2(all_zeros), dir(zero_vector), color(BLACK) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id=0, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0, float nc=0.0);
 	void mark_is_cube_light(unsigned eflags) {is_cube_light = 1; cube_eflags = eflags;}
 	void set_dynamic_state(point const &pos_, vector3d const &dir_, colorRGBA const &color_, bool enabled_) {pos = pos2 = pos_; dir = dir_; color = color_; enabled = enabled_;}
@@ -219,6 +219,7 @@ public:
 	void draw_light_cone(shader_t &shader, float alpha) const;
 	bool setup_shadow_map(float falloff, bool dynamic_cobj=0, bool outdoor_shadows=0, bool force_update=0, unsigned sm_size=0);
 	void release_smap();
+	void assign_smap_id(unsigned id) {user_smap_id = id;}
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
 };
