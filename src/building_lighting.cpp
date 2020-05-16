@@ -526,9 +526,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		clipped_bc.expand_by_xy(wall_thickness); // expand by wall thickness so that offset exterior doors are properly handled
 		clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC - post clip
+		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down, white for now
+		dl_sources.back().set_custom_bcube(clipped_bc);
 		bool dynamic_shadows(0);
 
-#if 0 // enable when the dynamic shadows flag is used/shadows are cached
 		if (camera_near_building) {
 			if (camera_surf_collide && camera_in_building && lpos.z > camera_bs.z && clipped_bc.contains_pt(camera_bs)) {dynamic_shadows = 1;} // camera shadow
 			else if (animate2 && enable_building_people_ai()) { // check moving people
@@ -539,9 +540,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 		}
-#endif
-		dl_sources.emplace_back(light_radius, lpos, lpos, color, dynamic_shadows, -plus_z, bwidth); // points down, white for now
-		dl_sources.back().set_custom_bcube(clipped_bc);
+		// if there are no dynamic shadows, we can reuse the previous frame's shadow map
+		// TODO: but may need to handle the case where a shadow caster moves out of the light's influence and leaves a shadow behind
+		if (!dynamic_shadows) {dl_sources.back().assign_smap_id(building_id + ((i - objs.begin()) << 16) + 1);} // use a nonzero value; hopefully won't overflow
 
 		if (camera_near_building && lpos.z > camera_bs.z) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
