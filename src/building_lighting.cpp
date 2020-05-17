@@ -433,7 +433,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube) {
 
 	if (!has_room_geom()) return; // error?
-	vector<room_object_t> const &objs(interior->room_geom->objs);
+	vector<room_object_t> &objs(interior->room_geom->objs); // non-const, light flags are updated
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	point const camera_bs(camera_pdu.pos - xlate); // camera in building space
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), camera_z(camera_bs.z);
@@ -540,10 +540,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 		}
-		// if there are no dynamic shadows, we can reuse the previous frame's shadow map
-		// TODO: but may need to handle the case where a shadow caster moves out of the light's influence and leaves a shadow behind
-		if (!dynamic_shadows) {dl_sources.back().assign_smap_id(building_id + ((i - objs.begin()) << 16) + 1);} // use a nonzero value; hopefully won't overflow
-
+		// if there are no dynamic shadows, we can reuse the previous frame's shadow map;
+		// need to handle the case where a shadow caster moves out of the light's influence and leaves a shadow behind;
+		// also need to handle the case where the light is added on the frame the room geom is generated when the shadow map is not yet created;
+		// requiring two consecutive frames of no dynamic objects should fix both problems
+		bool const cache_shadows(!dynamic_shadows && (i->flags & RO_FLAG_NODYNAM)); // no dynamic object on this frame or the last frame
+		if (cache_shadows) {dl_sources.back().assign_smap_id(uintptr_t(&(*i))/sizeof(void *));} // use memory address as a unique ID
+		if (dynamic_shadows) {i->flags &= ~RO_FLAG_NODYNAM;} else {i->flags |= RO_FLAG_NODYNAM;}
+		
 		if (camera_near_building && lpos.z > camera_bs.z) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
 			// since we're not enabling shadows for this light, it could incorrectly illuminate objects on the floor above, so we must make it small, unless it's on the top floor

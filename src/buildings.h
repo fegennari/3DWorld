@@ -201,6 +201,7 @@ uint8_t const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 uint8_t const RO_FLAG_INVIS   = 0x08; // invisible
 uint8_t const RO_FLAG_NOCOLL  = 0x10; // no collision detection
 uint8_t const RO_FLAG_OPEN    = 0x20; // open, for elevators and maybe eventually doors
+uint8_t const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
