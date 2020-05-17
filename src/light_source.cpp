@@ -387,17 +387,16 @@ void light_source_trig::register_activate(bool player_triggered) {
 
 // ************ SHADOW MAPS ***********
 
-smap_texture_array_t local_smap_tex_arr;
-
 class local_smap_manager_t {
 
 	bool use_tex_array;
 	vector<local_smap_data_t> smap_data;
 	vector<unsigned> free_list;
+	smap_texture_array_t smap_tex_arr;
 
 	local_smap_data_t &get_smap(unsigned index) {assert(index < smap_data.size()); return smap_data[index];} // does bounds checking
 public:
-	local_smap_manager_t(bool use_tex_array_) : use_tex_array(use_tex_array_) {}
+	local_smap_manager_t(bool use_tex_array_=1) : use_tex_array(use_tex_array_) {}
 
 	unsigned new_smap(unsigned size, unsigned user_smap_id, bool &matched_smap_id) {
 		unsigned index(0);
@@ -409,7 +408,7 @@ public:
 			if (!use_tex_array) {tu_id += index;} // if not using texture arrays, we need to allocate a unique tu_id for each shadow map
 			if ((int)tu_id >= max_tius) return 0; // not enough TIU's (none for texture array) - fail
 			local_smap_data_t smd(tu_id);
-			if (use_tex_array) {smd.bind_tex_array(&local_smap_tex_arr); assert(*smd.get_layer() == index);} // Note: must be <= GL_MAX_ARRAY_TEXTURE_LAYERS (which is 2048)
+			if (use_tex_array) {smd.bind_tex_array(&smap_tex_arr); assert(*smd.get_layer() == index);} // Note: must be <= GL_MAX_ARRAY_TEXTURE_LAYERS (which is 2048)
 			smap_data.push_back(smd);
 		}
 		else { // use free list element
@@ -453,6 +452,7 @@ public:
 	}
 	void free_gl_state() {
 		for (auto i = smap_data.begin(); i != smap_data.end(); ++i) {i->free_gl_state();}
+		smap_tex_arr.free_gl_state();
 	}
 	void clear() {
 		free_gl_state();
@@ -461,11 +461,10 @@ public:
 	}
 };
 
-local_smap_manager_t local_smap_manager(1);
+local_smap_manager_t local_smap_manager;
 
 void free_light_source_gl_state() { // free shadow maps
 	local_smap_manager.free_gl_state();
-	local_smap_tex_arr.free_gl_state();
 }
 
 
@@ -481,7 +480,6 @@ pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face, float fa
 	vector3d temp(zero_vector), up_dir;
 	temp[dim] = 1.0; // choose up axis
 	orthogonalize_dir(temp, dir, up_dir, 1);
-	//local_smap_data_t &smap(local_smap_manager.get(smap_index));
 	int cindex(-1);
 	float t(0.0);
 	vector3d cnorm; // unused
