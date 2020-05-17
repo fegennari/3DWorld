@@ -307,35 +307,45 @@ bool tree_cont_t::check_sphere_coll(point &center, float radius) const {
 void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer,
 	bool draw_branches, bool draw_leaves, bool shadow_only, bool reflection_pass, vector3d const &xlate)
 {
-	assert(draw_branches != draw_leaves); // must enable only one
-	int const wsoff_loc(s.get_uniform_loc("world_space_offset")), tex0_loc(s.get_uniform_loc("tex0"));
+	assert(draw_branches != draw_leaves); // must enable exactly one
+	int const wsoff_loc(s.get_uniform_loc("world_space_offset"));
+	bool const tt_shadow_mode(world_mode == WMODE_INF_TERRAIN && shadow_only);
 
 	if (draw_branches) {
 		tree_data_t::pre_branch_draw(s, shadow_only);
-		for (iterator i = begin(); i != end(); ++i) {i->draw_branches_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc);}
+
+		for (iterator i = begin(); i != end(); ++i) {
+			if (tt_shadow_mode && !dist_less_than((i->sphere_center() + xlate), camera_pdu.pos, camera_pdu.far_)) continue; // Note: intentionally excludes tree radius
+			i->draw_branches_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc);
+		}
 		tree_data_t::post_branch_draw(shadow_only);
 	}
 	else { // draw_leaves
+		int const tex0_loc(s.get_uniform_loc("tex0"));
 		tree_data_t::pre_leaf_draw(s);
 		sorted.clear();
 		
 		for (unsigned i = 0; i < size(); ++i) {
 			tree const &t(operator[](i));
 			point const center(t.sphere_center() + xlate);
-			// still need VFC in tiled terrain mode since the shadow volume doesn't include the entire scene
-			if (world_mode == WMODE_INF_TERRAIN && shadow_only && !camera_pdu.sphere_visible_test(center, 1.1*t.get_radius())) continue;
+			// still need VFC in tiled terrain mode since the shadow volume doesn't include the entire scene (especially for local city light shadows)
+			if (tt_shadow_mode && !dist_less_than(center, camera_pdu.pos, camera_pdu.far_))    continue; // Note: intentionally excludes tree radius
+			if (tt_shadow_mode && !camera_pdu.sphere_visible_test(center, 1.1*t.get_radius())) continue;
 			sorted.emplace_back(distance_to_camera_sq(center), i);
 		}
-		sort(sorted.begin(), sorted.end()); // sort front to back for better early z culling
+		if (!tt_shadow_mode) {sort(sorted.begin(), sorted.end());} // sort front to back for better early z culling
 		to_update_leaves.clear();
 
 		for (auto i = sorted.begin(); i != sorted.end(); ++i) {
 			operator[](i->second).draw_leaves_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc, tex0_loc, to_update_leaves);
 		}
 		tree_data_t::post_leaf_draw();
-		int const num_to_update(to_update_leaves.size());
-#pragma omp parallel for num_threads(max(1, min(4, num_to_update))) schedule(static) if (num_to_update > 1)
-		for (int i = 0; i < num_to_update; ++i) {to_update_leaves[i]->update_leaf_orients_wind();}
+
+		if (!tt_shadow_mode) {
+			int const num_to_update(to_update_leaves.size());
+	#pragma omp parallel for num_threads(max(1, min(4, num_to_update))) schedule(static) if (num_to_update > 1)
+			for (int i = 0; i < num_to_update; ++i) {to_update_leaves[i]->update_leaf_orients_wind();}
+		}
 	}
 }
 
@@ -437,11 +447,12 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 	}
 }
 
-void tree_cont_t::post_leaf_draw(shader_t &shader) {
-
-	if (!use_leaf_trans()) {set_multisample(1);} // re-enable AA
-	else {disable_blend(); glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
-	shader.clear_specular();
+void tree_cont_t::post_leaf_draw(shader_t &shader, bool shadow_only) {
+	if (!shadow_only) {
+		if (!use_leaf_trans()) {set_multisample(1);} // re-enable AA
+		else {disable_blend(); glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
+		shader.clear_specular();
+	}
 	shader.disable();
 }
 
@@ -457,7 +468,7 @@ void tree_cont_t::draw(bool shadow_only, bool reflection_pass) {
 	shader_t ls;
 	pre_leaf_draw(ls, 0, shadow_only);
 	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, reflection_pass, zero_vector);
-	post_leaf_draw(ls);
+	post_leaf_draw(ls, shadow_only);
 
 	// draw branches
 	shader_t bs;

@@ -408,7 +408,7 @@ public:
 	void draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
 		bool shadow_only, bool reflection_pass, vector3d const &xlate);
 	static void pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only=0, bool use_fs_smap=0, bool enable_smap=1, bool enable_dlights=1);
-	static void post_leaf_draw(shader_t &shader);
+	static void post_leaf_draw(shader_t &shader, bool shadow_only);
 	void draw(bool shadow_only, bool reflection_pass=0);
 	unsigned delete_all();
 	unsigned scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2);

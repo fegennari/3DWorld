@@ -1372,8 +1372,8 @@ void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool
 
 	if (decid_trees.empty() || !can_have_trees()) return;
 	//timer_t timer("Draw Decid Trees");
-	if (enable_smap  ) {bind_and_setup_shadow_map(s);}
-	if (draw_branches) {set_mesh_ambient_color(s);}
+	if (enable_smap) {bind_and_setup_shadow_map(s);}
+	if (draw_branches && !shadow_pass) {set_mesh_ambient_color(s);}
 	// Note: shadow_only mode doesn't help performance much
 	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, shadow_pass, reflection_pass, dtree_off.get_xlate());
 }
@@ -2965,6 +2965,7 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 	if (to_draw.empty()) return; // nothing to do
+	// Note: might want to check for any i->second->num_decid_trees() for tiles in to_draw, but in most cases this doesn't help
 	bool const enable_billboards(USE_TREE_BILLBOARDS && !shadow_pass);
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled()); // && !reflection_pass?
 	lod_renderer.resize_zero();
@@ -2980,17 +2981,17 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass, use_fs_smap, leaf_shadow_maps, enable_dlights);
 		if (leaf_shadow_maps ) {setup_tile_shader_shadow_map(ls);}
 		if (enable_billboards) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
-		set_tree_dither_noise_tex(ls, 1); // TU=1
-		ls.add_uniform_color("color_scale", leaf_color_scale);
+		if (!shadow_pass) {set_tree_dither_noise_tex(ls, 1);} // TU=1
+		if (!shadow_pass) {ls.add_uniform_color("color_scale", leaf_color_scale);}
 		draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass, shadow_pass, leaf_shadow_maps);
-		ls.add_uniform_color("color_scale", WHITE);
-		tree_cont_t::post_leaf_draw(ls);
+		if (!shadow_pass) {ls.add_uniform_color("color_scale", WHITE);}
+		tree_cont_t::post_leaf_draw(ls, shadow_pass);
 	}
 	{ // draw branches
 		shader_t bs;
 		bool const enable_dlights(!shadow_pass && !reflection_pass && ((is_night() && have_cities()) || flashlight_on)); // enable for city night lights
 		tree_branch_shader_setup(bs, enable_shadow_maps, 1, shadow_pass, enable_dlights); // enable_opacity=1
-		set_tree_dither_noise_tex(bs, 1); // TU=1 (for opacity)
+		if (!shadow_pass) {set_tree_dither_noise_tex(bs, 1);} // TU=1 (for opacity)
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
 		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);
 		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
@@ -2999,7 +3000,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	lod_renderer.finalize();
 	enable_blend(); // for fog transparency
 
-	if (lod_renderer.has_leaves()) { // draw leaf billboards
+	if (lod_renderer.has_leaves()) { // draw leaf billboards (not in shadow pass)
 		shader_t lrs;
 		lrs.set_vert_shader("tree_billboard_gs");
 		lrs.set_geom_shader("tree_billboard"); // point => 1 quad
@@ -3011,7 +3012,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		lrs.clear_specular();
 		lrs.end_shader();
 	}
-	if (lod_renderer.has_branches()) { // draw branch billboards
+	if (lod_renderer.has_branches()) { // draw branch billboards (not in shadow pass)
 		shader_t brs;
 		brs.set_prefix("#define TREE_BRANCHES", 2); // GS
 		brs.set_vert_shader("tree_billboard_gs");
