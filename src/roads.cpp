@@ -8,7 +8,7 @@ float const STREETLIGHT_BEAMWIDTH       = 0.25;
 float const SLIGHT_DIST_TO_CORNER_SCALE = 2.0;
 
 extern bool tt_fire_button_down;
-extern int frame_counter, game_mode;
+extern int frame_counter, game_mode, display_mode;
 extern float FAR_CLIP;
 extern vector<light_source> dl_sources;
 extern city_params_t city_params;
@@ -276,6 +276,12 @@ namespace streetlight_ns {
 		min_eq(lights_bcube.z1(), (lpos.z - ldist));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*ldist)); // pointed down - don't extend as far up
 		dl_sources.emplace_back(ldist, lpos, lpos, light_color, 0, -plus_z, STREETLIGHT_BEAMWIDTH); // points down
+		
+		// cache shadow maps if there are no dynamic cars or pedestrians (player doesn't cast a shadow)
+		if (city_params.num_cars == 0 && city_params.num_peds == 0) {
+			if (cached_smap) {dl_sources.back().assign_smap_id(uintptr_t(this)/sizeof(void *));} // cache on second frame
+			cached_smap = 1;
+		} else {cached_smap = 0;}
 	}
 
 	bool streetlight_t::proc_sphere_coll(point &center, float radius, vector3d const &xlate, vector3d *cnorm) const {

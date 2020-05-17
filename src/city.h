@@ -436,8 +436,9 @@ namespace streetlight_ns {
 	struct streetlight_t {
 		point pos; // bottom point
 		vector3d dir;
+		mutable bool cached_smap;
 
-		streetlight_t(point const &pos_, vector3d const &dir_) : pos(pos_), dir(dir_) {}
+		streetlight_t(point const &pos_, vector3d const &dir_) : pos(pos_), dir(dir_), cached_smap(0) {}
 		bool operator<(streetlight_t const &s) const {return ((pos.y == s.pos.y) ? (pos.x < s.pos.x) : (pos.y < s.pos.y));} // compare y then x
 		bool is_lit(bool always_on) const {return (always_on || is_night(STREETLIGHT_ON_RAND*signed_rand_hash(pos.x + pos.y)));}
 		point get_lpos() const;
