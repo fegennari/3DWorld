@@ -49,8 +49,8 @@ point bind_point_t::get_updated_bind_pos() const {
 
 // radius == 0.0 is really radius == infinity (no attenuation)
 light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf, float nc) :
-	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), is_cube_light(0), no_shadows(0), smap_index(0), user_smap_id(0), cube_eflags(0), num_dlight_rays(0),
-	radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius), r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c)
+	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), is_cube_light(0), no_shadows(0), smap_index(0), user_smap_id(0), smap_mgr_id(0), cube_eflags(0),
+	num_dlight_rays(0), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius), r_inner(ri), bwidth(bw), near_clip(nc), pos(p), pos2(p2), dir(d.get_norm()), color(c)
 {
 	assert(bw > 0.0 && bw <= 1.0);
 	assert(r_inner <= radius);
@@ -461,15 +461,21 @@ public:
 	}
 };
 
-local_smap_manager_t local_smap_manager;
+unsigned const NUM_SMAP_MGRS = 2;
+local_smap_manager_t local_smap_manager[NUM_SMAP_MGRS]; // {normal/city, building_interiors}
 
 void free_light_source_gl_state() { // free shadow maps
-	local_smap_manager.free_gl_state();
+	for (unsigned i = 0; i < NUM_SMAP_MGRS; ++i) {local_smap_manager[i].free_gl_state();}
 }
 
 
+local_smap_manager_t &light_source::get_smap_mgr() const {
+	assert(smap_mgr_id < NUM_SMAP_MGRS);
+	return local_smap_manager[smap_mgr_id];
+}
+
 void light_source::setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) const {
-	if (smap_index > 0) {local_smap_manager.get(smap_index).set_smap_shader_for_light(s, arr_tex_set);}
+	if (smap_index > 0) {get_smap_mgr().get(smap_index).set_smap_shader_for_light(s, arr_tex_set);}
 }
 
 pos_dir_up light_source::calc_pdu(bool dynamic_cobj, bool is_cube_face, float falloff) const {
@@ -551,10 +557,10 @@ bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdo
 	bool matched_smap_id(0);
 
 	if (smap_index == 0) {
-		smap_index = local_smap_manager.new_smap(sm_size, user_smap_id, matched_smap_id);
+		smap_index = get_smap_mgr().new_smap(sm_size, user_smap_id, matched_smap_id);
 		if (smap_index == 0) return 0; // allocation failed (at max)
 	}
-	local_smap_data_t &smap(local_smap_manager.get(smap_index));
+	local_smap_data_t &smap(get_smap_mgr().get(smap_index));
 	smap.pdu = calc_pdu(dynamic_cobj, is_cube_face, falloff); // Note: could cache this in the light source for static lights
 	smap.outdoor_shadows = outdoor_shadows;
 
@@ -570,7 +576,7 @@ bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdo
 }
 
 void light_source::release_smap() {
-	if (smap_index > 0) {local_smap_manager.free_smap(smap_index); smap_index = 0;}
+	if (smap_index > 0) {get_smap_mgr().free_smap(smap_index); smap_index = 0;}
 }
 
 

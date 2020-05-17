@@ -547,6 +547,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool const cache_shadows(!dynamic_shadows && (i->flags & RO_FLAG_NODYNAM)); // no dynamic object on this frame or the last frame
 		if (cache_shadows) {dl_sources.back().assign_smap_id(uintptr_t(&(*i))/sizeof(void *));} // use memory address as a unique ID
 		if (dynamic_shadows) {i->flags &= ~RO_FLAG_NODYNAM;} else {i->flags |= RO_FLAG_NODYNAM;}
+		dl_sources.back().assign_smap_mgr_id(1); // use a different smap manager than the city (cars + streetlights) so that they don't interfere with each other
 		
 		if (camera_near_building && lpos.z > camera_bs.z) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting
