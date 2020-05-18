@@ -2965,7 +2965,12 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 	if (to_draw.empty()) return; // nothing to do
-	// Note: might want to check for any i->second->num_decid_trees() for tiles in to_draw, but in most cases this doesn't help
+
+	if (to_draw.size() <= 9) { // local shadow computation; almost free, but in most cases this doesn't help
+		bool have_trees(0);
+		for (auto i = to_draw.begin(); i != to_draw.end() && !have_trees; ++i) {have_trees |= (i->second->num_decid_trees() > 0);}
+		if (!have_trees) return;
+	}
 	bool const enable_billboards(USE_TREE_BILLBOARDS && !shadow_pass);
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled()); // && !reflection_pass?
 	lod_renderer.resize_zero();
