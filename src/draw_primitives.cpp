@@ -287,7 +287,7 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 // length can be negative
 void draw_cylinder_at(point const &p1, float length, float radius1, float radius2, int ndiv, bool draw_ends, bool first_end_only, bool last_end_only, float tscale_len) {
 
-	assert(ndiv > 0 );
+	assert(ndiv > 0);
 	draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, length), radius1, radius2, ndiv, 1, 0, 0, nullptr, tscale_len); // tex coords?
 	if (draw_ends && !last_end_only  && radius1 > 0.0) {draw_circle_normal(0.0, radius1, ndiv, 1, p1);}
 	if (draw_ends && !first_end_only && radius2 > 0.0) {draw_circle_normal(0.0, radius2, ndiv, 0, p1+vector3d(0.0, 0.0, length));}
