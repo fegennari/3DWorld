@@ -11,8 +11,6 @@ Cities:
 - Wider connector roads/intersections
 - Railroad tracks
 - Fences
-- Mesh simplificaton for cars and peds for shadow pass?
 
-* Building interiors:
-  - Place more room objects/furniture
+- Building interiors:
   - Interiors for city office towers
