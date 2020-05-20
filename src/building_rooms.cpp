@@ -148,7 +148,6 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 }
 
 // Note: must be first placed object
-// Note: no blockers for people
 bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
 	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
 {
@@ -193,6 +192,32 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 		break; // done/success
 	} // for n
 	return (num_placed > 0);
+}
+
+// Note: must be first placed object
+bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
+	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
+{
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	float const vspace(get_window_vspace());
+	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
+	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
+	cube_t c;
+	c.z1() = zval;
+	c.z2() = zval + height;
+
+	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bed
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+		//c.d[dim][ dir] = ;
+		//c.d[dim][!dir] = ;
+		//float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
+		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
+		objs.emplace_back(c, TYPE_BED, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		objs.back().obj_id = (uint16_t)objs.size();
+		return 1; // done/success
+	} // for n
+	return 0;
 }
 
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
@@ -466,17 +491,20 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 			unsigned const objs_start(objs.size());
-			bool added_tc(0);
+			bool added_tc(0), added_bed(0);
 			cube_t avoid_cube;
 
 			// place room objects
-			if (rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) { // 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
+			if (0 && is_house && rgen.rand_float() < 0.25) {
+				added_bed = add_bed_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
+			}
+			else if (rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) { // 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				// place a table and maybe some chairs near the center of the room if it's not a hallway
 				added_tc = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
 			}
-			if (!added_tc) {add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);} // try to place a desk if there's no table
+			if (!added_tc && !added_bed) {add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);} // try to place a desk if there's no table/bed
 
-			if (objs.size() > objs_start) { // an object was placed (table or desk), maybe add a book on top of it
+			if (!added_bed && objs.size() > objs_start) { // an object was placed (table or desk), maybe add a book on top of it
 				if (rgen.rand_float() < (added_tc ? 0.4 : 0.75)*(is_house ? 1.0 : 0.5)*(r->is_office ? 0.75 : 1.0)) {
 					place_book_on_obj(rgen, objs[objs_start], room_id, tot_light_amt, is_lit, !added_tc);
 				}
@@ -1056,9 +1084,19 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_bed(room_object_t const &c, float tscale) {
+	float const height(c.dz());
+	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c); // pillow?
+	frame.z1() += 0.45*height;
+	frame.z2() -= 0.5*height;
+	// TODO: WRITE
+	legs_bcube.z2() = frame.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	add_tc_legs(legs_bcube, color, 0.06, tscale);
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
-	wood_mat.add_cube_to_verts(c, color); // TODO: WRITE
+	wood_mat.add_cube_to_verts(frame, color); // black metal?
+	wood_mat.add_cube_to_verts(head, color);
+	wood_mat.add_cube_to_verts(foot, color);
+	get_material(untex_shad_mat, 1).add_cube_to_verts(mattress, apply_light_color(c)); // TODO: sheet texture
 }
 
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
@@ -1127,6 +1165,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_WBOARD:   return WHITE;
 	case TYPE_BCASE:    return WOOD_COLOR;
 	case TYPE_DESK:     return WOOD_COLOR;
+	case TYPE_BED:      return (color + WOOD_COLOR)*0.5; // half wood and half cloth
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	return color; // Note: probably should always set color so that we can return it here
