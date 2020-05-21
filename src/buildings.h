@@ -508,6 +508,7 @@ struct building_t : public building_geom_t {
 	void update_stats(building_stats_t &s) const;
 	void build_nav_graph() const;
 	unsigned count_connected_room_components() const;
+	bool is_room_adjacent_to_ext_door(cube_t const &room) const;
 	point get_center_of_room(unsigned room_ix) const;
 	bool choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	bool find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, vector<point> &path) const;

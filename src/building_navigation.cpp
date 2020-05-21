@@ -402,11 +402,8 @@ void building_t::build_nav_graph() const {
 		if (room.is_hallway) {ng.mark_hallway(r);}
 		ng.set_room_bcube(r, c);
 		c.expand_by_xy(wall_width); // to include adjacent doors
+		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
-		for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
-			if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
-			if (c.intersects(d->get_bcube())) {ng.mark_exit(r); break;}
-		}
 		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
 			cube_t dc(*d);
@@ -440,6 +437,17 @@ unsigned building_t::count_connected_room_components() const {
 	unsigned const num(interior->nav_graph->count_connected_components());
 	interior->nav_graph.reset(); // no longer needed
 	return num;
+}
+
+bool building_t::is_room_adjacent_to_ext_door(cube_t const &room) const {
+	cube_t room_exp(room);
+	room_exp.expand_by_xy(0.5*get_wall_thickness());
+
+	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
+		if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
+		if (room_exp.intersects(d->get_bcube())) return 1;
+	}
+	return 0;
 }
 
 point building_t::get_center_of_room(unsigned room_ix) const {
