@@ -123,7 +123,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 // Note: no blockers for people
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	cube_t room_bounds(get_walkable_room_bounds(room));
+	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.4*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen.rand_uniform(1.0, 1.2));
@@ -152,7 +152,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
 {
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	cube_t room_bounds(get_walkable_room_bounds(room));
+	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
@@ -194,6 +194,12 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	return (num_placed > 0);
 }
 
+bool building_t::can_be_bedroom(room_t const &room) const {
+	if (!is_house || room.has_stairs || room.has_elevator || room.is_hallway || room.is_office) return 0; // no bed in these cases
+	if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom
+	return 1;
+}
+
 // Note: must be first placed object
 bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
 	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
@@ -201,19 +207,24 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
-	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
-	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
+	room_bounds.expand_by_xy(-0.3*vspace); // leave at least some space between the bed and the wall
+	bool const dim(room_bounds.dx() < room_bounds.dy()); // longer dim
+	vector3d bed_sz;
+	bed_sz[ dim] = 0.8*vspace*rgen.rand_uniform(1.0, 1.2);
+	bed_sz[!dim] = 0.5*vspace*rgen.rand_uniform(1.0, 1.2);
+	bed_sz.z     = 0.3*vspace*rgen.rand_uniform(1.0, 1.2);
+	if (room_bounds.dx() < 1.2*bed_sz.x || room_bounds.dy() < 1.2*bed_sz.y) return 0; // room is too small
 	cube_t c;
 	c.z1() = zval;
-	c.z2() = zval + height;
+	c.z2() = zval + bed_sz.z;
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bed
-		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
-		//c.d[dim][ dir] = ;
-		//c.d[dim][!dir] = ;
-		//float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
+		for (unsigned d = 0; d < 2; ++d) {
+			c.d[d][0] = rgen.rand_uniform(room_bounds.d[d][0], (room_bounds.d[d][1] - bed_sz[d]));
+			c.d[d][1] = c.d[d][0] + bed_sz[d];
+		}
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
-		objs.emplace_back(c, TYPE_BED, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		objs.emplace_back(c, TYPE_BED, room_id, dim, rgen.rand_bool(), (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
 		objs.back().obj_id = (uint16_t)objs.size();
 		return 1; // done/success
 	} // for n
@@ -1084,11 +1095,16 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_bed(room_object_t const &c, float tscale) {
-	float const height(c.dz());
+	float const height(c.dz()), length(c.get_sz_dim(c.dim));
 	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c); // pillow?
 	frame.z1() += 0.45*height;
 	frame.z2() -= 0.5*height;
-	// TODO: WRITE
+	foot.z2()  -= 0.15*height;
+	head.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.96*length;
+	foot.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.97*length;
+	mattress.z1() = head.z1() = foot.z1() = frame.z2();
+	mattress.z2() = mattress.z1() + 0.2*height;
+	mattress.expand_by_xy(-0.02*height);
 	legs_bcube.z2() = frame.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	add_tc_legs(legs_bcube, color, 0.06, tscale);
