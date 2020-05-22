@@ -105,16 +105,17 @@ void add_ssao() {
 	draw_white_quad_and_end_shader(s);
 }
 
-void add_color_only_effect(string const &frag_shader, float intensity=1.0) {
+void add_color_only_effect(string const &frag_shader, float intensity=1.0, float time_scale=1.0, float pos_scale=0.0) {
 
 	static float time(0.0);
-	if (animate2) {time += fticks;}
+	if (animate2) {time += time_scale*fticks;}
 	bind_frame_buffer_RGB();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
 	s.set_frag_shader(frag_shader);
 	s.begin_shader();
 	s.add_uniform_float("intensity", intensity);
+	if (pos_scale != 0.0) {s.add_uniform_float("pos_scale", pos_scale);} // not all shaders have this uniform
 	s.add_uniform_int("frame_buffer_tex", 0);
 	s.add_uniform_float("time", time); // may not be used
 	select_multitex(NOISE_TEX, 1);
@@ -235,7 +236,8 @@ void run_postproc_effects() {
 	if (camera_underwater) {
 		//add_color_only_effect("screen_space_blur");
 		add_2d_blur();
-		if (player_is_drowning()) {add_color_only_effect("drunken_wave", 1.0);}
+		if (player_is_drowning())                 {add_color_only_effect("drunken_wave", 1.0);}
+		else if (world_mode == WMODE_INF_TERRAIN) {add_color_only_effect("drunken_wave", 0.12, 1.6, 1.6);} // reduced but faster effect
 	}
 	else {
 		float const dist_to_fire(sqrt(dist_to_fire_sq)), fire_max_dist(4.0*CAMERA_RADIUS);
