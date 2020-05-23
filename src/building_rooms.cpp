@@ -196,9 +196,9 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	return (num_placed > 0);
 }
 
-bool building_t::can_be_bedroom(room_t const &room) const {
+bool building_t::can_be_bedroom(room_t const &room, bool on_first_floor) const {
 	if (!is_house || room.has_stairs || room.has_elevator || room.is_hallway || room.is_office) return 0; // no bed in these cases
-	if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom
+	if (on_first_floor && is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom
 	return 1;
 }
 
@@ -508,7 +508,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			cube_t avoid_cube;
 
 			// place room objects
-			if (0 && is_house && rgen.rand_float() < 0.25) {
+			if (can_be_bedroom(*r, (f == 0)) && rgen.rand_float() < 0.75) { // 75% of the time
 				added_bed = add_bed_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
 			}
 			else if (rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) { // 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
