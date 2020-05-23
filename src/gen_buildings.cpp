@@ -365,6 +365,7 @@ bool parse_buildings_option(FILE *fp) {
 	// room objects/textures
 	else if (str == "add_rug_texture"    ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.rug_tids    );}
 	else if (str == "add_picture_texture") {read_texture_and_add_if_valid(fp, str, error, global_building_params.picture_tids);}
+	else if (str == "add_sheet_texture"  ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.sheet_tids  );}
 	// special commands
 	else if (str == "probability") {
 		if (!read_uint(fp, global_building_params.cur_prob)) {buildings_file_err(str, error);}
@@ -387,6 +388,10 @@ int room_object_t::get_rug_tid() const {
 int room_object_t::get_picture_tid() const {
 	unsigned const num_tids(global_building_params.picture_tids.size());
 	return ((num_tids == 0) ? -1 : global_building_params.picture_tids[obj_id % num_tids]);
+}
+int room_object_t::get_sheet_tid() const {
+	unsigned const num_tids(global_building_params.sheet_tids.size());
+	return ((num_tids == 0) ? -1 : global_building_params.sheet_tids[obj_id % num_tids]);
 }
 
 void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos) {

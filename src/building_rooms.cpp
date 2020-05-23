@@ -1140,13 +1140,13 @@ void building_room_geom_t::add_bed(room_object_t const &c, float tscale) {
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	add_tc_legs(legs_bcube, color, 0.04, tscale);
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
-	wood_mat.add_cube_to_verts(frame, color); // black metal?
+	wood_mat.add_cube_to_verts(frame, color);
 	wood_mat.add_cube_to_verts(head, color, EF_Z1);
 	wood_mat.add_cube_to_verts(foot, color, EF_Z1);
 	unsigned const mattress_skip_faces(EF_Z1 | (c.dim ? (EF_Y1 | EF_Y2) : (EF_X1 | EF_X2)));
-	rgeom_mat_t &sheet_mat(get_material(untex_shad_mat, 1));
+	rgeom_mat_t &sheet_mat(get_material(tid_nm_pair_t(c.get_sheet_tid(), tscale), 1));
 	colorRGBA const sheet_color(apply_light_color(c));
-	sheet_mat.add_cube_to_verts(mattress, sheet_color, mattress_skip_faces); // TODO: sheet texture
+	sheet_mat.add_cube_to_verts(mattress, sheet_color, mattress_skip_faces);
 
 	if (is_wide) { // two pillows
 		for (unsigned d = 0; d < 2; ++d) {
