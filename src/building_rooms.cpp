@@ -139,7 +139,9 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
 		c.d[!dim][0] = pos - 0.5*width;
 		c.d[!dim][1] = pos + 0.5*width;
-		if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
+		cube_t tc(c);
+		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.2*vspace; // increase space to add clearance
+		if (is_cube_close_to_doorway(tc, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt); // Note: dir faces into the room, not the wall
 		objs.back().obj_id = (uint16_t)objs.size();
 		return 1; // done/success
