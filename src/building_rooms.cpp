@@ -1174,7 +1174,9 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 		v.set_ortho_norm(2, 1); // +z
 		
 		for (unsigned i = 0; i < 4; ++i) { // bottom
-			v.v.assign(base.d[0][i==0||i==1], base.d[1][i==1||i==2], base.z1());
+			bool const xp(i==0||i==1), yp(i==1||i==2);
+			v.v.assign(base.d[0][xp], base.d[1][yp], base.z1());
+			v.t[0] = float(xp); v.t[1] = float(yp); // required for normal mapping ddx/ddy on texture coordinate
 			verts.push_back(v);
 		}
 		for (unsigned dim = 0; dim < 2; ++dim) { // x,y
@@ -1182,10 +1184,11 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 				unsigned const six(verts.size());
 
 				for (unsigned i = 0; i < 4; ++i) {
-					bool const tb(i==1||i==2);
+					bool const tb(i==1||i==2), lohi(i==0||i==1);
 					v.v[ dim] = (tb ? c : base).d[ dim][dir];
-					v.v[!dim] = (tb ? c : base).d[!dim][i==0||i==1];
-					v.v.z = c.d[2][tb];
+					v.v[!dim] = (tb ? c : base).d[!dim][lohi];
+					v.v.z  = c.d[2][tb];
+					//v.t[0] = float(tb); v.t[1] = float(lohi); // causes a seam between triangles due to TBN basis change, so leave at 0.0
 					verts.push_back(v);
 				}
 				for (unsigned i = 0; i < 4; ++i) {verts.push_back(verts[six+3-i]);} // add reversed quad for opposing face
