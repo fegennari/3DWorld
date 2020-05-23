@@ -206,27 +206,47 @@ bool building_t::can_be_bedroom(room_t const &room, bool on_first_floor) const {
 bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
 	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
 {
+	unsigned const NUM_COLORS = 8;
+	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t room_bounds(get_walkable_room_bounds(room));
-	float const vspace(get_window_vspace());
-	room_bounds.expand_by_xy(-0.3*vspace); // leave at least some space between the bed and the wall
+	float const vspace(get_window_vspace()), wall_thick(get_wall_thickness());
 	bool const dim(room_bounds.dx() < room_bounds.dy()); // longer dim
-	vector3d bed_sz;
-	bed_sz[ dim] = 0.8*vspace*rgen.rand_uniform(1.0, 1.2);
-	bed_sz[!dim] = 0.5*vspace*rgen.rand_uniform(1.0, 1.2);
-	bed_sz.z     = 0.3*vspace*rgen.rand_uniform(1.0, 1.2);
-	if (room_bounds.dx() < 1.2*bed_sz.x || room_bounds.dy() < 1.2*bed_sz.y) return 0; // room is too small
+	vector3d expand, bed_sz;
+	expand[ dim] = -wall_thick; // small amount of space
+	expand[!dim] = -0.3*vspace; // leave at least some space between the bed and the wall
+	room_bounds.expand_by_xy(expand);
+	if (room_bounds.get_sz_dim(dim) < 1.3*vspace || room_bounds.get_sz_dim(!dim) < 0.8*vspace) return 0; // room is too small to fit a bed
+	if (room_bounds.get_sz_dim(dim) > 4.0*vspace || room_bounds.get_sz_dim(!dim) > 2.5*vspace) return 0; // room is too large to be a bedroom
+	bool const first_head_dir(rgen.rand_bool()), first_wall_dir(rgen.rand_bool());
 	cube_t c;
 	c.z1() = zval;
-	c.z2() = zval + bed_sz.z;
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bed
+		bed_sz[ dim] = 0.8*vspace*rgen.rand_uniform(1.0, 1.2); // length
+		bed_sz[!dim] = 0.5*vspace*rgen.rand_uniform(1.0, 1.5); // width
+		if (room_bounds.dx() < 1.5*bed_sz.x || room_bounds.dy() < 1.5*bed_sz.y) continue; // room is too small for a bed of this size
+		bed_sz.z = 0.3*vspace*rgen.rand_uniform(1.0, 1.2); // height
+		c.z2()   = zval + bed_sz.z;
+
 		for (unsigned d = 0; d < 2; ++d) {
-			c.d[d][0] = rgen.rand_uniform(room_bounds.d[d][0], (room_bounds.d[d][1] - bed_sz[d]));
+			float const min_val(room_bounds.d[d][0]), max_val(room_bounds.d[d][1] - bed_sz[d]);
+
+			if (bool(d) == dim && n < 5) { // in the first few iterations, try to place the head of the bed against the wall (maybe not for exterior wall facing window?)
+				c.d[d][0] = ((first_head_dir ^ bool(n&1)) ? min_val : max_val);
+			}
+			else if (bool(d) != dim && rgen.rand_bool()) { // try to place the bed against the wall sometimes
+				c.d[d][0] = ((first_wall_dir ^ bool(n&1)) ? (min_val - 0.25*vspace) : (max_val + 0.25*vspace));
+			}
+			else {
+				c.d[d][0] = rgen.rand_uniform(min_val, max_val);
+			}
 			c.d[d][1] = c.d[d][0] + bed_sz[d];
-		}
+		} // for d
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
-		objs.emplace_back(c, TYPE_BED, room_id, dim, rgen.rand_bool(), (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall
+		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		objs.back().color  = colors[rgen.rand()%NUM_COLORS];
 		objs.back().obj_id = (uint16_t)objs.size();
 		return 1; // done/success
 	} // for n
@@ -511,8 +531,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (can_be_bedroom(*r, (f == 0)) && rgen.rand_float() < 0.75) { // 75% of the time
 				added_bed = add_bed_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
 			}
-			else if (rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) { // 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
-				// place a table and maybe some chairs near the center of the room if it's not a hallway
+			if (!added_bed && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
+				// place a table and maybe some chairs near the center of the room if it's not a hallway;
+				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				added_tc = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
 			}
 			if (!added_tc && !added_bed) {add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);} // try to place a desk if there's no table/bed
@@ -1097,24 +1118,44 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_bed(room_object_t const &c, float tscale) {
-	float const height(c.dz()), length(c.get_sz_dim(c.dim));
-	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c); // pillow?
-	frame.z1() += 0.45*height;
-	frame.z2() -= 0.5*height;
-	foot.z2()  -= 0.15*height;
+	float const height(c.dz()), length(c.get_sz_dim(c.dim)), width(c.get_sz_dim(!c.dim));
+	bool const is_wide(width > 0.7*length);
+	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c), pillow(c);
 	head.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.96*length;
 	foot.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.97*length;
-	mattress.z1() = head.z1() = foot.z1() = frame.z2();
-	mattress.z2() = mattress.z1() + 0.2*height;
-	mattress.expand_by_xy(-0.02*height);
+	mattress.d[c.dim][ c.dir] = head.d[c.dim][!c.dir];
+	mattress.d[c.dim][!c.dir] = foot.d[c.dim][ c.dir];
+	frame.z1() += 0.3*height;
+	frame.z2() -= 0.65*height;
+	foot.z2()  -= 0.15*height;
+	mattress.z1()   = head.z1()   = foot.z1() = frame.z2();
+	mattress.z2()   = pillow.z1() = mattress.z1() + 0.2*height;
+	pillow.z2()     = pillow.z1() + 0.12*height;
 	legs_bcube.z2() = frame.z1();
+	float const pillow_space((is_wide ? 0.1 : 0.25)*width);
+	pillow.d[!c.dim][0] += pillow_space; pillow.d[!c.dim][1] -= pillow_space;
+	pillow.d[c.dim][ c.dir] = mattress.d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*0.02*length; // head
+	pillow.d[c.dim][!c.dir] = pillow  .d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*(is_wide ? 0.25 : 0.5)*pillow.get_sz_dim(!c.dim);
+	mattress.d[!c.dim][0] += 0.02*width; mattress.d[!c.dim][1] -= 0.02*width;
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	add_tc_legs(legs_bcube, color, 0.06, tscale);
+	add_tc_legs(legs_bcube, color, 0.04, tscale);
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
 	wood_mat.add_cube_to_verts(frame, color); // black metal?
-	wood_mat.add_cube_to_verts(head, color);
-	wood_mat.add_cube_to_verts(foot, color);
-	get_material(untex_shad_mat, 1).add_cube_to_verts(mattress, apply_light_color(c)); // TODO: sheet texture
+	wood_mat.add_cube_to_verts(head, color, EF_Z1);
+	wood_mat.add_cube_to_verts(foot, color, EF_Z1);
+	unsigned const mattress_skip_faces(EF_Z1 | (c.dim ? (EF_Y1 | EF_Y2) : (EF_X1 | EF_X2)));
+	rgeom_mat_t &sheet_mat(get_material(untex_shad_mat, 1));
+	colorRGBA const sheet_color(apply_light_color(c));
+	sheet_mat.add_cube_to_verts(mattress, sheet_color, mattress_skip_faces); // TODO: sheet texture
+
+	if (is_wide) { // two pillows
+		for (unsigned d = 0; d < 2; ++d) {
+			cube_t p(pillow);
+			p.d[!c.dim][d] += (d ? -1.0 : 1.0)*0.55*pillow.get_sz_dim(!c.dim);
+			sheet_mat.add_cube_to_verts(p, sheet_color, EF_Z1);
+		}
+	}
+	else {sheet_mat.add_cube_to_verts(pillow, sheet_color, EF_Z1);} // one pillow
 }
 
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
