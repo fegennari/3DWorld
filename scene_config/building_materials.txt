@@ -49,6 +49,7 @@ buildings add_picture_texture pictures/sponza.jpg
 
 # interior detail sheet textures
 # Note: fabrics directory is not part of the git repo
+buildings add_sheet_texture white.png
 buildings add_sheet_texture fabrics/blanket1.tif
 buildings add_sheet_texture fabrics/blanket2.tif # assigned to multiple colors
 buildings add_sheet_texture fabrics/medieval.tif
