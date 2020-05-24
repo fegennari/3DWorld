@@ -186,10 +186,12 @@ public:
 	{
 		assert(p1.z == p2.z);
 		bool is_path_valid(1);
+		cube_t walk_area_exp(walk_area);
+		walk_area_exp.expand_by_xy(radius); // to capture objects that we could intersect when our center is in walk_area
 		keepout.clear();
 
 		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-			if (!i->intersects_xy(walk_area)) continue;
+			if (!i->intersects_xy(walk_area_exp)) continue;
 			cube_t c(*i);
 			c.expand_by_xy(radius);
 
