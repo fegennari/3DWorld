@@ -749,7 +749,8 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 		itri_verts[itix++].assign(ce[bt], normal, 0.0, 0.0, cw.c); // center
 
 		for (unsigned i = 0; i < ndiv; ++i) {
-			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, 0.0, 0.0, cw.c);
+			vector3d const &side_normal(vpn.n[i]);
+			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, side_normal.x, side_normal.y, cw.c); // assign tcs based on side normal
 			indices[iix++] = center_ix; // center
 			indices[iix++] = center_ix + i + 1;
 			indices[iix++] = center_ix + ((i+1)%ndiv) + 1;
