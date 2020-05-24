@@ -18,6 +18,7 @@ bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const ADD_ROOM_SHADOWS      = 1;
 bool const ADD_ROOM_LIGHTS       = 1;
 bool const DRAW_INTERIOR_DOORS   = 1;
+bool const LINEAR_ROOM_DLIGHT_ATTEN = 1;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
@@ -2259,6 +2260,7 @@ public:
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && transparent_windows);
 			if (enable_animations) {enable_animations_for_shader(s);}
+			if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
 			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			set_interior_lighting(s, have_indir);

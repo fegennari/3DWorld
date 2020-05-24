@@ -63,7 +63,12 @@ float get_dir_light_scale(in vec3 light_dir, in vec3 dir, in float bwidth) {
 
 float get_point_intensity_at(in vec3 pos, in vec3 lpos, in float radius) { // Note: doesn't handle the radius==0 case
 	float rscale = max(0.0, (radius - distance(pos, lpos)))/radius;
+#ifdef LINEAR_DLIGHT_ATTEN
+	return rscale; // linear attenuation
+#else
+	//return min(1.0, 1.5*rscale*rscale);
 	return rscale*rscale; // quadratic 1/r^2 attenuation
+#endif
 }
 
 float get_sphere_intensity_at(in vec3 pos, in vec3 lpos, in float radius, in float inner_radius) { // Note: doesn't handle the radius==0 case
