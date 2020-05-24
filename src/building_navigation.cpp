@@ -508,6 +508,7 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 }
 
 void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2) const { // for AI
+	avoid.clear();
 	add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2);
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2);
 	if (!room_geom) return; // no room objects
@@ -553,10 +554,9 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	else if (loc1.part_ix != loc2.part_ix) {
 		if (parts[loc1.part_ix].z1() != parts[loc2.part_ix].z1()) {use_stairs = 1;} // stacked parts
 	}
-	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing); // approximate, since we're not tracking actual heights
+	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing), z2_add(height - radius); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
-	avoid.clear();
-	interior->get_avoid_cubes(avoid, (from.z - height), (from.z + height)); // if using stairs, don't avoid stairs
+	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add));
 
 	if (use_stairs) { // find path from <from> to nearest stairs, then find path from stairs to <to>
 		int const stairs_ix(find_nearest_stairs(from, to, 1)); // straight_only=1; pass in loc1.part_ix if both loc part_ix values are equal?
@@ -569,6 +569,7 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 		// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 		if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, up_or_down, avoid, from, from_path)) return 0; // from => stairs
 		point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, (stairs_ix + interior->rooms.size()), !up_or_down)); // other end
+		interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add)); // new floor, new zval, new avoid cubes
 		if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, !up_or_down, avoid, seg2_start, path)) return 0; // stairs => to
 		assert(!path.empty() && !from_path.empty());
 		path.push_back(seg2_start); // other end of the stairs
