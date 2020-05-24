@@ -441,6 +441,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_near_building(camera_in_building);
+	int camera_room(-1);
 	ped_bcubes.clear();
 
 	if (camera_in_building) {
@@ -449,7 +450,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient
 			// Note: stairs that connect stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
-			if (r->contains_pt(camera_bs)) {camera_by_stairs = r->has_stairs; break;}
+			if (r->contains_pt(camera_bs)) {camera_room = (r - interior->rooms.begin()); camera_by_stairs = r->has_stairs; break;}
 		}
 	}
 	else {
@@ -461,14 +462,26 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
+		//if (is_light_occluded(lpos, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
 		float const floor_z(i->z2() - window_vspacing), ceil_z(i->z2());
 		bool const floor_is_above(camera_z < floor_z), floor_is_below(camera_z > ceil_z);
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
 		// less culling if either the light or the camera is by stairs and light is on the floor above or below
-		bool const stairs_light((i->has_stairs() || room.has_stairs || camera_by_stairs) && (camera_z > floor_z-window_vspacing) && (camera_z < ceil_z+window_vspacing));
-		//if (is_light_occluded(lpos, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
+		bool stairs_light(0);
 
+		if ((camera_z > floor_z-window_vspacing) && (camera_z < ceil_z+window_vspacing)) { // light is on the floor above or below the camera
+			stairs_light = (i->has_stairs() || room.has_stairs || camera_by_stairs); // either the light or the camera is by the stairs
+
+			if (!stairs_light && floor_is_below && camera_room >= 0) { // what about camera in room adjacent to one with stairs and looking down at room?
+				cube_t cr(interior->rooms[camera_room]);
+				cr.expand_by_xy(2.0*wall_thickness);
+
+				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+					if (r->has_stairs && r->intersects_no_adj(cr)) {stairs_light = 1; break;}
+				}
+			}
+		}
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 			if (camera_in_building && (room.part_id == camera_part ||
 				(room.contains_pt_xy(camera_bs) && camera_z < ceil_z+window_vspacing && camera_z > floor_z-window_vspacing)))
