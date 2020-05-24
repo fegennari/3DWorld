@@ -449,8 +449,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->contains_pt(camera_bs)) {camera_part = (i - parts.begin()); break;}
 		}
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient
+			cube_t tc(*r);
+			tc.expand_by_xy(wall_thickness); // to include camera in doorway
 			// Note: stairs that connect stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
-			if (r->contains_pt(camera_bs)) {camera_room = (r - interior->rooms.begin()); camera_by_stairs = r->has_stairs; break;}
+			if (tc.contains_pt(camera_bs)) {camera_room = (r - interior->rooms.begin()); camera_by_stairs = r->has_stairs; break;}
 		}
 	}
 	else {
@@ -473,7 +475,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if ((camera_z > floor_z-window_vspacing) && (camera_z < ceil_z+window_vspacing)) { // light is on the floor above or below the camera
 			stairs_light = (i->has_stairs() || room.has_stairs || camera_by_stairs); // either the light or the camera is by the stairs
 
-			if (!stairs_light && floor_is_below && camera_room >= 0) { // what about camera in room adjacent to one with stairs and looking down at room?
+			if (!stairs_light /*&& floor_is_below*/ && camera_room >= 0) { // what about camera in room adjacent to one with stairs?
 				cube_t cr(interior->rooms[camera_room]);
 				cr.expand_by_xy(2.0*wall_thickness);
 
