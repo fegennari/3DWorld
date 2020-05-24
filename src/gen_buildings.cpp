@@ -831,7 +831,7 @@ public:
 	}
 
 	// Note: invert_tc only applies to doors
-	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool invert_tc_x=0) {
+	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool invert_tc_x=0, bool exclude_frame=0) {
 		assert(tquad.npts == 3 || tquad.npts == 4); // triangles or quads
 		auto &verts(get_verts(tex, (tquad.npts == 3))); // 0=quads, 1=tris
 		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -876,6 +876,7 @@ public:
 			else if (tquad.is_interior_door()) { // interior door textured/stretched in Y
 				vert.t[0] = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
 				vert.t[1] = tex.tscale_y*((i == 2 || i == 3));
+				if (exclude_frame) {vert.t[0] = 0.07 + 0.86*vert.t[0];}
 			}
 			else {assert(0);}
 			if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
@@ -1325,6 +1326,7 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 	float const ty(exterior ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
 	bool const opens_up(door_type == tquad_with_ix_t::TYPE_GDOOR);
+	bool const exclude_frame(door_type == tquad_with_ix_t::TYPE_HDOOR && !exterior && opened); // exclude the frame on open interior doors
 	unsigned const num_edges(opens_up ? 4 : 2);
 	int const tid(get_building_ext_door_tid(door_type));
 	float const thickness(opens_up ? 0.01*D.dz() : 0.02*D.get_sz_dim(!dim));
@@ -1353,7 +1355,7 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 				swap(door_side.pts[2], door_side.pts[3]);
 				door_side.type = tquad_with_ix_t::TYPE_IDOOR2;
 			}
-			bdraw.add_tquad(*this, door_side, bcube, tp, WHITE);
+			bdraw.add_tquad(*this, door_side, bcube, tp, WHITE, 0, exclude_frame);
 		} // for d
 		for (unsigned e = 0; e < num_edges; ++e) { // add untextured door edges
 			bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), WHITE); // Note: better to pick a single white texel in door tex and set tscale=0.0?
