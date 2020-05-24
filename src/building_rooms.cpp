@@ -246,8 +246,12 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall
 		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
-		objs.back().color  = colors[rgen.rand()%NUM_COLORS];
-		objs.back().obj_id = (uint16_t)objs.size();
+		room_object_t &bed(objs.back());
+		bed.obj_id = (uint16_t)objs.size();
+		// use white color if a texture is assigned that's not close to white
+		int const sheet_tid(bed.get_sheet_tid());
+		bool const use_white();
+		if (sheet_tid < 0 || sheet_tid == WHITE_TEX || texture_color(sheet_tid).get_luminance() > 0.5) {bed.color = colors[rgen.rand()%NUM_COLORS];}
 		return 1; // done/success
 	} // for n
 	return 0;
@@ -1215,19 +1219,20 @@ void building_room_geom_t::clear_materials() { // can be called to update textur
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
 	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale), 1); // hard-coded for common material
 }
+colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));}
 
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
-	case TYPE_TABLE:    return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));
-	case TYPE_CHAIR:    return (color + WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX)))*0.5; // 50% seat color / 50% wood legs color
+	case TYPE_TABLE:    return get_textured_wood_color();
+	case TYPE_CHAIR:    return (color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
 	case TYPE_STAIR:    return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());
 	case TYPE_PICTURE:  return texture_color(get_picture_tid());
 	case TYPE_WBOARD:   return WHITE;
-	case TYPE_BCASE:    return WOOD_COLOR;
-	case TYPE_DESK:     return WOOD_COLOR;
-	case TYPE_BED:      return (color + WOOD_COLOR)*0.5; // half wood and half cloth
+	case TYPE_BCASE:    return get_textured_wood_color();
+	case TYPE_DESK:     return get_textured_wood_color();
+	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	return color; // Note: probably should always set color so that we can return it here

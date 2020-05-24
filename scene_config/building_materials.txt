@@ -47,6 +47,13 @@ buildings add_picture_texture pictures/san_miguel.jpg
 buildings add_picture_texture pictures/spheres.jpg
 buildings add_picture_texture pictures/sponza.jpg
 
+# interior detail sheet textures
+# Note: fabrics directory is not part of the git repo
+#buildings add_sheet_texture none # untextured
+buildings add_sheet_texture fabrics/blanket1.tif
+buildings add_sheet_texture fabrics/blanket2.tif
+buildings add_sheet_texture fabrics/medieval.tif
+
 # house ceilings and floors
 buildings house_ceil_color  1.0 1.0 1.0 1.0 # white
 buildings house_floor_color 1.0 1.0 1.0 1.0 # white
