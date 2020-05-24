@@ -29,6 +29,7 @@ textures/skybox/skybox*.png
 textures/skybox/craterlake
 textures/skybox/ely_hills
 textures/pictures
+textures/fabrics
 dependencies/meshoptimizer/src/*.o
 TAGS
 *~
