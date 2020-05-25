@@ -1069,7 +1069,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 		cube_t const &shelf(shelves[i]);
 		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 books per shelf
 		float const book_space(shelf.get_sz_dim(!c.dim)/num_spaces);
-		float pos(shelf.d[!c.dim][0]), last_book_pos(pos);
+		float pos(shelf.d[!c.dim][0]), shelf_end(shelf.d[!c.dim][1]), last_book_pos(pos);
 		unsigned skip_mask(0);
 
 		for (unsigned n = 0; n < num_spaces; ++n) {
@@ -1079,11 +1079,13 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 			}
 		}
 		for (unsigned n = 0; n < num_spaces; ++n) {
+			if (pos + 0.7*book_space > shelf_end) break; // not enough space for another book
 			float const width(book_space*rgen.rand_uniform(0.7, 1.3));
 			if (skip_mask & (1<<n)) {pos += width; continue;} // skip this book
 			float const height((shelf_dz - shelf_thick)*rgen.rand_uniform(0.6, 0.98));
-			float const right_pos(min((pos + width), shelf.d[!c.dim][1]));
+			float const right_pos(min((pos + width), shelf_end));
 			cube_t book;
+			book.z1() = shelf.z2();
 			book.d[c.dim][ c.dir] = shelf.d[c.dim][ c.dir] + depth*rgen.rand_uniform(0.0, 0.25); // facing out
 			book.d[c.dim][!c.dir] = shelf.d[c.dim][!c.dir]; // facing in
 
@@ -1096,8 +1098,9 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 				book.d[!c.dim][0] = pos;
 				book.d[!c.dim][1] = right_pos; // clamp to edge of bookcase interior
 				book.z2() = shelf.z2() + height;
+				assert(pos < right_pos);
 			}
-			book.z1() = shelf.z2();
+			assert(book.is_strictly_normalized());
 			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 			book_mat.add_cube_to_verts(book, apply_light_color(c, book_color), book_skip_faces); // what about slight random rotation/tilt?
 			pos += width;
