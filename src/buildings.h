@@ -380,6 +380,7 @@ struct building_interior_t {
 	~building_interior_t();
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f, bool inc_open=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
+	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
 	bool update_elevators(point const &player_pos);
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2) const;

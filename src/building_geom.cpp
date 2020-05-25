@@ -1648,6 +1648,14 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, floa
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
 	return has_bcube_int(tc, stairwells, doorway_width); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
+// similar to above, but no expand for stairs/elevator, uses raw bcubes
+bool building_interior_t::is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin) const {
+	cube_t tc(c);
+	tc.expand_by_xy(dmin); // no pad in z
+	if (has_bcube_int(c, elevators)) return 1;
+	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs
+	return has_bcube_int(tc, stairwells); // must check zval to exclude stairs and elevators in parts with other z-ranges
+}
 
 void building_interior_t::finalize() {
 	remove_excess_cap(floors);

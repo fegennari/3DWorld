@@ -358,7 +358,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				keepout.z1() = zval; // extend to the floor
 				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
 				if (overlaps_other_room_obj(keepout, objs_start)) continue;
-				if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) continue; // bad placement
+				if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator_no_expand(tc, 4.0*wall_thickness)) continue; // bad placement
 				objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
 				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
 				was_hung = 1;
@@ -421,7 +421,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		cube_t pri_light, sec_light;
 		set_light_xy(pri_light, room_center, light_size, room_dim, light_shape);
 		if (!r->contains_cube_xy(pri_light)) {pri_light.set_to_zeros();} // disable light if it doesn't fit (small room)
-		bool const blocked_by_stairs(!r->is_hallway && interior->is_blocked_by_stairs_or_elevator(pri_light, fc_thick));
+		bool const blocked_by_stairs(!r->is_hallway && interior->is_blocked_by_stairs_or_elevator_no_expand(pri_light, fc_thick));
 		bool use_sec_light(0);
 		float z(r->z1());
 
@@ -432,7 +432,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				point new_center(room_center);
 				new_center[room_dim] += ((bool(d) ^ first_dir) ? -1.0 : 1.0)*0.33*r->get_sz_dim(room_dim);
 				set_light_xy(sec_light, new_center, light_size, !room_dim, light_shape); // flip the light dim
-				if (!interior->is_blocked_by_stairs_or_elevator(sec_light, fc_thick)) {use_sec_light = 1; break;} // add if not blocked
+				if (!interior->is_blocked_by_stairs_or_elevator_no_expand(sec_light, fc_thick)) {use_sec_light = 1; break;} // add if not blocked
 			}
 		}
 		// make chair colors consistent for each part by using a few variables for a hash
