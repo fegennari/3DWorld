@@ -519,13 +519,13 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	}
 }
 
-int building_t::find_nearest_stairs(point const &p1, point const &p2, bool straight_only, int part_ix) const { // returns -1 on failure
+void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, bool straight_only, int part_ix) const {
+	nearest_stairs.clear();
 	assert(interior);
-	if (interior->stairwells.empty()) return -1; // no stairs
+	if (interior->stairwells.empty()) return; // no stairs
 	assert(part_ix < 0 || (unsigned)part_ix < parts.size());
 	float const zmin(min(p1.z, p2.z)), zmax(max(p1.z, p2.z));
-	int ret(-1);
-	float dmin(0.0);
+	vector<pair<float, unsigned>> sorted;
 
 	for (unsigned s = 0; s < interior->stairwells.size(); ++s) {
 		stairwell_t const &stairs(interior->stairwells[s]);
@@ -534,9 +534,10 @@ int building_t::find_nearest_stairs(point const &p1, point const &p2, bool strai
 		if (part_ix >= 0 && !parts[part_ix].contains_cube(stairs)) continue; // stairs don't belong to this part
 		point const center(stairs.get_cube_center());
 		float const dist(p2p_dist(p1, center) + p2p_dist(center, p2));
-		if (dmin == 0.0 || dist < dmin) {ret = s; dmin = dist;}
+		sorted.emplace_back(dist, s);
 	} // for s
-	return ret;
+	sort(sorted.begin(), sorted.end()); // sort by distance, min first
+	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
 }
 
 bool building_t::find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, vector<point> &path) const {
@@ -559,30 +560,35 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add));
 
 	if (use_stairs) { // find path from <from> to nearest stairs, then find path from stairs to <to>
-		int const stairs_ix(find_nearest_stairs(from, to, 1)); // straight_only=1; pass in loc1.part_ix if both loc part_ix values are equal?
-		if (stairs_ix < 0) return 0; // no stairs can take us from <from> to <to>
-		assert((unsigned)stairs_ix < interior->stairwells.size());
-		stairwell_t const &stairs(interior->stairwells[stairs_ix]);
+		vector<unsigned> nearest_stairs;
+		find_nearest_stairs(from, to, nearest_stairs, 1); // straight_only=1; pass in loc1.part_ix if both loc part_ix values are equal?
 		bool const up_or_down(loc1.floor > loc2.floor); // 0=up, 1=down
-		unsigned stairs_room_ix(stairs_ix + interior->rooms.size()); // map to graph space
-		vector<point> from_path;
-		// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
-		if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, up_or_down, avoid, from, from_path)) return 0; // from => stairs
-		point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, (stairs_ix + interior->rooms.size()), !up_or_down)); // other end
-		interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add)); // new floor, new zval, new avoid cubes
-		if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, !up_or_down, avoid, seg2_start, path)) return 0; // stairs => to
-		assert(!path.empty() && !from_path.empty());
-		path.push_back(seg2_start); // other end of the stairs
-		// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
-		cube_t stairs_ext(stairs);
-		stairs_ext.d[stairs.dim][!stairs.dir] += (stairs.dir ? -1.0 : 1.0)*stairs.get_sz_dim(stairs.dim)/NUM_STAIRS_PER_FLOOR; // location of step up
-		path.push_back(stairs_ext.closest_pt(path.back()));
-		path.push_back(stairs_ext.closest_pt(from_path.front()));
-		vector_add_to(from_path, path); // concatenate the two path segments in reverse order
+
+		for (auto s = nearest_stairs.begin(); s != nearest_stairs.end(); ++s) { // try using stairs, closest to furthest
+			assert(*s < interior->stairwells.size());
+			stairwell_t const &stairs(interior->stairwells[*s]);
+			unsigned const stairs_room_ix(*s + interior->rooms.size()); // map to graph space
+			path.clear();
+			vector<point> from_path;
+			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
+			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, up_or_down, avoid, from, from_path)) continue; // from => stairs
+			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
+			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add)); // new floor, new zval, new avoid cubes
+			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, !up_or_down, avoid, seg2_start, path)) continue; // stairs => to
+			assert(!path.empty() && !from_path.empty());
+			path.push_back(seg2_start); // other end of the stairs
+			// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
+			cube_t stairs_ext(stairs);
+			stairs_ext.d[stairs.dim][!stairs.dir] += (stairs.dir ? -1.0 : 1.0)*stairs.get_sz_dim(stairs.dim)/NUM_STAIRS_PER_FLOOR; // location of step up
+			path.push_back(stairs_ext.closest_pt(path.back()));
+			path.push_back(stairs_ext.closest_pt(from_path.front()));
+			vector_add_to(from_path, path); // concatenate the two path segments in reverse order
+			assert(!path.empty());
+			return 1; // done/success
+		} // for s
+		return 0; // failed
 	}
-	else {
-		if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, 0, avoid, from, path)) return 0; // failed to find a path
-	}
+	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, 0, avoid, from, path)) return 0; // failed to find a path
 	assert(!path.empty());
 	return 1;
 }
