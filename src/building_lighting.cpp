@@ -515,7 +515,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 		} // end camera on different floor case
-		float const light_radius(7.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius);
+		float const light_radius(6.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius);
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t sphere_bc; // in building space
@@ -570,7 +570,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			bool const at_top(lpos.z > room.z2() - 0.5f*get_window_vspace());
 			float const radius_scale(at_top ? 0.55 : 0.5);
 			point const lpos_up(lpos - vector3d(0.0, 0.0, 2.0*i->dz()));
-			dl_sources.emplace_back(radius_scale*((room.is_hallway ? 0.3 : room.is_office ? 0.3 : 0.5))*light_radius, lpos_up, lpos_up, color);
+			dl_sources.emplace_back(radius_scale*((room.is_hallway ? 0.3 : room.is_office ? 0.35 : 0.5))*light_radius, lpos_up, lpos_up, color);
 			dl_sources.back().set_custom_bcube(clipped_bc); // Note: could reduce clipped_bc further if needed
 			dl_sources.back().disable_shadows();
 		}
