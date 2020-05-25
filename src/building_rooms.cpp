@@ -133,7 +133,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bookcase
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		if (classify_room_wall(room, zval, dim, dir) == ROOM_WALL_EXT) continue; // don't place against an exterior wall/window
+		if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // don't place against an exterior wall/window, inc. partial ext walls
 		c.d[dim][ dir] = room_bounds.d[dim][dir]; // against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
@@ -172,7 +172,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 		c.d[!dim][1] = pos + 0.5*width;
 		if (num_placed > 0 && c.intersects(placed_desk)) continue; // intersects previously placed desk
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
-		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && classify_room_wall(room, zval, dim, dir) != ROOM_WALL_EXT); // make short if against an exterior wall or in an office
+		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // make short if against an exterior wall or in an office
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		objs.back().obj_id = (uint16_t)objs.size();
 		cube_t bc(c);
