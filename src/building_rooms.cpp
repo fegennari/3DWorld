@@ -428,11 +428,13 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		if (blocked_by_stairs) { // blocked by stairs - see if we can add a light off to the side in the other orient
 			bool const first_dir(rgen.rand_bool());
 
-			for (unsigned d = 0; d < 2; ++d) { // see if we can place it by moving on one direction
-				point new_center(room_center);
-				new_center[room_dim] += ((bool(d) ^ first_dir) ? -1.0 : 1.0)*0.33*r->get_sz_dim(room_dim);
-				set_light_xy(sec_light, new_center, light_size, !room_dim, light_shape); // flip the light dim
-				if (!interior->is_blocked_by_stairs_or_elevator_no_expand(sec_light, fc_thick)) {use_sec_light = 1; break;} // add if not blocked
+			for (unsigned d = 0; d < 2 && !use_sec_light; ++d) { // see if we can place it by moving on one direction
+				for (unsigned n = 0; n < 5; ++n) { // try 5 different shift values: 0.2, 0.25, 0.3, 0.35, 0.4
+					point new_center(room_center);
+					new_center[room_dim] += ((bool(d) ^ first_dir) ? -1.0 : 1.0)*(0.2 + 0.05*n)*r->get_sz_dim(room_dim);
+					set_light_xy(sec_light, new_center, light_size, !room_dim, light_shape); // flip the light dim
+					if (!interior->is_blocked_by_stairs_or_elevator_no_expand(sec_light, fc_thick)) {use_sec_light = 1; break;} // add if not blocked
+				}
 			}
 		}
 		// make chair colors consistent for each part by using a few variables for a hash
