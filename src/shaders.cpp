@@ -22,6 +22,7 @@ string const shaders_dir = "shaders";
 string const shader_prefix_shared_file = "common_header_shared.part*";
 string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tesc", "tese", "comp"};
 string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "common_header", "common_header", "", "", ""}; // always included
+// future work (Nvidia Turing only): GL_MESH_SHADER_NV, GL_TASK_SHADER_NV
 int const shader_type_table[NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER, GL_COMPUTE_SHADER};
 
 shader_t *cur_shader(NULL);
