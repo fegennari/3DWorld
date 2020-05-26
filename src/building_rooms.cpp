@@ -1007,19 +1007,24 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 
 void building_room_geom_t::add_book(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0)); // unshadowed, since shadows are too small to have much effect
-	float const cov_thickness(0.125*c.dz()), indent(0.02*c.get_sz_dim(c.dim));
+	bool const upright(c.get_sz_dim(!c.dim) < c.dz());
+	unsigned const tdim(upright ? !c.dim : 2); // thickness dim
+	float const cov_thickness(0.125*c.get_sz_dim(tdim)), indent(0.02*c.get_sz_dim(c.dim));
 	cube_t bot(c), top(c), spine(c), pages(c);
-	bot.z2() = c.z1() + cov_thickness;
-	top.z1() = c.z2() - cov_thickness;
-	pages.z1() = spine.z1() = bot.z2();
-	pages.z2() = spine.z2() = top.z1();
-	pages.expand_by_xy(-indent);
+	bot.d[tdim][1] = c.d[tdim][0] + cov_thickness;
+	top.d[tdim][0] = c.d[tdim][1] - cov_thickness;
+	pages.d[tdim][0] = spine.d[tdim][0] = bot.d[tdim][1];
+	pages.d[tdim][1] = spine.d[tdim][1] = top.d[tdim][0];
+	vector3d shrink(zero_vector);
+	shrink[c.dim] = shrink[upright ? 2 : !c.dim] = -indent;
+	pages.expand_by(shrink);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
 	colorRGBA const color(apply_light_color(c));
-	mat.add_cube_to_verts(bot,   color, EF_Z1); // untextured, skip bottom face
+	unsigned const skip_faces(upright ? 0 : (EF_Z1 | EF_Z2)); // skip top/bottom face unless upright
+	mat.add_cube_to_verts(bot,   color, (upright ? 0 : EF_Z1)); // untextured, skip bottom face unless upright
 	mat.add_cube_to_verts(top,   color, 0); // untextured, all faces
-	mat.add_cube_to_verts(spine, color, (EF_Z1 | EF_Z2)); // untextured, skip top/bottom face
-	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), 3); // untextured, skip top/bottom face (could also skip face facing spine)
+	mat.add_cube_to_verts(spine, color, skip_faces); // untextured
+	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), skip_faces); // untextured (could also skip face facing spine)
 }
 
 void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bool no_shelves, float sides_scale) {
@@ -1102,7 +1107,8 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 			}
 			assert(book.is_strictly_normalized());
 			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
-			book_mat.add_cube_to_verts(book, apply_light_color(c, book_color), book_skip_faces); // what about slight random rotation/tilt?
+			add_book(room_object_t(book, TYPE_BOOK, c.room_id, c.dim, rgen.rand_bool(), c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color)); // detailed book
+			//book_mat.add_cube_to_verts(book, apply_light_color(c, book_color), book_skip_faces); // simple book - what about slight random rotation/tilt?
 			pos += width;
 			last_book_pos = pos;
 		} // for n
