@@ -1067,7 +1067,6 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 	}
 	// add books; may invalidate wood_mat
 	rgeom_mat_t &book_mat(get_material(untex_shad_mat, 1)); // shadowed?
-	unsigned const book_skip_faces(skip_faces | EF_Z1); // skip back face and bottom
 
 	for (unsigned i = 0; i < num_shelves; ++i) {
 		if (rgen.rand_float() < 0.2) continue; // no books on this shelf
@@ -1108,7 +1107,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 			assert(book.is_strictly_normalized());
 			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 			add_book(room_object_t(book, TYPE_BOOK, c.room_id, c.dim, rgen.rand_bool(), c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color)); // detailed book
-			//book_mat.add_cube_to_verts(book, apply_light_color(c, book_color), book_skip_faces); // simple book - what about slight random rotation/tilt?
+			//book_mat.add_cube_to_verts(book, apply_light_color(c, book_color), (skip_faces | EF_Z1)); // simple book, skip back face/bottom - what about slight random rotation/tilt?
 			pos += width;
 			last_book_pos = pos;
 		} // for n
