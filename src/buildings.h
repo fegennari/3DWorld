@@ -295,7 +295,7 @@ struct building_room_geom_t {
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);
 	void add_picture(room_object_t const &c);
-	void add_book(room_object_t const &c);
+	void add_book(room_object_t const &c, unsigned extra_skip_faces=0);
 	void add_bookcase(room_object_t const &c, float tscale, bool no_shelves=0, float sides_scale=1.0);
 	void add_desk(room_object_t const &c, float tscale);
 	void add_bed(room_object_t const &c, float tscale);
