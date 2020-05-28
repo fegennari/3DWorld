@@ -986,7 +986,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 		num_pic_tids = get_num_screenshot_tids();
 		has_pictures = 1;
 	}
-	unsigned skip_faces(~(1 << (2*(2-c.dim) + c.dir))); // only the face oriented outward
+	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 	bool const mirror_x(!whiteboard && !(c.dim ^ c.dir));
 	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim, mirror_x);
 	// add a frame
@@ -1068,8 +1068,6 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 		wood_mat.add_cube_to_verts(shelf, color, skip_faces_shelves); // Note: mat reference may be invalidated by adding books
 	}
 	// add books; may invalidate wood_mat
-	rgeom_mat_t &book_mat(get_material(untex_shad_mat, 1)); // shadowed?
-
 	for (unsigned i = 0; i < num_shelves; ++i) {
 		if (rgen.rand_float() < 0.2) continue; // no books on this shelf
 		cube_t const &shelf(shelves[i]);
@@ -1110,7 +1108,6 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 			bool const book_dir(c.dir ^ ((rgen.rand()&3) != 0)); // spine facing out 75% of the time
 			add_book(room_object_t(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color), skip_faces); // detailed book
-			//book_mat.add_cube_to_verts(book, apply_light_color(c, book_color), (skip_faces | EF_Z1)); // simple book, skip back face/bottom - what about slight random rotation/tilt?
 			pos += width;
 			last_book_pos = pos;
 		} // for n
