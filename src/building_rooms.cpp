@@ -264,12 +264,16 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	// book is randomly oriented for tables and rotated 90 degrees from desk orient
 	bool const dim(use_dim_dir ? !place_on.dim : rgen.rand_bool()), dir(use_dim_dir ? (place_on.dir^place_on.dim) : rgen.rand_bool());
 	cube_t book;
+	vector3d book_scale(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
+	book_scale[dim] *= 0.8; // slightly smaller in this dim
 	book.set_from_point(point(center.x, center.y, place_on.z2()));
-	book.expand_by(book_sz*rgen.rand_uniform(0.8, 1.2), book_sz*rgen.rand_uniform(0.8, 1.2), 0.0);
+	book.expand_by(book_scale);
 	book.z2() += book_sz*rgen.rand_uniform(0.1, 0.3);
 	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 	uint8_t const flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
-	interior->room_geom->objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, flags, tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, flags, tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
+	objs.back().obj_id = (uint16_t)objs.size();
 }
 
 void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
@@ -669,7 +673,7 @@ void building_t::clear_room_geom() {
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
-void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces, bool swap_tex_st, bool mirror_x) {
+void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y) {
 	vertex_t v;
 	v.set_c4(color);
 
@@ -691,7 +695,8 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 					v.v[d[0]] = c.d[d[0]][s2];
 					v.t[!swap_tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : tex.tscale_y*v.v[d[0]]);
 					quad_verts.push_back(v);
-					if (mirror_x) {quad_verts.back().t[0] = 1.0 - v.t[0];} // use for pictures
+					if (mirror_x) {quad_verts.back().t[0] = 1.0 - v.t[0];} // use for pictures and books
+					if (mirror_y) {quad_verts.back().t[1] = 1.0 - v.t[1];} // used for books
 				} // for k
 			} // for s1
 		} // for j
@@ -932,7 +937,7 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
 }
 
-unsigned get_face_mask(bool dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
+unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale) {
 	return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);
@@ -1010,8 +1015,8 @@ unsigned get_skip_mask_for_xy(bool dim) {return (dim ? (EF_Y1 | EF_Y2) : (EF_X1 
 void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_faces) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0)); // unshadowed, since shadows are too small to have much effect
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz());
-	unsigned const tdim(upright ? !c.dim : 2); // thickness dim
-	float const cov_thickness(0.125*c.get_sz_dim(tdim)), indent(0.02*c.get_sz_dim(c.dim));
+	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
+	float const thickness(c.get_sz_dim(tdim)), width(c.get_sz_dim(c.dim)), cov_thickness(0.125*thickness), indent(0.02*width);
 	cube_t bot(c), top(c), spine(c), pages(c);
 	bot.d[tdim][1] = c.d[tdim][0] + cov_thickness;
 	top.d[tdim][0] = c.d[tdim][1] - cov_thickness;
@@ -1027,6 +1032,20 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 	mat.add_cube_to_verts(top,   color, (extra_skip_faces | (upright ? EF_Z1 : 0))); // untextured, skip bottom face if upright
 	mat.add_cube_to_verts(spine, color, skip_faces); // untextured
 	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), (skip_faces | ~get_face_mask(c.dim, !c.dir))); // untextured
+	
+	if (upright || (c.obj_id&2)) { // add picture to book cover
+		cube_t cover(c);
+		vector3d expand;
+		float const height(c.get_sz_dim(hdim)), img_width(0.9*width), img_height(min(0.9f*height, 0.67f*img_width)); // use correct aspect ratio
+		expand[hdim]  = -0.5f*(height - img_height);
+		expand[c.dim] = -0.5f*(width  - img_width);
+		expand[tdim ] = 0.01*indent; // expand outward, other dims expand inward
+		cover.expand_by(expand);
+		int const picture_tid(c.get_picture_tid()); // not using user screenshot images
+		bool const tdir(upright ? (c.obj_id&1) : 1), swap_xy(upright ^ (!c.dim)), mirror_x(0), mirror_y(!upright && !(c.dim ^ c.dir)); // unclear what to set mirror_x to or if it matters for books
+		get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(cover, WHITE, get_face_mask(tdim, tdir), swap_xy, mirror_x, mirror_y);
+	}
+	// TODO: add title along spine using text
 }
 
 void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bool no_shelves, float sides_scale) {
@@ -1107,7 +1126,9 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 			assert(book.is_strictly_normalized());
 			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 			bool const book_dir(c.dir ^ ((rgen.rand()&3) != 0)); // spine facing out 75% of the time
-			add_book(room_object_t(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color), skip_faces); // detailed book
+			room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color);
+			obj.obj_id = c.obj_id + 123*i + 1337*n;
+			add_book(obj, skip_faces); // detailed book
 			pos += width;
 			last_book_pos = pos;
 		} // for n
