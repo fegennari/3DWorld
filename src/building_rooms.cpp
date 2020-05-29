@@ -1033,7 +1033,7 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 	mat.add_cube_to_verts(spine, color, skip_faces); // untextured
 	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), (skip_faces | ~get_face_mask(c.dim, !c.dir))); // untextured
 	
-	if (upright || (c.obj_id&2)) { // add picture to book cover
+	if (c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
 		cube_t cover(c);
 		vector3d expand;
 		float const height(c.get_sz_dim(hdim)), img_width(0.9*width), img_height(min(0.9f*height, 0.67f*img_width)); // use correct aspect ratio
