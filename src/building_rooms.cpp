@@ -92,7 +92,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
 	float const radius(0.02f*(3 + rr)*get_window_vspace()), height(0.54f*(3 + rar)*radius);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	cube_t room_bounds(get_walkable_room_bounds(room));
+	cube_t room_bounds(get_walkable_room_bounds(room)), room_exp(room);
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
 	int const floor_ix(int((zval - room.z1())/get_window_vspace()));
@@ -100,7 +100,14 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	point center;
 	center.z = zval + 0.001*get_window_vspace(); // slightly above the floor to avoid z-fighting
 	unsigned skip_wall(4); // start at an invalid value
+	// find interior doorways connected to this room
+	float const wall_thickness(get_wall_thickness());
+	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
+	vect_cube_t doorways;
 
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+		if (i->intersects(room_exp)) {doorways.push_back(*i);}
+	}
 	if (check_last_obj) {
 		assert(!objs.empty());
 		skip_wall = 2*objs.back().dim + (!objs.back().dir); // don't place trashcan on same wall as whiteboard (dir is opposite)
@@ -109,7 +116,19 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 		if ((2*dim + dir) == skip_wall) continue; // don't place a trashcan on this wall
 		center[ dim] = room_bounds.d[dim][dir]; // against this wall
-		center[!dim] = rgen.rand_uniform(room_bounds.d[!dim][0], room_bounds.d[!dim][1]);
+		bool is_good(0);
+
+		for (unsigned m = 0; m < 80; ++m) { // try to find a point near a doorway
+			center[!dim] = rgen.rand_uniform(room_bounds.d[!dim][0], room_bounds.d[!dim][1]);
+			if (doorways.empty()) break; // no doorways, keep this point
+				
+			for (auto i = doorways.begin(); i != doorways.end(); ++i) {
+				float const dmin(radius + i->dx() + i->dy());
+				if (i->closest_dist_less_than(center, dmin)) {is_good = 0; break;} // too close, reject this point
+				else if (i->closest_dist_less_than(center, 2.0*dmin)) {is_good = 1;} // close enough, keep this point
+			}
+			if (is_good) break; // done; may never get here if no points are good, but the code below will handle that
+		} // for m
 		cube_t c(center, center);
 		c.expand_by_xy(radius);
 		c.z2() += height;
