@@ -1062,7 +1062,16 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		bool const tdir(upright ? (c.obj_id&1) : 1), swap_xy(upright ^ (!c.dim)), mirror_x(0), mirror_y(!upright && !(c.dim ^ c.dir)); // unclear what to set mirror_x to or if it matters for books
 		get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(cover, WHITE, get_face_mask(tdim, tdir), swap_xy, mirror_x, mirror_y);
 	}
-	// TODO: add title along spine using text
+	if (0 && c.enable_pictures()) { // add title along spine using text
+		cube_t spine(c);
+		vector3d expand;
+		expand[ hdim] = -4.0*indent; // shrink
+		expand[ tdim] = -1.0*indent; // shrink
+		expand[c.dim] = 0.01*indent; // expand outward
+		spine.expand_by(expand);
+		int const tid = -1; // TODO: select title text
+		get_material(tid_nm_pair_t(tid, 0.0)).add_cube_to_verts(spine, WHITE, get_face_mask(c.dim, !c.dir), 0, 0, 0);
+	}
 }
 
 void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bool no_shelves, float sides_scale) {
