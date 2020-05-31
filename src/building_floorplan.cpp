@@ -760,7 +760,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
 		if (!is_house && !first_part_this_stack) {
 			float const elevator_prob[4] = {0.9, 0.5, 0.3, 0.1}; // higher chance of adding an elevator if there are more existing elevators
-			add_elevator = (rgen.rand_float() < elevator_prob[min(interior->elevators.size(), 3U)]);
+			add_elevator = (rgen.rand_float() < elevator_prob[min(interior->elevators.size(), size_t(3))]);
 		}
 		unsigned const rooms_end(interior->rooms.size()), num_avail_rooms(rooms_end - rooms_start);
 		assert(num_avail_rooms > 0); // must have added at least one room

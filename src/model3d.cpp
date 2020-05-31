@@ -902,7 +902,7 @@ template<typename T> void vntc_vect_block_t<T>::simplify_indices(float reduce_ta
 }
 
 template<typename T> void vntc_vect_block_t<T>::merge_into_single_vector() {
-	if (size() <= 1) return; // nothing to merge
+	if (this->size() <= 1) return; // nothing to merge
 	unsigned tot_verts(0), tot_ixs(0);
 
 	for (auto i = begin(); i != end(); ++i) {
@@ -910,7 +910,7 @@ template<typename T> void vntc_vect_block_t<T>::merge_into_single_vector() {
 		tot_verts += i->size();
 		tot_ixs   += i->indices.size();
 	}
-	auto &dest(front());
+	auto &dest(this->front());
 	dest.reserve(tot_verts);
 	dest.indices.reserve(tot_ixs);
 
@@ -919,7 +919,7 @@ template<typename T> void vntc_vect_block_t<T>::merge_into_single_vector() {
 		vector_add_to(i->indices, dest.indices); // merge indices
 	}
 	dest.calc_bounding_volumes(); // can be optimized
-	resize(1); // remove all but the first block
+	this->resize(1); // remove all but the first block
 }
 
 template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {

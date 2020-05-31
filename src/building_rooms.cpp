@@ -72,7 +72,6 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, obj_flags, tot_light_amt);
-	float const chair_sz(0.1*window_vspacing); // half size
 
 	// place some chairs around the table
 	for (unsigned dim = 0; dim < 2; ++dim) {
@@ -114,7 +113,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	}
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a trashcan
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		if ((2*dim + dir) == skip_wall) continue; // don't place a trashcan on this wall
+		if ((2U*dim + dir) == skip_wall) continue; // don't place a trashcan on this wall
 		center[ dim] = room_bounds.d[dim][dir]; // against this wall
 		bool is_good(0);
 
@@ -269,7 +268,6 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		bed.obj_id = (uint16_t)objs.size();
 		// use white color if a texture is assigned that's not close to white
 		int const sheet_tid(bed.get_sheet_tid());
-		bool const use_white();
 		if (sheet_tid < 0 || sheet_tid == WHITE_TEX || texture_color(sheet_tid).get_luminance() > 0.5) {bed.color = colors[rgen.rand()%NUM_COLORS];}
 		return 1; // done/success
 	} // for n
@@ -1285,8 +1283,8 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 
 				for (unsigned i = 0; i < 4; ++i) {
 					bool const tb(i==1||i==2), lohi(i==0||i==1);
-					v.v[ dim] = (tb ? c : base).d[ dim][dir];
-					v.v[!dim] = (tb ? c : base).d[!dim][lohi];
+					v.v[ dim] = (tb ? (cube_t)c : base).d[ dim][dir];
+					v.v[!dim] = (tb ? (cube_t)c : base).d[!dim][lohi];
 					v.v.z  = c.d[2][tb];
 					//v.t[0] = float(tb); v.t[1] = float(lohi); // causes a seam between triangles due to TBN basis change, so leave at 0.0
 					verts.push_back(v);
