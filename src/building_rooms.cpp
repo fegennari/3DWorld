@@ -1173,19 +1173,22 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 }
 
 void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color) {
-	//mat.add_cube_to_verts(c, color, EF_Z1);
 	unsigned const ndiv = 24; // number of quads in X and Y
-	float const ndiv_inv(1.0/ndiv), dx(c.dx()*ndiv_inv), dy(c.dy()*ndiv_inv), z1(c.z1()), dz(c.dz());
+	float const ndiv_inv(1.0/ndiv), dx_inv(1.0/c.dx()), dy_inv(1.0/c.dy());
 	color_wrapper cw(color);
 	auto &verts(mat.itri_verts);
-	auto &ixs(mat.indices);
 	unsigned const start(verts.size()), stride(ndiv + 1);
+	float dists[ndiv+1];
 
+	for (unsigned x = 0; x <= ndiv; ++x) {
+		float const v(2.0f*x*ndiv_inv - 1.0f); // centered on 0 in range [-1, 1]
+		dists[x] = 0.5*SIGN(v)*sqrt(abs(v)) + 0.5; // nonlinear spacing, closer near the edges, convert back to [0, 1] range
+	}
 	for (unsigned y = 0; y <= ndiv; ++y) {
+		float const yval(c.y1() + dists[y]*c.dy()), ey(2.0f*min((yval - c.y1()), (c.y2() - yval))*dy_inv);
+
 		for (unsigned x = 0; x <= ndiv; ++x) {
-			float const xval(c.x1() + x*dx), yval(c.y1() + y*dy);
-			float const ex(2.0f*min((xval - c.x1()), (c.x2() - xval))/c.dx()), ey(2.0f*min((yval - c.y1()), (c.y2() - yval))/c.dy());
-			float const zval(z1 + dz*sqrt(sqrt(ex*ey))); // TODO: use min distance to edge of cube?
+			float const xval(c.x1() + dists[x]*c.dx()), ex(2.0f*min((xval - c.x1()), (c.x2() - xval))*dx_inv), zval(c.z1() + c.dz()*pow(ex*ey, 0.2f));
 			verts.emplace_back(vert_norm_comp_tc(point(xval, yval, zval), plus_z, mat.tex.tscale_x*xval, mat.tex.tscale_y*yval), cw);
 		} // for x
 	} // for y
@@ -1204,12 +1207,12 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color) {
 	for (unsigned y = 0; y < ndiv; ++y) {
 		for (unsigned x = 0; x < ndiv; ++x) {
 			unsigned const off(start + y*stride + x);
-			ixs.push_back(off + 0); // T1
-			ixs.push_back(off + 1);
-			ixs.push_back(off + stride+1);
-			ixs.push_back(off + 0); // T2
-			ixs.push_back(off + stride+1);
-			ixs.push_back(off + stride);
+			mat.indices.push_back(off + 0); // T1
+			mat.indices.push_back(off + 1);
+			mat.indices.push_back(off + stride+1);
+			mat.indices.push_back(off + 0); // T2
+			mat.indices.push_back(off + stride+1);
+			mat.indices.push_back(off + stride);
 		} // for x
 	} // for y
 }
@@ -1227,9 +1230,9 @@ void building_room_geom_t::add_bed(room_object_t const &c, float tscale) {
 	foot.z2()  -= 0.15*height;
 	mattress.z1()   = head.z1()   = foot.z1() = frame.z2();
 	mattress.z2()   = pillow.z1() = mattress.z1() + 0.2*height;
-	pillow.z2()     = pillow.z1() + 0.12*height;
+	pillow.z2()     = pillow.z1() + 0.13*height;
 	legs_bcube.z2() = frame.z1();
-	float const pillow_space((is_wide ? 0.1 : 0.25)*width);
+	float const pillow_space((is_wide ? 0.08 : 0.23)*width);
 	pillow.d[!c.dim][0] += pillow_space; pillow.d[!c.dim][1] -= pillow_space;
 	pillow.d[c.dim][ c.dir] = mattress.d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*0.02*length; // head
 	pillow.d[c.dim][!c.dir] = pillow  .d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*(is_wide ? 0.25 : 0.6)*pillow.get_sz_dim(!c.dim);
