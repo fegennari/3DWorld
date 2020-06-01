@@ -61,6 +61,7 @@ city car_model ../models/cars/Soarer/soarer.model3d                2 -1 90  1.0 
 city car_model ../models/cars/Camaro/camaro2.model3d              24 -1 90  1.0 0.5  9 21 24
 city car_model ../models/cars/LowPolyTruck/truck.model3d          -1  2  0  1.6 0.5  3 4 5 6 16 17 20 24 # always GRAY
 city car_model ../models/cars/BMW/bmw.model3d                      0 -1 180 1.0 2.0  0 9 # Note: has emissive lights
+#city car_model ../models/toilet/toilet.obj                         0 -1 0   1.0 1.0  0
 #city car_model ../models/cars/Bentley/Bentley.model3d              1 -1 90  1.0 0.5  1
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
@@ -78,6 +79,7 @@ city ped_model ../models/people/Patrick/Patrick.model3d   0 -1 90  1.0  1.0  0
 #city ped_model ../models/people/Ana/Ana_Model.model3d     0 -1 90  1.0  1.0  0 # arms out in odd position, low poly
 #city ped_model ../models/people/Belle/Belle.model3d       0 -1 90  1.0  1.0  0 # too cartoonish (large head compared to body)
 city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 0 -1 90  0.8  1.0  0 # all one material
+#city ped_model ../models/toilet/toilet.obj                0 -1 0   1.0 1.0  0
 #city ped_model ../models/people/HumanAlloy/00079_Nash002_Basics_Free.model3d 0 -1 90  1.0 1.0  0 # odd initial pose, hard to animate
 # MakeHuman models
 city ped_model ../models/people/makehuman/Katie/Katie.model3d 0 -1 90   0.7 1.0  0 3
