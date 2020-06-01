@@ -864,6 +864,12 @@ bool shader_t::begin_shader(bool do_enable) {
 	cache_matrix_locs();
 	emission_loc = specular_color_loc = -1;
 	if (do_enable) {enable();}
+#if 0 // debugging
+	glValidateProgram(program);
+	int status(0);
+	glGetProgramiv(program,  GL_VALIDATE_STATUS, &status);
+	if (status == GL_FALSE) {cerr << "Error: Program validation failed" << endl;}
+#endif
 	return 1;
 }
 
