@@ -1718,6 +1718,10 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass,
 	int enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
 {
+	if (materials.empty() && mat_id == 0) { // no materials caller requested first material, use unbound geom
+		unbound_geom.render(shader, is_shadow_pass, xlate);
+		return;
+	}
 	assert(mat_id < materials.size());
 	materials[mat_id].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate);
 }
