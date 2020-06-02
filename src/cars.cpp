@@ -942,6 +942,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		fgPushMatrix();
 		translate_to(xlate);
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
+		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);} // disable hemispherical lighting normal because the transforms make it incorrect
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			if (cb->is_in_building() != garages_pass) continue; // wrong pass
@@ -954,6 +955,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 				dstate.draw_car(cars[c], is_dlight_shadows);
 			}
 		} // for cb
+		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore
 		dstate.post_draw();
 		fgPopMatrix();
 

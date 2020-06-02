@@ -1031,6 +1031,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	if (enable_animations) {enable_animations_for_shader(dstate.s);}
 	dstate.pre_draw(xlate, use_dlights, shadow_only);
 	if (enable_animations) {dstate.s.add_uniform_int("animation_id", animation_id);}
+	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);} // disable hemispherical lighting normal because the transforms make it incorrect
 	bool in_sphere_draw(0);
 
 	for (unsigned city = 0; city+1 < by_city.size(); ++city) {
@@ -1072,6 +1073,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 		} // for plot
 	} // for city
 	end_sphere_draw(in_sphere_draw);
+	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore
 	pedestrian_t const *selected_ped(nullptr);
 
 	if (tt_fire_button_down && !game_mode) {

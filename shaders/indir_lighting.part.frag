@@ -1,6 +1,7 @@
 uniform float half_dxy;
 uniform float indir_vert_offset   = 0.25;
 uniform float hemi_lighting_scale = 0.5;
+uniform float hemi_lighting_normal_scale = 1.0;
 // Note: these next two come from dynamic_lighting.part, which must always be included first
 //uniform vec3 scene_llc, scene_scale; // scene bounds (world space)
 uniform sampler3D smoke_and_indir_tex;
@@ -62,7 +63,7 @@ vec3 get_indir_lighting(in float normal_sign) {
 			float sky_lum   = max(get_luminance(sky_color), 0.33); // or use indir_color?
 			spos            = map_to_indir_space(spos);
 			vec3 gnd_color  = sky_lum*textureLod(ground_tex, spos.xy, 4).rgb; // use 4th LOD mipmap (64x64)
-			vec3 hemi_color = mix(gnd_color, sky_color, (0.5*normal_sign*normal.z + 0.5));
+			vec3 hemi_color = mix(gnd_color, sky_color, (0.5*normal_sign*hemi_lighting_normal_scale*normal.z + 0.5));
 			indir_color     = mix(indir_color, hemi_color, hemi_lighting_scale); // blend between the two
 		}
 		if (indir_lighting) {
