@@ -177,7 +177,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 		eye_dir        = fg_NormalMatrix * eye_dir; // convert world space into eye space
 		vec3 lnorm     = nscale*apply_bump_map_for_tbn(light_dir, eye_dir, TBN); // convert eye space to tangent space
 		//if (dot(eye_dir, lnorm) < 0.0) {eye_dir = -eye_dir;} // is this required?
-		float n_dot_l  = mix(dot(normal, orig_ldir), dot(lnorm, light_dir), bump_map_normal_scale);
+		float n_dot_l  = mix(dot(normal, orig_ldir), dot(lnorm, light_dir), bump_map_mag*bump_map_normal_scale);
 #else // !USE_BUMP_MAP_DL
 		vec3 lnorm     = normal;
 		float n_dot_l  = dot(lnorm, light_dir);
