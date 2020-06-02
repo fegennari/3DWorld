@@ -1139,7 +1139,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (has_alpha_mask) {select_texture(WHITE_TEX);} // back to a default white texture
 	}
 	else {
-		bool has_binary_alpha(1);
+		bool has_binary_alpha(1), bmap_disabled(0);
 		
 		if (disable_model_textures) {
 			select_texture(WHITE_TEX);
@@ -1158,6 +1158,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		}
 		else if (enable_bump_map() && is_bmap_pass) {
 			model3d::bind_default_flat_normal_map(); // use default normal map in this case instead of leaving it unbound, or bound to the previous material
+			shader.add_uniform_float("bump_map_mag", 0.0); // disable bump map, including TBN matrix transform of eye_pos and light_dir; needed when there are no TCs or tangent vectors
+			bmap_disabled = 1;
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
 			bind_texture_tu_or_white_tex(tmgr, s_tid,  8); // specular map
@@ -1183,6 +1185,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (need_blend) {disable_blend();}
 		if (set_ref_ix) {shader.add_uniform_float("refract_ix", 1.0);}
 		if (metalness >= 0.0) {shader.add_uniform_float("metalness", 0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
+		if (bmap_disabled) {shader.add_uniform_float("bump_map_mag", 1.0);} // reset back to default
 	}
 }
 

@@ -1,5 +1,6 @@
 uniform float ambient_scale = 1.0;
 uniform float wet_effect    = 0.0;
+uniform float bump_map_mag  = 1.0; /// 0.0 disables
 uniform vec3 ambient_tint   = vec3(1);
 uniform vec4 specular_color = vec4(0,0,0,1); // enocded as {color.rgb, shininess}
 
@@ -65,7 +66,7 @@ void maybe_apply_bump_map_self_shadowed(inout vec3 normal, inout vec3 light_dir,
 #ifdef USE_BUMP_MAP
 	float atten = length(normal); // multiply by length of eye norm to account for shadow map attenuation
 	atten *= clamp(5.0*dot(normal/atten, light_dir), 0.0, 1.0); // fix self-shadowing
-	normal = normal_scale*atten*apply_bump_map(light_dir, eye_pos);
+	normal = (bump_map_mag == 0.0) ? normal : bump_map_mag*normal_scale*atten*apply_bump_map(light_dir, eye_pos);
 #endif
 }
 
