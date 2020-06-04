@@ -217,10 +217,19 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	return (num_placed > 0);
 }
 
-bool building_t::can_be_bedroom(room_t const &room, bool on_first_floor) const {
+bool building_t::can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const {
 	if (!is_house || room.has_stairs || room.has_elevator || room.is_hallway || room.is_office) return 0; // no bed in these cases
 	if (on_first_floor && is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom
 	return 1;
+}
+
+unsigned building_t::count_num_int_doors(room_t const &room) const {
+	cube_t room_exp(room);
+	float const wall_thickness(get_wall_thickness());
+	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
+	unsigned num(0);
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {num += i->intersects(room_exp);}
+	return num;
 }
 
 // Note: must be first placed object
@@ -558,8 +567,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			cube_t avoid_cube;
 
 			// place room objects
-			if (can_be_bedroom(*r, (f == 0)) && rgen.rand_float() < 0.75) { // 75% of the time
-				added_bed = add_bed_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
+			if (can_be_bedroom_or_bathroom(*r, (f == 0))) {
+				if (rgen.rand_float() < 0.75) { // 75% of the time
+					added_bed = add_bed_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
+					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
+				}
+				if (!added_bed && min(r->dx(), r->dy()) < 2.0*window_vspacing && max(r->dx(), r->dy()) < 3.0*window_vspacing && count_num_int_doors(*r) == 1 /*&& rgen.rand_float() < 0.75*/) {
+					// TODO: add bathroom with toilet
+				}
 			}
 			if (!added_bed && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;

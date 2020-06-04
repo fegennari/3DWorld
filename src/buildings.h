@@ -323,7 +323,7 @@ struct elevator_t : public cube_t {
 };
 
 struct room_t : public cube_t {
-	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg;
+	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg; // or room_type index?
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	//uint8_t sides_with_doors; // is this useful/needed?
 	uint8_t part_id, num_lights;
@@ -556,7 +556,8 @@ private:
 	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir);
 	void add_rug_to_room     (rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
-	bool can_be_bedroom(room_t const &room, bool on_first_floor) const;
+	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
+	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);
 	bool test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const;
