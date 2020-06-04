@@ -55,13 +55,14 @@ inline float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1
 struct city_model_t {
 
 	string fn;
+	bool valid;
 	int body_mat_id, fixed_color_id;
 	float xy_rot, lod_mult, scale; // xy_rot in degrees
 	vector<unsigned> shadow_mat_ids;
 
-	city_model_t() : body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), lod_mult(1.0), scale(1.0) {}
+	city_model_t() : valid(0), body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), lod_mult(1.0), scale(1.0) {}
 	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
-		fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), scale(1.0), shadow_mat_ids(smids) {}
+		valid(0), fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), scale(1.0), shadow_mat_ids(smids) {}
 	bool read(FILE *fp);
 	bool check_filename();
 };
@@ -91,6 +92,8 @@ struct city_params_t {
 	unsigned num_peds, num_building_peds;
 	float ped_speed;
 	bool ped_respawn_at_dest;
+	// buildings; maybe should be building params, but we have the model loading code here
+	city_model_t toilet_model;
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0),
 		num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0), car_speed(0.0),
@@ -213,7 +216,7 @@ public:
 	bool is_model_valid(unsigned id);
 	void load_models();
 	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-		point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations=0);
+		vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations=0);
 };
 
 class car_model_loader_t : public city_model_loader_t {
@@ -225,6 +228,14 @@ public:
 class ped_model_loader_t : public city_model_loader_t {
 public:
 	unsigned num_models() const;
+	city_model_t const &get_model(unsigned id) const;
+};
+
+class object_model_loader_t : public city_model_loader_t {
+	city_model_t null_model;
+public:
+	unsigned num_models() const {return NUM_OBJ_MODELS;}
+	bool is_model_valid(unsigned id) const {return get_model(id).valid;}
 	city_model_t const &get_model(unsigned id) const;
 };
 

@@ -4,6 +4,7 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
+#include "city.h" // for object_model_loader_t
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 
@@ -11,6 +12,8 @@ extern int display_mode;
 
 unsigned const NUM_BOOK_COLORS = 16;
 colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
+
+object_model_loader_t building_obj_model_loader;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
@@ -1317,6 +1320,7 @@ void building_room_geom_t::clear() {
 void building_room_geom_t::clear_materials() { // can be called to update textures, lighting state, etc.
 	materials_s.clear();
 	materials_d.clear();
+	obj_model_insts.clear();
 }
 
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
@@ -1362,6 +1366,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_DESK:    add_desk    (*i, tscale); break;
 		case TYPE_TCAN:    add_trashcan(*i); break;
 		case TYPE_BED:     add_bed     (*i, tscale); break;
+		case TYPE_TOILET: obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_TOILET); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		default: assert(0); // undefined type
 		}
@@ -1396,6 +1401,15 @@ void building_room_geom_t::draw(shader_t &s, bool shadow_only) { // non-const be
 	materials_d.draw(s, shadow_only);
 	disable_blend();
 	vbo_wrap_t::post_render();
+
+	// draw object models
+	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
+		assert(i->obj_id < objs.size());
+		auto const &obj(objs[i->obj_id]);
+		vector3d dir(zero_vector);
+		dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
+		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, dir, WHITE, zero_vector, i->model_id, shadow_only, 0, 0);
+	}
 }
 
 

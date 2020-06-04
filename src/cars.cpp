@@ -29,6 +29,7 @@ bool city_model_t::read(FILE *fp) { // filename body_material_id fixed_color_id 
 	if (!read_float(fp, lod_mult) || lod_mult <= 0.0) return 0;
 	unsigned shadow_mat_id;
 	while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
+	valid = 1; // success
 	return 1;
 }
 
@@ -249,13 +250,6 @@ bool comp_car_road_then_pos::operator()(car_t const &c1, car_t const &c2) const 
 }
 
 
-unsigned car_model_loader_t::num_models() const {return city_params.car_model_files.size();}
-
-city_model_t const &car_model_loader_t::get_model(unsigned id) const {
-	assert(id < num_models());
-	return city_params.car_model_files[id];
-}
-
 bool city_model_loader_t::is_model_valid(unsigned id) {
 	assert(id < num_models());
 	ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid
@@ -279,7 +273,7 @@ void city_model_loader_t::load_models() {
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-	point const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations)
+	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations)
 {
 	assert(is_model_valid(model_id));
 	assert(size() == num_models()); // must be loaded
@@ -327,6 +321,21 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	camera_pdu.valid = camera_pdu_valid;
 	camera_pdu.pos   = orig_camera_pos;
 	select_texture(WHITE_TEX); // reset back to default/untextured
+}
+
+unsigned car_model_loader_t::num_models() const {return city_params.car_model_files.size();}
+
+city_model_t const &car_model_loader_t::get_model(unsigned id) const {
+	assert(id < num_models());
+	return city_params.car_model_files[id];
+}
+
+city_model_t const &object_model_loader_t::get_model(unsigned id) const {
+	switch (id) {
+	case OBJ_MODEL_TOILET: return city_params.toilet_model;
+	default: assert(0);
+	}
+	return null_model; // never gets here
 }
 
 

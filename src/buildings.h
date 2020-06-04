@@ -189,10 +189,11 @@ struct draw_range_t {
 };
 
 enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
-	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, NUM_TYPES};
+	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_TOILET, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U, SHAPE_TALL};
 enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED};
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
+enum {OBJ_MODEL_TOILET=0, NUM_OBJ_MODELS};
 
 // object flags, currently used for room lights
 uint8_t const RO_FLAG_LIT     = 0x01; // light is on
@@ -270,6 +271,11 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	void draw(shader_t &s, bool shadow_only);
 };
 
+struct obj_model_inst_t {
+	unsigned obj_id, model_id;
+	obj_model_inst_t(unsigned oid, unsigned mid) : obj_id(oid), model_id(mid) {}
+};
+
 struct building_room_geom_t {
 
 	bool has_elevators, has_pictures;
@@ -277,6 +283,7 @@ struct building_room_geom_t {
 	float obj_scale;
 	unsigned stairs_start; // index of first object of TYPE_STAIR
 	vector<room_object_t> objs; // for drawing and collision detection
+	vector<obj_model_inst_t> obj_model_insts;
 	building_materials_t materials_s, materials_d; // {static, dynamic} materials
 	vect_cube_t light_bcubes;
 
