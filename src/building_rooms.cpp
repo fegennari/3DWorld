@@ -233,9 +233,7 @@ unsigned building_t::count_num_int_doors(room_t const &room) const {
 }
 
 // Note: must be first placed object
-bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
-	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
-{
+bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -283,6 +281,11 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		if (sheet_tid < 0 || sheet_tid == WHITE_TEX || texture_color(sheet_tid).get_luminance() > 0.5) {bed.color = colors[rgen.rand()%NUM_COLORS];}
 		return 1; // done/success
 	} // for n
+	return 0;
+}
+
+bool building_t::add_toilet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+	// TODO: WRITE
 	return 0;
 }
 
@@ -563,28 +566,30 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 			unsigned const objs_start(objs.size());
-			bool added_tc(0), added_bed(0);
+			bool added_tc(0), added_obj(0), can_place_book(0);
 			cube_t avoid_cube;
 
 			// place room objects
 			if (can_be_bedroom_or_bathroom(*r, (f == 0))) {
 				if (rgen.rand_float() < 0.75) { // 75% of the time
-					added_bed = add_bed_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
+					added_obj = add_bed_to_room(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit);
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
-				if (!added_bed && min(r->dx(), r->dy()) < 2.0*window_vspacing && max(r->dx(), r->dy()) < 3.0*window_vspacing && count_num_int_doors(*r) == 1 /*&& rgen.rand_float() < 0.75*/) {
-					// TODO: add bathroom with toilet
+				if (!added_obj && min(r->dx(), r->dy()) < 2.0*window_vspacing && max(r->dx(), r->dy()) < 3.0*window_vspacing && count_num_int_doors(*r) == 1 /*&& rgen.rand_float() < 0.75*/) {
+					added_obj = add_toilet_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit); // add bathroom with toilet
 				}
 			}
-			if (!added_bed && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
+			if (!added_obj && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
-				added_tc = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
+				added_tc = added_obj = can_place_book = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
 			}
-			if (!added_tc && !added_bed) {add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);} // try to place a desk if there's no table/bed
-
-			if (!added_bed && objs.size() > objs_start) { // an object was placed (table or desk), maybe add a book on top of it
+			if (!added_obj) { // try to place a desk if there's no table/bed
+				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
+			}
+			if (can_place_book) { // an object was placed (table or desk), maybe add a book on top of it
 				if (rgen.rand_float() < (added_tc ? 0.4 : 0.75)*(is_house ? 1.0 : 0.5)*(r->is_office ? 0.75 : 1.0)) {
+					assert(objs.size() > objs_start);
 					place_book_on_obj(rgen, objs[objs_start], room_id, tot_light_amt, is_lit, !added_tc);
 				}
 			}
