@@ -1,0 +1,60 @@
+// 3D World - Loading and Drawing of 3D Models for Cities
+// by Frank Gennari
+// 6/5/2020
+
+#pragma once
+
+#include "3DWorld.h"
+#include "model3d.h"
+
+
+struct city_model_t {
+
+	string fn;
+	bool valid;
+	int body_mat_id, fixed_color_id;
+	float xy_rot, lod_mult, scale; // xy_rot in degrees
+	vector<unsigned> shadow_mat_ids;
+
+	city_model_t() : valid(0), body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), lod_mult(1.0), scale(1.0) {}
+	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
+		valid(0), fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), scale(1.0), shadow_mat_ids(smids) {}
+	bool read(FILE *fp);
+	bool check_filename();
+};
+
+
+class city_model_loader_t : public model3ds {
+protected:
+	vector<int> models_valid;
+	void ensure_models_loaded() {if (empty()) {load_models();}}
+public:
+	virtual ~city_model_loader_t() {}
+	virtual unsigned num_models() const = 0;
+	virtual city_model_t const &get_model(unsigned id) const = 0;
+	bool is_model_valid(unsigned id);
+	void load_models();
+	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
+		vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations=0);
+};
+
+class car_model_loader_t : public city_model_loader_t {
+public:
+	unsigned num_models() const;
+	city_model_t const &get_model(unsigned id) const;
+};
+
+class ped_model_loader_t : public city_model_loader_t {
+public:
+	unsigned num_models() const;
+	city_model_t const &get_model(unsigned id) const;
+};
+
+class object_model_loader_t : public city_model_loader_t {
+	city_model_t null_model;
+public:
+	unsigned num_models() const {return NUM_OBJ_MODELS;}
+	bool is_model_valid(unsigned id) const {return get_model(id).valid;}
+	city_model_t const &get_model(unsigned id) const;
+};
+

@@ -411,6 +411,9 @@
     <ClCompile Include="src\building_rooms.cpp">
       <Filter>Source Files\City</Filter>
     </ClCompile>
+    <ClCompile Include="src\city_model.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">
@@ -607,6 +610,9 @@
     </ClInclude>
     <ClInclude Include="src\textures.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\city_model.h">
+      <Filter>Source Files\City</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

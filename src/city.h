@@ -7,10 +7,10 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "inlines.h"
-#include "model3d.h"
 #include "shaders.h"
 #include "draw_utils.h"
 #include "buildings.h" // for building_occlusion_state_t
+#include "city_model.h"
 
 using std::string;
 
@@ -52,20 +52,6 @@ inline unsigned decode_neg_ix(int ix) {assert(ix < 0); return -(ix+1);}
 inline float rand_hash(float to_hash) {return fract(12345.6789*to_hash);}
 inline float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1.0);}
 
-struct city_model_t {
-
-	string fn;
-	bool valid;
-	int body_mat_id, fixed_color_id;
-	float xy_rot, lod_mult, scale; // xy_rot in degrees
-	vector<unsigned> shadow_mat_ids;
-
-	city_model_t() : valid(0), body_mat_id(-1), fixed_color_id(-1), xy_rot(0.0), lod_mult(1.0), scale(1.0) {}
-	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
-		valid(0), fn(fn_), body_mat_id(bmid), fixed_color_id(fcid), xy_rot(rot), lod_mult(lm), scale(1.0), shadow_mat_ids(smids) {}
-	bool read(FILE *fp);
-	bool check_filename();
-};
 
 struct city_params_t {
 
@@ -202,41 +188,6 @@ struct comp_car_road_then_pos {
 	vector3d const &camera_pos;
 	comp_car_road_then_pos(vector3d const &camera_pos_) : camera_pos(camera_pos_) {}
 	bool operator()(car_t const &c1, car_t const &c2) const;
-};
-
-
-class city_model_loader_t : public model3ds {
-protected:
-	vector<int> models_valid;
-	void ensure_models_loaded() {if (empty()) {load_models();}}
-public:
-	virtual ~city_model_loader_t() {}
-	virtual unsigned num_models() const = 0;
-	virtual city_model_t const &get_model(unsigned id) const = 0;
-	bool is_model_valid(unsigned id);
-	void load_models();
-	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-		vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations=0);
-};
-
-class car_model_loader_t : public city_model_loader_t {
-public:
-	unsigned num_models() const;
-	city_model_t const &get_model(unsigned id) const;
-};
-
-class ped_model_loader_t : public city_model_loader_t {
-public:
-	unsigned num_models() const;
-	city_model_t const &get_model(unsigned id) const;
-};
-
-class object_model_loader_t : public city_model_loader_t {
-	city_model_t null_model;
-public:
-	unsigned num_models() const {return NUM_OBJ_MODELS;}
-	bool is_model_valid(unsigned id) const {return get_model(id).valid;}
-	city_model_t const &get_model(unsigned id) const;
 };
 
 
