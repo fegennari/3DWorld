@@ -302,7 +302,7 @@ public:
 	void ensure_rings_texture();
 	void bind_rings_texture(unsigned tu_id) const;
 	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, float back_face_mult, bool a2c) const;
-	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const;
+	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars, float camera_dist_from_center) const;
 	void free_texture();
 	void free_uobj();
 	float get_hmap_scale () const {return PLANET_HMAP_SCALE;}

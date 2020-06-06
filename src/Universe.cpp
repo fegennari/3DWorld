@@ -1043,7 +1043,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 							for (vector<planet_draw_data_t>::const_iterator k = usg.atmos_to_draw.begin(); k != usg.atmos_to_draw.end(); ++k) {
 								uplanet const &planet(sol.planets[k->ix]);
-								planet.draw_atmosphere(usg, k->pos, k->size, k->svars);
+								planet.draw_atmosphere(usg, k->pos, k->size, k->svars, p2p_dist(camera, (pos + planet.pos)));
 							}
 							glDisable(GL_CULL_FACE);
 						}
@@ -2699,14 +2699,14 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 }
 
 
-void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const {
+void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars, float camera_dist_from_center) const {
 
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
 	usg.enable_atmospheric_shader(*this, make_pt_global(pos_), svars); // always WHITE
 	fgPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
-	uniform_scale(1.01*cloud_radius);
+	uniform_scale(min(1.01f*cloud_radius, camera_dist_from_center));
 	draw_sphere_vbo_raw(max(4, min(N_SPHERE_DIV, int(6.0*size_))), 1);
 	fgPopMatrix();
 	usg.disable_atmospheric_shader();
