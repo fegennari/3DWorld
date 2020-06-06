@@ -1654,12 +1654,12 @@ void set_def_spec_map() {
 
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 	unsigned bmap_pass_mask, int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate,
-	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist)
+	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist, bool skip_cull_face)
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass), is_bmap_pass((bmap_pass_mask & 2) != 0);
 	if (is_normal_pass) {smap_data[rot].set_for_all_lights(shader, mvm);} // choose correct shadow map based on rotation
 
-	if (group_back_face_cull && reflection_pass != 2) { // okay enable culling if is_shadow_pass on some scenes
+	if (group_back_face_cull && reflection_pass != 2 && !skip_cull_face) { // okay enable culling if is_shadow_pass on some scenes
 		if (reflection_pass == 1) {glCullFace(GL_FRONT);} // the reflection pass uses a mirror, which changes the winding direction, so we cull the front faces instead
 		glEnable(GL_CULL_FACE);
 	}
@@ -1712,7 +1712,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		}
 		to_draw.clear();
 	}
-	if (group_back_face_cull && reflection_pass != 2) { // okay enable culling if is_shadow_pass on some scenes
+	if (group_back_face_cull && reflection_pass != 2 && !skip_cull_face) { // okay enable culling if is_shadow_pass on some scenes
 		if (reflection_pass == 1) {glCullFace(GL_BACK);} // restore the default
 		glDisable(GL_CULL_FACE);
 	}
