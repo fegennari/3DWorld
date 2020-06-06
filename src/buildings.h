@@ -309,7 +309,7 @@ struct building_room_geom_t {
 	void add_trashcan(room_object_t const &c);
 	void create_static_vbos();
 	void create_dynamic_vbos();
-	void draw(shader_t &s, bool shadow_only);
+	void draw(shader_t &s, vector3d const &xlate, bool shadow_only);
 };
 
 struct elevator_t : public cube_t {
@@ -508,8 +508,8 @@ struct building_t : public building_geom_t {
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
-	void draw_room_geom(shader_t &s, bool shadow_only);
-	void gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only);
+	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only);
+	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;

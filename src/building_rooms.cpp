@@ -9,6 +9,7 @@
 
 
 extern int display_mode;
+extern pos_dir_up camera_pdu;
 
 unsigned const NUM_BOOK_COLORS = 16;
 colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
@@ -93,7 +94,6 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
 	float const radius(0.02f*(3 + rr)*get_window_vspace()), height(0.54f*(3 + rar)*radius);
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t room_bounds(get_walkable_room_bounds(room)), room_exp(room);
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
@@ -105,6 +105,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	// find interior doorways connected to this room
 	float const wall_thickness(get_wall_thickness());
 	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
+	vector<room_object_t> &objs(interior->room_geom->objs);
 	vect_cube_t doorways;
 
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
@@ -143,11 +144,11 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 
 // Note: no blockers for people
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.4*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen.rand_uniform(1.0, 1.2));
+	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z1() = zval;
 	c.z2() = zval + height;
@@ -174,11 +175,11 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
 	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
 {
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
+	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned num_placed(0);
 	cube_t c, placed_desk;
 	c.z1() = zval;
@@ -236,7 +237,6 @@ unsigned building_t::count_num_int_doors(room_t const &room) const {
 bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace()), wall_thick(get_wall_thickness());
 	bool const dim(room_bounds.dx() < room_bounds.dy()); // longer dim
@@ -247,6 +247,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	if (room_bounds.get_sz_dim(dim) < 1.3*vspace || room_bounds.get_sz_dim(!dim) < 0.8*vspace) return 0; // room is too small to fit a bed
 	if (room_bounds.get_sz_dim(dim) > 4.0*vspace || room_bounds.get_sz_dim(!dim) > 2.5*vspace) return 0; // room is too large to be a bedroom
 	bool const first_head_dir(rgen.rand_bool()), first_wall_dir(rgen.rand_bool());
+	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z1() = zval;
 
@@ -285,7 +286,31 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 }
 
 bool building_t::add_toilet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
-	// TODO: WRITE
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), width(0.25*floor_spacing), length(0.4*floor_spacing), height(0.4*floor_spacing);
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-wall_thickness);
+	if (min(place_area.dx(), place_area.dy()) < 2.0*length) return 0; // room is too small (should be rare)
+	unsigned const first_corner(rgen.rand() & 3);
+	bool const first_dim(rgen.rand_bool());
+	vector<room_object_t> &objs(interior->room_geom->objs);
+
+	for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
+		unsigned const corner_ix((first_corner + n)&3);
+		bool const xdir(corner_ix&1), ydir(corner_ix>>1);
+		point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
+		
+		for (unsigned d = 0; d < 2; ++d) { // try both dims
+			bool const dim(bool(d) ^ first_dim);
+			cube_t c(corner, corner);
+			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? width : length);
+			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? length : width);
+			for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] += ((dim ? xdir : ydir) ? -1.5 : 1.5)*wall_thickness;}
+			c.z2() += height;
+			if (is_cube_close_to_doorway(c, 0.0, 1)) continue; // bad placement
+			objs.emplace_back(c, TYPE_TOILET, room_id, dim, !(dim ? ydir : xdir), (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+			return 1; // done
+		} // for d
+	} // for n
 	return 0;
 }
 
@@ -430,7 +455,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
-	unsigned tot_num_rooms(0), num_light_stacks(0);
+	unsigned tot_num_rooms(0), num_light_stacks(0), num_bathrooms(0);
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
@@ -477,6 +502,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
 		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1337*num_floors) % 12]);
 		unsigned num_lights_added(0);
+		bool added_bathroom(0);
 
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
@@ -566,7 +592,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 			unsigned const objs_start(objs.size());
-			bool added_tc(0), added_obj(0), can_place_book(0);
+			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0);
 			cube_t avoid_cube;
 
 			// place room objects
@@ -575,8 +601,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					added_obj = add_bed_to_room(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit);
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
-				if (!added_obj && min(r->dx(), r->dy()) < 2.0*window_vspacing && max(r->dx(), r->dy()) < 3.0*window_vspacing && count_num_int_doors(*r) == 1 /*&& rgen.rand_float() < 0.75*/) {
-					added_obj = add_toilet_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit); // add bathroom with toilet
+				if (!added_obj && min(r->dx(), r->dy()) < 2.0*window_vspacing && max(r->dx(), r->dy()) < 3.0*window_vspacing &&
+					count_num_int_doors(*r) == 1 && (num_bathrooms == 0 || rgen.rand_float() < 0.5))
+				{
+					added_obj = is_bathroom = added_bathroom = add_toilet_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit); // add bathroom with toilet
 				}
 			}
 			if (!added_obj && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
@@ -594,7 +622,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 			if (is_house) { // place house-specific items
-				if (rgen.rand_float() < 0.8) { // 80% of the time
+				if (!is_bathroom && rgen.rand_float() < 0.8) { // place bookcase 80% of the time, but not in bathrooms
 					bool const added(add_bookcase_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 					if (added) {assert(!objs.empty()); avoid_cube = objs.back();}
 				}
@@ -610,6 +638,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 		num_light_stacks += num_lights_added;
+		if (added_bathroom) {++num_bathrooms;}
 	} // for r
 	add_stairs_and_elevators(rgen);
 	objs.shrink_to_fit();
@@ -684,10 +713,10 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	}
 }
 
-void building_t::draw_room_geom(shader_t &s, bool shadow_only) {
-	if (interior && interior->room_geom) {interior->room_geom->draw(s, shadow_only);}
+void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only) {
+	if (interior && interior->room_geom) {interior->room_geom->draw(s, xlate, shadow_only);}
 }
-void building_t::gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only) {
+void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only) {
 	if (!interior) return;
 	if (is_rotated()) return; // no room geom for rotated buildings
 
@@ -699,7 +728,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, vect_cube_t &ped_bcubes, un
 		gen_room_details(rgen, ped_bcubes); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	draw_room_geom(s, shadow_only);
+	draw_room_geom(s, xlate, shadow_only);
 }
 
 void building_t::clear_room_geom() {
@@ -1406,7 +1435,7 @@ void building_room_geom_t::create_dynamic_vbos() {
 	materials_d.create_vbos();
 }
 
-void building_room_geom_t::draw(shader_t &s, bool shadow_only) { // non-const because it creates the VBO
+void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
 
@@ -1421,15 +1450,20 @@ void building_room_geom_t::draw(shader_t &s, bool shadow_only) { // non-const be
 	materials_d.draw(s, shadow_only);
 	disable_blend();
 	vbo_wrap_t::post_render();
+	bool obj_drawn(0);
 
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		assert(i->obj_id < objs.size());
 		auto const &obj(objs[i->obj_id]);
+		if (!shadow_only && !dist_less_than((camera_pdu.pos - xlate), obj.get_llc(), 120.0*obj.dz())) continue; // too far away
+		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
 		vector3d dir(zero_vector);
 		dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
 		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, dir, WHITE, zero_vector, i->model_id, shadow_only, 0, 0);
+		obj_drawn = 1;
 	}
+	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 }
 
 
