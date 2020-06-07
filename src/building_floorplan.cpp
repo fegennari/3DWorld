@@ -12,7 +12,6 @@ extern building_params_t global_building_params;
 
 
 void remove_section_from_cube(cube_t &c, cube_t &c2, float v1, float v2, bool xy) { // c is input+output cube, c2 is other output cube
-	//if (!(v1 > c.d[xy][0] && v1 < v2 && v2 < c.d[xy][1])) {cout << TXT(v1) << TXT(v2) << TXT(c.d[xy][0]) << TXT(c.d[xy][1]) << TXT(xy) << endl;}
 	assert(v1 > c.d[xy][0] && v1 < v2 && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
 	c2 = c; // clone first cube
 	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side

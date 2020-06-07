@@ -9,7 +9,7 @@
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 
-bool const STAY_ON_ONE_FLOOR = 0; // Note: multi-floor movement not yet fully supported
+bool const STAY_ON_ONE_FLOOR = 0;
 
 extern float fticks;
 
