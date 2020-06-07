@@ -28,7 +28,7 @@ extern bool use_interior_cube_map_refl, enable_model3d_custom_mipmaps, enable_tt
 extern bool flatten_tt_mesh_under_models, no_store_model_textures_in_memory, disable_model_textures, allow_model3d_quads, merge_model_objects;
 extern unsigned shadow_map_sz, reflection_tid;
 extern int display_mode;
-extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, light_int_scale[];
+extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, model_mat_lod_thresh, cobj_z_bias, model_hemi_lighting_scale, light_int_scale[];
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
 extern vector<texture_t> textures;
@@ -2321,6 +2321,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
 					if (ref_pass && any_planar_reflective) {bind_texture_tu(reflection_tid, 14);}
 					if (model3d_wn_normal) {s.add_uniform_float("winding_normal_sign", ((reflection_pass == 1) ? -1.0 : 1.0));}
+					s.add_uniform_float("hemi_lighting_scale", model_hemi_lighting_scale);
 				}
 				else {
 					s.begin_simple_textured_shader(0.0, 1); // with lighting
