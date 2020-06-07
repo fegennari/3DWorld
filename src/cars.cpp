@@ -420,10 +420,15 @@ void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube
 	min_eq(lights_bcube.z1(), bcube.z1());
 	max_eq(lights_bcube.z2(), bcube.z2());
 
-	// TODO: merge headlights into a single spotlight for distant cars? share shadow maps between headlights?
-	for (unsigned d = 0; d < 2; ++d) { // L, R
-		point const pos((d ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (d ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
-		dl_sources.push_back(light_source(headlight_dist, pos, pos, color, 1, dir, beamwidth));
+	if (!dist_less_than((car.get_center() + xlate), camera_pdu.pos, 2.0*headlight_dist)) { // single merged headlight when far away
+		point const pos(0.5*(0.2*pb[0] + 0.8*pb[4] + 0.2*pb[1] + 0.8*pb[5]));
+		dl_sources.push_back(light_source(headlight_dist, pos, pos, color*1.333, 1, dir, 1.2*beamwidth));
+	}
+	else { // two separate left/right headlights
+		for (unsigned d = 0; d < 2; ++d) { // L, R
+			point const pos((d ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (d ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
+			dl_sources.push_back(light_source(headlight_dist, pos, pos, color, 1, dir, beamwidth)); // share shadow maps between headlights?
+		}
 	}
 }
 
