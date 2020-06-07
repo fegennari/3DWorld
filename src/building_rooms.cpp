@@ -430,6 +430,32 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	return was_hung;
 }
 
+void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	float const floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), window_thickness(0.05*wall_thickness);
+	float const z1(zval + floor_thickness), z2(zval + get_window_vspace() - floor_thickness);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	unsigned num_ext_walls(0);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {num_ext_walls += (classify_room_wall(room, zval, dim, dir, 1) == ROOM_WALL_EXT);}
+	}
+	if (num_ext_walls != 1) return; // it looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (classify_room_wall(room, zval, dim, dir, 1) != ROOM_WALL_EXT) continue; // exterior walls only
+			cube_t c(room);
+			c.z1() = zval; c.z2() = z2;
+			c.d[dim][!dir]  = c.d[dim][dir] + (dir ? -1.0 : 1.0)*window_thickness;
+			c.d[dim][ dir] -= (dir ? -1.0 : 1.0)*window_thickness;
+			// shrink by wall thickness to avoid problems at the corners of buildings
+			if (c.d[!dim][0] == bcube.d[!dim][0]) {c.d[!dim][0] += wall_thickness;}
+			if (c.d[!dim][1] == bcube.d[!dim][1]) {c.d[!dim][1] -= wall_thickness;}
+			objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), tot_light_amt, room_obj_shape::SHAPE_CUBE, WHITE); // always lit
+		} // for dir
+	} // for dim
+}
+
 void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		float const sz(((light_shape == SHAPE_CYLIN) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
@@ -635,6 +661,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (rgen.rand_float() < 0.8) { // 80% of the time
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && r->is_office)); // no trashcans on same wall as office whiteboard
 			}
+			if (is_bathroom) {add_bathroom_windows(*r, room_center.z, room_id, tot_light_amt);} // find all windows and add frosted windows
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f
 		num_light_stacks += num_lights_added;
@@ -1360,6 +1387,13 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
+	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z1 | EF_Z2); // only enable faces in dim
+	cube_t window(c);
+	swap(window.d[c.dim][0], window.d[c.dim][1]); // denormalized
+	get_material(tid_nm_pair_t(get_bath_wind_tid(), tscale), 0).add_cube_to_verts(window, c.color, skip_faces); // no apply_light_color()
+}
+
 void building_room_geom_t::clear() {
 	clear_materials();
 	objs.clear();
@@ -1415,7 +1449,8 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_DESK:    add_desk    (*i, tscale); break;
 		case TYPE_TCAN:    add_trashcan(*i); break;
 		case TYPE_BED:     add_bed     (*i, tscale); break;
-		case TYPE_TOILET: obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_TOILET); break;
+		case TYPE_WINDOW:  add_window  (*i, tscale); break;
+		case TYPE_TOILET:  obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_TOILET); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		default: assert(0); // undefined type
 		}

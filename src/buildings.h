@@ -189,7 +189,7 @@ struct draw_range_t {
 };
 
 enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
-	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_TOILET, NUM_TYPES};
+	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_TOILET, TYPE_WINDOW, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U, SHAPE_TALL};
 enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED};
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
@@ -306,6 +306,7 @@ struct building_room_geom_t {
 	void add_bookcase(room_object_t const &c, float tscale, bool no_shelves=0, float sides_scale=1.0);
 	void add_desk(room_object_t const &c, float tscale);
 	void add_bed(room_object_t const &c, float tscale);
+	void add_window(room_object_t const &c, float tscale);
 	void add_trashcan(room_object_t const &c);
 	void create_static_vbos();
 	void create_dynamic_vbos();
@@ -557,6 +558,7 @@ private:
 	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir);
 	void add_rug_to_room     (rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
+	void add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
 	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
@@ -631,6 +633,7 @@ void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsign
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2);
 bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0);
 int get_rect_panel_tid();
+int get_bath_wind_tid ();
 int get_normal_map_for_bldg_tid(int tid);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,

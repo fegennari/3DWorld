@@ -408,7 +408,7 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
 
 
 class building_texture_mgr_t {
-	int window_tid, hdoor_tid, bdoor_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2;
+	int window_tid, hdoor_tid, bdoor_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2, bath_wind_tid;
 
 	int ensure_tid(int &tid, const char *name) {
 		if (tid < 0) {tid = get_texture_by_name(name);}
@@ -416,13 +416,14 @@ class building_texture_mgr_t {
 		return tid;
 	}
 public:
-	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), gdoor_tid(-1), ac_unit_tid1(-1), ac_unit_tid2(-1) {}
-	int get_window_tid  () const {return window_tid;}
-	int get_hdoor_tid   () {return ensure_tid(hdoor_tid,    "textures/white_door.jpg");} // house door
-	int get_bdoor_tid   () {return ensure_tid(bdoor_tid,    "textures/buildings/building_door.jpg");} // building door
-	int get_gdoor_tid   () {return ensure_tid(gdoor_tid,    "textures/buildings/garage_door.jpg");} // garage door
-	int get_ac_unit_tid1() {return ensure_tid(ac_unit_tid1, "textures/buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
-	int get_ac_unit_tid2() {return ensure_tid(ac_unit_tid2, "textures/buildings/AC_unit2.jpg");} // AC unit
+	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), gdoor_tid(-1), ac_unit_tid1(-1), ac_unit_tid2(-1), bath_wind_tid(-1) {}
+	int get_window_tid   () const {return window_tid;}
+	int get_hdoor_tid    () {return ensure_tid(hdoor_tid,     "textures/white_door.jpg");} // house door
+	int get_bdoor_tid    () {return ensure_tid(bdoor_tid,     "textures/buildings/building_door.jpg");} // building door
+	int get_gdoor_tid    () {return ensure_tid(gdoor_tid,     "textures/buildings/garage_door.jpg");} // garage door
+	int get_ac_unit_tid1 () {return ensure_tid(ac_unit_tid1,  "textures/buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
+	int get_ac_unit_tid2 () {return ensure_tid(ac_unit_tid2,  "textures/buildings/AC_unit2.jpg");} // AC unit
+	int get_bath_wind_tid() {return ensure_tid(bath_wind_tid, "textures/buildings/window_blocks.jpg");} // bathroom window
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -436,6 +437,7 @@ public:
 building_texture_mgr_t building_texture_mgr;
 
 int get_rect_panel_tid() {return building_texture_mgr.get_gdoor_tid();} // use garage doors
+int get_bath_wind_tid () {return building_texture_mgr.get_bath_wind_tid();}
 
 
 class texture_id_mapper_t {
