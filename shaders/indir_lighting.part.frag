@@ -54,6 +54,7 @@ vec3 get_indir_lighting(in float normal_sign) {
 #ifdef USE_BUMP_MAP_INDIR // USE_BUMP_MAP must also be set
 		vec3 n_eye = inverse(get_tbn(1.0, eye_norm)) * get_bump_map_normal(); // convert tangent space to eye space
 		vec3 n = normalize(inverse(fg_NormalMatrix) * n_eye); // convert eye space to world space
+		n = mix(normal, n, bump_map_mag);
 #else
 		vec3 n = normal;
 #endif
