@@ -7,17 +7,20 @@
 #include "city.h" // for object_model_loader_t
 #pragma warning(disable : 26812) // prefer enum class over enum
 
-
-extern int display_mode;
-extern pos_dir_up camera_pdu;
-
+bool const ADD_BOOK_COVERS = 1;
+bool const ADD_BOOK_TITLES = 1;
 unsigned const NUM_BOOK_COLORS = 16;
 colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 
 object_model_loader_t building_obj_model_loader;
 
+extern int display_mode;
+extern pos_dir_up camera_pdu;
+
 int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
+
+void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
 
 
 bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const {
@@ -1131,7 +1134,7 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 	mat.add_cube_to_verts(spine, color, skip_faces); // untextured
 	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), (skip_faces | ~get_face_mask(c.dim, !c.dir))); // untextured
 	
-	if (c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
+	if (ADD_BOOK_COVERS && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
 		cube_t cover(c);
 		vector3d expand;
 		float const height(c.get_sz_dim(hdim)), img_width(0.9*width), img_height(min(0.9f*height, 0.67f*img_width)); // use correct aspect ratio
@@ -1143,15 +1146,45 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		bool const tdir(upright ? (c.obj_id&1) : 1), swap_xy(upright ^ (!c.dim)), mirror_x(0), mirror_y(!upright && !(c.dim ^ c.dir)); // unclear what to set mirror_x to or if it matters for books
 		get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(cover, WHITE, get_face_mask(tdim, tdir), swap_xy, mirror_x, mirror_y);
 	}
-	if (0 && c.enable_pictures()) { // add title along spine using text
-		cube_t spine(c);
+	if (ADD_BOOK_TITLES) { // add title along spine using text
+		// determine the area where we can place the book title on the spine (TODO: add to book cover later)
+		cube_t title_area(c);
 		vector3d expand;
 		expand[ hdim] = -4.0*indent; // shrink
 		expand[ tdim] = -1.0*indent; // shrink
 		expand[c.dim] = 0.01*indent; // expand outward
-		spine.expand_by(expand);
-		int const tid = -1; // TODO: select title text
-		get_material(tid_nm_pair_t(tid, 0.0)).add_cube_to_verts(spine, WHITE, get_face_mask(c.dim, !c.dir), 0, 0, 0);
+		title_area.expand_by(expand);
+		// select our title test
+		unsigned const NUM_TITLES = 2;
+		string const titles[NUM_TITLES] = {"The Title 1", "Book Title 2"}; // TODO: read these from a file or generate them somehow
+		string const &title(titles[c.obj_id%NUM_TITLES]);
+		// generate text verts
+		bool const cdir(!upright && !(c.dim ^ c.dir)), ldir(/*upright ^ (!c.dim)*/0); // colum and line directions (left/right/top/bot) TODO
+		vector3d column_dir(zero_vector), line_dir(zero_vector), normal(zero_vector);
+		column_dir[hdim] = (cdir  ? -1.0 : 1.0); // along book height
+		line_dir  [tdim] = (ldir  ? -1.0 : 1.0); // along book thickness
+		normal   [c.dim] = (c.dir ? -1.0 : 1.0); // along book width
+		vector<vert_tc_t> verts;
+		gen_text_verts(verts, all_zeros, title, 1.0, column_dir, line_dir, 1); // use_quads=1
+		assert(!verts.empty());
+		cube_t text_bcube(verts[0].v);
+		for (auto i = verts.begin()+1; i != verts.end(); ++i) {text_bcube.union_with_pt(i->v);}
+		// Note: for variable width font; for fixed width, use min value for width and height and recenter
+		float const width_scale(title_area.get_sz_dim(hdim)/text_bcube.get_sz_dim(hdim)), height_scale(title_area.get_sz_dim(tdim)/text_bcube.get_sz_dim(tdim));
+		//float const font_sz(min(width_scale, height_scale);
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID)));
+		colorRGBA const text_color((1.0 - c.color.R), (1.0 - c.color.G), (1.0 - c.color.B), 1.0); // make it contrast with book cover
+		color_wrapper const cw(apply_light_color(c, text_color));
+		if (!(upright && (c.dim ^ c.dir)) ^ ldir) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
+
+		for (auto i = verts.begin(); i != verts.end(); ++i) {
+			i->v[c.dim]  = title_area.d[c.dim][!c.dir]; // spine pos
+			i->v[ hdim] *= width_scale;
+			i->v[ hdim] += title_area.d[hdim][ldir];
+			i->v[ tdim] *= height_scale;
+			i->v[ tdim] += title_area.d[tdim][cdir];
+			mat.quad_verts.emplace_back(vert_norm_comp_tc(i->v, normal, i->t[0], i->t[1]), cw);
+		} // for i
 	}
 }
 
