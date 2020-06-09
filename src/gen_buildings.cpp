@@ -38,7 +38,7 @@ void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
 void tid_nm_pair_t::set_gl(shader_t &s) const {
-	select_texture(tid);
+	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();} else {select_texture(tid);}
 	select_multitex(get_nm_tid(), 5);
 	if (emissive) {s.add_uniform_float("emissive_scale", 1.0);} // enable emissive
 }
@@ -46,7 +46,7 @@ void tid_nm_pair_t::unset_gl(shader_t &s) const {
 	if (emissive) {s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
 }
 void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
-	if      (tid == BLDG_WINDOW_TEX) {tid = BLDG_WIND_TRANS_TEX;}
+	if      (tid == BLDG_WINDOW_TEX    ) {tid = BLDG_WIND_TRANS_TEX;}
 	else if (tid == BLDG_WIND_TRANS_TEX) {tid = BLDG_WINDOW_TEX;}
 }
 

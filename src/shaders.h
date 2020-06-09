@@ -287,7 +287,7 @@ public:
 	text_drawer() : cur_color(ALPHA0) {}
 	void begin_draw(colorRGBA const *const color=nullptr);
 	void end_draw();
-	void bind_font_texture();
+	static void bind_font_texture();
 	void set_color(colorRGBA const &color);
 	void flush();
 	void add_text(string const &text, point const &pos, float tsize, vector3d const &column_dir=plus_x, vector3d const &row_dir=plus_y, colorRGBA const *const color=nullptr);
@@ -295,6 +295,8 @@ public:
 		add_text(text, point(x, y, z), 0.8*tsize, plus_x, plus_y, &color);
 	}
 };
+
+unsigned const FONT_TEXTURE_ID = (1<<16); // some large number that will never be a valid texture ID
 
 struct tile_blend_tex_data_t {
 	unsigned tid_tinput, tid_lut, context_count;
