@@ -115,8 +115,7 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 			float const t[4][2] = {{pcd.u1,pcd.v1}, {pcd.u2,pcd.v1}, {pcd.u2,pcd.v2}, {pcd.u1,pcd.v2}};
 			float const dx[4] = {0.0, char_width, char_width, 0.0};
 			float const dy[4] = {0.0, 0.0, char_sz, char_sz};
-			//unsigned const start_ix(verts.size()); // indexed triangles; also needs the use_quads case below; untested
-			//for (unsigned j = 0; j < 6; ++j) {ixs.push_back(start_ix + quad_to_tris_ixs[j]);}
+			//for (unsigned j = 0; j < 6; ++j) {ixs.push_back(verts.size() + quad_to_tris_ixs[j]);} // indexed triangles; also needs the use_quads case below; untested
 
 			if (use_quads) { // quads as quads
 				for (unsigned j = 0; j < 4; ++j) {verts.emplace_back((cursor + column_dir*dx[j] + line_dir*dy[j]), t[j][0], t[j][1]);}

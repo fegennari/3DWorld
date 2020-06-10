@@ -531,7 +531,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		}
 		// make chair colors consistent for each part by using a few variables for a hash
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
-		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1337*num_floors) % 12]);
+		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % 12]);
 		unsigned num_lights_added(0);
 		bool added_bathroom(0);
 
@@ -1116,6 +1116,8 @@ unsigned get_skip_mask_for_xy(bool dim) {return (dim ? (EF_Y1 | EF_Y2) : (EF_X1 
 void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_faces) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0)); // unshadowed, since shadows are too small to have much effect
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz());
+	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
+	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
 	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
 	float const thickness(c.get_sz_dim(tdim)), width(c.get_sz_dim(c.dim)), cov_thickness(0.125*thickness), indent(0.02*width);
 	cube_t bot(c), top(c), spine(c), pages(c);
@@ -1143,8 +1145,8 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		expand[tdim ] = 0.01*indent; // expand outward, other dims expand inward
 		cover.expand_by(expand);
 		int const picture_tid(c.get_picture_tid()); // not using user screenshot images
-		bool const tdir(upright ? (c.obj_id&1) : 1), swap_xy(upright ^ (!c.dim)), mirror_x(0), mirror_y(!upright && !(c.dim ^ c.dir)); // unclear what to set mirror_x to or if it matters for books
-		get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(cover, WHITE, get_face_mask(tdim, tdir), swap_xy, mirror_x, mirror_y);
+		bool const swap_xy(upright ^ (!c.dim));
+		get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(cover, WHITE, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir);
 	}
 	if (ADD_BOOK_TITLES) { // add title along spine using text
 		// determine the area where we can place the book title on the spine (TODO: add to book cover later)
@@ -1159,7 +1161,6 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		string const titles[NUM_TITLES] = {"The Title 1", "Book Title 2"}; // TODO: read these from a file or generate them somehow
 		string const &title(titles[c.obj_id%NUM_TITLES]);
 		// generate text verts
-		bool const cdir(!upright && !(c.dim ^ c.dir)), ldir(/*upright ^ (!c.dim)*/0); // colum and line directions (left/right/top/bot) TODO
 		vector3d column_dir(zero_vector), line_dir(zero_vector), normal(zero_vector);
 		column_dir[hdim] = (cdir  ? -1.0 : 1.0); // along book height
 		line_dir  [tdim] = (ldir  ? -1.0 : 1.0); // along book thickness
@@ -1170,19 +1171,21 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		cube_t text_bcube(verts[0].v);
 		for (auto i = verts.begin()+1; i != verts.end(); ++i) {text_bcube.union_with_pt(i->v);}
 		// Note: for variable width font; for fixed width, use min value for width and height and recenter
-		float const width_scale(title_area.get_sz_dim(hdim)/text_bcube.get_sz_dim(hdim)), height_scale(title_area.get_sz_dim(tdim)/text_bcube.get_sz_dim(tdim));
-		//float const font_sz(min(width_scale, height_scale);
+		float width_scale(title_area.get_sz_dim(hdim)/text_bcube.get_sz_dim(hdim)), height_scale(title_area.get_sz_dim(tdim)/text_bcube.get_sz_dim(tdim));
+		min_eq(width_scale, 1.5f*height_scale); // use a reasonable aspect ratio
+		min_eq(height_scale, 1.5f*width_scale);
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID)));
-		colorRGBA const text_color((1.0 - c.color.R), (1.0 - c.color.G), (1.0 - c.color.B), 1.0); // make it contrast with book cover
+		colorRGBA text_color(BLACK);
+		for (unsigned i = 0; i < 3; ++i) {text_color[i] = ((c.color[i] > 0.5) ? 0.0 : 1.0);} // invert + saturate to contrast with book cover
 		color_wrapper const cw(apply_light_color(c, text_color));
-		if (!(upright && (c.dim ^ c.dir)) ^ ldir) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
+		if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 
 		for (auto i = verts.begin(); i != verts.end(); ++i) {
 			i->v[c.dim]  = title_area.d[c.dim][!c.dir]; // spine pos
 			i->v[ hdim] *= width_scale;
-			i->v[ hdim] += title_area.d[hdim][ldir];
+			i->v[ hdim] += title_area.d[hdim][cdir];
 			i->v[ tdim] *= height_scale;
-			i->v[ tdim] += title_area.d[tdim][cdir];
+			i->v[ tdim] += title_area.d[tdim][ldir];
 			mat.quad_verts.emplace_back(vert_norm_comp_tc(i->v, normal, i->t[0], i->t[1]), cw);
 		} // for i
 	}
@@ -1267,7 +1270,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 			bool const book_dir(c.dir ^ ((rgen.rand()&3) != 0)); // spine facing out 75% of the time
 			room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color);
-			obj.obj_id = c.obj_id + 123*i + 1337*n;
+			obj.obj_id = c.obj_id + 123*i + 1367*n;
 			add_book(obj, skip_faces); // detailed book
 			pos += width;
 			last_book_pos = pos;
