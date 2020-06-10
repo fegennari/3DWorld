@@ -112,18 +112,21 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 			per_char_data_t const &pcd(font_texture_manager.lookup_ascii(*i));
 			if (pcd.width == 0.0) continue; // non-printable character, skip it (currently never get here, but left for future use)
 			float const char_width(char_sz*pcd.width);
-			float const t[4][2] = {{pcd.u1,pcd.v1}, {pcd.u2,pcd.v1}, {pcd.u2,pcd.v2}, {pcd.u1,pcd.v2}};
-			float const dx[4] = {0.0, char_width, char_width, 0.0};
-			float const dy[4] = {0.0, 0.0, char_sz, char_sz};
-			//for (unsigned j = 0; j < 6; ++j) {ixs.push_back(verts.size() + quad_to_tris_ixs[j]);} // indexed triangles; also needs the use_quads case below; untested
 
-			if (use_quads) { // quads as quads
-				for (unsigned j = 0; j < 4; ++j) {verts.emplace_back((cursor + column_dir*dx[j] + line_dir*dy[j]), t[j][0], t[j][1]);}
-			}
-			else { // quads as triangles
-				for (unsigned j = 0; j < 6; ++j) {
-					unsigned const ix(quad_to_tris_ixs[j]);
-					verts.emplace_back((cursor + column_dir*dx[ix] + line_dir*dy[ix]), t[ix][0], t[ix][1]);
+			if (*i != ' ') { // skip non-printable space character
+				float const t[4][2] = {{pcd.u1,pcd.v1}, {pcd.u2,pcd.v1}, {pcd.u2,pcd.v2}, {pcd.u1,pcd.v2}};
+				float const dx[4] = {0.0, char_width, char_width, 0.0};
+				float const dy[4] = {0.0, 0.0, char_sz, char_sz};
+				//for (unsigned j = 0; j < 6; ++j) {ixs.push_back(verts.size() + quad_to_tris_ixs[j]);} // indexed triangles; also needs the use_quads case below; untested
+
+				if (use_quads) { // quads as quads
+					for (unsigned j = 0; j < 4; ++j) {verts.emplace_back((cursor + column_dir*dx[j] + line_dir*dy[j]), t[j][0], t[j][1]);}
+				}
+				else { // quads as triangles
+					for (unsigned j = 0; j < 6; ++j) {
+						unsigned const ix(quad_to_tris_ixs[j]);
+						verts.emplace_back((cursor + column_dir*dx[ix] + line_dir*dy[ix]), t[ix][0], t[ix][1]);
+					}
 				}
 			}
 			cursor += column_dir*(char_width + char_sz*char_spacing);
