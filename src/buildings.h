@@ -260,7 +260,7 @@ public:
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0);
 	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided=0, bool ts_tb=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0);
 	void create_vbo();
-	void draw(shader_t &s, bool shadow_only);
+	void draw(shader_t &s, bool shadow_only, bool no_small_features);
 };
 
 struct building_materials_t : public vector<rgeom_mat_t> {
@@ -268,7 +268,7 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	unsigned count_all_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos();
-	void draw(shader_t &s, bool shadow_only);
+	void draw(shader_t &s, bool shadow_only, bool no_small_features);
 };
 
 struct obj_model_inst_t {
@@ -310,7 +310,7 @@ struct building_room_geom_t {
 	void add_trashcan(room_object_t const &c);
 	void create_static_vbos();
 	void create_dynamic_vbos();
-	void draw(shader_t &s, vector3d const &xlate, bool shadow_only);
+	void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool no_small_features);
 };
 
 struct elevator_t : public cube_t {
@@ -509,8 +509,8 @@ struct building_t : public building_geom_t {
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
-	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only);
-	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only);
+	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool no_small_features);
+	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool no_small_features);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;

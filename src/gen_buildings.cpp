@@ -2077,7 +2077,7 @@ public:
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(roof_parts_draw);
-						b.draw_room_geom(s, xlate, 1); // shadow_only=1
+						b.draw_room_geom(s, xlate, 1, 1); // shadow_only=1, no_small_features=1
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
@@ -2301,12 +2301,13 @@ public:
 						if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
-						b.gen_and_draw_room_geom(s, xlate, ped_bcubes, bi->ix, ped_ix, 0); // shadow_only=0
+						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
+						b.gen_and_draw_room_geom(s, xlate, ped_bcubes, bi->ix, ped_ix, 0, !camera_near_building); // shadow_only=0, only draw small features if camera is near building
 						g->has_room_geom = 1;
 						if (!transparent_windows) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
-						if (!b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist)) continue; // camera not near building
+						if (!camera_near_building) continue; // camera not near building
 						//if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, door_type); // and draw opened door
 						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player

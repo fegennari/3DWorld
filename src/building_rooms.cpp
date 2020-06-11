@@ -745,10 +745,10 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	}
 }
 
-void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only) {
-	if (interior && interior->room_geom) {interior->room_geom->draw(s, xlate, shadow_only);}
+void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool no_small_features) {
+	if (interior && interior->room_geom) {interior->room_geom->draw(s, xlate, shadow_only, no_small_features);}
 }
-void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only) {
+void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool no_small_features) {
 	if (!interior) return;
 	if (is_rotated()) return; // no room geom for rotated buildings
 
@@ -760,7 +760,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect
 		gen_room_details(rgen, ped_bcubes); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	draw_room_geom(s, xlate, shadow_only);
+	draw_room_geom(s, xlate, shadow_only, no_small_features);
 }
 
 void building_t::clear_room_geom() {
@@ -936,9 +936,10 @@ void rgeom_mat_t::create_vbo() {
 	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be cleared
 }
 
-void rgeom_mat_t::draw(shader_t &s, bool shadow_only) {
+void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool no_small_features) {
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows
+	if (no_small_features && tex.tid == FONT_TEXTURE_ID) return; // book text is always small
 	assert(vbo.vbo_valid());
 	assert(num_qverts > 0 || num_itverts > 0);
 	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
@@ -981,8 +982,8 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 void building_materials_t::create_vbos() {
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo();}
 }
-void building_materials_t::draw(shader_t &s, bool shadow_only) {
-	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only);}
+void building_materials_t::draw(shader_t &s, bool shadow_only, bool no_small_features) {
+	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only, no_small_features);}
 }
 
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
@@ -1508,7 +1509,7 @@ void building_room_geom_t::create_dynamic_vbos() {
 	materials_d.create_vbos();
 }
 
-void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only) { // non-const because it creates the VBO
+void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool no_small_features) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
 
@@ -1518,9 +1519,9 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 	}
 	if (materials_s.empty()) {create_static_vbos ();} // create static  materials if needed
 	if (materials_d.empty()) {create_dynamic_vbos();} // create dynamic materials if needed
-	enable_blend(); // needed for rugs
-	materials_s.draw(s, shadow_only);
-	materials_d.draw(s, shadow_only);
+	enable_blend(); // needed for rugs and book text
+	materials_s.draw(s, shadow_only, no_small_features);
+	materials_d.draw(s, shadow_only, no_small_features);
 	disable_blend();
 	vbo_wrap_t::post_render();
 	bool obj_drawn(0);
