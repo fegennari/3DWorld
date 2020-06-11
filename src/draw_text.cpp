@@ -28,7 +28,7 @@ class font_texture_manager_t {
 	per_char_data_t pcd[256]; // one per ASCII value
 
 public:
-	font_texture_manager_t() : texture(0, 7, 0, 0, 0, 4, 3, "", 0, 0, 8.0) {} // custom alpha mipmaps, uncompressed
+	font_texture_manager_t() : texture(0, 7, 0, 0, 0, 4, 1, "", 0, 0, 8.0) {} // use mipmaps, uncompressed
 
 	bool check_nonempty_tile_column(unsigned tx, unsigned ty, unsigned x, unsigned tsize) const {
 		unsigned char const *data(texture.get_data());
