@@ -1144,7 +1144,7 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		float const height(c.get_sz_dim(hdim)), img_width(0.9*width), img_height(min(0.9f*height, 0.67f*img_width)); // use correct aspect ratio
 		expand[hdim]  = -0.5f*(height - img_height);
 		expand[c.dim] = -0.5f*(width  - img_width);
-		expand[tdim ] = 0.01*indent; // expand outward, other dims expand inward
+		expand[tdim ] = 0.1*indent; // expand outward, other dims expand inward
 		cover.expand_by(expand);
 		int const picture_tid(c.get_picture_tid()); // not using user screenshot images
 		bool const swap_xy(upright ^ (!c.dim));
@@ -1160,7 +1160,7 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		vector3d expand;
 		expand[ hdim] = -4.0*indent; // shrink
 		expand[ tdim] = -1.0*indent; // shrink
-		expand[c.dim] = 0.01*indent; // expand outward
+		expand[c.dim] = 0.1*indent; // expand outward
 		title_area.expand_by(expand);
 		// generate text verts
 		vector3d column_dir(zero_vector), line_dir(zero_vector), normal(zero_vector);
