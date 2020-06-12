@@ -85,6 +85,9 @@
     <Filter Include="Source Files\City">
       <UniqueIdentifier>{a380ffe6-15c4-4f41-a761-a3a009ae0741}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Input Files\text_data">
+      <UniqueIdentifier>{ba507f78-d7dd-4f24-b51a-ad32ea6976a7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3DWorld.cpp">
@@ -1548,6 +1551,9 @@
     </Text>
     <Text Include="scene_config\config_pre.txt">
       <Filter>Input Files\config</Filter>
+    </Text>
+    <Text Include="text_data\book_titles.txt">
+      <Filter>Input Files\text_data</Filter>
     </Text>
   </ItemGroup>
 </Project>

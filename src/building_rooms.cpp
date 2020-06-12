@@ -21,6 +21,7 @@ int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
 
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
+bool gen_book_title_and_author(unsigned rand_id, string &title, string &author, unsigned split_len=0);
 
 
 bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const {
@@ -1150,6 +1151,10 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(cover, WHITE, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows
 	}
 	if (ADD_BOOK_TITLES && !no_title) { // add title along spine using text
+		// select our title text
+		unsigned const SPLIT_LINE_SZ = 24;
+		string title, author;
+		if (!gen_book_title_and_author(c.obj_id, title, author, SPLIT_LINE_SZ)) return; // no title, done
 		// determine the area where we can place the book title on the spine (TODO: add to book cover later)
 		cube_t title_area(c);
 		vector3d expand;
@@ -1157,10 +1162,6 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		expand[ tdim] = -1.0*indent; // shrink
 		expand[c.dim] = 0.01*indent; // expand outward
 		title_area.expand_by(expand);
-		// select our title test
-		unsigned const NUM_TITLES = 2;
-		string const titles[NUM_TITLES] = {"The Title 1", "Book Title 2"}; // TODO: read these from a file or generate them somehow
-		string const &title(titles[c.obj_id%NUM_TITLES]);
 		// generate text verts
 		vector3d column_dir(zero_vector), line_dir(zero_vector), normal(zero_vector);
 		column_dir[hdim] = (cdir  ? -1.0 : 1.0); // along book height
@@ -1184,9 +1185,9 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 
 		for (auto i = verts.begin(); i != verts.end(); ++i) {
-			i->v[c.dim]  = title_area.d[c.dim][!c.dir]; // spine pos
-			i->v[ hdim] *= width_scale;  i->v[hdim] += title_start_hdim;
-			i->v[ tdim] *= height_scale; i->v[tdim] += title_start_tdim;
+			i->v[c.dim] = title_area.d[c.dim][!c.dir]; // spine pos
+			i->v[ hdim] = (i->v[hdim] - text_bcube.d[hdim][cdir])*width_scale  + title_start_hdim;
+			i->v[ tdim] = (i->v[tdim] - text_bcube.d[tdim][ldir])*height_scale + title_start_tdim;
 			mat.quad_verts.emplace_back(vert_norm_comp_tc(i->v, normal, i->t[0], i->t[1]), cw);
 		} // for i
 	}

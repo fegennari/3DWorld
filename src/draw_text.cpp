@@ -4,6 +4,7 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "shaders.h"
+#include <fstream>
 
 
 string const default_font_texture_atlas_fn = "textures/atlas/text_atlas.png";
@@ -215,5 +216,57 @@ void popup_text_t::check_player_prox() { // mode: 0=one time, 1=on enter, 2=cont
 
 void popup_text_t::draw() const {
 	print_text_onscreen(str, color, size, time*TICKS_PER_SECOND, 2);
+}
+
+
+class book_title_gen_t {
+	vector<string> titles, authors;
+	bool loaded;
+
+	void maybe_split_long_str(string &str, unsigned max_len) {
+		if (max_len == 0) return; // disabled
+		unsigned const len(str.size());
+		if (len <= max_len) return; // no split
+		unsigned min_dist(len), split_pos(0);
+
+		for (unsigned i = 1; i+1 < len; ++i) { // skip first and last pos
+			if (str[i] != ' ') continue; // can only split on space
+			unsigned const dist(max(i, len-i-1));
+			if (dist < min_dist) {min_dist = dist; split_pos = i;}
+		}
+		if (split_pos > 0) {str[split_pos] = '\n';} // replace space with newline for split pos closest to center, if found
+	}
+public:
+	void load_from_file(string const &fn) {
+		std::ifstream in(fn.c_str());
+		if (!in.good()) return;
+		string line;
+		unsigned num_lines(0);
+
+		while (std::getline(in, line)) {
+			++num_lines;
+			size_t const split_pos(line.find(" by ")); // line is expected to be in the format "<title> by <author>"
+			if (split_pos == string::npos) continue; // bad line, skip
+			titles .push_back(line.substr(0, split_pos));
+			authors.push_back(line.substr(split_pos+4, string::npos));
+		} // end while()
+		assert(titles.size() == authors.size());
+		loaded = 1;
+	}
+	bool gen_title_and_author(unsigned rand_id, string &title, string &author, unsigned split_len=0) {
+		if (!loaded) {load_from_file("text_data/book_titles.txt");} // should this come from a config file?
+		if (titles.empty()) return 0;
+		unsigned const ix((rand_id*977) % titles.size());
+		title  = titles[ix];
+		author = authors[ix];
+		maybe_split_long_str(title, split_len);
+		return 1;
+	}
+};
+
+book_title_gen_t book_title_gen;
+
+bool gen_book_title_and_author(unsigned rand_id, string &title, string &author, unsigned split_len=0) {
+	return book_title_gen.gen_title_and_author(rand_id, title, author, split_len);
 }
 

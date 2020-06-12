@@ -1047,6 +1047,7 @@
     <Text Include="scene_config\config_water.txt" />
     <Text Include="scene_config\config_white_plane.txt" />
     <Text Include="sphere_materials.txt" />
+    <Text Include="text_data\book_titles.txt" />
     <Text Include="universe\ship_defs_colonize_sparse.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
