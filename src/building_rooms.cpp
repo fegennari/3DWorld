@@ -1171,10 +1171,12 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		assert(!verts.empty());
 		cube_t text_bcube(verts[0].v);
 		for (auto i = verts.begin()+1; i != verts.end(); ++i) {text_bcube.union_with_pt(i->v);}
-		// Note: for variable width font; for fixed width, use min value for width and height and recenter
-		float width_scale(title_area.get_sz_dim(hdim)/text_bcube.get_sz_dim(hdim)), height_scale(title_area.get_sz_dim(tdim)/text_bcube.get_sz_dim(tdim));
-		min_eq(width_scale, 1.5f*height_scale); // use a reasonable aspect ratio
-		min_eq(height_scale, 1.5f*width_scale);
+		float const wscale(title_area.get_sz_dim(hdim)/text_bcube.get_sz_dim(hdim)), hscale(title_area.get_sz_dim(tdim)/text_bcube.get_sz_dim(tdim));
+		float width_scale(wscale), height_scale(hscale);
+		min_eq(width_scale,  1.5f*height_scale); // use a reasonable aspect ratio
+		min_eq(height_scale, 1.5f*width_scale );
+		float const title_start_hdim(title_area.d[hdim][cdir] + column_dir[hdim]*0.5*title_area.get_sz_dim(hdim)*(1.0 -  width_scale/wscale)); // centered
+		float const title_start_tdim(title_area.d[tdim][ldir] + line_dir  [tdim]*0.5*title_area.get_sz_dim(tdim)*(1.0 - height_scale/hscale)); // centered
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID))); // no shadows
 		colorRGBA text_color(BLACK);
 		for (unsigned i = 0; i < 3; ++i) {text_color[i] = ((c.color[i] > 0.5) ? 0.0 : 1.0);} // invert + saturate to contrast with book cover
@@ -1183,10 +1185,8 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 
 		for (auto i = verts.begin(); i != verts.end(); ++i) {
 			i->v[c.dim]  = title_area.d[c.dim][!c.dir]; // spine pos
-			i->v[ hdim] *= width_scale;
-			i->v[ hdim] += title_area.d[hdim][cdir];
-			i->v[ tdim] *= height_scale;
-			i->v[ tdim] += title_area.d[tdim][ldir];
+			i->v[ hdim] *= width_scale;  i->v[hdim] += title_start_hdim;
+			i->v[ tdim] *= height_scale; i->v[tdim] += title_start_tdim;
 			mat.quad_verts.emplace_back(vert_norm_comp_tc(i->v, normal, i->t[0], i->t[1]), cw);
 		} // for i
 	}
