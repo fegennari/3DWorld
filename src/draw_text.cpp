@@ -221,10 +221,10 @@ void popup_text_t::draw() const {
 
 class book_title_gen_t {
 	vector<string> titles, authors;
+	string empty_str;
 	bool loaded;
 
 	void maybe_split_long_str(string &str, unsigned max_len) {
-		if (max_len == 0) return; // disabled
 		unsigned const len(str.size());
 		if (len <= max_len) return; // no split
 		unsigned min_dist(len), split_pos(0);
@@ -237,7 +237,7 @@ class book_title_gen_t {
 		if (split_pos > 0) {str[split_pos] = '\n';} // replace space with newline for split pos closest to center, if found
 	}
 public:
-	void load_from_file(string const &fn) {
+	void load_from_file(string const &fn, unsigned split_len) {
 		std::ifstream in(fn.c_str());
 		if (!in.good()) return;
 		string line;
@@ -247,26 +247,26 @@ public:
 			++num_lines;
 			size_t const split_pos(line.find(" by ")); // line is expected to be in the format "<title> by <author>"
 			if (split_pos == string::npos) continue; // bad line, skip
+			if (split_len > 0 && split_pos > 2*split_len) continue; // title is too long, skip
 			titles .push_back(line.substr(0, split_pos));
 			authors.push_back(line.substr(split_pos+4, string::npos));
+			if (split_len > 0) {maybe_split_long_str(titles.back(), split_len);}
 		} // end while()
 		assert(titles.size() == authors.size());
 		loaded = 1;
 	}
-	bool gen_title_and_author(unsigned rand_id, string &title, string &author, unsigned split_len=0) {
-		if (!loaded) {load_from_file("text_data/book_titles.txt");} // should this come from a config file?
-		if (titles.empty()) return 0;
+	string const &gen_title(unsigned rand_id, string *author, unsigned split_len) {
+		if (!loaded) {load_from_file("text_data/book_titles.txt", split_len);} // should this come from a config file?
+		if (titles.empty()) return empty_str;
 		unsigned const ix((rand_id*977) % titles.size());
-		title  = titles[ix];
-		author = authors[ix];
-		maybe_split_long_str(title, split_len);
-		return 1;
+		if (author) {*author = authors[ix];}
+		return titles[ix];
 	}
 };
 
 book_title_gen_t book_title_gen;
 
-bool gen_book_title_and_author(unsigned rand_id, string &title, string &author, unsigned split_len=0) {
-	return book_title_gen.gen_title_and_author(rand_id, title, author, split_len);
+string const &gen_book_title(unsigned rand_id, string *author=nullptr, unsigned split_len=0) {
+	return book_title_gen.gen_title(rand_id, author, split_len);
 }
 
