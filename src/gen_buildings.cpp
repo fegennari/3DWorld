@@ -2241,7 +2241,7 @@ public:
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
-			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.5*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
+			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.4*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(GL_BACK);
 
