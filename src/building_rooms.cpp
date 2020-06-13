@@ -122,7 +122,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a trashcan
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 		if ((2U*dim + dir) == skip_wall) continue; // don't place a trashcan on this wall
-		center[ dim] = room_bounds.d[dim][dir]; // against this wall
+		center[dim] = room_bounds.d[dim][dir]; // against this wall
 		bool is_good(0);
 
 		for (unsigned m = 0; m < 80; ++m) { // try to find a point near a doorway
@@ -131,8 +131,9 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 				
 			for (auto i = doorways.begin(); i != doorways.end(); ++i) {
 				float const dmin(radius + i->dx() + i->dy());
-				if (i->closest_dist_less_than(center, dmin)) {is_good = 0; break;} // too close, reject this point
-				else if (i->closest_dist_less_than(center, 2.0*dmin)) {is_good = 1;} // close enough, keep this point
+				if (!i->closest_dist_less_than(center, 2.0*dmin)) continue; // too far
+				if ( i->closest_dist_less_than(center, dmin)) {is_good = 0; break;} // too close, reject this point
+				is_good = 1; // close enough, keep this point
 			}
 			if (is_good) break; // done; may never get here if no points are good, but the code below will handle that
 		} // for m
@@ -1169,10 +1170,10 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		normal   [c.dim] = (c.dir ? -1.0 : 1.0); // along book width
 		static vector<vert_tc_t> verts;
 		verts.clear();
-		gen_text_verts(verts, all_zeros, title, 1.0, column_dir, line_dir, 1); // use_quads=1
+		gen_text_verts(verts, all_zeros, title, 1.0, column_dir, line_dir, 1); // use_quads=1 (could cache this for c.obj_id + dim/dir bits)
 		assert(!verts.empty());
 		cube_t text_bcube(verts[0].v);
-		for (auto i = verts.begin()+1; i != verts.end(); ++i) {text_bcube.union_with_pt(i->v);}
+		for (auto i = verts.begin()+2; i != verts.end(); i += 2) {text_bcube.union_with_pt(i->v);} // only need to include opposite corners
 		float const wscale(title_area.get_sz_dim(hdim)/text_bcube.get_sz_dim(hdim)), hscale(title_area.get_sz_dim(tdim)/text_bcube.get_sz_dim(tdim));
 		float width_scale(wscale), height_scale(hscale);
 		min_eq(width_scale,  1.5f*height_scale); // use a reasonable aspect ratio
@@ -1304,9 +1305,10 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color) {
 	unsigned const ndiv = 24; // number of quads in X and Y
 	float const ndiv_inv(1.0/ndiv), dx_inv(1.0/c.dx()), dy_inv(1.0/c.dy());
 	color_wrapper cw(color);
-	auto &verts(mat.itri_verts);
+	auto &verts(mat.itri_verts); // Note: could cache verts
 	unsigned const start(verts.size()), stride(ndiv + 1);
 	float dists[ndiv+1];
+	norm_comp const nc(plus_z);
 
 	for (unsigned x = 0; x <= ndiv; ++x) {
 		float const v(2.0f*x*ndiv_inv - 1.0f); // centered on 0 in range [-1, 1]
@@ -1317,7 +1319,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color) {
 
 		for (unsigned x = 0; x <= ndiv; ++x) {
 			float const xval(c.x1() + dists[x]*c.dx()), ex(2.0f*min((xval - c.x1()), (c.x2() - xval))*dx_inv), zval(c.z1() + c.dz()*pow(ex*ey, 0.2f));
-			verts.emplace_back(vert_norm_comp_tc(point(xval, yval, zval), plus_z, mat.tex.tscale_x*xval, mat.tex.tscale_y*yval), cw);
+			verts.emplace_back(vert_norm_comp_tc(point(xval, yval, zval), nc, mat.tex.tscale_x*xval, mat.tex.tscale_y*yval), cw);
 		} // for x
 	} // for y
 	for (unsigned y = 0; y <= ndiv; ++y) {
@@ -1329,7 +1331,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color) {
 			if (x < ndiv && y >    0) {normal += cross_product((v - verts[off+1].v), (verts[off-stride].v - v));} // LR
 			if (x < ndiv && y < ndiv) {normal += cross_product((v - verts[off+stride].v), (verts[off+1].v - v));} // UR
 			if (x > 0    && y < ndiv) {normal += cross_product((v - verts[off-1].v), (verts[off+stride].v - v));} // UL
-			verts[off].set_norm(normal.get_norm());
+			verts[off].set_norm(normal.get_norm()); // this is the slowest line
 		} // for x
 	} // for y
 	for (unsigned y = 0; y < ndiv; ++y) {
@@ -1471,7 +1473,7 @@ colorRGBA room_object_t::get_color() const {
 }
 
 void building_room_geom_t::create_static_vbos() {
-	//timer_t timer("Gen Room Geom"); // 6.5ms
+	//timer_t timer("Gen Room Geom"); // 5ms
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
@@ -1498,7 +1500,7 @@ void building_room_geom_t::create_static_vbos() {
 		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
-	//timer_t timer2("Create VBOs"); // 3.8ms
+	//timer_t timer2("Create VBOs"); // 2ms
 	materials_s.create_vbos();
 }
 
