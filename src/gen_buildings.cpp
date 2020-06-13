@@ -40,9 +40,11 @@ float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();} else {select_texture(tid);}
 	select_multitex(get_nm_tid(), 5);
+	if (get_nm_tid() == FLAT_NMAP_TEX) {s.add_uniform_float("bump_map_mag", 0.0);} // disable bump map
 	if (emissive) {s.add_uniform_float("emissive_scale", 1.0);} // enable emissive
 }
 void tid_nm_pair_t::unset_gl(shader_t &s) const {
+	if (get_nm_tid() == FLAT_NMAP_TEX) {s.add_uniform_float("bump_map_mag", 1.0);} // re-enable bump map
 	if (emissive) {s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
 }
 void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
