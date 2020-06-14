@@ -1,10 +1,12 @@
 uniform float tex_coord_weight = 0.0;
 uniform vec4 texgen_s = vec4(1.0, 0.0, 0.0, 0.0);
 uniform vec4 texgen_t = vec4(0.0, 1.0, 0.0, 0.0);
+uniform vec3 texgen_origin = vec3(0.0);
 out vec2 tc;
 
 void setup_texgen_st() {
-	tc = vec2(dot(fg_Vertex, texgen_s), dot(fg_Vertex, texgen_t));
+	vec4 vertex = fg_Vertex - vec4(texgen_origin, 0.0);
+	tc = vec2(dot(vertex, texgen_s), dot(vertex, texgen_t));
 }
 
 uniform int tc_start_ix = 0;

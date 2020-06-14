@@ -22,6 +22,7 @@ bool const LINEAR_ROOM_DLIGHT_ATTEN = 1;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
+vector3d texgen_origin;
 building_params_t global_building_params;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
@@ -2082,9 +2083,9 @@ public:
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						if (ped_ix < 0 && !add_player_shadow) continue; // nothing else to draw
-						bool const camera_in_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
+						bool const camera_in_this_building(b.check_point_or_cylin_contained(pre_smap_player_pos, 0.0, points));
 
-						if (ped_ix >= 0 && (camera_in_building || player_close)) { // draw people in this building
+						if (ped_ix >= 0 && (camera_in_this_building || player_close)) { // draw people in this building
 							if (global_building_params.enable_people_ai) { // handle animations
 								if (!person_shader.is_setup()) {
 									enable_animations_for_shader(person_shader);
@@ -2095,7 +2096,7 @@ public:
 							}
 							else {draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1);} // no animations
 						}
-						if (add_player_shadow && camera_in_building) { // use a smaller radius, shift to center of player height
+						if (add_player_shadow && camera_in_this_building) { // use a smaller radius, shift to center of player height
 							draw_sphere_vbo((pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)), 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0);
 						}
 					} // for bi
@@ -2385,6 +2386,9 @@ public:
 					building_mat_t const &mat((*i)->buildings.front().get_material()); // assume all buildings have the same interior wall texture/scale
 					mat.wall_tex.set_gl(s);
 					s.set_cur_color(mat.wall_color);
+					// translate texture near the camera to get better tex coord resolution
+					if (!camera_in_building) {texgen_origin.assign(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);} // don't update when the camera is in the building and can see the textures move
+					s.add_uniform_vector3d("texgen_origin", texgen_origin);
 					setup_texgen_full(2.0f*mat.wall_tex.tscale_x, 2.0f*mat.wall_tex.tscale_x, 0.0, 0.0, 0.0, 0.0, 2.0f*mat.wall_tex.tscale_y, 0.0, s, 0);
 				}
 				if (!per_bcs_exclude.empty()) { // draw this range using stencil test but the rest of the buildings without stencil test
@@ -2401,6 +2405,7 @@ public:
 					}
 				}
 				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, 1, exclude); // tex_filt_mode=1 (exterior walls only); no stencil test
+				if (force_wall_tex) {s.add_uniform_vector3d("texgen_origin", zero_vector);} // restore orig value
 			} // for i
 			reset_interior_lighting(s);
 			s.end_shader();
