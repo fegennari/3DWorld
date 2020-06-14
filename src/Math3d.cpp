@@ -1224,6 +1224,24 @@ template<typename T> void rotate_vector3d_multi(pointT<T> const &vrot, double an
 	}
 }
 
+template<typename T> void rotate_verts(vector<T> &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start) {
+	assert(start < verts.size()); // nonempty range
+	if (angle == 0.0) return;
+	CREATE_ROT_MATRIX(axis, angle);
+
+	for (auto v = verts.begin()+start; v != verts.end(); ++v) {
+		point const vin(v->v - about); // have to cache this
+		matrix_mult(vin, v->v, m); // rotate the point about <about>
+		v->v += about;
+		vector3d const normal_in(v->get_norm()); // assumes norm_comp
+		vector3d normal_out;
+		matrix_mult(normal_in, normal_out, m); // rotate the normal
+		v->set_norm(normal_out);
+	}
+}
+
+template void rotate_verts(vector<vert_norm_comp_tc_color> &verts, vector3d const &axis, float angle, vector3d const &about, unsigned start); // used for building room geom
+
 
 // vrot must be normalized
 void rotate_vector3d_x2(point const &vrot, double angle, point &vout1, point &vout2) { // rotate by angle about vrot

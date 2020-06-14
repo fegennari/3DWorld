@@ -553,6 +553,7 @@ void add_rotated_quad_pts(vert_norm_comp *points, unsigned &ix, float theta, flo
 void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout);
 template<typename T> void rotate_vector3d(pointT<T> vin, pointT<T> const &vrot, double angle, pointT<T> &vout);
 template<typename T> void rotate_vector3d_multi(pointT<T> const &vrot, double angle, pointT<T> *vout, unsigned nv);
+template<typename T> void rotate_verts(vector<T> &verts, vector3d const &axis, float angle, vector3d const &about=zero_vector, unsigned start=0);
 void rotate_vector3d_x2(point const &vrot, double angle, point &vout1, point &vout2);
 void rotate_vector3d_by_vr_multi(vector3d v1, vector3d v2, vector3d *vout, unsigned num_vout);
 void rotate_norm_vector3d_into_plus_z_multi(vector3d const &v1, vector3d *vout, unsigned num_vout, float rot_dir_sign=1.0);
