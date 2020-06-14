@@ -916,7 +916,8 @@ public:
 		color_wrapper cw[2];
 		setup_ao_color(color, bg.bcube.z1(), bg.ao_bcz2, cube.z1(), cube.z2(), cw, vert, no_ao);
 		vector3d tex_vert_off(((world_mode == WMODE_INF_TERRAIN) ? zero_vector : vector3d(xoff2*DX_VAL, yoff2*DY_VAL, 0.0)));
-		tex_vert_off -= bg.bcube.get_llc(); // normalize to building LLC to keep tex coords small
+		if (clip_windows) {tex_vert_off.z -= bg.bcube.get_llc().z;} // don't adjust X/Y pos for windows, because other code needs to know where windows are placed
+		else {tex_vert_off -= bg.bcube.get_llc();} // normalize to building LLC to keep tex coords small
 		if (is_city && cube.z1() == bg.bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
 		float const window_vspacing(bg.get_material().get_floor_spacing()), offset_val(0.025*offset_scale*window_vspacing);
 		
