@@ -1683,7 +1683,7 @@ bool building_interior_t::update_elevators(point const &player_pos) { // Note: p
 			else          {max_eq(dist, (e->z1() - i->z1()));} // going down
 			if (dist == 0.0) break; // no movement, at top or bottom of elevator shaft
 			i->z1() += dist; i->z2() += dist;
-			room_geom->materials_d.clear(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
+			room_geom->mats_dynamic.clear(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
 			return 1; // done
 		} // for i
 		return 0; // player in elevator shaft (on top of elevator?) but not inside elevator car

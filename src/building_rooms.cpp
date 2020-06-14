@@ -747,10 +747,10 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	}
 }
 
-void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool no_small_features) {
-	if (interior && interior->room_geom) {interior->room_geom->draw(s, xlate, shadow_only, no_small_features);}
+void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool no_small_features) {
+	if (interior && interior->room_geom) {interior->room_geom->draw(s, xlate, shadow_only, inc_small, no_small_features);}
 }
-void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool no_small_features) {
+void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool inc_small, bool no_small_features) {
 	if (!interior) return;
 	if (is_rotated()) return; // no room geom for rotated buildings
 
@@ -762,7 +762,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect
 		gen_room_details(rgen, ped_bcubes); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	draw_room_geom(s, xlate, shadow_only, no_small_features);
+	draw_room_geom(s, xlate, shadow_only, inc_small, no_small_features);
 }
 
 void building_t::clear_room_geom() {
@@ -1118,8 +1118,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? (EF_Y1 | EF_Y2) : (EF_X1 | EF_X2));}
 
-void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_faces, bool no_title) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0)); // unshadowed, since shadows are too small to have much effect
+void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, unsigned extra_skip_faces, bool no_title) {
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz());
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
@@ -1134,15 +1133,18 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 	shrink[c.dim] = shrink[upright ? 2 : !c.dim] = -indent;
 	pages.expand_by(shrink);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
-	colorRGBA const color(apply_light_color(c));
 	vector3d const tex_origin(c.get_llc());
-	unsigned const skip_faces(extra_skip_faces | EF_Z1 | (upright ? get_skip_mask_for_xy(tdim) : EF_Z2)); // skip top/bottom faces, thickness dim if upright
-	mat.add_cube_to_verts(bot,   color, tex_origin, (extra_skip_faces | EF_Z1)); // untextured, skip bottom face
-	mat.add_cube_to_verts(top,   color, tex_origin, (extra_skip_faces | (upright ? EF_Z1 : 0))); // untextured, skip bottom face if upright
-	mat.add_cube_to_verts(spine, color, tex_origin, skip_faces); // untextured
-	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), tex_origin, (skip_faces | ~get_face_mask(c.dim, !c.dir))); // untextured
-	
-	if (ADD_BOOK_COVERS && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
+
+	if (inc_lg) { // add book geom
+		colorRGBA const color(apply_light_color(c));
+		unsigned const skip_faces(extra_skip_faces | EF_Z1 | (upright ? get_skip_mask_for_xy(tdim) : EF_Z2)); // skip top/bottom faces, thickness dim if upright
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0)); // unshadowed, since shadows are too small to have much effect
+		mat.add_cube_to_verts(bot,   color, tex_origin, (extra_skip_faces | EF_Z1)); // untextured, skip bottom face
+		mat.add_cube_to_verts(top,   color, tex_origin, (extra_skip_faces | (upright ? EF_Z1 : 0))); // untextured, skip bottom face if upright
+		mat.add_cube_to_verts(spine, color, tex_origin, skip_faces); // untextured
+		mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), tex_origin, (skip_faces | ~get_face_mask(c.dim, !c.dir))); // untextured
+	}
+	if (ADD_BOOK_COVERS && inc_sm && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
 		cube_t cover(c);
 		vector3d expand;
 		float const height(c.get_sz_dim(hdim)), img_width(0.9*width), img_height(min(0.9f*height, 0.67f*img_width)); // use correct aspect ratio
@@ -1152,9 +1154,9 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		cover.expand_by(expand);
 		int const picture_tid(c.get_picture_tid()); // not using user screenshot images
 		bool const swap_xy(upright ^ (!c.dim));
-		get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(cover, WHITE, tex_origin, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows
+		get_material(tid_nm_pair_t(picture_tid, 0.0), 0, 0, 1).add_cube_to_verts(cover, WHITE, tex_origin, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows, small=1
 	}
-	if (ADD_BOOK_TITLES && !no_title && (c.obj_id&7)) { // add title along spine using text 7/8 of the time
+	if (ADD_BOOK_TITLES && inc_sm && !no_title && (c.obj_id&7)) { // add title along spine using text 7/8 of the time
 		// select our title text
 		unsigned const SPLIT_LINE_SZ = 24;
 		string const &title(gen_book_title(c.obj_id, nullptr, SPLIT_LINE_SZ));
@@ -1184,7 +1186,7 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		float const title_start_hdim(title_area.d[hdim][cdir] + column_dir[hdim]*0.5*title_area.get_sz_dim(hdim)*(1.0 -  width_scale/wscale)); // centered
 		float const title_start_tdim(title_area.d[tdim][ldir] + line_dir  [tdim]*0.5*title_area.get_sz_dim(tdim)*(1.0 - height_scale/hscale)); // centered
 		if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID))); // no shadows
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 0, 1)); // no shadows, small=1
 		colorRGBA text_color(BLACK);
 		for (unsigned i = 0; i < 3; ++i) {text_color[i] = ((c.color[i] > 0.5) ? 0.0 : 1.0);} // invert + saturate to contrast with book cover
 		color_wrapper const cw(apply_light_color(c, text_color));
@@ -1199,7 +1201,7 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 	}
 }
 
-void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bool no_shelves, float sides_scale) {
+void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale) {
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
@@ -1280,7 +1282,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 			bool const backwards((rgen.rand()&3) == 0), book_dir(c.dir ^ backwards ^ 1); // spine facing out 75% of the time
 			room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color);
 			obj.obj_id = c.obj_id + 123*i + 1367*n;
-			add_book(obj, skip_faces, backwards); // detailed book, no title if backwards
+			add_book(obj, inc_lg, inc_sm, skip_faces, backwards); // detailed book, no title if backwards
 			pos += width;
 			last_book_pos = pos;
 		} // for n
@@ -1301,7 +1303,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 		c_top_back.z1() = top.z2();
 		c_top_back.z2() = top.z2() + 1.8*c.dz();
 		c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim);
-		add_bookcase(c_top_back, tscale, 1, 0.4); // no_shelves=1, side_width=0.4
+		add_bookcase(c_top_back, 1, 1, tscale, 1, 0.4); // no_shelves=1, side_width=0.4, both large and small
 	}
 }
 
@@ -1351,7 +1353,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vecto
 	} // for y
 }
 
-void building_room_geom_t::add_bed(room_object_t const &c, float tscale) {
+void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
 	float const height(c.dz()), length(c.get_sz_dim(c.dim)), width(c.get_sz_dim(!c.dim));
 	bool const is_wide(width > 0.7*length);
 	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c), pillow(c);
@@ -1371,26 +1373,33 @@ void building_room_geom_t::add_bed(room_object_t const &c, float tscale) {
 	pillow.d[c.dim][ c.dir] = mattress.d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*0.02*length; // head
 	pillow.d[c.dim][!c.dir] = pillow  .d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*(is_wide ? 0.25 : 0.6)*pillow.get_sz_dim(!c.dim);
 	mattress.d[!c.dim][0] += 0.02*width; mattress.d[!c.dim][1] -= 0.02*width;
-	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	add_tc_legs(legs_bcube, color, 0.04, tscale);
-	rgeom_mat_t &wood_mat(get_wood_material(tscale));
-	vector3d const tex_origin(c.get_llc());
-	wood_mat.add_cube_to_verts(frame, color, tex_origin);
-	wood_mat.add_cube_to_verts(head, color, tex_origin, EF_Z1);
-	wood_mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1);
-	unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
-	rgeom_mat_t &sheet_mat(get_material(tid_nm_pair_t(c.get_sheet_tid(), tscale), 1));
 	colorRGBA const sheet_color(apply_light_color(c));
-	sheet_mat.add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);
+	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale);
 
-	if (is_wide) { // two pillows
-		for (unsigned d = 0; d < 2; ++d) {
-			cube_t p(pillow);
-			p.d[!c.dim][d] += (d ? -1.0 : 1.0)*0.55*pillow.get_sz_dim(!c.dim);
-			add_pillow(p, sheet_mat, sheet_color, tex_origin);
-		}
+	if (inc_lg) {
+		colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+		add_tc_legs(legs_bcube, color, 0.04, tscale);
+		rgeom_mat_t &wood_mat(get_wood_material(tscale));
+		vector3d const tex_origin(c.get_llc());
+		wood_mat.add_cube_to_verts(frame, color, tex_origin);
+		wood_mat.add_cube_to_verts(head, color, tex_origin, EF_Z1);
+		wood_mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1);
+		unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
+		rgeom_mat_t &sheet_mat(get_material(sheet_tex, 1));
+		sheet_mat.add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);
 	}
-	else {add_pillow(pillow, sheet_mat, sheet_color, tex_origin);} // one pillow
+	if (inc_sm) {
+		rgeom_mat_t &pillow_mat(get_material(sheet_tex, 1, 0, 1)); // small=1
+
+		if (is_wide) { // two pillows
+			for (unsigned d = 0; d < 2; ++d) {
+				cube_t p(pillow);
+				p.d[!c.dim][d] += (d ? -1.0 : 1.0)*0.55*pillow.get_sz_dim(!c.dim);
+				add_pillow(p, pillow_mat, sheet_color, tex_origin);
+			}
+		}
+		else {add_pillow(pillow, pillow_mat, sheet_color, tex_origin);} // one pillow
+	}
 }
 
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
@@ -1450,11 +1459,15 @@ void building_room_geom_t::clear() {
 	has_elevators = 0;
 }
 void building_room_geom_t::clear_materials() { // can be called to update textures, lighting state, etc.
-	materials_s.clear();
-	materials_d.clear();
+	mats_static.clear();
+	mats_small.clear();
+	mats_dynamic.clear();
 	obj_model_insts.clear();
 }
 
+rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, bool small) {
+	return (dynamic ? mats_dynamic : (small ? mats_small : mats_static)).get_material(tex, inc_shadows);
+}
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
 	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale), 1); // hard-coded for common material
 }
@@ -1477,36 +1490,45 @@ colorRGBA room_object_t::get_color() const {
 	return color; // Note: probably should always set color so that we can return it here
 }
 
-void building_room_geom_t::create_static_vbos() {
-	//timer_t timer("Gen Room Geom"); // 5ms
+void building_room_geom_t::create_static_vbos(bool small_objs) {
+	//timer_t timer(string("Gen Room Geom") + (small_objs ? " Small" : "")); // 3.7ms / 2.1ms
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible()) continue;
 		assert(i->is_strictly_normalized());
-		switch (i->type) {
-		case TYPE_NONE:  assert(0); // not supported
-		case TYPE_TABLE:   add_table   (*i, tscale); break;
-		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
-		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
-		case TYPE_LIGHT:   add_light   (*i, tscale); break; // light fixture
-		case TYPE_RUG:     add_rug     (*i); break;
-		case TYPE_PICTURE: add_picture (*i); break;
-		case TYPE_WBOARD:  add_picture (*i); break;
-		case TYPE_BOOK:    add_book    (*i); break;
-		case TYPE_BCASE:   add_bookcase(*i, tscale, 0); break;
-		case TYPE_DESK:    add_desk    (*i, tscale); break;
-		case TYPE_TCAN:    add_trashcan(*i); break;
-		case TYPE_BED:     add_bed     (*i, tscale); break;
-		case TYPE_WINDOW:  add_window  (*i, tscale); break;
-		case TYPE_TOILET:  obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_TOILET); break;
-		case TYPE_ELEVATOR: break; // not handled here
-		default: assert(0); // undefined type
+
+		if (small_objs) {
+			switch (i->type) {
+			case TYPE_BOOK:    add_book    (*i, 0, 1); break;
+			case TYPE_BCASE:   add_bookcase(*i, 0, 1, tscale, 0); break;
+			case TYPE_BED:     add_bed     (*i, 0, 1, tscale); break;
+			}
+		}
+		else { // large objects
+			switch (i->type) {
+			case TYPE_TABLE:   add_table   (*i, tscale); break;
+			case TYPE_CHAIR:   add_chair   (*i, tscale); break;
+			case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
+			case TYPE_LIGHT:   add_light   (*i, tscale); break; // light fixture
+			case TYPE_RUG:     add_rug     (*i); break;
+			case TYPE_PICTURE: add_picture (*i); break;
+			case TYPE_WBOARD:  add_picture (*i); break;
+			case TYPE_BOOK:    add_book    (*i, 1, 0); break;
+			case TYPE_BCASE:   add_bookcase(*i, 1, 0, tscale, 0); break;
+			case TYPE_DESK:    add_desk    (*i, tscale); break;
+			case TYPE_TCAN:    add_trashcan(*i); break;
+			case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
+			case TYPE_WINDOW:  add_window  (*i, tscale); break;
+			case TYPE_TOILET:  obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_TOILET); break;
+			case TYPE_ELEVATOR: break; // not handled here
+			default: assert(0); // undefined type
+			}
 		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
-	//timer_t timer2("Create VBOs"); // 2ms
-	materials_s.create_vbos();
+	//timer_t timer2("Create VBOs"); // < 2ms
+	(small_objs ? mats_small : mats_static).create_vbos();
 }
 
 void building_room_geom_t::create_dynamic_vbos() {
@@ -1516,10 +1538,10 @@ void building_room_geom_t::create_dynamic_vbos() {
 		if (!i->is_visible() || i->type != TYPE_ELEVATOR) continue; // only elevators for now
 		add_elevator(*i, 2.0/obj_scale);
 	}
-	materials_d.create_vbos();
+	mats_dynamic.create_vbos();
 }
 
-void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool no_small_features) { // non-const because it creates the VBO
+void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool no_small_features) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
 
@@ -1527,11 +1549,13 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 		clear_materials(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
-	if (materials_s.empty()) {create_static_vbos ();} // create static  materials if needed
-	if (materials_d.empty()) {create_dynamic_vbos();} // create dynamic materials if needed
+	if (mats_static .empty()) {create_static_vbos(0);} // create static  materials if needed
+	if (mats_dynamic.empty()) {create_dynamic_vbos();} // create dynamic materials if needed
+	if (inc_small && mats_small.empty()) {create_static_vbos(1);} // create small  materials if needed
 	enable_blend(); // needed for rugs and book text
-	materials_s.draw(s, shadow_only, no_small_features);
-	materials_d.draw(s, shadow_only, no_small_features);
+	mats_static .draw(s, shadow_only, no_small_features);
+	mats_dynamic.draw(s, shadow_only, no_small_features);
+	if (inc_small) {mats_small.draw(s, shadow_only, no_small_features);}
 	disable_blend();
 	vbo_wrap_t::post_render();
 	bool obj_drawn(0);

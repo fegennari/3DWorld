@@ -2080,7 +2080,7 @@ public:
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(roof_parts_draw);
-						b.draw_room_geom(s, xlate, 1, 1); // shadow_only=1, no_small_features=1
+						b.draw_room_geom(s, xlate, 1, 1, 1); // shadow_only=1, inc_small=1, no_small_features=1
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
@@ -2244,7 +2244,8 @@ public:
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
 			//timer_t timer2("Draw Building Interiors");
-			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.4*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
+			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.4*interior_draw_dist);
+			float const room_geom_sm_draw_dist(0.05*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(GL_BACK);
 
@@ -2305,7 +2306,8 @@ public:
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
-						b.gen_and_draw_room_geom(s, xlate, ped_bcubes, bi->ix, ped_ix, 0, !camera_near_building); // shadow_only=0, only draw small features if camera is near building
+						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, room_geom_sm_draw_dist));
+						b.gen_and_draw_room_geom(s, xlate, ped_bcubes, bi->ix, ped_ix, 0, inc_small, !camera_near_building); // shadow_only=0, only draw small features if camera is near building
 						g->has_room_geom = 1;
 						if (!transparent_windows) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building

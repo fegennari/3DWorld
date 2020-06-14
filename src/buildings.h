@@ -285,15 +285,15 @@ struct building_room_geom_t {
 	vector3d tex_origin;
 	vector<room_object_t> objs; // for drawing and collision detection
 	vector<obj_model_inst_t> obj_model_insts;
-	building_materials_t materials_s, materials_d; // {static, dynamic} materials
+	building_materials_t mats_static, mats_small, mats_dynamic; // {large static, small static, dynamic} materials
 	vect_cube_t light_bcubes;
 
 	building_room_geom_t(vector3d const &tex_origin_) : has_elevators(0), has_pictures(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
-	unsigned get_num_verts() const {return (materials_s.count_all_verts() + materials_d.count_all_verts());}
-	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0) {return (dynamic ? materials_d : materials_s).get_material(tex, inc_shadows);}
+	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_dynamic.count_all_verts());}
+	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0);
 	rgeom_mat_t &get_wood_material(float tscale);
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale);
@@ -303,15 +303,15 @@ struct building_room_geom_t {
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);
 	void add_picture(room_object_t const &c);
-	void add_book(room_object_t const &c, unsigned extra_skip_faces=0, bool no_title=0);
-	void add_bookcase(room_object_t const &c, float tscale, bool no_shelves=0, float sides_scale=1.0);
+	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, unsigned extra_skip_faces=0, bool no_title=0);
+	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0);
 	void add_desk(room_object_t const &c, float tscale);
-	void add_bed(room_object_t const &c, float tscale);
+	void add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_window(room_object_t const &c, float tscale);
 	void add_trashcan(room_object_t const &c);
-	void create_static_vbos();
+	void create_static_vbos(bool small_objs);
 	void create_dynamic_vbos();
-	void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool no_small_features);
+	void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool no_small_features);
 };
 
 struct elevator_t : public cube_t {
@@ -511,8 +511,8 @@ struct building_t : public building_geom_t {
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
-	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool no_small_features);
-	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool no_small_features);
+	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool no_small_features);
+	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool inc_small, bool no_small_features);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
