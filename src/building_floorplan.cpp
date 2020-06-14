@@ -182,7 +182,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		bool const min_dim(psz.y < psz.x); // hall dim
 		float const cube_width(psz[min_dim]);
 		bool const first_part(p == parts.begin()), first_part_this_stack(first_part || (p-1)->z1() < p->z1());
-		bool const use_hallway(!is_house && first_part_this_stack && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
+		bool const use_hallway(!is_house && !has_complex_floorplan && first_part_this_stack && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
 		unsigned const rooms_start(interior->rooms.size()), part_id(p - parts.begin());
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
@@ -718,6 +718,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	cube_t stairs_cut, elevator_cut;
 	bool stairs_dim(0), add_elevator(0);
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
+	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
 
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
@@ -757,7 +758,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		// sometimes add an elevator to building parts, but not the first part in a stack (to guarantee we have at least one set of stairs)
 		// it might not be possible to place an elevator a part with no interior rooms, but that should be okay, because some other part will still have stairs
 		// do we need support for multiple floor cutouts stairs + elevator in this case as well?
-		if (!is_house && !first_part_this_stack) {
+		if (!is_house && !must_add_stairs) {
 			float const elevator_prob[4] = {0.9, 0.5, 0.3, 0.1}; // higher chance of adding an elevator if there are more existing elevators
 			add_elevator = (rgen.rand_float() < elevator_prob[min(interior->elevators.size(), size_t(3))]);
 		}
@@ -840,7 +841,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				}
 				break; // success - done
 			} // for n
-			if (!first_part_this_stack || add_elevator || !stairs_cut.is_all_zeros()) break; // successfully placed stairs, or not required to place stairs
+			if (!must_add_stairs || add_elevator || !stairs_cut.is_all_zeros()) break; // successfully placed stairs, or not required to place stairs
 			stairs_scale -= 0.1; // shrink stairs a bit and try again
 		} // for N
 	} // end stairs/elevator placement
@@ -898,7 +899,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	} // for f
 	bool has_roof_access(0);
 
-	if (first_part_this_stack && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT) { // add roof access for stairs
+	if (must_add_stairs && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT) { // add roof access for stairs
 		bool const is_sloped(sshape != SHAPE_U);
 		cube_t box(stairs_cut);
 		if (!is_sloped) {box.expand_by_xy(fc_thick);}
