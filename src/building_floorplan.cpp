@@ -986,6 +986,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		}
 	}
 	if (!has_roof_access) { // roof ceiling, full area
+		interior->top_ceilings_mask |= (uint64_t(1) << (interior->ceilings.size() & 63)); // mark this as a top ceiling so that it can be drawn; okay if wraps around
 		C.z1() = z - fc_thick; C.z2() = z;
 		interior->ceilings.push_back(C);
 	}

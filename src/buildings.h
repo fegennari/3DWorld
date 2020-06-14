@@ -384,6 +384,7 @@ struct building_interior_t {
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	draw_range_t draw_range;
+	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
 
 	building_interior_t();
 	~building_interior_t();

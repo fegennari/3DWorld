@@ -405,6 +405,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
+		//if (lpos.z < p->z1() || lpos.z > p->z2()) continue; // light zval not included (doesn't seem to work)
 		if (!light_bcube.intersects_xy(*p)) continue;
 		cube_t c(light_bcube);
 		c.intersect_with_cube_xy(*p);

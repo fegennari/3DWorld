@@ -1267,7 +1267,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_section(*this, empty_vc, *i, floor_tex, floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
 		}
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
-			bdraw.add_section(*this, empty_vc, *i, ceil_tex, ceil_color, 4, 0, 1, 1, 0); // no AO; skip_top; Z dim only
+			// skip top surface of all but top floor ceilings if the roof is sloped
+			bool const skip_top(roof_type == ROOF_TYPE_FLAT || !(interior->top_ceilings_mask & (uint64_t(1) << ((i - interior->ceilings.begin()) & 63))));
+			bdraw.add_section(*this, empty_vc, *i, ceil_tex, ceil_color, 4, 0, skip_top, 1, 0); // no AO; Z dim only
 		}
 		// minor optimization: don't need shadows for ceilings because lights only point down; assumes ceil_tex is only used for ceilings; not true for all houses
 		if (!is_house) {bdraw.set_no_shadows_for_tex(mat.ceil_tex);}

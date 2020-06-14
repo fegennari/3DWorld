@@ -784,5 +784,5 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 }
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
-building_interior_t::building_interior_t() {}
+building_interior_t::building_interior_t() : top_ceilings_mask(0) {}
 building_interior_t::~building_interior_t() {}
