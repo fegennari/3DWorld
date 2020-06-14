@@ -257,7 +257,7 @@ public:
 	unsigned get_tot_vert_count() const {return (num_qverts + num_itverts);}
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
-	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0);
+	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin, unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0);
 	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided=0, bool ts_tb=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0);
 	void create_vbo();
 	void draw(shader_t &s, bool shadow_only, bool no_small_features);
@@ -282,12 +282,13 @@ struct building_room_geom_t {
 	unsigned char num_pic_tids;
 	float obj_scale;
 	unsigned stairs_start; // index of first object of TYPE_STAIR
+	vector3d tex_origin;
 	vector<room_object_t> objs; // for drawing and collision detection
 	vector<obj_model_inst_t> obj_model_insts;
 	building_materials_t materials_s, materials_d; // {static, dynamic} materials
 	vect_cube_t light_bcubes;
 
-	building_room_geom_t() : has_elevators(0), has_pictures(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0) {}
+	building_room_geom_t(vector3d const &tex_origin_) : has_elevators(0), has_pictures(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
@@ -297,7 +298,7 @@ struct building_room_geom_t {
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale);
 	void add_chair(room_object_t const &c, float tscale);
-	void add_stair(room_object_t const &c, float tscale);
+	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_elevator(room_object_t const &c, float tscale);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);

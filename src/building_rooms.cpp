@@ -484,7 +484,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
 	//timer_t timer("Gen Room Details");
-	interior->room_geom.reset(new building_room_geom_t);
+	interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
@@ -776,7 +776,7 @@ void building_t::clear_room_geom() {
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
-void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y) {
+void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin, unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y) {
 	vertex_t v;
 	v.set_c4(color);
 
@@ -791,12 +791,12 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, uns
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
 				v.v[d[1]] = c.d[d[1]][s1];
-				v.t[swap_tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : tex.tscale_x*v.v[d[1]]); // tscale==0.0 => fit texture to cube
+				v.t[swap_tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : tex.tscale_x*(v.v[d[1]] - tex_origin[d[1]])); // tscale==0.0 => fit texture to cube
 
 				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 					bool const s2(k^j^s1^1); // need to orient the vertices differently for each side
 					v.v[d[0]] = c.d[d[0]][s2];
-					v.t[!swap_tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : tex.tscale_y*v.v[d[0]]);
+					v.t[!swap_tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : tex.tscale_y*(v.v[d[0]] - tex_origin[d[0]]));
 					quad_verts.push_back(v);
 					if (mirror_x) {quad_verts.back().t[0] = 1.0 - v.t[0];} // use for pictures and books
 					if (mirror_y) {quad_verts.back().t[1] = 1.0 - v.t[1];} // used for books
@@ -1004,7 +1004,7 @@ void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, 
 	rgeom_mat_t &mat(get_wood_material(tscale));
 	cube_t cubes[4];
 	get_tc_leg_cubes(c, width, cubes);
-	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, (EF_Z1 | EF_Z2));} // skip top and bottom faces
+	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, c.get_llc(), (EF_Z1 | EF_Z2));} // skip top and bottom faces
 }
 
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
@@ -1020,7 +1020,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale) { // 
 	top.z1() += 0.85*c.dz(); // 15% of height
 	legs_bcube.z2() = top.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	get_wood_material(tscale).add_cube_to_verts(top, color); // all faces drawn
+	get_wood_material(tscale).add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
 	add_tc_legs(legs_bcube, color, 0.08, tscale);
 }
 
@@ -1031,14 +1031,14 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
 	legs_bcube.z2() = seat.z1();
 	back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale), 1).add_cube_to_verts(seat, apply_light_color(c)); // all faces drawn
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale), 1).add_cube_to_verts(seat, apply_light_color(c), c.get_llc()); // all faces drawn
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	get_wood_material(tscale).add_cube_to_verts(back, color, EF_Z1); // skip bottom face
+	get_wood_material(tscale).add_cube_to_verts(back, color, c.get_llc(), EF_Z1); // skip bottom face
 	add_tc_legs(legs_bcube, color, 0.15, tscale);
 }
 
-void building_room_geom_t::add_stair(room_object_t const &c, float tscale) {
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85)); // all faces drawn
+void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) {
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85), tex_origin); // all faces drawn
 }
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
@@ -1056,16 +1056,17 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
 	floor.expand_by_xy(-0.5f*thickness);
 	ceil .expand_by_xy(-0.5f*thickness);
 	back.d[c.dim][c.dir] = back.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*thickness;
+	vector3d const tex_origin(c.get_llc());
 	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), floor_ceil_face_mask(front_face_mask & 60); // +Z faces
 	tid_nm_pair_t const paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
-	get_material(get_tex_auto_nm(TILE_TEX, tscale), 1, 1).add_cube_to_verts(floor, WHITE, floor_ceil_face_mask);
-	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil, WHITE, floor_ceil_face_mask);
-	get_material(paneling, 1, 1).add_cube_to_verts(back, WHITE, front_face_mask, !c.dim);
+	get_material(get_tex_auto_nm(TILE_TEX, tscale), 1, 1).add_cube_to_verts(floor, WHITE, tex_origin, floor_ceil_face_mask);
+	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil, WHITE, tex_origin, floor_ceil_face_mask);
+	get_material(paneling, 1, 1).add_cube_to_verts(back, WHITE, tex_origin, front_face_mask, !c.dim);
 
 	for (unsigned d = 0; d < 2; ++d) { // side walls
 		cube_t side(c);
 		side.d[!c.dim][!d] = side.d[!c.dim][d] + (d ? -1.0 : 1.0)*thickness;
-		get_material(paneling, 1, 1).add_cube_to_verts(side, WHITE, get_face_mask(!c.dim, !d), c.dim);
+		get_material(paneling, 1, 1).add_cube_to_verts(side, WHITE, tex_origin, get_face_mask(!c.dim, !d), c.dim);
 	}
 }
 
@@ -1075,14 +1076,14 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	tid_nm_pair_t tp((is_on ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = is_on;
 	rgeom_mat_t &mat(get_material(tp));
-	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, EF_Z2);} // untextured, skip top face
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, c.get_llc(), EF_Z2);} // untextured, skip top face
 	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts(c, c.color, 1, 0);} // bottom only
 	else {assert(0);}
 }
 
 void building_room_geom_t::add_rug(room_object_t const &c) {
 	bool const swap_tex_st(c.dy() < c.dx()); // rug textures are oriented with the long side in X, so swap the coordinates (rotate 90 degrees) if our rug is oriented the other way
-	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, WHITE, 61, swap_tex_st); // only draw top/+z face
+	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, WHITE, c.get_llc(), 61, swap_tex_st); // only draw top/+z face
 }
 
 void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards
@@ -1097,20 +1098,21 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	}
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 	bool const mirror_x(!whiteboard && !(c.dim ^ c.dir));
-	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, skip_faces, !c.dim, mirror_x);
+	vector3d const tex_origin(c.get_llc());
+	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, tex_origin, skip_faces, !c.dim, mirror_x);
 	// add a frame
 	cube_t frame(c);
 	vector3d exp;
 	exp.z = exp[!c.dim] = (whiteboard ? 0.04 : 0.06)*c.dz(); // frame width
 	exp[c.dim] = -0.1*c.get_sz_dim(c.dim); // shrink in this dim
 	frame.expand_by(exp);
-	get_material(tid_nm_pair_t()).add_cube_to_verts(frame, (whiteboard ? GRAY : BLACK), skip_faces, 0);
+	get_material(tid_nm_pair_t()).add_cube_to_verts(frame, (whiteboard ? GRAY : BLACK), tex_origin, skip_faces, 0);
 	
 	if (whiteboard) { // add a marker ledge
 		cube_t ledge(c);
 		ledge.z2() = ledge.z1() + 0.016*c.dz(); // along the bottom edge
 		ledge.d[c.dim][c.dir] += (c.dir ? 1.5 : -1.5)*c.get_sz_dim(c.dim); // extrude outward
-		get_material(untex_shad_mat, 1).add_cube_to_verts(ledge, GRAY, (1 << (2*(2-c.dim) + !c.dir)), 0); // shadowed
+		get_material(untex_shad_mat, 1).add_cube_to_verts(ledge, GRAY, tex_origin, (1 << (2*(2-c.dim) + !c.dir)), 0); // shadowed
 	}
 }
 
@@ -1133,11 +1135,12 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 	pages.expand_by(shrink);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
 	colorRGBA const color(apply_light_color(c));
+	vector3d const tex_origin(c.get_llc());
 	unsigned const skip_faces(extra_skip_faces | EF_Z1 | (upright ? get_skip_mask_for_xy(tdim) : EF_Z2)); // skip top/bottom faces, thickness dim if upright
-	mat.add_cube_to_verts(bot,   color, (extra_skip_faces | EF_Z1)); // untextured, skip bottom face
-	mat.add_cube_to_verts(top,   color, (extra_skip_faces | (upright ? EF_Z1 : 0))); // untextured, skip bottom face if upright
-	mat.add_cube_to_verts(spine, color, skip_faces); // untextured
-	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), (skip_faces | ~get_face_mask(c.dim, !c.dir))); // untextured
+	mat.add_cube_to_verts(bot,   color, tex_origin, (extra_skip_faces | EF_Z1)); // untextured, skip bottom face
+	mat.add_cube_to_verts(top,   color, tex_origin, (extra_skip_faces | (upright ? EF_Z1 : 0))); // untextured, skip bottom face if upright
+	mat.add_cube_to_verts(spine, color, tex_origin, skip_faces); // untextured
+	mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), tex_origin, (skip_faces | ~get_face_mask(c.dim, !c.dir))); // untextured
 	
 	if (ADD_BOOK_COVERS && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
 		cube_t cover(c);
@@ -1149,7 +1152,7 @@ void building_room_geom_t::add_book(room_object_t const &c, unsigned extra_skip_
 		cover.expand_by(expand);
 		int const picture_tid(c.get_picture_tid()); // not using user screenshot images
 		bool const swap_xy(upright ^ (!c.dim));
-		get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(cover, WHITE, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows
+		get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(cover, WHITE, tex_origin, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows
 	}
 	if (ADD_BOOK_TITLES && !no_title && (c.obj_id&7)) { // add title along spine using text 7/8 of the time
 		// select our title text
@@ -1203,22 +1206,23 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
 	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
 	float const side_thickness(0.06*sides_scale*width);
+	vector3d const tex_origin(c.get_llc());
 	cube_t middle(c);
 
 	for (unsigned d = 0; d < 2; ++d) { // left/right sides
 		cube_t lr(c);
 		lr.d[!c.dim][d] += (d ? -1.0f : 1.0f)*(width - side_thickness);
-		wood_mat.add_cube_to_verts(lr, color, (skip_faces | EF_Z1)); // side
+		wood_mat.add_cube_to_verts(lr, color, tex_origin, (skip_faces | EF_Z1)); // side
 		middle.d[!c.dim][!d] = lr.d[!c.dim][d];
 	}
 	cube_t top(middle);
 	top.z1()   += c.dz() - side_thickness; // make same width as sides
 	middle.z2() = top.z1();
-	wood_mat.add_cube_to_verts(top, color, skip_faces_shelves); // top
+	wood_mat.add_cube_to_verts(top, color, tex_origin, skip_faces_shelves); // top
 	cube_t back(middle);
 	back.d[c.dim] [c.dir]  += 0.94*depth;
 	middle.d[c.dim][!c.dir] = back.d[c.dim][c.dir];
-	wood_mat.add_cube_to_verts(back, color, get_face_mask(c.dim, c.dir)); // back - only face oriented outward
+	wood_mat.add_cube_to_verts(back, color, tex_origin, get_face_mask(c.dim, c.dir)); // back - only face oriented outward
 	if (no_shelves) return;
 	// add shelves
 	rand_gen_t rgen;
@@ -1232,7 +1236,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, float tscale, bo
 		shelf = middle; // copy XY parts
 		shelf.z1() += (i+0.25)*shelf_dz;
 		shelf.z2()  = shelf.z1() + shelf_thick;
-		wood_mat.add_cube_to_verts(shelf, color, skip_faces_shelves); // Note: mat reference may be invalidated by adding books
+		wood_mat.add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves); // Note: mat reference may be invalidated by adding books
 	}
 	// add books; may invalidate wood_mat
 	for (unsigned i = 0; i < num_shelves; ++i) {
@@ -1289,7 +1293,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	top.z1() += 0.8*c.dz();
 	legs_bcube.z2() = top.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	get_wood_material(tscale).add_cube_to_verts(top, color); // all faces drawn
+	get_wood_material(tscale).add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
 	add_tc_legs(legs_bcube, color, 0.06, tscale);
 
 	if (c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
@@ -1301,7 +1305,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	}
 }
 
-void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color) {
+void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vector3d const &tex_origin) {
 	unsigned const ndiv = 24; // number of quads in X and Y
 	float const ndiv_inv(1.0/ndiv), dx_inv(1.0/c.dx()), dy_inv(1.0/c.dy());
 	color_wrapper cw(color);
@@ -1319,7 +1323,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color) {
 
 		for (unsigned x = 0; x <= ndiv; ++x) {
 			float const xval(c.x1() + dists[x]*c.dx()), ex(2.0f*min((xval - c.x1()), (c.x2() - xval))*dx_inv), zval(c.z1() + c.dz()*pow(ex*ey, 0.2f));
-			verts.emplace_back(vert_norm_comp_tc(point(xval, yval, zval), nc, mat.tex.tscale_x*xval, mat.tex.tscale_y*yval), cw);
+			verts.emplace_back(vert_norm_comp_tc(point(xval, yval, zval), nc, mat.tex.tscale_x*(xval - tex_origin.x), mat.tex.tscale_y*(yval - tex_origin.y)), cw);
 		} // for x
 	} // for y
 	for (unsigned y = 0; y <= ndiv; ++y) {
@@ -1370,22 +1374,23 @@ void building_room_geom_t::add_bed(room_object_t const &c, float tscale) {
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	add_tc_legs(legs_bcube, color, 0.04, tscale);
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
-	wood_mat.add_cube_to_verts(frame, color);
-	wood_mat.add_cube_to_verts(head, color, EF_Z1);
-	wood_mat.add_cube_to_verts(foot, color, EF_Z1);
+	vector3d const tex_origin(c.get_llc());
+	wood_mat.add_cube_to_verts(frame, color, tex_origin);
+	wood_mat.add_cube_to_verts(head, color, tex_origin, EF_Z1);
+	wood_mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1);
 	unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
 	rgeom_mat_t &sheet_mat(get_material(tid_nm_pair_t(c.get_sheet_tid(), tscale), 1));
 	colorRGBA const sheet_color(apply_light_color(c));
-	sheet_mat.add_cube_to_verts(mattress, sheet_color, mattress_skip_faces);
+	sheet_mat.add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);
 
 	if (is_wide) { // two pillows
 		for (unsigned d = 0; d < 2; ++d) {
 			cube_t p(pillow);
 			p.d[!c.dim][d] += (d ? -1.0 : 1.0)*0.55*pillow.get_sz_dim(!c.dim);
-			add_pillow(p, sheet_mat, sheet_color);
+			add_pillow(p, sheet_mat, sheet_color, tex_origin);
 		}
 	}
-	else {add_pillow(pillow, sheet_mat, sheet_color);} // one pillow
+	else {add_pillow(pillow, sheet_mat, sheet_color, tex_origin);} // one pillow
 }
 
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
@@ -1435,7 +1440,7 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
 	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z1 | EF_Z2); // only enable faces in dim
 	cube_t window(c);
 	swap(window.d[c.dim][0], window.d[c.dim][1]); // denormalized
-	get_material(tid_nm_pair_t(get_bath_wind_tid(), tscale), 0).add_cube_to_verts(window, c.color, skip_faces); // no apply_light_color()
+	get_material(tid_nm_pair_t(get_bath_wind_tid(), tscale), 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 
 void building_room_geom_t::clear() {
@@ -1483,7 +1488,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_NONE:  assert(0); // not supported
 		case TYPE_TABLE:   add_table   (*i, tscale); break;
 		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
-		case TYPE_STAIR:   add_stair   (*i, tscale); break;
+		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
 		case TYPE_LIGHT:   add_light   (*i, tscale); break; // light fixture
 		case TYPE_RUG:     add_rug     (*i); break;
 		case TYPE_PICTURE: add_picture (*i); break;
