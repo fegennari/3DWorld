@@ -919,7 +919,7 @@ public:
 		if (clip_windows) {tex_vert_off.z -= bg.bcube.get_llc().z;} // don't adjust X/Y pos for windows, because other code needs to know where windows are placed
 		else {tex_vert_off -= bg.bcube.get_llc();} // normalize to building LLC to keep tex coords small
 		if (is_city && cube.z1() == bg.bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
-		float const window_vspacing(bg.get_material().get_floor_spacing()), offset_val(0.025*offset_scale*window_vspacing);
+		float const window_vspacing(bg.get_material().get_floor_spacing()), offset_val(0.01*offset_scale*window_vspacing);
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // n = dim of normal, i/d = other dims
@@ -2453,10 +2453,12 @@ public:
 			}
 		}
 		glDepthFunc(GL_LEQUAL);
+		glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting on building windows
 
 		if (have_windows) { // draw windows, front facing only (not viewed from interior)
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
+			glEnable(GL_POLYGON_OFFSET_FILL);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw windows on top of other buildings
 				// need to swap opaque window texture with transparent texture for this draw pass
@@ -2465,6 +2467,7 @@ public:
 				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 			}
 			//interior_wind_draw.draw(0, 0, 1); // draw opaque front facing windows of building the player is in; direct_draw_no_vbo=1
+			glDisable(GL_POLYGON_OFFSET_FILL);
 			glDepthMask(GL_TRUE); // re-enable depth writing
 			disable_blend();
 		}
@@ -2492,11 +2495,13 @@ public:
 
 					if (!(*i)->building_draw_windows.empty()) {
 						enable_blend();
+						glEnable(GL_POLYGON_OFFSET_FILL);
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
 						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 						(*i)->building_draw_windows.draw_tile(s, tile_id); // draw windows on top of other buildings
 						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
+						glDisable(GL_POLYGON_OFFSET_FILL);
 						disable_blend();
 					}
 				} // for g
