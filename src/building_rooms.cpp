@@ -1118,7 +1118,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? (EF_Y1 | EF_Y2) : (EF_X1 | EF_X2));}
 
-void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, unsigned extra_skip_faces, bool no_title) {
+void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle, unsigned extra_skip_faces, bool no_title) {
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz());
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
@@ -1134,11 +1134,9 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	pages.expand_by(shrink);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
 	vector3d const tex_origin(c.get_llc());
-
-	// rotations
-	vector3d axis, about(c.get_llc());
-	axis[c.dim] = (c.dir ? -1.0 : 1.0); // along book width
-	float angle(0.0); // in radians
+	vector3d axis, about(c.get_urc());
+	axis[c.dim] = 1.0; // along book width
+	tilt_angle *= (c.dim ? -1.0 : 1.0);
 
 	if (inc_lg) { // add book geom
 		colorRGBA const color(apply_light_color(c));
@@ -1149,7 +1147,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		mat.add_cube_to_verts(top,   color, tex_origin, (extra_skip_faces | (upright ? EF_Z1 : 0))); // untextured, skip bottom face if upright
 		mat.add_cube_to_verts(spine, color, tex_origin, skip_faces); // untextured
 		mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), tex_origin, (skip_faces | ~get_face_mask(c.dim, !c.dir))); // untextured
-		rotate_verts(mat.quad_verts, axis, angle, about, qv_start);
+		rotate_verts(mat.quad_verts, axis, tilt_angle, about, qv_start);
 	}
 	if (ADD_BOOK_COVERS && inc_sm && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
 		cube_t cover(c);
@@ -1164,7 +1162,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		rgeom_mat_t &cover_mat(get_material(tid_nm_pair_t(picture_tid, 0.0), 0, 0, 1));
 		unsigned const qv_start(cover_mat.quad_verts.size());
 		cover_mat.add_cube_to_verts(cover, WHITE, tex_origin, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows, small=1
-		rotate_verts(cover_mat.quad_verts, axis, angle, about, qv_start);
+		rotate_verts(cover_mat.quad_verts, axis, tilt_angle, about, qv_start);
 	} // end cover image
 	if (ADD_BOOK_TITLES && inc_sm && !no_title && (c.obj_id&7)) { // add title along spine using text 7/8 of the time
 		// select our title text
@@ -1209,7 +1207,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 			i->v[ tdim] = (i->v[tdim] - text_bcube.d[tdim][ldir])*height_scale + title_start_tdim;
 			mat.quad_verts.emplace_back(vert_norm_comp_tc(i->v, nc, i->t[0], i->t[1]), cw);
 		} // for i
-		rotate_verts(mat.quad_verts, axis, angle, about, qv_start);
+		rotate_verts(mat.quad_verts, axis, tilt_angle, about, qv_start);
 	} // end pages
 }
 
@@ -1260,6 +1258,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		float const book_space(shelf.get_sz_dim(!c.dim)/num_spaces);
 		float pos(shelf.d[!c.dim][0]), shelf_end(shelf.d[!c.dim][1]), last_book_pos(pos);
 		unsigned skip_mask(0);
+		bool prev_tilted(0);
 
 		for (unsigned n = 0; n < num_spaces; ++n) {
 			if (rgen.rand_float() < 0.12) {
@@ -1270,20 +1269,22 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		for (unsigned n = 0; n < num_spaces; ++n) {
 			if (pos + 0.7*book_space > shelf_end) break; // not enough space for another book
 			float const width(book_space*rgen.rand_uniform(0.7, 1.3));
-			if (skip_mask & (1<<n)) {pos += width; continue;} // skip this book
+			if (!prev_tilted && (skip_mask & (1<<n))) {pos += width; continue;} // skip this book, and don't tilt the next one
 			float const height((shelf_dz - shelf_thick)*rgen.rand_uniform(0.6, 0.98));
-			float const right_pos(min((pos + width), shelf_end));
+			float const right_pos(min((pos + width), shelf_end)), avail_space(right_pos - last_book_pos);
+			float tilt_angle(0.0);
 			cube_t book;
 			book.z1() = shelf.z2();
 			book.d[c.dim][ c.dir] = shelf.d[c.dim][ c.dir] + depth*rgen.rand_uniform(0.0, 0.25); // facing out
 			book.d[c.dim][!c.dir] = shelf.d[c.dim][!c.dir]; // facing in
 
-			if ((right_pos - last_book_pos) > 1.1f*height && rgen.rand_float() < 0.5) { // book has space to fall over 50% of the time
+			if (avail_space > 1.1f*height && rgen.rand_float() < 0.5) { // book has space to fall over 50% of the time
 				book.d[!c.dim][0] = last_book_pos + rgen.rand_uniform(0.0, (right_pos - last_book_pos - height)); // shift a random amount within the gap
 				book.d[!c.dim][1] = book.d[!c.dim][0] + height;
 				book.z2() = shelf.z2() + width;
 			}
 			else { // upright
+				if (!prev_tilted && avail_space > 2.0*width && avail_space < 0.9f*height) {tilt_angle = 0.2;}
 				book.d[!c.dim][0] = pos;
 				book.d[!c.dim][1] = right_pos; // clamp to edge of bookcase interior
 				book.z2() = shelf.z2() + height;
@@ -1294,9 +1295,10 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			bool const backwards((rgen.rand()&3) == 0), book_dir(c.dir ^ backwards ^ 1); // spine facing out 75% of the time
 			room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color);
 			obj.obj_id = c.obj_id + 123*i + 1367*n;
-			add_book(obj, inc_lg, inc_sm, skip_faces, backwards); // detailed book, no title if backwards
+			add_book(obj, inc_lg, inc_sm, tilt_angle, skip_faces, backwards); // detailed book, no title if backwards
 			pos += width;
 			last_book_pos = pos;
+			prev_tilted = (tilt_angle != 0.0); // don't tilt two books in a row
 		} // for n
 	} // for i
 }
