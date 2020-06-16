@@ -1140,7 +1140,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 
 	if (inc_lg) { // add book geom
 		colorRGBA const color(apply_light_color(c));
-		unsigned const skip_faces(extra_skip_faces | EF_Z1 | (upright ? get_skip_mask_for_xy(tdim) : EF_Z2)); // skip top/bottom faces, thickness dim if upright
+		// skip top face, bottom face if not tilted, thickness dim if upright
+		unsigned const skip_faces(extra_skip_faces | ((tilt_angle == 0.0) ? EF_Z1 : 0) | (upright ? get_skip_mask_for_xy(tdim) : EF_Z2));
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0)); // unshadowed, since shadows are too small to have much effect
 		unsigned const qv_start(mat.quad_verts.size());
 		mat.add_cube_to_verts(bot,   color, tex_origin, (extra_skip_faces | EF_Z1)); // untextured, skip bottom face
@@ -1256,7 +1257,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		cube_t const &shelf(shelves[i]);
 		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 books per shelf
 		float const book_space(shelf.get_sz_dim(!c.dim)/num_spaces);
-		float pos(shelf.d[!c.dim][0]), shelf_end(shelf.d[!c.dim][1]), last_book_pos(pos);
+		float pos(shelf.d[!c.dim][0]), shelf_end(shelf.d[!c.dim][1]), last_book_pos(pos), min_height(0.0);
 		unsigned skip_mask(0);
 		bool prev_tilted(0);
 
@@ -1267,16 +1268,17 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			}
 		}
 		for (unsigned n = 0; n < num_spaces; ++n) {
-			if (pos + 0.7*book_space > shelf_end) break; // not enough space for another book
+			if ((pos + 0.7*book_space) > shelf_end) break; // not enough space for another book
 			float const width(book_space*rgen.rand_uniform(0.7, 1.3));
 			if (!prev_tilted && (skip_mask & (1<<n))) {pos += width; continue;} // skip this book, and don't tilt the next one
-			float const height((shelf_dz - shelf_thick)*rgen.rand_uniform(0.6, 0.98));
+			float const height(max((shelf_dz - shelf_thick)*rgen.rand_uniform(0.6, 0.98), min_height));
 			float const right_pos(min((pos + width), shelf_end)), avail_space(right_pos - last_book_pos);
 			float tilt_angle(0.0);
 			cube_t book;
 			book.z1() = shelf.z2();
 			book.d[c.dim][ c.dir] = shelf.d[c.dim][ c.dir] + depth*rgen.rand_uniform(0.0, 0.25); // facing out
 			book.d[c.dim][!c.dir] = shelf.d[c.dim][!c.dir]; // facing in
+			min_height = 0.0;
 
 			if (avail_space > 1.1f*height && rgen.rand_float() < 0.5) { // book has space to fall over 50% of the time
 				book.d[!c.dim][0] = last_book_pos + rgen.rand_uniform(0.0, (right_pos - last_book_pos - height)); // shift a random amount within the gap
@@ -1284,10 +1286,16 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				book.z2() = shelf.z2() + width;
 			}
 			else { // upright
-				if (!prev_tilted && avail_space > 2.0*width && avail_space < 0.9f*height) {tilt_angle = 0.2;}
+				if (!prev_tilted && avail_space > 2.0*width && (right_pos + book_space) < shelf_end && n+1 < num_spaces) { // rotates about the URC
+					float const lean_width(min((avail_space - width), rgen.rand_uniform(0.1, 0.6)*height)); // use part of the availabe space to lean
+					tilt_angle = asinf(lean_width/height);
+					float const delta_z(height - sqrt(height*height - lean_width*lean_width)); // move down to touch the bottom of the bookshelf when rotated
+					book.z1() -= delta_z;
+					min_height = rgen.rand_uniform(0.95, 1.05)*(height - delta_z); // make sure the book this book is leaning on is tall enough
+				}
 				book.d[!c.dim][0] = pos;
 				book.d[!c.dim][1] = right_pos; // clamp to edge of bookcase interior
-				book.z2() = shelf.z2() + height;
+				book.z2() = book.z1() + height;
 				assert(pos < right_pos);
 			}
 			assert(book.is_strictly_normalized());
@@ -1298,7 +1306,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			add_book(obj, inc_lg, inc_sm, tilt_angle, skip_faces, backwards); // detailed book, no title if backwards
 			pos += width;
 			last_book_pos = pos;
-			prev_tilted = (tilt_angle != 0.0); // don't tilt two books in a row
+			prev_tilted   = (tilt_angle != 0.0); // don't tilt two books in a row
 		} // for n
 	} // for i
 }
