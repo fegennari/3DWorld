@@ -53,7 +53,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	chair_pos[dim] += (dir ? -1.0f : 1.0f)*rgen.rand_uniform(-0.5, 1.2)*chair_sz;
 	cube_t chair(chair_pos, chair_pos);
 	chair.z2() += 0.4*get_window_vspace(); // chair height
-	chair.expand_by(vector3d(chair_sz, chair_sz, 0.0));
+	chair.expand_by_xy(chair_sz);
 	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0; // check proximity to doors
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
@@ -381,11 +381,10 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {
 				bool const dim(bool(dim2) ^ pref_dim), dir(bool(dir2) ^ pref_dir);
 				if (fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
-				float const xy_space(0.2*room.get_sz_dim(!dim));
 				cube_t c(room);
 				c.z1() = zval + 0.25*floor_height; c.z2() = zval + 0.8*floor_height;
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
-				c.d[!dim][0] += xy_space; c.d[!dim][1] -= xy_space;
+				c.expand_in_dim(!dim, -0.2*room.get_sz_dim(!dim)); // xy_space
 				cube_t keepout(c);
 				keepout.z1() = zval; // extend to the floor
 				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
@@ -416,11 +415,11 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 					center[!dim] = rgen.rand_uniform(lo, hi);
 				}
 				cube_t c(center, center);
-				c.z1() -= 0.5*height; c.z2() += 0.5*height;
+				c.expand_in_dim(2, 0.5*height);
 				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
-				c.d[!dim][0] -= 0.5*width; c.d[!dim][1] += 0.5*width;
+				c.expand_in_dim(!dim, 0.5*width);
 				cube_t tc(c);
-				tc.d[!dim][0] -= 0.1*width; tc.d[!dim][1] += 0.1*width; // expand slightly to account for frame
+				tc.expand_in_dim(!dim, 0.1*width); // expand slightly to account for frame
 				cube_t keepout(c);
 				keepout.z1() = zval; // extend to the floor
 				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
@@ -1414,10 +1413,10 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	pillow.z2()     = pillow.z1() + 0.13*height;
 	legs_bcube.z2() = frame.z1();
 	float const pillow_space((is_wide ? 0.08 : 0.23)*width);
-	pillow.d[!c.dim][0] += pillow_space; pillow.d[!c.dim][1] -= pillow_space;
+	pillow.expand_in_dim(!c.dim, -pillow_space);
 	pillow.d[c.dim][ c.dir] = mattress.d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*0.02*length; // head
 	pillow.d[c.dim][!c.dir] = pillow  .d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*(is_wide ? 0.25 : 0.6)*pillow.get_sz_dim(!c.dim);
-	mattress.d[!c.dim][0] += 0.02*width; mattress.d[!c.dim][1] -= 0.02*width;
+	mattress.expand_in_dim(!c.dim, -0.02*width);
 	colorRGBA const sheet_color(apply_light_color(c));
 	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale);
 

@@ -277,7 +277,7 @@ public:
 			if (node.is_hallway) {
 				bool const min_dim(walk_area.dy() < walk_area.dx());
 				float const shrink(min(0.5f*radius, max(0.0f, 0.9f*0.5f*walk_area.get_sz_dim(min_dim)))); // shrink by an extra half radius if hallway is wide enough
-				walk_area.d[min_dim][0] += shrink; walk_area.d[min_dim][1] -= shrink;
+				walk_area.expand_in_dim(min_dim, -shrink);
 			}
 			if (is_first_pt) { // last point in path (first point in reverse path)
 				assert(came_from >= 0);

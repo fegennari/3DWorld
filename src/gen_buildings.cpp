@@ -1313,7 +1313,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				unsigned dim_mask2(3); // x and y dims enabled
 				dim_mask2 |= (1 << (2*(!dim) + (!d) + 3)); // disable one interior
 				cube_t door(entrance);
-				door.d[ dim][0] += 0.2*spacing; door.d[ dim][1] -= 0.2*spacing; // shrink slightly to make thinner
+				door.expand_in_dim(dim, -0.2*spacing); // shrink slightly to make thinner
 				door.d[!dim][d] = door.d[!dim][!d] + (d ? 1.0f : -1.0f)*door_width;
 				bdraw.add_section(*this, empty_vc, door, tid_nm_pair_t(WHITE_TEX), GRAY, dim_mask2, 0, 0, 1, 0);
 			}

@@ -57,8 +57,7 @@ void create_wall(cube_t &wall, bool dim, float wall_pos, float fc_thick, float w
 	wall.z2() -= fc_thick; // start at the ceiling
 	set_wall_width(wall, wall_pos, wall_half_thick, dim);
 	// move a bit away from the exterior wall to prevent z-fighting; we might want to add walls around the building exterior and cut window holes
-	wall.d[!dim][0] += wall_edge_spacing;
-	wall.d[!dim][1] -= wall_edge_spacing;
+	wall.expand_in_dim(!dim, -wall_edge_spacing);
 }
 
 // Note: assumes edge is not clipped and doesn't work when clipped
@@ -250,10 +249,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 						// walls along sec hallway
 						cube_t long_swall(s_hall), short_swall(s_hall); // sec outer, sec inner; both have rows of doors in them
-						short_swall.d[!min_dim][0] += sh_width - wall_half_thick; // expand to fill the corner + shrink wall length
-						short_swall.d[!min_dim][1] -= sh_width - wall_half_thick;
-						long_swall. d[!min_dim][0] = place_area.d[!min_dim][0]; // crosses the entire building (creates sec hall + room on each end)
-						long_swall. d[!min_dim][1] = place_area.d[!min_dim][1];
+						short_swall.expand_in_dim(!min_dim, -(sh_width - wall_half_thick)); // expand to fill the corner + shrink wall length
+						long_swall.d[!min_dim][0] = place_area.d[!min_dim][0]; // crosses the entire building (creates sec hall + room on each end)
+						long_swall.d[!min_dim][1] = place_area.d[!min_dim][1];
 						cube_t main_wall(short_swall); // also short
 						set_wall_width(main_wall,   hall.d[min_dim][d], wall_half_thick, min_dim);
 						set_wall_width(long_swall,  hall_outer, wall_half_thick, min_dim);
@@ -748,7 +746,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
 			bool const is_step_dim(bool(dim) == long_dim); // same orientation as the hallway
 			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0*doorway_width : 0.9*ewidth)); // set max size of stairs opening
-			stairs.d[dim][0] += 0.5*shrink; stairs.d[dim][1] -= 0.5*shrink; // centered in the hallway
+			stairs.expand_in_dim(dim, -0.5*shrink); // centered in the hallway
 		}
 		room.has_stairs = 1;
 		stairs_cut      = stairs;
@@ -817,7 +815,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						bool const is_step_dim(bool(dim) == stairs_dim);
 						float shrink(cutout.get_sz_dim(dim) - (is_step_dim ? 4.0 : 1.2)*stairs_sz); // set max size of stairs opening
 						max_eq(shrink, 2.0f*stairs_sz); // allow space for doors to open and player to enter/exit
-						cutout.d[dim][0] += 0.5*shrink; cutout.d[dim][1] -= 0.5*shrink; // centered in the room
+						cutout.expand_in_dim(dim, -0.5*shrink); // centered in the room
 
 						if (!is_step_dim) { // see if we can push the stairs to the wall on one of the sides without blocking a doorway
 							bool const first_dir(rgen.rand_bool());
@@ -1163,7 +1161,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						for (unsigned d = 0; d < 2; ++d) {wall_clipped |= subtract_cube_from_cubes(cand_test[e], interior->walls[d], nullptr, 1);} // clip_in_z=1
 					}
 				}
-				cand.d[dim][0] += stairs_pad; cand.d[dim][1] -= stairs_pad; // subtract off padding
+				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
 				stairs_shape const sshape(wall_clipped ? SHAPE_WALLED : SHAPE_STRAIGHT); // add walls around stairs if room walls were clipped
 				landing_t landing(cand, 0, 0, dim, stairs_dir, sshape);
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
@@ -1190,7 +1188,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cube_t extension(*e);
 			extension.z1() = p->z1(); extension.z2() = p->z2();
 			cube_t cand_test(extension);
-			cand_test.z1() += fc_thick; cand_test.z2() -= fc_thick; // shrink slightly in Z so that we don't intersect the original elevator *e
+			cand_test.expand_in_dim(2, -fc_thick); // shrink slightly in Z so that we don't intersect the original elevator *e
 			cand_test.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
 			if (!p->contains_cube_xy(cand_test)) continue; // not enough space at elevator entrance
 			bool const allow_clip_walls = 1; // optional

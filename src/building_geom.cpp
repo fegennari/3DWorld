@@ -534,8 +534,7 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor
 	if (door.type != tquad_with_ix_t::TYPE_RDOOR) {clip_cube.z1() += (clip_to_floor ? 0.7*get_floor_thickness() : 0.04*dz);}
 	clip_cube.z2() -= 0.5*z_border*dz;
 	bool const dim(clip_cube.dx() < clip_cube.dy()); // border dim
-	xy_border *= clip_cube.get_sz_dim(dim);
-	clip_cube.d[dim][0] += xy_border; clip_cube.d[dim][1] -= xy_border; // shrink by border
+	clip_cube.expand_in_dim(dim, -xy_border*clip_cube.get_sz_dim(dim)); // shrink by border
 	for (unsigned n = 0; n < door.npts; ++n) {clip_cube.clamp_pt(door.pts[n]);}
 }
 
@@ -1463,7 +1462,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 		for (unsigned n = 0; n < 100 && !placed; ++n) { // limited to 100 attempts to prevent infinite loop
 			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
-			c.expand_by(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.07), xy_sz*rgen.rand_uniform(0.01, 0.07), 0.0));
+			c.expand_by_xy(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.07), xy_sz*rgen.rand_uniform(0.01, 0.07), 0.0));
 			if (!bounds.contains_cube_xy(c)) continue; // not contained
 			placed = 1;
 			if (is_simple_cube()) break; // success/done
@@ -1489,7 +1488,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		float const height(rgen.rand_uniform(0.25, 0.5)*top.dz());
 		roof_obj_t antenna(ROOF_OBJ_ANT);
 		antenna.set_from_point(top.get_cube_center());
-		antenna.expand_by(vector3d(radius, radius, 0.0));
+		antenna.expand_by_xy(radius);
 		antenna.z1() = top.z2(); // z1
 		antenna.z2() = bcube.z2() + height; // z2 (use bcube to include sloped roof)
 		details.push_back(antenna);
@@ -1627,7 +1626,7 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin, 
 bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width) {
 	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
 		cube_t tc(*s);
-		tc.d[s->dim][0] -= doorway_width; tc.d[s->dim][1] += doorway_width; // add extra space at both ends of stairs
+		tc.expand_in_dim(s->dim, doorway_width); // add extra space at both ends of stairs
 		if (tc.intersects(bcube)) return 1;
 	}
 	return 0;
