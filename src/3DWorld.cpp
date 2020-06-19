@@ -1683,6 +1683,7 @@ int load_config(string const &config_file) {
 	kwmb.add("keep_keycards_on_death", keep_keycards_on_death);
 	kwmb.add("enable_timing_profiler", enable_timing_profiler);
 	kwmb.add("fast_transparent_spheres", fast_transparent_spheres);
+	kwmb.add("draw_building_interiors", draw_building_interiors);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
