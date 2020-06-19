@@ -2195,6 +2195,9 @@ public:
 		// one of these must have an indir texture
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->setup_indir_texture_for_building(s);}
 	}
+	static void enable_linear_dlights(shader_t &s) { // to be called before begin_shader()
+		if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
+	}
 	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 
@@ -2269,7 +2272,7 @@ public:
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && transparent_windows);
 			if (enable_animations) {enable_animations_for_shader(s);}
-			if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
+			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
 			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			set_interior_lighting(s, have_indir);
@@ -2376,6 +2379,7 @@ public:
 
 		if (transparent_windows) {
 			// draw back faces of buildings, which will be interior walls
+			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 1, have_indir); // force_tsl=1, use_texgen=1
 			set_interior_lighting(s, have_indir);
 			if (have_indir) {setup_indir_lighting(bcs, s);}
@@ -2417,6 +2421,7 @@ public:
 
 			// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
 			int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
+			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0
 			set_interior_lighting(s);
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, tex_filt_mode);}
