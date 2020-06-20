@@ -823,10 +823,11 @@ bool write_model3d_file(string const &base_fn, model3d &cur_model) {
 bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, int use_vertex_normals, bool verbose);
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
 
-
+// recalc_normals: 0=no, 1=yes, 2=face_weight_avg
 bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, int recalc_normals, int group_cobjs_level, bool write_file, bool verbose)
 {
+	if (filename.empty()) return 0; // can't be loaded
 	string const ext(get_file_extension(filename, 0, 1));
 	models.push_back(model3d(filename, models.tmgr, def_tid, def_c, reflective, metalness, recalc_normals, group_cobjs_level));
 	model3d &cur_model(models.back());
