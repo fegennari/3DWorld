@@ -1006,8 +1006,15 @@ void draw_moon() {
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	s.set_cur_color(attenuate_sun_color(WHITE));
+#if 1
+	static int moon_tid(-1);
+	if (moon_tid < 0) {moon_tid = get_texture_by_name("moon_lroc_1k.jpg");}
+	select_texture(moon_tid);
+	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV);
+#else
 	select_texture(MOON_TEX);
 	draw_cube_mapped_sphere(pos, moon_radius, N_SPHERE_DIV/2, 1);
+#endif
 	s.end_shader();
 	disable_light(4);
 	float const star_alpha(get_star_alpha());

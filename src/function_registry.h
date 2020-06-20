@@ -207,7 +207,7 @@ void add_sphere_quads(vector<vert_norm_tc> &verts, vector<unsigned> *indices, po
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,
 						int texture, bool disable_bfc, unsigned char const *const render_map=NULL, float const *const exp_map=NULL,
 						point const *const pt_shift=NULL, float expand=0.0, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);
-void draw_subdiv_sphere(point const &pos, float radius, int ndiv, int texture, bool disable_bfc);
+void draw_subdiv_sphere(point const &pos, float radius, int ndiv, int texture=1, bool disable_bfc=0);
 void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int texture,
 								float s_beg, float s_end, float t_beg, float t_end);
 void rotate_sphere_tex_to_dir(vector3d const &dir);
