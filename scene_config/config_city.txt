@@ -42,51 +42,54 @@ no_subdiv_model 1
 merge_model_objects 1 # optimization for large instance counts
 
 # cars
-city num_cars 4000
+#city num_cars 4000
 city car_speed 10.0
 city traffic_balance_val 0.9
 city new_city_prob 0.5
 city enable_car_path_finding 1
 city convert_model_files 1
-# car_model: filename body_material_id fixed_color_id xy_rot scale lod_mult shadow_mat_ids
-city car_model ../models/cars/sports_car/sportsCar.model3d        22 -1 90  1.0 1.0  20 22
-city car_model ../models/cars/natla_car/natla_car.model3d         -1  2 90  1.0 0.5  1 # always GRAY (writing to model3d file inverts DDS textures)
-city car_model ../models/cars/speedCar/speedCar.model3d           -1  6 0   1.0 0.5  4 5 # always DK_BLUE (writing to model3d file inverts DDS textures)
-city car_model ../models/cars/Lamborghini/Lamborghini.model3d      2 -1 180 1.0 0.5  2 3 4
-city car_model ../models/cars/GCPD_Police_Car/GCPD_Police_Car.model3d -1  1 90  1.0 0.2  0 1 # always GRAY_BLACK
-city car_model ../models/cars/bugatti/bugatti.model3d              0 -1 80  1.0 2.0  0 4 # Note: underside disabled for shadows model is already too many triangles
-city car_model ../models/cars/Mercedes_Benz/Mercedes-Benz.model3d  0 -1 180 1.0 0.5  0 6 7
-city car_model ../models/cars/Rio/rio.model3d                      5 -1 270 1.0 0.5  1 5 # Note: shadow material 1 may be optional
-city car_model ../models/cars/Soarer/soarer.model3d                2 -1 90  1.0 0.5  2 5 8
-city car_model ../models/cars/Camaro/camaro2.model3d              24 -1 90  1.0 0.5  9 21 24
-city car_model ../models/cars/LowPolyTruck/truck.model3d          -1  2  0  1.6 0.5  3 4 5 6 16 17 20 24 # always GRAY
-city car_model ../models/cars/BMW/bmw.model3d                      0 -1 180 1.0 2.0  0 9 # Note: has emissive lights
-#city car_model ../models/toilet/toilet.model3d                     0 -1 0   1.0 1.0  0
-#city car_model ../models/cars/Bentley/Bentley.model3d              1 -1 90  1.0 0.5  1
+# car_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult shadow_mat_ids
+city car_model ../models/cars/sports_car/sportsCar.model3d        1 22 -1 90  1 1.0 1.0  20 22
+city car_model ../models/cars/natla_car/natla_car.model3d         1 -1  2 90  1 1.0 0.5  1 # always GRAY (writing to model3d file inverts DDS textures)
+city car_model ../models/cars/speedCar/speedCar.model3d           1 -1  6 0   1 1.0 0.5  4 5 # always DK_BLUE (writing to model3d file inverts DDS textures)
+city car_model ../models/cars/Lamborghini/Lamborghini.model3d     1  2 -1 180 1 1.0 0.5  2 3 4
+city car_model ../models/cars/GCPD_Police_Car/GCPD_Police_Car.model3d 1 -1  1 90  1 1.0 0.2  0 1 # always GRAY_BLACK
+city car_model ../models/cars/bugatti/bugatti.model3d             1  0 -1 80  1 1.0 2.0  0 4 # Note: underside disabled for shadows model is already too many triangles
+city car_model ../models/cars/Mercedes_Benz/Mercedes-Benz.model3d 1  0 -1 180 1 1.0 0.5  0 6 7
+city car_model ../models/cars/Rio/rio.model3d                     1  5 -1 270 1 1.0 0.5  1 5 # Note: shadow material 1 may be optional
+city car_model ../models/cars/Soarer/soarer.model3d               1  2 -1 90  1 1.0 0.5  2 5 8
+city car_model ../models/cars/Camaro/camaro2.model3d              1 24 -1 90  1 1.0 0.5  9 21 24
+city car_model ../models/cars/LowPolyTruck/truck.model3d          1 -1  2  0  1 1.6 0.5  3 4 5 6 16 17 20 24 # always GRAY
+city car_model ../models/cars/BMW/bmw.model3d                     1  0 -1 180 1 1.0 2.0  0 9 # Note: has emissive lights
+#city car_model ../models/toilet/toilet.model3d                   1   0 -1 0   1 1.0 1.0  0
+#city car_model ../models/cars/Bentley/Bentley.model3d            1   1 -1 90  1 1.0 0.5  1
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 allow_model3d_quads 1 # 0 is slightly faster for drawing but uses more memory (must recreate model3d files to change this)
 
 # pedestrians
-city num_peds 10000
-city num_building_peds 50000
+#city num_peds 10000
+#city num_building_peds 50000
 city ped_speed 0.001
 city ped_respawn_at_dest 1
-# ped_model: filename body_material_id fixed_color_id xy_rot scale lod_mult shadow_mat_ids
-city ped_model ../models/people/muro/muro.model3d         0 -1 90  1.0  1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
-city ped_model ../models/people/Patrick/Patrick.model3d   0 -1 90  1.0  1.0  0
-#city ped_model ../models/people/Alfred/Alfred.model3d     0 -1 90  1.0  1.0  0 # arms out in odd position, low poly
-#city ped_model ../models/people/Ana/Ana_Model.model3d     0 -1 90  1.0  1.0  0 # arms out in odd position, low poly
-#city ped_model ../models/people/Belle/Belle.model3d       0 -1 90  1.0  1.0  0 # too cartoonish (large head compared to body)
-city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 0 -1 90  0.8  1.0  0 # all one material
-#city ped_model ../models/toilet/toilet.model3d            0 -1 0   1.0 1.0  0
-#city ped_model ../models/people/HumanAlloy/00079_Nash002_Basics_Free.model3d 0 -1 90  1.0 1.0  0 # odd initial pose, hard to animate
+# ped_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult shadow_mat_ids
+city ped_model ../models/people/muro/muro.model3d         1 0 -1 90  1 1.0  1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
+city ped_model ../models/people/Patrick/Patrick.model3d   1 0 -1 90  1 1.0  1.0  0
+#city ped_model ../models/people/Alfred/Alfred.model3d     1 0 -1 90  1 1.0  1.0  0 # arms out in odd position, low poly
+#city ped_model ../models/people/Ana/Ana_Model.model3d     1 0 -1 90  1 1.0  1.0  0 # arms out in odd position, low poly
+#city ped_model ../models/people/Belle/Belle.model3d       1 0 -1 90  1 1.0  1.0  0 # too cartoonish (large head compared to body)
+city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 -1 90  1 0.8  1.0  0 # all one material
+#city ped_model ../models/toilet/toilet.model3d            1 0 -1 0   1 1.0 1.0  0
+#city ped_model ../models/people/HumanAlloy/00079_Nash002_Basics_Free.model3d 1 0 -1 90  1 1.0 1.0  0 # odd initial pose, hard to animate
 # MakeHuman models
-city ped_model ../models/people/makehuman/Katie/Katie.model3d 0 -1 90   0.7 1.0  0 3
-#city ped_model ../models/people/makehuman/Test/test.model3d   0 -1 90   1.0 1.0  0
+city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 -1 90  1 0.7 1.0  0 3
+#city ped_model ../models/people/makehuman/Test/test.model3d   1 0 -1 90  1 1.0 1.0  0
 
-# filename body_material_id fixed_color_id xy_rot scale lod_mult shadow_mat_ids
-city toilet_model ../models/toilet/toilet.model3d  0 -1 0   1.0 1.0  0
+# filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult shadow_mat_ids
+city toilet_model ../models/interiors/toilet/toilet.model3d  1 0 -1 0  1 1.0 1.0  0
+#city sink_model ../models/interiors/simple_sink.obj  1 -1 -1 90  0 1.0 1.0  0
+#city sink_model ../models/interiors/washbasin.model3d  1 -1 -1 90  1 1.0 1.0  0 # bad normals
+#city fridge_model ../models/interiors/fridge/Fridge.obj  1 0 -1 90  1 1.0 1.0  0
 
 city max_lights 1024
 city max_shadow_maps 40

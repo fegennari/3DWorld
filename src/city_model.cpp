@@ -7,13 +7,15 @@
 extern city_params_t city_params;
 
 
-bool city_model_t::read(FILE *fp) { // filename body_material_id fixed_color_id xy_rot dz lod_mult shadow_mat_ids
+bool city_model_t::read(FILE *fp) { // filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult shadow_mat_ids
 
 	assert(fp);
 	if (!read_string(fp, fn)) return 0;
+	if (!read_int(fp, recalc_normals)) return 0; // 0,1,2
 	if (!read_int(fp, body_mat_id)) return 0;
 	if (!read_int(fp, fixed_color_id)) return 0;
 	if (!read_float(fp, xy_rot)) return 0;
+	if (!read_bool(fp, swap_yz)) return 0;
 	if (!read_float(fp, scale)) return 0;
 	if (!read_float(fp, lod_mult) || lod_mult <= 0.0) return 0;
 	unsigned shadow_mat_id;
@@ -43,12 +45,13 @@ void city_model_loader_t::load_models() {
 	models_valid.resize(num_models(), 1); // assume valid
 
 	for (unsigned i = 0; i < num_models(); ++i) {
-		string const &fn(get_model(i).fn);
-		int const recalc_normals = 1; // 0=no, 1=yes, 2=face_weight_avg
+		city_model_t const &model(get_model(i));
+		int const def_tid(-1); // should this be a model parameter?
+		colorRGBA const def_color(WHITE); // should this be a model parameter?
 
-		if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, city_params.convert_model_files, 1)) {
-			cerr << "Error: Failed to read model file '" << fn << "'; Skipping this model (will use default low poly model)." << endl;
-			push_back(model3d(fn, tmgr)); // add a placeholder dummy model
+		if (!load_model_file(model.fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, model.recalc_normals, 0, city_params.convert_model_files, 1)) {
+			cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model (will use default low poly model)." << endl;
+			push_back(model3d(model.fn, tmgr)); // add a placeholder dummy model
 			models_valid[i] = 0;
 		}
 	} // for i
@@ -86,7 +89,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
 	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis
-	fgRotate(90.0, 1.0, 0.0, 0.0); // swap Y and Z dirs; models have up=Y, but we want up=Z
+	if (model_file.swap_yz) {fgRotate(90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
 	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
 	translate_to(-bcube.get_cube_center()); // cancel out model local translate
 
