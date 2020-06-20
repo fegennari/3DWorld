@@ -44,7 +44,7 @@ void city_model_loader_t::load_models() {
 
 	for (unsigned i = 0; i < num_models(); ++i) {
 		string const &fn(get_model(i).fn);
-		bool const recalc_normals = 1;
+		int const recalc_normals = 1; // 0=no, 1=yes, 2=face_weight_avg
 
 		if (!load_model_file(fn, *this, geom_xform_t(), -1, WHITE, 0, 0.0, recalc_normals, 0, city_params.convert_model_files, 1)) {
 			cerr << "Error: Failed to read model file '" << fn << "'; Skipping this model (will use default low poly model)." << endl;

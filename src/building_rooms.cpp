@@ -291,6 +291,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 }
 
 bool building_t::add_toilet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) return 0; // no toilet model
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const width(0.22*floor_spacing), length(0.35*floor_spacing), height(0.35*floor_spacing);
 	cube_t place_area(get_walkable_room_bounds(room));
