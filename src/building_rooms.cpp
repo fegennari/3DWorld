@@ -290,35 +290,41 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	return 0;
 }
 
-bool building_t::add_toilet_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
-	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) return 0; // no toilet model
+bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	float const width(0.22*floor_spacing), length(0.35*floor_spacing), height(0.35*floor_spacing);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-wall_thickness);
-	if (min(place_area.dx(), place_area.dy()) < 2.0*length) return 0; // room is too small (should be rare)
-	unsigned const first_corner(rgen.rand() & 3);
-	bool const first_dim(rgen.rand_bool());
+	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	bool placed_toilet(0), placed_sink(0);
 
-	for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
-		unsigned const corner_ix((first_corner + n)&3);
-		bool const xdir(corner_ix&1), ydir(corner_ix>>1);
-		point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet
+		float const width(0.22*floor_spacing), length(0.35*floor_spacing), height(0.35*floor_spacing);
+		unsigned const first_corner(rgen.rand() & 3);
+		bool const first_dim(rgen.rand_bool());
+
+		for (unsigned n = 0; n < 4 && !placed_toilet; ++n) { // try 4 room corners
+			unsigned const corner_ix((first_corner + n)&3);
+			bool const xdir(corner_ix&1), ydir(corner_ix>>1);
+			point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
 		
-		for (unsigned d = 0; d < 2; ++d) { // try both dims
-			bool const dim(bool(d) ^ first_dim);
-			cube_t c(corner, corner);
-			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? width : length);
-			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? length : width);
-			for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] += ((dim ? xdir : ydir) ? -1.5 : 1.5)*wall_thickness;}
-			c.z2() += height;
-			if (is_cube_close_to_doorway(c, 0.0, 1)) continue; // bad placement
-			objs.emplace_back(c, TYPE_TOILET, room_id, dim, !(dim ? ydir : xdir), (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
-			return 1; // done
-		} // for d
-	} // for n
-	return 0;
+			for (unsigned d = 0; d < 2 && !placed_toilet; ++d) { // try both dims
+				bool const dim(bool(d) ^ first_dim);
+				cube_t c(corner, corner);
+				c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? width : length);
+				c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? length : width);
+				for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] += ((dim ? xdir : ydir) ? -1.5 : 1.5)*wall_thickness;}
+				c.z2() += height;
+				if (is_cube_close_to_doorway(c, 0.0, 1)) continue; // bad placement
+				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !(dim ? ydir : xdir), (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+				placed_toilet = 1; // done
+			} // for d
+		} // for n
+	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) { // have a sink model - place sink
+		// TODO: WRITE
+	}
+	return (placed_toilet || placed_sink);
 }
 
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
@@ -637,7 +643,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (!added_obj && min(r->dx(), r->dy()) < 2.0*window_vspacing && max(r->dx(), r->dy()) < 3.0*window_vspacing &&
 					count_num_int_doors(*r) == 1 && (num_bathrooms == 0 || rgen.rand_float() < 0.5))
 				{
-					added_obj = is_bathroom = added_bathroom = add_toilet_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit); // add bathroom with toilet
+					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit); // add bathroom with toilet
 				}
 			}
 			if (!added_obj && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
