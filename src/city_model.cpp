@@ -117,10 +117,15 @@ city_model_t const &car_model_loader_t::get_model(unsigned id) const {
 }
 
 city_model_t const &object_model_loader_t::get_model(unsigned id) const {
-	switch (id) {
-	case OBJ_MODEL_TOILET: return city_params.toilet_model;
-	default: assert(0);
-	}
-	return null_model; // never gets here
+	assert(id < NUM_OBJ_MODELS);
+	return city_params.building_models[id];
+}
+
+bool city_params_t::add_model(unsigned id, FILE *fp) {
+	assert(id < NUM_OBJ_MODELS);
+	city_model_t &model(building_models[id]);
+	if (!model.read(fp)) return 0;
+	if (!model.check_filename()) {cerr << "Error: model file '" << model.fn << "' does not exist; skipping" << endl;} // nonfatal
+	return 1;
 }
 

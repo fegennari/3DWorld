@@ -9,7 +9,7 @@
 #include "inlines.h"
 #include "shaders.h"
 #include "draw_utils.h"
-#include "buildings.h" // for building_occlusion_state_t
+#include "buildings.h" // for building_occlusion_state_t and obj models
 #include "city_model.h"
 
 using std::string;
@@ -79,7 +79,7 @@ struct city_params_t {
 	float ped_speed;
 	bool ped_respawn_at_dest;
 	// buildings; maybe should be building params, but we have the model loading code here
-	city_model_t toilet_model;
+	city_model_t building_models[NUM_OBJ_MODELS];
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0),
 		num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0), car_speed(0.0),
@@ -91,6 +91,7 @@ struct city_params_t {
 	float get_road_ar() const {return round(road_spacing/road_width);} // round to nearest texture multiple
 	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
 	bool read_option(FILE *fp);
+	bool add_model(unsigned id, FILE *fp);
 	vector3d get_nom_car_size() const {return CAR_SIZE*road_width;}
 	vector3d get_max_car_size() const {return max_car_scale*get_nom_car_size();}
 }; // city_params_t

@@ -169,10 +169,15 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "max_benches_per_plot") {
 		if (!read_uint(fp, max_benches_per_plot)) {return read_error(str);}
 	}
-	// buildings
+	// building models
 	else if (str == "toilet_model") {
-		if (!toilet_model.read(fp)) {return read_error(str);}
-		if (!toilet_model.check_filename()) {cerr << "Error: toilet_model file '" << toilet_model.fn << "' does not exist; skipping" << endl;} // nonfatal
+		if (!add_model(OBJ_MODEL_TOILET, fp)) {return read_error(str);}
+	}
+	else if (str == "sink_model") {
+		if (!add_model(OBJ_MODEL_SINK, fp)) {return read_error(str);}
+	}
+	else if (str == "fridge_model") {
+		if (!add_model(OBJ_MODEL_FRIDGE, fp)) {return read_error(str);}
 	}
 	else {
 		cout << "Unrecognized city keyword in input file: " << str << endl;
