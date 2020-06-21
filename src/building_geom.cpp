@@ -564,14 +564,22 @@ void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
 	c.z2() += floor_spacing*(targ_num_floors - num_floors); // ensure c.dz() is an exact multiple of num_floors
 }
 
+// split c against existing cubes and add its non-overlapping pieces
 void split_cubes_recur(cube_t c, vect_cube_t &cubes, unsigned search_start, unsigned search_end) {
 
 	for (unsigned i = search_start; i < search_end; ++i) {
-		cube_t const &sc(cubes[i]);
-		// while this generally holds, it can fail in rare cases, I assume due to floating-point error or some such thing, so this check has been disabled
+		//cube_t const &sc(cubes[i]);
+		cube_t &sc(cubes[i]);
+		// while this generally holds, it can fail in rare cases (or used to?), I assume due to floating-point error or some such thing, so this check has been disabled
 		//assert(sc.z2() >= c.z2()); // assumes cubes are ordered descending by ztop
 		if (!sc.intersects_no_adj(c)) continue;
 		if (sc.contains_cube(c)) return; // contained, done (remove all of c)
+
+		if (sc.z1() == c.z1() && sc.z2() > c.z2() && c.contains_cube_xy(sc)) { // sc covers the base of c and spans c's z-range
+			assert(sc.z1() < c.z2());
+			sc.z1() = c.z2(); // create a stack instead
+			continue;
+		}
 		// find a split plane
 		for (unsigned d = 0; d < 2; ++d) { // dim
 			for (unsigned e = 0; e < 2; ++e) { // dir
