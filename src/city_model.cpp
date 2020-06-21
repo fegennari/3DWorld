@@ -75,13 +75,14 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	camera_pdu.pos += bcube.get_cube_center() - pos - xlate; // required for distance based LOD
 	bool const camera_pdu_valid(camera_pdu.valid);
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
-	// Note: in model space, front-back=z, left-right=x, top-bot=y
+	// Note: in model space, front-back=z, left-right=x, top-bot=y (for model_file.swap_yz=1)
 	float const sz_scale(obj_bcube.get_size().sum() / bcube.get_size().sum());
-	float const z_offset(0.5*bcube.dy() - (pos.z - obj_bcube.z1())/sz_scale); // translate required to map bottom of model to bottom of obj_bcube post transform
+	float const height(model_file.swap_yz ? bcube.dy() : bcube.dz());
+	float const z_offset(0.5*height - (pos.z - obj_bcube.z1())/sz_scale); // translate required to map bottom of model to bottom of obj_bcube post transform
 	
 	if (enable_animations) {
 		s.add_uniform_float("animation_scale",    model_file.scale/sz_scale); // Note: determined somewhat experimentally
-		s.add_uniform_float("model_delta_height", (0.1*bcube.dy() + bcube.y1()));
+		s.add_uniform_float("model_delta_height", (0.1*height + (model_file.swap_yz ? bcube.y1() : bcube.z1())));
 	}
 	fgPushMatrix();
 	translate_to(pos + vector3d(0.0, 0.0, z_offset*sz_scale)); // z_offset is in model space, scale to world space
