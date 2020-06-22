@@ -322,7 +322,23 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 		} // for n
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) { // have a sink model - place sink
-		// TODO: WRITE
+		float const width(0.2*floor_spacing), hwidth(0.5*width), depth(0.2*floor_spacing), height(0.45*floor_spacing);
+		cube_t c;
+		c.z1() = zval;
+		c.z2() = zval + height;
+
+		for (unsigned n = 0; n < 20 && !placed_sink; ++n) { // make 20 attempts to place a sink
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+			float const center(rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth));
+			c.d[ dim][ dir] = place_area.d[dim][dir];
+			c.d[ dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+			c.d[!dim][   0] = center - hwidth;
+			c.d[!dim][   1] = center + hwidth;
+			if (placed_toilet && c.intersects(objs.back())) continue;
+			if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement
+			objs.emplace_back(c, TYPE_SINK, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+			placed_sink = 1; // done
+		} // for n
 	}
 	return (placed_toilet || placed_sink);
 }
@@ -1572,6 +1588,8 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
 			case TYPE_WINDOW:  add_window  (*i, tscale); break;
 			case TYPE_TOILET:  obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_TOILET); break;
+			case TYPE_SINK:    obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_SINK  ); break;
+			case TYPE_FRIDGE:  obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_FRIDGE); break;
 			case TYPE_ELEVATOR: break; // not handled here
 			default: assert(0); // undefined type
 			}

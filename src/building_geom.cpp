@@ -568,7 +568,6 @@ void building_t::adjust_part_zvals_for_floor_spacing(cube_t &c) const {
 void split_cubes_recur(cube_t c, vect_cube_t &cubes, unsigned search_start, unsigned search_end) {
 
 	for (unsigned i = search_start; i < search_end; ++i) {
-		//cube_t const &sc(cubes[i]);
 		cube_t &sc(cubes[i]);
 		// while this generally holds, it can fail in rare cases (or used to?), I assume due to floating-point error or some such thing, so this check has been disabled
 		//assert(sc.z2() >= c.z2()); // assumes cubes are ordered descending by ztop
