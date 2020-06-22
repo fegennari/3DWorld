@@ -300,7 +300,8 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	cube_t avoid;
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet
-		float const width(0.22*floor_spacing), length(0.35*floor_spacing), height(0.35*floor_spacing);
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
+		float const height(0.35*floor_spacing), width(height*sz.y/sz.z), length(height*sz.x/sz.z);
 		unsigned const first_corner(rgen.rand() & 3);
 		bool const first_dim(rgen.rand_bool());
 
@@ -326,7 +327,8 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 		} // for n
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) { // have a sink model - place sink
-		float const width(0.2*floor_spacing), hwidth(0.5*width), depth(0.2*floor_spacing), height(0.45*floor_spacing);
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK)); // D, W, H
+		float const height(0.45*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
 		cube_t c;
 		c.z1() = zval;
 		c.z2() = zval + height;

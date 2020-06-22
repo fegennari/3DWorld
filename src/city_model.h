@@ -32,6 +32,7 @@ public:
 	virtual ~city_model_loader_t() {}
 	virtual unsigned num_models() const = 0;
 	virtual city_model_t const &get_model(unsigned id) const = 0;
+	vector3d get_model_world_space_size(unsigned id);
 	bool is_model_valid(unsigned id);
 	void load_models();
 	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
