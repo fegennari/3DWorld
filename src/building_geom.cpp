@@ -1174,10 +1174,16 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[swap_sides], rot_angle);}
 					for (unsigned i = 0; i < 4; ++i) {door.pts[i][dim] += shift;}
 					cube_t test_bcube(door.get_bcube());
-					test_bcube.expand_by_xy(wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
-					if (!check_cube_contained_in_part(test_bcube))              {door = orig_door; continue;} // bad placement (extends outside part), revert
-					if (has_bcube_int(test_bcube, interior->walls[!dim]))       {door = orig_door; continue;} // bad placement (hits perp wall), revert
-					if (interior->is_blocked_by_stairs_or_elevator(test_bcube)) {door = orig_door; continue;} // bad placement (hits stairs or elevator), revert
+					test_bcube.expand_in_dim(!dim,  wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
+					test_bcube.expand_in_dim( dim, -wall_thickness); // shrink in other dim to avoid intersecting with other part/walls when this door separates two parts
+					
+					if (!check_cube_contained_in_part(test_bcube) || // bad placement (extends outside part)
+					    has_bcube_int(test_bcube, interior->walls[!dim]) || // bad placement (hits perp wall)
+					    interior->is_blocked_by_stairs_or_elevator(test_bcube)) // bad placement (hits stairs or elevator)
+					{
+						door = orig_door; // revert
+						continue;
+					}
 					break; // done
 				} // for angle
 			}
