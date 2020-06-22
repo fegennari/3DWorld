@@ -297,6 +297,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool placed_toilet(0), placed_sink(0), placed_tub(0);
+	cube_t avoid;
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet
 		float const width(0.22*floor_spacing), length(0.35*floor_spacing), height(0.35*floor_spacing);
@@ -309,14 +310,17 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 			point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
 		
 			for (unsigned d = 0; d < 2 && !placed_toilet; ++d) { // try both dims
-				bool const dim(bool(d) ^ first_dim);
+				bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir);
 				cube_t c(corner, corner);
 				c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? width : length);
 				c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? length : width);
-				for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] += ((dim ? xdir : ydir) ? -1.5 : 1.5)*wall_thickness;}
+				for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] += ((dim ? xdir : ydir) ? -1.5 : 1.5)*wall_thickness;} // extra padding on left and right sides
 				c.z2() += height;
 				if (is_cube_close_to_doorway(c, 0.0, 1)) continue; // bad placement
-				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !(dim ? ydir : xdir), (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+				avoid = c;
+				avoid.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, used for placing sink
+				avoid.expand_in_dim(!dim, 0.4*width); // more padding on the sides
 				placed_toilet = 1; // done
 			} // for d
 		} // for n
@@ -334,7 +338,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 			c.d[ dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 			c.d[!dim][   0] = center - hwidth;
 			c.d[!dim][   1] = center + hwidth;
-			if (placed_toilet && c.intersects(objs.back())) continue;
+			if (placed_toilet && c.intersects(avoid)) continue;
 			if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement
 			objs.emplace_back(c, TYPE_SINK, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
 			placed_sink = 1; // done
