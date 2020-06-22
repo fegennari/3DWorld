@@ -296,7 +296,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	place_area.expand_by(-wall_thickness);
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	bool placed_toilet(0), placed_sink(0);
+	bool placed_toilet(0), placed_sink(0), placed_tub(0);
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet
 		float const width(0.22*floor_spacing), length(0.35*floor_spacing), height(0.35*floor_spacing);
@@ -340,7 +340,10 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 			placed_sink = 1; // done
 		} // for n
 	}
-	return (placed_toilet || placed_sink);
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TUB)) { // have a bathtub model - place bathtub
+		// TODO: WRITE
+	}
+	return (placed_toilet || placed_sink || placed_tub);
 }
 
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
@@ -1587,9 +1590,9 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_TCAN:    add_trashcan(*i); break;
 			case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
 			case TYPE_WINDOW:  add_window  (*i, tscale); break;
-			case TYPE_TOILET:  obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_TOILET); break;
-			case TYPE_SINK:    obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_SINK  ); break;
-			case TYPE_FRIDGE:  obj_model_insts.emplace_back((i - objs.begin()), OBJ_MODEL_FRIDGE); break;
+			case TYPE_TOILET: case TYPE_SINK: case TYPE_TUB: case TYPE_FRIDGE:
+				obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET));
+				break;
 			case TYPE_ELEVATOR: break; // not handled here
 			default: assert(0); // undefined type
 			}
