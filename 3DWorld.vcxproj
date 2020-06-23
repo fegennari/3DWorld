@@ -698,6 +698,7 @@
     <ClInclude Include="src\openal_wrap.h" />
     <ClInclude Include="src\physics_objects.h" />
     <ClInclude Include="src\player_state.h" />
+    <ClInclude Include="src\rand_gen.h" />
     <ClInclude Include="src\scenery.h" />
     <ClInclude Include="src\shaders.h" />
     <ClInclude Include="src\shadow_map.h" />
