@@ -1051,7 +1051,7 @@ flower_manager_dynamic_t flower_manager;
 void setup_wind_for_shader(shader_t &s, unsigned tu_id) {
 
 	static double wind_time(0.0);
-	if (animate2 && ((display_mode & 0x0100) != 0)) {wind_time = tfticks;}
+	if (animate2) {wind_time = tfticks;}
 	s.add_uniform_float("time", 0.5*wind_time/TICKS_PER_SECOND);
 	s.add_uniform_float("wind_x", wind.x);
 	s.add_uniform_float("wind_y", wind.y);
