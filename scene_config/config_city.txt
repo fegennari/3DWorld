@@ -89,7 +89,8 @@ city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 -1 90  1 0.7 1
 city toilet_model ../models/interiors/toilet/toilet.model3d  1 0 -1 0  1 1.0 1.0  0
 city sink_model ../models/interiors/simple_sink.model3d  1 -1 -1 90  0 1.0 1.0  0
 #city sink_model ../models/interiors/washbasin.model3d  1 -1 -1 90  1 1.0 1.0  0 # bad normals or wrong vertex winding order
-#city fridge_model ../models/interiors/fridge/Fridge.model3d  1 0 -1 90  1 1.0 1.0  0
+city tub_model ../models/interiors/bathtub.model3d  1 -1 -1 90  1 1.0 1.0  0
+city fridge_model ../models/interiors/fridge/Fridge.model3d  1 0 -1 90  1 1.0 1.0  0
 
 city max_lights 1024
 city max_shadow_maps 40

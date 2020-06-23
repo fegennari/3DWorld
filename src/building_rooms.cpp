@@ -290,14 +290,37 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	return 0;
 }
 
+bool building_t::place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
+	unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, vect_cube_t const &avoid)
+{
+	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
+	cube_t c;
+	c.z1() = zval;
+	c.z2() = zval + height;
+
+	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place the object
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+		if (place_area.get_sz_dim(!dim) < 3.0*hwidth) continue; // place area is too small in this dim
+		float const center(rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth));
+		c.d[ dim][ dir] = place_area.d[dim][dir];
+		c.d[ dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+		c.d[!dim][   0] = center - hwidth;
+		c.d[!dim][   1] = center + hwidth;
+		if (has_bcube_int(c, avoid) || is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement
+		interior->room_geom->objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		return 1; // done
+	} // for n
+	return 0; // failed
+}
+
 bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-wall_thickness);
+	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
+	place_area.expand_by(-0.5*wall_thickness);
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool placed_toilet(0), placed_sink(0), placed_tub(0);
-	cube_t avoid;
+	vect_cube_t avoid;
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
@@ -319,35 +342,21 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 				c.z2() += height;
 				if (is_cube_close_to_doorway(c, 0.0, 1)) continue; // bad placement
 				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
-				avoid = c;
-				avoid.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, used for placing sink
-				avoid.expand_in_dim(!dim, 0.4*width); // more padding on the sides
+				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, used for placing sink
+				c.expand_in_dim(!dim, 0.4*width); // more padding on the sides
+				avoid.push_back(c);
 				placed_toilet = 1; // done
 			} // for d
 		} // for n
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) { // have a sink model - place sink
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK)); // D, W, H
-		float const height(0.45*floor_spacing), hwidth(0.5*height*sz.y/sz.z), depth(height*sz.x/sz.z);
-		cube_t c;
-		c.z1() = zval;
-		c.z2() = zval + height;
-
-		for (unsigned n = 0; n < 20 && !placed_sink; ++n) { // make 20 attempts to place a sink
-			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-			float const center(rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth));
-			c.d[ dim][ dir] = place_area.d[dim][dir];
-			c.d[ dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
-			c.d[!dim][   0] = center - hwidth;
-			c.d[!dim][   1] = center + hwidth;
-			if (placed_toilet && c.intersects(avoid)) continue;
-			if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement
-			objs.emplace_back(c, TYPE_SINK, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
-			placed_sink = 1; // done
-		} // for n
+		placed_sink = place_obj_along_wall(TYPE_SINK, 0.45*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, avoid);
+		if (placed_sink) {avoid.push_back(objs.back());}
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TUB)) { // have a bathtub model - place bathtub
-		// TODO: WRITE
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TUB)); // D, W, H
+		placed_tub = place_obj_along_wall(TYPE_TUB, 0.2*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, room_bounds, avoid); // no spacing between wall
 	}
 	return (placed_toilet || placed_sink || placed_tub);
 }
