@@ -1673,7 +1673,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 			shader.add_uniform_float("min_alpha", 0.0);
 			set_def_spec_map();
 		}
-		if (is_normal_pass || !enable_alpha_mask) {unbound_geom.render(shader, is_shadow_pass, xlate);} // skip shadow + alpha mask pass
+		if (is_normal_pass || enable_alpha_mask != 1) {unbound_geom.render(shader, is_shadow_pass, xlate);} // skip shadow + alpha mask only pass
 		if (is_normal_pass) {shader.clear_specular();}
 	}
 	bool check_lod(force_lod);
@@ -1721,7 +1721,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass,
 	int enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
 {
-	if (materials.empty() && mat_id == 0) { // no materials caller requested first material, use unbound geom
+	if (mat_id == materials.size()) { // unbound geom is material ID materials.size() (one past the end)
 		unbound_geom.render(shader, is_shadow_pass, xlate);
 		return;
 	}
