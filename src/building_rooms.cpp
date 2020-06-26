@@ -356,7 +356,9 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TUB)) { // have a bathtub model - place bathtub
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TUB)); // D, W, H
-		placed_tub = place_obj_along_wall(TYPE_TUB, 0.2*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, room_bounds, avoid); // no spacing between wall
+		cube_t place_area_tub(room_bounds);
+		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
+		placed_tub = place_obj_along_wall(TYPE_TUB, 0.2*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, avoid);
 	}
 	return (placed_toilet || placed_sink || placed_tub);
 }
@@ -1537,6 +1539,10 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(get_bath_wind_tid(), tscale), 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 
+void building_room_geom_t::add_tub_outer(room_object_t const &c) {
+	get_material(untex_shad_mat, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, (EF_Z1 | EF_Z2)); // shadowed, no top/bottom faces
+}
+
 void building_room_geom_t::clear() {
 	clear_materials();
 	objs.clear();
@@ -1605,7 +1611,9 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_TCAN:    add_trashcan(*i); break;
 			case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
 			case TYPE_WINDOW:  add_window  (*i, tscale); break;
-			case TYPE_TOILET: case TYPE_SINK: case TYPE_TUB: case TYPE_FRIDGE:
+			case TYPE_TUB:     add_tub_outer(*i);
+				// fallthrough
+			case TYPE_TOILET: case TYPE_SINK: case TYPE_FRIDGE:
 				obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET));
 				break;
 			case TYPE_ELEVATOR: break; // not handled here
