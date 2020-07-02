@@ -106,7 +106,7 @@ float model_hemi_lighting_scale(0.5);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0}, first_ray_weight[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
-string user_text, cobjs_out_fn, sphere_materials_fn, hmap_out_fn, skybox_cube_map_name;
+string user_text, cobjs_out_fn, sphere_materials_fn, hmap_out_fn, skybox_cube_map_name, coll_damage_name;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color, flower_color(ALPHA0);
 set<unsigned char> keys, keyset;
@@ -1830,6 +1830,7 @@ int load_config(string const &config_file) {
 
 	kw_to_val_map_t<string> kwms(error);
 	kwms.add("cobjs_out_filename", cobjs_out_fn);
+	kwms.add("coll_damage_name",   coll_damage_name);
 
 	while (read_str(fp, strc)) { // slow but should be OK: these ones require special handling
 		string const str(strc);

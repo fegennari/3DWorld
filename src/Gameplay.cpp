@@ -60,6 +60,7 @@ extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbotto
 extern float max_water_height, XY_SCENE_SIZE, TIMESTEP, FAR_CLIP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
 extern double camera_zh, c_phi, tfticks;
 extern point surface_pos, camera_last_pos;
+extern string coll_damage_name;
 extern int coll_id[];
 extern obj_type object_types[];
 extern obj_group obj_groups[];
@@ -407,8 +408,9 @@ void freeze_player(player_state &sstate, float energy) {
 }
 
 string get_kill_str(int type) {
-	string damage_name(obj_type_names[type]);
-	return ((damage_name == "Fell") ? "Teleporter" : damage_name); // can only kill with teleporter, not fell
+	if (type == FELL) {return "Teleporter";} // can only kill with teleporter, not fell
+	if (type == COLLISION && !coll_damage_name.empty()) return coll_damage_name;
+	return obj_type_names[type];
 }
 
 void camera_weapon_ammo_pickup(point const &position, colorRGBA &cam_filter_color) {
@@ -578,7 +580,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 				case SUFFOCATED: str = "SUFFOCATED";       break;
 				case CRUSHED:    str = "CRUSHED to DEATH"; break;
 				case GASSED:     str = "Gassed to Death";  break;
-				default:         str = string("SUICIDE with ") + obj_type_names[type];
+				default:         str = string("SUICIDE with ") + get_kill_str(type);
 			}
 			print_text_onscreen(str, RED, 1.0, MESSAGE_TIME, 3);
 			sstate.register_suicide();
@@ -775,7 +777,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 		case SUFFOCATED: str += " Suffocated";           break;
 		case CRUSHED:    str += " was Crushed to Death"; break;
 		case GASSED:     str += " was Gassed to Death";  break;
-		default:         str += " suicided with " + get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + obj_type_names[type];
+		default:         str += " suicided with " + get_weapon_qualifier(type, (type == BLAST_RADIUS ? br_source : ssource.weapon), source) + get_kill_str(type);
 		}
 		print_text_onscreen(str, CYAN, 1.0, MESSAGE_TIME/2, 0);
 		ssource.register_suicide();

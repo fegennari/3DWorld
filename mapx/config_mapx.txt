@@ -13,6 +13,7 @@ show_waypoints 0
 smileys_chase_player 0
 dynamic_smap_bias 1
 #cobjs_out_filename mapx/cobjs_out.txt
+coll_damage_name Heatpad
 
 #end # uncomment to disable lighting files
 
