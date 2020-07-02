@@ -1233,7 +1233,7 @@ bool coll_obj::sphere_intersects_exact(point const &sc, float sr, vector3d &cnor
 void coll_obj::convert_cube_to_ext_polygon() {
 
 	assert(type == COLL_CUBE);
-	type      = COLL_POLYGON;
+	type      = COLL_POLYGON; // Note: rounded corners (radius2) are not preserved
 	npoints   = 4;
 	thickness = dz(); // height
 	assert(thickness > 0.0);
