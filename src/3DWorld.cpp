@@ -1831,6 +1831,14 @@ int load_config(string const &config_file) {
 	kw_to_val_map_t<string> kwms(error);
 	kwms.add("cobjs_out_filename", cobjs_out_fn);
 	kwms.add("coll_damage_name",   coll_damage_name);
+	kwms.add("read_hmap_modmap_filename",  read_hmap_modmap_fn);
+	kwms.add("write_hmap_modmap_filename", write_hmap_modmap_fn);
+	kwms.add("read_voxel_brush_filename",  read_voxel_brush_fn);
+	kwms.add("write_voxel_brush_filename", write_voxel_brush_fn);
+	kwms.add("font_texture_atlas_fn", font_texture_atlas_fn);
+	kwms.add("sphere_materials_fn", sphere_materials_fn);
+	kwms.add("write_heightmap_png", hmap_out_fn);
+	kwms.add("skybox_cube_map", skybox_cube_map_name);
 
 	while (read_str(fp, strc)) { // slow but should be OK: these ones require special handling
 		string const str(strc);
@@ -1997,24 +2005,6 @@ int load_config(string const &config_file) {
 		else if (str == "state_file") {
 			if (!read_str(fp, state_file)) cfg_err("state_file command", error);
 		}
-		else if (str == "read_hmap_modmap_filename") {
-			if (!read_string(fp, read_hmap_modmap_fn)) cfg_err("read_hmap_modmap_filename command", error);
-		}
-		else if (str == "write_hmap_modmap_filename") {
-			if (!read_string(fp, write_hmap_modmap_fn)) cfg_err("write_hmap_modmap_filename command", error);
-		}
-		else if (str == "read_voxel_brush_filename") {
-			if (!read_string(fp, read_voxel_brush_fn)) cfg_err("read_voxel_brush_filename command", error);
-		}
-		else if (str == "write_voxel_brush_filename") {
-			if (!read_string(fp, write_voxel_brush_fn)) cfg_err("write_voxel_brush_filename command", error);
-		}
-		else if (str == "font_texture_atlas_fn") {
-			if (!read_string(fp, font_texture_atlas_fn)) cfg_err("font_texture_atlas_fn command", error);
-		}
-		else if (str == "sphere_materials_fn") {
-			if (!read_string(fp, sphere_materials_fn)) cfg_err("sphere_materials_fn command", error);
-		}
 		else if (str == "mesh_file") { // only the first parameter is required
 			float rmz(0.0);
 			if (fscanf(fp, "%255s%f%f%i", mesh_file, &mesh_file_scale, &mesh_file_tz, &do_read_mesh) < 1) cfg_err("mesh_file command", error);
@@ -2027,9 +2017,6 @@ int load_config(string const &config_file) {
 		else if (str == "mh_filename_tiled_terrain") {
 			alloc_if_req(mh_filename_tt, NULL);
 			if (fscanf(fp, "%255s", mh_filename_tt) != 1) cfg_err("mh_filename_tiled_terrain command", error);
-		}
-		else if (str == "write_heightmap_png") {
-			if (!read_string(fp, hmap_out_fn)) cfg_err("write_heightmap_png command", error);
 		}
 		else if (str == "mesh_diffuse_tex_fn") {
 			alloc_if_req(mesh_diffuse_tex_fn, NULL);
@@ -2047,10 +2034,6 @@ int load_config(string const &config_file) {
 		else if (str == "skybox_tex") {
 			if (!read_str(fp, strc)) cfg_err("skybox_tex", error);
 			skybox_tid = get_texture_by_name(string(strc), 0, 0, 0); // clamp
-		}
-		else if (str == "skybox_cube_map") {
-			if (!read_str(fp, strc)) cfg_err("skybox_cube_map", error);
-			skybox_cube_map_name = string(strc);
 		}
 		else if (str == "ship_def_file") {
 			if (!read_str(fp, ship_def_file)) cfg_err("ship_def_file command", error);
