@@ -22,7 +22,6 @@ bool const LINEAR_ROOM_DLIGHT_ATTEN = 1;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
-vector3d texgen_origin;
 building_params_t global_building_params;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
@@ -2395,8 +2394,9 @@ public:
 					building_mat_t const &mat((*i)->buildings.front().get_material()); // assume all buildings have the same interior wall texture/scale
 					mat.wall_tex.set_gl(s);
 					s.set_cur_color(mat.wall_color);
-					// translate texture near the camera to get better tex coord resolution
-					if (!camera_in_building) {texgen_origin.assign(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);} // don't update when the camera is in the building and can see the textures move
+					// translate texture near the camera to get better tex coord resolution; make a multiple of tscale to avoid visible shift
+					vector3d texgen_origin(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
+					for (unsigned d = 0; d < 2; ++d) {texgen_origin[d] = mat.wall_tex.tscale_x*int(texgen_origin[d]/mat.wall_tex.tscale_x);}
 					s.add_uniform_vector3d("texgen_origin", texgen_origin);
 					setup_texgen_full(2.0f*mat.wall_tex.tscale_x, 2.0f*mat.wall_tex.tscale_x, 0.0, 0.0, 0.0, 0.0, 2.0f*mat.wall_tex.tscale_y, 0.0, s, 0);
 				}
