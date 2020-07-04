@@ -566,6 +566,7 @@ private:
 	bool hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
 	void add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
+	bool can_be_bathroom(room_t const &room) const;
 	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	void split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen);

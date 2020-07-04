@@ -223,10 +223,14 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	return (num_placed > 0);
 }
 
-bool building_t::can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const {
+bool building_t::can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const { // check room type and existence of exterior door
 	if (!is_house || room.has_stairs || room.has_elevator || room.is_hallway || room.is_office) return 0; // no bed in these cases
 	if (on_first_floor && is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom
 	return 1;
+}
+bool building_t::can_be_bathroom(room_t const &room) const { // Note: assumes caller has checked can_be_bedroom_or_bathroom()
+	float const vspace(get_window_vspace());
+	return (min(room.dx(), room.dy()) < 2.0*vspace && max(room.dx(), room.dy()) < 3.0*vspace && count_num_int_doors(room) == 1);
 }
 
 unsigned building_t::count_num_int_doors(room_t const &room) const {
@@ -528,21 +532,37 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	//timer_t timer("Gen Room Details");
 	interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	vector<room_t> &rooms(interior->rooms);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0), num_light_stacks(0), num_bathrooms(0);
-	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
+	for (auto r = rooms.begin(); r != rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
+	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 
-	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+	if (is_house && rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
+		float min_score(0.0);
+
+		for (auto r = rooms.begin(); r != rooms.end(); ++r) {
+			if (r->is_sec_bldg) continue; // garage/shed excluded - not a normal room
+			bool const on_first_floor(calc_num_floors(*r, window_vspacing, floor_thickness) == 1); // if a single floor, this must be on the first floor
+
+			if (can_be_bedroom_or_bathroom(*r, on_first_floor)) { // find best bathroom with no hard size constraints
+				float score(r->dx() + r->dy()); // starts as half the perimeter
+				score *= (1.0 + 10.0*(max(count_num_int_doors(*r), 1U) - 1U)); // multiply by a large value if there are mult doors so we only choose this if there are no alternatives
+				if (min_score == 0.0 || score < min_score) {cand_bathroom = (r - rooms.begin()); min_score = score;}
+			}
+		} // for r
+	}
+	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 		float const light_amt(window_vspacing*r->get_light_amt()); // multiply perimeter/area by window spacing to make unitless
 		float const floor_height(r->is_sec_bldg ? r->dz() : window_vspacing); // secondary buildings are always one floor
-		unsigned const num_floors(calc_num_floors(*r, floor_height, floor_thickness));
-		unsigned const room_id(r - interior->rooms.begin());
+		unsigned const num_floors(calc_num_floors(*r, floor_height, floor_thickness)), room_id(r - rooms.begin());
 		point room_center(r->get_cube_center());
 		// determine light pos and size for this stack of rooms
 		bool const room_dim(r->dx() < r->dy()); // longer room dim
+		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
 		float light_size(floor_thickness); // default size for houses
 
 		if (r->is_office) { // light size varies by office size
@@ -671,14 +691,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			cube_t avoid_cube;
 
 			// place room objects
-			if (can_be_bedroom_or_bathroom(*r, (f == 0))) {
-				if (rgen.rand_float() < 0.75) { // 75% of the time
+			if (can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
+				if (!must_be_bathroom && rgen.rand_float() < 0.75) { // place a bedroom 75% of the time unless this must be a bathroom
 					added_obj = add_bed_to_room(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit);
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
-				if (!added_obj && min(r->dx(), r->dy()) < 2.0*window_vspacing && max(r->dx(), r->dy()) < 3.0*window_vspacing &&
-					count_num_int_doors(*r) == 1 && (num_bathrooms == 0 || rgen.rand_float() < 0.5))
-				{
+				if (!added_obj && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < 0.5)))) {
 					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit); // add bathroom with toilet
 				}
 			}
