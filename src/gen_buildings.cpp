@@ -1904,7 +1904,7 @@ public:
 
 		if (params.flatten_mesh && !use_city_plots) { // not needed for city plots, which are already flat
 			timer_t timer("Gen Building Zvals", !is_tile);
-			bool const do_flatten(using_tiled_terrain_hmap_tex());
+			bool const do_flatten(using_tiled_terrain_hmap_tex() && !is_tile); // can't flatten terrain when using tiles as this can generate seams
 
 #pragma omp parallel for schedule(static,1) if (!is_tile)
 			for (int i = 0; i < (int)buildings.size(); ++i) {
@@ -1914,9 +1914,10 @@ public:
 					//assert(!b.is_rotated()); // too strong?
 					if (!is_tile) {flatten_hmap_region(b.bcube);} // can't flatten terrain when using tiles as this can generate seams
 				}
-				else { // extend building bottom downward to min mesh height; can break floor alignment for building interiors
+				else { // extend building bottom downward to min mesh height
+					bool const shift_top(DRAW_WINDOWS_AS_HOLES); // shift is required to preserve height for floor alignment of building interiors
 					float &zmin(b.bcube.z1()); // Note: grid bcube z0 value won't be correct, but will be fixed conservatively below
-					float const zmin0(zmin);
+					float const orig_zmin(zmin);
 					unsigned num_below(0);
 					
 					for (int d = 0; d < 4; ++d) {
@@ -1925,15 +1926,17 @@ public:
 						num_below += (zval < def_water_level);
 					}
 					max_eq(zmin, def_water_level); // don't go below the water
-					float const max_dz(b.get_material().max_delta_z);
+					float const dz(orig_zmin - zmin), max_dz(b.get_material().max_delta_z);
+					if (shift_top) {b.bcube.z2() -= dz;} // shift top down as well to keep the height constant
 					if (num_below > 2 || // more than 2 corners underwater
-						(max_dz > 0.0 && (zmin0 - zmin) > max_dz)) // too steep of a slope
+						(max_dz > 0.0 && dz > max_dz)) // too steep of a slope
 					{
 						b.bcube.set_to_zeros();
 						++num_skip;
 					}
 					else if (!b.parts.empty()) {
 						b.parts.back().z1() = b.bcube.z1(); // update base z1
+						if (shift_top) {b.parts.back().z2() -= dz;} // shift top down as well
 						assert(b.parts.back().dz() > 0.0);
 					}
 				}
