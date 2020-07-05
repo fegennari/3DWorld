@@ -17,6 +17,7 @@ camera_height 0.016
 player_speed 0.2
 
 buildings tt_only 1
+#buildings infinite_buildings 1
 shadow_map_sz 4096
 
 #sun_rot 2.0

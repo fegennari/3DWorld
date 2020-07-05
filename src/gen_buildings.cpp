@@ -1777,7 +1777,7 @@ public:
 		assert(!(city_only && non_city_only));
 		clear();
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
-		if (params.gen_inf_buildings() && !is_tile) return; // not added here
+		if (params.gen_inf_buildings() && !is_tile && !city_only) return; // secondary buildings - not added here
 		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only));
 		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
 		timer_t timer("Gen Buildings", !is_tile);
@@ -2889,7 +2889,7 @@ public:
 		bcube.y2() = get_yval((y+1)*MESH_Y_SIZE);
 		global_building_params.set_pos_range(bcube);
 		int const rseed(x + (y << 16) + 12345); // should not be zero
-		bc.gen(global_building_params, 0, 0, 1, rseed);
+		bc.gen(global_building_params, 0, have_cities(), 1, rseed); // if there are cities, then tiles are non-city/secondary buildings
 		global_building_params.restore_prev_pos_range();
 		max_extent = max_extent.max(bc.get_max_extent());
 		return 1;
