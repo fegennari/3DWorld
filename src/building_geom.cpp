@@ -1681,7 +1681,13 @@ void building_interior_t::finalize() {
 	for (unsigned d = 0; d < 2; ++d) {remove_excess_cap(walls[d]);}
 }
 
-bool building_interior_t::update_elevators(point const &player_pos) { // Note: player_pos is in building space
+void building_t::update_elevators(point const &player_pos) {
+	assert(interior);
+	interior->update_elevators(player_pos, get_floor_thickness());
+}
+bool building_interior_t::update_elevators(point const &player_pos, float floor_thickness) { // Note: player_pos is in building space
+	float const z_space(0.05*floor_thickness); // to prevent z-fighting
+
 	// Note: the player can only be in one elevator at a time, so we can exit when we find the first containing elevator
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
 		if (!e->contains_pt(player_pos)) continue; // player not in this elevator
@@ -1691,8 +1697,8 @@ bool building_interior_t::update_elevators(point const &player_pos) { // Note: p
 			if (i->type != TYPE_ELEVATOR || i->room_id != elevator_id || !i->contains_pt(player_pos)) continue;
 			bool const move_dir(player_pos[!i->dim] < i->get_center_dim(!i->dim)); // player controls up/down direction based on which side of the elevator they stand on
 			float dist(min(0.5f*CAMERA_RADIUS, 0.04f*i->dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
-			if (move_dir) {min_eq(dist, (e->z2() - i->z2()));} // going up
-			else          {max_eq(dist, (e->z1() - i->z1()));} // going down
+			if (move_dir) {min_eq(dist, (e->z2() - i->z2() - z_space));} // going up
+			else          {max_eq(dist, (e->z1() - i->z1() + z_space));} // going down
 			if (dist == 0.0) break; // no movement, at top or bottom of elevator shaft
 			i->z1() += dist; i->z2() += dist;
 			room_geom->mats_dynamic.clear(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs

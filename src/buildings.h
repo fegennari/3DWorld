@@ -394,7 +394,7 @@ struct building_interior_t {
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
-	bool update_elevators(point const &player_pos);
+	bool update_elevators(point const &player_pos, float floor_thickness);
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2) const;
 };
 
@@ -532,6 +532,7 @@ struct building_t : public building_geom_t {
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	bool place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
 		unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, vect_cube_t const &avoid);
+	void update_elevators(point const &player_pos);
 private:
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
