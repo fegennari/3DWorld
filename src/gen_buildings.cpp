@@ -2938,6 +2938,11 @@ public:
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {num += i->second.get_num_buildings();}
 		return num;
 	}
+	unsigned get_gpu_mem_usage() const {
+		unsigned mem(0);
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {mem += i->second.get_gpu_mem_usage();}
+		return mem;
+	}
 }; // end building_tiles_t
 
 
@@ -2993,7 +2998,9 @@ bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_o
 }
 bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode
 	point center(pos + get_tt_xlate_val());
-	return building_creator.check_sphere_coll(center, pos, 0.0, 1, nullptr); // secondary buildings only
+	if (building_creator.check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1; // secondary buildings only
+	if (building_tiles  .check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1;
+	return 0;
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) { // for line_intersect_city()
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
@@ -3007,8 +3014,8 @@ bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &c
 	return building_creator.get_building_hit_color(p1, p2, color);
 }
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproc effects
-bool no_grass_under_buildings() {return (world_mode == WMODE_INF_TERRAIN && !building_creator.empty() && global_building_params.flatten_mesh);}
-unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage());}
+bool no_grass_under_buildings() {return (world_mode == WMODE_INF_TERRAIN && !(building_creator.empty() && building_tiles.empty()) && global_building_params.flatten_mesh);}
+unsigned get_buildings_gpu_mem_usage() {return (building_creator.get_gpu_mem_usage() + building_creator_city.get_gpu_mem_usage() + building_tiles.get_gpu_mem_usage());}
 
 vector3d get_buildings_max_extent() { // used for TT shadow bounds + map mode
 	return building_creator.get_max_extent().max(building_creator_city.get_max_extent()).max(building_tiles.get_max_extent());
@@ -3041,7 +3048,7 @@ bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &buil
 bool enable_building_people_ai() {return global_building_params.enable_people_ai;}
 
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
-	return building_creator.place_people(locs, radius, speed_mult, num); // secondary buildings only for now
+	return building_creator.place_people(locs, radius, speed_mult, num); // secondary buildings only for now, no support for building tiles
 }
 void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir) {building_creator.update_ai_state(people, delta_dir);}
 
