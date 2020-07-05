@@ -2915,6 +2915,16 @@ public:
 		}
 		return 0;
 	}
+	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
+		vector3d const xlate(get_camera_coord_space_xlate());
+		cube_t const line_bcube((p1 - xlate), (p2 - xlate));
+
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
+			if (!i->second.get_bcube().intersects(line_bcube)) continue; // optimization
+			if (i->second.get_building_hit_color(p1, p2, color)) return 1; // line is generally pointed down and can only intersect one building; return the first hit
+		}
+		return 0;
+	}
 	void add_drawn(vector3d const &xlate, vector<building_creator_t *> &bcs) {
 		float const draw_dist(get_draw_tile_dist());
 		point const camera(get_camera_pos() - xlate);
@@ -3007,10 +3017,11 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	unsigned const coll1(building_creator_city.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 0));
 	if (coll1 && ret_any_pt) return coll1;
 	unsigned const coll2(building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 1));
-	return (coll2 ? coll2 : coll1);
+	return (coll2 ? coll2 : coll1); // Note: excludes building_tiles
 }
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
 	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.get_building_hit_color(p1, p2, color)) return 1;
+	if (building_tiles.get_building_hit_color(p1, p2, color)) return 1;
 	return building_creator.get_building_hit_color(p1, p2, color);
 }
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproc effects
