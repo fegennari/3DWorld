@@ -2925,6 +2925,14 @@ public:
 			if (i->second.is_visible(xlate)) {bcs.push_back(&i->second);}
 		}
 	}
+	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) {
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
+			cube_t const &bcube(i->second.get_bcube());
+			if (!lights_bcube.intersects_xy(bcube)) continue; // not within light volume (too far from camera)
+			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
+			i->second.add_interior_lights(xlate, lights_bcube);
+		}
+	}
 	unsigned get_tot_num_buildings() const {
 		unsigned num(0);
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {num += i->second.get_num_buildings();}
@@ -3014,7 +3022,11 @@ void clear_building_vbos() {
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
-void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {building_creator.add_interior_lights(xlate, lights_bcube);} // secondary buildings only for now
+
+void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) { // secondary buildings only for now
+	building_creator.add_interior_lights(xlate, lights_bcube);
+	building_tiles.add_interior_lights(xlate, lights_bcube);
+}
 // cars + peds
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
