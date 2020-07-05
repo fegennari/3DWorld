@@ -1909,11 +1909,11 @@ public:
 			for (int i = 0; i < (int)buildings.size(); ++i) {
 				building_t &b(buildings[i]);
 
-				if (do_flatten) {
+				if (do_flatten) { // flatten the mesh under the bcube to a height of mesh_zval
 					//assert(!b.is_rotated()); // too strong?
-					flatten_hmap_region(b.bcube); // flatten the mesh under the bcube to a height of mesh_zval
+					if (!is_tile) {flatten_hmap_region(b.bcube);} // can't flatten terrain when using tiles as this can generate seams
 				}
-				else { // extend building bottom downward to min mesh height
+				else { // extend building bottom downward to min mesh height; can break floor alignment for building interiors
 					float &zmin(b.bcube.z1()); // Note: grid bcube z0 value won't be correct, but will be fixed conservatively below
 					float const zmin0(zmin);
 					unsigned num_below(0);
