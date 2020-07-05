@@ -2943,6 +2943,9 @@ public:
 			i->second.add_interior_lights(xlate, lights_bcube);
 		}
 	}
+	void get_all_garages(vect_cube_t &garages) const {
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_all_garages(garages);}
+	}
 	unsigned get_tot_num_buildings() const {
 		unsigned num(0);
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {num += i->second.get_num_buildings();}
@@ -3066,5 +3069,6 @@ void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir) {bu
 void get_all_garages(vect_cube_t &garages) {
 	building_creator.get_all_garages(garages);
 	building_creator_city.get_all_garages(garages); // doesn't have houses/garages yet, but leave it in in case they're added in the future
+	building_tiles.get_all_garages(garages); // not sure if this should be included
 }
 
