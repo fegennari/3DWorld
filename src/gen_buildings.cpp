@@ -2918,6 +2918,13 @@ public:
 	}
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
 		vector3d const xlate(get_camera_coord_space_xlate());
+
+		if (p1.x == p2.x && p1.y == p2.y) { // vertical line, use map lookup optimization
+			int const x(round_fp(0.5f*(p1.x - xlate.x)/X_SCENE_SIZE)), y(round_fp(0.5f*(p1.y - xlate.y)/Y_SCENE_SIZE));
+			auto it(tiles.find(make_pair(x, y)));
+			if (it == tiles.end()) return 0;
+			return it->second.get_building_hit_color(p1, p2, color);
+		}
 		cube_t const line_bcube((p1 - xlate), (p2 - xlate));
 
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
