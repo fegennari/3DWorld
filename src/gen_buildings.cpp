@@ -1668,7 +1668,10 @@ class building_creator_t {
 		if (single_tile || world_mode != WMODE_INF_TERRAIN) { // not used in this mode - add all buildings to the first tile
 			grid_by_tile.resize(1);
 			grid_by_tile.front().bc_ixs.reserve(buildings.size());
-			for(unsigned bix = 0; bix < buildings.size(); ++bix) {grid_by_tile.front().add(buildings[bix].bcube, bix);}
+
+			for(unsigned bix = 0; bix < buildings.size(); ++bix) {
+				if (!buildings[bix].bcube.is_all_zeros()) {grid_by_tile.front().add(buildings[bix].bcube, bix);} // skip invalid buildings
+			}
 			return;
 		}
 		//timer_t timer("build_grid_by_tile");
@@ -1677,6 +1680,7 @@ class building_creator_t {
 		for(unsigned bix = 0; bix < buildings.size(); ++bix) {
 			unsigned gix;
 			cube_t const &bcube(buildings[bix].bcube);
+			if (bcube.is_all_zeros()) continue; // skip invalid buildings
 			uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(bcube.get_cube_center()));
 			auto it(tile_to_gbt.find(tile_id));
 
