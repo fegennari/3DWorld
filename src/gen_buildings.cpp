@@ -2675,6 +2675,7 @@ public:
 		building_draw_windows.clear_vbos();
 		building_draw_wind_lights.clear_vbos();
 		building_draw_interior.clear_vbos();
+		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom();} // likely required for tiled buildings
 	}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
