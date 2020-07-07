@@ -2495,7 +2495,8 @@ public:
 			glEnable(GL_CULL_FACE); // cull back faces to avoid lighting/shadows on inside walls of building interiors
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
-				bool const no_depth_write(!(*i)->is_single_tile());
+				bool const single_tile((*i)->is_single_tile()), no_depth_write(!single_tile);
+				if (single_tile && !(*i)->use_smap_this_frame) continue; // optimization
 				if (no_depth_write) {glDepthMask(GL_FALSE);} // disable depth writing
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
