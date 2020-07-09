@@ -1275,14 +1275,14 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 			vector3d expand;
 			expand[ hdim] = -4.0*indent; // shrink
 			expand[ tdim] = -1.0*indent; // shrink
-			expand[c.dim] =  0.1*indent; // expand outward
+			expand[c.dim] =  0.2*indent; // expand outward
 			title_area.expand_by(expand);
 			add_book_title(title, title_area, mat, text_color, hdim, tdim, c.dim, cdir, ldir, c.dir);
 		}
 		if (!upright && (!add_spine_title || (c.obj_id%3))) { // add title to front cover if upright
 			cube_t title_area_fc(c);
 			title_area_fc.z1()  = title_area_fc.z2();
-			title_area_fc.z2() += 0.1*indent;
+			title_area_fc.z2() += 0.2*indent;
 			title_area_fc.expand_in_dim(c.dim, -4.0*indent);
 			bool const top_dir(c.dim ^ c.dir);
 			
