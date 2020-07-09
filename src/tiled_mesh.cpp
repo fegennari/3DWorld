@@ -14,6 +14,7 @@ bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slower rendering
 bool const ENABLE_ANIMALS     = 1;
 bool const USE_PARAMS_HSCALE  = 0;
+bool const FLATTEN_BUILDING_TILE = 1; // removes terrain from the inside of buildings, but can create minor mesh seams and is slightly slower/higher memory usage
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const TILE_SMAP_START_TU_ID = 13;
@@ -2111,6 +2112,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	int const x1(-tile_radius + toffx), y1(-tile_radius + toffy);
 	int const x2( tile_radius + toffx), y2( tile_radius + toffy);
 	unsigned const init_tiles((unsigned)tiles.size());
+	bool const create_buildings_first(FLATTEN_BUILDING_TILE && using_tiled_terrain_hmap_tex());
 	unsigned num_erased(0);
 	min_camera_dist = FAR_DISTANCE;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
@@ -2141,8 +2143,9 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
 			tile_t *new_tile(new tile_t(tile));
 			to_gen_zvals.push_back(make_pair(new_tile->get_draw_priority(), new_tile));
-		}
-	}
+			if (create_buildings_first) {create_buildings_tile(x, y, 1);} // in this mode, we need to place buildings and flatten the heightmap before calculating tile heights
+		} // for x
+	} // for y
 	//if (to_gen_zvals.size() < max_cpu_tiles) {to_gen_zvals.clear();} // block until at least max_cpu_tiles tiles to generate (lower average gen time, but causes more slow frames/lag)
 	unsigned const num_to_gen(to_gen_zvals.size());
 	unsigned gen_this_frame(min(num_to_gen, max_tile_gen_per_frame));
@@ -2189,7 +2192,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		if (rel_dist <= DRAW_DIST_TILES) {
 			terrain_zmin = min(terrain_zmin, i->second->get_zmin());
 			if (!camera_surf_collide) {min_camera_dist = min(min_camera_dist, i->second->get_min_dist_to_pt(cpos, 0, 0));}
-			create_buildings_tile(i->first.x, i->first.y);
+			if (!create_buildings_first) {create_buildings_tile(i->first.x, i->first.y, 0);} // if create_buildings_first, buildings should have been created above; not flattened
 		}
 		else if (rel_dist > CLEAR_DIST_TILES) {remove_buildings_tile(i->first.x, i->first.y);}
 	}

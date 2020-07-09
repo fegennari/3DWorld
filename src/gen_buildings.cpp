@@ -1778,7 +1778,7 @@ public:
 		}
 		return 1;
 	}
-	void gen(building_params_t const &params, bool city_only, bool non_city_only, bool is_tile, int rseed=123) {
+	void gen(building_params_t const &params, bool city_only, bool non_city_only, bool is_tile, bool allow_flatten, int rseed=123) {
 		assert(!(city_only && non_city_only));
 		clear();
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
@@ -1908,7 +1908,7 @@ public:
 
 		if (params.flatten_mesh && !use_city_plots) { // not needed for city plots, which are already flat
 			timer_t timer("Gen Building Zvals", !is_tile);
-			bool const do_flatten(using_tiled_terrain_hmap_tex() && !is_tile); // can't flatten terrain when using tiles as this can generate seams
+			bool const do_flatten(allow_flatten && using_tiled_terrain_hmap_tex()); // can't always flatten terrain when using tiles as this can generate seams
 
 #pragma omp parallel for schedule(static,1) if (!is_tile)
 			for (int i = 0; i < (int)buildings.size(); ++i) {
@@ -1916,7 +1916,7 @@ public:
 
 				if (do_flatten) { // flatten the mesh under the bcube to a height of mesh_zval
 					//assert(!b.is_rotated()); // too strong?
-					if (!is_tile) {flatten_hmap_region(b.bcube);} // can't flatten terrain when using tiles as this can generate seams
+					flatten_hmap_region(b.bcube);
 				}
 				else { // extend building bottom downward to min mesh height
 					bool const shift_top(DRAW_WINDOWS_AS_HOLES); // shift is required to preserve height for floor alignment of building interiors
@@ -2886,7 +2886,7 @@ public:
 	unsigned size()  const {return tiles.size();}
 	vector3d get_max_extent() const {return max_extent;}
 
-	bool create_tile(int x, int y) {
+	bool create_tile(int x, int y, bool allow_flatten) {
 		auto it(tiles.find(make_pair(x, y)));
 		if (it != tiles.end()) return 0; // already exists
 		//cout << "Create building tile " << x << "," << y << ", tiles: " << tiles.size() << endl; // 299 tiles
@@ -2899,7 +2899,7 @@ public:
 		bcube.y2() = get_yval((y+1)*MESH_Y_SIZE);
 		global_building_params.set_pos_range(bcube);
 		int const rseed(x + (y << 16) + 12345); // should not be zero
-		bc.gen(global_building_params, 0, have_cities(), 1, rseed); // if there are cities, then tiles are non-city/secondary buildings
+		bc.gen(global_building_params, 0, have_cities(), 1, allow_flatten, rseed); // if there are cities, then tiles are non-city/secondary buildings
 		global_building_params.restore_prev_pos_range();
 		max_extent = max_extent.max(bc.get_max_extent());
 		return 1;
@@ -2986,8 +2986,8 @@ public:
 building_creator_t building_creator(0), building_creator_city(1);
 building_tiles_t building_tiles;
 
-void create_buildings_tile(int x, int y) {
-	if (global_building_params.gen_inf_buildings()) {building_tiles.create_tile(x, y);}
+void create_buildings_tile(int x, int y, bool allow_flatten) {
+	if (global_building_params.gen_inf_buildings()) {building_tiles.create_tile(x, y, allow_flatten);}
 }
 void remove_buildings_tile(int x, int y) {
 	if (global_building_params.gen_inf_buildings()) {building_tiles.remove_tile(x, y);}
@@ -2999,10 +2999,10 @@ void gen_buildings() {
 	update_sun_and_moon(); // need to update light_factor from sun to know if we need to generate window light geometry
 
 	if (world_mode == WMODE_INF_TERRAIN && have_cities()) {
-		building_creator_city.gen(global_building_params, 1, 0, 0); // city buildings
+		building_creator_city.gen(global_building_params, 1, 0, 0, 1); // city buildings
 		global_building_params.restore_prev_pos_range(); // hack to undo clip to city bounds to allow buildings to extend further out
-		building_creator.gen     (global_building_params, 0, 1, 0); // non-city secondary buildings
-	} else {building_creator.gen (global_building_params, 0, 0, 0);} // mixed buildings
+		building_creator.gen     (global_building_params, 0, 1, 0, 1); // non-city secondary buildings
+	} else {building_creator.gen (global_building_params, 0, 0, 0, 1);} // mixed buildings
 }
 void draw_buildings(int shadow_only, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
