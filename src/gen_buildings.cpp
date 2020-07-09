@@ -2906,8 +2906,8 @@ public:
 	}
 	bool remove_tile(int x, int y) {
 		auto it(tiles.find(make_pair(x, y)));
-		//cout << "Remove building tile " << x << "," << y << ", tiles: " << tiles.size() << endl;
 		if (it == tiles.end()) return 0; // not found
+		//cout << "Remove building tile " << x << "," << y << ", tiles: " << tiles.size() << endl;
 		it->second.clear_vbos(); // free VBOs/VAOs
 		tiles.erase(it);
 		return 1;
@@ -2920,6 +2920,13 @@ public:
 		tiles.clear();
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
+		if (radius == 0.0) { // single point, use map lookup optimization (for example for grass)
+			vector3d const xlate(get_camera_coord_space_xlate());
+			int const x(round_fp(0.5f*(pos.x - xlate.x)/X_SCENE_SIZE)), y(round_fp(0.5f*(pos.y - xlate.y)/Y_SCENE_SIZE));
+			auto it(tiles.find(make_pair(x, y)));
+			if (it == tiles.end()) return 0;
+			return it->second.check_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior);
+		}
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
 			if (i->second.check_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior)) return 1;
 		}
@@ -2928,7 +2935,7 @@ public:
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
 		vector3d const xlate(get_camera_coord_space_xlate());
 
-		if (p1.x == p2.x && p1.y == p2.y) { // vertical line, use map lookup optimization
+		if (p1.x == p2.x && p1.y == p2.y) { // vertical line, use map lookup optimization (for overhead map mode)
 			int const x(round_fp(0.5f*(p1.x - xlate.x)/X_SCENE_SIZE)), y(round_fp(0.5f*(p1.y - xlate.y)/Y_SCENE_SIZE));
 			auto it(tiles.find(make_pair(x, y)));
 			if (it == tiles.end()) return 0;
