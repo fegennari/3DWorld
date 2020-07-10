@@ -2878,7 +2878,9 @@ public:
 
 
 class building_tiles_t {
-	map<pair<int, int>, building_creator_t> tiles; // key is {x, y} pair
+	typedef pair<int, int> xy_pair;
+	map<xy_pair, building_creator_t> tiles; // key is {x, y} pair
+	set<xy_pair> generated; // only used in heightmap terrain mode, and generally limited to the size of the heightmap in tiles
 	vector3d max_extent;
 public:
 	building_tiles_t() : max_extent(zero_vector) {}
@@ -2886,8 +2888,9 @@ public:
 	unsigned size()  const {return tiles.size();}
 	vector3d get_max_extent() const {return max_extent;}
 
-	bool create_tile(int x, int y, bool allow_flatten) {
-		auto it(tiles.find(make_pair(x, y)));
+	int create_tile(int x, int y, bool allow_flatten) { // return value: 0=already exists, 1=newly generaged, 2=re-generated
+		xy_pair const loc(x, y);
+		auto it(tiles.find(loc));
 		if (it != tiles.end()) return 0; // already exists
 		//cout << "Create building tile " << x << "," << y << ", tiles: " << tiles.size() << endl; // 299 tiles
 		building_creator_t &bc(tiles[make_pair(x, y)]); // insert it
@@ -2902,6 +2905,7 @@ public:
 		bc.gen(global_building_params, 0, have_cities(), 1, allow_flatten, rseed); // if there are cities, then tiles are non-city/secondary buildings
 		global_building_params.restore_prev_pos_range();
 		max_extent = max_extent.max(bc.get_max_extent());
+		if (allow_flatten) {return (generated.insert(loc).second ? 1 : 2);}
 		return 1;
 	}
 	bool remove_tile(int x, int y) {
@@ -2986,11 +2990,13 @@ public:
 building_creator_t building_creator(0), building_creator_city(1);
 building_tiles_t building_tiles;
 
-void create_buildings_tile(int x, int y, bool allow_flatten) {
-	if (global_building_params.gen_inf_buildings()) {building_tiles.create_tile(x, y, allow_flatten);}
+int create_buildings_tile(int x, int y, bool allow_flatten) { // return value: 0=already exists, 1=newly generaged, 2=re-generated
+	if (!global_building_params.gen_inf_buildings()) return 0;
+	return building_tiles.create_tile(x, y, allow_flatten);
 }
-void remove_buildings_tile(int x, int y) {
-	if (global_building_params.gen_inf_buildings()) {building_tiles.remove_tile(x, y);}
+bool remove_buildings_tile(int x, int y) {
+	if (!global_building_params.gen_inf_buildings()) return 0;
+	return building_tiles.remove_tile(x, y);
 }
 
 vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);}

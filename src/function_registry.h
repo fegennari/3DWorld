@@ -1011,8 +1011,8 @@ bool have_buildings();
 unsigned get_buildings_gpu_mem_usage();
 vector3d get_buildings_max_extent();
 void clear_building_vbos();
-void create_buildings_tile(int x, int y, bool allow_flatten);
-void remove_buildings_tile(int x, int y);
+int create_buildings_tile(int x, int y, bool allow_flatten);
+bool remove_buildings_tile(int x, int y);
 void free_building_indir_texture();
 void end_building_rt_job();
 
