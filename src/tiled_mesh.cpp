@@ -2192,7 +2192,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		if (rel_dist <= DRAW_DIST_TILES) {
 			terrain_zmin = min(terrain_zmin, i->second->get_zmin());
 			if (!camera_surf_collide) {min_camera_dist = min(min_camera_dist, i->second->get_min_dist_to_pt(cpos, 0, 0));}
-			create_buildings_tile(i->first.x, i->first.y, create_buildings_first); // create, or re-create if create_buildings_first
+			create_buildings_tile(i->first.x, i->first.y, 0); // create, or re-create if create_buildings_first; should already be flat
 		}
 		else if (rel_dist > CLEAR_DIST_TILES) {remove_buildings_tile(i->first.x, i->first.y);}
 	}
