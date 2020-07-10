@@ -19,6 +19,7 @@ float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CITY_LIGHT_FALLOFF      = 0.2;
 
 
+float city_dlight_pcf_offset_scale(1.0);
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
@@ -216,7 +217,7 @@ void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool
 	if (use_smap) {
 		s.add_uniform_float("z_bias", pcf_scale*cobj_z_bias); // I guess pcf_scale is really some sort of light size scale and should apply to the z-bias as well
 		s.add_uniform_float("pcf_offset", 8.0*pcf_scale*shadow_map_pcf_offset);
-		s.add_uniform_float("dlight_pcf_offset", 0.0005*pcf_scale);
+		s.add_uniform_float("dlight_pcf_offset", 0.0005*pcf_scale*city_dlight_pcf_offset_scale);
 	}
 }
 

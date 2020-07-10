@@ -26,7 +26,7 @@ building_params_t global_building_params;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
-extern float CAMERA_RADIUS;
+extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale;
 extern double camera_zh;
 extern point sun_pos, pre_smap_player_pos;
 extern vector<light_source> dl_sources;
@@ -2244,6 +2244,7 @@ public:
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		float const pcf_scale = 0.2;
+		city_dlight_pcf_offset_scale = 0.67; // reduced for building interiors
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw, ext_door_draw;
@@ -2452,6 +2453,7 @@ public:
 		} // end transparent_windows
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
+		city_dlight_pcf_offset_scale = 1.0; // restore city value
 		setup_city_lights(xlate);
 
 		// main/batched draw pass
