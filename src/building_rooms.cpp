@@ -120,8 +120,8 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 		skip_wall = 2*objs.back().dim + (!objs.back().dir); // don't place trashcan on same wall as whiteboard (dir is opposite)
 	}
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a trashcan
-		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		if ((2U*dim + dir) == skip_wall) continue; // don't place a trashcan on this wall
+		bool dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+		if ((2U*dim + dir) == skip_wall) {dir ^= 1;} // don't place a trashcan on this wall, try opposite wall
 		center[dim] = room_bounds.d[dim][dir]; // against this wall
 		bool is_good(0);
 
