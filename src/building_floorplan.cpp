@@ -530,6 +530,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			assert(to_split.empty());
 			if (no_walls) {add_room(*p, part_id, 1, 0, 0);} // add entire part as a room
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
+			bool is_first_split(1);
 			
 			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
 				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*parts.size());}
@@ -575,6 +576,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				interior->walls[wall_dim].push_back(wall2);
 				bool const do_split(csz[wall_dim] > max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len); // split into two smaller rooms
 
+				if (is_house && is_first_split) {
+					// TODO: maybe create a hallway: create another split parallel to this one offset a bit toward the further part edge and make the room in between a hallway
+				}
 				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 					split_cube_t c_sub(c);
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
@@ -582,6 +586,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					c_sub.door_hi[!wall_dim][d] = hi_pos + wall_half_thick;
 					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, part_id, 1, 0, 0);} // leaf case (unsplit), add a new room
 				}
+				is_first_split = 0;
 			} // end while()
 			// insert walls to split up parts into rectangular rooms
 			float const min_split_wall_len(0.5*min_wall_len); // allow a shorter than normal wall because these walls have higher priority
