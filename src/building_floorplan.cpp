@@ -16,12 +16,15 @@ void remove_section_from_cube(cube_t &c, cube_t &c2, float v1, float v2, bool xy
 	c2 = c; // clone first cube
 	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side
 }
-void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, vect_door_t &doors) {
-	remove_section_from_cube(c, c2, v1, v2, xy);
+void add_door_to_doorway(cube_t &c, float v1, float v2, bool xy, bool open_dir, vect_door_t &doors) {
 	door_t door(c, !xy, open_dir, DRAW_OPEN_DOORS);
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
 	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
 	doors.push_back(door);
+}
+void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, vect_door_t &doors) {
+	remove_section_from_cube(c, c2, v1, v2, xy);
+	add_door_to_doorway(c, v1, v2, xy, open_dir, doors);
 }
 void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, vect_cube_t &walls, vect_door_t &doors) {
 	cube_t wall2;
@@ -527,6 +530,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 		else { // generate random walls using recursive 2D slices
 			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
+			float const min_split_len(max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len);
 			assert(to_split.empty());
 			if (no_walls) {add_room(*p, part_id, 1, 0, 0);} // add entire part as a room
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
@@ -574,10 +578,40 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, open_dir, interior->doors);
 				interior->walls[wall_dim].push_back(wall);
 				interior->walls[wall_dim].push_back(wall2);
-				bool const do_split(csz[wall_dim] > max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len); // split into two smaller rooms
+				bool const do_split(csz[wall_dim] > min_split_len); // split into two smaller rooms
 
-				if (is_house && is_first_split) {
-					// TODO: maybe create a hallway: create another split parallel to this one offset a bit toward the further part edge and make the room in between a hallway
+				if (is_house && is_first_split && csz[!wall_dim] > 1.2*min_split_len) { // wall/hall len is at least enough to place 2-3 rooms
+					// maybe create a hallway: create another split parallel to this one offset a bit and make the room in between a hallway
+					bool const dir((wall_pos - c.d[wall_dim][0]) < (c.d[wall_dim][1] - wall_pos)); // further part edge
+					float other_wall_pos(0.0);
+					bool other_pos_valid(0);
+
+					for (unsigned num = 0; num < 10; ++num) { // 10 tries to choose a wall pos that's not inside a window
+						other_wall_pos = wall_pos + ((dir ? 1.0 : -1.0)*rgen.rand_uniform(1.6, 2.4)*doorway_width); // opposite edge of hallway
+						if (on_edge && is_val_inside_window(*p, wall_dim, other_wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
+						other_pos_valid = 1; break; // done, keep wall_pos
+					}
+					float const other_side_room_len(dir ? (c.d[wall_dim][1] - other_wall_pos) : (other_wall_pos - c.d[wall_dim][0]));
+
+					if (other_pos_valid && other_side_room_len > 1.25*min_wall_len) { // room opposite the hallway is large enough
+						// create hallway room
+						cube_t hall(c);
+						hall.d[wall_dim][ dir] = other_wall_pos; // Note: building navigation code wants hallways to end at wall centerlines
+						hall.d[wall_dim][!dir] = wall_pos;
+						assert(hall.is_strictly_normalized());
+						unsigned const num_lights(2.0*csz[!wall_dim]/min_split_len); // more lights for longer hallways
+						add_room(hall, part_id, num_lights, 1, 0);
+						// add other wall parts and doorway, with a different random doorway pos
+						cube_t o_wall1(c), o_wall2;
+						create_wall(o_wall1, wall_dim, other_wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
+						float const door_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
+						float const o_lo_pos(door_pos - doorway_hwidth), o_hi_pos(door_pos + doorway_hwidth);
+						remove_section_from_cube_and_add_door(o_wall1, o_wall2, o_lo_pos, o_hi_pos, !wall_dim, !open_dir, interior->doors); // opens in other dir
+						interior->walls[wall_dim].push_back(o_wall1);
+						interior->walls[wall_dim].push_back(o_wall2);
+						wall.d[wall_dim][dir] = o_wall1.d[wall_dim][dir]; // make original wall the entire width of the hall so that the room on the other side doesn't overlap the hall
+						// FIXME: o_lo_pos and o_hi_pos need to be checked for walls in other dim (or unioned with?)
+					}
 				}
 				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 					split_cube_t c_sub(c);
