@@ -1165,7 +1165,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	cube_t frame(c);
 	vector3d exp;
 	exp.z = exp[!c.dim] = (whiteboard ? 0.04 : 0.06)*c.dz(); // frame width
-	exp[c.dim] = -0.1*c.get_sz_dim(c.dim); // shrink in this dim
+	exp[c.dim] = (whiteboard ? -0.1 : -0.25)*c.get_sz_dim(c.dim); // shrink in this dim
 	frame.expand_by(exp);
 	get_material(tid_nm_pair_t()).add_cube_to_verts(frame, (whiteboard ? GRAY : BLACK), tex_origin, skip_faces, 0);
 	
