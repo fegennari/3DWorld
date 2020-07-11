@@ -578,6 +578,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, open_dir, interior->doors);
 				interior->walls[wall_dim].push_back(wall);
 				interior->walls[wall_dim].push_back(wall2);
+				float door_lo[2] = {lo_pos, lo_pos}, door_hi[2] = {hi_pos, hi_pos}; // passed to next split step to avoid placing a wall that intersects this doorway
 				bool const do_split(csz[wall_dim] > min_split_len); // split into two smaller rooms
 
 				if (is_house && is_first_split && csz[!wall_dim] > 1.2*min_split_len) { // wall/hall len is at least enough to place 2-3 rooms
@@ -610,14 +611,15 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						interior->walls[wall_dim].push_back(o_wall1);
 						interior->walls[wall_dim].push_back(o_wall2);
 						wall.d[wall_dim][dir] = o_wall1.d[wall_dim][dir]; // make original wall the entire width of the hall so that the room on the other side doesn't overlap the hall
-						// FIXME: o_lo_pos and o_hi_pos need to be checked for walls in other dim (or unioned with?)
+						door_lo[dir] = o_lo_pos;
+						door_hi[dir] = o_hi_pos;
 					}
 				}
 				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
 					split_cube_t c_sub(c);
 					c_sub.d[wall_dim][d] = wall.d[wall_dim][!d]; // clip to wall pos
-					c_sub.door_lo[!wall_dim][d] = lo_pos - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
-					c_sub.door_hi[!wall_dim][d] = hi_pos + wall_half_thick;
+					c_sub.door_lo[!wall_dim][d] = door_lo[!d] - wall_half_thick; // set new door pos in this dim (keep door pos in other dim, if set)
+					c_sub.door_hi[!wall_dim][d] = door_hi[!d] + wall_half_thick;
 					if (do_split) {to_split.push_back(c_sub);} else {add_room(c_sub, part_id, 1, 0, 0);} // leaf case (unsplit), add a new room
 				}
 				is_first_split = 0;
