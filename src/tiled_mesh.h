@@ -482,8 +482,7 @@ public:
 	void end_lightning() const;
 	void clear_vbos_tids();
 	void clear_flowers();
-	bool remove_tile(tile_xy_pair const &tp);
-	void remove_tiles_adjacent_to(tile_xy_pair const &tp);
+	bool remove_tile(tile_xy_pair const &tp) {return (tiles.erase(tp) > 0);} // okay if tile doesn't exist; unused
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp) const;
 	tile_t *get_tile_containing_point(point const &pos) const;
 	void invalidate_tile_smap_at_pt(point const &pos, float radius);

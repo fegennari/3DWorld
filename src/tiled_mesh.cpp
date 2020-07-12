@@ -2143,14 +2143,8 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
 			tile_t *new_tile(new tile_t(tile));
 			to_gen_zvals.push_back(make_pair(new_tile->get_draw_priority(), new_tile));
-
-			if (create_buildings_first) { // in this mode, we need to place buildings and flatten the heightmap before calculating tile heights
-				int const ret(create_buildings_tile(x, y, 1)); // 0=already exists, 1=newly generaged, 2=re-generated
-				// Note: this doesn't work because tiles don't respect building-building spacing requirements,
-				// so two buildings can attempt to set the same heightmap entry to different values;
-				// that means there can be seams at a border between two building tiles that were previously generated if the were created in the opposite order
-				if (0 && ret == 1) {remove_tiles_adjacent_to(txy);} // newly generaged, remove and recreate adjacent tiles to fix any seams resulting from flattening near the borders
-			}
+			// in this mode, we need to place buildings and flatten the heightmap before calculating tile heights
+			if (create_buildings_first) {create_buildings_tile(x, y, 1);}
 		} // for x
 	} // for y
 	//if (to_gen_zvals.size() < max_cpu_tiles) {to_gen_zvals.clear();} // block until at least max_cpu_tiles tiles to generate (lower average gen time, but causes more slow frames/lag)
@@ -3238,15 +3232,6 @@ void tile_draw_t::clear_vbos_tids() {
 
 void tile_draw_t::clear_flowers() {
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_flowers();}
-}
-
-bool tile_draw_t::remove_tile(tile_xy_pair const &tp) { // okay if tile doesn't exist
-	return (tiles.erase(tp) > 0);
-}
-void tile_draw_t::remove_tiles_adjacent_to(tile_xy_pair const &tp) {
-	for (int dy = -1; dy <= 1; ++dy) {
-		for (int dx = -1; dx <= 1; ++dx) {remove_tile(tile_xy_pair(tp.x + dx, tp.y + dy));}
-	}
 }
 
 

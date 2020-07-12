@@ -2891,7 +2891,7 @@ public:
 class building_tiles_t {
 	typedef pair<int, int> xy_pair;
 	map<xy_pair, building_creator_t> tiles; // key is {x, y} pair
-	set<xy_pair> generated; // only used in heightmap terrain mode, and generally limited to the size of the heightmap in tiles
+	//set<xy_pair> generated; // only used in heightmap terrain mode, and generally limited to the size of the heightmap in tiles
 	vector3d max_extent;
 public:
 	building_tiles_t() : max_extent(zero_vector) {}
@@ -2917,7 +2917,7 @@ public:
 		bc.gen(global_building_params, 0, have_cities(), 1, allow_flatten, rseed); // if there are cities, then tiles are non-city/secondary buildings
 		global_building_params.restore_prev_pos_range();
 		max_extent = max_extent.max(bc.get_max_extent());
-		if (allow_flatten) {return (generated.insert(loc).second ? 1 : 2);}
+		//if (allow_flatten) {return (generated.insert(loc).second ? 1 : 2);} // Note: caller no longer uses this value, so don't need to maintain generated
 		return 1;
 	}
 	bool remove_tile(int x, int y) {
