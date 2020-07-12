@@ -152,6 +152,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	float const doorway_width(0.5*window_vspacing), doorway_hwidth(0.5*doorway_width);
 	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
 	float const wwf(global_building_params.get_window_width_fract()), window_border(0.5*(1.0 - wwf)); // (0.0, 1.0)
+	point bldg_door_open_dir_tp(bcube.get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
 	// houses have at most two parts; exclude garage, shed, porch, porch support, etc.
 	auto parts_end(get_real_parts_end());
 	vector<split_cube_t> to_split;
@@ -535,6 +536,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			if (no_walls) {add_room(*p, part_id, 1, 0, 0);} // add entire part as a room
 			else {to_split.emplace_back(*p);} // seed room is entire part, no door
 			bool is_first_split(1);
+			point part_door_open_dir_tp(p->get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
 			
 			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
 				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*parts.size());}
@@ -574,7 +576,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				create_wall(wall, wall_dim, wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
 				float const doorway_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
 				float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
-				bool const open_dir(wall_pos > p->get_center_dim(wall_dim)); // doors open away from the building center
+				bool const open_dir(wall_pos > part_door_open_dir_tp[wall_dim]); // doors open away from the building center
 				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, open_dir, interior->doors);
 				interior->walls[wall_dim].push_back(wall);
 				interior->walls[wall_dim].push_back(wall2);
@@ -613,6 +615,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						wall.d[wall_dim][dir] = o_wall1.d[wall_dim][dir]; // make original wall the entire width of the hall so that the room on the other side doesn't overlap the hall
 						door_lo[dir] = o_lo_pos;
 						door_hi[dir] = o_hi_pos;
+						part_door_open_dir_tp[wall_dim] = 0.5f*(wall_pos + other_wall_pos); // use the center of the hallway so that doors open into the rooms
+						if (get_real_num_parts() == 1) {bldg_door_open_dir_tp[wall_dim] = part_door_open_dir_tp[wall_dim];} // this is also the test point for the entire building
 					}
 				}
 				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack
@@ -731,7 +735,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					cand.d[!d][0] = lo_pos; cand.d[!d][1] = hi_pos;
 					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
 					if (interior->is_blocked_by_stairs_or_elevator(cand, doorway_width, elevators_only)) continue; // stairs in the way, skip; should we assert !pref_split?
-					bool const open_dir(wall.get_center_dim(d) > bcube.get_center_dim(d)); // doors open away from the building center
+					bool const open_dir(wall.get_center_dim(d) > bldg_door_open_dir_tp[d]); // doors open away from the building center
 					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0, walls, interior->doors); // Note: modifies wall
 					was_split = 1;
 					break;
