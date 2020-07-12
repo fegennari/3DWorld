@@ -594,9 +594,10 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						if (on_edge && is_val_inside_window(*p, wall_dim, other_wall_pos, window_hspacing[wall_dim], window_border)) continue; // try a new wall_pos
 						other_pos_valid = 1; break; // done, keep wall_pos
 					}
+					float const first_side_room_len(dir ? (wall_pos - c.d[wall_dim][0]) : (c.d[wall_dim][1] - wall_pos));
 					float const other_side_room_len(dir ? (c.d[wall_dim][1] - other_wall_pos) : (other_wall_pos - c.d[wall_dim][0]));
 
-					if (other_pos_valid && other_side_room_len > 1.25*min_wall_len) { // room opposite the hallway is large enough
+					if (other_pos_valid && min(first_side_room_len, other_side_room_len) > 1.2*min_wall_len) { // rooms on both sides of the hallway are large enough
 						// create hallway room
 						cube_t hall(c);
 						hall.d[wall_dim][ dir] = other_wall_pos; // Note: building navigation code wants hallways to end at wall centerlines
