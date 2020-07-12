@@ -1546,6 +1546,14 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	} // for i
 }
 
+void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // used for blocking room shadows between parts
+	building_mat_t const &mat(get_material());
+
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
+	}
+}
+
 void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 	if (!interior || is_house || real_num_parts == 1) return; // no a stacked case
 
@@ -2073,7 +2081,7 @@ public:
 		s.begin_color_only_shader(); // really don't even need colors
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
 		vector<point> points; // reused temporary
-		building_draw_t roof_parts_draw;
+		building_draw_t ext_parts_draw; // roof and exterior walls
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -2087,9 +2095,10 @@ public:
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
-						b.add_split_roof_shadow_quads(roof_parts_draw);
+						b.add_split_roof_shadow_quads(ext_parts_draw);
 						b.draw_room_geom(s, xlate, 1, 1); // shadow_only=1, inc_small=1
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
+						if (b.get_real_num_parts() > 1) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						if (ped_ix < 0 && !add_player_shadow) continue; // nothing else to draw
@@ -2116,7 +2125,7 @@ public:
 				(*i)->building_draw_vbo.draw(s, 1);
 			}
 		} // for i
-		roof_parts_draw.draw(s, 1, 1, 1);
+		ext_parts_draw.draw(s, 1, 1, 1);
 		if (interior_shadow_maps) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
 		fgPopMatrix();
