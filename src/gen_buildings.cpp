@@ -1916,7 +1916,7 @@ public:
 
 		if (params.flatten_mesh && !use_city_plots) { // not needed for city plots, which are already flat
 			timer_t timer("Gen Building Zvals", !is_tile);
-			bool const do_flatten(allow_flatten && using_tiled_terrain_hmap_tex()); // can't always flatten terrain when using tiles as this can generate seams
+			bool const do_flatten(allow_flatten && using_tiled_terrain_hmap_tex()); // can't always flatten terrain when using tiles
 
 #pragma omp parallel for schedule(static,1) if (!is_tile)
 			for (int i = 0; i < (int)buildings.size(); ++i) {
@@ -2906,11 +2906,12 @@ public:
 		//cout << "Create building tile " << x << "," << y << ", tiles: " << tiles.size() << endl; // 299 tiles
 		building_creator_t &bc(tiles[make_pair(x, y)]); // insert it
 		assert(bc.empty());
+		int const border(allow_flatten ? 1 : 0); // add a 1 pixel border around the tile to avoid creating a seam when an adjacent tile's edge height is modified
 		cube_t bcube(all_zeros);
-		bcube.x1() = get_xval(x*MESH_X_SIZE);
-		bcube.y1() = get_yval(y*MESH_Y_SIZE);
-		bcube.x2() = get_xval((x+1)*MESH_X_SIZE);
-		bcube.y2() = get_yval((y+1)*MESH_Y_SIZE);
+		bcube.x1() = get_xval(x*MESH_X_SIZE + border);
+		bcube.y1() = get_yval(y*MESH_Y_SIZE + border);
+		bcube.x2() = get_xval((x+1)*MESH_X_SIZE - border);
+		bcube.y2() = get_yval((y+1)*MESH_Y_SIZE - border);
 		global_building_params.set_pos_range(bcube);
 		int const rseed(x + (y << 16) + 12345); // should not be zero
 		bc.gen(global_building_params, 0, have_cities(), 1, allow_flatten, rseed); // if there are cities, then tiles are non-city/secondary buildings
