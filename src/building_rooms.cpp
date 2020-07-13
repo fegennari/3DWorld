@@ -10,11 +10,12 @@
 bool const ADD_BOOK_COVERS = 1;
 bool const ADD_BOOK_TITLES = 1;
 unsigned const NUM_BOOK_COLORS = 16;
+unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
 colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 
 object_model_loader_t building_obj_model_loader;
 
-extern int display_mode;
+extern int display_mode, frame_counter;
 extern pos_dir_up camera_pdu;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
@@ -1655,17 +1656,27 @@ void building_room_geom_t::create_dynamic_vbos() {
 	mats_dynamic.create_vbos();
 }
 
+
 void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
+	static int last_frame(0);
+	static unsigned num_geom_this_frame(0); // used to limit per-frame geom gen time; doesn't apply to shadow pass, in case shadows are cached
+	if (frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;}
 
 	if (has_pictures && num_pic_tids != num_screenshot_tids) {
 		clear_materials(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
-	if (mats_static .empty()) {create_static_vbos(0);} // create static  materials if needed
-	if (mats_dynamic.empty()) {create_dynamic_vbos();} // create dynamic materials if needed
-	if (inc_small && mats_small.empty()) {create_static_vbos(1);} // create small  materials if needed
+	if (mats_static.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create static materials if needed
+		create_static_vbos(0);
+		++num_geom_this_frame;
+	}
+	if (inc_small && mats_small.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create small materials if needed
+		create_static_vbos(1);
+		++num_geom_this_frame;
+	}
+	if (mats_dynamic.empty()) {create_dynamic_vbos();} // create dynamic materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	mats_static .draw(s, shadow_only);
 	mats_dynamic.draw(s, shadow_only);
