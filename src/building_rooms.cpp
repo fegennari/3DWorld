@@ -368,6 +368,18 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	return (placed_toilet || placed_sink || placed_tub);
 }
 
+bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+	// Note: table and chairs have already been placed
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FRIDGE)) return 0; // no fridge
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FRIDGE)); // D, W, H
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.25*wall_thickness);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	vect_cube_t const avoid(objs.begin()+objs_start, objs.end()); // could be more efficient
+	return place_obj_along_wall(TYPE_FRIDGE, 0.72*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, avoid);
+}
+
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
@@ -541,6 +553,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
+	bool added_kitchen(0);
 
 	if (is_house && rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0);
@@ -705,6 +718,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				added_tc = added_obj = can_place_book = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
+
+				// on ground floor, try to make this a kitchen; if it has an external door then reject the room half the time, because most houses don't have a front door that opens to the kitchen;
+				// not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
+				if (added_tc && !added_kitchen && f == 0 && (!is_room_adjacent_to_ext_door(*r) || rgen.rand_bool())) {
+					added_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+				}
 			}
 			if (!added_obj) { // try to place a desk if there's no table/bed
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
