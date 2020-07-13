@@ -2094,8 +2094,11 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	unsigned const max_cpu_tiles          = 3; // 0 = GPU only
 	unsigned const max_defer_tiles        = 8; // 0 = disable
 	if (height_gens.empty()) {height_gens.resize(max(max_defer_tiles, 1U));}
-	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {read_default_hmap_modmap();}
-	
+
+	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {
+		read_default_hmap_modmap();
+		force_onto_surface_mesh(surface_pos); // move camera onto newly loaded terrain so that the first drawn frame is correct
+	}
 	if (!buildings_valid) {
 		gen_buildings();
 		gen_city_details(); // after building generation
