@@ -423,7 +423,11 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 
 bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	if (!room_object_t::enable_pictures()) return 0; // disabled
-	if (!is_house && !room.is_office) return 0; // houses and offices only for now
+	
+	if (!is_house && !room.is_office) {
+		if (room.is_hallway) return 0; // no pictures or whiteboards in office building hallways
+		// room in a commercial building - add whiteboard when there is a full wall to use
+	}
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
@@ -432,7 +436,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool was_hung(0);
 
-	if (room.is_office) { // add whiteboards
+	if (!is_house || room.is_office) { // add whiteboards
 		if (rgen.rand_float() < 0.2) return 0; // skip 20% of the time
 		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
 
@@ -449,7 +453,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
 				keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
 				if (overlaps_other_room_obj(keepout, objs_start)) continue;
-				if (is_cube_close_to_doorway(c)) continue; // bad placement (inc_open=1?)
+				if (is_cube_close_to_doorway(c, 0.0, !room.is_office)) continue; // bad placement (inc_open=!is_office)
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
 				return 1; // done, only need to add one
 			} // for dir
