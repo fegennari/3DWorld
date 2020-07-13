@@ -425,7 +425,6 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	if (!room_object_t::enable_pictures()) return 0; // disabled
 	if (!is_house && !room.is_office) return 0; // houses and offices only for now
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
-	if (room.is_hallway ) return 0; // no pictures in hallways (yet)
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness), side_clearance(1.0*wall_thickness);
@@ -461,7 +460,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
 			if (fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
-			if (rgen.rand_float() < 0.2) continue; // skip 20% of the time
+			if (!room.is_hallway && rgen.rand_float() < 0.2) continue; // skip 20% of the time unless it's a hallway
 			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)), width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
 			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
 			point center;
@@ -478,6 +477,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				cube_t c(center, center);
 				c.expand_in_dim(2, 0.5*height);
 				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
+				if (room.is_hallway) {c.translate_dim((dir ? -1.0 : 1.0)*0.5*wall_thickness, dim);} // add an additional half wall thickness for hallways
 				c.expand_in_dim(!dim, 0.5*width);
 				cube_t tc(c);
 				tc.expand_in_dim(!dim, 0.1*width); // expand slightly to account for frame
@@ -698,7 +698,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
-			if (r->no_geom) continue; // no other geometry for this room
+
+			if (r->no_geom) {
+				// allow pictures in the hallways of houses; assume lights are on
+				if (is_house && r->is_hallway) {hang_pictures_in_room(rgen, *r, room_center.z, room_id, (light_amt + room_light_intensity), is_lit, objs.size());}
+				continue; // no other geometry for this room
+			}
 			if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building rooms that have stairs
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
