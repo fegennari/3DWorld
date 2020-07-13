@@ -428,7 +428,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	if (room.is_hallway ) return 0; // no pictures in hallways (yet)
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
-	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness);
+	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness), side_clearance(1.0*wall_thickness);
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool was_hung(0);
@@ -448,6 +448,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				cube_t keepout(c);
 				keepout.z1() = zval; // extend to the floor
 				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
+				keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
 				if (overlaps_other_room_obj(keepout, objs_start)) continue;
 				if (is_cube_close_to_doorway(c)) continue; // bad placement (inc_open=1?)
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
@@ -483,6 +484,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				cube_t keepout(c);
 				keepout.z1() = zval; // extend to the floor
 				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
+				keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
 				if (overlaps_other_room_obj(keepout, objs_start)) continue;
 				if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator_no_expand(tc, 4.0*wall_thickness)) continue; // bad placement
 				objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
