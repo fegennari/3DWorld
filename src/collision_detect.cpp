@@ -1762,7 +1762,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		proc_player_city_sphere_coll(pos);
 		camera_last_pos = pos;
 		camera_change   = 0;
-		return; // infinite terrain mode
+		return; // that's it
 	}
 	if (cflight) {
 		if (jump_time) {pos.z += 0.5*JUMP_ACCEL*fticks*radius; jump_time = 0;}

@@ -2562,7 +2562,7 @@ void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height) 
 			return;
 		}
 	}
-	pos.z = mesh_zval; // no model collision, place no mesh
+	pos.z = mesh_zval; // no model collision, place on mesh
 }
 
 void check_legal_movement_using_model_coll(point const &prev, point &cur, float radius) {

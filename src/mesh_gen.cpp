@@ -332,9 +332,7 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 
 	if (surface_type != 5) {
 		if (!keep_sin_table || !init || update_zvals) {
-			if (AUTOSCALE_HEIGHT && world_mode == WMODE_GROUND) {
-				mesh_origin.z = camera_origin.z = surface_pos.z = 0.5f*(zmin + zmax);
-			}
+			if (AUTOSCALE_HEIGHT && world_mode == WMODE_GROUND) {mesh_origin.z = camera_origin.z = surface_pos.z = 0.5f*(zmin + zmax);}
 			estimate_zminmax(surface_type < 3);
 		}
 		else {
