@@ -370,6 +370,9 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 
 bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	// Note: table and chairs have already been placed
+	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be kitchens
+	if (!is_house && rgen.rand_bool()) return 0; // some office buildings have kitchens, allow it half the time
+	if (is_room_adjacent_to_ext_door(room) && rgen.rand_bool()) return 0; // if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FRIDGE)) return 0; // no fridge
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FRIDGE)); // D, W, H
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -729,12 +732,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				added_tc = added_obj = can_place_book = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
-
-				// on ground floor, try to make this a kitchen; if it has an external door then reject the room half the time, because most houses don't have a front door that opens to the kitchen;
-				// not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
-				if (added_tc && !added_kitchen && f == 0 && (!is_room_adjacent_to_ext_door(*r) || rgen.rand_bool())) {
-					added_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
-				}
+				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
+				if (added_tc && !added_kitchen && f == 0) {added_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);}
 			}
 			if (!added_obj) { // try to place a desk if there's no table/bed
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
