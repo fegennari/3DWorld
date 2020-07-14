@@ -381,6 +381,10 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FRIDGE)); // D, W, H
 		added_obj |= place_obj_along_wall(TYPE_FRIDGE, 0.72*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
 	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_STOVE)) { // have a stove
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_STOVE)); // D, W, H
+		added_obj |= place_obj_along_wall(TYPE_STOVE, 0.50*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
+	}
 	return added_obj;
 }
 
@@ -1663,7 +1667,7 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_WINDOW:  add_window  (*i, tscale); break;
 			case TYPE_TUB:     add_tub_outer(*i);
 				// fallthrough
-			case TYPE_TOILET: case TYPE_SINK: case TYPE_FRIDGE:
+			case TYPE_TOILET: case TYPE_SINK: case TYPE_FRIDGE: case TYPE_STOVE:
 				obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET));
 				break;
 			case TYPE_ELEVATOR: break; // not handled here
