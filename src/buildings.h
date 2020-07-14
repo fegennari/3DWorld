@@ -532,7 +532,7 @@ struct building_t : public building_geom_t {
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	bool place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
-		unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, vect_cube_t const &avoid);
+		unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start);
 	void update_elevators(point const &player_pos);
 private:
 	cube_t get_walkable_room_bounds(room_t const &room) const;

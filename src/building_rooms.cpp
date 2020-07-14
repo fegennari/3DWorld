@@ -296,7 +296,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 }
 
 bool building_t::place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
-	unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, vect_cube_t const &avoid)
+	unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
 	cube_t c;
@@ -311,7 +311,7 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 		c.d[ dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		c.d[!dim][   0] = center - hwidth;
 		c.d[!dim][   1] = center + hwidth;
-		if (has_bcube_int(c, avoid) || is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement
+		if (overlaps_other_room_obj(c, objs_start) || is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement
 		interior->room_geom->objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
 		return 1; // done
 	} // for n
@@ -324,8 +324,8 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	place_area.expand_by(-0.5*wall_thickness);
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	unsigned const objs_start(objs.size());
 	bool placed_toilet(0), placed_sink(0), placed_tub(0);
-	vect_cube_t avoid;
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
@@ -349,21 +349,19 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
 				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, used for placing sink
 				c.expand_in_dim(!dim, 0.4*width); // more padding on the sides
-				avoid.push_back(c);
 				placed_toilet = 1; // done
 			} // for d
 		} // for n
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) { // have a sink model - place sink
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK)); // D, W, H
-		placed_sink = place_obj_along_wall(TYPE_SINK, 0.45*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, avoid);
-		if (placed_sink) {avoid.push_back(objs.back());}
+		placed_sink = place_obj_along_wall(TYPE_SINK, 0.45*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TUB)) { // have a bathtub model - place bathtub
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TUB)); // D, W, H
 		cube_t place_area_tub(room_bounds);
 		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
-		placed_tub = place_obj_along_wall(TYPE_TUB, 0.2*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, avoid);
+		placed_tub = place_obj_along_wall(TYPE_TUB, 0.2*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start);
 	}
 	return (placed_toilet || placed_sink || placed_tub);
 }
@@ -373,14 +371,17 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be kitchens
 	if (!is_house && rgen.rand_bool()) return 0; // some office buildings have kitchens, allow it half the time
 	if (is_room_adjacent_to_ext_door(room) && rgen.rand_bool()) return 0; // if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
-	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FRIDGE)) return 0; // no fridge
-	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FRIDGE)); // D, W, H
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-0.25*wall_thickness);
+	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	vect_cube_t const avoid(objs.begin()+objs_start, objs.end()); // could be more efficient
-	return place_obj_along_wall(TYPE_FRIDGE, 0.72*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, avoid);
+	bool added_obj(0);
+
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FRIDGE)) { // have a fridge
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FRIDGE)); // D, W, H
+		added_obj |= place_obj_along_wall(TYPE_FRIDGE, 0.72*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
+	}
+	return added_obj;
 }
 
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
