@@ -9,8 +9,8 @@
 
 bool const ADD_BOOK_COVERS = 1;
 bool const ADD_BOOK_TITLES = 1;
-unsigned const NUM_BOOK_COLORS = 16;
 unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
+unsigned const NUM_BOOK_COLORS = 16;
 colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 
 object_model_loader_t building_obj_model_loader;
@@ -297,7 +297,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 }
 
 bool building_t::place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
-	unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start)
+	unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start, colorRGBA const &color)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
 	cube_t c;
@@ -313,7 +313,7 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 		c.d[!dim][   0] = center - hwidth;
 		c.d[!dim][   1] = center + hwidth;
 		if (overlaps_other_room_obj(c, objs_start) || is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c)) continue; // bad placement
-		interior->room_geom->objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		interior->room_geom->objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
 		return 1; // done
 	} // for n
 	return 0; // failed
@@ -381,16 +381,34 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FRIDGE)); // D, W, H
 		added_obj |= place_obj_along_wall(TYPE_FRIDGE, 0.72*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
 	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_STOVE)) { // have a stove
+	if (is_house && building_obj_model_loader.is_model_valid(OBJ_MODEL_STOVE)) { // have a stove
+		// TODO: clearance
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_STOVE)); // D, W, H
 		added_obj |= place_obj_along_wall(TYPE_STOVE, 0.50*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
 	}
 	return added_obj;
 }
 
-bool building_t::add_livingroom_objs (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
-	// TODO: WRITE
-	return 0;
+bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+	if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be living rooms
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	bool added_obj(0);
+
+	// TODO: add a function
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) { // have a TV
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
+		added_obj |= place_obj_along_wall(TYPE_TV, 0.44*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
+	}
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_COUCH)) { // have a couch
+		unsigned const NUM_COLORS = 8;
+		colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_COUCH)); // D, W, H
+		added_obj |= place_obj_along_wall(TYPE_COUCH, 0.42*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, colors[rgen.rand()%NUM_COLORS]);
+	}
+	return added_obj;
 }
 
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
@@ -572,7 +590,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
-	bool added_kitchen(0);
+	bool added_kitchen(0), added_living(0);
 
 	if (is_house && rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0);
@@ -725,7 +743,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 			unsigned const objs_start(objs.size());
-			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0);
+			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_kitchen(0);
 			cube_t avoid_cube;
 
 			// place room objects
@@ -743,10 +761,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				added_tc = added_obj = can_place_book = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
-				if (added_tc && !added_kitchen && f == 0) {added_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);}
+				if (added_tc && !added_kitchen && f == 0) {added_kitchen = is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);}
 			}
 			if (!added_obj) { // try to place a desk if there's no table/bed
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
+			}
+			if (can_place_book && !is_kitchen && f == 0 && (!added_living || is_room_adjacent_to_ext_door(*r))) {
+				// add a living room on the ground floor if it has a table or desk but isn't a kitchen
+				added_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
 			}
 			if (can_place_book) { // an object was placed (table or desk), maybe add a book on top of it
 				if (rgen.rand_float() < (added_tc ? 0.4 : 0.75)*(is_house ? 1.0 : 0.5)*(r->is_office ? 0.75 : 1.0)) {
@@ -1672,8 +1694,8 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_WINDOW:  add_window  (*i, tscale); break;
 			case TYPE_TUB:     add_tub_outer(*i);
 				// fallthrough
-			case TYPE_TOILET: case TYPE_SINK: case TYPE_FRIDGE: case TYPE_STOVE:
-				obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET));
+			case TYPE_TOILET: case TYPE_SINK: case TYPE_FRIDGE: case TYPE_STOVE: case TYPE_TV: case TYPE_COUCH:
+				obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);
 				break;
 			case TYPE_ELEVATOR: break; // not handled here
 			default: assert(0); // undefined type
@@ -1732,7 +1754,7 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
 		vector3d dir(zero_vector);
 		dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
-		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, dir, WHITE, zero_vector, i->model_id, shadow_only, 0, 0);
+		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, dir, i->color, zero_vector, i->model_id, shadow_only, 0, 0);
 		obj_drawn = 1;
 	}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix

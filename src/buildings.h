@@ -189,12 +189,12 @@ struct draw_range_t {
 };
 
 enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
-	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_WINDOW,
-	                 NUM_TYPES};
+	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV,
+	                 TYPE_COUCH, TYPE_WINDOW, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U, SHAPE_TALL};
 enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED};
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
-enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, NUM_OBJ_MODELS};
+enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_COUCH, NUM_OBJ_MODELS};
 
 // object flags, currently used for room lights
 uint8_t const RO_FLAG_LIT     = 0x01; // light is on
@@ -274,7 +274,8 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 
 struct obj_model_inst_t {
 	unsigned obj_id, model_id;
-	obj_model_inst_t(unsigned oid, unsigned mid) : obj_id(oid), model_id(mid) {}
+	colorRGBA color;
+	obj_model_inst_t(unsigned oid, unsigned mid, colorRGBA const &c) : obj_id(oid), model_id(mid), color(c) {}
 };
 
 struct building_room_geom_t {
@@ -533,7 +534,7 @@ struct building_t : public building_geom_t {
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	bool place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval,
-		unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start);
+		unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start, colorRGBA const &color=WHITE);
 	void update_elevators(point const &player_pos);
 private:
 	cube_t get_walkable_room_bounds(room_t const &room) const;

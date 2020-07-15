@@ -92,6 +92,8 @@ city sink_model ../models/interiors/simple_sink.model3d  1 -1 -1 90  0 1.0 1.0  
 city tub_model ../models/interiors/bathtub.model3d  1 -1 -1 90  1 1.0 1.0  0
 city fridge_model ../models/interiors/fridge/Fridge.model3d  1 0 -1 90  1 1.0 1.0  0
 city stove_model ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 0 -1 90  1 1.0 1.0  0
+city tv_model ../models/interiors/SmartTV/SmartTV.obj  1 -1 -1 90  1 1.0 1.0  0
+city couch_model ../models/interiors/couch/OBJ.obj  1 0 -1 90  1 1.0 1.0  0
 
 city max_lights 1024
 city max_shadow_maps 40
