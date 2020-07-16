@@ -1669,6 +1669,7 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible()) continue;
 		assert(i->is_strictly_normalized());
+		assert(i->type < NUM_TYPES);
 
 		if (small_objs) {
 			switch (i->type) {
@@ -1692,14 +1693,13 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_TCAN:    add_trashcan(*i); break;
 			case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
 			case TYPE_WINDOW:  add_window  (*i, tscale); break;
-			case TYPE_TUB:     add_tub_outer(*i);
-				// fallthrough
-			case TYPE_TOILET: case TYPE_SINK: case TYPE_FRIDGE: case TYPE_STOVE: case TYPE_TV: case TYPE_COUCH:
-				obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);
-				break;
+			case TYPE_TUB:     add_tub_outer(*i); break;
+			case TYPE_TV:      break; // TODO: draw a picture on the screen sometimes?
 			case TYPE_ELEVATOR: break; // not handled here
-			default: assert(0); // undefined type
 			}
+		}
+		if (i->type >= TYPE_TOILET) { // handle drawing of 3D models
+			obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);
 		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting

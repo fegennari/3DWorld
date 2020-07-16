@@ -72,6 +72,7 @@ inline bool read_type_t(FILE *fp,     bool  &val) {return read_bool  (fp, val);}
 
 bool read_float_reset_pos_on_fail(FILE *fp, float &v);
 bool read_int_reset_pos_on_fail(FILE *fp, int &v);
+std::string read_quoted_string(FILE *fp, unsigned &line_num);
 
 struct geom_xform_t;
 unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c);

@@ -10,7 +10,9 @@ extern city_params_t city_params;
 bool city_model_t::read(FILE *fp) { // filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult shadow_mat_ids
 
 	assert(fp);
-	if (!read_string(fp, fn)) return 0;
+	unsigned line_num(0); // unused
+	fn = read_quoted_string(fp, line_num);
+	if (fn.empty()) return 0;
 	if (!read_int(fp, recalc_normals)) return 0; // 0,1,2
 	if (!read_int(fp, body_mat_id)) return 0;
 	if (!read_int(fp, fixed_color_id)) return 0;
