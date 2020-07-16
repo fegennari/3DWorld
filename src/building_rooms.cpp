@@ -400,13 +400,13 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	// TODO: add a function
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) { // have a TV
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
-		added_obj |= place_obj_along_wall(TYPE_TV, 0.44*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
+		added_obj |= place_obj_along_wall(TYPE_TV, 0.45*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, GRAY_BLACK);
 	}
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_COUCH)) { // have a couch
 		unsigned const NUM_COLORS = 8;
 		colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_COUCH)); // D, W, H
-		added_obj |= place_obj_along_wall(TYPE_COUCH, 0.42*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, colors[rgen.rand()%NUM_COLORS]);
+		added_obj |= place_obj_along_wall(TYPE_COUCH, 0.40*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, colors[rgen.rand()%NUM_COLORS]);
 	}
 	return added_obj;
 }
