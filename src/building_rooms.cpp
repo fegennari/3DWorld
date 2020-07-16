@@ -318,6 +318,13 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 	} // for n
 	return 0; // failed
 }
+bool building_t::place_model_along_wall(unsigned model_id, room_object type, float height, rand_gen_t &rgen, float zval,
+	unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start, colorRGBA const &color)
+{
+	if (!building_obj_model_loader.is_model_valid(model_id)) return 0; // don't have a model of this type
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
+	return place_obj_along_wall(type, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, color);
+}
 
 bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -325,7 +332,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	place_area.expand_by(-0.5*wall_thickness);
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	bool placed_toilet(0), placed_sink(0), placed_tub(0);
+	bool placed_obj(0);
 
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
@@ -333,12 +340,12 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 		unsigned const first_corner(rgen.rand() & 3);
 		bool const first_dim(rgen.rand_bool());
 
-		for (unsigned n = 0; n < 4 && !placed_toilet; ++n) { // try 4 room corners
+		for (unsigned n = 0; n < 4 && !placed_obj; ++n) { // try 4 room corners
 			unsigned const corner_ix((first_corner + n)&3);
 			bool const xdir(corner_ix&1), ydir(corner_ix>>1);
 			point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
 		
-			for (unsigned d = 0; d < 2 && !placed_toilet; ++d) { // try both dims
+			for (unsigned d = 0; d < 2 && !placed_obj; ++d) { // try both dims
 				bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir);
 				cube_t c(corner, corner);
 				c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? width : length);
@@ -349,21 +356,18 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
 				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, used for placing sink
 				c.expand_in_dim(!dim, 0.4*width); // more padding on the sides
-				placed_toilet = 1; // done
+				placed_obj = 1; // done
 			} // for d
 		} // for n
 	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)) { // have a sink model - place sink
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK)); // D, W, H
-		placed_sink = place_obj_along_wall(TYPE_SINK, 0.45*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
-	}
-	if (is_house && building_obj_model_loader.is_model_valid(OBJ_MODEL_TUB)) { // have a bathtub model - place bathtub, only in houses
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TUB)); // D, W, H
+	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
+
+	if (is_house) { // not in office buildings
 		cube_t place_area_tub(room_bounds);
 		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
-		placed_tub = place_obj_along_wall(TYPE_TUB, 0.2*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start);
+		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, 0.2, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start);
 	}
-	return (placed_toilet || placed_sink || placed_tub);
+	return placed_obj;
 }
 
 bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
@@ -375,18 +379,10 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	bool added_obj(0);
-
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FRIDGE)) { // have a fridge
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FRIDGE)); // D, W, H
-		added_obj |= place_obj_along_wall(TYPE_FRIDGE, 0.72*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
-	}
-	if (is_house && building_obj_model_loader.is_model_valid(OBJ_MODEL_STOVE)) { // have a stove
-		// TODO: clearance
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_STOVE)); // D, W, H
-		added_obj |= place_obj_along_wall(TYPE_STOVE, 0.50*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
-	}
-	return added_obj;
+	bool placed_obj(0);
+	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, 0.72, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);
+	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, 0.50, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start);}
+	return placed_obj;
 }
 
 bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
@@ -395,20 +391,13 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	bool added_obj(0);
-
-	// TODO: add a function
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) { // have a TV
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
-		added_obj |= place_obj_along_wall(TYPE_TV, 0.45*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, GRAY_BLACK);
-	}
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_COUCH)) { // have a couch
-		unsigned const NUM_COLORS = 8;
-		colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_COUCH)); // D, W, H
-		added_obj |= place_obj_along_wall(TYPE_COUCH, 0.40*floor_spacing, sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, colors[rgen.rand()%NUM_COLORS]);
-	}
-	return added_obj;
+	bool placed_obj(0);
+	placed_obj |= place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, BKGRAY);
+	// place couches with a variety of colors
+	unsigned const NUM_COLORS = 8;
+	colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
+	placed_obj |= place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, 0.40, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, colors[rgen.rand()%NUM_COLORS]);
+	return placed_obj;
 }
 
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
