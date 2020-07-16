@@ -1721,12 +1721,16 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_pass, bool is_z_prepass,
 	int enable_alpha_mask, bool is_bmap_pass, point const *const xlate)
 {
-	if (mat_id == materials.size()) { // unbound geom is material ID materials.size() (one past the end)
-		unbound_geom.render(shader, is_shadow_pass, xlate);
-		return;
+	if (mat_id == materials.size()) {unbound_geom.render(shader, is_shadow_pass, xlate);} // unbound geom is material ID materials.size() (one past the end)
+	else {get_material(mat_id).render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate);}
+}
+
+void model3d::set_color_for_material(unsigned mat_id, colorRGBA const &color) {
+	if (mat_id == materials.size()) {unbound_mat.color = color;} // unbound geom is material ID materials.size() (one past the end)
+	else {
+		material_t &mat(get_material(mat_id));
+		mat.ka = mat.kd = color;
 	}
-	assert(mat_id < materials.size());
-	materials[mat_id].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate);
 }
 
 

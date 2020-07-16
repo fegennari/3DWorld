@@ -73,11 +73,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	assert(size() == num_models()); // must be loaded
 	city_model_t const &model_file(get_model(model_id));
 	model3d &model(at(model_id));
-
-	if (!is_shadow_pass && model_file.body_mat_id >= 0 && color.A != 0.0) { // use custom color for body material
-		material_t &body_mat(model.get_material(model_file.body_mat_id));
-		body_mat.ka = body_mat.kd = color;
-	}
+	if (!is_shadow_pass && model_file.body_mat_id >= 0 && color.A != 0.0) {model.set_color_for_material(model_file.body_mat_id, color);} // use custom color for body material
 	model.bind_all_used_tids();
 	cube_t const &bcube(model.get_bcube());
 	point const orig_camera_pos(camera_pdu.pos);

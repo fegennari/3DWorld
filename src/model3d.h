@@ -512,7 +512,7 @@ public:
 		xform_zvals_set(0), metalness(metalness_), textures_loaded(0), sky_lighting_weight(0.0), tmgr(tmgr_)
 	{UNROLL_3X(sky_lighting_sz[i_] = 0;)}
 	~model3d() {clear();}
-	size_t num_materials(void) const {return materials.size();}
+	size_t num_materials() const {return materials.size();}
 
 	material_t &get_material(int mat_id) {
 		assert(mat_id >= 0 && (unsigned)mat_id < materials.size());
@@ -560,6 +560,7 @@ public:
 		int reflection_pass, bool is_z_prepass, int enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask);
 	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 		unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate);
+	void set_color_for_material(unsigned mat_id, colorRGBA const &color);
 	void ensure_reflection_cube_map();
 	cube_t get_single_transformed_bcube(vector3d const &xlate=zero_vector) const;
 	void setup_shadow_maps();
