@@ -1750,7 +1750,7 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		assert(i->obj_id < objs.size());
 		auto const &obj(objs[i->obj_id]);
-		if (!shadow_only && !dist_less_than((camera_pdu.pos - xlate), obj.get_llc(), 120.0*obj.dz())) continue; // too far away
+		if (!shadow_only && !dist_less_than((camera_pdu.pos - xlate), obj.get_llc(), 100.0*obj.dz())) continue; // too far away
 		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
 		vector3d dir(zero_vector);
 		dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
