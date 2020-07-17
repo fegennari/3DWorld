@@ -296,18 +296,26 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	return 0;
 }
 
-bool building_t::place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id,
-	float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance, colorRGBA const &color)
+bool building_t::place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
+	bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color)
 {
-	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z);
+	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z), min_space(3.0*hwidth);
+	vector3d const place_area_sz(place_area.get_size());
+	if (max(place_area_sz.x, place_area_sz.y) <= min_space) return 0; // can't fit in either dim
+	unsigned const force_dim((place_area_sz.x <= min_space) ? 0 : ((place_area_sz.y <= min_space) ? 1 : 2)); // *other* dim; 2=neither
 	cube_t c;
 	c.z1() = zval;
 	c.z2() = zval + height;
+	bool center_tried[4] = {};
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place the object
-		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		if (place_area.get_sz_dim(!dim) < 3.0*hwidth) continue; // place area is too small in this dim
-		float const center(rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth));
+		bool const use_pref(pref_orient < 4 && n < 10); // use pref orient for first 10 tries
+		bool const dim((force_dim < 2) ? force_dim : (use_pref ? (pref_orient >> 1) : rgen.rand_bool())); // choose a random wall unless forced
+		bool const dir(use_pref ? !(pref_orient & 1) : rgen.rand_bool()); // dir is inverted for the model, so we invert pref dir as well
+		unsigned const orient(2*dim + dir);
+		float center(0.0);
+		if (pref_centered && !center_tried[orient]) {center = place_area.get_center_dim(!dim); center_tried[orient] = 1;} // try centered
+		else {center = rgen.rand_uniform(place_area.d[!dim][0]+hwidth, place_area.d[!dim][1]-hwidth);} // random position
 		c.d[ dim][ dir] = place_area.d[dim][dir];
 		c.d[ dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		c.d[!dim][   0] = center - hwidth;
@@ -320,12 +328,13 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 	} // for n
 	return 0; // failed
 }
-bool building_t::place_model_along_wall(unsigned model_id, room_object type, float height, rand_gen_t &rgen, float zval, unsigned room_id,
-	float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance, colorRGBA const &color)
+bool building_t::place_model_along_wall(unsigned model_id, room_object type, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
+	bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color)
 {
 	if (!building_obj_model_loader.is_model_valid(model_id)) return 0; // don't have a model of this type
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
-	return place_obj_along_wall(type, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, front_clearance, color);
+	return place_obj_along_wall(type, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt,
+		is_lit, place_area, objs_start, front_clearance, pref_orient, pref_centered, color);
 }
 
 bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
@@ -397,9 +406,14 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	// place couches with a variety of colors
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
-	placed_obj |= place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, 0.40, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.67, colors[rgen.rand()%NUM_COLORS]);
-	// TODO: TV should be across from couch
-	placed_obj |= place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 8.0, BKGRAY);
+	colorRGBA const &couch_color(colors[rgen.rand()%NUM_COLORS]);
+	unsigned tv_pref_orient(4);
+	
+	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, 0.40, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.67, 4, 1, couch_color)) { // pref centered
+		placed_obj     = 1;
+		tv_pref_orient = (2*objs.back().dim + !objs.back().dir); // TV should be across from couch
+	}
+	placed_obj |= place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 8.0, tv_pref_orient, 1, BKGRAY); // pref centered
 	return placed_obj;
 }
 
