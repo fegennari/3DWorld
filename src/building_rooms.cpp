@@ -1671,6 +1671,7 @@ colorRGBA room_object_t::get_color() const {
 void building_room_geom_t::create_static_vbos(bool small_objs) {
 	//timer_t timer(string("Gen Room Geom") + (small_objs ? " Small" : "")); // 3.7ms / 2.1ms
 	float const tscale(2.0/obj_scale);
+	if (!small_objs) {obj_model_insts.clear();}
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible()) continue;
@@ -1703,9 +1704,9 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_TV:      break; // TODO: draw a picture on the screen sometimes?
 			case TYPE_ELEVATOR: break; // not handled here
 			}
-		}
-		if (i->type >= TYPE_TOILET) { // handle drawing of 3D models
-			obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);
+			if (i->type >= TYPE_TOILET) { // handle drawing of 3D models
+				obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);
+			}
 		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
