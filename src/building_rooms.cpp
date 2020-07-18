@@ -380,11 +380,12 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	return placed_obj;
 }
 
-bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool allow_adj_ext_door) {
 	// Note: table and chairs have already been placed
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be kitchens
 	if (!is_house && rgen.rand_bool()) return 0; // some office buildings have kitchens, allow it half the time
-	if (is_room_adjacent_to_ext_door(room) && rgen.rand_bool()) return 0; // if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
+	// if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
+	if (is_room_adjacent_to_ext_door(room) && (!allow_adj_ext_door || rgen.rand_bool())) return 0;
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
@@ -597,7 +598,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0); // per-floor
-	bool added_living(0);
+	bool added_bedroom(0), added_living(0), added_dining(0);
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0);
@@ -749,14 +750,17 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building rooms that have stairs
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
-			unsigned const objs_start(objs.size());
-			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_kitchen(0);
+			unsigned const objs_start(objs.size()), floor_mask(1<<f);
+			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_kitchen(0), is_living(0);
 			cube_t avoid_cube;
 
 			// place room objects
-			if (can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
-				if (is_house && !must_be_bathroom && rgen.rand_float() < 0.75) { // place a bedroom 75% of the time unless this must be a bathroom; houses only
-					added_obj = add_bed_to_room(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit);
+			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
+
+			if (allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
+				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
+				if (is_house && !must_be_bathroom && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
+					added_obj = added_bedroom = add_bed_to_room(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit);
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
 				if (!added_obj && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < extra_bathroom_prob)))) {
@@ -769,17 +773,19 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				added_tc = added_obj = can_place_book = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
-				if (added_tc && !(added_kitchen_mask & (1<<f)) && (!is_house || f == 0)) { // office buildings can also have kitchens, even on non-ground floors
-					is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
-					if (is_kitchen) {added_kitchen_mask |= (1<<f);}
+				if (added_tc && !(added_kitchen_mask & floor_mask) && (!is_house || f == 0)) { // office buildings can also have kitchens, even on non-ground floors
+					is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, added_living);
+					if (is_kitchen) {added_kitchen_mask |= floor_mask;}
 				}
 			}
-			if (!added_obj) { // try to place a desk if there's no table/bed
+			if (!added_obj) { // try to place a desk if there's no table or bed
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
 			}
-			if (can_place_book && !is_kitchen && f == 0 && (!added_living || is_room_adjacent_to_ext_door(*r))) {
-				// add a living room on the ground floor if it has a table or desk but isn't a kitchen
-				added_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+			if (is_house && can_place_book && !is_kitchen && f == 0) {
+				if (((!added_living && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r))) { // don't add second living room unless we added a kitchen
+					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
+					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+				}
 			}
 			if (can_place_book) { // an object was placed (table or desk), maybe add a book on top of it
 				if (rgen.rand_float() < (added_tc ? 0.4 : 0.75)*(is_house ? 1.0 : 0.5)*(r->is_office ? 0.75 : 1.0)) {
@@ -796,6 +802,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 				}
 			}
+			added_dining |= (f == 0 && added_tc && !is_living && !is_kitchen); // dining room
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
