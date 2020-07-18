@@ -1643,6 +1643,16 @@ void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 	get_material(untex_shad_mat, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, (EF_Z1 | EF_Z2)); // shadowed, no top/bottom faces
 }
 
+void building_room_geom_t::add_tv_picture(room_object_t const &c) {
+	if (c.obj_id & 1) return; // TV is off half the time
+#if 0
+	cube_t screen(c);
+	// TODO: correctly position screen
+	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
+	get_material(tid_nm_pair_t(c.get_picture_tid(), 0.0)).add_cube_to_verts(screen, WHITE, c.get_llc(), skip_faces, !c.dim, !(c.dim ^ c.dir));
+#endif
+}
+
 void building_room_geom_t::clear() {
 	clear_materials();
 	objs.clear();
@@ -1714,7 +1724,7 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
 			case TYPE_WINDOW:  add_window  (*i, tscale); break;
 			case TYPE_TUB:     add_tub_outer(*i); break;
-			case TYPE_TV:      break; // TODO: draw a picture on the screen sometimes?
+			case TYPE_TV:      add_tv_picture(*i); break;
 			case TYPE_ELEVATOR: break; // not handled here
 			}
 			if (i->type >= TYPE_TOILET) { // handle drawing of 3D models

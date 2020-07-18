@@ -312,6 +312,7 @@ struct building_room_geom_t {
 	void add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_window(room_object_t const &c, float tscale);
 	void add_tub_outer(room_object_t const &c);
+	void add_tv_picture(room_object_t const &c);
 	void add_trashcan(room_object_t const &c);
 	void create_static_vbos(bool small_objs);
 	void create_dynamic_vbos();
