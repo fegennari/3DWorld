@@ -40,7 +40,7 @@ vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
-extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting;
+extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting, display_frame_time;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
 extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cube_map_bump_maps, enable_tt_model_indir, fast_transparent_spheres;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
@@ -1928,7 +1928,8 @@ void draw_splashes() {
 void draw_framerate(float val) {
 
 	char text[32];
-	sprintf(text, "%i", round_fp(val));
+	if (display_frame_time) {sprintf(text, "%.2f", 1000.0/val);} // frame time in ms
+	else {sprintf(text, "%i", round_fp(val));} // framerate in FPS
 	float const ar(((float)window_width)/((float)window_height));
 	draw_text(WHITE, -0.011*ar, -0.011, -0.02, text);
 }
