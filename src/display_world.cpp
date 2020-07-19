@@ -1028,7 +1028,7 @@ void display() {
 		if (display_framerate) { // notify the user of lighting progress
 			if (indir_lighting_updated()) {draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");}
 			else if (!lighting_update_text.empty()) {
-				draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, lighting_update_text.c_str());
+				draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, lighting_update_text);
 				lighting_update_text.clear();
 			}
 		}

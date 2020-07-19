@@ -715,7 +715,7 @@ void draw_universe_stats() {
 	draw_text(WHITE, 0.0086*aspect_ratio, 0.0117, -0.025, text);
 
 	// draw message text (user typed)
-	if (!user_text.empty()) {draw_text(WHITE, -0.010*aspect_ratio, 0.010, -0.02, user_text.c_str());} // x and z are scaled
+	if (!user_text.empty()) {draw_text(WHITE, -0.010*aspect_ratio, 0.010, -0.02, user_text);} // x and z are scaled
 }
 
 
