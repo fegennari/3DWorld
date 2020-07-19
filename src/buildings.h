@@ -206,6 +206,7 @@ uint8_t const RO_FLAG_INVIS   = 0x08; // invisible
 uint8_t const RO_FLAG_NOCOLL  = 0x10; // no collision detection
 uint8_t const RO_FLAG_OPEN    = 0x20; // open, for elevators and maybe eventually doors
 uint8_t const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
+uint8_t const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
@@ -221,10 +222,11 @@ struct room_object_t : public cube_t {
 		room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
 		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_)
 	{assert(is_strictly_normalized());}
-	bool is_lit    () const {return (flags & RO_FLAG_LIT);}
-	bool has_stairs() const {return (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
-	bool is_visible() const {return !(flags & RO_FLAG_INVIS);}
-	bool no_coll   () const {return (flags & RO_FLAG_NOCOLL);}
+	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}
+	bool has_stairs () const {return  (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
+	bool is_visible () const {return !(flags & RO_FLAG_INVIS);}
+	bool no_coll    () const {return  (flags & RO_FLAG_NOCOLL);}
+	bool is_interior() const {return  (flags & RO_FLAG_INTERIOR);}
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	static bool enable_rugs();
 	static bool enable_pictures();
@@ -318,7 +320,7 @@ struct building_room_geom_t {
 	void add_trashcan(room_object_t const &c);
 	void create_static_vbos(bool small_objs);
 	void create_dynamic_vbos();
-	void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small);
+	void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building);
 };
 
 struct elevator_t : public cube_t {
@@ -332,13 +334,14 @@ struct elevator_t : public cube_t {
 };
 
 struct room_t : public cube_t {
-	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg; // or room_type index?
+	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg, interior;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	//uint8_t sides_with_doors; // is this useful/needed?
 	uint8_t part_id, num_lights;
 	room_type rtype; // this applies to the first floor because some rooms can have variable per-floor assignment
 	uint64_t lit_by_floor;
-	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), ext_sides(0), part_id(0), num_lights(0), rtype(RTYPE_NOTSET), lit_by_floor(0) {}
+	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), interior(0),
+		ext_sides(0), part_id(0), num_lights(0), rtype(RTYPE_NOTSET), lit_by_floor(0) {}
 	room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_);
 	void assign_to(room_type rt, unsigned floor=0);
 	float get_light_amt() const;
@@ -520,8 +523,8 @@ struct building_t : public building_geom_t {
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
-	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small);
-	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool inc_small);
+	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building);
+	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;

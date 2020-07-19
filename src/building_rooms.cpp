@@ -649,6 +649,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
 		bool const is_office_bathroom(r->is_office && r->rtype == RTYPE_BATH);
 		float light_size(floor_thickness); // default size for houses
+		unsigned const room_objs_start(objs.size());
 
 		if (r->is_sec_bldg) {
 			if    (has_garage) {r->assign_to(RTYPE_GARAGE);}
@@ -850,10 +851,18 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (is_bathroom) {add_bathroom_windows(*r, room_center.z, room_id, tot_light_amt, is_lit);} // find all windows and add frosted windows
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
-		} // for f
+		} // for f (floor)
 		num_light_stacks += num_lights_added;
 		if (added_bathroom) {++num_bathrooms;}
-	} // for r
+
+		// determine if room is interior and tag objects
+		assert(r->part_id < parts.size());
+		r->interior = parts[r->part_id].contains_cube_xy_no_adj(*r);
+
+		if (r->interior) {
+			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
+		}
+	} // for r (room)
 	add_stairs_and_elevators(rgen);
 	objs.shrink_to_fit();
 	interior->room_geom->light_bcubes.resize(num_light_stacks); // allocate but don't fill un until needed
@@ -928,10 +937,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	}
 }
 
-void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small) {
-	if (interior && interior->room_geom) {interior->room_geom->draw(s, xlate, shadow_only, inc_small);}
+void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building) {
+	if (interior && interior->room_geom) {interior->room_geom->draw(s, xlate, shadow_only, inc_small, player_in_building);}
 }
-void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool inc_small) {
+void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix,
+	int ped_ix, bool shadow_only, bool inc_small, bool player_in_building)
+{
 	if (!interior) return;
 	if (is_rotated()) return; // no room geom for rotated buildings
 
@@ -943,7 +954,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect
 		gen_room_details(rgen, ped_bcubes); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	draw_room_geom(s, xlate, shadow_only, inc_small);
+	draw_room_geom(s, xlate, shadow_only, inc_small, player_in_building);
 }
 
 void building_t::clear_room_geom() {
@@ -954,7 +965,7 @@ void building_t::clear_room_geom() {
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
 	cube_t(c), has_stairs(0), has_elevator(0), no_geom(is_hallway_), is_hallway(is_hallway_), is_office(is_office_),
-	is_sec_bldg(is_sec_bldg_), ext_sides(0), part_id(p), num_lights(nl), lit_by_floor(0) // no geom in hallways
+	is_sec_bldg(is_sec_bldg_), interior(0), ext_sides(0), part_id(p), num_lights(nl), lit_by_floor(0) // no geom in hallways
 {
 	if      (is_sec_bldg) {rtype = RTYPE_GARAGE;} // or RTYPE_SHED - will be set later
 	else if (is_hallway)  {rtype = RTYPE_HALL;}
@@ -1805,7 +1816,7 @@ void building_room_geom_t::create_dynamic_vbos() {
 }
 
 
-void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small) { // non-const because it creates the VBO
+void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
 	static int last_frame(0);
@@ -1837,6 +1848,7 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		assert(i->obj_id < objs.size());
 		auto const &obj(objs[i->obj_id]);
+		if (!player_in_building && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
 		if (!shadow_only && !dist_less_than((camera_pdu.pos - xlate), obj.get_llc(), 100.0*obj.dz())) continue; // too far away
 		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
 		vector3d dir(zero_vector);
