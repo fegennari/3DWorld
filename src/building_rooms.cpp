@@ -744,6 +744,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			if (r->no_geom) {
 				// allow pictures in the hallways of houses; assume lights are on
+				// TODO: what about rugs and bookcases?
 				if (is_house && r->is_hallway) {hang_pictures_in_room(rgen, *r, room_center.z, room_id, (light_amt + room_light_intensity), is_lit, objs.size());}
 				continue; // no other geometry for this room
 			}
@@ -794,7 +795,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 			if (is_house) { // place house-specific items
-				if (!is_bathroom && rgen.rand_float() < 0.8) { // place bookcase 80% of the time, but not in bathrooms
+				if (!is_bathroom && !is_kitchen && rgen.rand_float() < 0.8) { // place bookcase 80% of the time, but not in bathrooms or kitchens
 					bool const added(add_bookcase_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 					if (added) {assert(!objs.empty()); avoid_cube = objs.back();}
 				}
