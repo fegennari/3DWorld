@@ -93,6 +93,14 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 	}
 	return 1;
 }
+void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_start) {
+	for (auto i = interior->room_geom->objs.begin() + objs_start; i != interior->room_geom->objs.end(); ++i) {
+		if (i->type != TYPE_CHAIR)  continue;
+		if (!i->intersects(region)) continue;
+		i->z2() -= 0.4*i->dz();
+		i->type = TYPE_SM_CHAIR;
+	}
+}
 
 void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool check_last_obj) {
 	unsigned const NUM_COLORS = 6;
@@ -408,7 +416,7 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	bool placed_obj(0);
+	bool placed_couch(0), placed_tv(0);
 	// place couches with a variety of colors
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
@@ -416,11 +424,22 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	unsigned tv_pref_orient(4);
 	
 	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, 0.40, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.67, 4, 1, couch_color)) { // pref centered
-		placed_obj     = 1;
+		placed_couch   = 1;
 		tv_pref_orient = (2*objs.back().dim + !objs.back().dir); // TV should be across from couch
 	}
-	placed_obj |= place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 8.0, tv_pref_orient, 1, BKGRAY); // pref centered
-	return placed_obj;
+	// TODO: should the TV be placed on a small table or hung from the wall?
+	placed_tv = place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 8.0, tv_pref_orient, 1, BKGRAY); // pref centered
+	
+	if (placed_couch && placed_tv) {
+		room_object_t const &couch(objs[objs.size()-2]), &tv(objs.back());
+
+		if (couch.dim == tv.dim && couch.dir != tv.dir) { // placed against opposite walls facing each other
+			cube_t region(couch);
+			region.union_with_cube(tv);
+			shorten_chairs_in_region(region, objs_start); // region represents that space between the couch and the TV
+		}
+	}
+	return (placed_couch || placed_tv);
 }
 
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
@@ -1201,7 +1220,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale) { // 
 }
 
 void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
-	float const height(c.dz());
+	float const height(c.dz()*((c.type == TYPE_SM_CHAIR) ? 1.67 : 1.0)); // effective height if the chair wasn't short
 	cube_t seat(c), back(c), legs_bcube(c);
 	seat.z1() += 0.32*height;
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
@@ -1714,7 +1733,7 @@ colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_col
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE:    return get_textured_wood_color();
-	case TYPE_CHAIR:    return (color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
+	case TYPE_CHAIR: case TYPE_SM_CHAIR: return (color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
 	case TYPE_STAIR:    return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());
@@ -1749,6 +1768,7 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			switch (i->type) {
 			case TYPE_TABLE:   add_table   (*i, tscale); break;
 			case TYPE_CHAIR:   add_chair   (*i, tscale); break;
+			case TYPE_SM_CHAIR:add_chair   (*i, tscale); break;
 			case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
 			case TYPE_LIGHT:   add_light   (*i, tscale); break; // light fixture
 			case TYPE_RUG:     add_rug     (*i); break;

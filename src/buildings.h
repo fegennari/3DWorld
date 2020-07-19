@@ -188,9 +188,9 @@ struct draw_range_t {
 	vertex_range_t vr[MAX_DRAW_BLOCKS]; // quad verts only for now
 };
 
-enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
-	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE,
-	                 TYPE_TV, TYPE_COUCH, NUM_TYPES};
+enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_SM_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD,
+	                 TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE,
+	                 TYPE_STOVE, TYPE_TV, TYPE_COUCH, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U, SHAPE_TALL};
 enum room_type      {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY, RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
 std::string const room_names[NUM_RTYPES] = {"Not Set", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study", "Garage", "Shed"};
@@ -566,6 +566,7 @@ private:
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool is_lit);
 	bool add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit);
+	void shorten_chairs_in_region(cube_t const &region, unsigned objs_start);
 	void add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool check_last_obj);
 	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
 	bool add_desk_to_room    (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
