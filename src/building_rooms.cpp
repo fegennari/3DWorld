@@ -342,40 +342,41 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	place_area.expand_by(-0.5*wall_thickness);
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	bool placed_obj(0);
+	bool placed_obj(0), placed_toilet(0);
 
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet
+	if (is_house) { // place a tub, but not in office buildings; placed first because it's the largest and the most limited in valid locations
+		cube_t place_area_tub(room_bounds);
+		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
+		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, 0.2, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start, 0.5);
+	}
+	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
+
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet last so that clearance is guaranteed
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 		float const height(0.35*floor_spacing), width(height*sz.y/sz.z), length(height*sz.x/sz.z);
 		unsigned const first_corner(rgen.rand() & 3);
 		bool const first_dim(rgen.rand_bool());
 
-		for (unsigned n = 0; n < 4 && !placed_obj; ++n) { // try 4 room corners
+		for (unsigned n = 0; n < 4 && !placed_toilet; ++n) { // try 4 room corners
 			unsigned const corner_ix((first_corner + n)&3);
 			bool const xdir(corner_ix&1), ydir(corner_ix>>1);
 			point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
 		
-			for (unsigned d = 0; d < 2 && !placed_obj; ++d) { // try both dims
+			for (unsigned d = 0; d < 2 && !placed_toilet; ++d) { // try both dims
 				bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir);
 				cube_t c(corner, corner);
 				c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? width : length);
 				c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? length : width);
 				for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] += ((dim ? xdir : ydir) ? -1.5 : 1.5)*wall_thickness;} // extra padding on left and right sides
 				c.z2() += height;
-				if (is_cube_close_to_doorway(c, 0.0, 1)) continue; // bad placement
+				cube_t c2(c); // used for placement tests
+				c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, to avoid placing other objects there (sink and tub)
+				c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
+				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1)) continue; // bad placement
 				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
-				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, to avoid placing other objects there (sink and tub)
-				c.expand_in_dim(!dim, 0.4*width); // more padding on the sides
-				placed_obj = 1; // done
+				placed_obj = placed_toilet = 1; // done
 			} // for d
 		} // for n
-	}
-	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
-
-	if (is_house) { // not in office buildings
-		cube_t place_area_tub(room_bounds);
-		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
-		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, 0.2, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start, 0.5);
 	}
 	return placed_obj;
 }
