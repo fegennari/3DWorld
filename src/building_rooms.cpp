@@ -302,6 +302,7 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 	vector3d const place_area_sz(place_area.get_size());
 	if (max(place_area_sz.x, place_area_sz.y) <= min_space) return 0; // can't fit in either dim
 	unsigned const force_dim((place_area_sz.x <= min_space) ? 0 : ((place_area_sz.y <= min_space) ? 1 : 2)); // *other* dim; 2=neither
+	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z1() = zval;
 	c.z2() = zval + height;
@@ -322,7 +323,8 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 		cube_t c2(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*depth*front_clearance;
 		if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
-		interior->room_geom->objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
+		objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
+		objs.back().obj_id = (uint16_t)objs.size();
 		return 1; // done
 	} // for n
 	return 0; // failed
@@ -1676,12 +1678,15 @@ void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	if (c.obj_id & 1) return; // TV is off half the time
-#if 0
 	cube_t screen(c);
-	// TODO: correctly position screen
+	screen.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.35*c.get_sz_dim(c.dim);
+	screen.expand_in_dim(!c.dim, -0.03*c.get_sz_dim(!c.dim)); // shrink the sides in
+	screen.z1() += 0.09*c.dz();
+	screen.z2() -= 0.04*c.dz();
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
-	get_material(tid_nm_pair_t(c.get_picture_tid(), 0.0)).add_cube_to_verts(screen, WHITE, c.get_llc(), skip_faces, !c.dim, !(c.dim ^ c.dir));
-#endif
+	tid_nm_pair_t tex(c.get_picture_tid(), 0.0);
+	tex.emissive = 1;
+	get_material(tex).add_cube_to_verts(screen, WHITE, c.get_llc(), skip_faces, !c.dim, !(c.dim ^ c.dir));
 }
 
 void building_room_geom_t::clear() {
