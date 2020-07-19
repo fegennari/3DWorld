@@ -643,6 +643,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float const room_size(min(r->dx(), r->dy())); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*floor_thickness);
 		}
+		if (r->has_stairs) {r->assign_to(RTYPE_STAIRS);}
 		float const light_val(22.0*light_size), room_light_intensity(light_val*light_val/r->get_area_xy()); // average for room, unitless
 		cube_t pri_light, sec_light;
 		set_light_xy(pri_light, room_center, light_size, room_dim, light_shape);
@@ -797,7 +798,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (!added_obj) { // try to place a desk if there's no table or bed
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
-				if (added_obj) {r->assign_to(RTYPE_STUDY, f);} // or other room type - may be overwritten below
+				if (added_obj && !r->has_stairs) {r->assign_to(RTYPE_STUDY, f);} // or other room type - may be overwritten below
 			}
 			if (is_house && can_place_book && !is_kitchen && f == 0) {
 				if (((!added_living && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r))) { // don't add second living room unless we added a kitchen

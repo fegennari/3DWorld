@@ -452,8 +452,15 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) { // conservative but less efficient
 			cube_t tc(*r);
 			tc.expand_by_xy(wall_thickness); // to include camera in doorway
+
 			// Note: stairs that connect stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
-			if (tc.contains_pt(camera_bs)) {camera_room = (r - interior->rooms.begin()); camera_by_stairs = r->has_stairs; break;}
+			if (tc.contains_pt(camera_bs)) {
+				camera_room = (r - interior->rooms.begin());
+				camera_by_stairs = r->has_stairs;
+				assert(r->rtype < NUM_RTYPES);
+				if (display_mode & 0x20) {lighting_update_text = room_names[r->rtype];} // debugging, key '6'
+				break;
+			}
 		}
 	}
 	else {
