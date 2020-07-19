@@ -1561,10 +1561,10 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vecto
 		dists[x] = 0.5*SIGN(v)*sqrt(abs(v)) + 0.5; // nonlinear spacing, closer near the edges, convert back to [0, 1] range
 	}
 	for (unsigned y = 0; y <= ndiv; ++y) {
-		float const yval(c.y1() + dists[y]*c.dy()), ey(2.0f*min((yval - c.y1()), (c.y2() - yval))*dy_inv);
+		float const yval(c.y1() + dists[y]*c.dy()), ey(2.0f*max(0.0f, min((yval - c.y1()), (c.y2() - yval)))*dy_inv);
 
 		for (unsigned x = 0; x <= ndiv; ++x) {
-			float const xval(c.x1() + dists[x]*c.dx()), ex(2.0f*min((xval - c.x1()), (c.x2() - xval))*dx_inv), zval(c.z1() + c.dz()*pow(ex*ey, 0.2f));
+			float const xval(c.x1() + dists[x]*c.dx()), ex(2.0f*max(0.0f, min((xval - c.x1()), (c.x2() - xval)))*dx_inv), zval(c.z1() + c.dz()*pow(ex*ey, 0.2f));
 			verts.emplace_back(vert_norm_comp_tc(point(xval, yval, zval), nc, mat.tex.tscale_x*(xval - tex_origin.x), mat.tex.tscale_y*(yval - tex_origin.y)), cw);
 		} // for x
 	} // for y
