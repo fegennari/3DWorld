@@ -624,6 +624,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
 		float light_size(floor_thickness); // default size for houses
 
+		if (r->is_sec_bldg) {
+			if    (has_garage) {r->assign_to(RTYPE_GARAGE);}
+			else if (has_shed) {r->assign_to(RTYPE_SHED);}
+		}
 		if (r->is_office) { // light size varies by office size
 			float const room_size(r->dx() + r->dy()); // normalized to office size
 			light_size = max(0.015f*room_size, 0.67f*floor_thickness);
@@ -752,7 +756,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);
-			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_kitchen(0), is_living(0);
+			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0);
 			cube_t avoid_cube;
 
 			// place room objects
@@ -761,12 +765,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
 				if (is_house && !must_be_bathroom && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
-					added_obj = added_bedroom = add_bed_to_room(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit);
+					added_obj = added_bedroom = is_bedroom = add_bed_to_room(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit);
+					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
 				if (!added_obj && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < extra_bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings
 					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start); // add bathroom
+					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
 			if (!added_obj && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
@@ -776,16 +782,18 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
 				if (added_tc && !(added_kitchen_mask & floor_mask) && (!is_house || f == 0)) { // office buildings can also have kitchens, even on non-ground floors
 					is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, added_living);
-					if (is_kitchen) {added_kitchen_mask |= floor_mask;}
+					if (is_kitchen) {r->assign_to(RTYPE_KITCHEN, f); added_kitchen_mask |= floor_mask;}
 				}
 			}
 			if (!added_obj) { // try to place a desk if there's no table or bed
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
+				if (added_obj) {r->assign_to(RTYPE_STUDY, f);} // or other room type - may be overwritten below
 			}
 			if (is_house && can_place_book && !is_kitchen && f == 0) {
 				if (((!added_living && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r))) { // don't add second living room unless we added a kitchen
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+					if (is_bathroom) {r->assign_to(RTYPE_LIVING, f);}
 				}
 			}
 			if (can_place_book) { // an object was placed (table or desk), maybe add a book on top of it
@@ -803,7 +811,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 				}
 			}
-			added_dining |= (f == 0 && added_tc && !is_living && !is_kitchen); // dining room
+			if (f == 0 && added_tc && !is_living && !is_kitchen) {r->assign_to(RTYPE_DINING, f); added_dining = 1;} // dining room
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
@@ -912,6 +920,20 @@ void building_t::clear_room_geom() {
 	if (!has_room_geom()) return;
 	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
+}
+
+room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
+	cube_t(c), has_stairs(0), has_elevator(0), no_geom(is_hallway_), is_hallway(is_hallway_), is_office(is_office_),
+	is_sec_bldg(is_sec_bldg_), ext_sides(0), part_id(p), num_lights(nl), lit_by_floor(0) // no geom in hallways
+{
+	if      (is_sec_bldg) {rtype = RTYPE_GARAGE;} // or RTYPE_SHED - will be set later
+	else if (is_hallway)  {rtype = RTYPE_HALL;}
+	else if (is_office)   {rtype = RTYPE_OFFICE;}
+	else if (has_stairs)  {rtype = RTYPE_STAIRS;}
+	else                  {rtype = RTYPE_NOTSET;}
+}
+void room_t::assign_to(room_type rt, unsigned floor) {
+	if (rtype == RTYPE_NOTSET || floor == 0) {rtype = rt;} // rtype is not per floor: assign if not yet assigned or this is the first floor (first floor has priority)
 }
 
 // *** room geometry ***
