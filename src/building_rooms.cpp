@@ -803,7 +803,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (((!added_living && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r))) { // don't add second living room unless we added a kitchen
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
-					if (is_bathroom) {r->assign_to(RTYPE_LIVING, f);}
+					if (is_living) {r->assign_to(RTYPE_LIVING, f);}
 				}
 			}
 			if (can_place_book) { // an object was placed (table or desk), maybe add a book on top of it
