@@ -334,8 +334,10 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							if (n < num_cent_rooms) { // add a room
 								float const next_pos(shift_val_to_not_intersect_window(*p, (room_pos + cent_room_width), hspace, window_border, !min_dim));
 								room_pos += cent_room_width; // move to next row
-								room_outer.d[!min_dim][0] = room_inner.d[!min_dim][0] = start_pos;
-								room_outer.d[!min_dim][1] = room_inner.d[!min_dim][1] = next_pos;
+								room_outer.d[!min_dim][0] = start_pos;
+								room_inner.d[!min_dim][0] = ((n == 0) ? (rooms_start + wall_half_thick) : start_pos); // first inner room is relative to the sec hallway
+								room_outer.d[!min_dim][1] = next_pos;
+								room_inner.d[!min_dim][1] = ((n+1 == num_cent_rooms) ? (rooms_end - wall_half_thick) : next_pos); // last inner room is relative to sec hallway
 								add_room(room_outer, part_id, 1, 0, 1); // office
 								add_room(room_inner, part_id, 1, 0, 1); // office
 								// add doors to 2-3 walls
