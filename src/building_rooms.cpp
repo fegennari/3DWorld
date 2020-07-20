@@ -97,7 +97,7 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 	for (auto i = interior->room_geom->objs.begin() + objs_start; i != interior->room_geom->objs.end(); ++i) {
 		if (i->type != TYPE_CHAIR)  continue;
 		if (!i->intersects(region)) continue;
-		i->z2() -= 0.4*i->dz();
+		i->z2() -= 0.25*i->dz();
 		i->type = TYPE_SM_CHAIR;
 	}
 }
@@ -427,11 +427,18 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 		placed_couch   = 1;
 		tv_pref_orient = (2*objs.back().dim + !objs.back().dir); // TV should be across from couch
 	}
-	// TODO: should the TV be placed on a small table or hung from the wall?
-	placed_tv = place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 8.0, tv_pref_orient, 1, BKGRAY); // pref centered
-	
+	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 8.0, tv_pref_orient, 1, BKGRAY)) { // pref centered
+		placed_tv = 1;
+		// add a small table to place the TV on so that it's off the floor and not blocked as much by tables and chairs
+		room_object_t &tv(objs.back());
+		float const height(0.4*tv.dz());
+		cube_t table(tv); // same XY bounds as the TV
+		tv.translate_dim(height, 2); // move TV up
+		table.z2() = tv.z1();
+		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+	}
 	if (placed_couch && placed_tv) {
-		room_object_t const &couch(objs[objs.size()-2]), &tv(objs.back());
+		room_object_t const &couch(objs[objs.size()-3]), &tv(objs[objs.size()-2]); // skip the small table under the TV
 
 		if (couch.dim == tv.dim && couch.dir != tv.dir) { // placed against opposite walls facing each other
 			cube_t region(couch);
@@ -1231,7 +1238,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale) { // 
 }
 
 void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
-	float const height(c.dz()*((c.type == TYPE_SM_CHAIR) ? 1.67 : 1.0)); // effective height if the chair wasn't short
+	float const height(c.dz()*((c.type == TYPE_SM_CHAIR) ? 1.333 : 1.0)); // effective height if the chair wasn't short
 	cube_t seat(c), back(c), legs_bcube(c);
 	seat.z1() += 0.32*height;
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
