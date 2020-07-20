@@ -400,10 +400,9 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	if (!is_house && rgen.rand_bool()) return 0; // some office buildings have kitchens, allow it half the time
 	// if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
 	if (is_room_adjacent_to_ext_door(room) && (!allow_adj_ext_door || rgen.rand_bool())) return 0;
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool placed_obj(0);
 	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, 0.72, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
 	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, 0.50, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8);}
@@ -412,7 +411,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 
 bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be living rooms
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -578,7 +577,7 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 	}
 	if (num_ext_walls != 1) return; // it looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
 	float const floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), window_thickness(0.05*wall_thickness);
-	float const z1(zval + floor_thickness), z2(zval + get_window_vspace() - floor_thickness);
+	float const z2(zval + get_window_vspace() - floor_thickness);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 
@@ -630,7 +629,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0); // per-floor
-	bool added_bedroom(0), added_living(0), added_dining(0);
+	bool added_bedroom(0), added_living(0);
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0);
@@ -849,7 +848,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 				}
 			}
-			if (f == 0 && added_tc && !is_living && !is_kitchen) {r->assign_to(RTYPE_DINING, f); added_dining = 1;} // dining room
+			if (f == 0 && added_tc && !is_living && !is_kitchen) {r->assign_to(RTYPE_DINING, f);} // dining room
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
@@ -1780,6 +1779,7 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_BOOK:    add_book    (*i, 0, 1); break;
 			case TYPE_BCASE:   add_bookcase(*i, 0, 1, tscale, 0); break;
 			case TYPE_BED:     add_bed     (*i, 0, 1, tscale); break;
+			default: break;
 			}
 		}
 		else { // large objects
@@ -1801,6 +1801,7 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_TUB:     add_tub_outer(*i); break;
 			case TYPE_TV:      add_tv_picture(*i); break;
 			case TYPE_ELEVATOR: break; // not handled here
+			default: break;
 			}
 			if (i->type >= TYPE_TOILET) { // handle drawing of 3D models
 				obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);

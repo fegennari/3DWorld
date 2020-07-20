@@ -99,7 +99,6 @@ float    const SPLASH_ALPHA     = 1.0;
 float    const SNOW_ALPHA       = 1.0;
 
 int      const N_RAND_GAUSS     = 10;
-int      const N_RAND_DIST      = 10000;
 int      const N_STAR_POINTS    = 5;
 int      const N_CYL_SIDES      = 32;
 int      const N_SPHERE_DIV     = 32;

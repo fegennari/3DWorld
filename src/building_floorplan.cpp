@@ -448,7 +448,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 									room.d[!min_dim][1] = split_wall.d[!min_dim][1]; // restore orig value
 								}
 								add_room(room, part_id, 1, 0, 1); // office or bathroom along sec hallway
-								if (r+1 == rooms_per_side && i == (bathroom_ix+1)) {interior->rooms.back().assign_to(RTYPE_BATH);} // bathroom must be an interior/windowless room
+								if (r+1 == rooms_per_side && (unsigned)i == (bathroom_ix+1)) {interior->rooms.back().assign_to(RTYPE_BATH);} // bathroom must be an interior/windowless room
 
 								if (add_sec_hall) { // add doorways + doors
 									float const doorway_pos(0.5f*(room_split_pos + next_split_pos)); // room center

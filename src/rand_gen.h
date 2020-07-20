@@ -7,6 +7,8 @@
 #include <memory>
 #include <assert.h>
 
+int const N_RAND_DIST = 10000;
+
 template<typename T> struct pointT;
 typedef pointT<float> point;
 typedef pointT<float> vector3d;
@@ -78,10 +80,10 @@ public:
 		return fres - 1.0f;
 	}
 	int rand_seed_mix() {
-		int val1(rand()); swap(rseed1, rseed2); return (val1 + rand()); // more random
+	  int val1(rand()); std::swap(rseed1, rseed2); return (val1 + rand()); // more random
 		//return (rseed1 ^ (rseed2 >> 8)); // faster (should call rand2_mix() after)
 	}
-	void rand_mix() {rand(); swap(rseed1, rseed2);}
+	void rand_mix() {rand(); std::swap(rseed1, rseed2);}
 	float rand_float() {return 0.000001*(rand()%1000000);} // uniform 0 to 1
 	float signed_rand_float() {return 2.0*float(base::randd()) - 1.0;}
 	bool rand_bool() {return ((rand()&1) != 0);}
