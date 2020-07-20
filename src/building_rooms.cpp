@@ -779,16 +779,17 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
+			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
+			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 
 			if (r->no_geom) {
-				// allow pictures in the hallways of houses; assume lights are on
-				// TODO: what about rugs and bookcases?
-				if (is_house && r->is_hallway) {hang_pictures_in_room(rgen, *r, room_center.z, room_id, (light_amt + room_light_intensity), is_lit, objs.size());}
+				if (is_house && r->is_hallway) { // allow pictures and rugs in the hallways of houses
+					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs.size());
+					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);}
+				}
 				continue; // no other geometry for this room
 			}
 			if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building rooms that have stairs
-			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
-			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);
 			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0);
 			cube_t avoid_cube;
