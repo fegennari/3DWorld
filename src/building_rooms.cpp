@@ -988,7 +988,9 @@ void room_t::assign_to(room_type rt, unsigned floor) {
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
-void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin, unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y) {
+void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
+	unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y, bool inverted)
+{
 	vertex_t v;
 	v.set_c4(color);
 
@@ -999,6 +1001,7 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vec
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 			if (skip_faces & (1 << (2*(2-n) + j))) continue; // skip this face
 			v.set_ortho_norm(n, j);
+			if (inverted) {v.invert_normal();}
 			v.v[n] = c.d[n][j];
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
@@ -1006,7 +1009,7 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vec
 				v.t[swap_tex_st] = ((tex.tscale_x == 0.0) ? float(s1) : tex.tscale_x*(v.v[d[1]] - tex_origin[d[1]])); // tscale==0.0 => fit texture to cube
 
 				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-					bool const s2(k^j^s1^1); // need to orient the vertices differently for each side
+					bool const s2(bool(k^j^s1)^inverted^1); // need to orient the vertices differently for each side
 					v.v[d[0]] = c.d[d[0]][s2];
 					v.t[!swap_tex_st] = ((tex.tscale_y == 0.0) ? float(s2) : tex.tscale_y*(v.v[d[0]] - tex_origin[d[0]]));
 					quad_verts.push_back(v);
@@ -1710,7 +1713,10 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
-	get_material(untex_shad_mat, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, (EF_Z1 | EF_Z2)); // shadowed, no top/bottom faces
+	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
+	colorRGBA const color(apply_light_color(c));
+	mat.add_cube_to_verts(c, color, zero_vector, (EF_Z1 | EF_Z2)); // shadowed, no top/bottom faces
+	mat.add_cube_to_verts(c, color, zero_vector, (EF_Z1 | EF_Z2), 0, 0, 0, 1); // inverted, needed for shadows
 }
 
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
