@@ -62,8 +62,8 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	return 1;
 }
 
-// Note: must be first placed object
-bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
+// Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
+unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit)
 {
 	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness());
@@ -81,6 +81,7 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, obj_flags, tot_light_amt);
+	unsigned num_added(1); // start with the table
 
 	// place some chairs around the table
 	for (unsigned dim = 0; dim < 2; ++dim) {
@@ -88,10 +89,10 @@ bool building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect
 			if (rgen.rand_bool()) continue; // 50% of the time
 			point chair_pos(table_pos); // same starting center and z1
 			chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
-			add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, is_lit);
+			num_added += add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, is_lit);
 		}
 	}
-	return 1;
+	return num_added;
 }
 void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_start) {
 	for (auto i = interior->room_geom->objs.begin() + objs_start; i != interior->room_geom->objs.end(); ++i) {
@@ -792,6 +793,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building rooms that have stairs
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);
 			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0);
+			unsigned num_chairs(0);
 			cube_t avoid_cube;
 
 			// place room objects
@@ -816,7 +818,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (!added_obj && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
-				added_tc = added_obj = can_place_book = add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit);
+				unsigned const num_tcs(add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit));
+				if (num_tcs > 0) {added_tc = added_obj = can_place_book = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
 				if (added_tc && !(added_kitchen_mask & floor_mask) && (!is_house || f == 0)) { // office buildings can also have kitchens, even on non-ground floors
 					is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, added_living);
@@ -849,7 +852,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 				}
 			}
-			if (f == 0 && added_tc && !is_living && !is_kitchen) {r->assign_to(RTYPE_DINING, f);} // dining room
+			if (f == 0 && added_tc && num_chairs > 0 && !is_living && !is_kitchen) {r->assign_to(RTYPE_DINING, f);} // dining room
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
