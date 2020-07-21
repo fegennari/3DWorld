@@ -1037,7 +1037,28 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 		add_door(door, door_part, door_dim, door_dir, 0);
 		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
-	}
+
+		if (1) { // if house is large enough, add a back door
+			bool added_door(0);
+
+			for (unsigned p = 0; p < (two_parts ? 2U : 1U) && !added_door; ++p) {
+				unsigned door2_part(two_parts ? 1-door_part : 0); // try the other part first
+				cube_t const &part(parts[door2_part]);
+
+				for (unsigned d = 0; d < 2 && !added_door; ++d) {
+					bool const door2_dim(door_dim ^ bool(d)); // try same dim first
+
+					for (unsigned door2_dir = 0; door2_dir < 2 && !added_door; ++door2_dir) {
+						if (door2_dim == door_dim && door_dir == bool(door2_dir) /*&& door2_part == door_part*/) continue; // don't place second door on the same side
+						if (part.d[door2_dim][door2_dir] != bcube.d[door2_dim][door2_dir]) continue; // door on building bcube is always exterior/never interior face between two parts
+						cube_t door2(place_door(part, door2_dim, door2_dir, door_height, 0.0, 0.0, 0.25, door_width_scale, 1, rgen));
+						if (interior && interior->is_blocked_by_stairs_or_elevator(door2, 0.5*door_height)) continue; // bad placement
+						added_door |= add_door(door2, door2_part, door2_dim, door2_dir, 0);
+					} // for door_dir2
+				} // for d
+			} // for p
+		} // end back door
+	} // end gen_door
 	// add roof tquads
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
 	float roof_dz[3] = {0.0f};

@@ -831,6 +831,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (added_obj && !r->has_stairs) {r->assign_to(RTYPE_STUDY, f);} // or other room type - may be overwritten below
 			}
 			if (is_house && can_place_book && !is_kitchen && f == 0) {
+				// TODO: only consider front door
 				if (((!added_living && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r))) { // don't add second living room unless we added a kitchen
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
