@@ -16,7 +16,7 @@ buildings window_color 0.5 0.5 0.5 1.0 # gray
 buildings wall_color  1.0 1.0 1.0 1.0 # white
 buildings ceil_color  1.0 1.0 1.0 1.0 # white
 buildings floor_color 1.0 1.0 1.0 1.0 # white - using carpet textures
-buildings wall_tscale  12.0
+buildings wall_tscale  32.0
 buildings ceil_tscale  16.0
 buildings floor_tscale 16.0
 buildings wall_tid stucco.jpg
@@ -59,7 +59,7 @@ buildings add_sheet_texture fabrics/flowers.jpg # assigned to multiple colors, n
 # house ceilings and floors
 buildings house_ceil_color  1.0 1.0 1.0 1.0 # white
 buildings house_floor_color 1.0 1.0 1.0 1.0 # white
-buildings house_ceil_tscale  16.0
+buildings house_ceil_tscale  32.0
 buildings house_floor_tscale 32.0
 buildings house_floor_tid fence.jpg
 buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
