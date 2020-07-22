@@ -441,13 +441,14 @@ unsigned building_t::count_connected_room_components() const {
 	return num;
 }
 
-bool building_t::is_room_adjacent_to_ext_door(cube_t const &room) const {
+bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only) const {
 	cube_t room_exp(room);
 	room_exp.expand_by_xy(0.5*get_wall_thickness());
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
 		if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
 		if (room_exp.intersects(d->get_bcube())) return 1;
+		if (front_door_only) return 0; // assumes the first door is the front door
 	}
 	return 0;
 }

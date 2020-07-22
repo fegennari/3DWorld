@@ -400,7 +400,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be kitchens
 	if (!is_house && rgen.rand_bool()) return 0; // some office buildings have kitchens, allow it half the time
 	// if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
-	if (is_room_adjacent_to_ext_door(room) && (!allow_adj_ext_door || rgen.rand_bool())) return 0;
+	if (is_room_adjacent_to_ext_door(room, 1) && (!allow_adj_ext_door || rgen.rand_bool())) return 0; // front_door_only=1
 	float const wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
@@ -830,9 +830,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
 				if (added_obj && !r->has_stairs) {r->assign_to(RTYPE_STUDY, f);} // or other room type - may be overwritten below
 			}
-			if (is_house && can_place_book && !is_kitchen && f == 0) {
-				// TODO: only consider front door
-				if (((!added_living && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r))) { // don't add second living room unless we added a kitchen
+			if (is_house && can_place_book && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen
+				if (((!added_living && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r, 1))) { // front_door_only=1
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
 					if (is_living) {r->assign_to(RTYPE_LIVING, f);}
