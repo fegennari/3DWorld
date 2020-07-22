@@ -2438,6 +2438,7 @@ public:
 			s.end_shader();
 
 			// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
+			// TODO: what about one door opened and one door closed when both are visible?
 			int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
 			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0

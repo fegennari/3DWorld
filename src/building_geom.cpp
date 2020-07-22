@@ -902,7 +902,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
 	float const door_width_scale(0.5);
-	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);;
+	float door_height(get_door_height()), floor_spacing(get_window_vspace()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);;
 	bool door_dim(rgen.rand_bool()), door_dir(0), dim(0), dir(0), dir2(0);
 	unsigned door_part(0), detail_type(0);
 	real_num_parts = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
@@ -1037,8 +1037,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 		add_door(door, door_part, door_dim, door_dir, 0);
 		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
+		float const tot_area(parts[0].dx()*parts[0].dy() + (two_parts ? parts[1].dx()*parts[1].dy() : 0.0f));
 
-		if (1) { // if house is large enough, add a back door
+		if (tot_area > 25.0f*floor_spacing*floor_spacing) { // if house is large enough, add a back door
 			bool added_door(0);
 
 			for (unsigned p = 0; p < (two_parts ? 2U : 1U) && !added_door; ++p) {
@@ -1136,7 +1137,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		c.d[!dim][0] = center - 0.05*sz1;
 		c.d[!dim][1] = center + 0.05*sz1;
 		c.z1()  = c.z2();
-		c.z2() += max(chimney_height, 0.75f*get_window_vspace()); // make it at least 3/4 a story in height
+		c.z2() += max(chimney_height, 0.75f*floor_spacing); // make it at least 3/4 a story in height
 		parts.push_back(c);
 		// add top quad to cap chimney (will also update bcube to contain chimney)
 		tquad_t tquad(4); // quad
