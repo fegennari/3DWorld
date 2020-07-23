@@ -521,7 +521,7 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0, point const *const only_cont_pt=nullptr) const;
 	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) const;
-	bool find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
+	int find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);

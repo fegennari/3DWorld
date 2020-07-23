@@ -1482,7 +1482,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) const {
 	tquad_with_ix_t door;
-	if (!find_door_close_to_point(door, pos, dist)) return 0; // no nearby door
+	int const door_ix(find_door_close_to_point(door, pos, dist));
+	if (door_ix < 0) return 0; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door, 1); // clip to floor
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
@@ -1492,17 +1493,26 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	vector3d const normal(door.get_norm());
 	bool const opens_outward(!is_house), dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
 	add_door_to_bdraw(door.get_bcube(), open_door_draw, door.type, dim, dir, 1, opens_outward, 1); // opened=1, exterior=1
+
+	// draw other exterior doors as closed in case they're visible through the open door
+	for (auto d = doors.begin(); d != doors.end(); ++d) {
+		if (int(d - doors.begin()) == door_ix) continue; // skip the open door
+		vector3d const normal2(d->get_norm());
+		if (dot_product_ptv(normal2, pos, d->pts[0]) > 0.0) continue; // facing exterior of door rather than interior, skip
+		bool const dim2(fabs(normal2.x) < fabs(normal2.y)), dir2(normal2[dim] > 0.0); // dir2 is reversed
+		add_door_to_bdraw(d->get_bcube(), open_door_draw, d->type, dim2, dir2, 0, opens_outward, 1); // opened=0, exterior=1
+	}
 	open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
 	return 1;
 }
 
-bool building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
+int building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
 		cube_t c(d->get_bcube());
 		c.expand_by_xy(dist);
-		if (c.contains_pt(pos)) {door = *d; return 1;}
+		if (c.contains_pt(pos)) {door = *d; return (d - doors.begin());}
 	}
-	return 0; // not found
+	return -1; // not found
 }
 
 void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front) const {
@@ -2438,7 +2448,6 @@ public:
 			s.end_shader();
 
 			// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
-			// TODO: what about one door opened and one door closed when both are visible?
 			int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
 			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0
