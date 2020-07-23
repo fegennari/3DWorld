@@ -536,7 +536,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 		} // end use_hallway
 
 		else { // generate random walls using recursive 2D slices
-			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
+			float const min_wall_len2(0.85*min_wall_len); // a somewhat shorter value that applies to some tests (but not wall_split_thresh)
+			bool const no_walls(min(p->dx(), p->dy()) < min_wall_len2); // not enough space to add a room (chimney, porch support, garage, shed, etc.)
 			float const min_split_len(max(global_building_params.wall_split_thresh, 1.0f)*min_wall_len);
 			assert(to_split.empty());
 			if (no_walls) {add_room(*p, part_id, 1, 0, 0);} // add entire part as a room
@@ -554,12 +555,12 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				to_split.pop_back();
 				vector3d const csz(c.get_size());
 				bool wall_dim(0); // which dim the room is split by
-				if      (csz.y > min_wall_len && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
-				else if (csz.x > min_wall_len && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
+				if      (csz.y > min_wall_len2 && csz.x > 1.25*csz.y) {wall_dim = 0;} // split long room in x
+				else if (csz.x > min_wall_len2 && csz.y > 1.25*csz.x) {wall_dim = 1;} // split long room in y
 				else {wall_dim = rgen.rand_bool();} // choose a random split dim for nearly square rooms
 				
 				//if (csz[!wall_dim] < min_wall_len || csz[wall_dim] < 1.5*doorway_width) {
-				if (min(csz.x, csz.y) < min_wall_len) {
+				if (min(csz.x, csz.y) < min_wall_len2) {
 					add_room(c, part_id, 1, 0, 0);
 					continue; // not enough space to add a wall
 				}
