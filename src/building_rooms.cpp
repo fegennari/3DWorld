@@ -389,7 +389,9 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 			} // for d
 		} // for n
 		if (!placed_toilet) { // if the toilet can't be placed in a corner, allow it to be placed anywhere; needed for small offices
-			placed_obj = placed_toilet = place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, 0.35, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8);
+			if (place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, 0.35, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8)) {
+				placed_obj = placed_toilet = 1;
+			}
 		}
 	}
 	return placed_obj;
