@@ -855,6 +855,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 			if (f == 0 && added_tc && num_chairs > 0 && !is_living && !is_kitchen) {r->assign_to(RTYPE_DINING, f);} // dining room
+			if (r->rtype == RTYPE_NOTSET && is_room_adjacent_to_ext_door(*r))      {r->assign_to(RTYPE_ENTRY,  f);} // entryway if has exterior door and is unassigned
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 

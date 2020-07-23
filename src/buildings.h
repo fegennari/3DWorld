@@ -192,8 +192,9 @@ enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_SM_CHAIR, TYPE_S
 	                 TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE,
 	                 TYPE_STOVE, TYPE_TV, TYPE_COUCH, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_STAIRS_U, SHAPE_TALL};
-enum room_type      {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY, RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
-std::string const room_names[NUM_RTYPES] = {"Not Set", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study", "Garage", "Shed"};
+enum room_type      {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY, RTYPE_ENTRY,
+	                 RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
+std::string const room_names[NUM_RTYPES] = {"Not Set", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study", "Entryway", "Garage", "Shed"};
 enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED};
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
 enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_COUCH, NUM_OBJ_MODELS};
