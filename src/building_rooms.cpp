@@ -5,6 +5,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "city.h" // for object_model_loader_t
+#include "subdiv.h" // for sd_sphere_d
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 bool const ADD_BOOK_COVERS = 1;
@@ -602,7 +603,7 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 
 void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		float const sz(((light_shape == SHAPE_CYLIN) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
+		float const sz(((light_shape == SHAPE_CYLIN || light_shape == SHAPE_SPHERE) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
 		light.d[dim][0] = center[dim] - sz;
 		light.d[dim][1] = center[dim] + sz;
 	}
@@ -720,6 +721,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			cube_t light;
 			if (!blocked_by_stairs || top_of_stairs) {light = pri_light;}
 			else if (use_sec_light) {light = sec_light; light_dim ^= 1;}
+			int light_obj_ix(-1);
 
 			if (!light.is_all_zeros()) { // add a light to the center of the ceiling of this room if there's space (always for top of stairs)
 				light.z2() = z + floor_height - fc_thick;
@@ -776,6 +778,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				else { // normal room
 					if (check_stairs && has_bcube_int_exp(light, interior->stairwells, fc_thick)) {is_lit = 0;} // disable if blocked by stairs
 					else {
+						light_obj_ix = objs.size();
 						objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
 						objs.back().obj_id = num_light_stacks;
 					}
@@ -855,7 +858,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 				}
 			}
-			if (f == 0 && added_tc && num_chairs > 0 && !is_living && !is_kitchen) {r->assign_to(RTYPE_DINING, f);} // dining room
+			if (f == 0 && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // dining room
+				if (light_obj_ix >= 0) { // handle dining room light: extend downward and make it a sphere
+					assert((unsigned)light_obj_ix < objs.size());
+					room_object_t &light(objs[light_obj_ix]);
+					light.shape = SHAPE_SPHERE;
+					light.z2() += 0.5f*light.dz();
+					light.z1() -= 0.22f*(light.dx() + light.dy());
+				}
+				r->assign_to(RTYPE_DINING, f);
+			}
 			if (r->rtype == RTYPE_NOTSET && is_room_adjacent_to_ext_door(*r))      {r->assign_to(RTYPE_ENTRY,  f);} // entryway if has exterior door and is unassigned
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
@@ -1093,6 +1105,19 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
 }
 
+void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color) {
+	static vector<vert_norm_tc> verts;
+	verts.clear();
+	static sd_sphere_d sd(all_zeros, 1.0, N_SPHERE_DIV); // resed across all calls
+	static sphere_point_norm spn;
+	if (!spn.get_points()) {sd.gen_points_norms(spn);} // calculate once and reuse
+	sd.get_quad_points(verts); // could use indexed triangles, but this only returns indexed quads
+	color_wrapper cw;
+	cw.set_c4(color);
+	point const center(c.get_cube_center()), size(0.5*c.get_size());
+	for (auto i = verts.begin(); i != verts.end(); ++i) {quad_verts.emplace_back(vert_norm_comp_tc((i->v*size + center), i->n, i->t[0], i->t[1]), cw);}
+}
+
 class rgeom_alloc_t {
 	deque<rgeom_storage_t> free_list; // one per unique texture ID/material
 public:
@@ -1296,11 +1321,12 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	// Note: need to use a different texture (or -1) for is_on because emissive flag alone does not cause a material change
 	bool const is_on(c.is_lit());
-	tid_nm_pair_t tp((is_on ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
+	tid_nm_pair_t tp(((is_on || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = is_on;
 	rgeom_mat_t &mat(get_material(tp));
-	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts  (c, c.color, c.get_llc(), EF_Z2);} // untextured, skip top face
-	else if (c.shape == SHAPE_CYLIN) {mat.add_vcylin_to_verts(c, c.color, 1, 0);} // bottom only
+	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts  (c, c.color, c.get_llc(), EF_Z2);} // untextured, skip top face
+	else if (c.shape == SHAPE_CYLIN ) {mat.add_vcylin_to_verts(c, c.color, 1, 0);} // bottom only
+	else if (c.shape == SHAPE_SPHERE) {mat.add_sphere_to_verts(c, c.color);}
 	else {assert(0);}
 }
 
