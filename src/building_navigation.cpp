@@ -515,7 +515,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	if (!room_geom) return; // no room objects
 
 	for (auto c = room_geom->objs.begin(); c != (room_geom->objs.begin() + room_geom->stairs_start); ++c) {
-		if (c->no_coll() || c->type == TYPE_ELEVATOR || c->type == TYPE_STAIR || c->type == TYPE_LIGHT) continue; // the object types are not collided with
+		if (c->no_coll() || c->type == TYPE_ELEVATOR || c->type == TYPE_STAIR || c->type == TYPE_LIGHT || c->type == TYPE_BLOCKER) continue; // the object types are not collided with by people
 		if (c->z1() < z2 && c->z2() > z1) {avoid.push_back(*c);}
 	}
 }

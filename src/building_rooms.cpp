@@ -96,8 +96,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, 
 }
 void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_start) {
 	for (auto i = interior->room_geom->objs.begin() + objs_start; i != interior->room_geom->objs.end(); ++i) {
-		if (i->type != TYPE_CHAIR)  continue;
-		if (!i->intersects(region)) continue;
+		if (i->type != TYPE_CHAIR || !i->intersects(region)) continue;
 		i->z2() -= 0.25*i->dz();
 		i->type = TYPE_SM_CHAIR;
 	}
@@ -334,6 +333,7 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 		if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
 		objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
 		objs.back().obj_id = (uint16_t)objs.size();
+		objs.emplace_back(c2, TYPE_BLOCKER, room_id); // add blocker cube to ensure no other object overlaps this space
 		return 1; // done
 	} // for n
 	return 0; // failed
@@ -355,14 +355,8 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool placed_obj(0), placed_toilet(0);
 
-	if (is_house) { // place a tub, but not in office buildings; placed first because it's the largest and the most limited in valid locations
-		cube_t place_area_tub(room_bounds);
-		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
-		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, 0.2, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start, 0.5);
-	}
-	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
-
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model - place toilet last so that clearance is guaranteed
+	// place toilet first because it's in the corner out of the way and higher priority
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 		float const height(0.35*floor_spacing), width(height*sz.y/sz.z), length(height*sz.x/sz.z);
 		unsigned const first_corner(rgen.rand() & 3);
@@ -372,7 +366,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 			unsigned const corner_ix((first_corner + n)&3);
 			bool const xdir(corner_ix&1), ydir(corner_ix>>1);
 			point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
-		
+
 			for (unsigned d = 0; d < 2 && !placed_toilet; ++d) { // try both dims
 				bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir);
 				cube_t c(corner, corner);
@@ -385,15 +379,20 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 				c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
 				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1)) continue; // bad placement
 				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+				objs.emplace_back(c2, TYPE_BLOCKER, room_id); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_toilet = 1; // done
 			} // for d
 		} // for n
 		if (!placed_toilet) { // if the toilet can't be placed in a corner, allow it to be placed anywhere; needed for small offices
-			if (place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, 0.35, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8)) {
-				placed_obj = placed_toilet = 1;
-			}
+			placed_obj |= place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, 0.35, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8);
 		}
 	}
+	if (is_house) { // place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
+		cube_t place_area_tub(room_bounds);
+		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
+		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, 0.2, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start, 0.4);
+	}
+	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.6);
 	return placed_obj;
 }
 
@@ -423,16 +422,18 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, LT_BROWN, BROWN, DK_BROWN};
 	colorRGBA const &couch_color(colors[rgen.rand()%NUM_COLORS]);
-	unsigned tv_pref_orient(4);
+	unsigned tv_pref_orient(4), couch_ix(objs.size()), tv_ix(0);
 	
 	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, 0.40, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.67, 4, 1, couch_color)) { // pref centered
 		placed_couch   = 1;
-		tv_pref_orient = (2*objs.back().dim + !objs.back().dir); // TV should be across from couch
+		tv_pref_orient = (2*objs[couch_ix].dim + !objs[couch_ix].dir); // TV should be across from couch
 	}
-	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 8.0, tv_pref_orient, 1, BKGRAY)) { // pref centered
+	tv_ix = objs.size();
+
+	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 4.0, tv_pref_orient, 1, BKGRAY)) { // pref centered
 		placed_tv = 1;
 		// add a small table to place the TV on so that it's off the floor and not blocked as much by tables and chairs
-		room_object_t &tv(objs.back());
+		room_object_t &tv(objs[tv_ix]);
 		float const height(0.4*tv.dz());
 		cube_t table(tv); // same XY bounds as the TV
 		tv.translate_dim(height, 2); // move TV up
@@ -440,7 +441,7 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
 	}
 	if (placed_couch && placed_tv) {
-		room_object_t const &couch(objs[objs.size()-3]), &tv(objs[objs.size()-2]); // skip the small table under the TV
+		room_object_t const &couch(objs[couch_ix]), &tv(objs[tv_ix]);
 
 		if (couch.dim == tv.dim && couch.dir != tv.dir) { // placed against opposite walls facing each other
 			cube_t region(couch);
@@ -1814,6 +1815,7 @@ void building_room_geom_t::create_static_vbos(bool small_objs) {
 			case TYPE_TUB:     add_tub_outer(*i); break;
 			case TYPE_TV:      add_tv_picture(*i); break;
 			case TYPE_ELEVATOR: break; // not handled here
+			case TYPE_BLOCKER:  break; // not drawn
 			default: break;
 			}
 			if (i->type >= TYPE_TOILET) { // handle drawing of 3D models
