@@ -844,7 +844,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (!added_obj) { // try to place a desk if there's no table or bed
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
-				if (added_obj && !r->has_stairs) {r->assign_to(RTYPE_STUDY, f);} // or other room type - may be overwritten below
+				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? RTYPE_STUDY : RTYPE_OFFICE), f);} // or other room type - may be overwritten below
 			}
 			if (is_house && can_place_book && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen
 				if (((!added_living && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r, 1))) { // front_door_only=1
@@ -883,7 +883,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					added_library = 1;
 				}
 			}
-			if (r->rtype == RTYPE_NOTSET && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if has exterior door and is unassigned
+			if (r->rtype == RTYPE_NOTSET) {
+				if (is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if has exterior door and is unassigned
+				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
+			}
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
