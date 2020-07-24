@@ -586,7 +586,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	} // for i
 }
 
-bool building_t::toggle_room_light(point const &closest_to) { // Note: closest_to is in building space, not camera space
+bool building_t::toggle_room_light(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
 	if (!has_room_geom()) return 0; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
@@ -602,9 +602,25 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: closest_t
 	} // for i
 	if (closest_dist_sq == 0.0) return 0; // no light found
 	assert(closest_light < objs.size());
-	objs[closest_light].toggle_lit_state(); // Note: doesn't update light texture/emissive, indir lighting, or room light value
+	objs[closest_light].toggle_lit_state(); // Note: doesn't update indir lighting or room light value
 	interior->room_geom->clear_materials(); // recreate light geom with correct emissive properties
 	return 1;
+}
+
+bool building_t::set_room_light_state_to(cube_t const &room, float zval, bool make_on) { // called by AI people
+	if (!has_room_geom()) return 0; // error?
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	float const window_vspacing(get_window_vspace());
+	bool updated(0);
+
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (i->type != TYPE_LIGHT) continue; // not a light
+		if (i->z1() < zval || i->z1() > (zval + window_vspacing) || !room.contains_cube_xy(*i)) continue; // light is on the wrong floor or in the wrong room
+		if (i->is_lit() != make_on) {i->toggle_lit_state(); updated = 1;} // Note: doesn't update indir lighting or room light value
+	} // for i
+	if (updated) {interior->room_geom->clear_materials();} // recreate light geom with correct emissive properties
+	return updated;
 }
 
 float room_t::get_light_amt() const { // Note: not normalized to 1.0
