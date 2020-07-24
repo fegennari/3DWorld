@@ -453,6 +453,17 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	return (placed_couch || placed_tv);
 }
 
+bool building_t::add_library_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be libraries
+	unsigned num_added(0);
+
+	for (unsigned n = 0; n < 8; ++n) { // place up to 8 bookcases
+		bool const added(add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, is_lit, objs_start));
+		if (added) {++num_added;} else {break;}
+	}
+	return (num_added > 0);
+}
+
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
@@ -634,7 +645,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0); // per-floor
-	bool added_bedroom(0), added_living(0);
+	bool added_bedroom(0), added_living(0), added_library(0);
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0);
@@ -856,15 +867,21 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
 				}
 			}
-			if (f == 0 && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // dining room
-				if (light_obj_ix >= 0) { // handle dining room light: extend downward and make it a sphere
-					assert((unsigned)light_obj_ix < objs.size());
-					room_object_t &light(objs[light_obj_ix]);
-					light.shape = SHAPE_SPHERE;
-					light.z2() += 0.5f*light.dz();
-					light.z1() -= 0.22f*(light.dx() + light.dy());
+			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
+				if (f == 0) { // dining room, must be on the first floor
+					if (light_obj_ix >= 0) { // handle dining room light: extend downward and make it a sphere
+						assert((unsigned)light_obj_ix < objs.size());
+						room_object_t &light(objs[light_obj_ix]);
+						light.shape = SHAPE_SPHERE;
+						light.z2() += 0.5f*light.dz();
+						light.z1() -= 0.22f*(light.dx() + light.dy());
+					}
+					r->assign_to(RTYPE_DINING, f);
 				}
-				r->assign_to(RTYPE_DINING, f);
+				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start)) { // add library, at most one
+					r->assign_to(RTYPE_LIBRARY, f);
+					added_library = 1;
+				}
 			}
 			if (r->rtype == RTYPE_NOTSET && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if has exterior door and is unassigned
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen)); // no whiteboards in office bathrooms or kitchens
