@@ -11,6 +11,7 @@
 
 bool const STAY_ON_ONE_FLOOR = 0;
 
+extern int frame_counter, display_mode;
 extern float fticks;
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
@@ -464,8 +465,8 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
 	if (loc.room_ix < 0) return 0; // not in a room
-	state.cur_room   = loc.room_ix;
-	state.dest_room  = state.cur_room; // set to the same room and pos just in case
+	state.cur_room    = loc.room_ix;
+	state.dest_room   = state.cur_room; // set to the same room and pos just in case
 	person.target_pos = person.pos; // set but not yet used
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 
@@ -639,7 +640,8 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 	return 0;
 }
 
-int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor) const {
+// Note: non-const because this updates room lights
+int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor) {
 
 	assert(person_ix < people.size());
 	pedestrian_t &person(people[person_ix]);
@@ -687,7 +689,6 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
 		assert(bcube.contains_pt(person.target_pos));
 		person.pos = person.target_pos;
-		// TODO: call set_room_light_state_to() on exit room and entrance room; need to make function non-const
 		if (!state.path.empty()) {state.next_path_pt(person, stay_on_one_floor); return AI_NEXT_PT;} // move to next path point
 		person.anim_time = 0.0; // reset animation
 		wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
@@ -726,7 +727,21 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
+	ai_room_lights_update(state, person, person_ix); // non-const part
 	return AI_MOVING;
+}
+
+void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t &person, unsigned person_ix) {
+	if (!(display_mode & 0x20)) return; // FIXME
+	if ((frame_counter + person_ix) & 7) return; // update room info only every 8 frames
+	int const room_ix(get_room_containing_pt(person.pos));
+	if (room_ix < 0) return; // room is not valid (between rooms, etc.)
+	assert((unsigned)room_ix < interior->rooms.size());
+	set_room_light_state_to(interior->rooms[room_ix], person.pos.z, 1); // make sure current room light is on
+	if ((unsigned)room_ix == state.cur_room) return; // same room as last time - done
+	assert(state.cur_room < interior->rooms.size());
+	set_room_light_state_to(interior->rooms[state.cur_room], person.pos.z, 0); // make sure old room light is off (check for other people in the room?)
+	state.cur_room = room_ix;
 }
 
 void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const {
@@ -749,7 +764,8 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 	}
 }
 
-void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) const {
+// Note: non-const because this updates room lights
+void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) {
 	//timer_t timer("Building People Update"); // ~3.7ms for 50K people, 0.55ms with distance check
 	point const camera_bs(get_camera_pos() - get_tiled_terrain_model_xlate());
 	float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
@@ -764,6 +780,14 @@ void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vect
 	}
 }
 
+int building_t::get_room_containing_pt(point const &pt) const {
+	assert(interior);
+
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		if (r->contains_pt(pt)) {return (r - interior->rooms.begin());}
+	}
+	return -1; // room not found
+}
 building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	building_loc_t loc;
 

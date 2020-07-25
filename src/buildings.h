@@ -530,7 +530,7 @@ struct building_t : public building_geom_t {
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
-	bool set_room_light_state_to(cube_t const &room, float zval, bool make_on);
+	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
@@ -545,8 +545,10 @@ struct building_t : public building_geom_t {
 	bool choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	bool find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, vector<point> &path) const;
 	void find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, bool straight_only, int part_ix=-1) const;
-	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor=1) const;
+	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor=1);
+	void ai_room_lights_update(building_ai_state_t &state, pedestrian_t &person, unsigned person_ix);
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
+	int get_room_containing_pt(point const &pt) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	bool place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
 		bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE);
@@ -604,7 +606,7 @@ private:
 };
 
 struct vect_building_t : public vector<building_t> {
-	void ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) const;
+	void ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen);
 };
 
 struct building_draw_utils {

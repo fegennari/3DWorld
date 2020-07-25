@@ -607,8 +607,9 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	return 1;
 }
 
-bool building_t::set_room_light_state_to(cube_t const &room, float zval, bool make_on) { // called by AI people
+bool building_t::set_room_light_state_to(room_t const &room, float zval, bool make_on) { // called by AI people
 	if (!has_room_geom()) return 0; // error?
+	if (room.is_hallway)  return 0; // don't toggle lights for hallways, which can have more than one light
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	float const window_vspacing(get_window_vspace());
