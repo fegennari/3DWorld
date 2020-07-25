@@ -303,6 +303,7 @@ struct building_room_geom_t {
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
+	void clear_materials_lg_static();
 	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_dynamic.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0);
 	rgeom_mat_t &get_wood_material(float tscale);
