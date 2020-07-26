@@ -474,10 +474,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		//if (is_light_occluded(lpos, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
-		float const floor_z(i->z2() - window_vspacing), ceil_z(i->z2());
-		bool const floor_is_above(camera_z < floor_z), floor_is_below(camera_z > ceil_z);
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
+		float const floor_z(i->z2() - window_vspacing), ceil_z(i->z2());
+		bool const floor_is_above((camera_z < floor_z) && !room.is_sec_bldg), floor_is_below(camera_z > ceil_z); // secondary buildings are all one floor independent of height
 		// less culling if either the light or the camera is by stairs and light is on the floor above or below
 		bool stairs_light(0);
 
@@ -596,7 +596,8 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_LIGHT) continue; // not a light
-		if (i->z1() < closest_to.z || i->z1() > (closest_to.z + window_vspacing)) continue; // light is on the wrong floor
+		assert(i->room_id < interior->rooms.size());
+		if (i->z1() < closest_to.z || (i->z1() > (closest_to.z + window_vspacing) && !interior->rooms[i->room_id].is_sec_bldg)) continue; // light is on the wrong floor
 		float const dist_sq(p2p_dist_sq(closest_to, i->get_cube_center()));
 		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; closest_light = (i - objs.begin());}
 	} // for i
