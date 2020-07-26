@@ -1222,7 +1222,7 @@ bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir,
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
 	unsigned const type(for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
-	float const pos_adj(0.025*sz[!dim]);
+	float const pos_adj(0.015*get_window_vspace()); // distance to move away from the building wall
 	doors.push_back(set_door_from_cube(c, dim, dir, type, pos_adj, 1, 0, 0, 0, 0)); // exterior=1, opened=0, opens_out=0, opens_up=0, swap_sides=0
 	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}
 	if (roof_access) {doors.back().type = tquad_with_ix_t::TYPE_RDOOR;}
