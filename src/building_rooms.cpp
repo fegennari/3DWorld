@@ -1504,7 +1504,6 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 
 void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale) {
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	rgeom_mat_t &wood_mat(get_wood_material(tscale));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
 	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
@@ -1515,17 +1514,17 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	for (unsigned d = 0; d < 2; ++d) { // left/right sides
 		cube_t lr(c);
 		lr.d[!c.dim][d] += (d ? -1.0f : 1.0f)*(width - side_thickness);
-		if (inc_lg) {wood_mat.add_cube_to_verts(lr, color, tex_origin, (skip_faces | EF_Z1));} // side
+		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(lr, color, tex_origin, (skip_faces | EF_Z1));} // side
 		middle.d[!c.dim][!d] = lr.d[!c.dim][d];
 	}
 	cube_t top(middle);
 	top.z1()   += c.dz() - side_thickness; // make same width as sides
 	middle.z2() = top.z1();
-	if (inc_lg) {wood_mat.add_cube_to_verts(top, color, tex_origin, skip_faces_shelves);} // top
+	if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(top, color, tex_origin, skip_faces_shelves);} // top
 	cube_t back(middle);
 	back.d[c.dim] [c.dir]  += 0.94*depth;
 	middle.d[c.dim][!c.dir] = back.d[c.dim][c.dir];
-	if (inc_lg) {wood_mat.add_cube_to_verts(back, color, tex_origin, get_face_mask(c.dim, c.dir));} // back - only face oriented outward
+	if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(back, color, tex_origin, get_face_mask(c.dim, c.dir));} // back - only face oriented outward
 	if (no_shelves) return;
 	// add shelves
 	rand_gen_t rgen;
@@ -1539,9 +1538,9 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		shelf = middle; // copy XY parts
 		shelf.z1() += (i+0.25)*shelf_dz;
 		shelf.z2()  = shelf.z1() + shelf_thick;
-		if (inc_lg) {wood_mat.add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);} // Note: mat reference may be invalidated by adding books
+		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);} // Note: mat reference may be invalidated by adding books
 	}
-	// add books; may invalidate wood_mat
+	// add books
 	for (unsigned i = 0; i < num_shelves; ++i) {
 		if (rgen.rand_float() < 0.2) continue; // no books on this shelf
 		cube_t const &shelf(shelves[i]);
