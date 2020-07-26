@@ -6,6 +6,7 @@
 #include "buildings.h"
 #include "city.h" // for object_model_loader_t
 #include "subdiv.h" // for sd_sphere_d
+#include "profiler.h"
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 bool const ADD_BOOK_COVERS = 1;
@@ -1826,7 +1827,7 @@ colorRGBA room_object_t::get_color() const {
 }
 
 void building_room_geom_t::create_static_vbos() {
-	//timer_t timer("Gen Room Geom"); // 3.7ms
+	//highres_timer_t timer("Gen Room Geom"); // 2.1ms
 	float const tscale(2.0/obj_scale);
 	obj_model_insts.clear();
 
@@ -1864,7 +1865,7 @@ void building_room_geom_t::create_static_vbos() {
 	mats_static.create_vbos();
 }
 void building_room_geom_t::create_small_static_vbos() {
-	//timer_t timer("Gen Room Geom Small"); // 2.1ms
+	//highres_timer_t timer("Gen Room Geom Small"); // 1.3ms
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
@@ -1882,6 +1883,7 @@ void building_room_geom_t::create_small_static_vbos() {
 	mats_small.create_vbos();
 }
 void building_room_geom_t::create_lights_vbos() {
+	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
