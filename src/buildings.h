@@ -303,6 +303,7 @@ struct building_room_geom_t {
 	building_room_geom_t(vector3d const &tex_origin_) : has_elevators(0), has_pictures(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_) {}
 	bool empty() const {return objs.empty();}
 	void clear();
+	void clear_static_vbos();
 	void clear_materials();
 	void clear_and_recreate_lights() {mats_lights.clear();}
 	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_dynamic.count_all_verts() + mats_lights.count_all_verts());}

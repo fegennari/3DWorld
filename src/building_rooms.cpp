@@ -1790,11 +1790,14 @@ void building_room_geom_t::clear() {
 	has_elevators = 0;
 }
 void building_room_geom_t::clear_materials() { // can be called to update textures, lighting state, etc.
-	mats_static.clear();
+	clear_static_vbos();
 	mats_small.clear();
 	mats_dynamic.clear();
 	mats_lights.clear();
-	obj_model_insts.clear();
+}
+void building_room_geom_t::clear_static_vbos() { // used to clear pictures
+	mats_static.clear();
+	obj_model_insts.clear(); // these are associated with static VBOs
 }
 
 rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, bool small) {
@@ -1905,7 +1908,7 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 	if (frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;}
 
 	if (has_pictures && num_pic_tids != num_screenshot_tids) {
-		clear_materials(); // user created a new screenshot texture, and this building has pictures - recreate room geom
+		clear_static_vbos(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
 	if (mats_static.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create static materials if needed
