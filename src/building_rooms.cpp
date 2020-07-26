@@ -1341,7 +1341,7 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	bool const is_on(c.is_lit());
 	tid_nm_pair_t tp(((is_on || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
 	tp.emissive = is_on;
-	rgeom_mat_t &mat(get_material(tp));
+	rgeom_mat_t &mat(mats_lights.get_material(tp, 0)); // no shadows
 	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts  (c, c.color, c.get_llc(), EF_Z2);} // untextured, skip top face
 	else if (c.shape == SHAPE_CYLIN ) {mat.add_vcylin_to_verts(c, c.color, 1, 0);} // bottom only
 	else if (c.shape == SHAPE_SPHERE) {mat.add_sphere_to_verts(c, c.color);}
@@ -1790,12 +1790,10 @@ void building_room_geom_t::clear() {
 	has_elevators = 0;
 }
 void building_room_geom_t::clear_materials() { // can be called to update textures, lighting state, etc.
-	clear_materials_lg_static();
+	mats_static.clear();
 	mats_small.clear();
 	mats_dynamic.clear();
-}
-void building_room_geom_t::clear_materials_lg_static() {
-	mats_static.clear();
+	mats_lights.clear();
 	obj_model_insts.clear();
 }
 
@@ -1824,56 +1822,70 @@ colorRGBA room_object_t::get_color() const {
 	return color; // Note: probably should always set color so that we can return it here
 }
 
-void building_room_geom_t::create_static_vbos(bool small_objs) {
-	//timer_t timer(string("Gen Room Geom") + (small_objs ? " Small" : "")); // 3.7ms / 2.1ms
+void building_room_geom_t::create_static_vbos() {
+	//timer_t timer("Gen Room Geom"); // 3.7ms
 	float const tscale(2.0/obj_scale);
-	if (!small_objs) {obj_model_insts.clear();}
+	obj_model_insts.clear();
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible()) continue;
 		assert(i->is_strictly_normalized());
 		assert(i->type < NUM_TYPES);
 
-		if (small_objs) {
-			switch (i->type) {
-			case TYPE_BOOK:    add_book    (*i, 0, 1); break;
-			case TYPE_BCASE:   add_bookcase(*i, 0, 1, tscale, 0); break;
-			case TYPE_BED:     add_bed     (*i, 0, 1, tscale); break;
-			default: break;
-			}
-		}
-		else { // large objects
-			switch (i->type) {
-			case TYPE_TABLE:   add_table   (*i, tscale); break;
-			case TYPE_CHAIR:   add_chair   (*i, tscale); break;
-			case TYPE_SM_CHAIR:add_chair   (*i, tscale); break;
-			case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
-			case TYPE_LIGHT:   add_light   (*i, tscale); break; // light fixture
-			case TYPE_RUG:     add_rug     (*i); break;
-			case TYPE_PICTURE: add_picture (*i); break;
-			case TYPE_WBOARD:  add_picture (*i); break;
-			case TYPE_BOOK:    add_book    (*i, 1, 0); break;
-			case TYPE_BCASE:   add_bookcase(*i, 1, 0, tscale, 0); break;
-			case TYPE_DESK:    add_desk    (*i, tscale); break;
-			case TYPE_TCAN:    add_trashcan(*i); break;
-			case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
-			case TYPE_WINDOW:  add_window  (*i, tscale); break;
-			case TYPE_TUB:     add_tub_outer(*i); break;
-			case TYPE_TV:      add_tv_picture(*i); break;
-			case TYPE_ELEVATOR: break; // not handled here
-			case TYPE_BLOCKER:  break; // not drawn
-			default: break;
-			}
-			if (i->type >= TYPE_TOILET) { // handle drawing of 3D models
-				obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);
-			}
+		switch (i->type) {
+		case TYPE_TABLE:   add_table   (*i, tscale); break;
+		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
+		case TYPE_SM_CHAIR:add_chair   (*i, tscale); break;
+		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
+		case TYPE_RUG:     add_rug     (*i); break;
+		case TYPE_PICTURE: add_picture (*i); break;
+		case TYPE_WBOARD:  add_picture (*i); break;
+		case TYPE_BOOK:    add_book    (*i, 1, 0); break;
+		case TYPE_BCASE:   add_bookcase(*i, 1, 0, tscale, 0); break;
+		case TYPE_DESK:    add_desk    (*i, tscale); break;
+		case TYPE_TCAN:    add_trashcan(*i); break;
+		case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
+		case TYPE_WINDOW:  add_window  (*i, tscale); break;
+		case TYPE_TUB:     add_tub_outer(*i); break;
+		case TYPE_TV:      add_tv_picture(*i); break;
+		case TYPE_ELEVATOR: break; // not handled here
+		case TYPE_BLOCKER:  break; // not drawn
+		default: break;
+		} // end switch
+		if (i->type >= TYPE_TOILET) { // handle drawing of 3D models
+			obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);
 		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
 	//timer_t timer2("Create VBOs"); // < 2ms
-	(small_objs ? mats_small : mats_static).create_vbos();
+	mats_static.create_vbos();
 }
+void building_room_geom_t::create_small_static_vbos() {
+	//timer_t timer("Gen Room Geom Small"); // 2.1ms
+	float const tscale(2.0/obj_scale);
 
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (!i->is_visible()) continue;
+		assert(i->is_strictly_normalized());
+		assert(i->type < NUM_TYPES);
+
+		switch (i->type) {
+		case TYPE_BOOK:  add_book    (*i, 0, 1); break;
+		case TYPE_BCASE: add_bookcase(*i, 0, 1, tscale, 0); break;
+		case TYPE_BED:   add_bed     (*i, 0, 1, tscale); break;
+		default: break;
+		}
+	} // for i
+	mats_small.create_vbos();
+}
+void building_room_geom_t::create_lights_vbos() {
+	float const tscale(2.0/obj_scale);
+
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (i->is_visible() && i->type == TYPE_LIGHT) {add_light(*i, tscale);}
+	}
+	mats_lights.create_vbos();
+}
 void building_room_geom_t::create_dynamic_vbos() {
 	if (!has_elevators) return; // currently only elevators are dynamic, can skip this step if there are no elevators
 
@@ -1893,20 +1905,22 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 	if (frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;}
 
 	if (has_pictures && num_pic_tids != num_screenshot_tids) {
-		clear_materials_lg_static(); // user created a new screenshot texture, and this building has pictures - recreate room geom
+		clear_materials(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
 	if (mats_static.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create static materials if needed
-		create_static_vbos(0);
+		create_static_vbos();
 		++num_geom_this_frame;
 	}
 	if (inc_small && mats_small.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create small materials if needed
-		create_static_vbos(1);
+		create_small_static_vbos();
 		++num_geom_this_frame;
 	}
+	if (mats_lights .empty()) {create_lights_vbos ();} // create lights  materials if needed (no limit)
 	if (mats_dynamic.empty()) {create_dynamic_vbos();} // create dynamic materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	mats_static .draw(s, shadow_only);
+	mats_lights .draw(s, shadow_only);
 	mats_dynamic.draw(s, shadow_only);
 	if (inc_small) {mats_small.draw(s, shadow_only);}
 	disable_blend();

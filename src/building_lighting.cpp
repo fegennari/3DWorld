@@ -603,7 +603,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	if (closest_dist_sq == 0.0) return 0; // no light found
 	assert(closest_light < objs.size());
 	objs[closest_light].toggle_lit_state(); // Note: doesn't update indir lighting or room light value
-	interior->room_geom->clear_materials_lg_static(); // recreate light geom with correct emissive properties
+	interior->room_geom->clear_and_recreate_lights(); // recreate light geom with correct emissive properties
 	return 1;
 }
 
@@ -620,7 +620,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 		if (i->z1() < zval || i->z1() > (zval + window_vspacing) || !room.contains_cube_xy(*i)) continue; // light is on the wrong floor or in the wrong room
 		if (i->is_lit() != make_on) {i->toggle_lit_state(); updated = 1;} // Note: doesn't update indir lighting or room light value
 	} // for i
-	if (updated) {interior->room_geom->clear_materials_lg_static();} // recreate light geom with correct emissive properties
+	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
 	return updated;
 }
 

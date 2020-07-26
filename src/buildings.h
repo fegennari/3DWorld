@@ -297,15 +297,15 @@ struct building_room_geom_t {
 	vector3d tex_origin;
 	vector<room_object_t> objs; // for drawing and collision detection
 	vector<obj_model_inst_t> obj_model_insts;
-	building_materials_t mats_static, mats_small, mats_dynamic; // {large static, small static, dynamic} materials
+	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights; // {large static, small static, dynamic, lights} materials
 	vect_cube_t light_bcubes;
 
 	building_room_geom_t(vector3d const &tex_origin_) : has_elevators(0), has_pictures(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
-	void clear_materials_lg_static();
-	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_dynamic.count_all_verts());}
+	void clear_and_recreate_lights() {mats_lights.clear();}
+	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_dynamic.count_all_verts() + mats_lights.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0);
 	rgeom_mat_t &get_wood_material(float tscale);
 	// Note: these functions are all for drawing objects / adding them to the vertex list
@@ -326,7 +326,9 @@ struct building_room_geom_t {
 	void add_tub_outer(room_object_t const &c);
 	void add_tv_picture(room_object_t const &c);
 	void add_trashcan(room_object_t const &c);
-	void create_static_vbos(bool small_objs);
+	void create_static_vbos();
+	void create_small_static_vbos();
+	void create_lights_vbos();
 	void create_dynamic_vbos();
 	void draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building);
 };
