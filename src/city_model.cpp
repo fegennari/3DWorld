@@ -7,7 +7,7 @@
 extern city_params_t city_params;
 
 
-bool city_model_t::read(FILE *fp) { // filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult shadow_mat_ids
+bool city_model_t::read(FILE *fp) { // filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult [shadow_mat_ids]
 
 	assert(fp);
 	unsigned line_num(0); // unused
@@ -20,7 +20,7 @@ bool city_model_t::read(FILE *fp) { // filename recalc_normals body_material_id 
 	if (!read_bool(fp, swap_yz)) return 0;
 	if (!read_float(fp, scale)) return 0;
 	if (!read_float(fp, lod_mult) || lod_mult <= 0.0) return 0;
-	unsigned shadow_mat_id;
+	unsigned shadow_mat_id(0);
 	while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
 	valid = 1; // success
 	return 1;
@@ -56,7 +56,7 @@ void city_model_loader_t::load_models() {
 	models_valid.resize(num_models(), 1); // assume valid
 
 	for (unsigned i = 0; i < num_models(); ++i) {
-		city_model_t const &model(get_model(i));
+		city_model_t &model(get_model(i));
 		int const def_tid(-1); // should this be a model parameter?
 		colorRGBA const def_color(WHITE); // should this be a model parameter?
 
@@ -64,6 +64,11 @@ void city_model_loader_t::load_models() {
 			cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model (will use default low poly model)." << endl;
 			push_back(model3d(model.fn, tmgr)); // add a placeholder dummy model
 			models_valid[i] = 0;
+		}
+		if (model.shadow_mat_ids.empty()) { // empty shadow_mat_ids, create the list from all materials
+			model3d const &m(back());
+			unsigned const num_materials(max(m.num_materials(), 1U)); // max with 1 for unbound material
+			for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
 		}
 	} // for i
 }
@@ -101,7 +106,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
 	translate_to(-bcube.get_cube_center()); // cancel out model local translate
 
-	if ((low_detail || is_shadow_pass) && !model_file.shadow_mat_ids.empty()) { // low detail pass, normal maps disabled
+	if (low_detail || is_shadow_pass) { // low detail pass, normal maps disabled
 		if (!is_shadow_pass && use_model3d_bump_maps()) {model3d::bind_default_flat_normal_map();} // still need to set the default here in case the shader is using it
 		// TODO: combine shadow materials into a single VBO and draw with one call when is_shadow_pass==1; this is complex and may not yield a significant improvement
 		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass, 0, 2, 0);}
@@ -122,8 +127,15 @@ city_model_t const &car_model_loader_t::get_model(unsigned id) const {
 	assert(id < num_models());
 	return city_params.car_model_files[id];
 }
-
+city_model_t &car_model_loader_t::get_model(unsigned id) {
+	assert(id < num_models());
+	return city_params.car_model_files[id];
+}
 city_model_t const &object_model_loader_t::get_model(unsigned id) const {
+	assert(id < NUM_OBJ_MODELS);
+	return city_params.building_models[id];
+}
+city_model_t &object_model_loader_t::get_model(unsigned id) {
 	assert(id < NUM_OBJ_MODELS);
 	return city_params.building_models[id];
 }

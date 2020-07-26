@@ -598,6 +598,10 @@ city_model_t const &ped_model_loader_t::get_model(unsigned id) const {
 	assert(id < num_models());
 	return city_params.ped_model_files[id];
 }
+city_model_t &ped_model_loader_t::get_model(unsigned id) {
+	assert(id < num_models());
+	return city_params.ped_model_files[id];
+}
 
 void ped_city_vect_t::add_ped(pedestrian_t const &ped, unsigned road_ix) {
 	if (ped.city >= peds.size()) {peds.resize(ped.city+1);} // allocate city if needed
