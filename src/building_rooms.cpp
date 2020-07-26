@@ -1943,7 +1943,7 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
 		vector3d dir(zero_vector);
 		dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
-		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, dir, i->color, zero_vector, i->model_id, shadow_only, 0, 0);
+		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
 		obj_drawn = 1;
 	}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
