@@ -1768,7 +1768,6 @@ void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
 	colorRGBA const color(apply_light_color(c));
 	mat.add_cube_to_verts(c, color, zero_vector, (EF_Z1 | EF_Z2)); // shadowed, no top/bottom faces
-	mat.add_cube_to_verts(c, color, zero_vector, (EF_Z1 | EF_Z2), 0, 0, 0, 1); // inverted, needed for shadows
 }
 
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {

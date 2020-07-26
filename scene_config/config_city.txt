@@ -48,7 +48,7 @@ city traffic_balance_val 0.9
 city new_city_prob 0.5
 city enable_car_path_finding 1
 city convert_model_files 1
-# car_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult shadow_mat_ids
+# car_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult [shadow_mat_ids]
 city car_model ../models/cars/sports_car/sportsCar.model3d        1 22 -1 90  1 1.0 1.0  20 22
 city car_model ../models/cars/natla_car/natla_car.model3d         1 -1  2 90  1 1.0 0.5  1 # always GRAY (writing to model3d file inverts DDS textures)
 city car_model ../models/cars/speedCar/speedCar.model3d           1 -1  6 0   1 1.0 0.5  4 5 # always DK_BLUE (writing to model3d file inverts DDS textures)
@@ -72,7 +72,7 @@ city num_peds 10000
 city num_building_peds 50000
 city ped_speed 0.001
 city ped_respawn_at_dest 1
-# ped_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult shadow_mat_ids
+# ped_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult [shadow_mat_ids]
 city ped_model ../models/people/muro/muro.model3d         1 0 -1 90  1 1.0  1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
 city ped_model ../models/people/Patrick/Patrick.model3d   1 0 -1 90  1 1.0  1.0  0
 #city ped_model ../models/people/Alfred/Alfred.model3d     1 0 -1 90  1 1.0  1.0  0 # arms out in odd position, low poly
@@ -85,15 +85,15 @@ city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 -1 90  1 0.8  1.0 
 city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 -1 90  1 0.7 1.0  0 3
 #city ped_model ../models/people/makehuman/Test/test.model3d   1 0 -1 90  1 1.0 1.0  0
 
-# filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult shadow_mat_ids
+# filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult [shadow_mat_ids]
 city toilet_model ../models/interiors/toilet/toilet.model3d  1 -1 -1 0  1 1.0 1.0  0
-city sink_model ../models/interiors/simple_sink.model3d  1 -1 -1 90  0 1.0 1.0  0
-#city sink_model ../models/interiors/washbasin.model3d  1 -1 -1 90  1 1.0 1.0  0 # bad normals or wrong vertex winding order
-city tub_model ../models/interiors/bathtub.model3d  1 -1 -1 90  1 1.0 1.0  0
-city fridge_model ../models/interiors/fridge/Fridge.model3d  1 -1 -1 90  1 1.0 1.0  0
-city stove_model ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 0 -1 90  1 1.0 1.0  0
-city tv_model "../models/interiors/SmartTV/Smart TV.model3d"  1 0 -1 90  1 1.0 1.0  0
-city couch_model ../models/interiors/couch/OBJ.model3d  1 0 -1 90  1 1.0 1.0  0
+city sink_model ../models/interiors/simple_sink.model3d  1 -1 -1 90  0 1.0 1.0
+#city sink_model ../models/interiors/washbasin.model3d  1 -1 -1 90  1 1.0 1.0 # bad normals or wrong vertex winding order
+city tub_model ../models/interiors/bathtub.model3d  1 -1 -1 90  1 1.0 1.0  2
+city fridge_model ../models/interiors/fridge/Fridge.model3d  1 -1 -1 90  1 1.0 1.0  0 1 2 3 4 5
+city stove_model ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 0 -1 90  1 1.0 1.0
+city tv_model "../models/interiors/SmartTV/Smart TV.model3d"  1 0 -1 90  1 1.0 1.0
+city couch_model ../models/interiors/couch/OBJ.model3d  1 0 -1 90  1 1.0 1.0
 
 city max_lights 1024
 city max_shadow_maps 40
