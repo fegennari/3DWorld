@@ -1907,6 +1907,10 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 	static unsigned num_geom_this_frame(0); // used to limit per-frame geom gen time; doesn't apply to shadow pass, in case shadows are cached
 	if (frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;}
 
+	if (lights_changed) {
+		mats_lights.clear();
+		lights_changed = 0;
+	}
 	if (has_pictures && num_pic_tids != num_screenshot_tids) {
 		clear_static_vbos(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
