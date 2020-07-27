@@ -24,7 +24,7 @@ city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
 extern bool enable_dlight_shadows, dl_smap_enabled, draw_building_interiors, flashlight_on, camera_in_building, have_indir_smoke_tex;
-extern int rand_gen_index, display_mode, animate2;
+extern int rand_gen_index, display_mode, animate2, draw_model;
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
 extern vector<light_source> dl_sources;
@@ -2970,6 +2970,7 @@ bool city_lights_manager_t::begin_lights_setup(vector3d const &xlate, float ligh
 	clear_dynamic_lights();
 	lights_bcube.set_to_zeros();
 	dl_smap_enabled = 0; // here for safety, needed for buildings flow
+	if (draw_model != 0) return 0; // skip shadow calculation in wireframe mode
 	if (!enable_lights() && !prev_had_lights) return 0; // only have lights at night
 	lights_bcube = cube_t(camera_pdu.pos - xlate);
 	lights_bcube.expand_by(light_radius);

@@ -54,7 +54,7 @@ extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, 
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt, num_rnd_grass_blocks;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height;
-extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv;
+extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv, draw_model;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
 extern float ocean_wave_height, sm_tree_density, tree_density_thresh, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset, biome_x_offset;
 extern float smap_thresh_scale, tt_grass_scale_factor;
@@ -930,6 +930,7 @@ cube_t tile_t::get_shadow_bcube() const {
 void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool cleanup_only) {
 
 	if (!shadow_map_enabled()) return; // disabled
+	if (draw_model != 0) {clear_shadow_map(&smap_manager); return;} // skip shadow calculation in wireframe mode
 	//timer_t timer("Create Tile Shadow Maps");
 	float const smap_dist_scale(get_dist_to_camera_in_tiles(1)/(SMAP_NEW_THRESH*smap_thresh_scale));
 
