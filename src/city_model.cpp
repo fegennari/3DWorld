@@ -19,7 +19,7 @@ bool city_model_t::read(FILE *fp) { // filename recalc_normals body_material_id 
 	if (!read_float(fp, xy_rot)) return 0;
 	if (!read_bool(fp, swap_yz)) return 0;
 	if (!read_float(fp, scale)) return 0;
-	if (!read_float(fp, lod_mult) || lod_mult <= 0.0) return 0;
+	if (!read_float(fp, lod_mult) || lod_mult < 0.0) return 0;
 	unsigned shadow_mat_id(0);
 	while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
 	valid = 1; // success
@@ -111,9 +111,11 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		// TODO: combine shadow materials into a single VBO and draw with one call when is_shadow_pass==1; this is complex and may not yield a significant improvement
 		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass, 0, 2, 0);}
 	}
-	else { // TODO: should model_file.lod_mult be multiplied by sz_scale?
+	else {
+		float lod_mult(model_file.lod_mult); // should model_file.lod_mult always be multiplied by sz_scale?
+		if (model_file.lod_mult == 0.0) {lod_mult = 400.0*sz_scale;} // auto select lod_mult
 		model.render_materials(s, is_shadow_pass, 0, 0, 2, 3, 3, model.get_unbound_material(), rotation_t(),
-			nullptr, nullptr, is_shadow_pass, model_file.lod_mult, (is_shadow_pass ? 10.0 : 0.0)); // enable_alpha_mask=2 (both)
+			nullptr, nullptr, is_shadow_pass, lod_mult, (is_shadow_pass ? 10.0 : 0.0)); // enable_alpha_mask=2 (both)
 	}
 	fgPopMatrix();
 	camera_pdu.valid = camera_pdu_valid;
