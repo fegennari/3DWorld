@@ -995,7 +995,8 @@ public:
 							if (segs[2].enabled) { // already have a Z segment - can only clip in Z (can happen for buildings with overlapping parts)
 								for (unsigned n = 0; n < 2; ++n) {
 									if (!segs[n].enabled) continue;
-									// check that *p contains range clo1/clo2/cli1/cli2? seems to always contain that range in the buildings I've seen
+									// Note: the line below is intended to prevent missing exterior walls, at the cost of failing to remove some false exterior walls from the interior
+									if ((pxy1 - cxy1)/sz[xy] > clo1 || (pxy2 - cxy1)/sz[xy] < chi1) continue; // XY range not covered by this part - can't clip (do better somehow?)
 									if (d == xy) {segs[0].ilo = segs[1].ilo = z_split;} else {segs[0].dlo = segs[1].dlo = z_split;} // clip off bottom
 								}
 								continue;
