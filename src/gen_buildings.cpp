@@ -968,7 +968,7 @@ public:
 						assert(dlo >= 0.0f && dhi <= 1.0f && ilo >= 0.0f && ihi <= 1.0f);
 					}
 				};
-				wall_seg_t segs[3]; // lo, hi, top
+				wall_seg_t segs[5]; // lo, hi, top, lo_top, hi_top
 				segs[0].enabled = 1; // default is first segment used only
 
 				if (bg.has_interior() && !parts.empty() && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
@@ -994,9 +994,21 @@ public:
 
 							if (segs[2].enabled) { // already have a Z segment - can only clip in Z (can happen for buildings with overlapping parts)
 								for (unsigned n = 0; n < 2; ++n) {
-									if (!segs[n].enabled) continue;
-									// Note: the line below is intended to prevent missing exterior walls, at the cost of failing to remove some false exterior walls from the interior
-									if ((pxy1 - cxy1)/sz[xy] > clo1 || (pxy2 - cxy1)/sz[xy] < chi1) continue; // XY range not covered by this part - can't clip (do better somehow?)
+									if (!segs[n].enabled) continue; // no segment assigned to this slot, don't need to split
+									float const p_lo((pxy1 - cxy1)/sz[xy]), p_hi((pxy2 - cxy1)/sz[xy]);
+									// check if this part partially contains this face in XY; if so, create more segs if there are slots available;
+									// it's rare to get into this case, and the two continues are never reached for the current set of buildings that are created,
+									// so it seems like 5 segments is always enough - though it may be cleaner to use a splitting loop somehow
+									if (p_lo > clo1) {
+										if (segs[3].enabled) continue; // don't have any extra segs, leave the exterior wall even if it's partially interior
+										segs[3] = segs[n];
+										((d == xy) ? segs[3].dhi : segs[3].ihi) = p_lo; // x2/y2 ends at part x1/y1
+									}
+									if (p_hi < chi1) {
+										if (segs[4].enabled) continue; // don't have any extra segs, leave the exterior wall even if it's partially interior
+										segs[4] = segs[n];
+										((d == xy) ? segs[4].dlo : segs[4].ilo) = p_hi; // x1/y1 starts at part x2/y2
+									}
 									if (d == xy) {segs[0].ilo = segs[1].ilo = z_split;} else {segs[0].dlo = segs[1].dlo = z_split;} // clip off bottom
 								}
 								continue;
@@ -1022,7 +1034,7 @@ public:
 						}
 					} // for p
 				} // end wall clipping
-				for (unsigned s = 0; s < 3; ++s) {
+				for (unsigned s = 0; s < 5; ++s) {
 					wall_seg_t &seg(segs[s]);
 					seg.finalize();
 					if (!seg.enabled) continue; // this segment unused
