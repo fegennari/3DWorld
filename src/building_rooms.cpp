@@ -564,10 +564,10 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 			center[ dim] = wall_pos;
 			center[!dim] = room.get_center_dim(!dim);
 			center.z     = zval + rgen.rand_uniform(0.45, 0.55)*floor_height; // move up
+			float const lo(room.d[!dim][0] + 0.7*width), hi(room.d[!dim][1] - 0.7*width);
 
-			for (unsigned n = 0; n < 2; ++n) { // make 2 attempts to choose a position along the wall; first iteration is the center
-				if (n > 0) {
-					float const lo(room.d[!dim][0] + 0.7*width), hi(room.d[!dim][1] - 0.7*width);
+			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to choose a position along the wall; first iteration is the center
+				if (n > 0) { // try centered first, then non-centered
 					if (hi - lo < width) break; // not enough space to shift, can't place this picture
 					center[!dim] = rgen.rand_uniform(lo, hi);
 				}
