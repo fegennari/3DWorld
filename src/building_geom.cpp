@@ -186,7 +186,9 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 	}
 	else {
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
-			if (xy_only && i->z1() > bcube.z1()) break; // only need to check first level in this mode
+			if (xy_only && i->z1() > bcube.z1()) { // only need to check first level in this mode
+				if (has_complex_floorplan) {continue;} else {break;}
+			}
 			if (!xy_only && ((pos2.z + radius < i->z1() + xlate.z) || (pos2.z - radius > i->z2() + xlate.z))) continue; // test z overlap
 			if (radius == 0.0 && !(xy_only ? i->contains_pt_xy(pos2) : i->contains_pt(pos2))) continue; // no intersection; ignores p_last
 			cube_t const part_bc(*i + xlate);
