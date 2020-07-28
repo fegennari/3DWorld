@@ -558,6 +558,7 @@ struct building_t : public building_geom_t {
 		bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE);
 	bool place_model_along_wall(unsigned model_id, room_object type, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
 		bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE);
+	bool check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_elevators(point const &player_pos);
 private:
 	cube_t get_walkable_room_bounds(room_t const &room) const;

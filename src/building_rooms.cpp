@@ -506,17 +506,30 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 	objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
 }
 
+bool building_t::check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const {
+	float const wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness), side_clearance(1.0*wall_thickness);
+	cube_t tc(c), keepout(c);
+	tc.expand_in_dim(!dim, 0.1*width); // expand slightly to account for frame
+	keepout.z1() = zval; // extend to the floor
+	keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
+	keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
+	if (overlaps_other_room_obj(keepout, objs_start)) return 0;
+	if (is_cube_close_to_doorway(tc, 0.0, (!is_house && !room.is_office))) return 0; // bad placement (inc_open = (!is_house && !room.is_office))
+	if ((room.has_stairs || room.has_elevator) && interior->is_blocked_by_stairs_or_elevator_no_expand(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
+	return 1; // success
+}
+
 bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	if (!room_object_t::enable_pictures()) return 0; // disabled
 	
 	if (!is_house && !room.is_office) {
-		if (room.is_hallway) return 0; // no pictures or whiteboards in office building hallways
+		if (room.is_hallway) return 0; // no pictures or whiteboards in office building hallways (what about rooms with stairs?)
 		// room in a commercial building - add whiteboard when there is a full wall to use
 	}
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
 	assert(room.part_id < parts.size());
 	cube_t const &part(parts[room.part_id]);
-	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness), side_clearance(1.0*wall_thickness);
+	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool was_hung(0);
@@ -533,12 +546,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				c.z1() = zval + 0.25*floor_height; c.z2() = zval + 0.8*floor_height;
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
 				c.expand_in_dim(!dim, -0.2*room.get_sz_dim(!dim)); // xy_space
-				cube_t keepout(c);
-				keepout.z1() = zval; // extend to the floor
-				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
-				keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
-				if (overlaps_other_room_obj(keepout, objs_start)) continue;
-				if (is_cube_close_to_doorway(c, 0.0, !room.is_office)) continue; // bad placement (inc_open=!is_office)
+				if (!check_valid_picture_placement(room, c, 0.6*room.get_sz_dim(!dim), zval, dim, dir, objs_start)) continue;
 				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
 				return 1; // done, only need to add one
 			} // for dir
@@ -568,14 +576,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
 				if (room.is_hallway) {c.translate_dim((dir ? -1.0 : 1.0)*0.5*wall_thickness, dim);} // add an additional half wall thickness for hallways
 				c.expand_in_dim(!dim, 0.5*width);
-				cube_t tc(c);
-				tc.expand_in_dim(!dim, 0.1*width); // expand slightly to account for frame
-				cube_t keepout(c);
-				keepout.z1() = zval; // extend to the floor
-				keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
-				keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
-				if (overlaps_other_room_obj(keepout, objs_start)) continue;
-				if (is_cube_close_to_doorway(tc) || interior->is_blocked_by_stairs_or_elevator_no_expand(tc, 4.0*wall_thickness)) continue; // bad placement
+				if (!check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start)) continue;
 				objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
 				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
 				was_hung = 1;
