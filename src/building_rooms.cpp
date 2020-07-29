@@ -506,7 +506,8 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 	objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
 }
 
-bool building_t::check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const {
+// return value: 0=invalid, 1=valid and good, 2=valid but could be better
+int building_t::check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const {
 	float const wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness), side_clearance(1.0*wall_thickness);
 	cube_t tc(c), keepout(c);
 	tc.expand_in_dim(!dim, 0.1*width); // expand slightly to account for frame
@@ -514,8 +515,10 @@ bool building_t::check_valid_picture_placement(room_t const &room, cube_t const 
 	keepout.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
 	keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
 	if (overlaps_other_room_obj(keepout, objs_start)) return 0;
-	if (is_cube_close_to_doorway(tc, 0.0, (!is_house && !room.is_office))) return 0; // bad placement (inc_open = (!is_house && !room.is_office))
+	bool const inc_open(!is_house && !room.is_office);
+	if (is_cube_close_to_doorway(tc, 0.0, inc_open)) return 0; // bad placement
 	if ((room.has_stairs || room.has_elevator) && interior->is_blocked_by_stairs_or_elevator_no_expand(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
+	if (!inc_open && is_cube_close_to_doorway(tc, 0.0, 1)) return 2; // success, but could be better
 	return 1; // success
 }
 
@@ -565,6 +568,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 			center[!dim] = room.get_center_dim(!dim);
 			center.z     = zval + rgen.rand_uniform(0.45, 0.55)*floor_height; // move up
 			float const lo(room.d[!dim][0] + 0.7*width), hi(room.d[!dim][1] - 0.7*width);
+			cube_t best_pos;
 
 			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to choose a position along the wall; first iteration is the center
 				if (n > 0) { // try centered first, then non-centered
@@ -576,12 +580,15 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
 				if (room.is_hallway) {c.translate_dim((dir ? -1.0 : 1.0)*0.5*wall_thickness, dim);} // add an additional half wall thickness for hallways
 				c.expand_in_dim(!dim, 0.5*width);
-				if (!check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start)) continue;
-				objs.emplace_back(c, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
-				objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
-				was_hung = 1;
-				break; // success
+				int const ret(check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start));
+				if (ret == 0) continue; // invalid, retry
+				best_pos = c;
+				if (ret == 1) break; // valid and good - keep this pos
 			} // for n
+			if (best_pos.is_all_zeros()) continue; // failed placement
+			objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
+			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
+			was_hung = 1;
 		} // for dir
 	} // for dim
 	return was_hung;
