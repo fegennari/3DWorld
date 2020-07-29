@@ -1894,11 +1894,14 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_WINDOW:  add_window  (*i, tscale); break;
 		case TYPE_TUB:     add_tub_outer(*i); break;
 		case TYPE_TV:      add_tv_picture(*i); break;
+		case TYPE_CUBICLE:  break; // TODO
+		case TYPE_STALL:    break; // TODO
+		case TYPE_PLANT:    break; // TODO
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		default: break;
 		} // end switch
-		if (i->type >= TYPE_TOILET) { // handle drawing of 3D models
+		if (i->type >= TYPE_TOILET && i->type <= TYPE_COUCH) { // handle drawing of 3D models
 			obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);
 		}
 	} // for i
