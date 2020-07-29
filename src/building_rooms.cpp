@@ -234,6 +234,15 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	return (num_placed > 0);
 }
 
+bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+	if (!room.is_office) return 0;
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	float const floor_spacing(get_window_vspace());
+	if (min(room_bounds.dx(), room_bounds.dy()) < 2.5*floor_spacing || max(room_bounds.dx(), room_bounds.dy()) < 3.5*floor_spacing) return 0; // not large enough
+	// TODO - WRITE
+	return 0;
+}
+
 bool building_t::can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const { // check room type and existence of exterior door
 	if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_office) return 0; // no bed/bath in these cases
 	if (on_first_floor && is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
@@ -354,11 +363,16 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.5*wall_thickness);
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
+	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
+
+	if (have_toilet && have_sink && room.is_office && min(place_area.dx(), place_area.dy()) > 2.0*floor_spacing && max(place_area.dx(), place_area.dy()) > 3.0*floor_spacing) {
+		//if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit, objs_start)) return 1; // large enough, try to divide into bathroom stalls
+	}
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool placed_obj(0), placed_toilet(0);
-
+	
 	// place toilet first because it's in the corner out of the way and higher priority
-	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)) { // have a toilet model
+	if (have_toilet) { // have a toilet model
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 		float const height(0.35*floor_spacing), width(height*sz.y/sz.z), length(height*sz.x/sz.z);
 		unsigned const first_corner(rgen.rand() & 3);
@@ -396,6 +410,25 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	}
 	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.6);
 	return placed_obj;
+}
+
+bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
+	vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK  )); // L, W, H
+	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z);
+	float const sheight(0.55*floor_spacing), swidth(sheight*ssz.y/ssz.z), slength(sheight*ssz.x/ssz.z);
+	float const stall_width(2.0*tlength), stall_depth(tlength + twidth), sink_spacing(1.6*swidth);
+	vector3d const room_sz(room.get_size());
+	bool const min_dim(room_sz.y < room_sz.x);
+	float const room_len(room_sz[!min_dim]), room_width(room_sz[!min_dim]), sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
+	if (room_width < req_depth) return 0;
+	bool const two_rows(room_width > 1.5*req_depth);
+	unsigned const num_stalls(floor(stalls_len/stall_width)), num_sinks(floor(sinks_len/sink_spacing));
+	//cout << TXT(two_rows) << TXT(num_stalls) << TXT(num_sinks) << endl;
+	if (num_stalls < 2 || num_sinks < 2) return 0; // not enough space for 2 stalls and 2 sinks
+	// TODO: divide bathroom into stalls and add multiple sinks and toilets
+	return 0;
 }
 
 bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool allow_adj_ext_door) {
@@ -851,6 +884,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_kitchen) {r->assign_to(RTYPE_KITCHEN, f); added_kitchen_mask |= floor_mask;}
 				}
 			}
+			if (!added_obj && r->is_office) {added_obj = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);} // handle large offices
+
 			if (!added_obj) { // try to place a desk if there's no table or bed
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
 				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? RTYPE_STUDY : RTYPE_OFFICE), f);} // or other room type - may be overwritten below
