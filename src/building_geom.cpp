@@ -1651,7 +1651,7 @@ bool building_t::is_cube_close_to_doorway(cube_t const &c, float dmin, bool inc_
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // test exterior doors
 		cube_t const door(i->get_bcube());
 		if (c.z2() < door.z1() || c.z1() > door.z2()) continue;
-		if (is_cube_close_to_door(c, dmin, 0, door))  return 1;
+		if (is_cube_close_to_door(c, dmin, inc_open, door)) return 1;
 	}
 	return (interior ? interior->is_cube_close_to_doorway(c, dmin, inc_open) : 0); // test interior doors
 }
