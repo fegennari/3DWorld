@@ -327,6 +327,8 @@ struct building_room_geom_t {
 	void add_tub_outer(room_object_t const &c);
 	void add_tv_picture(room_object_t const &c);
 	void add_trashcan(room_object_t const &c);
+	void add_br_stall(room_object_t const &c);
+	void add_cubicle(room_object_t const &c);
 	void create_static_vbos();
 	void create_small_static_vbos();
 	void create_lights_vbos();
@@ -666,6 +668,7 @@ void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &s
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 cube_t get_building_lights_bcube();
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
+bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, bool dim);

@@ -365,8 +365,8 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 
-	if (have_toilet && have_sink && room.is_office && min(place_area.dx(), place_area.dy()) > 2.0*floor_spacing && max(place_area.dx(), place_area.dy()) > 3.0*floor_spacing) {
-		//if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit, objs_start)) return 1; // large enough, try to divide into bathroom stalls
+	if (have_toilet && have_sink && room.is_office && min(place_area.dx(), place_area.dy()) > 1.8*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.6*floor_spacing) {
+		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit, objs_start)) return 1; // large enough, try to divide into bathroom stalls
 	}
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool placed_obj(0), placed_toilet(0);
@@ -416,19 +416,83 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 	vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK  )); // L, W, H
-	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z);
-	float const sheight(0.55*floor_spacing), swidth(sheight*ssz.y/ssz.z), slength(sheight*ssz.x/ssz.z);
-	float const stall_width(2.0*tlength), stall_depth(tlength + twidth), sink_spacing(1.6*swidth);
+	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z), stall_depth(2.0*tlength);
+	float const sheight(0.45*floor_spacing), swidth(sheight*ssz.y/ssz.z), slength(sheight*ssz.x/ssz.z);
+	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
 	vector3d const room_sz(room.get_size());
-	bool const min_dim(room_sz.y < room_sz.x);
-	float const room_len(room_sz[!min_dim]), room_width(room_sz[!min_dim]), sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
+	bool br_dim(room_sz.y < room_sz.x), sink_side(0), sink_side_set(0);
+
+	// determine men's room vs. women's room (however, they are currently the same because there is no urinal model)
+	assert(room.part_id < parts.size());
+	point const part_center(parts[room.part_id].get_cube_center()), room_center(room.get_cube_center());
+	bool const mens_room((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
+
+	for (unsigned d = 0; d < 2 && !sink_side_set; ++d) {
+		for (unsigned side = 0; side < 2 && !sink_side_set; ++side) {
+			cube_t c(room);
+			c.z1() = zval; // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
+			c.z2() = zval + wall_thickness;
+			c.d[!br_dim][!side] = c.d[!br_dim][side] + (side ? -1.0 : 1.0)*wall_thickness; // shrink to near zero area in this dim
+
+			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+				if (c.z2() < i->z1() || c.z1() > i->z2()) continue;
+				if (is_cube_close_to_door(c, 0.0, 0, *i)) {sink_side = side; sink_side_set = 1; break;} // sinks are on the side closest to the door
+			}
+		} // for side
+		if (d == 0 && !sink_side_set) {br_dim ^= 1;} // door not found on long dim - R90 and try short dim
+	} // for d
+	//cout << TXT(sink_side) << TXT(br_dim) << TXT((room_sz.y<room_sz.x)) << endl;
+	assert(sink_side_set);
+	float const room_len(room_sz[!br_dim]), room_width(room_sz[!br_dim]), sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
 	if (room_width < req_depth) return 0;
-	bool const two_rows(room_width > 1.5*req_depth);
 	unsigned const num_stalls(floor(stalls_len/stall_width)), num_sinks(floor(sinks_len/sink_spacing));
 	//cout << TXT(two_rows) << TXT(num_stalls) << TXT(num_sinks) << endl;
 	if (num_stalls < 2 || num_sinks < 2) return 0; // not enough space for 2 stalls and 2 sinks
-	// TODO: divide bathroom into stalls and add multiple sinks and toilets
-	return 0;
+	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
+	sink_spacing = sinks_len/num_sinks;
+	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(two_rows ? 0 : rgen.rand_bool());
+	float const stall_step((sink_side ? 1.0 : -1.0)*stall_width), sink_step((sink_side ? -1.0 : 1.0)*sink_spacing);
+	unsigned const flags(is_lit ? RO_FLAG_LIT : 0);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+
+	for (unsigned dir = 0; dir < 2; ++dir) { // each side of the wall
+		if (!two_rows && dir == (unsigned)skip_stalls_side) continue; // no stalls/sinks on this side
+		// add stalls
+		float const dir_sign(dir ? -1.0 : 1.0), wall_pos(room.d[br_dim][dir]), stall_from_wall(wall_pos + dir_sign*(tlength + 0.5*wall_thickness));
+		float stall_pos(room.d[!br_dim][!sink_side] + 0.5*stall_step);
+
+		for (unsigned n = 0; n < num_stalls; ++n) {
+			point center(stall_from_wall, stall_pos, zval);
+			if (br_dim) {swap(center.x, center.y);} // R90 about z
+			cube_t toilet(center, center);
+			toilet.expand_in_dim( br_dim, 0.5*tlength);
+			toilet.expand_in_dim(!br_dim, 0.5*twidth);
+			toilet.z2() += theight;
+			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
+			cube_t stall(center, center);
+			stall.z2() = 0.5*floor_spacing; // set stall height
+			stall.expand_in_dim(!br_dim, 0.5*stall_width);
+			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
+			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth;
+			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, !dir, flags, tot_light_amt);
+			stall_pos += stall_step;
+		} // for n
+		// add sinks
+		// TODO: leave space for doors
+		float sink_pos(room.d[!br_dim][sink_side] + 0.5*sink_step), sink_from_wall(wall_pos + dir_sign*(slength + 0.5*wall_thickness));
+
+		for (unsigned n = 0; n < num_sinks; ++n) {
+			point center(sink_from_wall, sink_pos, zval);
+			if (br_dim) {swap(center.x, center.y);} // R90 about z
+			cube_t sink(center, center);
+			sink.expand_in_dim( br_dim, 0.5*slength);
+			sink.expand_in_dim(!br_dim, 0.5*swidth);
+			sink.z2() += sheight;
+			objs.emplace_back(sink, TYPE_SINK, room_id, br_dim, !dir, flags, tot_light_amt);
+			sink_pos += sink_step;
+		} // for n
+	} // for dir
+	return 1;
 }
 
 bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool allow_adj_ext_door) {
@@ -1800,6 +1864,14 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_br_stall(room_object_t const &c) {
+	// TODO
+}
+
+void building_room_geom_t::add_cubicle(room_object_t const &c) {
+	// TODO
+}
+
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
 	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z1 | EF_Z2); // only enable faces in dim
 	cube_t window(c);
@@ -1894,8 +1966,8 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_WINDOW:  add_window  (*i, tscale); break;
 		case TYPE_TUB:     add_tub_outer(*i); break;
 		case TYPE_TV:      add_tv_picture(*i); break;
-		case TYPE_CUBICLE:  break; // TODO
-		case TYPE_STALL:    break; // TODO
+		case TYPE_CUBICLE: add_cubicle(*i); break;
+		case TYPE_STALL:   add_br_stall(*i); break;
 		case TYPE_PLANT:    break; // TODO
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
