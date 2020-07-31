@@ -30,6 +30,7 @@ string const &gen_book_title(unsigned rand_id, string *author, unsigned split_le
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
 	unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y, bool inverted)
 {
+	//assert(c.is_normalized()); // no, bathroom window is denormalized
 	vertex_t v;
 	v.set_c4(color);
 
@@ -758,11 +759,42 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_br_stall(room_object_t const &c) {
-	// TODO
+	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
+	colorRGBA const color(apply_light_color(c));
+	point const tex_origin(c.get_llc()); // doesn't really need to be set, since stall is untextured
+	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(2.0*wall_thick), door_gap(0.2*wall_thick);
+	cube_t sides(c), front(c);
+	sides.z2() -= 0.35*dz;
+	sides.z1() += 0.15*dz;
+	sides.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*wall_thick; // shorten for door
+	front.d[c.dim][ c.dir] = sides.d[c.dim][!c.dir];
+	assert(front.is_strictly_normalized());
+	assert(sides.is_strictly_normalized());
+	cube_t side1(sides), side2(sides), front1(front), front2(front), door(front);
+	door.z2() -= 0.38*dz;
+	door.z1() += 0.18*dz;
+	side1.d[!c.dim][1] = side1.d[!c.dim][0] + wall_thick;
+	side2.d[!c.dim][0] = side2.d[!c.dim][1] - wall_thick;
+	door.expand_in_dim(!c.dim, -frame_thick);
+	front1.d[!c.dim][1] = door.d[!c.dim][0];
+	front2.d[!c.dim][0] = door.d[!c.dim][1];
+	door.expand_in_dim(!c.dim, -door_gap);
+	assert(side1.is_strictly_normalized());
+	assert(side2.is_strictly_normalized());
+	assert(front1.is_strictly_normalized());
+	assert(front2.is_strictly_normalized());
+	assert(door.is_strictly_normalized());
+	mat.add_cube_to_verts(side1,  color, tex_origin, get_skip_mask_for_xy(c.dim));
+	mat.add_cube_to_verts(side2,  color, tex_origin, get_skip_mask_for_xy(c.dim));
+	mat.add_cube_to_verts(front1, color, tex_origin, (EF_Z1 | EF_Z2));
+	mat.add_cube_to_verts(front2, color, tex_origin, (EF_Z1 | EF_Z2));
+	mat.add_cube_to_verts(door,   color, tex_origin);
 }
 
 void building_room_geom_t::add_cubicle(room_object_t const &c) {
-	// TODO
+	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
+	colorRGBA const color(apply_light_color(c));
+	mat.add_cube_to_verts(c, color, c.get_llc()); // TODO
 }
 
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {

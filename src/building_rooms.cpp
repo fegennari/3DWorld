@@ -399,11 +399,12 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 	vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK  )); // L, W, H
-	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z), stall_depth(2.0*tlength);
+	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z), stall_depth(2.2*tlength);
 	float const sheight(0.45*floor_spacing), swidth(sheight*ssz.y/ssz.z), slength(sheight*ssz.x/ssz.z);
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0);
 	cube_t place_area(room);
+	place_area.expand_by(-0.5*wall_thickness);
 
 	// determine men's room vs. women's room (however, they are currently the same because there is no urinal model)
 	assert(room.part_id < parts.size());
@@ -456,11 +457,11 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			toilet.z2() += theight;
 			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
 			cube_t stall(center, center);
-			stall.z2() = 0.5*floor_spacing; // set stall height
+			stall.z2() = stall.z1() + floor_spacing; // set stall height to room height
 			stall.expand_in_dim(!br_dim, 0.5*stall_width);
 			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
 			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth;
-			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, !dir, flags, tot_light_amt);
+			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, dir, flags, tot_light_amt, SHAPE_CUBE, colorRGBA(0.75, 1.0, 0.9, 1.0)); // blue-green
 			stall_pos += stall_step;
 		} // for n
 		// add sinks
