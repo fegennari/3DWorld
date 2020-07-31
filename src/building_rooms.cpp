@@ -419,8 +419,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z), stall_depth(2.0*tlength);
 	float const sheight(0.45*floor_spacing), swidth(sheight*ssz.y/ssz.z), slength(sheight*ssz.x/ssz.z);
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
-	vector3d const room_sz(room.get_size());
-	bool br_dim(room_sz.y < room_sz.x), sink_side(0), sink_side_set(0);
+	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0);
+	cube_t place_area(room);
 
 	// determine men's room vs. women's room (however, they are currently the same because there is no urinal model)
 	assert(room.part_id < parts.size());
@@ -436,14 +436,18 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 				if (c.z2() < i->z1() || c.z1() > i->z2()) continue;
-				if (is_cube_close_to_door(c, 0.0, 0, *i)) {sink_side = side; sink_side_set = 1; break;} // sinks are on the side closest to the door
+				if ((i->dy() < i->dx()) == br_dim) continue; // door in wrong dim
+				if (!is_cube_close_to_door(c, 0.0, 0, *i)) continue;
+				sink_side = side; sink_side_set = 1;
+				place_area.d[!br_dim][side] += (sink_side ? -1.0 : 1.0)*(i->get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
+				break; // sinks are on the side closest to the door
 			}
 		} // for side
 		if (d == 0 && !sink_side_set) {br_dim ^= 1;} // door not found on long dim - R90 and try short dim
 	} // for d
-	//cout << TXT(sink_side) << TXT(br_dim) << TXT((room_sz.y<room_sz.x)) << endl;
 	assert(sink_side_set);
-	float const room_len(room_sz[!br_dim]), room_width(room_sz[!br_dim]), sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
+	float const room_len(place_area.get_sz_dim(!br_dim)), room_width(place_area.get_sz_dim(br_dim));
+	float const sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
 	if (room_width < req_depth) return 0;
 	unsigned const num_stalls(floor(stalls_len/stall_width)), num_sinks(floor(sinks_len/sink_spacing));
 	//cout << TXT(two_rows) << TXT(num_stalls) << TXT(num_sinks) << endl;
@@ -458,8 +462,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	for (unsigned dir = 0; dir < 2; ++dir) { // each side of the wall
 		if (!two_rows && dir == (unsigned)skip_stalls_side) continue; // no stalls/sinks on this side
 		// add stalls
-		float const dir_sign(dir ? -1.0 : 1.0), wall_pos(room.d[br_dim][dir]), stall_from_wall(wall_pos + dir_sign*(tlength + 0.5*wall_thickness));
-		float stall_pos(room.d[!br_dim][!sink_side] + 0.5*stall_step);
+		float const dir_sign(dir ? -1.0 : 1.0), wall_pos(place_area.d[br_dim][dir]), stall_from_wall(wall_pos + dir_sign*(0.5*tlength + wall_thickness));
+		float stall_pos(place_area.d[!br_dim][!sink_side] + 0.5*stall_step);
 
 		for (unsigned n = 0; n < num_stalls; ++n) {
 			point center(stall_from_wall, stall_pos, zval);
@@ -478,8 +482,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			stall_pos += stall_step;
 		} // for n
 		// add sinks
-		// TODO: leave space for doors
-		float sink_pos(room.d[!br_dim][sink_side] + 0.5*sink_step), sink_from_wall(wall_pos + dir_sign*(slength + 0.5*wall_thickness));
+		float sink_pos(place_area.d[!br_dim][sink_side] + 0.5*sink_step), sink_from_wall(wall_pos + dir_sign*(0.5*slength + wall_thickness));
 
 		for (unsigned n = 0; n < num_sinks; ++n) {
 			point center(sink_from_wall, sink_pos, zval);
