@@ -13,6 +13,9 @@ unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currentl
 unsigned const NUM_STAIRS_PER_FLOOR= 12;
 float const FLOOR_THICK_VAL        = 0.1; // 10% of floor spacing
 
+unsigned const NUM_BOOK_COLORS = 16;
+colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
+
 class light_source;
 class lmap_manager_t;
 class building_nav_graph_t;

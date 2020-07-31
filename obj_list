@@ -105,5 +105,6 @@ building_lighting.o
 building_floorplan.o
 building_navigation.o
 building_rooms.o
+building_room_geom.o
 simplifier.o
 city_model.o
