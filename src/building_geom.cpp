@@ -1639,7 +1639,8 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	s.nverts += interior->room_geom->get_num_verts();
 }
 
-bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door) {
+bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, bool check_zval) {
+	if (check_zval && (c.z2() < door.z1() || c.z1() > door.z2())) return 0;
 	bool const dim(door.dy() < door.dx());
 	float const keepout(inc_open ? door.get_sz_dim(!dim) : 0.0f); // we don't know how much the door is open and in which direction, so expand by door width in both dirs to be conservative
 	if (c.d[!dim][0] > door.d[!dim][1]+keepout || c.d[!dim][1] < door.d[!dim][0]-keepout) return 0; // no overlap in !dim
@@ -1649,15 +1650,13 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 bool building_t::is_cube_close_to_doorway(cube_t const &c, float dmin, bool inc_open) const { // Note: inc_open only applies to interior doors
 	// Note: we want to test this for things like stairs, but exterior doors likely haven't been allocated at this point, so we have to check for that during door placement
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // test exterior doors
-		cube_t const door(i->get_bcube());
-		if (c.z2() < door.z1() || c.z1() > door.z2()) continue;
-		if (is_cube_close_to_door(c, dmin, inc_open, door)) return 1;
+		if (is_cube_close_to_door(c, dmin, inc_open, i->get_bcube(), 1)) return 1; // check_zval=1
 	}
-	return (interior ? interior->is_cube_close_to_doorway(c, dmin, inc_open) : 0); // test interior doors
+	return (interior ? interior->is_cube_close_to_doorway(c, dmin, inc_open, 1) : 0); // test interior doors, check_zval=1
 }
-bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin, bool inc_open) const { // ignores zvals
+bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin, bool inc_open, bool check_zval) const { // ignores zvals
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // interior doors
-		if (is_cube_close_to_door(c, dmin, inc_open, *i)) return 1;
+		if (is_cube_close_to_door(c, dmin, inc_open, *i, check_zval)) return 1;
 	}
 	return 0;
 }

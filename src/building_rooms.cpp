@@ -435,9 +435,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			c.d[!br_dim][!side] = c.d[!br_dim][side] + (side ? -1.0 : 1.0)*wall_thickness; // shrink to near zero area in this dim
 
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-				if (c.z2() < i->z1() || c.z1() > i->z2()) continue;
 				if ((i->dy() < i->dx()) == br_dim) continue; // door in wrong dim
-				if (!is_cube_close_to_door(c, 0.0, 0, *i)) continue;
+				if (!is_cube_close_to_door(c, 0.0, 0, *i, 1)) continue; // check_zval=1
 				sink_side = side; sink_side_set = 1;
 				place_area.d[!br_dim][side] += (sink_side ? -1.0 : 1.0)*(i->get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
 				break; // sinks are on the side closest to the door
