@@ -437,7 +437,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	if (num_stalls < 2 || num_sinks < 2) return 0; // not enough space for 2 stalls and 2 sinks
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
-	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(two_rows ? 0 : rgen.rand_bool());
+	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(two_rows ? 0 : (room_id & 1)); // put stalls on a side consistent across floors
 	float const stall_step((sink_side ? 1.0 : -1.0)*stall_width), sink_step((sink_side ? -1.0 : 1.0)*sink_spacing);
 	unsigned const flags(is_lit ? RO_FLAG_LIT : 0);
 	vector<room_object_t> &objs(interior->room_geom->objs);
