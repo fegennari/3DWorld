@@ -233,7 +233,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 	float lo_pos(room_bounds.d[long_dim][0]);
 	cube_t c;
 	c.z1() = zval;
-	c.z2() = zval + 0.42*floor_spacing; // set height
+	c.z2() = zval + 0.425*floor_spacing; // set height
 
 	for (unsigned n = 0; n < num_cubes; ++n) {
 		float const hi_pos(lo_pos + cube_width);
@@ -247,6 +247,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 			if (interior->is_cube_close_to_doorway(c, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
 			if (interior->is_blocked_by_stairs_or_elevator(c))    continue;
 			objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt);
+			objs.back().obj_id = uint16_t(mat_ix + interior->rooms.size()); // some value that's per-building
 			
 			if (n+1 != num_cubes) { // add a collider to allow the player to enter the cubicle but not cross the side walls
 				cube_t c2(c);

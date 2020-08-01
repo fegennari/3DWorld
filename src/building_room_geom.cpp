@@ -785,11 +785,12 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	mat.add_cube_to_verts(door,   color, tex_origin);
 }
 
-void building_room_geom_t::add_cubicle(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
+void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
+	int const tid(get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg")); // select from one of 2 textures
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(tid, tscale), 1));
 	colorRGBA const color(apply_light_color(c));
 	point const tex_origin(c.get_llc());
-	float const wall_thick(0.05*c.dz()), frame_thick(4.0*wall_thick);
+	float const wall_thick(0.07*c.dz()), frame_thick(4.0*wall_thick);
 	cube_t sides(c), front(c), back(c);
 	sides.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*wall_thick; // front
 	sides.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*wall_thick; // back
@@ -910,7 +911,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_WINDOW:  add_window  (*i, tscale); break;
 		case TYPE_TUB:     add_tub_outer(*i); break;
 		case TYPE_TV:      add_tv_picture(*i); break;
-		case TYPE_CUBICLE: add_cubicle(*i); break;
+		case TYPE_CUBICLE: add_cubicle (*i, tscale); break;
 		case TYPE_STALL:   add_br_stall(*i); break;
 		case TYPE_PLANT:    break; // TODO
 		case TYPE_ELEVATOR: break; // not handled here
