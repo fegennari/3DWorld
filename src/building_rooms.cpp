@@ -761,7 +761,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		// determine light pos and size for this stack of rooms
 		bool const room_dim(r->dx() < r->dy()); // longer room dim
 		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
-		bool const is_office_bathroom(r->is_office && r->rtype == RTYPE_BATH);
+		bool is_office_bathroom(r->is_office && r->rtype == RTYPE_BATH && !(r->has_stairs || r->has_elevator));
+		if (is_office_bathroom) {cout << (r->has_stairs || r->has_elevator);}
 		float light_size(floor_thickness); // default size for houses
 		unsigned const room_objs_start(objs.size());
 
