@@ -217,13 +217,47 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	return (num_placed > 0);
 }
 
-bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
-	if (!room.is_office) return 0;
+bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) { // assumes no prior placed objects
+	if (!room.is_office) return 0; // offices only
+	if (!room.interior && rgen.rand_bool()) return 0; // 50% chance for non-interior rooms
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const floor_spacing(get_window_vspace());
-	if (min(room_bounds.dx(), room_bounds.dy()) < 2.5*floor_spacing || max(room_bounds.dx(), room_bounds.dy()) < 3.5*floor_spacing) return 0; // not large enough
-	// TODO - WRITE
-	return 0;
+	// Note: we could choose the primary dim based on door placement like in office building bathrooms, but it seems easier to not place cubes by doors
+	bool const long_dim(room.dx() < room.dy());
+	float const rlength(room_bounds.get_sz_dim(long_dim)), rwidth(room_bounds.get_sz_dim(!long_dim));
+	if (rwidth < 2.5*floor_spacing || rlength < 3.5*floor_spacing) return 0; // not large enough
+	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.75, 0.9)*floor_spacing))); // >= 4
+	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.25)); // not quite square
+	unsigned const flags(is_lit ? RO_FLAG_LIT : 0), cube_flags(flags | RO_FLAG_NOCOLL);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	float lo_pos(room_bounds.d[long_dim][0]);
+	cube_t c;
+	c.z1() = zval;
+	c.z2() = zval + 0.42*floor_spacing; // set height
+
+	for (unsigned n = 0; n < num_cubes; ++n) {
+		float const hi_pos(lo_pos + cube_width);
+		c.d[long_dim][0] = lo_pos;
+		c.d[long_dim][1] = hi_pos;
+
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			float const wall_pos(room_bounds.d[!long_dim][dir]);
+			c.d[!long_dim][ dir] = wall_pos;
+			c.d[!long_dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*cube_depth;
+			if (interior->is_cube_close_to_doorway(c, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
+			if (interior->is_blocked_by_stairs_or_elevator(c))    continue;
+			objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt);
+			
+			if (n+1 != num_cubes) { // add a collider to allow the player to enter the cubicle but not cross the side walls
+				cube_t c2(c);
+				c2.d[long_dim][0] = hi_pos;
+				c2.expand_in_dim(long_dim, 0.05*cube_width);
+				objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, flags, tot_light_amt);
+			}
+		} // for d
+		lo_pos = hi_pos;
+	} // for n
+	return 1;
 }
 
 bool building_t::can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const { // check room type and existence of exterior door
@@ -349,7 +383,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
 
 	if (have_toilet && have_sink && room.is_office && min(place_area.dx(), place_area.dy()) > 1.8*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.6*floor_spacing) {
-		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit, objs_start)) return 1; // large enough, try to divide into bathroom stalls
+		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit)) return 1; // large enough, try to divide into bathroom stalls
 	}
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool placed_obj(0), placed_toilet(0);
@@ -395,7 +429,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	return placed_obj;
 }
 
-bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) { // assumes no prior placed objects
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 	vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK  )); // L, W, H
@@ -799,6 +833,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 		}
+		assert(r->part_id < parts.size());
+		r->interior = parts[r->part_id].contains_cube_xy_no_adj(*r);
 		// make chair colors consistent for each part by using a few variables for a hash
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
 		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % 12]);
@@ -901,7 +937,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building rooms that have stairs
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);
-			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0);
+			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), no_whiteboard(0);
 			unsigned num_chairs(0);
 
 			// place room objects
@@ -923,6 +959,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
+			if (!added_obj && r->is_office) {added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);} // large office
+
 			if (!added_obj && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
@@ -934,8 +972,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_kitchen) {r->assign_to(RTYPE_KITCHEN, f); added_kitchen_mask |= floor_mask;}
 				}
 			}
-			if (!added_obj && r->is_office) {added_obj = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);} // handle large offices
-
 			if (!added_obj) { // try to place a desk if there's no table or bed
 				added_obj = can_place_book = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
 				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? RTYPE_STUDY : RTYPE_OFFICE), f);} // or other room type - may be overwritten below
@@ -981,7 +1017,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if has exterior door and is unassigned
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 			}
-			bool const can_hang(is_house || !(is_bathroom || is_kitchen)); // no whiteboards in office bathrooms or kitchens
+			bool const can_hang(is_house || !(is_bathroom || is_kitchen || no_whiteboard)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
@@ -993,11 +1029,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		num_light_stacks += num_lights_added;
 		if (added_bathroom) {++num_bathrooms;}
 
-		// determine if room is interior and tag objects
-		assert(r->part_id < parts.size());
-		r->interior = parts[r->part_id].contains_cube_xy_no_adj(*r);
-
-		if (r->interior) {
+		if (r->interior) { // tag objects as interior if room is interior
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)

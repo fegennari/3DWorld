@@ -788,7 +788,32 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 void building_room_geom_t::add_cubicle(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
 	colorRGBA const color(apply_light_color(c));
-	mat.add_cube_to_verts(c, color, c.get_llc()); // TODO
+	point const tex_origin(c.get_llc());
+	float const wall_thick(0.05*c.dz()), frame_thick(4.0*wall_thick);
+	cube_t sides(c), front(c), back(c);
+	sides.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*wall_thick; // front
+	sides.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*wall_thick; // back
+	front.d[c.dim][ c.dir] = sides.d[c.dim][!c.dir];
+	back .d[c.dim][!c.dir] = sides.d[c.dim][ c.dir];
+	cube_t side1(sides), side2(sides), front1(front), front2(front);
+	side1 .d[!c.dim][1] = side1.d[!c.dim][0] + wall_thick;
+	side2 .d[!c.dim][0] = side2.d[!c.dim][1] - wall_thick;
+	front1.d[!c.dim][1] = front.d[!c.dim][0] + frame_thick;
+	front2.d[!c.dim][0] = front.d[!c.dim][1] - frame_thick;
+	unsigned const side_skip_mask(EF_Z12 | get_skip_mask_for_xy(c.dim)), front_skip_mask(EF_Z12 | get_skip_mask_for_xy(!c.dim));
+	mat.add_cube_to_verts(side1,  color, tex_origin, side_skip_mask);
+	mat.add_cube_to_verts(side2,  color, tex_origin, side_skip_mask);
+	mat.add_cube_to_verts(front1, color, tex_origin, front_skip_mask);
+	mat.add_cube_to_verts(front2, color, tex_origin, front_skip_mask);
+	mat.add_cube_to_verts(back,   color, tex_origin, EF_Z12);
+	// black edges on walls
+	rgeom_mat_t &edge_mat(get_material(untex_shad_mat, 1)); // shadowed?
+	unsigned const side_edge_skip_mask(~(EF_Z2 | get_skip_mask_for_xy(!c.dim)));
+	edge_mat.add_cube_to_verts(side1,  BLACK, tex_origin, ~EF_Z2);
+	edge_mat.add_cube_to_verts(side2,  BLACK, tex_origin, ~EF_Z2);
+	edge_mat.add_cube_to_verts(front1, BLACK, tex_origin, side_edge_skip_mask);
+	edge_mat.add_cube_to_verts(front2, BLACK, tex_origin, side_edge_skip_mask);
+	edge_mat.add_cube_to_verts(back,   BLACK, tex_origin, ~EF_Z2);
 }
 
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
