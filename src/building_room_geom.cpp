@@ -890,6 +890,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_PLANT:    break; // TODO
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
+		case TYPE_COLLIDER: break; // not drawn
 		default: break;
 		} // end switch
 		if (i->type >= TYPE_TOILET && i->type <= TYPE_COUCH) { // handle drawing of 3D models
