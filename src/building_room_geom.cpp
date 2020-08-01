@@ -272,7 +272,7 @@ void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, 
 	rgeom_mat_t &mat(get_wood_material(tscale));
 	cube_t cubes[4];
 	get_tc_leg_cubes(c, width, cubes);
-	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, c.get_llc(), (EF_Z1 | EF_Z2));} // skip top and bottom faces
+	for (unsigned i = 0; i < 4; ++i) {mat.add_cube_to_verts(cubes[i], color, c.get_llc(), EF_Z12);} // skip top and bottom faces
 }
 
 colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
@@ -385,7 +385,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	}
 }
 
-unsigned get_skip_mask_for_xy(bool dim) {return (dim ? (EF_Y1 | EF_Y2) : (EF_X1 | EF_X2));}
+unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
 
 void building_room_geom_t::add_book_title(string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
 	unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir)
@@ -768,8 +768,6 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	sides.z1() += 0.15*dz;
 	sides.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*wall_thick; // shorten for door
 	front.d[c.dim][ c.dir] = sides.d[c.dim][!c.dir];
-	assert(front.is_strictly_normalized());
-	assert(sides.is_strictly_normalized());
 	cube_t side1(sides), side2(sides), front1(front), front2(front), door(front);
 	door.z2() -= 0.38*dz;
 	door.z1() += 0.18*dz;
@@ -779,15 +777,11 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	front1.d[!c.dim][1] = door.d[!c.dim][0];
 	front2.d[!c.dim][0] = door.d[!c.dim][1];
 	door.expand_in_dim(!c.dim, -door_gap);
-	assert(side1.is_strictly_normalized());
-	assert(side2.is_strictly_normalized());
-	assert(front1.is_strictly_normalized());
-	assert(front2.is_strictly_normalized());
-	assert(door.is_strictly_normalized());
-	mat.add_cube_to_verts(side1,  color, tex_origin, get_skip_mask_for_xy(c.dim));
-	mat.add_cube_to_verts(side2,  color, tex_origin, get_skip_mask_for_xy(c.dim));
-	mat.add_cube_to_verts(front1, color, tex_origin, (EF_Z1 | EF_Z2));
-	mat.add_cube_to_verts(front2, color, tex_origin, (EF_Z1 | EF_Z2));
+	unsigned const side_skip_mask(get_skip_mask_for_xy(c.dim));
+	mat.add_cube_to_verts(side1,  color, tex_origin, side_skip_mask);
+	mat.add_cube_to_verts(side2,  color, tex_origin, side_skip_mask);
+	mat.add_cube_to_verts(front1, color, tex_origin, EF_Z12);
+	mat.add_cube_to_verts(front2, color, tex_origin, EF_Z12);
 	mat.add_cube_to_verts(door,   color, tex_origin);
 }
 
@@ -798,7 +792,7 @@ void building_room_geom_t::add_cubicle(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
-	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z1 | EF_Z2); // only enable faces in dim
+	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z12); // only enable faces in dim
 	cube_t window(c);
 	swap(window.d[c.dim][0], window.d[c.dim][1]); // denormalized
 	get_material(tid_nm_pair_t(get_bath_wind_tid(), tscale), 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
@@ -807,7 +801,7 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
 	colorRGBA const color(apply_light_color(c));
-	mat.add_cube_to_verts(c, color, zero_vector, (EF_Z1 | EF_Z2)); // shadowed, no top/bottom faces
+	mat.add_cube_to_verts(c, color, zero_vector, EF_Z12); // shadowed, no top/bottom faces
 }
 
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {

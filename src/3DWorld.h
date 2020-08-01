@@ -1321,6 +1321,9 @@ enum {LIGHT_SUN = 0, LIGHT_MOON, NUM_LIGHT_SRC};
 #define EF_Y2  0x08
 #define EF_X1  0x10
 #define EF_X2  0x20
+#define EF_Z12 0x03
+#define EF_Y12 0x0c
+#define EF_X12 0x30
 #define EF_ALL 0x3F
 
 unsigned char const EFLAGS[3][2] = {{EF_X1, EF_X2}, {EF_Y1, EF_Y2}, {EF_Z1, EF_Z2}};
