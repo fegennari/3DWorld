@@ -817,6 +817,59 @@ void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 	edge_mat.add_cube_to_verts(back,   BLACK, tex_origin, ~EF_Z2);
 }
 
+class sign_helper_t {
+	map<string, unsigned> txt_to_id;
+	vector<string> text;
+public:
+	unsigned register_text(string const &t) {
+		auto it(txt_to_id.find(t));
+		if (it != txt_to_id.end()) return it->second; // found
+		unsigned const id(text.size());
+		txt_to_id[t] = id; // new text, insert it
+		text.push_back(t);
+		assert(text.size() == txt_to_id.size());
+		return id;
+	}
+	string const &get_text(unsigned id) const {
+		assert(id < text.size());
+		return text[id];
+	}
+};
+
+sign_helper_t sign_helper;
+
+unsigned register_sign_text(string const &text) {return sign_helper.register_text(text);}
+
+void building_room_geom_t::add_sign(room_object_t const &c) {
+	vector3d line_dir(zero_vector), normal(zero_vector);
+	bool const ldir(0); // TODO
+	line_dir[!c.dim] = (ldir  ? 1.0 : -1.0);
+	normal  [ c.dim] = (c.dir ? 1.0 : -1.0);
+	static vector<vert_tc_t> verts;
+	verts.clear();
+	string const &text(sign_helper.get_text(c.obj_id));
+	assert(!text.empty());
+	gen_text_verts(verts, all_zeros, text, 1.0, plus_z, line_dir, 1); // use_quads=1
+	assert(!verts.empty());
+	cube_t text_bcube(verts[0].v);
+	for (auto i = verts.begin()+2; i != verts.end(); i += 2) {text_bcube.union_with_pt(i->v);} // only need to include opposite corners
+	float const width_scale(c.get_sz_dim(!c.dim)/text_bcube.get_sz_dim(!c.dim)), height_scale(c.dz()/text_bcube.dz());
+	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
+	tid_nm_pair_t tex(FONT_TEXTURE_ID);
+	if (c.color.A == 0.0) {tex.emissive = 1;}
+	rgeom_mat_t &mat(get_material(tex, 0));
+	color_wrapper const cw(colorRGBA(apply_light_color(c), 1.0)); // set alpha=1.0
+	norm_comp const nc(normal);
+
+	for (auto i = verts.begin(); i != verts.end(); ++i) {
+		i->v[ c.dim] = c.d[c.dim][c.dir] + (c.dir ? 1.0 : -1.0)*0.1*c.get_sz_dim(c.dim); // normal
+		i->v.z       = i->v.z*width_scale + c.z1(); // column
+		i->v[!c.dim] = i->v[!c.dim]*height_scale + c.d[!c.dim][ldir]; // line
+		mat.quad_verts.emplace_back(vert_norm_comp_tc(i->v, nc, i->t[0], i->t[1]), cw);
+	} // for i
+	get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, WHITE, zero_vector, 0); // back of the sign, always white (for now)
+}
+
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
 	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z12); // only enable faces in dim
 	cube_t window(c);
@@ -940,6 +993,7 @@ void building_room_geom_t::create_small_static_vbos() {
 		case TYPE_BOOK:  add_book    (*i, 0, 1); break;
 		case TYPE_BCASE: add_bookcase(*i, 0, 1, tscale, 0); break;
 		case TYPE_BED:   add_bed     (*i, 0, 1, tscale); break;
+		case TYPE_SIGN:  add_sign    (*i);
 		default: break;
 		}
 	} // for i

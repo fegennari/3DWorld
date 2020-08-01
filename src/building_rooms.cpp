@@ -438,7 +438,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	float const sheight(0.45*floor_spacing), swidth(sheight*ssz.y/ssz.z), slength(sheight*ssz.x/ssz.z);
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0);
-	cube_t place_area(room);
+	cube_t place_area(room), br_door;
 	place_area.expand_by(-0.5*wall_thickness);
 
 	// determine men's room vs. women's room (however, they are currently the same because there is no urinal model)
@@ -458,6 +458,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 				if (!is_cube_close_to_door(c, 0.0, 0, *i, 1)) continue; // check_zval=1
 				sink_side = side; sink_side_set = 1;
 				place_area.d[!br_dim][side] += (sink_side ? -1.0 : 1.0)*(i->get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
+				br_door = *i;
 				break; // sinks are on the side closest to the door
 			}
 		} // for side
@@ -513,6 +514,12 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			sink_pos += sink_step;
 		} // for n
 	} // for dir
+	cube_t sign(br_door);
+#if 0 // TODO: add a sign outside br_door
+	objs.emplace_back(sign, TYPE_SIGN, room_id, br_dim, sink_side, RO_FLAG_LIT, tot_light_amt); // always lit; technically should use hallway room_id
+	string const sign_text(mens_room ? "Men" : "Women");
+	objs.back().obj_id = register_sign_text(sign_text);
+#endif
 	return 1;
 }
 
