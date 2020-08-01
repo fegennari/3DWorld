@@ -229,11 +229,13 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.75, 0.9)*floor_spacing))); // >= 4
 	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.25)); // not quite square
 	unsigned const flags(is_lit ? RO_FLAG_LIT : 0), cube_flags(flags | RO_FLAG_NOCOLL);
+	cube_t const &part(get_part_for_room(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float lo_pos(room_bounds.d[long_dim][0]);
 	cube_t c;
 	c.z1() = zval;
 	c.z2() = zval + 0.425*floor_spacing; // set height
+	bool added_cube(0);
 
 	for (unsigned n = 0; n < num_cubes; ++n) {
 		float const hi_pos(lo_pos + cube_width);
@@ -246,8 +248,10 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 			c.d[!long_dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*cube_depth;
 			if (interior->is_cube_close_to_doorway(c, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
 			if (interior->is_blocked_by_stairs_or_elevator(c))    continue;
-			objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt);
+			bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
+			objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt, (against_window ? SHAPE_SHORT : SHAPE_CUBE));
 			objs.back().obj_id = uint16_t(mat_ix + interior->rooms.size()); // some value that's per-building
+			added_cube = 1;
 			
 			if (n+1 != num_cubes) { // add a collider to allow the player to enter the cubicle but not cross the side walls
 				cube_t c2(c);
@@ -258,7 +262,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 		} // for d
 		lo_pos = hi_pos;
 	} // for n
-	return 1;
+	return added_cube;
 }
 
 bool building_t::can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const { // check room type and existence of exterior door

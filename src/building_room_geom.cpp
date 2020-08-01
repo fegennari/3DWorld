@@ -26,6 +26,9 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
 
 
+unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
+unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
+
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
 	unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y, bool inverted)
@@ -309,8 +312,6 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85), tex_origin); // all faces drawn
 }
 
-unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
-
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale) {
 	return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);
 }
@@ -384,8 +385,6 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 		get_material(untex_shad_mat, 1).add_cube_to_verts(ledge, GRAY, tex_origin, (1 << (2*(2-c.dim) + !c.dir)), 0); // shadowed
 	}
 }
-
-unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
 
 void building_room_geom_t::add_book_title(string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
 	unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir)
@@ -790,8 +789,10 @@ void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(tid, tscale), 1));
 	colorRGBA const color(apply_light_color(c));
 	point const tex_origin(c.get_llc());
-	float const wall_thick(0.07*c.dz()), frame_thick(4.0*wall_thick);
+	float const wall_thick(0.07*c.dz()), frame_thick(5.0*wall_thick);
+	bool const is_short(c.shape == SHAPE_SHORT);
 	cube_t sides(c), front(c), back(c);
+	if (is_short) {back.z2() -= 0.4*c.dz();}
 	sides.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*wall_thick; // front
 	sides.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*wall_thick; // back
 	front.d[c.dim][ c.dir] = sides.d[c.dim][!c.dir];
@@ -801,7 +802,8 @@ void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 	side2 .d[!c.dim][0] = side2.d[!c.dim][1] - wall_thick;
 	front1.d[!c.dim][1] = front.d[!c.dim][0] + frame_thick;
 	front2.d[!c.dim][0] = front.d[!c.dim][1] - frame_thick;
-	unsigned const side_skip_mask(EF_Z12 | get_skip_mask_for_xy(c.dim)), front_skip_mask(EF_Z12 | get_skip_mask_for_xy(!c.dim));
+	unsigned const side_skip_mask (EF_Z12 | get_skip_mask_for_xy( c.dim));
+	unsigned const front_skip_mask(EF_Z12 | get_skip_mask_for_xy(!c.dim));
 	mat.add_cube_to_verts(side1,  color, tex_origin, side_skip_mask);
 	mat.add_cube_to_verts(side2,  color, tex_origin, side_skip_mask);
 	mat.add_cube_to_verts(front1, color, tex_origin, front_skip_mask);
@@ -809,12 +811,13 @@ void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 	mat.add_cube_to_verts(back,   color, tex_origin, EF_Z12);
 	// black edges on walls
 	rgeom_mat_t &edge_mat(get_material(untex_shad_mat, 1)); // shadowed?
-	unsigned const side_edge_skip_mask(~(EF_Z2 | get_skip_mask_for_xy(!c.dim)));
-	edge_mat.add_cube_to_verts(side1,  BLACK, tex_origin, ~EF_Z2);
-	edge_mat.add_cube_to_verts(side2,  BLACK, tex_origin, ~EF_Z2);
-	edge_mat.add_cube_to_verts(front1, BLACK, tex_origin, side_edge_skip_mask);
-	edge_mat.add_cube_to_verts(front2, BLACK, tex_origin, side_edge_skip_mask);
-	edge_mat.add_cube_to_verts(back,   BLACK, tex_origin, ~EF_Z2);
+	unsigned const side_edge_skip_mask (~(EF_Z2 | (is_short ? ~get_face_mask(c.dim, c.dir) : 0)));
+	unsigned const front_edge_skip_mask(~(EF_Z2 | get_skip_mask_for_xy(!c.dim)));
+	edge_mat.add_cube_to_verts(side1,  BKGRAY, tex_origin, side_edge_skip_mask);
+	edge_mat.add_cube_to_verts(side2,  BKGRAY, tex_origin, side_edge_skip_mask);
+	edge_mat.add_cube_to_verts(front1, BKGRAY, tex_origin, front_edge_skip_mask);
+	edge_mat.add_cube_to_verts(front2, BKGRAY, tex_origin, front_edge_skip_mask);
+	edge_mat.add_cube_to_verts(back,   BKGRAY, tex_origin, ~EF_Z2);
 }
 
 class sign_helper_t {
