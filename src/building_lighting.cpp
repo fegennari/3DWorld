@@ -512,8 +512,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					cube_t const &cpart(parts[camera_part]);
 					if (cpart.z2() <= room.z1() || cpart.z1() >= room.z2()) continue; // light in a different vertical stack than the camera
 					// is it better to check if light half sphere is occluded by the floor above/below?
-					assert(room.part_id < parts.size());
-					cube_t const &part(parts[room.part_id]);
+					cube_t const &part(get_part_for_room(room));
 					bool visible[2] = {0};
 
 					for (unsigned d = 0; d < 2; ++d) { // for each dim

@@ -121,8 +121,7 @@ bool building_t::interior_enabled() const {
 int building_t::classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const { // Note: zval is for the floor
 	if (!ret_sep_if_part_int_part_ext && (room.ext_sides & (1 << (2*dim + dir)))) return ROOM_WALL_EXT; // use ext_sides (if these flags have been setup properly) (optimization)
 	if (room.d[dim][dir] == bcube.d[dim][dir]) return ROOM_WALL_EXT; // at bcube border
-	assert(room.part_id < parts.size());
-	cube_t const &part(parts[room.part_id]);
+	cube_t const &part(get_part_for_room(room));
 	float const wall_thickness(get_wall_thickness()), max_gap(1.5*wall_thickness), part_edge(part.d[dim][dir]);
 	if (dir ? (room.d[dim][1] + max_gap < part_edge) : (room.d[dim][0] - max_gap > part_edge)) return ROOM_WALL_INT; // interior to part, allowing for wall_thickness of gap
 	if (real_num_parts == 1) return ROOM_WALL_EXT; // optimization

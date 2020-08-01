@@ -616,6 +616,7 @@ private:
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
 	void clip_ray_to_walls(point const &p1, point &p2) const;
 	void refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const;
+	cube_t get_part_for_room(room_t const &room) const {assert(room.part_id < parts.size()); return parts[room.part_id];}
 };
 
 struct vect_building_t : public vector<building_t> {

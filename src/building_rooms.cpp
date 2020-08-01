@@ -442,8 +442,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	place_area.expand_by(-0.5*wall_thickness);
 
 	// determine men's room vs. women's room (however, they are currently the same because there is no urinal model)
-	assert(room.part_id < parts.size());
-	point const part_center(parts[room.part_id].get_cube_center()), room_center(room.get_cube_center());
+	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
 	bool const mens_room((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
 
 	for (unsigned d = 0; d < 2 && !sink_side_set; ++d) {
@@ -655,8 +654,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 		// room in a commercial building - add whiteboard when there is a full wall to use
 	}
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
-	assert(room.part_id < parts.size());
-	cube_t const &part(parts[room.part_id]);
+	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -841,8 +839,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 		}
-		assert(r->part_id < parts.size());
-		r->interior = parts[r->part_id].contains_cube_xy_no_adj(*r);
+		r->interior = get_part_for_room(*r).contains_cube_xy_no_adj(*r);
 		// make chair colors consistent for each part by using a few variables for a hash
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
 		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % 12]);
