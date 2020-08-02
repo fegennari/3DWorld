@@ -1048,7 +1048,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
-	add_stairs_and_elevators(rgen);
+	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
+	add_exterior_door_signs(rgen);
 	objs.shrink_to_fit();
 	interior->room_geom->light_bcubes.resize(num_light_stacks); // allocate but don't fill un until needed
 }
@@ -1119,6 +1120,51 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		elevator_car.z1() += 0.05*get_floor_thickness(); // to prevent z-fighting when looking at the building from the bottom
 		elevator_car.z2() = elevator_car.z1() + window_vspacing; // currently at the bottom floor
 		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, (i->open ? RO_FLAG_OPEN : 0));
+	}
+}
+
+void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) {
+	cube_t const door_bcube(door.get_bcube());
+	bool const dim(door_bcube.dy() < door_bcube.dx());
+	float const width(door_bcube.get_sz_dim(!dim)), height(door_bcube.dz());
+	cube_t c(door_bcube);
+	c.z1() = door_bcube.z2() + 0.05*height; // TODO: place off to the side in case there's no space above
+	c.z2() = door_bcube.z2() + 0.10*height;
+	float const sign_width(text.size()*c.dz()), shrink(0.5f*(width - sign_width));
+	c.expand_in_dim(!dim, -shrink);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find part containing this door so that we can get the correct dir
+		cout << TXT(p->str()) << endl;
+		if (p->z1() != bcube.z1()) continue; // not ground floor
+		if (p->d[!dim][1] < door_bcube.d[!dim][1] || p->d[!dim][0] > door_bcube.d[!dim][0]) {continue;} // not contained in this dim
+		bool dir(0);
+		if      (fabs(p->d[dim][0] - door_bcube.d[dim][0]) < 0.1*width) {dir = 0;}
+		else if (fabs(p->d[dim][1] - door_bcube.d[dim][1]) < 0.1*width) {dir = 1;}
+		else {continue;} // wrong part
+		if (!outside) {dir ^= 1;}
+		c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*height;
+		objs.emplace_back(c, TYPE_SIGN, 0, dim, dir, RO_FLAG_LIT, 1.0, SHAPE_CUBE, colorRGBA(color, (emissive ? 0.0 : 1.0))); // always lit; room_id is not valid
+		objs.back().obj_id = register_sign_text(text);
+		return; // done
+	} // for p
+	assert(0); // never gets here
+}
+
+void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
+	if (is_house) { // maybe add welcome sign
+		if (parts.size() < 5) return; // only houses with a porch have a welcome sign
+		//if (rgen.rand_bool()) return;
+		assert(!doors.empty());
+		add_sign_by_door(doors.front(), 1, "Welcome", DK_BROWN, 0); // front door only, outside
+	}
+	else { // add exit signs
+		if (pri_hall.is_all_zeros()) return; // only place exit signs on buildings with primary hallways
+		colorRGBA const exit_color(rgen.rand_bool() ? RED : GREEN);
+		
+		for (auto d = doors.begin(); d != doors.end(); ++d) {
+			if (d->type == tquad_with_ix_t::TYPE_BDOOR) {add_sign_by_door(*d, 0, "Exit", exit_color, 1);} // inside, emissive
+		}
 	}
 }
 
