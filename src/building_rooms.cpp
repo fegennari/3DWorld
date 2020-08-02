@@ -477,7 +477,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
 	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(two_rows ? 0 : (room_id & 1)); // put stalls on a side consistent across floors
-	float const stall_step((sink_side ? 1.0 : -1.0)*stall_width), sink_step((sink_side ? -1.0 : 1.0)*sink_spacing);
+	float const sink_side_sign(sink_side ? 1.0 : -1.0), stall_step(sink_side_sign*stall_width), sink_step(-sink_side_sign*sink_spacing);
 	unsigned const flags(is_lit ? RO_FLAG_LIT : 0);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
@@ -517,12 +517,19 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			sink_pos += sink_step;
 		} // for n
 	} // for dir
+	// add a sign outside the bathroom door
+	bool const shift_dir(room_center[br_dim] < part_center[br_dim]); // put the sign toward the outside of the building because there's more space and more light
+	float const door_width(br_door.get_sz_dim(br_dim));
 	cube_t sign(br_door);
-#if 0 // TODO: add a sign outside br_door
-	objs.emplace_back(sign, TYPE_SIGN, room_id, br_dim, sink_side, RO_FLAG_LIT, tot_light_amt); // always lit; technically should use hallway room_id
+	sign.z1() = zval + 0.50*floor_spacing;
+	sign.z2() = zval + 0.55*floor_spacing;
+	sign.translate_dim((shift_dir ? -1.0 : 1.0)*0.8*door_width, br_dim);
+	sign.expand_in_dim(br_dim, -(mens_room ? 0.35 : 0.25)*door_width); // shrink a bit
+	sign.translate_dim(sink_side_sign*0.5*wall_thickness, !br_dim); // move to outside wall
+	sign.d[!br_dim][sink_side] += sink_side_sign*0.1*wall_thickness; // make nonzero area
+	objs.emplace_back(sign, TYPE_SIGN, room_id, !br_dim, sink_side, RO_FLAG_LIT, tot_light_amt, SHAPE_CUBE, DK_BLUE); // always lit; technically should use hallway room_id
 	string const sign_text(mens_room ? "Men" : "Women");
 	objs.back().obj_id = register_sign_text(sign_text);
-#endif
 	return 1;
 }
 
