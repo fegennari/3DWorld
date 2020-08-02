@@ -1173,7 +1173,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 	bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const
 {
 	tquad_with_ix_t door(4, type); // quad
-	float const wall_thickness(get_wall_thickness());
+	float const wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const pos(c.d[dim][0] + (opened ? 0.0 : pos_adj*(dir ? 1.0 : -1.0))); // move away from wall slightly (not needed if opened)
 	door.pts[0].z = door.pts[1].z = c.z1(); // bottom
 	door.pts[2].z = door.pts[3].z = c.z2(); // top
@@ -1202,6 +1202,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					cube_t test_bcube(door.get_bcube());
 					test_bcube.expand_in_dim(!dim,  wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
 					test_bcube.expand_in_dim( dim, -wall_thickness); // shrink in other dim to avoid intersecting with other part/walls when this door separates two parts
+					test_bcube.expand_in_dim(2, -floor_thickness);   // shrink a bit in z to avoid picking up objects from stacks above or below
 					
 					if (!check_cube_contained_in_part(test_bcube) || // bad placement (extends outside part)
 					    has_bcube_int(test_bcube, interior->walls[!dim]) || // bad placement (hits perp wall)
