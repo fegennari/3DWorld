@@ -1222,7 +1222,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				// attempt to cut holes in ceiling of this part and floor of above part
 				subtract_cube_from_floor_ceil(cand, interior->floors);
 				subtract_cube_from_floor_ceil(cand, interior->ceilings);
-				//for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {if (r->contains_cube(cand)) {r->has_stairs = 1;}} // is this needed?
+
+				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+					if (r->intersects(cand) && r->contains_cube_xy(cand)) {r->has_stairs = 1;} // Note: may be approximate
+				}
 				break; // success
 			} // for n
 		} // for p
@@ -1264,7 +1267,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				interior->landings.push_back(landing);
 			}
 			for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-				if (r->contains_cube(cand_test)) {r->has_elevator = 1; break;} // find containing room and set has_elevator flag
+				if (r->contains_cube(cand_test)) {r->has_elevator = 1;break;} // find containing room and set has_elevator flag (approximate)
 			}
 		} // for p
 	} // for e
