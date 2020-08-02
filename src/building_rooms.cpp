@@ -211,7 +211,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 			}
 		}
 		++num_placed;
-		if (room.is_office && num_placed == 1 && rgen.rand_float() < 0.5) {placed_desk = bc; continue;} // allow two desks in one office
+		if (room.is_office && num_placed == 1 && rgen.rand_float() < 0.5 && !room.has_stairs && !room.has_elevator) {placed_desk = bc; continue;} // allow two desks in one office
 		break; // done/success
 	} // for n
 	return (num_placed > 0);
