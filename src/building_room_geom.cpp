@@ -845,14 +845,14 @@ unsigned register_sign_text(string const &text) {return sign_helper.register_tex
 
 void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text) {
 	if (inc_back) {
-		unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
+		unsigned const skip_faces((c.flags & RO_FLAG_HANGING) ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless hanging
 		get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, WHITE, zero_vector, skip_faces); // back of the sign, always white (for now)
 	}
 	if (!inc_text) return;
 	// add sign text
 	cube_t ct(c); // text area is slightly smaller than full cube
 	ct.expand_in_dim(!c.dim, -0.1*c.get_sz_dim(!c.dim));
-	ct.expand_in_dim(2, 0.1*c.dz());
+	ct.expand_in_dim(2, -0.05*c.dz());
 	vector3d col_dir(zero_vector), normal(zero_vector);
 	bool const ldir(c.dim ^ c.dir);
 	col_dir[!c.dim] = (ldir  ? 1.0 : -1.0);
@@ -870,9 +870,9 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	float const width_scale(ct.get_sz_dim(!c.dim)/text_bcube.get_sz_dim(!c.dim)), height_scale(ct.dz()/text_bcube.dz());
 	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 	tid_nm_pair_t tex(FONT_TEXTURE_ID);
-	if (c.color.A == 0.0) {tex.emissive = 1;}
+	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1;}
 	rgeom_mat_t &mat(get_material(tex, 0, 0, 1));
-	color_wrapper const cw(colorRGBA(apply_light_color(c), 1.0)); // set alpha=1.0
+	color_wrapper const cw(apply_light_color(c)); // set alpha=1.0
 	norm_comp const nc(normal);
 
 	for (auto i = verts.begin(); i != verts.end(); ++i) {
