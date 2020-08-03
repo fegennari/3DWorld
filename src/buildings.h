@@ -204,18 +204,22 @@ enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
 enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_COUCH, NUM_OBJ_MODELS};
 
 // object flags, currently used for room lights
-uint8_t const RO_FLAG_LIT     = 0x01; // light is on
-uint8_t const RO_FLAG_TOS     = 0x02; // at top of stairs
-uint8_t const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
-uint8_t const RO_FLAG_INVIS   = 0x08; // invisible
-uint8_t const RO_FLAG_NOCOLL  = 0x10; // no collision detection
-uint8_t const RO_FLAG_OPEN    = 0x20; // open, for elevators and maybe eventually doors
-uint8_t const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
-uint8_t const RO_FLAG_INTERIOR= 0x80; // applies to containing room
+uint16_t const RO_FLAG_LIT     = 0x01; // light is on
+uint16_t const RO_FLAG_TOS     = 0x02; // at top of stairs
+uint16_t const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
+uint16_t const RO_FLAG_INVIS   = 0x08; // invisible
+uint16_t const RO_FLAG_NOCOLL  = 0x10; // no collision detection
+uint16_t const RO_FLAG_OPEN    = 0x20; // open, for elevators and maybe eventually doors
+uint16_t const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
+uint16_t const RO_FLAG_INTERIOR= 0x80; // applies to containing room
+// second byte
+uint16_t const RO_FLAG_EMISSIVE= 0x100; // for signs
+uint16_t const RO_FLAG_HANGING = 0x200; // for signs
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
-	uint8_t flags, room_id; // for at most 256 rooms per floor
+	uint16_t flags;
+	uint8_t room_id; // for at most 256 rooms per floor
 	uint16_t obj_id; // currently only used for lights and random property hashing
 	room_object type;
 	room_obj_shape shape;
@@ -223,7 +227,7 @@ struct room_object_t : public cube_t {
 	colorRGBA color;
 
 	room_object_t() : dim(0), dir(0), flags(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
-	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, uint8_t f=0, float light=1.0,
+	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, uint16_t f=0, float light=1.0,
 		room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
 		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_)
 	{assert(is_strictly_normalized());}

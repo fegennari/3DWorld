@@ -228,7 +228,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 	if (rwidth < 2.5*floor_spacing || rlength < 3.5*floor_spacing) return 0; // not large enough
 	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.75, 0.9)*floor_spacing))); // >= 4
 	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.25)); // not quite square
-	unsigned const flags(is_lit ? RO_FLAG_LIT : 0), cube_flags(flags | RO_FLAG_NOCOLL);
+	unsigned const cube_flags(RO_FLAG_LIT | RO_FLAG_NOCOLL);
 	cube_t const &part(get_part_for_room(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float lo_pos(room_bounds.d[long_dim][0]);
@@ -257,7 +257,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 				cube_t c2(c);
 				c2.d[long_dim][0] = hi_pos;
 				c2.expand_in_dim(long_dim, 0.05*cube_width);
-				objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, flags, tot_light_amt);
+				objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt);
 			}
 		} // for d
 		lo_pos = hi_pos;
@@ -366,7 +366,7 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 		if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
 		objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
 		objs.back().obj_id = (uint16_t)objs.size();
-		objs.emplace_back(c2, TYPE_BLOCKER, room_id); // add blocker cube to ensure no other object overlaps this space
+		objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 		return 1; // done
 	} // for n
 	return 0; // failed
@@ -417,7 +417,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 				c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
 				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1)) continue; // bad placement
 				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
-				objs.emplace_back(c2, TYPE_BLOCKER, room_id); // add blocker cube to ensure no other object overlaps this space
+				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_toilet = 1; // done
 			} // for d
 		} // for n
@@ -527,7 +527,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	sign.expand_in_dim(br_dim, -(mens_room ? 0.35 : 0.25)*door_width); // shrink a bit
 	sign.translate_dim(sink_side_sign*0.5*wall_thickness, !br_dim); // move to outside wall
 	sign.d[!br_dim][sink_side] += sink_side_sign*0.1*wall_thickness; // make nonzero area
-	objs.emplace_back(sign, TYPE_SIGN, room_id, !br_dim, sink_side, RO_FLAG_LIT, tot_light_amt, SHAPE_CUBE, DK_BLUE); // always lit; technically should use hallway room_id
+	objs.emplace_back(sign, TYPE_SIGN, room_id, !br_dim, sink_side, (RO_FLAG_LIT | RO_FLAG_NOCOLL), tot_light_amt, SHAPE_CUBE, DK_BLUE); // always lit; technically should use hallway room_id
 	string const sign_text(mens_room ? "Men" : "Women");
 	objs.back().obj_id = register_sign_text(sign_text);
 	return 1;
@@ -889,7 +889,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (p->z2() < light.z1() && p->z1() + floor_height > light.z2()) {is_lit = 1;} // on this floor
 				}
 				uint8_t flags(RO_FLAG_NOCOLL); // no collision detection with lights
-				if (is_lit)        {flags |= RO_FLAG_LIT;}
+				if (is_lit)        {flags |= RO_FLAG_LIT | RO_FLAG_EMISSIVE;}
 				if (top_of_stairs) {flags |= RO_FLAG_TOS;}
 				if (has_stairs)    {flags |= RO_FLAG_RSTAIRS;}
 				colorRGBA color;
