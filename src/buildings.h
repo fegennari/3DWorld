@@ -592,6 +592,7 @@ private:
 	void remove_intersecting_roof_cubes(cube_t const &c);
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const;
 	int classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const;
+	bool room_has_stairs_or_elevator(room_t const &room, float zval) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool is_lit);
 	unsigned add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,

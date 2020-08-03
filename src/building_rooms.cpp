@@ -170,6 +170,20 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 	return 0; // not placed
 }
 
+bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval) const {
+	if (room.has_elevator) return 1; // elevator shafts extend through all rooms in a stack, don't need to check zval
+	if (!room.has_stairs ) return 0; // no stairs
+	assert(interior);
+	cube_t c(room);
+	c.z1() = zval;
+	c.z2() = zval + 0.9*get_window_vspace();
+
+	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
+		if (s->intersects(c)) return 1;
+	}
+	return 0;
+}
+
 // Note: must be first placed object
 bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
 	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
@@ -211,7 +225,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 			}
 		}
 		++num_placed;
-		if (room.is_office && num_placed == 1 && rgen.rand_float() < 0.5 && !room.has_stairs && !room.has_elevator) {placed_desk = bc; continue;} // allow two desks in one office
+		if (room.is_office && num_placed == 1 && rgen.rand_float() < 0.5 && !room_has_stairs_or_elevator(room, zval)) {placed_desk = bc; continue;} // allow two desks in one office
 		break; // done/success
 	} // for n
 	return (num_placed > 0);
@@ -266,7 +280,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 }
 
 bool building_t::can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const { // check room type and existence of exterior door
-	if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_office) return 0; // no bed/bath in these cases
+	if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_office) return 0; // no bed/bath in these cases (assumes a house)
 	if (on_first_floor && is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
 	return 1;
 }
@@ -812,7 +826,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		// determine light pos and size for this stack of rooms
 		bool const room_dim(r->dx() < r->dy()); // longer room dim
 		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
-		bool is_office_bathroom(r->is_office && r->rtype == RTYPE_BATH && !(r->has_stairs || r->has_elevator));
 		float light_size(floor_thickness); // default size for houses
 		unsigned const room_objs_start(objs.size());
 
@@ -828,7 +841,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float const room_size(min(r->dx(), r->dy())); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*floor_thickness);
 		}
-		if (r->has_stairs) {r->assign_to(RTYPE_STAIRS);}
+		if (r->has_stairs && r->rtype == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS);} // default to stairs, may be re-assigned below
 		float const light_val(22.0*light_size), room_light_intensity(light_val*light_val/r->get_area_xy()); // average for room, unitless
 		cube_t pri_light, sec_light;
 		set_light_xy(pri_light, room_center, light_size, room_dim, light_shape);
@@ -950,13 +963,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 				continue; // no other geometry for this room
 			}
-			if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building rooms that have stairs
+			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);
 			bool added_tc(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), no_whiteboard(0);
 			unsigned num_chairs(0);
 
 			// place room objects
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
+			bool is_office_bathroom(r->is_office && r->rtype == RTYPE_BATH && !room_has_stairs_or_elevator(*r, room_center.z));
 
 			if (is_office_bathroom) { // bathroom is already assigned (should this be a row of toilets and sinks if the room is large?)
 				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start); // add bathroom
