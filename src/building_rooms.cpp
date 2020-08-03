@@ -268,10 +268,12 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 			added_cube = 1;
 			
 			if (n+1 != num_cubes) { // add a collider to allow the player to enter the cubicle but not cross the side walls
-				cube_t c2(c);
+				cube_t c2(c), c3(c);
 				c2.d[long_dim][0] = hi_pos;
-				c2.expand_in_dim(long_dim, 0.05*cube_width);
-				objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt);
+				c2.expand_in_dim(long_dim, 0.06*cube_width);
+				c3.d[!long_dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*0.12*cube_depth;
+				objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // sides
+				objs.emplace_back(c3, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // back (against wall)
 			}
 		} // for d
 		lo_pos = hi_pos;
