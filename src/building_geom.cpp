@@ -847,6 +847,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	float door_pos, float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen)
 {
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
+	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
 	float const door_shift(0.01*get_material().get_floor_spacing());
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
