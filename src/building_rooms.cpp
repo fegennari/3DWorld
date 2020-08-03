@@ -560,7 +560,11 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	bool placed_obj(0);
 	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, 0.72, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
-	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, 0.50, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8);}
+	
+	if (is_house) {
+		placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, 0.50, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8);
+		// TODO: countertops
+	}
 	return placed_obj;
 }
 
@@ -602,6 +606,7 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 			shorten_chairs_in_region(region, objs_start); // region represents that space between the couch and the TV
 		}
 	}
+	// TODO: potted plant?
 	return (placed_couch || placed_tv);
 }
 

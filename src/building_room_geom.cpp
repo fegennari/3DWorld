@@ -898,6 +898,17 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	}
 }
 
+void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
+	cube_t top(c), rest(c);
+	top.z1() += 0.95*c.dz();
+	get_material(tid_nm_pair_t(get_texture_by_name("marble2.jpg"), 4.0*tscale), 1).add_cube_to_verts(top, apply_light_color(c, WHITE), tex_origin); // top surface, all faces
+	float const overhang(0.05*c.get_sz_dim(c.dim));
+	rest.z2() = top.z1();
+	rest.expand_in_dim(!c.dim, -overhang);
+	rest.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*overhang;
+	get_wood_material(tscale).add_cube_to_verts(rest, apply_light_color(c, WOOD_COLOR), tex_origin, EF_Z1); // wood part, skip top face
+}
+
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
 	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z12); // only enable faces in dim
 	cube_t window(c);
@@ -961,6 +972,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BCASE:    return get_textured_wood_color();
 	case TYPE_DESK:     return get_textured_wood_color();
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
+	case TYPE_COUNTER:  return (get_textured_wood_color()*0.75 + WHITE*0.25);
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	return color; // Note: probably should always set color so that we can return it here
@@ -995,6 +1007,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_CUBICLE: add_cubicle (*i, tscale); break;
 		case TYPE_STALL:   add_br_stall(*i); break;
 		case TYPE_SIGN:    add_sign    (*i, 1, 0); break;
+		case TYPE_COUNTER: add_counter (*i, tscale); break;
 		case TYPE_PLANT:    break; // TODO
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
