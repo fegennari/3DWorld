@@ -559,11 +559,39 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	bool placed_obj(0);
-	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, 0.72, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
-	
-	if (is_house) {
-		placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, 0.50, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8);
-		// TODO: countertops
+	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, 0.72, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.2);
+	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, 0.50, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);}
+		
+	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
+		float const height(0.37*get_window_vspace()), depth(0.7*height), min_hwidth(0.6*height), front_clearance(0.5*height);
+		vector<room_object_t> &objs(interior->room_geom->objs);
+		cube_t c;
+		c.z1() = zval;
+		c.z2() = zval + height;
+
+		for (unsigned n = 0; n < 50; ++n) { // 50 attempts
+			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+			float const center(rgen.rand_uniform(place_area.d[!dim][0]+min_hwidth, place_area.d[!dim][1]-min_hwidth)); // random position
+			c.d[ dim][ dir] = place_area.d[dim][dir];
+			c.d[ dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+			c.d[!dim][   0] = center - min_hwidth;
+			c.d[!dim][   1] = center + min_hwidth;
+			cube_t best;
+
+			for (unsigned exp_dir = 0; exp_dir < 2; ++exp_dir) {
+				float &pos(c.d[!dim][exp_dir]);
+
+				for (unsigned m = 0; m < 50; ++m) {
+					cube_t c2(c); // used for collision tests
+					c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*front_clearance;
+					if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c2)) break; // bad placement
+					best = c; // max size found so far
+					pos += (exp_dir ? 1.0 : -1.0)*0.1*min_hwidth; // expand and try again
+					if (pos < place_area.d[!dim][0] || pos > place_area.d[!dim][1]) {pos = max(place_area.d[!dim][0], min(place_area.d[!dim][1], pos)); m = 50;} // clamp to place area
+				}
+			} // for exp_dir
+			if (!best.is_all_zeros()) {objs.emplace_back(best, TYPE_COUNTER, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);}
+		} // for n
 	}
 	return placed_obj;
 }
