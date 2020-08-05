@@ -1679,10 +1679,13 @@ bool has_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, flo
 	}
 	return 0;
 }
+float building_interior_t::get_doorway_width() const {
+	return (doors.empty() ? 0.0 : max(doors.front().dx(), doors.front().dy())); // calculate doorway width from first door
+}
 bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only) const {
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
-	float const doorway_width(doors.empty() ? 0.0 : max(doors.front().dx(), doors.front().dy())); // calculate doorway width from first door
+	float const doorway_width(get_doorway_width());
 	if (has_bcube_int(tc, elevators, doorway_width)) return 1;
 	if (elevators_only || stairwells.empty()) return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs

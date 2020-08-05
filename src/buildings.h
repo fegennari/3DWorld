@@ -421,6 +421,7 @@ struct building_interior_t {
 
 	building_interior_t();
 	~building_interior_t();
+	float get_doorway_width() const;
 	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f, bool inc_open=0, bool check_zval=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
@@ -594,6 +595,7 @@ private:
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const;
 	int classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const;
 	bool room_has_stairs_or_elevator(room_t const &room, float zval) const;
+	void gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool is_lit);
 	unsigned add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,

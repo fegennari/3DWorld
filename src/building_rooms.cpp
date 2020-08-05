@@ -16,7 +16,7 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) c
 	assert(objs_start <= objs.size());
 
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (i->intersects(c)) return 1;
+		if (!(i->flags & RO_FLAG_NOCOLL) && i->intersects(c)) return 1;
 	}
 	return 0;
 }
@@ -549,6 +549,40 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
+void add_door_if_blocker(cube_t const &door, cube_t const &room, vect_cube_t &blockers) {
+	bool const dim(door.dy() < door.dx());
+	float const width(door.get_sz_dim(!dim));
+	cube_t door_exp(door);
+	door_exp.expand_in_dim( dim, width);
+	if (!door_exp.intersects(room)) return; // check against room before expanding along wall to exclude doors in adjacent rooms
+	door_exp.expand_in_dim(!dim, width);
+	blockers.push_back(door_exp);
+}
+void building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors) const {
+	assert(interior && interior->room_geom);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	assert(objs_start <= objs.size());
+	blockers.clear();
+
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (!(i->flags & RO_FLAG_NOCOLL) && i->intersects(room)) {blockers.push_back(*i);}
+	}
+	for (auto i = doors.begin(); i != doors.end(); ++i) {add_door_if_blocker(i->get_bcube(), room, blockers);} // exterior doors
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {add_door_if_blocker(*i, room, blockers);} // interior doors
+	float const doorway_width(interior->get_doorway_width());
+
+	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
+		cube_t tc(*s);
+		tc.expand_in_dim(s->dim, doorway_width); // add extra space at both ends of stairs
+		if (tc.intersects(bcube)) {blockers.push_back(tc);}
+	}
+	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
+		cube_t tc(*e);
+		tc.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
+		if (tc.intersects(bcube)) {blockers.push_back(tc);}
+	}
+}
+
 bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool allow_adj_ext_door) {
 	// Note: table and chairs have already been placed
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be kitchens
@@ -556,41 +590,48 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	// if it has an external door then reject the room half the time; most houses don't have a front door to the kitchen
 	if (is_room_adjacent_to_ext_door(room, 1) && (!allow_adj_ext_door || rgen.rand_bool())) return 0; // front_door_only=1
 	float const wall_thickness(get_wall_thickness());
-	cube_t place_area(get_walkable_room_bounds(room));
+	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	bool placed_obj(0);
-	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, 0.72, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.2);
-	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, 0.50, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);}
+	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, 0.75, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.2);
+	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, 0.46, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);}
 		
 	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
-		float const height(0.37*get_window_vspace()), depth(0.7*height), min_hwidth(0.6*height), front_clearance(0.5*height);
+		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height), front_clearance(0.54*height);
+		cube_t cabinet_area(room_bounds);
+		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area
 		vector<room_object_t> &objs(interior->room_geom->objs);
 		cube_t c;
 		c.z1() = zval;
 		c.z2() = zval + height;
+		cabinet_area.z1() = zval;
+		cabinet_area.z2() = zval + get_window_vspace() - get_floor_thickness();
+		static vect_cube_t blockers;
+		gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1); // inc_open_doors=1
 
 		for (unsigned n = 0; n < 50; ++n) { // 50 attempts
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-			float const center(rgen.rand_uniform(place_area.d[!dim][0]+min_hwidth, place_area.d[!dim][1]-min_hwidth)); // random position
-			c.d[ dim][ dir] = place_area.d[dim][dir];
-			c.d[ dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+			float const center(rgen.rand_uniform(cabinet_area.d[!dim][0]+min_hwidth, cabinet_area.d[!dim][1]-min_hwidth)); // random position
+			float const wall_pos(cabinet_area.d[dim][dir]), front_pos(wall_pos + (dir ? -1.0 : 1.0)*depth);
+			c.d[ dim][ dir] = wall_pos;
+			c.d[ dim][!dir] = front_pos + (dir ? -1.0 : 1.0)*front_clearance;
 			c.d[!dim][   0] = center - min_hwidth;
 			c.d[!dim][   1] = center + min_hwidth;
-			cube_t best;
+			cube_t c_min(c); // min runlength - used for collision tests
+			for (unsigned e = 0; e < 2; ++e) {c.d[!dim][e] = cabinet_area.d[!dim][e];} // start at full room width
+			bool bad_place(0);
 
-			for (unsigned exp_dir = 0; exp_dir < 2; ++exp_dir) {
-				float &pos(c.d[!dim][exp_dir]);
-
-				for (unsigned m = 0; m < 50; ++m) {
-					cube_t c2(c); // used for collision tests
-					c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*front_clearance;
-					if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c2)) break; // bad placement
-					best = c; // max size found so far
-					pos += (exp_dir ? 1.0 : -1.0)*0.1*min_hwidth; // expand and try again
-					if (pos < place_area.d[!dim][0] || pos > place_area.d[!dim][1]) {pos = max(place_area.d[!dim][0], min(place_area.d[!dim][1], pos)); m = 50;} // clamp to place area
-				}
-			} // for exp_dir
-			if (!best.is_all_zeros()) {objs.emplace_back(best, TYPE_COUNTER, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);}
+			for (auto i = blockers.begin(); i != blockers.end(); ++i) {
+				if (!i->intersects(c)) continue; // optimization - no cube interaction
+				if (i->intersects(c_min)) {bad_place = 1; break;}
+				if (i->d[!dim][1] < c_min.d[!dim][0]) {max_eq(c.d[!dim][0], i->d[!dim][1]);} // clip on lo side
+				if (i->d[!dim][0] > c_min.d[!dim][1]) {min_eq(c.d[!dim][1], i->d[!dim][0]);} // clip on hi side
+			}
+			if (bad_place) continue;
+			assert(c.contains_cube(c_min));
+			c.d[dim][!dir] = front_pos; // remove front clearance
+			objs.emplace_back(c, TYPE_COUNTER, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
 		} // for n
 	}
 	return placed_obj;
