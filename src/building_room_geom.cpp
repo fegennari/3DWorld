@@ -901,12 +901,12 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
 	cube_t top(c), rest(c);
 	top.z1() += 0.95*c.dz();
-	get_material(tid_nm_pair_t(get_texture_by_name("marble2.jpg"), 4.0*tscale), 1).add_cube_to_verts(top, apply_light_color(c, WHITE), tex_origin); // top surface, all faces
+	get_material(tid_nm_pair_t(get_texture_by_name("marble2.jpg"), 2.5*tscale), 1).add_cube_to_verts(top, apply_light_color(c, WHITE), tex_origin); // top surface, all faces
 	float const overhang(0.05*c.get_sz_dim(c.dim));
 	rest.z2() = top.z1();
-	rest.expand_in_dim(!c.dim, -overhang);
-	rest.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*overhang;
-	get_wood_material(tscale).add_cube_to_verts(rest, apply_light_color(c, WOOD_COLOR), tex_origin, EF_Z1); // wood part, skip top face
+	//rest.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
+	rest.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*overhang; // add front overhang
+	get_wood_material(tscale).add_cube_to_verts(rest, apply_light_color(c, WOOD_COLOR), tex_origin, EF_Z1); // wood part, skip top face (can't skip back in case it's against a window)
 }
 
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
