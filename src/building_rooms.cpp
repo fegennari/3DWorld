@@ -134,7 +134,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 		cube_t c(center, center);
 		c.expand_by_xy(radius);
 		c.z2() += height;
-		if (is_cube_close_to_doorway(c, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
+		if (is_cube_close_to_doorway(c, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (cylin ? room_obj_shape::SHAPE_CYLIN : room_obj_shape::SHAPE_CUBE));
 		objs.back().color = colors[rgen.rand()%NUM_COLORS];
 		return; // done
@@ -364,6 +364,7 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 	c.z1() = zval;
 	c.z2() = zval + height;
 	bool center_tried[4] = {};
+	bool const inc_open(1);
 
 	for (unsigned n = 0; n < 25; ++n) { // make 25 attempts to place the object
 		bool const use_pref(pref_orient < 4 && n < 10); // use pref orient for first 10 tries
@@ -379,7 +380,7 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 		c.d[!dim][   1] = center + hwidth;
 		cube_t c2(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*depth*front_clearance;
-		if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
+		if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, inc_open) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
 		objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
 		objs.back().obj_id = (uint16_t)objs.size();
 		objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
@@ -743,7 +744,7 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	bool const inc_open(!is_house && !room.is_office);
 	if (is_cube_close_to_doorway(tc, 0.0, inc_open)) return 0; // bad placement
 	if ((room.has_stairs || room.has_elevator) && interior->is_blocked_by_stairs_or_elevator_no_expand(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
-	if (!inc_open && is_cube_close_to_doorway(tc, 0.0, 1)) return 2; // success, but could be better
+	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
 	return 1; // success
 }
 
