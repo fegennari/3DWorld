@@ -25,7 +25,7 @@ bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room
 	cube_t place_area(room);
 	if (room_pad != 0.0f) {place_area.expand_by_xy(-room_pad);} // shrink by dmin
 	if (!place_area.contains_cube_xy(c)) return 0; // not contained in interior part of the room
-	if (is_cube_close_to_doorway(c, 0.0, inc_open_doors)) return 0; // too close to a doorway
+	if (is_cube_close_to_doorway(c, room, 0.0, inc_open_doors)) return 0; // too close to a doorway
 	if (interior && interior->is_blocked_by_stairs_or_elevator(c)) return 0; // faster to check only one per stairwell, but then we need to store another vector?
 	if (has_bcube_int(c, blockers)) return 0; // Note: ignores dmin
 	return 1;
@@ -134,7 +134,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 		cube_t c(center, center);
 		c.expand_by_xy(radius);
 		c.z2() += height;
-		if (is_cube_close_to_doorway(c, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
+		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (cylin ? room_obj_shape::SHAPE_CYLIN : room_obj_shape::SHAPE_CUBE));
 		objs.back().color = colors[rgen.rand()%NUM_COLORS];
 		return; // done
@@ -162,7 +162,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		c.d[!dim][1] = pos + 0.5*width;
 		cube_t tc(c);
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.2*vspace; // increase space to add clearance
-		if (is_cube_close_to_doorway(tc, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
+		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt); // Note: dir faces into the room, not the wall
 		objs.back().obj_id = (uint16_t)objs.size();
 		return 1; // done/success
@@ -260,8 +260,8 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 			float const wall_pos(room_bounds.d[!long_dim][dir]);
 			c.d[!long_dim][ dir] = wall_pos;
 			c.d[!long_dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*cube_depth;
-			if (interior->is_cube_close_to_doorway(c, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
-			if (interior->is_blocked_by_stairs_or_elevator(c))    continue;
+			if (interior->is_cube_close_to_doorway(c, room, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
+			if (interior->is_blocked_by_stairs_or_elevator(c)) continue;
 			bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
 			objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt, (against_window ? SHAPE_SHORT : SHAPE_CUBE));
 			objs.back().obj_id = uint16_t(mat_ix + interior->rooms.size()); // some value that's per-building
@@ -352,7 +352,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	return 0;
 }
 
-bool building_t::place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
+bool building_t::place_obj_along_wall(room_object type, cube_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
 	bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z), min_space(2.8*hwidth);
@@ -364,7 +364,6 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 	c.z1() = zval;
 	c.z2() = zval + height;
 	bool center_tried[4] = {};
-	bool const inc_open(1);
 
 	for (unsigned n = 0; n < 25; ++n) { // make 25 attempts to place the object
 		bool const use_pref(pref_orient < 4 && n < 10); // use pref orient for first 10 tries
@@ -380,7 +379,7 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 		c.d[!dim][   1] = center + hwidth;
 		cube_t c2(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*depth*front_clearance;
-		if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, inc_open) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
+		if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
 		objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
 		objs.back().obj_id = (uint16_t)objs.size();
 		objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
@@ -388,12 +387,12 @@ bool building_t::place_obj_along_wall(room_object type, float height, vector3d c
 	} // for n
 	return 0; // failed
 }
-bool building_t::place_model_along_wall(unsigned model_id, room_object type, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
+bool building_t::place_model_along_wall(unsigned model_id, room_object type, cube_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
 	bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color)
 {
 	if (!building_obj_model_loader.is_model_valid(model_id)) return 0; // don't have a model of this type
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
-	return place_obj_along_wall(type, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt,
+	return place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt,
 		is_lit, place_area, objs_start, front_clearance, pref_orient, pref_centered, color);
 }
 
@@ -432,22 +431,22 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 				cube_t c2(c); // used for placement tests
 				c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, to avoid placing other objects there (sink and tub)
 				c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
-				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, 0.0, 1)) continue; // bad placement
+				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
 				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
 				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_toilet = 1; // done
 			} // for d
 		} // for n
 		if (!placed_toilet) { // if the toilet can't be placed in a corner, allow it to be placed anywhere; needed for small offices
-			placed_obj |= place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, 0.35, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8);
+			placed_obj |= place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, room, 0.35, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8);
 		}
 	}
 	if (is_house) { // place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
 		cube_t place_area_tub(room_bounds);
 		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
-		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, 0.2, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start, 0.4);
+		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, 0.2, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start, 0.4);
 	}
-	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.6);
+	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.6);
 	return placed_obj;
 }
 
@@ -596,8 +595,8 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	bool placed_obj(0);
-	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, 0.75, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.2);
-	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, 0.46, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);}
+	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.2);
+	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, room, 0.46, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);}
 		
 	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
 		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height), front_clearance(0.54*height);
@@ -655,13 +654,13 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	colorRGBA const &couch_color(colors[rgen.rand()%NUM_COLORS]);
 	unsigned tv_pref_orient(4), couch_ix(objs.size()), tv_ix(0);
 	
-	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, 0.40, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.67, 4, 1, couch_color)) { // pref centered
+	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.67, 4, 1, couch_color)) { // pref centered
 		placed_couch   = 1;
 		tv_pref_orient = (2*objs[couch_ix].dim + !objs[couch_ix].dir); // TV should be across from couch
 	}
 	tv_ix = objs.size();
 
-	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 4.0, tv_pref_orient, 1, BKGRAY)) { // pref centered
+	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 4.0, tv_pref_orient, 1, BKGRAY)) { // pref centered
 		placed_tv = 1;
 		// add a small table to place the TV on so that it's off the floor and not blocked as much by tables and chairs
 		room_object_t &tv(objs[tv_ix]);
@@ -746,9 +745,9 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	keepout.expand_in_dim(!dim, side_clearance); // make sure there's space for the frame
 	if (overlaps_other_room_obj(keepout, objs_start)) return 0;
 	bool const inc_open(!is_house && !room.is_office);
-	if (is_cube_close_to_doorway(tc, 0.0, inc_open)) return 0; // bad placement
+	if (is_cube_close_to_doorway(tc, room, 0.0, inc_open)) return 0; // bad placement
 	if ((room.has_stairs || room.has_elevator) && interior->is_blocked_by_stairs_or_elevator_no_expand(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
-	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
+	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, room, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
 	return 1; // success
 }
 

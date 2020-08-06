@@ -1642,7 +1642,7 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 }
 
 bool door_opens_inward(door_t const &door, cube_t const &room) {
-	return ((door.d[door.dim][0] < room.get_center_dim(door.dim)) == door.open_dir);
+	return (room.is_all_zeros() || (door.d[door.dim][0] < room.get_center_dim(door.dim)) == door.open_dir); // null room always returns 1 (conservative)
 }
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, bool check_zval) {
 	if (check_zval && (c.z2() < door.z1() || c.z1() > door.z2())) return 0;
@@ -1652,16 +1652,16 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 	float const min_dist((dmin == 0.0f) ? door.get_sz_dim(!dim) : dmin); // if dmin==0, use door width (so that door has space to open)
 	return (c.d[dim][0] < door.d[dim][1]+min_dist && c.d[dim][1] > door.d[dim][0]-min_dist); // within min_dist
 }
-bool building_t::is_cube_close_to_doorway(cube_t const &c, float dmin, bool inc_open) const { // Note: inc_open only applies to interior doors
+bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // Note: inc_open only applies to interior doors
 	// Note: we want to test this for things like stairs, but exterior doors likely haven't been allocated at this point, so we have to check for that during door placement
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // test exterior doors
 		if (is_cube_close_to_door(c, dmin, inc_open, i->get_bcube(), 1)) return 1; // check_zval=1
 	}
-	return (interior ? interior->is_cube_close_to_doorway(c, dmin, inc_open, 1) : 0); // test interior doors, check_zval=1
+	return (interior ? interior->is_cube_close_to_doorway(c, room, dmin, inc_open, 1) : 0); // test interior doors, check_zval=1
 }
-bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, float dmin, bool inc_open, bool check_zval) const { // ignores zvals
+bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open, bool check_zval) const { // ignores zvals
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // interior doors
-		if (is_cube_close_to_door(c, dmin, inc_open, *i, check_zval)) return 1;
+		if (is_cube_close_to_door(c, dmin, (inc_open && door_opens_inward(*i, room)), *i, check_zval)) return 1;
 	}
 	return 0;
 }

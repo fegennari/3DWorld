@@ -843,7 +843,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							// shrink to leave a small gap between the outer wall to prevent z-fighting
 							if (wtype_x == ROOM_WALL_EXT) {elevator.d[0][x] += (x ? -shrink : shrink);}
 							if (wtype_y == ROOM_WALL_EXT) {elevator.d[1][y] += (y ? -shrink : shrink);}
-							if (is_cube_close_to_doorway(elevator)) continue; // try again
+							if (is_cube_close_to_doorway(elevator, room)) continue; // try again
 							add_or_extend_elevator(elevator, 1);
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
@@ -879,7 +879,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 								cube_t cand(cutout);
 								float const shift(0.95f*(cand.d[dim][dir] - room.d[dim][dir])); // negative if dir==1, add small gap to prevent z-fighting and FP accuracy asserts
 								cand.d[dim][0] -= shift; cand.d[dim][1] -= shift; // close the gap - flush with the wall
-								if (!is_cube_close_to_doorway(cand)) {cutout = cand; break;} // keep if it's good
+								if (!is_cube_close_to_doorway(cand, room)) {cutout = cand; break;} // keep if it's good
 							} // for d
 						}
 					} // for dim
@@ -1052,7 +1052,7 @@ bool building_t::check_cube_intersect_walls(cube_t const &c) const {
 }
 
 bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad, bool check_walls) const {
-	if (is_cube_close_to_doorway(c, stairs_pad)) return 0; // bad
+	if (is_cube_close_to_doorway(c, cube_t(), stairs_pad)) return 0; // bad
 	if (interior->is_blocked_by_stairs_or_elevator(c, door_pad)) return 0; // bad
 	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
 	if (check_walls && check_cube_intersect_walls(c)) return 0;

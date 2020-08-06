@@ -423,7 +423,7 @@ struct building_interior_t {
 	building_interior_t();
 	~building_interior_t();
 	float get_doorway_width() const;
-	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0f, bool inc_open=0, bool check_zval=0) const;
+	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_zval=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
@@ -569,9 +569,9 @@ struct building_t : public building_geom_t {
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	int get_room_containing_pt(point const &pt) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
-	bool place_obj_along_wall(room_object type, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
+	bool place_obj_along_wall(room_object type, cube_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
 		bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE);
-	bool place_model_along_wall(unsigned model_id, room_object type, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
+	bool place_model_along_wall(unsigned model_id, room_object type, cube_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
 		bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_elevators(point const &player_pos);
@@ -584,7 +584,7 @@ private:
 		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	cube_t get_part_containing_pt(point const &pt) const;
-	bool is_cube_close_to_doorway(cube_t const &c, float dmin=0.0, bool inc_open=0) const;
+	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0, bool inc_open=0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad=0.0) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;
 	bool check_cube_contained_in_part(cube_t const &c) const;
