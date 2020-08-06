@@ -611,6 +611,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 		cabinet_area.z2() = zval + get_window_vspace() - get_floor_thickness();
 		static vect_cube_t blockers;
 		gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1); // inc_open_doors=1
+		bool is_sink(1);
 
 		for (unsigned n = 0; n < 50; ++n) { // 50 attempts
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
@@ -633,8 +634,9 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 			if (bad_place) continue;
 			assert(c.contains_cube(c_min));
 			c.d[dim][!dir] = front_pos; // remove front clearance
-			objs.emplace_back(c, TYPE_COUNTER, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
+			is_sink = 0; // sink is in first placed counter only
 		} // for n
 	}
 	return placed_obj;

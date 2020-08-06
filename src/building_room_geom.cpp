@@ -901,12 +901,32 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
 	cube_t top(c), rest(c);
 	top.z1() += 0.95*c.dz();
-	get_material(tid_nm_pair_t(get_texture_by_name("marble2.jpg"), 2.5*tscale), 1).add_cube_to_verts(top, apply_light_color(c, WHITE), tex_origin); // top surface, all faces
+	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("marble2.jpg"), 2.5*tscale), 1));
+	colorRGBA const top_color(apply_light_color(c, WHITE));
+
+	if (c.type == TYPE_KSINK) { // counter with kitchen sink
+		float const sdepth(0.9*c.get_sz_dim(c.dim)), swidth(min(1.4f*sdepth, 0.75f*c.get_sz_dim(!c.dim)));
+		vector3d const center(c.get_cube_center());
+		cube_t sink(center, center);
+		sink.z2() = top.z1();
+		sink.z1() = top.z1() - 0.25*c.dz();
+		sink.expand_in_dim( c.dim, 0.5*sdepth);
+		sink.expand_in_dim(!c.dim, 0.5*swidth);
+		static vect_cube_t cubes;
+		cubes.clear();
+		subtract_cube_from_cube(top, sink, cubes);
+		for (auto i = cubes.begin(); i != cubes.end(); ++i) {top_mat.add_cube_to_verts(*i, top_color, tex_origin);} // should always be 4 cubes
+		get_material(tid_nm_pair_t(), 0).add_cube_to_verts(sink, apply_light_color(c, GRAY), tex_origin, EF_Z2, 0, 0, 0, 1); // basin: unshadowed, inverted, skip to face
+	}
+	else { // regular counter top
+		top_mat.add_cube_to_verts(top, top_color, tex_origin); // top surface, all faces
+	}
+	// add wood sides of counter
 	float const overhang(0.05*c.get_sz_dim(c.dim));
 	rest.z2() = top.z1();
 	//rest.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
 	rest.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*overhang; // add front overhang
-	get_wood_material(tscale).add_cube_to_verts(rest, apply_light_color(c, WOOD_COLOR), tex_origin, EF_Z1); // wood part, skip top face (can't skip back in case it's against a window)
+	get_wood_material(tscale).add_cube_to_verts(rest, apply_light_color(c, WOOD_COLOR), tex_origin, EF_Z12); // skip top/bottom faces (can't skip back in case it's against a window)
 }
 
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
@@ -1008,6 +1028,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_STALL:   add_br_stall(*i); break;
 		case TYPE_SIGN:    add_sign    (*i, 1, 0); break;
 		case TYPE_COUNTER: add_counter (*i, tscale); break;
+		case TYPE_KSINK:   add_counter (*i, tscale); break; // counter with kitchen sink
 		case TYPE_PLANT:    break; // TODO
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
