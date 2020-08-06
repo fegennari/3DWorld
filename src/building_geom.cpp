@@ -1641,6 +1641,9 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	s.nverts += interior->room_geom->get_num_verts();
 }
 
+bool door_opens_inward(door_t const &door, cube_t const &room) {
+	return ((door.d[door.dim][0] < room.get_center_dim(door.dim)) == door.open_dir);
+}
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, bool check_zval) {
 	if (check_zval && (c.z2() < door.z1() || c.z1() > door.z2())) return 0;
 	bool const dim(door.dy() < door.dx());
