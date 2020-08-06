@@ -563,6 +563,7 @@ void building_t::gather_room_placement_blockers(cube_t const &room, unsigned obj
 	assert(interior && interior->room_geom);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
+	bool const first_floor(room.z1() < bcube.z1() + get_floor_thickness());
 	blockers.clear();
 
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
@@ -574,7 +575,8 @@ void building_t::gather_room_placement_blockers(cube_t const &room, unsigned obj
 
 	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 		cube_t tc(*s);
-		tc.expand_in_dim(s->dim, doorway_width); // add extra space at both ends of stairs
+		if (first_floor) {tc.d[s->dim][!s->dir] += (s->dir ? -1.0 : 1.0);} // first floor, expand only in stairs entrance dim (could do the opposite for top floor)
+		else {tc.expand_in_dim(s->dim, doorway_width);} // add extra space at both ends of stairs
 		if (tc.intersects(bcube)) {blockers.push_back(tc);}
 	}
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
@@ -951,7 +953,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool const top_floor(f+1 == num_floors), check_stairs(!is_house && parts.size() > 1 && top_floor); // top floor of building that may have stairs connecting to upper stack
 			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs);
 
-			if (!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) { // check for stairwells connecting stacked parts
+			if (!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) { // check for stairwells connecting stacked parts (is this still needed?)
 				for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 					if (!r->contains_cube_xy(*s)) continue; // stairs not in this room
 					// Note: here we adjust stairs zval by floor_thickness to include stairs in the floor but not in the room above
