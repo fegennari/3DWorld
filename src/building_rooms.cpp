@@ -549,13 +549,14 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
-void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, vect_cube_t &blockers) {
-	bool const dim(door.dy() < door.dx());
+void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, bool dir, vect_cube_t &blockers) {
+	bool const dim(door.dy() < door.dx()), edir(dim ^ dir ^ 1);
 	float const width(door.get_sz_dim(!dim));
 	cube_t door_exp(door);
 	door_exp.expand_in_dim(dim, width);
 	if (!door_exp.intersects(room)) return; // check against room before expanding along wall to exclude doors in adjacent rooms
-	door_exp.expand_in_dim(!dim, width*(inc_open ? 1.0 : 0.25));
+	door_exp.expand_in_dim(!dim, width*0.25); // min expand value
+	if (inc_open) {door_exp.d[!dim][edir] += (edir ? 1.0 : -1.0)*0.75*width;} // expand the remainder of the door width in this dir
 	blockers.push_back(door_exp);
 }
 void building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors) const {
@@ -568,8 +569,8 @@ void building_t::gather_room_placement_blockers(cube_t const &room, unsigned obj
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (!(i->flags & RO_FLAG_NOCOLL) && i->intersects(room)) {blockers.push_back(*i);}
 	}
-	for (auto i = doors.begin(); i != doors.end(); ++i) {add_door_if_blocker(i->get_bcube(), room, 1, blockers);} // exterior doors
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {add_door_if_blocker(*i, room, door_opens_inward(*i, room), blockers);} // interior doors
+	for (auto i = doors.begin(); i != doors.end(); ++i) {add_door_if_blocker(i->get_bcube(), room, 0, 0, blockers);} // exterior doors, inc_open=0
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {add_door_if_blocker(*i, room, door_opens_inward(*i, room), i->open_dir, blockers);} // interior doors
 	float const doorway_width(interior->get_doorway_width());
 
 	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
