@@ -927,6 +927,12 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 	//rest.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
 	rest.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*overhang; // add front overhang
 	get_wood_material(tscale).add_cube_to_verts(rest, apply_light_color(c, WOOD_COLOR), tex_origin, EF_Z12); // skip top/bottom faces (can't skip back in case it's against a window)
+	// TODO: add cabinet doors
+}
+
+void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
+	get_wood_material(tscale).add_cube_to_verts(c, apply_light_color(c, WOOD_COLOR), tex_origin, EF_Z2); // skip top face
+	// TODO: add cabinet doors
 }
 
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
@@ -993,6 +999,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_DESK:     return get_textured_wood_color();
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
 	case TYPE_COUNTER:  return (get_textured_wood_color()*0.75 + WHITE*0.25);
+	case TYPE_CABINET:  return get_textured_wood_color();
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	return color; // Note: probably should always set color so that we can return it here
@@ -1029,6 +1036,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_SIGN:    add_sign    (*i, 1, 0); break;
 		case TYPE_COUNTER: add_counter (*i, tscale); break;
 		case TYPE_KSINK:   add_counter (*i, tscale); break; // counter with kitchen sink
+		case TYPE_CABINET: add_cabinet (*i, tscale); break;
 		case TYPE_PLANT:    break; // TODO
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn

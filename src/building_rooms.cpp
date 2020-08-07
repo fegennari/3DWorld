@@ -600,6 +600,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 		
 	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
 		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height), front_clearance(0.54*height);
+		unsigned const flags(is_lit ? RO_FLAG_LIT : 0);
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area
 		vector<room_object_t> &objs(interior->room_geom->objs);
@@ -607,7 +608,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 		c.z1() = zval;
 		c.z2() = zval + height;
 		cabinet_area.z1() = zval;
-		cabinet_area.z2() = zval + get_window_vspace() - get_floor_thickness();
+		cabinet_area.z2() = zval + vspace - get_floor_thickness();
 		static vect_cube_t blockers;
 		gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1); // inc_open_doors=1
 		bool is_sink(1);
@@ -633,7 +634,14 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 			if (bad_place) continue;
 			assert(c.contains_cube(c_min));
 			c.d[dim][!dir] = front_pos; // remove front clearance
-			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, flags, tot_light_amt);
+
+			if (1) { // add upper cabinets, always (for now); should we remove cabinets in front of windows?
+				cube_t c2(c);
+				c2.z1() = zval + 0.66*vspace;
+				c2.z2() = cabinet_area.z2(); // up to the ceiling
+				if (!has_bcube_int(c2, blockers, 0)) {objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, (flags | RO_FLAG_NOCOLL), tot_light_amt);} // no collision detection
+			}
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
 			is_sink = 0; // sink is in first placed counter only
 		} // for n
