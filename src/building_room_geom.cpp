@@ -899,7 +899,7 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 }
 
 void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
-	cube_t top(c), rest(c);
+	cube_t top(c);
 	top.z1() += 0.95*c.dz();
 	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("marble2.jpg"), 2.5*tscale), 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
@@ -923,16 +923,41 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 	}
 	// add wood sides of counter
 	float const overhang(0.05*c.get_sz_dim(c.dim));
+	room_object_t rest(c);
 	rest.z2() = top.z1();
 	//rest.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
 	rest.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*overhang; // add front overhang
-	get_wood_material(tscale).add_cube_to_verts(rest, apply_light_color(c, WOOD_COLOR), tex_origin, EF_Z12); // skip top/bottom faces (can't skip back in case it's against a window)
-	// TODO: add cabinet doors
+	add_cabinet(rest, tscale); // draw the wood part
 }
 
 void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
-	get_wood_material(tscale).add_cube_to_verts(c, apply_light_color(c, WOOD_COLOR), tex_origin, EF_Z2); // skip top face
-	// TODO: add cabinet doors
+	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
+	get_wood_material(tscale).add_cube_to_verts(c, apply_light_color(c, WOOD_COLOR), tex_origin, skip_faces);
+	// add cabinet doors
+	float const door_height(0.8*c.dz()), door_width(0.75*door_height), door_thick(0.05*door_height), cab_width(c.get_sz_dim(!c.dim));
+	float door_spacing(1.2*door_width);
+	unsigned const num_doors(floor(cab_width/door_spacing));
+	assert(num_doors > 0);
+	door_spacing = cab_width/num_doors;
+	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.16*door_width);
+	float lo(c.d[!c.dim][0]);
+	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
+	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color
+	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
+	
+	for (unsigned n = 0; n < num_doors; ++n) {
+		float const hi(lo + door_spacing);
+		cube_t door(c);
+		door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
+		door.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*door_thick; // expand out a bit
+		door.d[!c.dim][0] = lo;
+		door.d[!c.dim][1] = hi;
+		door.expand_in_dim(2,      -tb_border  ); // shrink in Z
+		door.expand_in_dim(!c.dim, -side_border); // shrink in XY
+		door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
+		lo = hi;
+	}
+	// TODO: add door handles
 }
 
 void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
