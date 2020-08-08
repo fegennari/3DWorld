@@ -731,7 +731,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 }
 
 void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t &person, unsigned person_ix) {
-	if (!(display_mode & 0x20)) return; // FIXME
+	if (!(display_mode & 0x20)) return; // disabled by default, enable with key '6'
 	if ((frame_counter + person_ix) & 7) return; // update room info only every 8 frames
 	int const room_ix(get_room_containing_pt(person.pos));
 	if (room_ix < 0) return; // room is not valid (between rooms, etc.)
