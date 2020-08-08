@@ -686,7 +686,7 @@ bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusio
 cube_t get_building_lights_bcube();
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_t const &door, cube_t const &room);
-bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, bool check_zval);
+bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs, bool check_zval);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, bool dim);
