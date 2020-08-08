@@ -2985,8 +2985,8 @@ void city_lights_manager_t::finalize_lights(vector<light_source> &lights) { // N
 	prev_had_lights = !lights.empty();
 }
 
-void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_sources, point const &cpos) {
-	unsigned const num_smaps(min((unsigned)light_sources.size(), min(city_params.max_shadow_maps, MAX_DLIGHT_SMAPS)));
+void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_sources, point const &cpos, unsigned max_smaps) {
+	unsigned const num_smaps(min((unsigned)light_sources.size(), min(max_smaps, MAX_DLIGHT_SMAPS)));
 	dl_smap_enabled = 0;
 	if (!enable_dlight_shadows || shadow_map_sz == 0 || num_smaps == 0) return;
 	sort_lights_by_dist_size(light_sources, cpos); // Note: may already be sorted for enabled lights selection, but okay to sort again
@@ -3137,7 +3137,7 @@ public:
 		road_gen.add_city_lights(xlate, lights_bcube);
 		if (flashlight_on && !camera_in_building) {add_player_flashlight(0.25);} // add player flashlight
 		clamp_to_max_lights(xlate, dl_sources);
-		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));
+		setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), city_params.max_shadow_maps);
 		finalize_lights(dl_sources);
 	}
 	virtual bool enable_lights() const {return (is_night(max(STREETLIGHT_ON_RAND, HEADLIGHT_ON_RAND)) || road_gen.has_tunnels() || flashlight_on);} // only have lights at night

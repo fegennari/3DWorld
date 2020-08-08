@@ -150,6 +150,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "num_tries") {
 		if (!read_uint(fp, global_building_params.num_tries)) {buildings_file_err(str, error);}
 	}
+	else if (str == "max_shadow_maps") {
+		if (!read_uint(fp, global_building_params.max_shadow_maps)) {buildings_file_err(str, error);}
+	}
 	else if (str == "ao_factor") {
 		if (!read_zero_one_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
 	}
@@ -1601,7 +1604,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		if (flashlight_on /*&& camera_in_building*/) {add_player_flashlight(0.12);} // add player flashlight
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
-		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate));}
+		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps);}
 		finalize_lights(dl_sources);
 	}
 	virtual bool enable_lights() const {return ((draw_building_interiors && ADD_ROOM_LIGHTS) || flashlight_on);}
