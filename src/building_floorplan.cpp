@@ -201,7 +201,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			int const num_windows   (num_windows_per_side[!min_dim]);
 			int const num_windows_od(num_windows_per_side[min_dim]); // other dim, for use in hallway width calculation
 			int windows_per_room((num_windows > 5) ? 2 : 1); // 1-2 windows per room
-			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows);
+			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows), min_hall_width(3.6*doorway_width);
 			float room_len(wind_hspacing*windows_per_room);
 
 			while (room_len < 1.2*min_wall_len) { // add more windows to increase room size if too small
@@ -211,7 +211,8 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			int const num_rooms((num_windows+windows_per_room-1)/windows_per_room); // round up
 			bool const partial_room((num_windows % windows_per_room) != 0); // an odd number of windows leaves a small room at the end
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
-			float const num_hall_windows((num_windows_od & 1) ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
+			float num_hall_windows((num_windows_od & 1) ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
+			max_eq(num_hall_windows, min_hall_width*num_windows_od/cube_width); // enforce min_hall_width (may split a window, but this limit is only hit for non-window city office buildings)
 			float const hall_width(num_hall_windows*cube_width/num_windows_od);
 			float const room_width(0.5f*(cube_width - hall_width)); // rooms are the same size on each side of the hallway
 			float const hwall_extend(0.5f*(room_len - doorway_width - wall_thick));
@@ -381,8 +382,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					float room_sub_width(0.0);
 
 					while (1) { // increase the number of windows per room until room is large enough
-						rooms_per_side = windows_per_side_od/windows_per_room_od;
-						assert(rooms_per_side > 1); // should be guaranteed by above check
+						rooms_per_side = max(windows_per_side_od/windows_per_room_od, 1);
 						room_sub_width = sh_len/rooms_per_side;
 						if (room_sub_width > 1.5*doorway_width) break; // done
 						++windows_per_room_od;
