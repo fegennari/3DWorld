@@ -2275,7 +2275,7 @@ public:
 				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
 		}
-		bool const transparent_windows(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
+		bool const draw_interior(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		float const pcf_scale = 0.2;
@@ -2313,7 +2313,7 @@ public:
 			}
 			// Note: the best I can come up with is applying animations to both buildings and people, making sure to set animation_time to 0.0 for buildings;
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
-			bool const enable_animations(global_building_params.enable_people_ai && transparent_windows);
+			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
 			if (enable_animations) {enable_animations_for_shader(s);}
 			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
@@ -2324,7 +2324,7 @@ public:
 			vect_cube_t ped_bcubes; // reused temporary
 			int indir_bcs_ix(-1), indir_bix(-1);
 
-			if (transparent_windows) {
+			if (draw_interior) {
 				per_bcs_exclude.resize(bcs.size());
 				int_wall_draw_front.resize(bcs.size());
 				int_wall_draw_back.resize(bcs.size());
@@ -2356,7 +2356,7 @@ public:
 						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, room_geom_sm_draw_dist));
 						b.gen_and_draw_room_geom(s, xlate, ped_bcubes, bi->ix, ped_ix, 0, inc_small, b.bcube.contains_pt_xy(camera_xlated)); // shadow_only=0
 						g->has_room_geom = 1;
-						if (!transparent_windows) continue;
+						if (!draw_interior) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) continue; // camera not near building
@@ -2403,7 +2403,7 @@ public:
 			if (indir_bcs_ix >= 0 && indir_bix >= 0) {bcs[indir_bcs_ix]->create_indir_texture_for_building(indir_bix, camera_xlated);}
 			else {end_building_rt_job();}
 			
-			if (transparent_windows) { // write to stencil buffer, use stencil test for back facing building walls
+			if (draw_interior && have_windows) { // write to stencil buffer, use stencil test for back facing building walls
 				shader_t holes_shader;
 				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test
 				glClear(GL_STENCIL_BUFFER_BIT);
@@ -2420,7 +2420,7 @@ public:
 			}
 		} // end have_interior
 
-		if (transparent_windows) {
+		if (draw_interior) {
 			// draw back faces of buildings, which will be interior walls
 			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 1, have_indir); // force_tsl=1, use_texgen=1
@@ -2485,7 +2485,7 @@ public:
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			holes_shader.end_shader();
 			glDisable(GL_CULL_FACE);
-		} // end transparent_windows
+		} // end draw_interior
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
 		city_dlight_pcf_offset_scale = 1.0; // restore city value
@@ -2512,9 +2512,9 @@ public:
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw windows on top of other buildings
 				// need to swap opaque window texture with transparent texture for this draw pass
-				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+				if (draw_interior) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 				(*i)->building_draw_windows.draw(s, 0);
-				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+				if (draw_interior) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 			}
 			//interior_wind_draw.draw(0, 0, 1); // draw opaque front facing windows of building the player is in; direct_draw_no_vbo=1
 			glDisable(GL_POLYGON_OFFSET_FILL);
@@ -2548,9 +2548,9 @@ public:
 						enable_blend();
 						glEnable(GL_POLYGON_OFFSET_FILL);
 						if (!no_depth_write) {glDepthMask(GL_FALSE);} // always disable depth writing
-						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+						if (draw_interior) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 						(*i)->building_draw_windows.draw_tile(s, tile_id); // draw windows on top of other buildings
-						if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+						if (draw_interior) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 						if (!no_depth_write) {glDepthMask(GL_TRUE);} // always re-enable depth writing
 						glDisable(GL_POLYGON_OFFSET_FILL);
 						disable_blend();
