@@ -2184,7 +2184,7 @@ public:
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) { // Note: non const because this caches light bcubes
 		if (!ADD_ROOM_LIGHTS) return;
-		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || building_draw_windows.empty()) return; // no windows
+		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || building_draw_interior.empty()) return; // no interior
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		vector<point> points; // reused temporary
 		vect_cube_t ped_bcubes; // reused temporary
