@@ -81,6 +81,7 @@ void building_params_t::add_cur_mat() {
 		(cur_mat.no_city ? mat_gen_ix_nocity : mat_gen_ix_city).push_back(mat_ix);
 	}
 	materials.push_back(cur_mat);
+	materials.back().finalize();
 	materials.back().update_range(range_translate);
 	has_normal_map |= cur_mat.has_normal_map();
 }
@@ -99,9 +100,19 @@ void building_params_t::restore_prev_pos_range() {
 	for (auto i = materials.begin(); i != materials.end(); ++i) {i->restore_prev_pos_range();}
 }
 
-
+// windows are scaled to make the texture look correct; this is fine for exterior building wall materials that have no windows, since we can place the windows however we want;
+// but some office buildings have windows spaced too close together, and we don't have control over it here;
+// so instead we use a larger window space for floorplanning, since windows aren't cut out of the walls anyway
 float building_mat_t::get_window_tx() const {return wind_xscale*global_building_params.get_window_tx();}
 float building_mat_t::get_window_ty() const {return wind_yscale*global_building_params.get_window_ty();}
+
+void building_mat_t::finalize() { // compute and cache spacing values
+	float tx(get_window_tx()), ty(get_window_ty());
+	if (global_building_params.max_fp_wind_yscale > 0.0) {min_eq(ty, global_building_params.max_fp_wind_yscale*global_building_params.get_window_ty());}
+	if (global_building_params.max_fp_wind_xscale > 0.0) {min_eq(tx, global_building_params.max_fp_wind_xscale*global_building_params.get_window_tx());}
+	floor_spacing = 1.0/(2.0*ty);
+	floorplan_wind_xscale = 2.0f*tx;
+}
 
 void buildings_file_err(string const &str, int &error) {
 	cout << "Error reading buildings config option " << str << "." << endl;
@@ -158,6 +169,12 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "sec_extra_spacing") {
 		if (!read_float(fp, global_building_params.sec_extra_spacing)) {buildings_file_err(str, error);}
+	}
+	else if (str == "max_floorplan_window_xscale") {
+		if (!read_float(fp, global_building_params.max_fp_wind_xscale)) {buildings_file_err(str, error);}
+	}
+	else if (str == "max_floorplan_window_yscale") {
+		if (!read_float(fp, global_building_params.max_fp_wind_yscale)) {buildings_file_err(str, error);}
 	}
 	else if (str == "tt_only") {
 		if (!read_bool(fp, global_building_params.tt_only)) {buildings_file_err(str, error);}

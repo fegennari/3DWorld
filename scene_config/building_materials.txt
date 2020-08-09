@@ -11,6 +11,8 @@ buildings window_height 0.55
 buildings window_xspace 0.56
 buildings window_yspace 0.45
 buildings window_color 0.5 0.5 0.5 1.0 # gray
+buildings max_floorplan_window_xscale 7.5
+buildings max_floorplan_window_yscale 11.25
 
 # interiors
 buildings wall_color  1.0 1.0 1.0 1.0 # white

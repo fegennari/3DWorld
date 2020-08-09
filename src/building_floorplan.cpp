@@ -44,8 +44,8 @@ float cube_rand_side_pos(cube_t const &c, bool dim, float min_dist_param, float 
 // see global_building_params.window_xspace/window_width
 int building_t::get_num_windows_on_side(float xy1, float xy2) const {
 	assert(xy1 < xy2);
-	building_mat_t const &mat(get_material());
-	float tscale(2.0f*mat.get_window_tx()), t0(tscale*xy1), t1(tscale*xy2);
+	float const tscale(get_material().get_floorplan_window_xscale());
+	float t0(tscale*xy1), t1(tscale*xy2);
 	clip_low_high(t0, t1);
 	return round_fp(t1 - t0);
 }

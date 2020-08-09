@@ -89,6 +89,7 @@ struct building_mat_t : public building_tex_params_t {
 	unsigned min_levels, max_levels, min_sides, max_sides;
 	float place_radius, max_delta_z, max_rot_angle, min_level_height, min_alt, max_alt, house_prob, house_scale_min, house_scale_max;
 	float split_prob, cube_prob, round_prob, asf_prob, min_fsa, max_fsa, min_asf, max_asf, wind_xscale, wind_yscale, wind_xoff, wind_yoff;
+	float floor_spacing, floorplan_wind_xscale; // these are derived values
 	cube_t pos_range, prev_pos_range, sz_range; // pos_range z is unused?
 	color_range_t side_color, roof_color; // exterior
 	colorRGBA window_color, wall_color, ceil_color, floor_color, house_ceil_color, house_floor_color;
@@ -96,17 +97,19 @@ struct building_mat_t : public building_tex_params_t {
 	building_mat_t() : no_city(0), add_windows(0), add_wind_lights(0), min_levels(1), max_levels(1), min_sides(4), max_sides(4), place_radius(0.0),
 		max_delta_z(0.0), max_rot_angle(0.0), min_level_height(0.0), min_alt(-1000), max_alt(1000), house_prob(0.0), house_scale_min(1.0), house_scale_max(1.0),
 		split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0),
-		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros), sz_range(1,1,1,1,1,1),
-		window_color(GRAY), wall_color(WHITE), ceil_color(WHITE), floor_color(LT_GRAY), house_ceil_color(WHITE), house_floor_color(WHITE) {}
+		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), floor_spacing(0.0), floorplan_wind_xscale(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros),
+		sz_range(1,1,1,1,1,1), window_color(GRAY), wall_color(WHITE), ceil_color(WHITE), floor_color(LT_GRAY), house_ceil_color(WHITE), house_floor_color(WHITE) {}
 	float gen_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}
 	void update_range(vector3d const &range_translate);
 	void set_pos_range(cube_t const &new_pos_range) {prev_pos_range = pos_range; pos_range = new_pos_range;}
 	void restore_prev_pos_range() {
 		if (!prev_pos_range.is_all_zeros()) {pos_range = prev_pos_range;}
 	}
+	void finalize();
 	float get_window_tx() const;
 	float get_window_ty() const;
-	float get_floor_spacing() const {return 1.0/(2.0*get_window_ty());}
+	float get_floor_spacing() const {return floor_spacing;}
+	float get_floorplan_window_xscale() const {return floorplan_wind_xscale;}
 };
 
 struct building_params_t {
@@ -115,7 +118,7 @@ struct building_params_t {
 	unsigned num_place, num_tries, cur_prob, max_shadow_maps;
 	float ao_factor, sec_extra_spacing;
 	float window_width, window_height, window_xspace, window_yspace; // windows
-	float wall_split_thresh; // interiors
+	float wall_split_thresh, max_fp_wind_xscale, max_fp_wind_yscale; // interiors
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
@@ -124,7 +127,8 @@ struct building_params_t {
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), dome_roof(0),
 		onion_roof(0), enable_people_ai(0), num_place(num), num_tries(10), cur_prob(1), max_shadow_maps(32), ao_factor(0.0), sec_extra_spacing(0.0),
-		window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), wall_split_thresh(4.0), range_translate(zero_vector) {}
+		window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0),
+		range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}
