@@ -1410,9 +1410,13 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt) const {
 
-	if (!is_valid() || !global_building_params.windows_enabled()) return; // invalid building or no windows
+	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
-	if (lights_pass ? !mat.add_wind_lights : !mat.add_windows) return; // no windows for this material
+	
+	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !mat.add_windows)) { // no windows for this material
+		if (only_cont_pt != nullptr) {cut_holes_for_ext_doors(bdraw, *only_cont_pt, 0xFFFF);} // still need to draw holes for doors
+		return;
+	}
 	int const window_tid(building_texture_mgr.get_window_tid());
 	if (window_tid < 0) return; // not allocated - error?
 	if (mat.wind_xscale == 0.0 || mat.wind_yscale == 0.0) return; // no windows for this material?
@@ -1500,23 +1504,29 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		} // for dim
 	} // for i
 	if (only_cont_pt != nullptr) { // camera inside this building, cut out holes so that the exterior doors show through
-		for (auto d = doors.begin(); d != doors.end(); ++d) { // cut a hole for each door
-			tquad_with_ix_t door(*d);
-			move_door_to_other_side_of_wall(door, 0.3, 0); // move a bit in front of the normal interior door (0.3 vs. 0.2)
-			cube_t const door_bcube(door.get_bcube());
-			bool contained(0);
-
-			for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
-				if (!i->intersects(door_bcube)) continue;
-				contained = ((draw_parts_mask & (1<<(i-parts.begin()))) != 0);
-				if (only_cont_pt->z > (door_bcube.z1() + floor_spacing) && !i->contains_pt(*only_cont_pt)) {contained = 0;} // camera in a different part on a floor above the door
-				break;
-			}
-			if (!contained) continue; // part skipped, skip door as well
-			clip_door_to_interior(door, 0);
-			bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
-		} // for d
+		cut_holes_for_ext_doors(bdraw, *only_cont_pt, draw_parts_mask);
 	}
+}
+
+void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const {
+	float const floor_spacing(get_material().get_floor_spacing());
+
+	for (auto d = doors.begin(); d != doors.end(); ++d) { // cut a hole for each door
+		tquad_with_ix_t door(*d);
+		move_door_to_other_side_of_wall(door, 0.3, 0); // move a bit in front of the normal interior door (0.3 vs. 0.2)
+		cube_t const door_bcube(door.get_bcube());
+		bool contained(0);
+
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+			if (!i->intersects(door_bcube)) continue;
+			contained = ((draw_parts_mask & (1<<(i-parts.begin()))) != 0);
+			if (contain_pt.z > (door_bcube.z1() + floor_spacing) && !i->contains_pt(contain_pt)) {contained = 0;} // camera in a different part on a floor above the door
+			break;
+		}
+		if (!contained) continue; // part skipped, skip door as well
+		clip_door_to_interior(door, 0);
+		bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
+	} // for d
 }
 
 bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) const {
