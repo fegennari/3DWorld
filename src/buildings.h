@@ -137,10 +137,8 @@ struct building_params_t {
 	float get_window_tx() const {assert(windows_enabled()); return 1.0f/(window_width  + window_xspace);}
 	float get_window_ty() const {assert(windows_enabled()); return 1.0f/(window_height + window_yspace);}
 	void add_cur_mat();
+	void finalize();
 
-	void finalize() {
-		if (materials.empty()) {add_cur_mat();} // add current (maybe default) material
-	}
 	building_mat_t const &get_material(unsigned mat_ix) const {
 		assert(mat_ix < materials.size());
 		return materials[mat_ix];

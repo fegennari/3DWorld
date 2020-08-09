@@ -99,6 +99,9 @@ void building_params_t::restore_prev_pos_range() {
 	cur_mat.restore_prev_pos_range();
 	for (auto i = materials.begin(); i != materials.end(); ++i) {i->restore_prev_pos_range();}
 }
+void building_params_t::finalize() {
+	if (materials.empty()) {add_cur_mat();} // add current (maybe default) material
+}
 
 // windows are scaled to make the texture look correct; this is fine for exterior building wall materials that have no windows, since we can place the windows however we want;
 // but some office buildings have windows spaced too close together, and we don't have control over it here;
@@ -3057,6 +3060,7 @@ bool remove_buildings_tile(int x, int y) {
 vector3d get_tt_xlate_val() {return ((world_mode == WMODE_INF_TERRAIN) ? vector3d(xoff*DX_VAL, yoff*DY_VAL, 0.0) : zero_vector);}
 
 void gen_buildings() {
+	global_building_params.finalize();
 	update_sun_and_moon(); // need to update light_factor from sun to know if we need to generate window light geometry
 
 	if (world_mode == WMODE_INF_TERRAIN && have_cities()) {
