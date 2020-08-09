@@ -200,11 +200,17 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			// Note: we could probably make these unsigned, but I want to avoid unepected negative numbers in the math
 			int const num_windows   (num_windows_per_side[!min_dim]);
 			int const num_windows_od(num_windows_per_side[min_dim]); // other dim, for use in hallway width calculation
-			int const windows_per_room((num_windows > 5) ? 2 : 1); // 1-2 windows per room
+			int windows_per_room((num_windows > 5) ? 2 : 1); // 1-2 windows per room
+			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows);
+			float room_len(wind_hspacing*windows_per_room);
+
+			while (room_len < 1.2*min_wall_len) { // add more windows to increase room size if too small
+				++windows_per_room;
+				room_len = wind_hspacing*windows_per_room;
+			}
 			int const num_rooms((num_windows+windows_per_room-1)/windows_per_room); // round up
 			bool const partial_room((num_windows % windows_per_room) != 0); // an odd number of windows leaves a small room at the end
 			assert(num_rooms >= 0 && num_rooms < 1000); // sanity check
-			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows), room_len(wind_hspacing*windows_per_room);
 			float const num_hall_windows((num_windows_od & 1) ? 1.4 : 1.8); // hall either contains 1 (odd) or 2 (even) windows, wider for single window case to make room for stairs
 			float const hall_width(num_hall_windows*cube_width/num_windows_od);
 			float const room_width(0.5f*(cube_width - hall_width)); // rooms are the same size on each side of the hallway
