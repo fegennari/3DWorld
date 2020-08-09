@@ -935,13 +935,17 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
 	get_wood_material(tscale).add_cube_to_verts(c, apply_light_color(c, WOOD_COLOR), tex_origin, skip_faces);
 	// add cabinet doors
-	float const door_height(0.8*c.dz()), door_width(0.75*door_height), door_thick(0.05*door_height), handle_thick(0.75*door_thick), cab_width(c.get_sz_dim(!c.dim));
+	float const cab_depth(c.get_sz_dim(c.dim)), door_height(0.8*c.dz()), door_width(0.75*door_height), door_thick(0.05*door_height);
+	cube_t front(c);
+	if (c.flags & RO_FLAG_ADJ_LO) {front.d[!c.dim][0] += cab_depth;} // exclude L-joins of cabinets from having doors; assumes all cabinets are the same depth
+	if (c.flags & RO_FLAG_ADJ_HI) {front.d[!c.dim][1] -= cab_depth;}
+	float const handle_thick(0.75*door_thick), cab_width(front.get_sz_dim(!c.dim));
 	float door_spacing(1.2*door_width);
 	unsigned const num_doors(floor(cab_width/door_spacing));
-	assert(num_doors > 0);
+	if (num_doors == 0) return; // is this possible?
 	door_spacing = cab_width/num_doors;
 	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.16*door_width), dir_sign(c.dir ? 1.0 : -1.0);
-	float lo(c.d[!c.dim][0]);
+	float lo(front.d[!c.dim][0]);
 	get_material(tid_nm_pair_t(), 0); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
 	rgeom_mat_t &handle_mat(get_material(tid_nm_pair_t(), 0)); // untextured, unshadowed
