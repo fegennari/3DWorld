@@ -2321,8 +2321,10 @@ public:
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 				
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
+					float const ddist_scale((*i)->building_draw_windows.empty() ? 0.1 : 1.0);
+
 					for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-						if (g->bcube.closest_dist_xy_less_than(camera_xlated, z_prepass_dist)) {
+						if (g->bcube.closest_dist_xy_less_than(camera_xlated, ddist_scale*z_prepass_dist)) {
 							(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 						}
 					}
@@ -2352,9 +2354,10 @@ public:
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw only nearby interiors
 				unsigned const bcs_ix(i - bcs.begin());
 				float const door_open_dist(get_door_open_dist());
+				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.05 : 1.0); // if there are no windows, we can wait until the player is very close to draw the interior
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					if (!g->bcube.closest_dist_less_than(camera_xlated, interior_draw_dist)) { // too far
+					if (!g->bcube.closest_dist_less_than(camera_xlated, ddist_scale*interior_draw_dist)) { // too far
 						if (g->has_room_geom) { // need to clear room geom
 							for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();}
 							g->has_room_geom = 0;
@@ -2364,16 +2367,16 @@ public:
 					if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
-					if (!g->bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far
+					if (!g->bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior) continue; // no interior, skip
-						if (!b.bcube.closest_dist_less_than(camera_xlated, room_geom_draw_dist)) continue; // too far away
+						if (!b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
-						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, room_geom_sm_draw_dist));
+						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
 						b.gen_and_draw_room_geom(s, xlate, ped_bcubes, bi->ix, ped_ix, 0, inc_small, b.bcube.contains_pt_xy(camera_xlated)); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
