@@ -377,13 +377,20 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					float const sh_len(room_width);
 					int const num_sec_halls(num_rooms/2); // round down if odd
 					int const windows_per_side_od((num_windows_od - round_fp(num_hall_windows))/2); // of hallway
-					int const windows_per_room_od((windows_per_side_od & 1) ? 1 : 2), rooms_per_side(windows_per_side_od/windows_per_room_od); // rooms along each sec hall
-					int const num_offices(4*rooms_per_side*num_sec_halls);
-					assert(rooms_per_side > 1); // should be guaranteed by above check
-					float const room_sub_width(sh_len/rooms_per_side);
+					int windows_per_room_od((windows_per_side_od & 1) ? 1 : 2), rooms_per_side(0); // rooms along each sec hall
+					float room_sub_width(0.0);
+
+					while (1) { // increase the number of windows per room until room is large enough
+						rooms_per_side = windows_per_side_od/windows_per_room_od;
+						assert(rooms_per_side > 1); // should be guaranteed by above check
+						room_sub_width = sh_len/rooms_per_side;
+						if (room_sub_width > 1.5*doorway_width) break; // done
+						++windows_per_room_od;
+					}
 					float const sh_spacing(cube_len/num_sec_halls - sh_width), end_spacing(0.5*sh_spacing); // half spacing at both ends
 					assert(sh_spacing > min_wall_len); // I'm not sure if this can fail or what we should do in that case - use fewer secondary hallways?
 					float room_start(p->d[!min_dim][0]), wall_pos(room_start + end_spacing); // first sec hall wall pos
+					int const num_offices(4*rooms_per_side*num_sec_halls);
 					vect_cube_t &split_walls(hall_walls);
 					room_walls.reserve(4*(rooms_per_side+1)*num_sec_halls + 2*(num_sec_halls-1)); // walls with doors + room dividers
 					split_walls.reserve(2*rooms_per_side*(num_sec_halls+1));
