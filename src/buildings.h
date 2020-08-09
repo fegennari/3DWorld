@@ -7,6 +7,7 @@
 #include "gl_ext_arb.h" // for vbo_wrap_t
 
 bool const ADD_BUILDING_INTERIORS  = 1;
+bool const ADD_CITY_INTERIORS      = 0; // somewhat working now, but rooms are too small and it's slow
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 unsigned const MAX_CYLIN_SIDES     = 36;
 unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors

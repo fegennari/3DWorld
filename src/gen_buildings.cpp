@@ -2275,7 +2275,7 @@ public:
 				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
 		}
-		bool const draw_interior(DRAW_WINDOWS_AS_HOLES && have_windows && draw_building_interiors); // reuse draw_building_interiors for now
+		bool const draw_interior(DRAW_WINDOWS_AS_HOLES && (have_windows || ADD_CITY_INTERIORS) && draw_building_interiors); // reuse draw_building_interiors for now
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		float const pcf_scale = 0.2;
@@ -3052,7 +3052,7 @@ void draw_buildings(int shadow_only, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
-	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps)); // don't draw city buildings for interior shadows
+	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps || ADD_CITY_INTERIORS)); // don't draw city buildings for interior shadows
 	bool const draw_sec ((shadow_only != 2 || interior_shadow_maps)); // don't draw secondary buildings for exterior dynamic shadows
 	if (draw_city && building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
 	if (draw_sec  && building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
@@ -3112,8 +3112,9 @@ void clear_building_vbos() {
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
 
-void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) { // secondary buildings only for now
+void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 	building_creator.add_interior_lights(xlate, lights_bcube);
+	building_creator_city.add_interior_lights(xlate, lights_bcube);
 	building_tiles.add_interior_lights(xlate, lights_bcube);
 }
 // cars + peds

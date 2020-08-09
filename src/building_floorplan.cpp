@@ -114,7 +114,7 @@ bool building_t::interior_enabled() const {
 	if (!global_building_params.windows_enabled()) return 0; // no windows, can't assign floors and generate interior
 	//if (has_overlapping_cubes) return; // overlapping cubes buildings are more difficult to handle
 	if (!is_cube()) return 0; // only generate interiors for cube buildings for now
-	if (!get_material().add_windows) return 0; // not a building type that has generated windows (skip office buildings with windows baked into textures)
+	if (!ADD_CITY_INTERIORS && !get_material().add_windows) return 0; // not a building type that has generated windows (skip office buildings with windows baked into textures)
 	return 1;
 }
 
