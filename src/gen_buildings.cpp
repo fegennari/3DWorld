@@ -397,6 +397,9 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_uint(fp, global_building_params.cur_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "add_material") {global_building_params.add_cur_mat();}
+	else if (str == "add_city_interiors") {
+	if (!read_bool(fp, global_building_params.add_city_interiors)) {buildings_file_err(str, error);}
+	}
 	else {
 		cout << "Unrecognized buildings keyword in input file: " << str << endl;
 		error = 1;
@@ -2295,7 +2298,7 @@ public:
 				(*i)->use_smap_this_frame = (use_tt_smap && try_bind_tile_smap_at_point(((*i)->grid_by_tile[0].bcube.get_cube_center() + xlate), s, 1)); // check_only=1
 			}
 		}
-		bool const draw_interior(DRAW_WINDOWS_AS_HOLES && (have_windows || ADD_CITY_INTERIORS) && draw_building_interiors); // reuse draw_building_interiors for now
+		bool const draw_interior(DRAW_WINDOWS_AS_HOLES && (have_windows || global_building_params.add_city_interiors) && draw_building_interiors);
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		float const pcf_scale = 0.2;
@@ -3076,7 +3079,8 @@ void draw_buildings(int shadow_only, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
-	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps || ADD_CITY_INTERIORS)); // don't draw city buildings for interior shadows
+	// don't draw city buildings for interior shadows
+	bool const draw_city(world_mode == WMODE_INF_TERRAIN && (shadow_only != 2 || !interior_shadow_maps || global_building_params.add_city_interiors));
 	bool const draw_sec ((shadow_only != 2 || interior_shadow_maps)); // don't draw secondary buildings for exterior dynamic shadows
 	if (draw_city && building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
 	if (draw_sec  && building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
