@@ -4,6 +4,7 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
+#include "profiler.h"
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 bool const DRAW_OPEN_DOORS = 1;
@@ -1065,10 +1066,10 @@ bool building_t::check_cube_intersect_walls(cube_t const &c) const {
 }
 
 bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad, bool check_walls) const {
-	if (is_cube_close_to_doorway(c, cube_t(), stairs_pad)) return 0; // bad
-	if (interior->is_blocked_by_stairs_or_elevator(c, door_pad)) return 0; // bad
 	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
 	if (check_walls && check_cube_intersect_walls(c)) return 0;
+	if (is_cube_close_to_doorway(c, cube_t(), stairs_pad)) return 0; // bad
+	if (interior->is_blocked_by_stairs_or_elevator(c, door_pad)) return 0; // bad
 	return 1;
 }
 
@@ -1188,7 +1189,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
-			for (unsigned n = 0; n < 200; ++n) { // make 100 tries to add stairs
+			for (unsigned n = 0; n < 200; ++n) { // make 200 tries to add stairs
 				cube_t place_region((n < 20) ? pref_shared : shared); // use preferred shared area from primary hallway for first 20 iterations
 
 				if (n >= 40 && n < 160 && (n%10) == 0) { // decrease stairs size slightly every 10 iterations
@@ -1214,7 +1215,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				bool bad_place(0), wall_clipped(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
-					if (!is_valid_stairs_elevator_placement(cand_test[d], doorway_width, stairs_pad, !allow_clip_walls)) {bad_place = 1;} // bad placement
+					if (!is_valid_stairs_elevator_placement(cand_test[d], doorway_width, stairs_pad, !allow_clip_walls)) {bad_place = 1; break;} // bad placement
 				}
 				if (bad_place) continue;
 
