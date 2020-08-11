@@ -493,6 +493,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	sink_spacing = sinks_len/num_sinks;
 	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(two_rows ? 0 : (room_id & 1)); // put stalls on a side consistent across floors
 	float const sink_side_sign(sink_side ? 1.0 : -1.0), stall_step(sink_side_sign*stall_width), sink_step(-sink_side_sign*sink_spacing);
+	float const floor_thickness(get_floor_thickness());
 	unsigned const flags(is_lit ? RO_FLAG_LIT : 0);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
@@ -511,7 +512,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			toilet.z2() += theight;
 			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
 			cube_t stall(center, center);
-			stall.z2() = stall.z1() + floor_spacing; // set stall height to room height
+			stall.z2() = stall.z1() + floor_spacing - floor_thickness; // set stall height to room height
 			stall.expand_in_dim(!br_dim, 0.5*stall_width);
 			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
 			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth;
