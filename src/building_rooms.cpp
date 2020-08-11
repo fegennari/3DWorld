@@ -266,15 +266,14 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 			objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt, (against_window ? SHAPE_SHORT : SHAPE_CUBE));
 			objs.back().obj_id = uint16_t(mat_ix + interior->rooms.size()); // some value that's per-building
 			added_cube = 1;
-			
-			if (n+1 != num_cubes) { // add a collider to allow the player to enter the cubicle but not cross the side walls
-				cube_t c2(c), c3(c);
-				c2.d[long_dim][0] = hi_pos;
-				c2.expand_in_dim(long_dim, 0.06*cube_width);
-				c3.d[!long_dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*0.12*cube_depth;
-				objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // sides
-				objs.emplace_back(c3, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // back (against wall)
-			}
+			// add colliders to allow the player to enter the cubicle but not cross the side walls
+			cube_t c2(c), c3(c), c4(c);
+			c2.d[long_dim][0] = hi_pos - 0.06*cube_width;
+			c3.d[long_dim][1] = lo_pos + 0.06*cube_width;
+			c4.d[!long_dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*0.12*cube_depth;
+			objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side1
+			objs.emplace_back(c3, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side2
+			objs.emplace_back(c4, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // back (against wall)
 		} // for d
 		lo_pos = hi_pos;
 	} // for n
