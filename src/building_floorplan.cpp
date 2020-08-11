@@ -1161,6 +1161,7 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically
 
+	//highres_timer_t timer("Connect Stairs"); // 116ms
 	float const window_vspacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
 
@@ -1176,11 +1177,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			// however, this does mean that the part above this one has already been processed
 			float stairs_width(1.2*doorway_width); // relatively small
 			float stairs_pad(1.0*doorway_width), len_with_pad(stairs_len + 2.0*stairs_pad); // pad both ends of stairs to make sure player has space to enter/exit
-			if (max(shared.dx(), shared.dy()) < 1.5*len_with_pad || min(shared.dx(), shared.dy()) < 2.0*stairs_width) continue; // too small to add stairs between these parts
+			if (max(shared.dx(), shared.dy()) < 1.0*len_with_pad || min(shared.dx(), shared.dy()) < 1.2*stairs_width) continue; // too small to add stairs between these parts
 
 			if (!pri_hall.is_all_zeros() && part.contains_cube(pri_hall) && pri_hall.intersects_xy(shared)) { // have a primary hallway in this part
 				pref_shared.intersect_with_cube(pri_hall);
-				if (max(pref_shared.dx(), pref_shared.dy()) < 1.5*len_with_pad || min(pref_shared.dx(), pref_shared.dy()) < 2.0*stairs_width) {pref_shared = shared;} // too small
+				if (max(pref_shared.dx(), pref_shared.dy()) < 1.2*len_with_pad || min(pref_shared.dx(), pref_shared.dy()) < 1.5*stairs_width) {pref_shared = shared;} // too small
 			}
 			// place stairs in shared area if there's space and no walls are in the way for either the room or above
 			cube_t cand;
@@ -1197,8 +1198,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					stairs_pad   -= 0.040*doorway_width;
 					len_with_pad -= 0.230*doorway_width;
 				}
-				bool dim(rgen.rand_bool());
-				if (place_region.get_sz_dim(dim) < 1.5*len_with_pad) {dim ^= 1;} // too narrow in this dim, try other dim
+				bool dim(0);
+				if (min(place_region.dx(), place_region.dy()) < 1.5*len_with_pad) {dim = (place_region.dx() < place_region.dy());} // use larger dim
+				else {dim = rgen.rand_bool();}
 				bool const stairs_dir(rgen.rand_bool());
 
 				for (unsigned d = 0; d < 2; ++d) {
