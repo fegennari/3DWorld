@@ -338,6 +338,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			if (c->no_coll()) continue;
 			if (c->type == TYPE_BLOCKER) continue; // skip blockers because they only block other objects, not the player
 			if (c->type == TYPE_CHAIR  ) continue; // skip chair collisions because they can be in the way and block the path in some rooms
+			if (c->type == TYPE_CUBICLE) continue; // skip cubicle collisions because they have their own colliders
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
 				if (!c->contains_pt_xy(pos)) continue;

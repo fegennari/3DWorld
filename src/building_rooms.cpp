@@ -242,7 +242,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 	if (rwidth < 2.5*floor_spacing || rlength < 3.5*floor_spacing) return 0; // not large enough
 	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.75, 0.9)*floor_spacing))); // >= 4
 	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.25)); // not quite square
-	unsigned const cube_flags(RO_FLAG_LIT | RO_FLAG_NOCOLL);
+	unsigned const cube_flags(is_lit ? RO_FLAG_LIT : 0);
 	cube_t const &part(get_part_for_room(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float lo_pos(room_bounds.d[long_dim][0]);
