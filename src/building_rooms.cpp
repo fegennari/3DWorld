@@ -257,11 +257,13 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 		c.d[long_dim][1] = hi_pos;
 
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			float const wall_pos(room_bounds.d[!long_dim][dir]);
+			float const wall_pos(room_bounds.d[!long_dim][dir]), dir_sign(dir ? -1.0 : 1.0);
 			c.d[!long_dim][ dir] = wall_pos;
-			c.d[!long_dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*cube_depth;
-			if (interior->is_cube_close_to_doorway(c, room, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
-			if (interior->is_blocked_by_stairs_or_elevator(c)) continue;
+			c.d[!long_dim][!dir] = wall_pos + dir_sign*cube_depth;
+			cube_t test_cube(c);
+			test_cube.d[!long_dim][!dir] += dir_sign*0.5*cube_depth; // allow space for people to enter the cubicle
+			if (interior->is_cube_close_to_doorway(test_cube, room, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
+			if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
 			bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
 			objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt, (against_window ? SHAPE_SHORT : SHAPE_CUBE));
 			objs.back().obj_id = uint16_t(mat_ix + interior->rooms.size()); // some value that's per-building
@@ -270,7 +272,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 			cube_t c2(c), c3(c), c4(c);
 			c2.d[long_dim][0] = hi_pos - 0.06*cube_width;
 			c3.d[long_dim][1] = lo_pos + 0.06*cube_width;
-			c4.d[!long_dim][!dir] = wall_pos + (dir ? -1.0 : 1.0)*0.12*cube_depth;
+			c4.d[!long_dim][!dir] = wall_pos + dir_sign*0.12*cube_depth;
 			objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side1
 			objs.emplace_back(c3, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side2
 			objs.emplace_back(c4, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // back (against wall)
