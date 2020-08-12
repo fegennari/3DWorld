@@ -285,10 +285,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	float const floor_spacing(get_window_vspace());
 	bool had_coll(0), on_stairs(0);
 	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
+	float const wall_test_z(obj_z + radius); // hack to allow player to step over a wall that's below the stairs connecting stacked parts
 
 	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
-			if (obj_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
+			if (wall_test_z < i->z1() || wall_test_z > i->z2()) continue; // wrong part/floor
 			had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, 0, cnorm); // skip_z=0 (required for stacked parts that have diff walls)
 		}
 	}
