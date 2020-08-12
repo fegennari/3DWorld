@@ -677,10 +677,12 @@ inline void clip_low_high(float &t0, float &t1) {
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
 }
 
-template<typename T> bool has_bcube_int(cube_t const &bcube, vector<T> const &bcubes, bool inc_adj=1) { // T must derive from cube_t
-	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {
-		if (inc_adj ? c->intersects(bcube) : c->intersects_no_adj(bcube)) return 1;
-	}
+template<typename T> bool has_bcube_int(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
+	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects(bcube)) return 1;}
+	return 0;
+}
+template<typename T> bool has_bcube_int_no_adj(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
+	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects_no_adj(bcube)) return 1;}
 	return 0;
 }
 

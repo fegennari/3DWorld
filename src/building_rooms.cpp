@@ -648,7 +648,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 				cube_t c2(c);
 				c2.z1() = zval + 0.66*vspace;
 				c2.z2() = cabinet_area.z2(); // up to the ceiling
-				if (!has_bcube_int(c2, blockers, 0)) {objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, (flags | RO_FLAG_NOCOLL), tot_light_amt);} // no collision detection
+				if (!has_bcube_int_no_adj(c2, blockers)) {objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, (flags | RO_FLAG_NOCOLL), tot_light_amt);} // no collision detection
 			}
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
 			is_sink = 0; // sink is in first placed counter only
