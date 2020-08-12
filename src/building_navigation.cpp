@@ -620,7 +620,7 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(room.d[d][0]+radius, room.d[d][1]-radius);} // random XY point inside this room
 		cube_t bcube(pos);
 		bcube.expand_by(radius); // expand more in Z?
-		if (!is_valid_stairs_elevator_placement(bcube, radius, radius)) continue;
+		if (!is_valid_stairs_elevator_placement(bcube, radius)) continue;
 		bool bad_place(0);
 
 		// Note: people are placed before room geom is generated for all buildings, so this may not work and will have to be handled during room geom placement

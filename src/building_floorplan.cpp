@@ -1065,11 +1065,11 @@ bool building_t::check_cube_intersect_walls(cube_t const &c) const {
 	return 0;
 }
 
-bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float door_pad, float stairs_pad, bool check_walls) const {
+bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, bool check_walls) const {
 	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
 	if (check_walls && check_cube_intersect_walls(c)) return 0;
-	if (is_cube_close_to_doorway(c, cube_t(), stairs_pad)) return 0; // bad
-	if (interior->is_blocked_by_stairs_or_elevator(c, door_pad)) return 0; // bad
+	if (is_cube_close_to_doorway(c, cube_t(), pad)) return 0; // bad
+	if (interior->is_blocked_by_stairs_or_elevator(c, pad)) return 0; // bad
 	return 1;
 }
 
@@ -1176,7 +1176,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			// Note: parts are sorted top to bottom, so any part above <part> should be before it in parts - but we don't want to rely on that here;
 			// however, this does mean that the part above this one has already been processed
 			float stairs_width(1.2*doorway_width); // relatively small
-			float stairs_pad(1.0*doorway_width), len_with_pad(stairs_len + 2.0*stairs_pad); // pad both ends of stairs to make sure player has space to enter/exit
+			float stairs_pad(doorway_width), len_with_pad(stairs_len + 2.0*stairs_pad); // pad both ends of stairs to make sure player has space to enter/exit
 			if (max(shared.dx(), shared.dy()) < 1.0*len_with_pad || min(shared.dx(), shared.dy()) < 1.2*stairs_width) continue; // too small to add stairs between these parts
 
 			if (!pri_hall.is_all_zeros() && part.contains_cube(pri_hall) && pri_hall.intersects_xy(shared)) { // have a primary hallway in this part
@@ -1195,7 +1195,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 				if (n >= 40 && n < 160 && (n%10) == 0) { // decrease stairs size slightly every 10 iterations
 					stairs_width -= 0.025*doorway_width;
-					stairs_pad   -= 0.040*doorway_width;
+					stairs_pad   -= 0.030*doorway_width;
 					len_with_pad -= 0.230*doorway_width;
 				}
 				bool dim(0);
@@ -1217,7 +1217,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				bool bad_place(0), wall_clipped(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
-					if (!is_valid_stairs_elevator_placement(cand_test[d], doorway_width, stairs_pad, !allow_clip_walls)) {bad_place = 1; break;} // bad placement
+					if (!is_valid_stairs_elevator_placement(cand_test[d], stairs_pad, !allow_clip_walls)) {bad_place = 1; break;} // bad placement
 				}
 				if (bad_place) continue;
 
@@ -1266,7 +1266,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cand_test.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
 			if (!p->contains_cube_xy(cand_test)) continue; // not enough space at elevator entrance
 			bool const allow_clip_walls = 1; // optional
-			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, doorway_width, !allow_clip_walls)) continue; // bad placement
+			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, !allow_clip_walls)) continue; // bad placement
 
 			if (allow_clip_walls) { // clip out walls around extended elevator
 				for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(cand_test, interior->walls[d]);}
