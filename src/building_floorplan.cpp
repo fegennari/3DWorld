@@ -858,6 +858,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							if (wtype_x == ROOM_WALL_EXT) {elevator.d[0][x] += (x ? -shrink : shrink);}
 							if (wtype_y == ROOM_WALL_EXT) {elevator.d[1][y] += (y ? -shrink : shrink);}
 							if (is_cube_close_to_doorway(elevator, room)) continue; // try again
+							// TODO: what about blocking secondary hallways?
 							add_or_extend_elevator(elevator, 1);
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
@@ -1067,9 +1068,9 @@ bool building_t::check_cube_intersect_walls(cube_t const &c) const {
 
 bool building_t::is_valid_stairs_elevator_placement(cube_t const &c, float pad, bool check_walls) const {
 	// check if any previously placed walls intersect this cand stairs/elevator; we really only need to check the walls from <part> and *p though
+	if (interior->is_blocked_by_stairs_or_elevator(c, pad)) return 0; // bad
 	if (check_walls && check_cube_intersect_walls(c)) return 0;
 	if (is_cube_close_to_doorway(c, cube_t(), pad)) return 0; // bad
-	if (interior->is_blocked_by_stairs_or_elevator(c, pad)) return 0; // bad
 	return 1;
 }
 
@@ -1161,7 +1162,7 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically
 
-	//highres_timer_t timer("Connect Stairs"); // 116ms
+	//highres_timer_t timer("Connect Stairs"); // 79ms (serial)
 	float const window_vspacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
 
@@ -1187,6 +1188,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cube_t cand;
 			cand.z1() = part.z2() - window_vspacing + fc_thick; // top of top floor for this part
 			cand.z2() = part.z2() + fc_thick; // top of bottom floor of upper part *p
+			//static unsigned success_count(0);
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
@@ -1218,6 +1220,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 				for (unsigned d = 0; d < 2; ++d) {
 					if (!is_valid_stairs_elevator_placement(cand_test[d], stairs_pad, !allow_clip_walls)) {bad_place = 1; break;} // bad placement
+					// TODO: what about blocking secondary hallways?
 				}
 				if (bad_place) continue;
 
@@ -1244,8 +1247,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 					if (r->intersects(cand) && r->contains_cube_xy(cand)) {r->has_stairs = 1;} // Note: may be approximate
 				}
+				//++success_count;
 				break; // success
 			} // for n
+			//if ((success_count % 10) == 0) {cout << success_count << " ";} // 1107 / 2292
 		} // for p
 	}
 
