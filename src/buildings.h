@@ -420,6 +420,7 @@ struct building_interior_t {
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
+	vect_cube_t exclusion;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	draw_range_t draw_range;

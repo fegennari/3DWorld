@@ -241,6 +241,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					room_walls.reserve(2*(10 + 2*num_cent_rooms)); // short dim
 					interior->rooms.reserve(num_offices + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
 					interior->doors.reserve(num_offices + 2*add_doors_to_main_wall*num_cent_rooms + 4); // at least one per office
+					interior->exclusion.reserve(6); // 2 sec hallways + 4 conn hallways
 					unsigned const bathroom_ix(rgen.rand_bool() ? 0 : num_cent_rooms-1); // place bathrooms on one of the end center rooms
 
 					for (unsigned d = 0; d < 2; ++d) { // for each side of main hallway
@@ -258,6 +259,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						c_hall.d[ min_dim][ d] = hall_inner;
 						c_hall.d[ min_dim][!d] = hall_wall_pos[d];
 						add_room(s_hall, part_id, 3, 1, 0); // add sec hallway as room with 3 lights
+						interior->exclusion.push_back(s_hall); // excluded from placing stairs and elevators
 
 						// walls along sec hallway
 						cube_t long_swall(s_hall), short_swall(s_hall); // sec outer, sec inner; both have rows of doors in them
@@ -285,6 +287,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 							c_hall.d[!min_dim][!e] = offset_inner;
 							unsigned const num_lights((c_hall.get_sz_dim(min_dim) > 0.25*s_hall.get_sz_dim(!min_dim)) ? 2 : 1); // 2 lights if it's long enough
 							add_room(c_hall, part_id, num_lights, 1, 0); // add conn hallway as room
+							cube_t exclude(c_hall);
+							exclude.d[min_dim][!d] += dsign*doorway_width; // expand out a bit into the main hallway to ensure there's space to enter this hallway
+							interior->exclusion.push_back(exclude); // excluded from placing stairs and elevators
 
 							for (unsigned side = 0; side < 2; ++side) { // add walls along connector hallway
 								cube_t conn_wall(c_hall);
@@ -397,6 +402,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					split_walls.reserve(2*rooms_per_side*(num_sec_halls+1));
 					interior->rooms.reserve(num_offices + 2*num_sec_halls + 1); // offices + sec hallways + pri hallway
 					interior->doors.reserve(num_offices); // one per office
+					interior->exclusion.reserve(2*num_sec_halls);
 					unsigned const bathroom_ix((num_sec_halls <= 2) ? 0 : (rgen.rand()%(num_sec_halls-1))); // place bathrooms in rooms near the central hallway
 
 					for (int i = 0; i <= num_sec_halls; ++i) { // actually iterates over the number of room blocks between halls (num halls + 1)
@@ -439,6 +445,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								s_hall.d[!min_dim][ 0] = hall_start_pos;
 								s_hall.d[!min_dim][ 1] = hall_end_pos;
 								add_room(s_hall, part_id, 2, 1, 0); // add sec hallway as room with 2 lights
+								cube_t exclude(s_hall);
+								exclude.d[min_dim][!d] += dsign*doorway_width; // expand out a bit into the main hallway to ensure there's space to enter this hallway
+								interior->exclusion.push_back(exclude); // excluded from placing stairs and elevators
 								
 								for (unsigned dir = 0; dir < 2; ++dir) { // add walls between hall and rooms on each side
 									sep_walls[dir] = div_wall; // copy z and min_dim from div_wall
@@ -857,8 +866,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							// shrink to leave a small gap between the outer wall to prevent z-fighting
 							if (wtype_x == ROOM_WALL_EXT) {elevator.d[0][x] += (x ? -shrink : shrink);}
 							if (wtype_y == ROOM_WALL_EXT) {elevator.d[1][y] += (y ? -shrink : shrink);}
-							if (is_cube_close_to_doorway(elevator, room)) continue; // try again
-							// TODO: what about blocking secondary hallways?
+							if (has_bcube_int(elevator, interior->exclusion)) continue; // try again
+							if (is_cube_close_to_doorway(elevator, room))     continue; // try again
 							add_or_extend_elevator(elevator, 1);
 							elevator_cut = elevator;
 							placed       = 1; // successfully placed
@@ -1162,7 +1171,7 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically
 
-	//highres_timer_t timer("Connect Stairs"); // 79ms (serial)
+	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
 	float const window_vspacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
 
@@ -1219,8 +1228,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				bool bad_place(0), wall_clipped(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
+					if (has_bcube_int(cand_test[d], interior->exclusion)) {bad_place = 1; break;} // bad placement
 					if (!is_valid_stairs_elevator_placement(cand_test[d], stairs_pad, !allow_clip_walls)) {bad_place = 1; break;} // bad placement
-					// TODO: what about blocking secondary hallways?
 				}
 				if (bad_place) continue;
 
@@ -1250,7 +1259,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				//++success_count;
 				break; // success
 			} // for n
-			//if ((success_count % 10) == 0) {cout << success_count << " ";} // 1107 / 2292
+			//if ((success_count % 10) == 0) {cout << success_count << " ";} // 1100 / 2340
 		} // for p
 	}
 
