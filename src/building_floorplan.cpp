@@ -1305,6 +1305,13 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	} // for e
 }
 
+bool building_t::are_parts_stacked(cube_t const &p1, cube_t const &p2) const {
+	if (is_house) return 0; // houses are never stacked
+	if (p1.z2() == p2.z1() && p1.contains_cube_xy(p2)) return 1; // p2 stacked on p1
+	if (p2.z2() == p1.z1() && p2.contains_cube_xy(p1)) return 1; // p1 stacked on p2
+	return 0;
+}
+
 bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out, vect_cube_t &temp) const { // and elevators
 	if (!interior || interior->stairwells.empty()) return 0;
 	subtract_cubes_from_cube(c, interior->stairwells, out, temp);

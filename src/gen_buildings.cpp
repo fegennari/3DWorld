@@ -1431,29 +1431,40 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	int const clip_windows(mat.no_city ? (is_house ? 2 : 1) : 0);
 	float const floor_spacing(mat.get_floor_spacing());
 	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (bcube.z1() + floor_spacing) : doors.front().pts[2].z));
-	cube_t cont_part; // part containing the point
-	if (only_cont_pt != nullptr) {cont_part = get_part_containing_pt(*only_cont_pt);}
 	unsigned draw_parts_mask(0);
+	bool room_with_stairs(0);
+	cube_t cont_part; // part containing the point
 
+	if (only_cont_pt != nullptr) {
+		cont_part = get_part_containing_pt(*only_cont_pt);
+		room_with_stairs = room_containing_pt_has_stairs(*only_cont_pt);
+	}
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		cube_t draw_part;
 		cube_t const *clamp_cube(nullptr);
 
 		if (only_cont_pt != nullptr && !i->contains_pt(*only_cont_pt)) { // not the part containing the point
-			if (i->z2() < only_cont_pt->z || i->z1() > only_cont_pt->z) continue; // z-range not contained, skip
-			bool skip(0);
-
-			for (unsigned d = 0; d < 2; ++d) {
-				if (i->d[ d][0] != cont_part.d[ d][1] && i->d[ d][1] != cont_part.d[ d][0]) continue; // not adj in dim d
-				if (i->d[!d][0] >= cont_part.d[!d][1] || i->d[!d][1] <= cont_part.d[!d][0]) continue; // no overlap in dim !d
-				if (i->d[!d][1] < (*only_cont_pt)[!d] || i->d[!d][0] > (*only_cont_pt)[!d]) {skip = 1; break;} // other dim range not contained, skip
-				draw_part = *i; // deep copy
-				max_eq(draw_part.d[!d][0], cont_part.d[!d][0]); // clamp to contained part in dim !d
-				min_eq(draw_part.d[!d][1], cont_part.d[!d][1]);
+			if (room_with_stairs && are_parts_stacked(*i, cont_part)) { // windows may be visible through stairs in rooms with stacked parts
+				draw_part = cont_part;
+				draw_part.intersect_with_cube_xy(*i);
 				clamp_cube = &draw_part;
-				break;
-			} // for d
-			if (skip || clamp_cube == nullptr) continue; // skip if adj in neither dim, always skip (but could check chained adj case)
+			}
+			else {
+				if (i->z2() < only_cont_pt->z || i->z1() > only_cont_pt->z) continue; // z-range not contained, skip
+				bool skip(0);
+
+				for (unsigned d = 0; d < 2; ++d) {
+					if (i->d[ d][0] != cont_part.d[ d][1] && i->d[ d][1] != cont_part.d[ d][0]) continue; // not adj in dim d
+					if (i->d[!d][0] >= cont_part.d[!d][1] || i->d[!d][1] <= cont_part.d[!d][0]) continue; // no overlap in dim !d
+					if (i->d[!d][1] < (*only_cont_pt)[!d] || i->d[!d][0] > (*only_cont_pt)[!d]) {skip = 1; break;} // other dim range not contained, skip
+					draw_part = *i; // deep copy
+					max_eq(draw_part.d[!d][0], cont_part.d[!d][0]); // clamp to contained part in dim !d
+					min_eq(draw_part.d[!d][1], cont_part.d[!d][1]);
+					clamp_cube = &draw_part;
+					break;
+				} // for d
+				if (skip || clamp_cube == nullptr) continue; // skip if adj in neither dim, always skip (but could check chained adj case)
+			}
 		}
 		unsigned const part_ix(i - parts.begin());
 		unsigned const dsides((part_ix < 4 && mat.add_windows) ? door_sides[part_ix] : 0); // skip windows on sides with doors, but only for buildings with windows
@@ -1572,6 +1583,10 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
 		if (make_all_front || i->contains_pt(only_cont_pt)) { // part containing the point
+			bdraw_front.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
+			continue;
+		}
+		if (are_parts_stacked(*i, cont_part)) { // stacked building parts, contained, draw as front in case player can see through stairs
 			bdraw_front.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
 			continue;
 		}
@@ -2405,7 +2420,7 @@ public:
 						// neg offset to move windows on the inside of the building's exterior wall
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &camera_xlated);
 						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
-						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated);
+						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated, 0);
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						this_frame_camera_in_building = 1;
 

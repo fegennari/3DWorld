@@ -574,6 +574,7 @@ struct building_t : public building_geom_t {
 	void ai_room_lights_update(building_ai_state_t &state, pedestrian_t &person, unsigned person_ix);
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	int get_room_containing_pt(point const &pt) const;
+	bool room_containing_pt_has_stairs(point const &pt) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	bool place_obj_along_wall(room_object type, cube_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
 		bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE);
@@ -635,6 +636,7 @@ private:
 	void clip_ray_to_walls(point const &p1, point &p2) const;
 	void refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const;
 	cube_t get_part_for_room(room_t const &room) const {assert(room.part_id < parts.size()); return parts[room.part_id];}
+	bool are_parts_stacked(cube_t const &p1, cube_t const &p2) const;
 };
 
 struct vect_building_t : public vector<building_t> {

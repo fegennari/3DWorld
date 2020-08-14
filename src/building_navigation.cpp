@@ -807,6 +807,12 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	}
 	return loc;
 }
+bool building_t::room_containing_pt_has_stairs(point const &pt) const {
+	int const room_ix(get_room_containing_pt(pt));
+	if (room_ix < 0) return 0; // no room contains this point
+	assert((unsigned)room_ix < interior->rooms.size());
+	return interior->rooms[room_ix].has_stairs;
+}
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
 building_interior_t::building_interior_t() : top_ceilings_mask(0) {}
