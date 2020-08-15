@@ -1130,7 +1130,7 @@ bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *
 			hole.intersect_with_cube(s);
 			bool merged(0);
 
-			// see if we can merge this hole with another hole to remove an interiro face
+			// see if we can merge this hole with another hole to remove an interior face
 			for (auto h = holes->begin(); h != holes->end() && !merged; ++h) {
 				if (h->z1() != hole.z1() || h->z2() != hole.z2()) continue;
 
@@ -1172,7 +1172,7 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically
 
 	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
-	float const window_vspacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness());
+	float const window_vspacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness()), wall_thickness(get_wall_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it
@@ -1284,7 +1284,27 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			if (has_bcube_int(cand_test, interior->exclusion)) continue; // bad placement
 
 			if (allow_clip_walls) { // clip out walls around extended elevator
-				for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(cand_test, interior->walls[d]);}
+				for (unsigned d = 0; d < 2; ++d) {
+					holes.clear();
+					subtract_cube_from_cubes(cand_test, interior->walls[d], (((bool)d == e->dim) ? &holes : nullptr));
+
+					// see if we need to add any walls to close gaps created between the front of the elevator and a removed wall section
+					for (auto h = holes.begin(); h != holes.end(); ++h) {
+						float const elevator_front(e->d[e->dim][e->dir]), inner_face(h->d[e->dim][!e->dir]), outer_face(h->d[e->dim][e->dir]);
+						if ((inner_face > elevator_front) ^ e->dir) continue; // wall not in front of the elevator
+						
+						for (unsigned g = 0; g < 2; ++g) { // left and right of the elevator
+							float const elevator_edge(e->d[!e->dim][g]);
+							if (h->d[!e->dim][g] != elevator_edge) continue; // not clipped to this edge
+							cube_t wall(*h); // copy zvals from hole
+							wall.d[ e->dim][ e->dir] = outer_face;
+							wall.d[ e->dim][!e->dir] = elevator_front;
+							wall.d[!e->dim][ g] = elevator_edge;
+							wall.d[!e->dim][!g] = elevator_edge + (g ? -1.0 : 1.0)*wall_thickness;
+							interior->walls[!d].push_back(wall);
+						} // for g
+					} // for h
+				} // for d
 			}
 			min_eq(e->z1(), extension.z1()); max_eq(e->z2(), extension.z2()); // perform extension in Z
 			float const shift((is_above ? -1.1 : 1.1)*fc_thick);
