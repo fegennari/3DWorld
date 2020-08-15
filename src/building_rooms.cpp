@@ -514,17 +514,19 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 		for (unsigned n = 0; n < num_stalls; ++n) {
 			point center(stall_from_wall, stall_pos, zval);
 			if (br_dim) {swap(center.x, center.y);} // R90 about z
-			cube_t toilet(center, center);
+			cube_t toilet(center, center), stall(toilet);
 			toilet.expand_in_dim( br_dim, 0.5*tlength);
 			toilet.expand_in_dim(!br_dim, 0.5*twidth);
 			toilet.z2() += theight;
-			objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
-			cube_t stall(center, center);
 			stall.z2() = stall.z1() + floor_spacing - floor_thickness; // set stall height to room height
 			stall.expand_in_dim(!br_dim, 0.5*stall_width);
 			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
 			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth;
-			objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, dir, flags, tot_light_amt, SHAPE_CUBE, colorRGBA(0.75, 1.0, 0.9, 1.0)); // blue-green
+			
+			if (!interior->is_cube_close_to_doorway(stall, room, 0.0, 1, 1)) { // skip if close to a door (for rooms with doors at both ends); inc_open=1
+				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
+				objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, dir, flags, tot_light_amt, SHAPE_CUBE, colorRGBA(0.75, 1.0, 0.9, 1.0)); // blue-green
+			}
 			stall_pos += stall_step;
 		} // for n
 		// add sinks
