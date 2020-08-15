@@ -1281,6 +1281,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			if (!p->contains_cube_xy(cand_test)) continue; // not enough space at elevator entrance
 			bool const allow_clip_walls = 1; // optional
 			if (!is_valid_stairs_elevator_placement(cand_test, doorway_width, !allow_clip_walls)) continue; // bad placement
+			if (has_bcube_int(cand_test, interior->exclusion)) continue; // bad placement
 
 			if (allow_clip_walls) { // clip out walls around extended elevator
 				for (unsigned d = 0; d < 2; ++d) {subtract_cube_from_cubes(cand_test, interior->walls[d]);}
