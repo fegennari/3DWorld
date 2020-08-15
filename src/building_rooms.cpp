@@ -238,11 +238,13 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 	float const floor_spacing(get_window_vspace());
 	// Note: we could choose the primary dim based on door placement like in office building bathrooms, but it seems easier to not place cubes by doors
 	bool const long_dim(room.dx() < room.dy());
-	float const rlength(room_bounds.get_sz_dim(long_dim)), rwidth(room_bounds.get_sz_dim(!long_dim));
+	float const rlength(room_bounds.get_sz_dim(long_dim)), rwidth(room_bounds.get_sz_dim(!long_dim)), midpoint(room_bounds.get_center_dim(!long_dim));
 	if (rwidth < 2.5*floor_spacing || rlength < 3.5*floor_spacing) return 0; // not large enough
 	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.75, 0.9)*floor_spacing))); // >= 4
-	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.25)); // not quite square
+	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.2)); // not quite square
+	bool const add_middle_col(rwidth > 4.0*cube_depth + 2.0*interior->get_doorway_width()); // enough to fit 4 rows of cubes and 2 hallways in between
 	unsigned const cube_flags(is_lit ? RO_FLAG_LIT : 0);
+	uint16_t const bldg_id(uint16_t(mat_ix + interior->rooms.size())); // some value that's per-building
 	cube_t const &part(get_part_for_room(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	float lo_pos(room_bounds.d[long_dim][0]);
@@ -256,27 +258,31 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 		c.d[long_dim][0] = lo_pos;
 		c.d[long_dim][1] = hi_pos;
 
-		for (unsigned dir = 0; dir < 2; ++dir) {
-			float const wall_pos(room_bounds.d[!long_dim][dir]), dir_sign(dir ? -1.0 : 1.0);
-			c.d[!long_dim][ dir] = wall_pos;
-			c.d[!long_dim][!dir] = wall_pos + dir_sign*cube_depth;
-			cube_t test_cube(c);
-			test_cube.d[!long_dim][!dir] += dir_sign*0.5*cube_depth; // allow space for people to enter the cubicle
-			if (interior->is_cube_close_to_doorway(test_cube, room, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
-			if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
-			bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
-			objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt, (against_window ? SHAPE_SHORT : SHAPE_CUBE));
-			objs.back().obj_id = uint16_t(mat_ix + interior->rooms.size()); // some value that's per-building
-			added_cube = 1;
-			// add colliders to allow the player to enter the cubicle but not cross the side walls
-			cube_t c2(c), c3(c), c4(c);
-			c2.d[long_dim][0] = hi_pos - 0.06*cube_width;
-			c3.d[long_dim][1] = lo_pos + 0.06*cube_width;
-			c4.d[!long_dim][!dir] = wall_pos + dir_sign*0.12*cube_depth;
-			objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side1
-			objs.emplace_back(c3, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side2
-			objs.emplace_back(c4, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // back (against wall)
-		} // for d
+		for (unsigned is_middle = 0; is_middle < (add_middle_col ? 2U : 1U); ++is_middle) {
+			if (is_middle && (n == 0 || n+1 == num_cubes)) continue; // skip end rows for middle section
+
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const wall_pos(is_middle ? midpoint : room_bounds.d[!long_dim][dir]), dir_sign(dir ? -1.0 : 1.0);
+				c.d[!long_dim][ dir] = wall_pos;
+				c.d[!long_dim][!dir] = wall_pos + dir_sign*cube_depth;
+				cube_t test_cube(c);
+				test_cube.d[!long_dim][!dir] += dir_sign*0.5*cube_depth; // allow space for people to enter the cubicle
+				if (interior->is_cube_close_to_doorway(test_cube, room, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
+				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
+				bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
+				objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt, ((against_window && !is_middle) ? SHAPE_SHORT : SHAPE_CUBE));
+				objs.back().obj_id = bldg_id;
+				added_cube = 1;
+				// add colliders to allow the player to enter the cubicle but not cross the side walls
+				cube_t c2(c), c3(c), c4(c);
+				c2.d[long_dim][0] = hi_pos - 0.06*cube_width;
+				c3.d[long_dim][1] = lo_pos + 0.06*cube_width;
+				c4.d[!long_dim][!dir] = wall_pos + dir_sign*0.12*cube_depth;
+				objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side1
+				objs.emplace_back(c3, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side2
+				objs.emplace_back(c4, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // back (against wall)
+			} // for d
+		} // for col
 		lo_pos = hi_pos;
 	} // for n
 	return added_cube;
