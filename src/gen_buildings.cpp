@@ -100,7 +100,7 @@ void building_params_t::restore_prev_pos_range() {
 	for (auto i = materials.begin(); i != materials.end(); ++i) {i->restore_prev_pos_range();}
 }
 void building_params_t::finalize() {
-	if (materials.empty()) {add_cur_mat();} // add current (maybe default) material
+	//if (materials.empty()) {add_cur_mat();} // add current (maybe default) material - seems not to be needed
 }
 
 // windows are scaled to make the texture look correct; this is fine for exterior building wall materials that have no windows, since we can place the windows however we want;
@@ -110,6 +110,7 @@ float building_mat_t::get_window_tx() const {return wind_xscale*global_building_
 float building_mat_t::get_window_ty() const {return wind_yscale*global_building_params.get_window_ty();}
 
 void building_mat_t::finalize() { // compute and cache spacing values
+	if (!global_building_params.windows_enabled()) return; // don't set the variables below
 	float tx(get_window_tx()), ty(get_window_ty());
 	if (global_building_params.max_fp_wind_yscale > 0.0) {min_eq(ty, global_building_params.max_fp_wind_yscale*global_building_params.get_window_ty());}
 	if (global_building_params.max_fp_wind_xscale > 0.0) {min_eq(tx, global_building_params.max_fp_wind_xscale*global_building_params.get_window_tx());}
