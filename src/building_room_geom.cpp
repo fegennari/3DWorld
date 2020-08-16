@@ -77,11 +77,10 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 	for (unsigned i = 0; i < numi; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + numv);} // copy in reverse order
 }
 
-void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool ts_tb, bool inv_tb, float rs_bot, float rs_top) {
-	assert(!(ts_tb && inv_tb));
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float rs_bot, float rs_top) {
 	point const center(c.get_cube_center());
 	point const ce[2] = {point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2())};
-	unsigned const ndiv(N_CYL_SIDES), num_ends((unsigned)draw_top + (unsigned)draw_bot);
+	unsigned const ndiv(N_CYL_SIDES);
 	float const radius(0.5*min(c.dx(), c.dy())), ndiv_inv(1.0/ndiv); // cube X/Y size should be equal/square
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius*rs_bot, radius*rs_top, ndiv, v12));
@@ -105,6 +104,7 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 	// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
 	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
 	// maybe add top and bottom end cap using triangles, currently using all TCs=0.0
+	unsigned const num_ends((unsigned)draw_top + (unsigned)draw_bot);
 	itris_start = itix = itri_verts.size();
 	ixs_start   = iix  = indices.size();
 	itri_verts.resize(itris_start + (ndiv + 1)*num_ends);
@@ -126,6 +126,26 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 	} // for bt
 	if (inv_tb) {std::reverse(indices.begin()+ixs_start, indices.end());} // reverse the order to swap triangle winding order
 	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
+}
+
+void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color) {
+	assert(radius > 0.0);
+	color_wrapper const cw(color);
+	vector3d const n(normal_z_neg ? -plus_z : plus_z);
+	unsigned const ndiv(N_CYL_SIDES), itris_start(itri_verts.size());
+	float const css(-1.0*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
+	float sin_s(0.0), cos_s(1.0);
+	itri_verts.emplace_back(vert_norm_comp_tc(pos, n, 0.5, 0.5), cw);
+
+	for (unsigned i = 0; i < ndiv; ++i) {
+		float const s(sin_s), c(cos_s);
+		itri_verts.emplace_back(vert_norm_comp_tc((pos + point(radius*s, radius*c, 0.0)), n, 0.5*(1.0 + s), 0.5*(1.0 + c)), cw);
+		indices.push_back(itris_start); // center
+		indices.push_back(itris_start + i + 1);
+		indices.push_back(itris_start + ((i+1)%ndiv) + 1);
+		sin_s = s*cos_ds + c*sin_ds;
+		cos_s = c*cos_ds - s*sin_ds;
+	}
 }
 
 void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color) {
@@ -719,7 +739,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.shape == room_obj_shape::SHAPE_CYLIN) {
-		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 0, 1, 0.7, 1.0); // untextured, bottom only, two_sided cylinder with inverted bottom normal
+		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.7, 1.0); // untextured, bottom only, two_sided cylinder with inverted bottom normal
 	}
 	else { // sloped cube; this shape is rather unique, so is drawn inline; untextured
 		cube_t base(c);
