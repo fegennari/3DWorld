@@ -7,6 +7,7 @@
 #include "city.h" // for object_model_loader_t
 #include "subdiv.h" // for sd_sphere_d
 #include "profiler.h"
+#include "scenery.h" // for s_plant
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 bool const ADD_BOOK_COVERS = 1;
@@ -79,11 +80,15 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 
 void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float rs_bot, float rs_top) {
 	point const center(c.get_cube_center());
-	point const ce[2] = {point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2())};
+	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
+	add_vcylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top, color, draw_bot, draw_top, two_sided, inv_tb);
+}
+void rgeom_mat_t::add_vcylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb) {
+	point const ce[2] = {bot, top};
 	unsigned const ndiv(N_CYL_SIDES);
-	float const radius(0.5*min(c.dx(), c.dy())), ndiv_inv(1.0/ndiv); // cube X/Y size should be equal/square
+	float const ndiv_inv(1.0/ndiv);
 	vector3d v12;
-	vector_point_norm const &vpn(gen_cylinder_data(ce, radius*rs_bot, radius*rs_top, ndiv, v12));
+	vector_point_norm const &vpn(gen_cylinder_data(ce, bot_radius, top_radius, ndiv, v12));
 	color_wrapper const cw(color);
 	unsigned itris_start(itri_verts.size()), ixs_start(indices.size()), itix(itris_start), iix(ixs_start);
 	itri_verts.resize(itris_start + 2*(ndiv+1));
@@ -1026,20 +1031,30 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 
 void building_room_geom_t::add_potted_plant(room_object_t const &c) {
 	// draw the pot
-	rgeom_mat_t &pot_mat(get_material(untex_shad_mat, 1));
 	unsigned const num_colors = 8;
 	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
 	colorRGBA const pot_color(apply_light_color(c, pot_colors[c.obj_id % num_colors]));
-	float const pot_diameter(0.5f*(c.dx() + c.dy()));
-	cube_t pot_bcube(c);
-	pot_bcube.z2() = pot_bcube.z1() + max(0.67*pot_diameter, 0.35*c.dz());
-	pot_mat.add_vcylin_to_verts(pot_bcube, pot_color, 0, 0, 1, 0, 0.65, 1.0); // tapered with a narrower bottom
+	float const plant_diameter(0.5f*(c.dx() + c.dy())), pot_radius(0.4*plant_diameter),stem_radius(0.035*plant_diameter);
+	float const pot_height(max(0.6*plant_diameter, 0.3*c.dz())), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height);
+	float const cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
+	get_material(untex_shad_mat, 1).add_vcylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, pot_color, 0, 0, 1, 0); // pot, tapered with narrower bottom
+	// draw dirt in the pot as a disk
 	rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
-	point dirt_pos(pot_bcube.get_cube_center());
-	dirt_pos.z = pot_bcube.z2() - 0.15*pot_bcube.dz();
-	dirt_mat.add_disk_to_verts(dirt_pos, 0.4737*pot_diameter, 0, apply_light_color(c, WHITE));
-	// draw the plant
-	// TODO: see leafy_plant
+	point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk
+	dirt_mat.add_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
+	// draw plant leaves
+	s_plant plant;
+	plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id);
+	static vector<vert_norm_comp> points;
+	points.clear();
+	plant.create_leaf_points(points, 10.0); // plant_scale=10.0 seems to work well
+	auto &leaf_verts(get_material(tid_nm_pair_t(plant.get_leaf_tid()), 1).quad_verts);
+	color_wrapper const leaf_cw(apply_light_color(c, plant.get_leaf_color()));
+	float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
+	for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
+	// draw plant stem
+	colorRGBA const stem_color(plant.get_stem_color());
+	get_wood_material(1.0).add_vcylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem
 }
 
 void building_room_geom_t::clear() {
