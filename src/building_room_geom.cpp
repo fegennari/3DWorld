@@ -1027,17 +1027,19 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 void building_room_geom_t::add_potted_plant(room_object_t const &c) {
 	// draw the pot
 	rgeom_mat_t &pot_mat(get_material(untex_shad_mat, 1));
-	colorRGBA const pot_color(apply_light_color(c, RED)); // TODO: random
+	unsigned const num_colors = 8;
+	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
+	colorRGBA const pot_color(apply_light_color(c, pot_colors[c.obj_id % num_colors]));
 	float const pot_diameter(0.5f*(c.dx() + c.dy()));
 	cube_t pot_bcube(c);
 	pot_bcube.z2() = pot_bcube.z1() + max(0.67*pot_diameter, 0.35*c.dz());
 	pot_mat.add_vcylin_to_verts(pot_bcube, pot_color, 0, 0, 1, 0, 0.65, 1.0); // tapered with a narrower bottom
-	rgeom_mat_t &dirt_mat(get_material(untex_shad_mat, 1)); // TODO: dirt texture
+	rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
 	point dirt_pos(pot_bcube.get_cube_center());
-	dirt_pos.z = pot_bcube.z2(); // TODO: move down a bit
-	dirt_mat.add_disk_to_verts(dirt_pos, 0.5*pot_diameter, 0, apply_light_color(c, BROWN));
+	dirt_pos.z = pot_bcube.z2() - 0.15*pot_bcube.dz();
+	dirt_mat.add_disk_to_verts(dirt_pos, 0.4737*pot_diameter, 0, apply_light_color(c, WHITE));
 	// draw the plant
-	// TODO
+	// TODO: see leafy_plant
 }
 
 void building_room_geom_t::clear() {
