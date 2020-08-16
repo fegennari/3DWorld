@@ -176,8 +176,6 @@ class s_plant : public plant_base { // size = 56
 	float height;
 	vector<vert_wrap_t> berries;
 
-	void create_leaf_points(vector<vert_norm_comp> &points) const;
-
 public:
 	struct shader_state_t {
 		int color_scale_loc, normal_scale_loc, wind_scale_loc, wind_add_loc;
@@ -192,10 +190,15 @@ public:
 	s_plant() : coll_id2(-1), height(1.0) {}
 	virtual float get_bsphere_radius() const {return 0.5f*(height + radius);}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
+	colorRGBA const &get_leaf_color() const;
+	colorRGBA const &get_stem_color() const;
+	int get_leaf_tid() const;
 	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager);
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager);
+	void create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z=0);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
+	void create_leaf_points(vector<vert_norm_comp> &points, float plant_scale) const;
 	void gen_points(vbo_vnc_block_manager_t &vbo_manager);
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager);
 	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager);

@@ -749,6 +749,11 @@ int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_
 }
 
 void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager) {
+	create_no_verts(pos_, height_, radius_, type_, calc_z);
+	gen_points(vbo_manager);
+}
+
+void s_plant::create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z) {
 
 	vbo_mgr_ix = -1;
 	type   = abs(type_)%NUM_PLANT_TYPES;
@@ -756,8 +761,11 @@ void s_plant::create2(point const &pos_, float height_, float radius_, int type_
 	radius = radius_;
 	height = height_;
 	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);}
-	gen_points(vbo_manager);
 }
+
+colorRGBA const &s_plant::get_leaf_color() const {return pltype[type].leafc;}
+colorRGBA const &s_plant::get_stem_color() const {return pltype[type].stemc;}
+int s_plant::get_leaf_tid() const {return pltype[type].tid;}
 
 void s_plant::add_cobjs() {
 
@@ -766,25 +774,25 @@ void s_plant::add_cobjs() {
 	cpos.z  += height;
 	cpos2.z += 3.0*height/(36.0*height + 4.0);
 	bpos.z  -= 0.1*height;
-	coll_id  = add_coll_cylinder(cpos2, cpos, r2, radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
-	coll_id2 = add_coll_cylinder(bpos, cpos, radius, 0.0, cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX)); // trunk
+	coll_id  = add_coll_cylinder(cpos2, cpos, r2, radius, cobj_params(0.4, get_leaf_color(), 0, 0, NULL, 0, get_leaf_tid())); // leaves
+	coll_id2 = add_coll_cylinder(bpos, cpos, radius, 0.0, cobj_params(0.4, get_stem_color(), 0, 0, NULL, 0, WOOD_TEX)); // trunk
 }
 
 bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // used in tiled terrain mode
 	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.1*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
-void s_plant::create_leaf_points(vector<vert_norm_comp> &points) const {
+void s_plant::create_leaf_points(vector<vert_norm_comp> &points, float plant_scale) const {
 	
 	// Note: could scale leaves for different plant types differently in x vs. y to allow for non-square textures (tighter bounds = lower fillrate)
-	float const wscale(250.0*radius*tree_scale), theta0((int(1.0E6*height)%360)*TO_RADIANS);
+	float const wscale(250.0*radius*plant_scale), theta0((int(1.0E6*height)%360)*TO_RADIANS);
 	float const llen(wscale*pltype[type].leaf_length), blwidth(wscale*pltype[type].leaf_width_base), elwidth(wscale*pltype[type].leaf_width_end);
-	unsigned const nlevels(max(1U, unsigned(36.0*height*tree_scale))), nrings(3);
+	unsigned const nlevels(max(1U, unsigned(36.0*height*plant_scale))), nrings(3);
 	float rdeg(30.0);
 	points.resize(4*nlevels*nrings);
 
 	for (unsigned j = 0, ix = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
-		float const sz(0.07*(height + 0.03/tree_scale)*((nlevels - j + 3.0)/(float)nlevels));
+		float const sz(0.07*(height + 0.03/plant_scale)*((nlevels - j + 3.0)/(float)nlevels));
 		float const z((j + 3.0)*height/(nlevels + 4.0));
 
 		for (unsigned k = 0; k < nrings; ++k) {
@@ -800,9 +808,9 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 
 	if (vbo_mgr_ix >= 0) return; // already generated
 	vector<vert_norm_comp> &pts(vbo_manager.temp_points);
-	create_leaf_points(pts);
+	create_leaf_points(pts, tree_scale);
 	assert(!pts.empty());
-	vbo_mgr_ix = vbo_manager.add_points_with_offset(pts, pltype[type].leafc);
+	vbo_mgr_ix = vbo_manager.add_points_with_offset(pts, get_leaf_color());
 
 	if (pltype[type].berryc.A != 0.0) { // create berries
 		rand_gen_t rgen;
@@ -825,8 +833,8 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 void s_plant::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager) {
 
 	assert(vbo_mgr_ix >= 0);
-	create_leaf_points(vbo_manager.temp_points);
-	vbo_manager.update_range(vbo_manager.temp_points, pltype[type].leafc, vbo_mgr_ix, vbo_mgr_ix+1);
+	create_leaf_points(vbo_manager.temp_points, tree_scale);
+	vbo_manager.update_range(vbo_manager.temp_points, get_leaf_color(), vbo_mgr_ix, vbo_mgr_ix+1);
 }
 
 bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager) {
@@ -858,7 +866,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, (height + radius), pos2)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
-	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
+	colorRGBA color(get_stem_color()*(shadowed ? SHADOW_VAL : 1.0));
 	if (is_water_plant) {water_color_atten_at_pos(color, pos+xlate);}
 	float const dist(distance_to_camera(pos2));
 
@@ -904,7 +912,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	if (set_color) {state.set_color_scale(s, get_plant_color(xlate));}
 	if (shadowed) {state.set_normal_scale(s, 0.0);}
 	state.set_wind_scale(s, wind_scale);
-	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
+	select_texture((draw_model == 0) ? get_leaf_tid() : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
 	if (set_color) {state.set_color_scale(s, WHITE);}
