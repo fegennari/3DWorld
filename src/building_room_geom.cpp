@@ -1024,6 +1024,22 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	get_material(tex).add_cube_to_verts(screen, WHITE, c.get_llc(), skip_faces, !c.dim, !(c.dim ^ c.dir));
 }
 
+void building_room_geom_t::add_potted_plant(room_object_t const &c) {
+	// draw the pot
+	rgeom_mat_t &pot_mat(get_material(untex_shad_mat, 1));
+	colorRGBA const pot_color(apply_light_color(c, RED)); // TODO: random
+	float const pot_diameter(0.5f*(c.dx() + c.dy()));
+	cube_t pot_bcube(c);
+	pot_bcube.z2() = pot_bcube.z1() + max(0.67*pot_diameter, 0.35*c.dz());
+	pot_mat.add_vcylin_to_verts(pot_bcube, pot_color, 0, 0, 1, 0, 0.65, 1.0); // tapered with a narrower bottom
+	rgeom_mat_t &dirt_mat(get_material(untex_shad_mat, 1)); // TODO: dirt texture
+	point dirt_pos(pot_bcube.get_cube_center());
+	dirt_pos.z = pot_bcube.z2(); // TODO: move down a bit
+	dirt_mat.add_disk_to_verts(dirt_pos, 0.5*pot_diameter, 0, apply_light_color(c, BROWN));
+	// draw the plant
+	// TODO
+}
+
 void building_room_geom_t::clear() {
 	clear_materials();
 	objs.clear();
@@ -1063,6 +1079,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
 	case TYPE_COUNTER:  return (get_textured_wood_color()*0.75 + WHITE*0.25);
 	case TYPE_CABINET:  return get_textured_wood_color();
+	case TYPE_PLANT:    return blend_color(GREEN, BROWN, 0.5, 0); // halfway between green and brown, as a guess
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	return color; // Note: probably should always set color so that we can return it here
@@ -1100,7 +1117,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_COUNTER: add_counter (*i, tscale); break;
 		case TYPE_KSINK:   add_counter (*i, tscale); break; // counter with kitchen sink
 		case TYPE_CABINET: add_cabinet (*i, tscale); break;
-		case TYPE_PLANT:    break; // TODO
+		case TYPE_PLANT:   add_potted_plant(*i); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn

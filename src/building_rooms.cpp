@@ -389,7 +389,7 @@ bool building_t::place_obj_along_wall(room_object type, cube_t const &room, floa
 		if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
 		objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
 		objs.back().obj_id = (uint16_t)objs.size();
-		objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
+		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
 		return 1; // done
 	} // for n
 	return 0; // failed
@@ -705,7 +705,6 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 			shorten_chairs_in_region(region, objs_start); // region represents that space between the couch and the TV
 		}
 	}
-	// TODO: potted plant?
 	return (placed_couch || placed_tv);
 }
 
@@ -846,6 +845,18 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 		} // for dir
 	} // for dim
 	return was_hung;
+}
+
+void building_t::add_plants_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, unsigned num) {
+	float const window_vspacing(get_window_vspace());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
+	
+	for (unsigned n = 0; n < num; ++n) {
+		float const height(rand_uniform(0.25, 0.75)*window_vspacing), width(rand_uniform(0.15, 0.35)*window_vspacing);
+		vector3d const sz_scale(width/height, width/height, 1.0);
+		place_obj_along_wall(TYPE_PLANT, room, height, sz_scale, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start); // no clearanc, pref_orient, or color
+	}
 }
 
 void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
@@ -1071,7 +1082,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);
-			bool added_tc(0), added_desk(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), no_whiteboard(0);
+			bool added_tc(0), added_desk(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), no_whiteboard(0);
 			unsigned num_chairs(0);
 
 			// place room objects
@@ -1151,6 +1162,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 						light.z1() -= 0.22f*(light.dx() + light.dy());
 					}
 					r->assign_to(RTYPE_DINING, f);
+					is_dining = 1;
 				}
 				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start)) { // add library, at most one
 					r->assign_to(RTYPE_LIBRARY, f);
@@ -1164,6 +1176,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen || no_whiteboard)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
+			if (!is_bathroom && !is_bedroom && !is_kitchen) { // add potted plants to some room types
+				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()&3) == 0)); // 0-2 for living/dining rooms, 50% chance for houses, 25% chance for offices
+				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, num);}
+			}
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && r->is_office)); // no trashcans on same wall as office whiteboard
 			}
