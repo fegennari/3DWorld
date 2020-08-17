@@ -29,6 +29,7 @@ string const &gen_book_title(unsigned rand_id, string *author, unsigned split_le
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
+tid_nm_pair_t get_tex_auto_nm(int tid, float tscale) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);}
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
@@ -284,8 +285,11 @@ void building_materials_t::draw(shader_t &s, bool shadow_only) {
 	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only);}
 }
 
+float get_tc_leg_width(cube_t const &c, float width) {
+	return 0.5f*width*(c.dx() + c.dy()); // make legs square
+}
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
-	float const leg_width(0.5f*width*(c.dx() + c.dy())); // make legs square
+	float const leg_width(get_tc_leg_width(c, width));
 
 	for (unsigned y = 0; y < 2; ++y) {
 		for (unsigned x = 0; x < 2; ++x) {
@@ -311,13 +315,13 @@ colorRGBA apply_light_color(room_object_t const &o) {return apply_light_color(o,
 
 tid_nm_pair_t const untex_shad_mat(-1, 2.0); // make sure it's different from default tid_nm_pair_t so that it's not grouped with shadowed materials
 
-void building_room_geom_t::add_table(room_object_t const &c, float tscale) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
+void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
 	cube_t top(c), legs_bcube(c);
-	top.z1() += 0.85*c.dz(); // 15% of height
+	top.z1() += (1.0 - top_dz)*c.dz(); // 15% of height
 	legs_bcube.z2() = top.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	get_wood_material(tscale).add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
-	add_tc_legs(legs_bcube, color, 0.08, tscale);
+	add_tc_legs(legs_bcube, color, leg_width, tscale);
 }
 
 void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
@@ -333,12 +337,59 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	add_tc_legs(legs_bcube, color, 0.15, tscale);
 }
 
-void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) {
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, apply_light_color(c, colorRGBA(0.85, 0.85, 0.85)), tex_origin); // all faces drawn
+void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) {
+	add_table(c, tscale, 0.06, 0.10);
+	cube_t middle(c);
+	middle.z1() += 0.12*c.dz();
+	middle.z2() -= 0.06*c.dz(); // at bottom of top surface
+	float const leg_width(get_tc_leg_width(c, 0.10));
+	middle.expand_by_xy(-0.5*leg_width); // shrink by half leg width
+	get_wood_material(tscale).add_cube_to_verts(middle, apply_light_color(c, WOOD_COLOR), c.get_llc()); // all faces drawn
+	// add drawers
+	middle.expand_in_dim(!c.dim, -0.5*leg_width);
+	float const depth(middle.get_sz_dim(c.dim)), width(middle.get_sz_dim(!c.dim)), height(middle.dz());
+	bool is_lg(width > 2.0*height);
+	unsigned const num_doors_v(2 + ((13*c.obj_id) % 3)), num_doors_h(is_lg ? (2 + ((17*c.obj_id) % 3)) : 1); // 2-4, 1-4
+	float const door_spacing_h(width/num_doors_h), door_spacing_v(height/num_doors_v), door_thick(0.05*height), handle_thick(0.75*door_thick);
+	float const border_h(0.05*door_spacing_h), border_v(0.1*door_spacing_v), dir_sign(c.dir ? 1.0 : -1.0);
+	get_material(tid_nm_pair_t(), 0); // ensure material exists so that door_mat reference is not invalidated
+	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
+	rgeom_mat_t &handle_mat(get_material(tid_nm_pair_t(), 0)); // untextured, unshadowed
+	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
+	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
+	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir)); // should be specular metal
+	cube_t door(middle);
+	door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
+	door.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
+	cube_t handle(door);
+	handle.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
+	handle.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
+	float vpos(middle.z1());
+
+	for (unsigned n = 0; n < num_doors_v; ++n) {
+		float hpos(middle.d[!c.dim][0]);
+
+		for (unsigned m = 0; m < num_doors_h; ++m) {
+			door.d[!c.dim][0] = hpos + border_h;
+			door.d[!c.dim][1] = hpos + door_spacing_h - border_h;
+			door.z1() = vpos + border_v;
+			door.z2() = vpos + door_spacing_v - border_v;
+			door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
+			// add door handle
+			float const dheight(door.dz()), dwidth(door.get_sz_dim(!c.dim));
+			handle.z1() = door.z1()   + 0.8*dheight;
+			handle.z2() = handle.z1() + 0.1*dheight;
+			handle.d[!c.dim][0] = door.d[!c.dim][0] + 0.4*dwidth;
+			handle.d[!c.dim][1] = door.d[!c.dim][1] - 0.4*dwidth;
+			handle_mat.add_cube_to_verts(handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
+			hpos += door_spacing_h;
+		} // for m
+		vpos += door_spacing_v;
+	} // for n
 }
 
-tid_nm_pair_t get_tex_auto_nm(int tid, float tscale) {
-	return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);
+void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) {
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, apply_light_color(c, colorRGBA(0.85, 0.85, 0.85)), tex_origin); // all faces drawn
 }
 
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
@@ -977,15 +1028,19 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir)); // should be specular metal
+	cube_t door(c);
+	door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
+	door.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
+	door.expand_in_dim(2, -tb_border  ); // shrink in Z
+	cube_t handle(door);
+	handle.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
+	handle.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
+	handle.expand_in_dim(2, -0.4*door.dz()); // shrink in Z
 	
 	for (unsigned n = 0; n < num_doors; ++n) {
 		float const hi(lo + door_spacing);
-		cube_t door(c);
-		door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
-		door.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
 		door.d[!c.dim][0] = lo;
 		door.d[!c.dim][1] = hi;
-		door.expand_in_dim(2,      -tb_border  ); // shrink in Z
 		door.expand_in_dim(!c.dim, -side_border); // shrink in XY
 		door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
 		lo = hi;
@@ -993,12 +1048,8 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 		float const dwidth(door.get_sz_dim(!c.dim)), hwidth(0.04*door.dz()); // the actual door and handle widths
 		float const near_side(0.1*dwidth), far_side(dwidth - near_side - hwidth);
 		bool const side(n & 1); // alternate
-		cube_t handle(door);
-		handle.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
-		handle.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
-		handle.expand_in_dim(2, -0.4*door.dz()); // shrink in Z
-		handle.d[!c.dim][0] += (side ? near_side : far_side);
-		handle.d[!c.dim][1] -= (side ? far_side : near_side);
+		handle.d[!c.dim][0] = door.d[!c.dim][0] + (side ? near_side : far_side);
+		handle.d[!c.dim][1] = door.d[!c.dim][1] - (side ? far_side : near_side);
 		handle_mat.add_cube_to_verts(handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
 	} // for n
 }
@@ -1097,6 +1148,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_COUNTER:  return (get_textured_wood_color()*0.75 + WHITE*0.25);
 	case TYPE_CABINET:  return get_textured_wood_color();
 	case TYPE_PLANT:    return blend_color(GREEN, BROWN, 0.5, 0); // halfway between green and brown, as a guess
+	case TYPE_DRESSER:  return get_textured_wood_color();
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	return color; // Note: probably should always set color so that we can return it here
@@ -1135,6 +1187,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_KSINK:   add_counter (*i, tscale); break; // counter with kitchen sink
 		case TYPE_CABINET: add_cabinet (*i, tscale); break;
 		case TYPE_PLANT:   add_potted_plant(*i); break;
+		case TYPE_DRESSER: add_dresser (*i, tscale); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn

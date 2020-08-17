@@ -307,6 +307,21 @@ unsigned building_t::count_num_int_doors(room_t const &room) const {
 	return num;
 }
 
+bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, is_lit)) return 0; // it's only a bedroom if there's bed
+	float const window_vspacing(get_window_vspace());
+	cube_t place_area(get_walkable_room_bounds(room));
+	// dresser
+	float const ds_height(rand_uniform(0.26, 0.28)*window_vspacing), ds_depth(rand_uniform(0.20, 0.24)*window_vspacing), ds_width(rand_uniform(0.6, 0.8)*window_vspacing);
+	vector3d const ds_sz_scale(ds_depth/ds_height, ds_width/ds_height, 1.0);
+	place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
+	// nightstand
+	float const ns_height(rand_uniform(0.24, 0.26)*window_vspacing), ns_depth(rand_uniform(0.15, 0.2)*window_vspacing), ns_width(rand_uniform(1.0, 2.0)*ns_depth);
+	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
+	place_obj_along_wall(TYPE_DRESSER, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
+	return 1; // success
+}
+
 // Note: must be first placed object
 bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
 	unsigned const NUM_COLORS = 8;
@@ -1096,7 +1111,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
 				if (is_house && !must_be_bathroom && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
-					added_obj = added_bedroom = is_bedroom = add_bed_to_room(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit);
+					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
