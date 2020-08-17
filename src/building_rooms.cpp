@@ -62,7 +62,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, 
 	for (unsigned d = 0; d < 2; ++d) {table_pos[d] += rand_place_off*room_sz[d]*rgen.rand_uniform(-1.0, 1.0);} // near the center of the room
 	point llc(table_pos - table_sz), urc(table_pos + table_sz);
 	llc.z = table_pos.z; // bottom
-	urc.z = table_pos.z + 0.2*window_vspacing;
+	urc.z = table_pos.z + rgen.rand_uniform(0.20, 0.22)*window_vspacing; // top
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
 	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, obj_flags, tot_light_amt);
