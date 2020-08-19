@@ -312,7 +312,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 	float const window_vspacing(get_window_vspace());
 	cube_t place_area(get_walkable_room_bounds(room));
 	// dresser
-	float const ds_height(rand_uniform(0.26, 0.28)*window_vspacing), ds_depth(rand_uniform(0.20, 0.24)*window_vspacing), ds_width(rand_uniform(0.6, 0.8)*window_vspacing);
+	float const ds_height(rand_uniform(0.26, 0.32)*window_vspacing), ds_depth(rand_uniform(0.20, 0.25)*window_vspacing), ds_width(rand_uniform(0.6, 0.9)*window_vspacing);
 	vector3d const ds_sz_scale(ds_depth/ds_height, ds_width/ds_height, 1.0);
 	place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
 	// nightstand

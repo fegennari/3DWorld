@@ -337,7 +337,7 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	add_tc_legs(legs_bcube, color, 0.15, tscale);
 }
 
-void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) {
+void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { // or nightstand
 	add_table(c, tscale, 0.06, 0.10);
 	cube_t middle(c);
 	middle.z1() += 0.12*c.dz();
@@ -347,11 +347,14 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) {
 	get_wood_material(tscale).add_cube_to_verts(middle, apply_light_color(c, WOOD_COLOR), c.get_llc()); // all faces drawn
 	// add drawers
 	middle.expand_in_dim(!c.dim, -0.5*leg_width);
+	rand_gen_t rgen;
+	rgen.set_state(c.obj_id, c.room_id);
+	rgen.rand_mix();
 	float const depth(middle.get_sz_dim(c.dim)), width(middle.get_sz_dim(!c.dim)), height(middle.dz());
 	bool is_lg(width > 2.0*height);
-	unsigned const num_doors_v(2 + ((13*c.obj_id) % 3)), num_doors_h(is_lg ? (2 + ((17*c.obj_id) % 3)) : 1); // 2-4, 1-4
-	float const door_spacing_h(width/num_doors_h), door_spacing_v(height/num_doors_v), door_thick(0.05*height), handle_thick(0.75*door_thick);
-	float const border_h(0.05*door_spacing_h), border_v(0.1*door_spacing_v), dir_sign(c.dir ? 1.0 : -1.0);
+	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
+	float const row_spacing(height/num_rows), door_thick(0.05*height), handle_thick(0.75*door_thick);
+	float const border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_material(tid_nm_pair_t(), 0); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
 	rgeom_mat_t &handle_mat(get_material(tid_nm_pair_t(), 0)); // untextured, unshadowed
@@ -364,27 +367,30 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) {
 	cube_t handle(door);
 	handle.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
 	handle.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
+	unsigned num_cols(1); // 1 for nightstand
 	float vpos(middle.z1());
 
-	for (unsigned n = 0; n < num_doors_v; ++n) {
+	for (unsigned n = 0; n < num_rows; ++n) {
+		if (is_lg && (num_cols == 1 || rgen.rand_bool())) {num_cols = 2 + (rgen.rand() % 3);} // 2-4, 50% of the time keep same as prev row
+		float const col_spacing(width/num_cols);
 		float hpos(middle.d[!c.dim][0]);
+		door.z1() = vpos + border;
+		door.z2() = vpos + row_spacing - border;
+		handle.z1() = door.z1()   + 0.8*door.dz();
+		handle.z2() = handle.z1() + 0.1*door.dz();
 
-		for (unsigned m = 0; m < num_doors_h; ++m) {
-			door.d[!c.dim][0] = hpos + border_h;
-			door.d[!c.dim][1] = hpos + door_spacing_h - border_h;
-			door.z1() = vpos + border_v;
-			door.z2() = vpos + door_spacing_v - border_v;
+		for (unsigned m = 0; m < num_cols; ++m) {
+			door.d[!c.dim][0] = hpos + border;
+			door.d[!c.dim][1] = hpos + col_spacing - border;
 			door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
 			// add door handle
-			float const dheight(door.dz()), dwidth(door.get_sz_dim(!c.dim));
-			handle.z1() = door.z1()   + 0.8*dheight;
-			handle.z2() = handle.z1() + 0.1*dheight;
-			handle.d[!c.dim][0] = door.d[!c.dim][0] + 0.4*dwidth;
-			handle.d[!c.dim][1] = door.d[!c.dim][1] - 0.4*dwidth;
+			float const dwidth(door.get_sz_dim(!c.dim)), handle_shrink(0.5*dwidth - handle_width);
+			handle.d[!c.dim][0] = door.d[!c.dim][0] + handle_shrink;
+			handle.d[!c.dim][1] = door.d[!c.dim][1] - handle_shrink;
 			handle_mat.add_cube_to_verts(handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
-			hpos += door_spacing_h;
+			hpos += col_spacing;
 		} // for m
-		vpos += door_spacing_v;
+		vpos += row_spacing;
 	} // for n
 }
 
