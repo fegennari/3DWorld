@@ -491,6 +491,7 @@ struct building_t : public building_geom_t {
 		has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), ao_bcz2(0.0) {}
 	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT),
 		is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), ao_bcz2(0.0) {}
+	static float get_scaled_player_radius();
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	bool has_interior () const {return bool(interior);}
 	bool has_room_geom() const {return (has_interior() && interior->room_geom);}
