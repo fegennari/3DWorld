@@ -51,7 +51,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit)
 {
-	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), 2.0f*get_scaled_player_radius()));
+	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance()));
 	uint8_t const obj_flags(is_lit ? RO_FLAG_LIT : 0);
 	vector3d const room_sz(room.get_size());
 	assert(interior && interior->room_geom);
@@ -147,7 +147,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.4*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen.rand_uniform(1.0, 1.2));
-	float const clearance(max(0.2f*vspace, 2.0f*get_scaled_player_radius()));
+	float const clearance(max(0.2f*vspace, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z1() = zval;
@@ -382,7 +382,7 @@ bool building_t::place_obj_along_wall(room_object type, cube_t const &room, floa
 	vector3d const place_area_sz(place_area.get_size());
 	if (max(place_area_sz.x, place_area_sz.y) <= min_space) return 0; // can't fit in either dim
 	unsigned const force_dim((place_area_sz.x <= min_space) ? 0 : ((place_area_sz.y <= min_space) ? 1 : 2)); // *other* dim; 2=neither
-	float const clearance(max(depth*front_clearance, 2.0f*get_scaled_player_radius()));
+	float const clearance(max(depth*front_clearance, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z1() = zval;
@@ -628,7 +628,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 		
 	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
 		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height);
-		float const front_clearance(max(0.6f*height, 2.0f*get_scaled_player_radius()));
+		float const front_clearance(max(0.6f*height, get_min_front_clearance()));
 		unsigned const flags(is_lit ? RO_FLAG_LIT : 0);
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area
