@@ -174,6 +174,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "sec_extra_spacing") {
 		if (!read_float(fp, global_building_params.sec_extra_spacing)) {buildings_file_err(str, error);}
 	}
+	else if (str == "player_coll_radius_scale") {
+		if (!read_float(fp, global_building_params.player_coll_radius_scale)) {buildings_file_err(str, error);}
+	}
 	else if (str == "max_floorplan_window_xscale") {
 		if (!read_float(fp, global_building_params.max_fp_wind_xscale)) {buildings_file_err(str, error);}
 	}

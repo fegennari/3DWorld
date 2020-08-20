@@ -286,11 +286,12 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	bool had_coll(0), on_stairs(0);
 	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
 	float const wall_test_z(obj_z + radius); // hack to allow player to step over a wall that's below the stairs connecting stacked parts
+	float const xy_radius(radius*global_building_params.player_coll_radius_scale); // XY radius can be smaller to allow player to fit between furniture
 
 	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
 			if (wall_test_z < i->z1() || wall_test_z > i->z2()) continue; // wrong part/floor
-			had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, 0, cnorm); // skip_z=0 (required for stacked parts that have diff walls)
+			had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *i, p_last, 1, 0, cnorm); // skip_z=0 (required for stacked parts that have diff walls)
 		}
 	}
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
@@ -299,13 +300,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		if (1/*obj_z < e->z1() + floor_spacing*/) { // should players only be allowed in elevators on the ground floor?
 			cube_t cubes[5];
 			unsigned const num_cubes(e->get_coll_cubes(cubes));
-			for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
+			for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
 		}
-		else {had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, 0, cnorm);} // skip_z=0
+		else {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *e, p_last, 1, 0, cnorm);} // skip_z=0
 	}
 	/*for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // doors tend to block the player, don't collide with them
 		if (obj_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
-		had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, 0, cnorm); // skip_z=0
+		had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *i, p_last, 1, 0, cnorm); // skip_z=0
 	}*/
 	if (!xy_only && 2.2*radius < floor_spacing*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings
@@ -331,8 +332,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			pos.z = c->z1() + radius; // stand on the stair - this can happen for multiple stairs
 			obj_z = max(pos.z, p_last.z);
 			bool const is_u(c->shape == SHAPE_STAIRS_U);
-			if (!is_u || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + radius));} // force the sphere onto the stairs
-			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - radius));}
+			if (!is_u || c->dir == 1) {max_eq(pos[!c->dim], (c->d[!c->dim][0] + xy_radius));} // force the sphere onto the stairs
+			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
 			had_coll = on_stairs = 1;
 		} // for c
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with
@@ -348,13 +349,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
-			had_coll |= sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, cnorm); // skip_z=0
+			had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *c, p_last, 1, 0, cnorm); // skip_z=0
 		} // for c
 	}
 	for (auto i = ped_bcubes.begin(); i != ped_bcubes.end(); ++i) {
 		float const ped_radius(0.5*max(i->dx(), i->dy())); // determine radius from bcube X/Y
 		point const center(i->get_cube_center());
-		float const dist(p2p_dist(pos, center)), r_sum(radius + 0.5*ped_radius); // ped_radius is a bit too large
+		float const dist(p2p_dist(pos, center)), r_sum(xy_radius + 0.5*ped_radius); // ped_radius is a bit too large
 		if (dist >= r_sum) continue; // no intersection
 		vector3d const normal(vector3d(pos.x-center.x, pos.y-center.y, 0.0).get_norm()); // XY direction
 		if (cnorm) {*cnorm = normal;}

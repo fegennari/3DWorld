@@ -9,6 +9,7 @@ buildings min_level_height 0.25
 buildings ao_factor 0.4
 buildings max_rot_angle 90.0
 buildings wall_split_thresh 2.5 # typically 1.0-5.0, smaller is slower with more walls
+buildings player_coll_radius_scale 0.75
 
 buildings min_altitude 0.05 # slightly above sea level
 buildings max_altitude 4.00 # same for all buildings

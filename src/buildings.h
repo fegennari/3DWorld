@@ -115,7 +115,7 @@ struct building_params_t {
 
 	bool flatten_mesh, has_normal_map, tex_mirror, tex_inv_y, tt_only, infinite_buildings, dome_roof, onion_roof, enable_people_ai, add_city_interiors;
 	unsigned num_place, num_tries, cur_prob, max_shadow_maps;
-	float ao_factor, sec_extra_spacing;
+	float ao_factor, sec_extra_spacing, player_coll_radius_scale;
 	float window_width, window_height, window_xspace, window_yspace; // windows
 	float wall_split_thresh, max_fp_wind_xscale, max_fp_wind_yscale; // interiors
 	vector3d range_translate; // used as a temporary to add to material pos_range
@@ -126,8 +126,8 @@ struct building_params_t {
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), dome_roof(0),
 		onion_roof(0), enable_people_ai(0), add_city_interiors(0), num_place(num), num_tries(10), cur_prob(1), max_shadow_maps(32), ao_factor(0.0),
-		sec_extra_spacing(0.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0), wall_split_thresh(4.0),
-		max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), range_translate(zero_vector) {}
+		sec_extra_spacing(0.0), player_coll_radius_scale(1.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0),
+		wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}
