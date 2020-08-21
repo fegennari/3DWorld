@@ -10,6 +10,7 @@ cube_t grass_exclude1, grass_exclude2;
 
 extern bool draw_building_interiors;
 extern float grass_width, fticks, CAMERA_RADIUS;
+extern double camera_zh;
 extern building_params_t global_building_params;
 
 
@@ -351,7 +352,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
-			had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *c, p_last, 1, 0, cnorm); // skip_z=0
+			cube_t c_extended(*c);
+			c_extended.z1() -= camera_zh;
+			had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm); // skip_z=0
 		} // for c
 	}
 	for (auto i = ped_bcubes.begin(); i != ped_bcubes.end(); ++i) {
