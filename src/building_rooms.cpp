@@ -586,7 +586,7 @@ void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, 
 	if (inc_open) {door_exp.d[!dim][edir] += (edir ? 1.0 : -1.0)*0.75*width;} // expand the remainder of the door width in this dir
 	blockers.push_back(door_exp);
 }
-void building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors) const {
+void building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors, bool ignore_chairs) const {
 	assert(interior && interior->room_geom);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
@@ -594,6 +594,7 @@ void building_t::gather_room_placement_blockers(cube_t const &room, unsigned obj
 	blockers.clear();
 
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (ignore_chairs && i->type == TYPE_CHAIR) continue;
 		if (!(i->flags & RO_FLAG_NOCOLL) && i->intersects(room)) {blockers.push_back(*i);}
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {add_door_if_blocker(i->get_bcube(), room, 0, 0, blockers);} // exterior doors, inc_open=0
@@ -633,13 +634,14 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area
 		vector<room_object_t> &objs(interior->room_geom->objs);
+		unsigned const counters_start(objs.size());
 		cube_t c;
 		c.z1() = zval;
 		c.z2() = zval + height;
 		cabinet_area.z1() = zval;
 		cabinet_area.z2() = zval + vspace - get_floor_thickness();
 		static vect_cube_t blockers;
-		gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1); // inc_open_doors=1
+		gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1); // inc_open_doors=1, ignore_chairs=1
 		bool is_sink(1);
 
 		for (unsigned n = 0; n < 50; ++n) { // 50 attempts
@@ -664,7 +666,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 			assert(c.contains_cube(c_min));
 			c.d[dim][!dir] = front_pos; // remove front clearance
 
-			for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // find adjacencies to previously placed counters and flag to avoid placing doors
+			for (auto i = objs.begin()+counters_start; i != objs.end(); ++i) { // find adjacencies to previously placed counters and flag to avoid placing doors
 				if (i->dim == dim) continue; // not perpendicular
 				if (i->d[!i->dim][dir] != wall_pos) continue; // not against the wall on this side
 				if (i->d[i->dim][i->dir] != c.d[!dim][0] && i->d[i->dim][i->dir] != c.d[!dim][1]) continue; // not adjacent
