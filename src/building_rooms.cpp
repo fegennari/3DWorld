@@ -420,7 +420,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, cub
 		is_lit, place_area, objs_start, front_clearance, pref_orient, pref_centered, color);
 }
 
-bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) { // Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.5*wall_thickness);

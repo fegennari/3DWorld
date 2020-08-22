@@ -624,7 +624,7 @@ private:
 	bool create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool add_bedroom_objs    (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
 	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
-	bool add_bathroom_objs   (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
+	bool add_bathroom_objs   (rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
 	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	bool add_kitchen_objs    (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool allow_adj_ext_door);
 	bool add_livingroom_objs (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
