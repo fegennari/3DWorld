@@ -512,7 +512,6 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	float const sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
 	if (room_width < req_depth) return 0;
 	unsigned const num_stalls(floor(stalls_len/stall_width)), num_sinks(floor(sinks_len/sink_spacing));
-	//cout << TXT(two_rows) << TXT(num_stalls) << TXT(num_sinks) << endl;
 	if (num_stalls < 2 || num_sinks < 2) return 0; // not enough space for 2 stalls and 2 sinks
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
