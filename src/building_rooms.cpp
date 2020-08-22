@@ -1210,7 +1210,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, num);}
 			}
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
-				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && r->is_office)); // no trashcans on same wall as office whiteboard
+				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
 			if (is_bathroom) {add_bathroom_windows(*r, room_center.z, room_id, tot_light_amt, is_lit);} // find all windows and add frosted windows
 			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
