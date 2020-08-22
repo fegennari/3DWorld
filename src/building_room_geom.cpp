@@ -394,6 +394,10 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	} // for n
 }
 
+void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
+	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c, WHITE), tex_origin, ~EF_Z2); // top face only
+}
+
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, apply_light_color(c, colorRGBA(0.85, 0.85, 0.85)), tex_origin); // all faces drawn
 }
@@ -1155,6 +1159,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CABINET:  return get_textured_wood_color();
 	case TYPE_PLANT:    return blend_color(GREEN, BROWN, 0.5, 0); // halfway between green and brown, as a guess
 	case TYPE_DRESSER:  return get_textured_wood_color();
+	case TYPE_FLOORING: return colorRGBA(0.8, 0.8, 0.8); // account for texture color
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	return color; // Note: probably should always set color so that we can return it here
@@ -1194,6 +1199,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_CABINET: add_cabinet (*i, tscale); break;
 		case TYPE_PLANT:   add_potted_plant(*i); break;
 		case TYPE_DRESSER: add_dresser (*i, tscale); break;
+		case TYPE_FLOORING:add_flooring(*i, tscale); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn

@@ -195,8 +195,8 @@ struct draw_range_t {
 
 enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_SM_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD,
 	                 TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL,
-	                 TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE,
-	                 TYPE_STOVE, TYPE_TV, TYPE_COUCH, NUM_TYPES};
+	                 TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_TOILET, TYPE_SINK, TYPE_TUB,
+	                 TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT};
 enum room_type      {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY, RTYPE_ENTRY,
 	                 RTYPE_LIBRARY, RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
@@ -329,6 +329,7 @@ struct building_room_geom_t {
 	void add_table(room_object_t const &c, float tscale, float top_dz=0.15, float leg_width=0.08);
 	void add_chair(room_object_t const &c, float tscale);
 	void add_dresser(room_object_t const &c, float tscale);
+	void add_flooring(room_object_t const &c, float tscale);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_elevator(room_object_t const &c, float tscale);
 	void add_light(room_object_t const &c, float tscale);

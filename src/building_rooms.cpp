@@ -426,11 +426,20 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float z
 	place_area.expand_by(-0.5*wall_thickness);
 	if (min(place_area.dx(), place_area.dy()) < 0.7*floor_spacing) return 0; // room is too small (should be rare)
 	bool const have_toilet(building_obj_model_loader.is_model_valid(OBJ_MODEL_TOILET)), have_sink(building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK));
+	vector<room_object_t> &objs(interior->room_geom->objs);
 
+	if (!is_house && (have_toilet || have_sink)) { // office with at least a toilet or sink - replace carpet with tile
+		float const new_zval(zval + 0.05*wall_thickness);
+		cube_t floor(room_bounds);
+		floor.z1() = zval;
+		floor.z2() = new_zval;
+		objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0); // assume always lit, even if light starts off
+		objs_start = objs.size(); // exclude this from collision checks
+		zval = new_zval; // move the effective floor up
+	}
 	if (have_toilet && have_sink && room.is_office && min(place_area.dx(), place_area.dy()) > 1.8*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.6*floor_spacing) {
 		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit)) return 1; // large enough, try to divide into bathroom stalls
 	}
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool placed_obj(0), placed_toilet(0);
 	
 	// place toilet first because it's in the corner out of the way and higher priority
