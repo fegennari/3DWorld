@@ -323,14 +323,15 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 
 bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, is_lit)) return 0; // it's only a bedroom if there's bed
-	float const window_vspacing(get_window_vspace());
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
-	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
+	place_area.expand_by(-0.1*wall_thickness); // shrink to leave a small gap
 	// closet
 	float const doorway_width(interior->get_doorway_width()), floor_thickness(get_floor_thickness()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance()));
 	float const closet_min_depth(0.65*doorway_width), closet_min_width(1.5*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
+	cube_t const part(get_part_for_room(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool is_ext_wall[2][2] = {0}; // precompute which walls are exterior, {dim}x{dir}
 	for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
@@ -344,12 +345,17 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 		for (unsigned d = 0; d < 2 && !placed_closet; ++d) { // try both dims
 			bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir), other_dir(dim ? xdir : ydir);
 			if (room_bounds.get_sz_dim(!dim) < closet_min_width + min_dist_to_wall) continue; // room is too narrow to add a closet here
-			// don't place closets against exterior walls where they would block a window
-			if (is_ext_wall[dim][dir] || is_ext_wall[!dim][other_dir]) continue;
+			if (is_ext_wall[dim][dir]) continue; // don't place closets against exterior walls where they would block a window
 			float const dir_sign(dir ? -1.0 : 1.0), signed_front_clearance(dir_sign*front_clearance);
+			float const window_hspacing(part.get_sz_dim(dim)/get_num_windows_on_side(part.d[dim][0], part.d[dim][1]));
 			cube_t c(corner, corner);
 			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? closet_min_width : closet_min_depth);
 			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? closet_min_depth : closet_min_width);
+
+			if (is_ext_wall[!dim][other_dir]) {
+				if (is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, get_window_border())) continue;
+				c.d[!dim][other_dir] -= (other_dir ? 1.0 : -1.0)*0.1*wall_thickness; // move in slightly to prevent z-fighting with exterior wall
+			}
 			c.z2() += window_vspacing - floor_thickness;
 			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed
 			if (!check_valid_closet_placement(c, room, objs_start, min_bed_space)) continue; // bad placement
@@ -368,6 +374,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 			for (unsigned s2 = 0; s2 < num_steps; ++s2) { // now try increasing depth
 				cube_t c2(c);
 				c2.d[dim][!dir] += depth_step;
+				if (is_ext_wall[!dim][other_dir] && is_val_inside_window(part, dim, (c2.d[dim][!dir] - signed_front_clearance), window_hspacing, get_window_border())) break; // bad placement
 				if (!check_valid_closet_placement(c2, room, objs_start, min_bed_space)) break; // bad placement
 				c = c2; // valid placement, update with larger cube
 			}

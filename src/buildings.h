@@ -542,6 +542,7 @@ struct building_t : public building_geom_t {
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
 	int get_num_windows_on_side(float xy1, float xy2) const;
+	float get_window_border() const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
@@ -712,6 +713,7 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, bool dim);
+bool is_val_inside_window(cube_t const &c, bool dim, float val, float window_spacing, float window_border);
 void subtract_cube_from_cube(cube_t const &c, cube_t const &s, vect_cube_t &out);
 void subtract_cube_from_cube_inplace(cube_t const &s, vect_cube_t &cubes, unsigned &ix, unsigned &iter_end);
 template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub, vect_cube_t &out, vect_cube_t &out2);
