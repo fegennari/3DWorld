@@ -394,8 +394,34 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	} // for n
 }
 
-void building_room_geom_t::add_closet(room_object_t const &c, float tscale) { // no lighting scale
-	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1).add_cube_to_verts(c, WHITE, tex_origin, EF_Z12);
+void building_room_geom_t::add_closet(room_object_t const &c, float tscale, tid_nm_pair_t const &wall_tex) { // no lighting scale
+	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), wall_shift(0.95*width);
+	cube_t doors(c), walls[2] = {c, c}; // left, right
+	walls[0].d[!c.dim][1] -= wall_shift;
+	walls[1].d[!c.dim][0] += wall_shift;
+	tid_nm_pair_t wall_tex_scaled(wall_tex);
+	wall_tex_scaled.tscale_x *= 2.0;
+	wall_tex_scaled.tscale_y *= 2.0;
+	rgeom_mat_t &wall_mat(get_material(wall_tex_scaled, 1));
+	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir) | EF_Z12); // skip top, bottom, and face that's against the wall
+	for (unsigned d = 0; d < 2; ++d) {wall_mat.add_cube_to_verts(walls[d], WHITE, tex_origin, skip_faces);}
+	for (unsigned d = 0; d < 2; ++d) {doors.d[!c.dim][d] = walls[d].d[!c.dim][!d];} // clip door to space between walls
+	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.04*depth; // shift in slightly
+	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.92*depth; // make it narrow
+	float const doors_width(doors.get_sz_dim(!c.dim)), door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
+	int const tid(get_rect_panel_tid());
+	float tx(1.0/doors_width), ty(0.25/doors.dz());
+	if (!c.dim) {swap(tx, ty);} // swap so that ty is always in Z
+	tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
+	rgeom_mat_t &door_mat(get_material(door_tex, 1));
+	point const llc(doors.get_llc());
+
+	for (unsigned n = 0; n < 4; ++n) { // draw closet door in 4 parts
+		cube_t door(doors);
+		door.d[!c.dim][0] = doors.d[!c.dim][0] + n    *door_spacing + door_gap; // left edge
+		door.d[!c.dim][1] = doors.d[!c.dim][0] + (n+1)*door_spacing - door_gap; // right edge
+		door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
+	}
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
@@ -420,12 +446,13 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
 	tid_nm_pair_t const paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
 	get_material(get_tex_auto_nm(TILE_TEX, tscale), 1, 1).add_cube_to_verts(floor, WHITE, tex_origin, floor_ceil_face_mask);
 	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil, WHITE, tex_origin, floor_ceil_face_mask);
-	get_material(paneling, 1, 1).add_cube_to_verts(back, WHITE, tex_origin, front_face_mask, !c.dim);
+	rgeom_mat_t &paneling_mat(get_material(paneling, 1, 1));
+	paneling_mat.add_cube_to_verts(back, WHITE, tex_origin, front_face_mask, !c.dim);
 
 	for (unsigned d = 0; d < 2; ++d) { // side walls
 		cube_t side(c);
 		side.d[!c.dim][!d] = side.d[!c.dim][d] + (d ? -1.0 : 1.0)*thickness;
-		get_material(paneling, 1, 1).add_cube_to_verts(side, WHITE, tex_origin, get_face_mask(!c.dim, !d), c.dim);
+		paneling_mat.add_cube_to_verts(side, WHITE, tex_origin, get_face_mask(!c.dim, !d), c.dim);
 	}
 }
 
@@ -1169,7 +1196,7 @@ colorRGBA room_object_t::get_color() const {
 	return color; // Note: probably should always set color so that we can return it here
 }
 
-void building_room_geom_t::create_static_vbos() {
+void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 	//highres_timer_t timer("Gen Room Geom"); // 2.1ms
 	float const tscale(2.0/obj_scale);
 	obj_model_insts.clear();
@@ -1204,7 +1231,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_PLANT:   add_potted_plant(*i); break;
 		case TYPE_DRESSER: add_dresser (*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
-		case TYPE_CLOSET:  add_closet  (*i, tscale); break;
+		case TYPE_CLOSET:  add_closet  (*i, tscale, wall_tex); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn
@@ -1257,7 +1284,7 @@ void building_room_geom_t::create_dynamic_vbos() {
 }
 
 
-void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building) { // non-const because it creates the VBO
+void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_t const &wall_tex, bool shadow_only, bool inc_small, bool player_in_building) { // non-const because it creates the VBO
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
 	static int last_frame(0);
@@ -1273,7 +1300,7 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, bool shadow_
 		num_pic_tids = num_screenshot_tids;
 	}
 	if (mats_static.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create static materials if needed
-		create_static_vbos();
+		create_static_vbos(wall_tex);
 		++num_geom_this_frame;
 	}
 	if (inc_small && mats_small.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create small materials if needed
