@@ -308,6 +308,19 @@ unsigned building_t::count_num_int_doors(room_t const &room) const {
 	return num;
 }
 
+bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, float min_bed_space) const {
+	if (min_bed_space > 0.0) {
+		vector<room_object_t> &objs(interior->room_geom->objs);
+		assert(objs_start < objs.size());
+		room_object_t const &bed(objs[objs_start]);
+		assert(bed.type == TYPE_BED);
+		cube_t bed_exp(bed);
+		bed_exp.expand_by_xy(min_bed_space);
+		if (c.intersects_xy(bed_exp)) return 0; // too close to bed
+	}
+	return (!overlaps_other_room_obj(c, objs_start) && !is_cube_close_to_doorway(c, room, 0.0, 1));
+}
+
 bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, is_lit)) return 0; // it's only a bedroom if there's bed
 	float const window_vspacing(get_window_vspace());
@@ -315,7 +328,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
 	// closet
 	float const doorway_width(interior->get_doorway_width()), floor_thickness(get_floor_thickness()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance()));
-	float const closet_min_depth(0.65*doorway_width), closet_min_width(2.0*doorway_width), min_dist_to_wall(1.0*doorway_width);
+	float const closet_min_depth(0.65*doorway_width), closet_min_width(2.0*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -337,22 +350,22 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? closet_min_depth : closet_min_width);
 			c.z2() += window_vspacing - floor_thickness;
 			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed
-			if (overlaps_other_room_obj(c, objs_start) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue; // bad placement
+			if (!check_valid_closet_placement(c, room, objs_start, min_bed_space)) continue; // bad placement
 			// good placement, see if we can make the closet larger
 			unsigned const num_steps = 10;
 			float const max_grow((room_bounds.d[!dim][!other_dir] - (other_dir ? -1.0 : 1.0)*min_dist_to_wall) - c.d[!dim][!other_dir]); // at least a doorway width from the opposite wall
-			float const len_step(max_grow/num_steps), depth_step(dir_sign*0.5*doorway_width/num_steps); // signed
+			float const len_step(max_grow/num_steps), depth_step(dir_sign*0.35*doorway_width/num_steps); // signed
 
 			for (unsigned s1 = 0; s1 < num_steps; ++s1) { // try increasing width
 				cube_t c2(c);
 				c2.d[!dim][!other_dir] += len_step;
-				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) break; // bad placement
+				if (!check_valid_closet_placement(c2, room, objs_start, min_bed_space)) break; // bad placement
 				c = c2; // valid placement, update with larger cube
 			}
 			for (unsigned s2 = 0; s2 < num_steps; ++s2) { // now try increasing depth
 				cube_t c2(c);
 				c2.d[dim][!dir] += depth_step;
-				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) break; // bad placement
+				if (!check_valid_closet_placement(c2, room, objs_start, min_bed_space)) break; // bad placement
 				c = c2; // valid placement, update with larger cube
 			}
 			c.d[ dim][!dir] -= signed_front_clearance; // subtract off front clearance
