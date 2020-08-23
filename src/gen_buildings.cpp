@@ -470,6 +470,7 @@ building_texture_mgr_t building_texture_mgr;
 
 int get_rect_panel_tid() {return building_texture_mgr.get_gdoor_tid();} // use garage doors
 int get_bath_wind_tid () {return building_texture_mgr.get_bath_wind_tid();}
+int get_int_door_tid  () {return building_texture_mgr.get_hdoor_tid();}
 
 
 class texture_id_mapper_t {

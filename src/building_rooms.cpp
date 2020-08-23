@@ -328,7 +328,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
 	// closet
 	float const doorway_width(interior->get_doorway_width()), floor_thickness(get_floor_thickness()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance()));
-	float const closet_min_depth(0.65*doorway_width), closet_min_width(2.0*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
+	float const closet_min_depth(0.65*doorway_width), closet_min_width(1.5*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
 	vector<room_object_t> &objs(interior->room_geom->objs);

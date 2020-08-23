@@ -718,6 +718,7 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub
 bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes=nullptr, bool clip_in_z=0);
 int get_rect_panel_tid();
 int get_bath_wind_tid ();
+int get_int_door_tid  ();
 int get_normal_map_for_bldg_tid(int tid);
 unsigned register_sign_text(std::string const &text);
 // functions in city_gen.cc

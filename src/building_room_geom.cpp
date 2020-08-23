@@ -395,7 +395,10 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 }
 
 void building_room_geom_t::add_closet(room_object_t const &c, float tscale, tid_nm_pair_t const &wall_tex) { // no lighting scale
-	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), wall_shift(0.95*width);
+	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
+	bool const use_small_door(width < 1.2*height);
+	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : 0.05*width), wall_shift(width - wall_width);
+	assert(wall_shift > 0.0);
 	cube_t doors(c), walls[2] = {c, c}; // left, right
 	walls[0].d[!c.dim][1] -= wall_shift;
 	walls[1].d[!c.dim][0] += wall_shift;
@@ -408,19 +411,25 @@ void building_room_geom_t::add_closet(room_object_t const &c, float tscale, tid_
 	for (unsigned d = 0; d < 2; ++d) {doors.d[!c.dim][d] = walls[d].d[!c.dim][!d];} // clip door to space between walls
 	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.04*depth; // shift in slightly
 	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.92*depth; // make it narrow
-	float const doors_width(doors.get_sz_dim(!c.dim)), door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
-	int const tid(get_rect_panel_tid());
-	float tx(1.0/doors_width), ty(0.25/doors.dz());
-	if (!c.dim) {swap(tx, ty);} // swap so that ty is always in Z
-	tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
-	rgeom_mat_t &door_mat(get_material(door_tex, 1));
 	point const llc(doors.get_llc());
 
-	for (unsigned n = 0; n < 4; ++n) { // draw closet door in 4 parts
-		cube_t door(doors);
-		door.d[!c.dim][0] = doors.d[!c.dim][0] + n    *door_spacing + door_gap; // left edge
-		door.d[!c.dim][1] = doors.d[!c.dim][0] + (n+1)*door_spacing - door_gap; // right edge
-		door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
+	if (use_small_door) { // small house closet door
+		get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 1).add_cube_to_verts(doors, WHITE, llc, get_face_mask(c.dim, c.dir), !c.dim); // draw only front face
+	}
+	else { // 4 panel folding door
+		float const doors_width(doors.get_sz_dim(!c.dim)), door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
+		int const tid(get_rect_panel_tid());
+		float tx(1.0/doors_width), ty(0.25/doors.dz());
+		if (!c.dim) {swap(tx, ty);} // swap so that ty is always in Z
+		tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
+		rgeom_mat_t &door_mat(get_material(door_tex, 1));
+
+		for (unsigned n = 0; n < 4; ++n) { // draw closet door in 4 parts
+			cube_t door(doors);
+			door.d[!c.dim][0] = doors.d[!c.dim][0] + n    *door_spacing + door_gap; // left edge
+			door.d[!c.dim][1] = doors.d[!c.dim][0] + (n+1)*door_spacing - door_gap; // right edge
+			door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
+		}
 	}
 }
 
