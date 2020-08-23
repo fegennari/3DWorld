@@ -332,6 +332,8 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	bool is_ext_wall[2][2] = {0}; // precompute which walls are exterior, {dim}x{dir}
+	for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 	bool placed_closet(0);
 
 	for (unsigned n = 0; n < 4 && !placed_closet; ++n) { // try 4 room corners
@@ -343,7 +345,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 			bool const dim(bool(d) ^ first_dim), dir(dim ? ydir : xdir), other_dir(dim ? xdir : ydir);
 			if (room_bounds.get_sz_dim(!dim) < closet_min_width + min_dist_to_wall) continue; // room is too narrow to add a closet here
 			// don't place closets against exterior walls where they would block a window
-			if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT || classify_room_wall(room, zval, !dim, other_dir, 0) == ROOM_WALL_EXT) continue;
+			if (is_ext_wall[dim][dir] || is_ext_wall[!dim][other_dir]) continue;
 			float const dir_sign(dir ? -1.0 : 1.0), signed_front_clearance(dir_sign*front_clearance);
 			cube_t c(corner, corner);
 			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? closet_min_width : closet_min_depth);
@@ -353,7 +355,8 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 			if (!check_valid_closet_placement(c, room, objs_start, min_bed_space)) continue; // bad placement
 			// good placement, see if we can make the closet larger
 			unsigned const num_steps = 10;
-			float const max_grow((room_bounds.d[!dim][!other_dir] - (other_dir ? -1.0 : 1.0)*min_dist_to_wall) - c.d[!dim][!other_dir]); // at least a doorway width from the opposite wall
+			float const req_dist(is_ext_wall[!dim][!other_dir] ? (other_dir ? -1.0 : 1.0)*min_dist_to_wall : 0.0); // signed; at least min dist from the opposite wall if it's exterior
+			float const max_grow((room_bounds.d[!dim][!other_dir] - req_dist) - c.d[!dim][!other_dir]);
 			float const len_step(max_grow/num_steps), depth_step(dir_sign*0.35*doorway_width/num_steps); // signed
 
 			for (unsigned s1 = 0; s1 < num_steps; ++s1) { // try increasing width
