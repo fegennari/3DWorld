@@ -394,6 +394,10 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	} // for n
 }
 
+void building_room_geom_t::add_closet(room_object_t const &c, float tscale) { // no lighting scale
+	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1).add_cube_to_verts(c, WHITE, tex_origin, EF_Z12);
+}
+
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c, WHITE), tex_origin, ~EF_Z2); // top face only
 }
@@ -403,7 +407,7 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 }
 
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
-	// elevator car, all materials are dynamic
+	// elevator car, all materials are dynamic; no lighting scale
 	float const thickness(0.051*c.dz());
 	cube_t floor(c), ceil(c), back(c);
 	floor.z2() = floor.z1() + thickness;
@@ -1200,6 +1204,7 @@ void building_room_geom_t::create_static_vbos() {
 		case TYPE_PLANT:   add_potted_plant(*i); break;
 		case TYPE_DRESSER: add_dresser (*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
+		case TYPE_CLOSET:  add_closet  (*i, tscale); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn
