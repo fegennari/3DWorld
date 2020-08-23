@@ -407,8 +407,13 @@ void building_room_geom_t::add_closet(room_object_t const &c, float tscale, tid_
 	wall_tex_scaled.tscale_y *= 2.0;
 	rgeom_mat_t &wall_mat(get_material(wall_tex_scaled, 1));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir) | EF_Z12); // skip top, bottom, and face that's against the wall
-	for (unsigned d = 0; d < 2; ++d) {wall_mat.add_cube_to_verts(walls[d], WHITE, tex_origin, skip_faces);}
-	for (unsigned d = 0; d < 2; ++d) {doors.d[!c.dim][d] = walls[d].d[!c.dim][!d];} // clip door to space between walls
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		unsigned wall_skip_faces(skip_faces);
+		if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {wall_skip_faces |= ~get_face_mask(!c.dim, d);} // adjacent to room wall, skip that face
+		wall_mat.add_cube_to_verts(walls[d], WHITE, tex_origin, wall_skip_faces);
+		doors.d[!c.dim][d] = walls[d].d[!c.dim][!d]; // clip door to space between walls
+	}
 	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.04*depth; // shift in slightly
 	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.92*depth; // make it narrow
 	point const llc(doors.get_llc());

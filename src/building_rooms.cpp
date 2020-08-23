@@ -351,11 +351,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 			cube_t c(corner, corner);
 			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? closet_min_width : closet_min_depth);
 			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? closet_min_depth : closet_min_width);
-
-			if (is_ext_wall[!dim][other_dir]) {
-				if (is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, get_window_border())) continue;
-				c.d[!dim][other_dir] -= (other_dir ? 1.0 : -1.0)*0.1*wall_thickness; // move in slightly to prevent z-fighting with exterior wall
-			}
+			if (is_ext_wall[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, get_window_border())) continue; // check for window intersection
 			c.z2() += window_vspacing - floor_thickness;
 			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed
 			if (!check_valid_closet_placement(c, room, objs_start, min_bed_space)) continue; // bad placement
@@ -379,7 +375,10 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 				c = c2; // valid placement, update with larger cube
 			}
 			c.d[ dim][!dir] -= signed_front_clearance; // subtract off front clearance
-			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, RO_FLAG_LIT, 1.0);
+			unsigned flags(RO_FLAG_LIT);
+			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
+			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
+			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, 1.0);
 			placed_closet = 1; // done
 		} // for d
 	} // for n
