@@ -56,10 +56,13 @@ void set_wall_width(cube_t &wall, float pos, float half_thick, bool dim) {
 	wall.d[dim][0] = pos - half_thick;
 	wall.d[dim][1] = pos + half_thick;
 }
-// Note: wall should start out equal to the room bcube
-void create_wall(cube_t &wall, bool dim, float wall_pos, float fc_thick, float wall_half_thick, float wall_edge_spacing) {
+void clip_wall_to_ceil_floor(cube_t &wall, float fc_thick) {
 	wall.z1() += fc_thick; // start at the floor
 	wall.z2() -= fc_thick; // start at the ceiling
+}
+// Note: wall should start out equal to the room bcube
+void create_wall(cube_t &wall, bool dim, float wall_pos, float fc_thick, float wall_half_thick, float wall_edge_spacing) {
+	clip_wall_to_ceil_floor(wall, fc_thick);
 	set_wall_width(wall, wall_pos, wall_half_thick, dim);
 	// move a bit away from the exterior wall to prevent z-fighting; we might want to add walls around the building exterior and cut window holes
 	wall.expand_in_dim(!dim, -wall_edge_spacing);
@@ -228,6 +231,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			if (num_windows_od >= 7 && num_rooms >= 4) { // at least 7 windows (3 on each side of hallway)
 				float const min_hall_width(1.5f*doorway_width), max_hall_width(2.5f*doorway_width);
 				float const sh_width(max(min(0.4f*hall_width, max_hall_width), min_hall_width)), hspace(window_hspacing[!min_dim]);
+				unsigned const walls_start[2] = {interior->walls[0].size(), interior->walls[1].size()};
 
 				if (rgen.rand_bool()) { // ring hallway
 					float const room_depth(0.5f*(room_width - sh_width)); // for inner and outer rows of rooms
@@ -495,6 +499,9 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						min_eq(wall_pos, p->d[!min_dim][1]); // clamp to far side of building to handle the final row of rooms
 					} // for i
 				} // end secondary hallways
+				for (unsigned d = 0; d < 2; ++d) {
+					for (auto i = interior->walls[d].begin()+walls_start[d]; i != interior->walls[d].end(); ++i) {clip_wall_to_ceil_floor(*i, fc_thick);} // clip the walls we just created
+				}
 			} // end multiple hallways case
 
 			else { // single main hallway
