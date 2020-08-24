@@ -394,7 +394,7 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	} // for n
 }
 
-void building_room_geom_t::add_closet(room_object_t const &c, float tscale, tid_nm_pair_t const &wall_tex) { // no lighting scale
+void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex) { // no lighting scale
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
 	bool const use_small_door(width < 1.2*height);
 	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : 0.05*width), wall_shift(width - wall_width);
@@ -1245,7 +1245,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		case TYPE_PLANT:   add_potted_plant(*i); break;
 		case TYPE_DRESSER: add_dresser (*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
-		case TYPE_CLOSET:  add_closet  (*i, tscale, wall_tex); break;
+		case TYPE_CLOSET:  add_closet  (*i, wall_tex); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn

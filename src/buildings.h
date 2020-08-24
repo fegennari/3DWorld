@@ -348,7 +348,7 @@ struct building_room_geom_t {
 	void add_sign(room_object_t const &c, bool inc_back, bool inc_text);
 	void add_counter(room_object_t const &c, float tscale);
 	void add_cabinet(room_object_t const &c, float tscale);
-	void add_closet(room_object_t const &c, float tscale, tid_nm_pair_t const &wall_tex);
+	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex);
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_potted_plant(room_object_t const &c);
 	void create_static_vbos(tid_nm_pair_t const &wall_tex);
