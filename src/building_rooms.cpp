@@ -1344,10 +1344,33 @@ void building_t::add_wall_and_door_trim() {
 			}
 		} // for w
 	} // for d
-	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // add trim for exterior walls; need to cut out area for exterior doors
+		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
+
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
-				// TODO: add trim for exterior walls; need to cut out area for exterior doors
+				cube_t trim(*i);
+				trim.d[dim][!dir] = i->d[dim][dir] + (dir ? -1.0 : 1.0)*trim_thickness;
+				unsigned const ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
+				float z(i->z1() + fc_thick);
+
+				for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
+					trim.z1() = z; // floor height
+					trim.z2() = z + trim_height;
+					cube_t trim_parts[2];
+					trim_parts[0] = trim; // start with entire length
+
+					for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
+						if (j == i) continue; // skip self
+						// TODO: split trim into trim_parts
+					}
+					if (f == 0) { // first floor, cut out areas for exterior doors
+						// TODO: split trim into trim_parts
+					}
+					for (unsigned d = 0; d < 2; ++d) {
+						if (!trim_parts[d].is_all_zeros()) {objs.emplace_back(trim_parts[d], TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE);}
+					}
+				} // for f
 			} // for dir
 		} // for dim
 	}
