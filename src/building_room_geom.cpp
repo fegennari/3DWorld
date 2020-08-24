@@ -443,7 +443,9 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_wall_trim(room_object_t const &c) {
-	unsigned const skip_faces(/*get_skip_mask_for_xy(!c.dim) |*/ EF_Z1); // skip bottom surface and short sides
+	unsigned skip_faces(0);
+	if (c.shape == SHAPE_TALL) {skip_faces = EF_Z12;} // door trim: skip top and bottom
+	else {skip_faces = get_skip_mask_for_xy(!c.dim) | EF_Z1;} // wall trim: skip bottom surface and short sides
 	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(c, WHITE, tex_origin, skip_faces); // is_small, untextured, no shadows, not light scale
 }
 

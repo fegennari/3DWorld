@@ -1302,14 +1302,19 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 void building_t::add_wall_and_door_trim() {
 	if (!is_house) return; // office buildings not yet supported
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
-	float const wall_thickness(get_wall_thickness()), trim_height(0.04*window_vspacing);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
+	float const trim_height(0.04*window_vspacing), trim_thickness(0.10*wall_thickness), door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
 	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
-	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
-		for (unsigned d = 0; d < 2; ++d) { // left/right of door
-			// TODO - vertical strips on each side of door
+	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) { // vertical strips on each side of door
+		cube_t trim(*d);
+		trim.expand_in_dim(d->dim, door_trim_exp);
+
+		for (unsigned side = 0; side < 2; ++side) { // left/right of door
+			trim.d[!d->dim][0] = d->d[!d->dim][side] - (side ? door_trim_width : trim_thickness);
+			trim.d[!d->dim][1] = d->d[!d->dim][side] + (side ? trim_thickness : door_trim_width);
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, flags, 1.0, SHAPE_TALL); // abuse tall flag
 		}
 	} // for d
 	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor, and maybe later at the ceilings
@@ -1321,14 +1326,18 @@ void building_t::add_wall_and_door_trim() {
 				cube_t trim(*w);
 				trim.z1() = z; // floor height
 				trim.z2() = trim.z1() + trim_height;
-				trim.expand_in_dim( dim,  0.10*wall_thickness);
+				trim.expand_in_dim( dim, trim_thickness);
 				trim.expand_in_dim(!dim, -0.01*wall_thickness); // shrink slightly in other dim to prevent z-fighting; will eventually merge into door trim
-				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags);
+				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_CUBE);
 			} // for f
 		} // for w
 	} // for d
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-		// TODO: add trim for exterior walls; need to cut out area for exterior doors
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				// TODO: add trim for exterior walls; need to cut out area for exterior doors
+			} // for dir
+		} // for dim
 	}
 }
 
