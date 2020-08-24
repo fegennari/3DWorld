@@ -143,7 +143,8 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 
 // Note: no blockers for people
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
-	cube_t const room_bounds(get_walkable_room_bounds(room));
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	room_bounds.expand_by_xy(-0.1*get_wall_thickness());
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.4*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen.rand_uniform(1.0, 1.2));
