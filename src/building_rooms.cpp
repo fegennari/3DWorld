@@ -1301,7 +1301,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 }
 
 void building_t::add_wall_and_door_trim() {
-	if (!is_house) return; // office buildings not yet supported
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(0.04*window_vspacing), trim_thickness(0.10*wall_thickness), door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
 	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL);
@@ -1317,6 +1316,8 @@ void building_t::add_wall_and_door_trim() {
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, flags, 1.0, SHAPE_TALL); // abuse tall flag
 		}
 	} // for d
+	if (!is_house && !pri_hall.is_all_zeros()) return; // office building hallway wall trim is not yet supported due to exterior corners
+
 	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor, and maybe later at the ceilings
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
 			unsigned const num_floors(calc_num_floors(*w, window_vspacing, floor_thickness));
