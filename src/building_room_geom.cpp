@@ -442,6 +442,11 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c, WHITE), tex_origin, ~EF_Z2); // top face only
 }
 
+void building_room_geom_t::add_wall_trim(room_object_t const &c) {
+	unsigned const skip_faces(/*get_skip_mask_for_xy(!c.dim) |*/ EF_Z1); // skip bottom surface and short sides
+	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(c, WHITE, tex_origin, skip_faces); // is_small, untextured, no shadows, not light scale
+}
+
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, apply_light_color(c, colorRGBA(0.85, 0.85, 0.85)), tex_origin); // all faces drawn
 }
@@ -1273,6 +1278,7 @@ void building_room_geom_t::create_small_static_vbos() {
 		case TYPE_BCASE: add_bookcase(*i, 0, 1, tscale, 0); break;
 		case TYPE_BED:   add_bed     (*i, 0, 1, tscale); break;
 		case TYPE_SIGN:  add_sign    (*i, 0, 1); break;
+		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
 		default: break;
 		}
 	} // for i

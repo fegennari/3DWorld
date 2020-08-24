@@ -1292,10 +1292,43 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
+	add_wall_and_door_trim();
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
 	add_exterior_door_signs(rgen);
 	objs.shrink_to_fit();
 	interior->room_geom->light_bcubes.resize(num_light_stacks); // allocate but don't fill un until needed
+}
+
+void building_t::add_wall_and_door_trim() {
+	if (!is_house) return; // office buildings not yet supported
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
+	float const wall_thickness(get_wall_thickness()), trim_height(0.04*window_vspacing);
+	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+
+	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
+		for (unsigned d = 0; d < 2; ++d) { // left/right of door
+			// TODO - vertical strips on each side of door
+		}
+	} // for d
+	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor, and maybe later at the ceilings
+		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
+			unsigned const num_floors(calc_num_floors(*w, window_vspacing, floor_thickness));
+			float z(w->z1());
+
+			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
+				cube_t trim(*w);
+				trim.z1() = z; // floor height
+				trim.z2() = trim.z1() + trim_height;
+				trim.expand_in_dim( dim,  0.10*wall_thickness);
+				trim.expand_in_dim(!dim, -0.01*wall_thickness); // shrink slightly in other dim to prevent z-fighting; will eventually merge into door trim
+				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags);
+			} // for f
+		} // for w
+	} // for d
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		// TODO: add trim for exterior walls; need to cut out area for exterior doors
+	}
 }
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
