@@ -1302,9 +1302,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 void building_t::add_wall_and_door_trim() {
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
-	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
+	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), expand_val(2.0*trim_thickness);
+	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
 	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	vect_cube_t trim_cubes;
 
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) { // vertical strips on each side of door
 		cube_t trim(*d);
@@ -1344,7 +1346,7 @@ void building_t::add_wall_and_door_trim() {
 			}
 		} // for w
 	} // for d
-	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // add trim for exterior walls; need to cut out area for exterior doors
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // add trim for exterior walls
 		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
@@ -1357,19 +1359,25 @@ void building_t::add_wall_and_door_trim() {
 				for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 					trim.z1() = z; // floor height
 					trim.z2() = z + trim_height;
-					cube_t trim_parts[2];
-					trim_parts[0] = trim; // start with entire length
+					trim_cubes.clear();
+					trim_cubes.push_back(trim); // start with entire length
 
 					for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
 						if (j == i) continue; // skip self
-						// TODO: split trim into trim_parts
+						cube_t clip_cube(*j);
+						clip_cube.expand_in_dim(dim, expand_val); // expand to clip trim on the other side of the split wall
+						subtract_cube_from_cubes(clip_cube, trim_cubes); // subtract this part from current trim cubes by clipping in XY
 					}
 					if (f == 0) { // first floor, cut out areas for exterior doors
-						// TODO: split trim into trim_parts
+						for (auto d = doors.begin(); d != doors.end(); ++d) {
+							cube_t door(d->get_bcube());
+							bool const door_dim(door.dy() < door.dx());
+							if (door_dim != bool(dim)) continue;
+							door.expand_in_dim(door_dim, (expand_val + wall_thickness)); // expand to nonzero area; use a larger expand to account for distance door is offset away from ext wall
+							subtract_cube_from_cubes(door, trim_cubes); // subtract this door from current trim cubes by clipping in XY
+						}
 					}
-					for (unsigned d = 0; d < 2; ++d) {
-						if (!trim_parts[d].is_all_zeros()) {objs.emplace_back(trim_parts[d], TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE);}
-					}
+					for (auto c = trim_cubes.begin(); c != trim_cubes.end(); ++c) {objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE);}
 				} // for f
 			} // for dir
 		} // for dim
