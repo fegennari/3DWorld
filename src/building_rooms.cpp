@@ -1308,7 +1308,7 @@ void building_t::add_wall_and_door_trim() {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vect_cube_t trim_cubes;
 
-	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) { // vertical strips on each side of door
+	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) { // vertical strips on each side + strip on top of interior doors
 		cube_t trim(*d);
 		trim.expand_in_dim(d->dim, door_trim_exp);
 
@@ -1317,7 +1317,7 @@ void building_t::add_wall_and_door_trim() {
 			trim.d[!d->dim][1] = d->d[!d->dim][side] + (side ? trim_thickness : door_trim_width);
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, flags, 1.0, SHAPE_TALL); // abuse tall flag
 		}
-		// add trim at top of doors
+		// add trim at top of door
 		unsigned const num_floors(calc_num_floors(*d, window_vspacing, floor_thickness));
 		float z(d->z1() + window_vspacing - floor_thickness);
 		trim.d[!d->dim][0] = d->d[!d->dim][0] + trim_thickness;
@@ -1327,6 +1327,34 @@ void building_t::add_wall_and_door_trim() {
 			trim.z1() = z - trim_thickness;
 			trim.z2() = z; // ceil height
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, 0, flags, 1.0, SHAPE_SHORT);
+		}
+	} // for d
+	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
+		cube_t door(d->get_bcube());
+		bool const dim(door.dy() < door.dx());
+		cube_t trim(door);
+		trim.expand_in_dim(dim, door_trim_exp);
+		unsigned ext_flags(flags);
+
+		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+			if (!i->intersects_no_adj(trim)) continue;
+			trim.intersect_with_cube_xy(*i); // clip to containing part
+			// TODO: move slightly away from wall
+			//ext_flags |= ((i->get_center_dim(dim) < trim.get_center_dim(dim)) ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // no, back side can be seen when door is opened
+			break;
+		}
+		for (unsigned side = 0; side < 2; ++side) { // left/right of door
+			trim.d[!dim][0] = door.d[!dim][side] - (side ? door_trim_width : trim_thickness);
+			trim.d[!dim][1] = door.d[!dim][side] + (side ? trim_thickness : door_trim_width);
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, ext_flags, 1.0, SHAPE_TALL); // abuse tall flag
+		}
+		if (d->type == tquad_with_ix_t::TYPE_HDOOR) { // add trim at top of door, houses only
+			float z(door.z1() + window_vspacing - floor_thickness);
+			trim.d[!dim][0] = door.d[!dim][0] + trim_thickness;
+			trim.d[!dim][1] = door.d[!dim][1] - trim_thickness;
+			trim.z1() = z - trim_thickness;
+			trim.z2() = z; // ceil height
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_SHORT);
 		}
 	} // for d
 	if (!is_house && !pri_hall.is_all_zeros()) return; // office building hallway wall trim is not yet supported due to exterior corners
