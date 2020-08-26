@@ -445,10 +445,11 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 	unsigned skip_faces(0);
 	if      (c.shape == SHAPE_TALL ) {skip_faces = EF_Z12;} // door side trim: skip top and bottom
-	else if (c.shape == SHAPE_SHORT) {skip_faces = get_skip_mask_for_xy(!c.dim) | EF_Z2;} // door top trim: skip ends and top
+	else if (c.shape == SHAPE_SHORT) {skip_faces = get_skip_mask_for_xy(!c.dim);} // door top trim: skip ends
 	else                             {skip_faces = get_skip_mask_for_xy(!c.dim) | EF_Z1;} // wall trim: skip bottom surface and short sides
 	if (c.flags & RO_FLAG_ADJ_LO) {skip_faces |= ~get_face_mask(c.dim, 0);}
 	if (c.flags & RO_FLAG_ADJ_HI) {skip_faces |= ~get_face_mask(c.dim, 1);}
+	skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
 	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(c, WHITE, tex_origin, skip_faces); // is_small, untextured, no shadows, not light scale
 }
 

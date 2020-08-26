@@ -218,8 +218,10 @@ uint16_t const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // second byte
 uint16_t const RO_FLAG_EMISSIVE= 0x100; // for signs
 uint16_t const RO_FLAG_HANGING = 0x200; // for signs
-uint16_t const RO_FLAG_ADJ_LO  = 0x400; // for kitchen counters and closets
-uint16_t const RO_FLAG_ADJ_HI  = 0x800; // for kitchen counters and closets
+uint16_t const RO_FLAG_ADJ_LO  = 0x400; // for kitchen counters/closets/door trim
+uint16_t const RO_FLAG_ADJ_HI  = 0x800; // for kitchen counters/closets/door trim
+uint16_t const RO_FLAG_ADJ_BOT = 0x1000; // for door trim
+uint16_t const RO_FLAG_ADJ_TOP = 0x2000; // for door trim
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
