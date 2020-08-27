@@ -1381,7 +1381,7 @@ void building_t::add_wall_and_door_trim() {
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
 			cube_t trim(*w);
 			trim.expand_in_dim( dim, trim_thickness);
-			trim.expand_in_dim(!dim, -0.01*wall_thickness); // shrink slightly in other dim to prevent z-fighting; will eventually merge into door trim
+			//trim.expand_in_dim(!dim, 0.5*wall_thickness); // expand to cover gap at outside corners of hallway walls (TODO: only when needed)
 			unsigned const num_floors(calc_num_floors(*w, window_vspacing, floor_thickness));
 			float z(w->z1());
 
@@ -1389,7 +1389,6 @@ void building_t::add_wall_and_door_trim() {
 				trim.z1() = z; // floor height
 				trim.z2() = z + trim_height;
 				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_CUBE);
-				// TODO: extend trim on hallway walls to meet at outside corners
 			}
 		} // for w
 	} // for d
