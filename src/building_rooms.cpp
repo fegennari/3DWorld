@@ -1301,6 +1301,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 }
 
 void building_t::add_wall_and_door_trim() {
+
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
@@ -1330,16 +1331,20 @@ void building_t::add_wall_and_door_trim() {
 		}
 	} // for d
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
+		if (d->type == tquad_with_ix_t::TYPE_RDOOR) { // roof access door
+			continue; // this requires a completely different approach to trim and has not yet been implemented
+		}
 		cube_t door(d->get_bcube());
 		bool const dim(door.dy() < door.dx());
 		cube_t trim(door);
 		trim.expand_in_dim(dim, door_trim_exp);
+		bool dir(0);
 		unsigned ext_flags(flags);
 
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
 			if (!i->intersects_no_adj(trim)) continue;
 			trim.intersect_with_cube_xy(*i); // clip to containing part
-			bool const dir(i->get_center_dim(dim) < trim.get_center_dim(dim));
+			dir = (i->get_center_dim(dim) < trim.get_center_dim(dim));
 			trim.d[dim][dir] -= (dir ? -1.0 : 1.0)*0.025*window_vspacing; // move to to same offset for door
 			ext_flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // no, back side can be seen when door is opened
 			break;
@@ -1354,14 +1359,21 @@ void building_t::add_wall_and_door_trim() {
 		trim.d[!dim][1] = door.d[!dim][1];
 		trim.z1() = door.z1() + fc_thick; // floor height
 		trim.z2() = trim.z1() + 2.0*trim_thickness;
-		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT);
+		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT);
 
 		if (d->type == tquad_with_ix_t::TYPE_HDOOR) { // add trim at top of door, houses only
 			float z(door.z1() + window_vspacing - floor_thickness);
 			trim.z1() = z - 0.03*door.dz(); // see logic in clip_door_to_interior()
 			trim.z2() = z; // top of door texture
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_SHORT);
 		}
+		else if (d->type == tquad_with_ix_t::TYPE_BDOOR) { // different logic for building doors, which are higher
+			float z(door.z1() + window_vspacing - 0.01*door.dz());
+			trim.z1() = z - fc_thick;
+			trim.z2() = z;
+			ext_flags = flags; // unlike hdoors, need to draw the back face to hide the gap betweeen ceiling and floor above
+			trim.d[dim][dir] += (dir ? -1.0 : 1.0)*0.005*window_vspacing; // minor shift back toward building to prevent z-fighting
+		}
+		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_SHORT); // top of door
 	} // for d
 	if (!is_house && !pri_hall.is_all_zeros()) return; // office building hallway wall trim is not yet supported due to exterior corners
 
