@@ -435,7 +435,6 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						for (unsigned d = 0; d < 2; ++d) { // left, right of main hall
 							float const dsign(d ? -1.0 : 1.0);
 							cube_t split_wall(*p);
-							clip_wall_to_ceil_floor(split_wall, fc_thick);
 							split_wall.d[!min_dim][0] = room_start     + wall_edge_spacing; // start of building or end of prev sec hall
 							split_wall.d[!min_dim][1] = hall_start_pos - wall_edge_spacing; // start of this hall or end of building
 							float room_split_pos(p->d[min_dim][d]), div_pos(0); // start at edge of building (outermost room with windows)
@@ -494,6 +493,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								room_split_pos = next_split_pos;
 								set_wall_width(split_wall, room_split_pos, wall_half_thick, min_dim);
 								split_walls.push_back(split_wall);
+								clip_wall_to_ceil_floor(split_walls.back(), fc_thick); // clip post-add so that the room continues to use part z1/z2
 							} // for r
 							if (add_sec_hall) { // add sec hall remaining walls after doorway insertion
 								for (unsigned dir = 0; dir < 2; ++dir) {room_walls.push_back(sep_walls[dir]);}
