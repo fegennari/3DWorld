@@ -5,6 +5,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "city.h" // for object_model_loader_t
+#include "profiler.h"
 #pragma warning(disable : 26812) // prefer enum class over enum
 
 extern object_model_loader_t building_obj_model_loader;
@@ -1006,7 +1007,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
-	//timer_t timer("Gen Room Details");
+	//highres_timer_t timer("Gen Room Details");
 	interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
@@ -1375,13 +1376,20 @@ void building_t::add_wall_and_door_trim() {
 		}
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_SHORT); // top of door
 	} // for d
-	if (!is_house && !pri_hall.is_all_zeros()) return; // office building hallway wall trim is not yet supported due to exterior corners
-
 	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor, and maybe later at the ceilings
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
 			cube_t trim(*w);
 			trim.expand_in_dim( dim, trim_thickness);
-			//trim.expand_in_dim(!dim, 0.5*wall_thickness); // expand to cover gap at outside corners of hallway walls (TODO: only when needed)
+
+			if (!is_house && !pri_hall.is_all_zeros()) { // handle outside corners of office building hallway intersections
+				for (auto W = interior->walls[!dim].begin(); W != interior->walls[!dim].end(); ++W) { // check walls in other dim for an outside corner
+					for (unsigned d = 0; d < 2; ++d) {
+						if (W->d[!dim][0] > w->d[!dim][d] || W->d[!dim][1] < w->d[!dim][d]) continue; // not adjacent/overlapping
+						if (W->d[ dim][0] < w->d[ dim][0] && W->d[ dim][1] > w->d[ dim][1]) continue; // skip T junctions
+						trim.d[!dim][d] = W->d[!dim][d] + (d ? 1.0 : -1.0)*trim_thickness; // expand to cover gap at outside corners of hallway walls
+					}
+				} // for W
+			}
 			unsigned const num_floors(calc_num_floors(*w, window_vspacing, floor_thickness));
 			float z(w->z1());
 
