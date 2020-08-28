@@ -1326,7 +1326,7 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 	return roof_dz;
 }
 
-void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
+void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office buildings
 
 	if (!is_cube()) return; // for now, only cube buildings can have doors; doors can be added to N-gon (non cylinder) buildings later
 	assert(!parts.empty());
@@ -1341,7 +1341,9 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) {
 	bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
 	bool const has_windows(get_material().add_windows);
 	bool used[4] = {0,0,0,0}; // per-side, not per-base cube
-	unsigned const num_doors(1 + (rgen.rand() % (has_windows ? 3 : 4))); // 1-4; buildings with windows have at most 3 doors since they're smaller
+	unsigned const min_doors((parts.size() > 1) ? 2 : 1); // at least 2 doors unless it's a small rectangle (large rectangle will have a central hallway with doors at each end)
+	unsigned const max_doors(has_windows ? 3 : 4); // buildings with windows have at most 3 doors since they're smaller
+	unsigned const num_doors(min_doors + (rgen.rand() % (max_doors - min_doors + 1)));
 
 	for (unsigned num = 0; num < num_doors; ++num) {
 		bool placed(0);
