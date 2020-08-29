@@ -250,12 +250,18 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 	uint16_t const bldg_id(uint16_t(mat_ix + interior->rooms.size())); // some value that's per-building
 	cube_t const &part(get_part_for_room(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	float lo_pos(room_bounds.d[long_dim][0]);
+	bool const has_office_chair(building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR));
+	float lo_pos(room_bounds.d[long_dim][0]), chair_height(0.0), chair_radius(0.0);
 	cube_t c;
 	c.z1() = zval;
 	c.z2() = zval + 0.425*floor_spacing; // set height
 	bool added_cube(0);
 
+	if (has_office_chair) {
+		vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_OFFICE_CHAIR));
+		chair_height = 0.425*floor_spacing;
+		chair_radius = 0.5f*chair_height*(0.5f*(chair_sz.x + chair_sz.y))/chair_sz.z; // assume square and take average of xsize and ysize
+	}
 	for (unsigned n = 0; n < num_cubes; ++n) {
 		float const hi_pos(lo_pos + cube_width);
 		c.d[long_dim][0] = lo_pos;
@@ -284,6 +290,17 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 				objs.emplace_back(c2, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side1
 				objs.emplace_back(c3, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // side2
 				objs.emplace_back(c4, TYPE_COLLIDER, room_id, !long_dim, dir, RO_FLAG_INVIS, tot_light_amt); // back (against wall)
+
+				if (has_office_chair && (rgen.rand()&3)) { // add office chair 75% of the time
+					point center(c.get_cube_center());
+					center[!long_dim] += dir_sign*0.2*cube_depth;
+					for (unsigned d = 0; d < 2; ++d) {center[d] += 0.15*chair_radius*rgen.signed_rand_float();} // slightly random XY position
+					cube_t chair(center, center);
+					chair.z1() = zval;
+					chair.z2() = zval + chair_height;
+					chair.expand_by_xy(chair_radius);
+					objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, !long_dim, dir, cube_flags, tot_light_amt, room_obj_shape::SHAPE_CUBE, GRAY_BLACK);
+				}
 			} // for d
 		} // for col
 		lo_pos = hi_pos;
