@@ -1204,6 +1204,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			unsigned num_chairs(0);
 
 			// place room objects
+			// TODO: should room assignment depend on rooms.size() and possibly num_floors?
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool is_office_bathroom(r->is_office && r->rtype == RTYPE_BATH && !room_has_stairs_or_elevator(*r, room_center.z));
 
