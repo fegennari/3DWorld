@@ -20,6 +20,7 @@ class light_source;
 class lmap_manager_t;
 class building_nav_graph_t;
 struct pedestrian_t;
+typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 
 struct building_occlusion_state_t {
 	point pos;
@@ -563,7 +564,8 @@ struct building_t : public building_geom_t {
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
-	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale=1.0, point const *const only_cont_pt=nullptr) const;
+	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0, point const *const only_cont_pt=nullptr) const;
+	void get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const;
 	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) const;
 	int find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;

@@ -611,8 +611,6 @@ public:
 	vert.t[!st] = tscale[!st]*pt[i]; \
 	verts.push_back(vert);
 
-typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
-
 class building_draw_t {
 
 	class draw_block_t {
@@ -762,6 +760,9 @@ public:
 	unsigned get_to_draw_ix(tid_nm_pair_t const &tex) const {return tid_mapper.get_slot_ix(tex.tid);}
 	unsigned get_num_verts (tid_nm_pair_t const &tex, bool quads_or_tris=0) {return get_verts(tex, quads_or_tris).size();}
 
+	void get_all_mat_verts(vect_vnctcc_t &verts, bool triangles) const {
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {vector_add_to((triangles ? i->tri_verts : i->quad_verts), verts);}
+	}
 	void begin_draw_range_capture() {
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->record_num_verts();}
 	}
@@ -1099,6 +1100,7 @@ public:
 						clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
 						clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
 						clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st]);
+						// Note: if we're drawing windows, and either of the texture coords have zero ranges, we can drop this quad; but this is uncommon and maybe not worth the trouble
 					}
 					if (clamp_cube != nullptr && *clamp_cube != cube && n < 2) { // x/y dims only
 						unsigned const dim((i == 2) ? d : i); // x/y
@@ -1522,6 +1524,12 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	if (only_cont_pt != nullptr) { // camera inside this building, cut out holes so that the exterior doors show through
 		cut_holes_for_ext_doors(bdraw, *only_cont_pt, draw_parts_mask);
 	}
+}
+
+void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const {
+	building_draw_t bdraw; // should this be a static variable?
+	get_all_drawn_window_verts(bdraw);
+	bdraw.get_all_mat_verts(verts, 0); // combine quad verts across materials (should only be one)
 }
 
 void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const {
