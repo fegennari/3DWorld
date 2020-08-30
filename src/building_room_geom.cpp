@@ -443,14 +443,39 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_wall_trim(room_object_t const &c) {
-	unsigned skip_faces(0);
-	if      (c.shape == SHAPE_TALL ) {skip_faces = 0;} // door/window side trim
-	else if (c.shape == SHAPE_SHORT) {skip_faces = get_skip_mask_for_xy(!c.dim);} // door top trim: skip ends
-	else                             {skip_faces = get_skip_mask_for_xy(!c.dim) | EF_Z1;} // wall trim: skip bottom surface and short sides
-	if (c.flags & RO_FLAG_ADJ_LO) {skip_faces |= ~get_face_mask(c.dim, 0);}
-	if (c.flags & RO_FLAG_ADJ_HI) {skip_faces |= ~get_face_mask(c.dim, 1);}
-	skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
-	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(c, WHITE, tex_origin, skip_faces); // is_small, untextured, no shadows, not light scale
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
+
+	if (c.shape == SHAPE_ANGLED) { // single quad
+		point pts[4];
+		pts[0][!c.dim] = pts[1][!c.dim] = c.d[!c.dim][0];
+		pts[2][!c.dim] = pts[3][!c.dim] = c.d[!c.dim][1];
+		pts[0][ c.dim] = pts[3][ c.dim] = c.d[ c.dim][!c.dir];
+		pts[1][ c.dim] = pts[2][ c.dim] = c.d[ c.dim][ c.dir];
+		pts[0].z = pts[3].z = c.z1();
+		pts[1].z = pts[2].z = c.z2();
+		if (c.dir ^ c.dim) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);} // change winding order/normal sign
+		rgeom_mat_t::vertex_t v;
+		v.set_norm(get_poly_norm(pts));
+		v.set_c4(WHITE);
+		float const tcs[2][4] = {{0,0,1,1}, {0,1,1,0}};
+
+		for (unsigned n = 0; n < 4; ++n) {
+			v.v = pts[n];
+			v.t[0] = tcs[0][n];
+			v.t[1] = tcs[1][n];
+			mat.quad_verts.push_back(v);
+		}
+	}
+	else { // cube
+		unsigned skip_faces(0);
+		if      (c.shape == SHAPE_TALL ) {skip_faces = 0;} // door/window side trim
+		else if (c.shape == SHAPE_SHORT) {skip_faces = get_skip_mask_for_xy(!c.dim);} // door top trim: skip ends
+		else                             {skip_faces = get_skip_mask_for_xy(!c.dim) | EF_Z1;} // wall trim: skip bottom surface and short sides
+		if (c.flags & RO_FLAG_ADJ_LO) {skip_faces |= ~get_face_mask(c.dim, 0);}
+		if (c.flags & RO_FLAG_ADJ_HI) {skip_faces |= ~get_face_mask(c.dim, 1);}
+		skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
+		mat.add_cube_to_verts(c, WHITE, tex_origin, skip_faces); // is_small, untextured, no shadows, not light scale
+	}
 }
 
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) {

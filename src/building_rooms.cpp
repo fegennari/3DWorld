@@ -1326,6 +1326,7 @@ void building_t::add_wall_and_door_trim() {
 	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
 	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL);
+	bool const has_ceil_trim(is_house); // ceiling trim on houses only, for now (though the code also handles office buildings)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vect_cube_t trim_cubes;
 
@@ -1395,10 +1396,10 @@ void building_t::add_wall_and_door_trim() {
 		}
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_SHORT); // top of door
 	} // for d
-	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor, and maybe later at the ceilings
+	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor/ceiling
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
 			cube_t trim(*w);
-			trim.expand_in_dim( dim, trim_thickness);
+			trim.expand_in_dim(dim, trim_thickness);
 
 			if (!is_house && !pri_hall.is_all_zeros()) { // handle outside corners of office building hallway intersections
 				for (auto W = interior->walls[!dim].begin(); W != interior->walls[!dim].end(); ++W) { // check walls in other dim for an outside corner
@@ -1415,8 +1416,17 @@ void building_t::add_wall_and_door_trim() {
 			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 				trim.z1() = z; // floor height
 				trim.z2() = z + trim_height;
-				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_CUBE);
-			}
+				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_CUBE); // floor trim
+				if (!has_ceil_trim) continue;
+				trim.z2() = z + window_vspacing - floor_thickness; // ceil height
+				trim.z1() = trim.z2() - trim_height;
+
+				for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
+					cube_t ceil_trim(trim);
+					ceil_trim.d[dim][!dir] = w->d[dim][dir];
+					objs.emplace_back(ceil_trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_ANGLED); // ceiling trim
+				}
+			} // for f
 		} // for w
 	} // for d
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // add trim for exterior walls
@@ -1434,6 +1444,7 @@ void building_t::add_wall_and_door_trim() {
 					trim.z2() = z + trim_height;
 					trim_cubes.clear();
 					trim_cubes.push_back(trim); // start with entire length
+					float const ceil_trim_z2(z + window_vspacing - floor_thickness), ceil_trim_z1(ceil_trim_z2 - trim_height); // ceil height
 
 					for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
 						if (j == i) continue; // skip self
@@ -1450,7 +1461,15 @@ void building_t::add_wall_and_door_trim() {
 							subtract_cube_from_cubes(door, trim_cubes); // subtract this door from current trim cubes by clipping in XY
 						}
 					}
-					for (auto c = trim_cubes.begin(); c != trim_cubes.end(); ++c) {objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE);}
+					for (auto c = trim_cubes.begin(); c != trim_cubes.end(); ++c) {
+						objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE); // floor trim
+						if (!has_ceil_trim) continue;
+						if (is_house && c != trim_cubes.begin()) continue;
+						cube_t ceil_trim(is_house ? trim : *c); // houses have shorter doors and ceiling trim extends above the door, so draw full range
+						ceil_trim.z2() = ceil_trim_z2;
+						ceil_trim.z1() = ceil_trim_z1;
+						objs.emplace_back(ceil_trim, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED); // ceiling trim
+					}
 				} // for f
 			} // for dir
 		} // for dim
