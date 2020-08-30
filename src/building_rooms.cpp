@@ -236,7 +236,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 
 bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) { // assumes no prior placed objects
 	if (!room.is_office) return 0; // offices only
-	if (!room.interior && rgen.rand_bool()) return 0; // 50% chance for non-interior rooms
+	if (!room.interior && (rgen.rand()%3) == 0) return 0; // 66.7% chance for non-interior rooms
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const floor_spacing(get_window_vspace());
 	// Note: we could choose the primary dim based on door placement like in office building bathrooms, but it seems easier to not place cubes by doors
