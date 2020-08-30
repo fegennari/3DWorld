@@ -302,7 +302,8 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 struct obj_model_inst_t {
 	unsigned obj_id, model_id;
 	colorRGBA color;
-	obj_model_inst_t(unsigned oid, unsigned mid, colorRGBA const &c) : obj_id(oid), model_id(mid), color(c) {}
+	vector3d dir;
+	obj_model_inst_t(unsigned oid, unsigned mid, colorRGBA const &c, vector3d const &d) : obj_id(oid), model_id(mid), color(c), dir(d) {}
 };
 
 struct building_room_geom_t {

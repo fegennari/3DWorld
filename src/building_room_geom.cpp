@@ -1263,8 +1263,16 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		default: break;
 		} // end switch
 		if (i->type >= TYPE_TOILET && i->type <= TYPE_OFFICE_CHAIR) { // handle drawing of 3D models
+			vector3d dir(zero_vector);
+			dir[i->dim] = (i->dir ? 1.0 : -1.0);
+
+			if (i->type == TYPE_OFFICE_CHAIR) {
+				float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
+				vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
+				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
+			}
+			obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color, dir);
 			//get_material(tid_nm_pair_t()).add_cube_to_verts(*i, WHITE, tex_origin); // for debugging of model bcubes
-			obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->color);
 		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
@@ -1352,15 +1360,7 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_
 		if (!player_in_building && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
 		if (!shadow_only && !dist_less_than((camera_pdu.pos - xlate), obj.get_llc(), 100.0*obj.dz())) continue; // too far away
 		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
-		vector3d dir(zero_vector);
-		dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
-		
-		if (i->model_id == OBJ_MODEL_OFFICE_CHAIR) {
-			float const angle(123.4*obj.x1() + 456.7*obj.y1() + 567.8*obj.z1()); // random rotation angle based on position
-			vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
-			dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
-		}
-		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
+		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, i->dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
 		obj_drawn = 1;
 	}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
