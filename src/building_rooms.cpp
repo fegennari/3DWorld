@@ -1320,6 +1320,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 void building_t::add_wall_and_door_trim() {
 
+	//highres_timer_t timer("Add Wall And Door Trim");
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
@@ -1334,7 +1335,7 @@ void building_t::add_wall_and_door_trim() {
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
 			trim.d[!d->dim][0] = d->d[!d->dim][side] - (side ? door_trim_width : trim_thickness);
 			trim.d[!d->dim][1] = d->d[!d->dim][side] + (side ? trim_thickness : door_trim_width);
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, flags, 1.0, SHAPE_TALL); // abuse tall flag
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL); // abuse tall flag
 		}
 		// add trim at top of door
 		unsigned const num_floors(calc_num_floors(*d, window_vspacing, floor_thickness));
@@ -1364,13 +1365,13 @@ void building_t::add_wall_and_door_trim() {
 			trim.intersect_with_cube_xy(*i); // clip to containing part
 			dir = (i->get_center_dim(dim) < trim.get_center_dim(dim));
 			trim.d[dim][dir] -= (dir ? -1.0 : 1.0)*0.025*window_vspacing; // move to to same offset for door
-			ext_flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO); // no, back side can be seen when door is opened
+			ext_flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 			break;
 		}
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
 			trim.d[!dim][0] = door.d[!dim][side] - (side ? door_trim_width : 0.0);
 			trim.d[!dim][1] = door.d[!dim][side] + (side ? 0.0 : door_trim_width);
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, ext_flags, 1.0, SHAPE_TALL); // abuse tall flag
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, (ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL); // abuse tall flag
 		}
 		// add trim at bottom of door for threshold
 		trim.d[!dim][0] = door.d[!dim][0];
@@ -1452,7 +1453,72 @@ void building_t::add_wall_and_door_trim() {
 				} // for f
 			} // for dir
 		} // for dim
-	}
+	} // for i
+	// add window trim
+	float const border_mult(0.95); // account for the frame part of the window texture, which is included in the interior cutout of the window
+	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
+	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
+	float const window_trim_width(0.75*wall_thickness), window_trim_depth(0.1*wall_thickness), windowsill_depth(0.1*wall_thickness);
+	float const window_offset(0.01*window_vspacing); // must match building_draw_t::add_section()
+	static vect_vnctcc_t wall_quad_verts;
+	wall_quad_verts.clear();
+	get_all_drawn_window_verts_as_quads(wall_quad_verts);
+	assert((wall_quad_verts.size() & 3) == 0); // must be a multiple of 4
+
+	for (unsigned i = 0; i < wall_quad_verts.size(); i += 4) { // iterate over each quad
+		auto const &v0(wall_quad_verts[i]);
+		cube_t c(v0.v);
+		float tx1(v0.t[0]), tx2(tx1), tz1(v0.t[1]), tz2(tz1); // tex coord ranges (xy, z); should generally be whole integers
+
+		for (unsigned j = 1; j < 4; ++j) {
+			auto const &vj(wall_quad_verts[i + j]);
+			c.union_with_pt(vj.v);
+			min_eq(tx1, vj.t[0]);
+			max_eq(tx2, vj.t[0]);
+			min_eq(tz1, vj.t[1]);
+			max_eq(tz2, vj.t[1]);
+		}
+		if (tx1 == tx2 || tz1 == tz2) continue; // wall is too small to contain a window
+		assert(tx2 - tx1 < 1000.0f && tz2 - tz1 < 1000.0f); // sanity check - less than 1000 windows in each dim
+		assert(c.dz() > 0.0);
+		bool const dim(c.dy() < c.dx()), dir(v0.get_norm()[dim] > 0.0);
+		assert(c.get_sz_dim(dim) == 0.0); // must be zero size in one dim (X or Y oriented); could also use the vertex normal
+		float const d_tx_inv(1.0f/(tx2 - tx1)), d_tz_inv(1.0f/(tz2 - tz1));
+		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to window_vspacing
+		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border);
+		cube_t window(c); // copy dim <dim>
+		window.translate_dim((dir ? -1.0 : 1.0)*window_offset, dim);
+		window.d[dim][!dir] += (dir ? -1.0 : 1.0)*window_trim_depth; // add thickness on interior of building
+		unsigned ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
+
+		for (float z = tz1; z < tz2; z += 1.0) { // each floor
+			float const bot_edge(c.z1() + (z - tz1)*window_height);
+			window.z1() = bot_edge + border_z;
+			window.z2() = bot_edge + window_height - border_z;
+
+			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
+				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
+				window.d[!dim][0] = low_edge + border_xy;
+				window.d[!dim][1] = low_edge + window_width - border_xy;
+				cube_t top(window), bot(window), side(window);
+				top.z1()  = window.z2();
+				top.z2() += window_trim_width;
+				bot.z2()  = window.z1();
+				bot.z1() -= window_trim_width;
+				bot.d[dim][!dir] += (dir ? -1.0f : 1.0f)*(windowsill_depth - window_trim_depth); // shift out further for windowsill
+				top.expand_in_dim(!dim, window_trim_width);
+				bot.expand_in_dim(!dim, window_trim_width);
+				objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL);
+				objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL);
+
+				for (unsigned s = 0; s < 2; ++s) { // left/right sides
+					side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*window_trim_width;
+					side.d[!dim][!s] = window.d[!dim][s];
+					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL);
+				}
+			} // for xy
+		} // for z
+	} // for i
 }
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
