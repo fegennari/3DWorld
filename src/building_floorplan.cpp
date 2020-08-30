@@ -50,7 +50,8 @@ int building_t::get_num_windows_on_side(float xy1, float xy2) const {
 	clip_low_high(t0, t1);
 	return round_fp(t1 - t0);
 }
-float building_t::get_window_border() const {return 0.5*(1.0 - global_building_params.get_window_width_fract());} // (0.0, 1.0)
+float building_t::get_window_h_border() const {return 0.5*(1.0 - global_building_params.get_window_width_fract ());} // (0.0, 1.0)
+float building_t::get_window_v_border() const {return 0.5*(1.0 - global_building_params.get_window_height_fract());} // (0.0, 1.0)
 
 void set_wall_width(cube_t &wall, float pos, float half_thick, bool dim) {
 	wall.d[dim][0] = pos - half_thick;
@@ -155,7 +156,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
 	float const doorway_width(0.5*window_vspacing), doorway_hwidth(0.5*doorway_width);
 	float const wall_thick(get_wall_thickness()), wall_half_thick(0.5*wall_thick), wall_edge_spacing(0.05*wall_thick), min_wall_len(4.0*doorway_width);
-	float const window_border(get_window_border());
+	float const window_border(get_window_h_border());
 	point bldg_door_open_dir_tp(bcube.get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
 	// houses have at most two parts; exclude garage, shed, porch, porch support, etc.
 	auto parts_end(get_real_parts_end());

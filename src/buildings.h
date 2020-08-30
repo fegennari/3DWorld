@@ -546,7 +546,8 @@ struct building_t : public building_geom_t {
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
 	int get_num_windows_on_side(float xy1, float xy2) const;
-	float get_window_border() const;
+	float get_window_h_border() const;
+	float get_window_v_border() const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,

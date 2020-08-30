@@ -370,7 +370,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 			cube_t c(corner, corner);
 			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*(dim ? closet_min_width : closet_min_depth);
 			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(dim ? closet_min_depth : closet_min_width);
-			if (is_ext_wall[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, get_window_border())) continue; // check for window intersection
+			if (is_ext_wall[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, get_window_h_border())) continue; // check for window intersection
 			c.z2() += window_vspacing - floor_thickness;
 			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed
 			if (!check_valid_closet_placement(c, room, objs_start, min_bed_space)) continue; // bad placement
@@ -389,7 +389,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 			for (unsigned s2 = 0; s2 < num_steps; ++s2) { // now try increasing depth
 				cube_t c2(c);
 				c2.d[dim][!dir] += depth_step;
-				if (is_ext_wall[!dim][other_dir] && is_val_inside_window(part, dim, (c2.d[dim][!dir] - signed_front_clearance), window_hspacing, get_window_border())) break; // bad placement
+				if (is_ext_wall[!dim][other_dir] && is_val_inside_window(part, dim, (c2.d[dim][!dir] - signed_front_clearance), window_hspacing, get_window_h_border())) break; // bad placement
 				if (!check_valid_closet_placement(c2, room, objs_start, min_bed_space)) break; // bad placement
 				c = c2; // valid placement, update with larger cube
 			}
