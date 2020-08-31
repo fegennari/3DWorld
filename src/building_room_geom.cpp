@@ -122,7 +122,8 @@ void rgeom_mat_t::add_vcylin_to_verts(point const &bot, point const &top, float 
 		unsigned const center_ix(itix);
 		itri_verts[itix++].assign(ce[bt], normal, 0.0, 0.0, cw.c); // center
 
-		for (unsigned i = 0; i < ndiv; ++i) {
+		for (unsigned I = 0; I < ndiv; ++I) {
+			unsigned const i(bt ? ndiv-I-1 : I); // invert winding order for top face
 			vector3d const &side_normal(vpn.n[i]);
 			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, side_normal.x, side_normal.y, cw.c); // assign tcs based on side normal
 			indices[iix++] = center_ix; // center
