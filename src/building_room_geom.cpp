@@ -79,12 +79,16 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 	for (unsigned i = 0; i < numi; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + numv);} // copy in reverse order
 }
 
-void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float rs_bot, float rs_top) {
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top,
+	bool two_sided, bool inv_tb, float rs_bot, float rs_top, float side_tscale)
+{
 	point const center(c.get_cube_center());
 	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
-	add_vcylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top, color, draw_bot, draw_top, two_sided, inv_tb);
+	add_vcylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top, color, draw_bot, draw_top, two_sided, inv_tb, side_tscale);
 }
-void rgeom_mat_t::add_vcylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided, bool inv_tb) {
+void rgeom_mat_t::add_vcylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
+	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale)
+{
 	point const ce[2] = {bot, top};
 	unsigned const ndiv(N_CYL_SIDES);
 	float const ndiv_inv(1.0/ndiv);
@@ -98,7 +102,7 @@ void rgeom_mat_t::add_vcylin_to_verts(point const &bot, point const &top, float 
 
 	for (unsigned i = 0; i <= ndiv; ++i) { // vertex data
 		unsigned const s(i%ndiv);
-		float const ts(1.0f - i*ndiv_inv);
+		float const ts(side_tscale*(1.0f - i*ndiv_inv));
 		norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
 		itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, ts, 0.0, cw.c);
 		itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw.c);
@@ -321,8 +325,28 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 	top.z1() += (1.0 - top_dz)*c.dz(); // 15% of height
 	legs_bcube.z2() = top.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	get_wood_material(tscale).add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
-	add_tc_legs(legs_bcube, color, leg_width, tscale);
+	rgeom_mat_t &mat(get_wood_material(tscale));
+
+	if (c.shape == SHAPE_CYLIN) { // cylindrical table
+		vector3d const size(c.get_size());
+		legs_bcube.expand_by_xy(-0.46*size);
+		mat.add_vcylin_to_verts(top, color, 1, 1, 0, 0, 1.0, 1.0, 16.0); // draw top and bottom with scaled side texture coords
+		mat.add_vcylin_to_verts(legs_bcube, color, 1, 1, 0, 0, 1.0, 1.0, 1.0); // support
+		cube_t feet(c);
+		feet.z2() = c.z1() + 0.1*c.dz();
+		feet.expand_by_xy(-0.2*size);
+
+		for (unsigned d = 0; d < 2; ++d) { // add crossed feet
+			cube_t foot(feet);
+			foot.expand_in_dim(d, -0.27*size[d]);
+			mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1); // skip bottom surface
+		}
+	}
+	else { // cube table
+		assert(c.shape == SHAPE_CUBE);
+		mat.add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
+		add_tc_legs(legs_bcube, color, leg_width, tscale);
+	}
 }
 
 void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
