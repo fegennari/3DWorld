@@ -323,7 +323,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			break; // only change zval once
 		}
 	}
-	if (interior->room_geom) { // collision with room cubes
+	if (interior->room_geom) { // collision with room geometry
 		vector<room_object_t> const &objs(interior->room_geom->objs);
 		obj_z = max(pos.z, p_last.z);
 
@@ -354,7 +354,16 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 			cube_t c_extended(*c);
 			c_extended.z1() -= camera_zh;
-			had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm); // skip_z=0
+
+			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+				float const radius(0.25f*(c->dx() + c->dy())); // average of x/y diameter
+				point const center(c->get_cube_center());
+				cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, c->z2()), radius, radius);
+				had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, cylin, cnorm);
+			}
+			else { // assume it's a cube
+				had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm); // skip_z=0
+			}
 		} // for c
 	}
 	for (auto i = ped_bcubes.begin(); i != ped_bcubes.end(); ++i) {
