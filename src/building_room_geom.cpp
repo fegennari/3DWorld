@@ -1091,25 +1091,41 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 }
 
 void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
+	float const dz(c.dz());
 	cube_t top(c);
-	top.z1() += 0.95*c.dz();
+	top.z1() += 0.95*dz;
 	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("marble2.jpg"), 2.5*tscale), 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
 
 	if (c.type == TYPE_KSINK) { // counter with kitchen sink
-		float const sdepth(0.9*c.get_sz_dim(c.dim)), swidth(min(1.4f*sdepth, 0.75f*c.get_sz_dim(!c.dim)));
+		float const sdepth(0.8*c.get_sz_dim(c.dim)), swidth(min(1.4f*sdepth, 0.75f*c.get_sz_dim(!c.dim)));
 		vector3d const center(c.get_cube_center());
-		cube_t sink(center, center);
+		vector3d faucet_pos(center);
+		faucet_pos[c.dim] += (c.dir ? -1.0 : 1.0)*0.56*sdepth;
+		cube_t sink(center, center), faucet1(faucet_pos, faucet_pos);
 		sink.z2() = top.z1();
-		sink.z1() = top.z1() - 0.25*c.dz();
+		sink.z1() = top.z1() - 0.25*dz;
+		faucet1.z1() = top.z2();
+		faucet1.z2() = top.z2() + 0.30*dz;
 		sink.expand_in_dim( c.dim, 0.5*sdepth);
 		sink.expand_in_dim(!c.dim, 0.5*swidth);
+		faucet1.expand_in_dim( c.dim, 0.04*sdepth);
+		faucet1.expand_in_dim(!c.dim, 0.05*swidth);
+		cube_t faucet2(faucet1);
+		faucet2.z1() = faucet1.z2();
+		faucet2.z2() += 0.035*dz;
+		faucet2.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.28*sdepth;
 		static vect_cube_t cubes;
 		cubes.clear();
 		subtract_cube_from_cube(top, sink, cubes);
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {top_mat.add_cube_to_verts(*i, top_color, tex_origin);} // should always be 4 cubes
-		// basin: unshadowed, inverted, skip top face (should be specular metal)
-		get_material(tid_nm_pair_t(), 0).add_cube_to_verts(sink, apply_light_color(c, GRAY), tex_origin, EF_Z2, 0, 0, 0, 1);
+		tid_nm_pair_t tex;
+		tex.set_specular(0.8, 60.0);
+		rgeom_mat_t &metal_mat(get_material(tex, 0)); // unshadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
+		colorRGBA const sink_color(apply_light_color(c, GRAY));
+		metal_mat.add_cube_to_verts(sink,    sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face
+		metal_mat.add_cube_to_verts(faucet1, sink_color, tex_origin, EF_Z12); // vertical part of faucet, skip top and bottom faces
+		metal_mat.add_cube_to_verts(faucet2, sink_color, tex_origin, 0); // horizontal part of faucet, draw all faces
 	}
 	else { // regular counter top
 		top_mat.add_cube_to_verts(top, top_color, tex_origin); // top surface, all faces
