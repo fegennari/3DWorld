@@ -42,10 +42,12 @@ void tid_nm_pair_t::set_gl(shader_t &s) const {
 	select_multitex(get_nm_tid(), 5);
 	if (get_nm_tid() == FLAT_NMAP_TEX) {s.add_uniform_float("bump_map_mag", 0.0);} // disable bump map
 	if (emissive) {s.add_uniform_float("emissive_scale", 1.0);} // enable emissive
+	if (spec_mag > 0) {s.set_specular(spec_mag/255.0, shininess);}
 }
 void tid_nm_pair_t::unset_gl(shader_t &s) const {
 	if (get_nm_tid() == FLAT_NMAP_TEX) {s.add_uniform_float("bump_map_mag", 1.0);} // re-enable bump map
 	if (emissive) {s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
+	if (spec_mag > 0) {s.clear_specular();}
 }
 void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
 	if      (tid == BLDG_WINDOW_TEX    ) {tid = BLDG_WIND_TRANS_TEX;}
