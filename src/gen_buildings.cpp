@@ -37,6 +37,12 @@ void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
+tid_nm_pair_t tid_nm_pair_t::get_scaled_version(float scale) const {
+	tid_nm_pair_t tex(*this);
+	tex.tscale_x *= scale;
+	tex.tscale_y *= scale;
+	return tex;
+}
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();} else {select_texture(tid);}
 	select_multitex(get_nm_tid(), 5);
@@ -148,6 +154,10 @@ void read_texture_and_add_if_valid(FILE *fp, string const &str, int &error, vect
 void read_building_tscale(FILE *fp, tid_nm_pair_t &tex, string const &str, int &error) {
 	if (!read_float(fp, tex.tscale_x)) {buildings_file_err(str, error);}
 	tex.tscale_y = tex.tscale_x; // uniform
+}
+void read_building_mat_specular(FILE *fp, string const &str, tid_nm_pair_t &tex, int &error) {
+	float mag(0.0), shine(0.0);
+	if (read_float(fp, mag) && read_float(fp, shine)) {tex.set_specular(mag, shine);} else {buildings_file_err(str, error);}
 }
 
 bool parse_buildings_option(FILE *fp) {
@@ -335,6 +345,14 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "roof_color_grayscale_rand") {
 		if (!read_float(fp, global_building_params.cur_mat.roof_color.grayscale_rand)) {buildings_file_err(str, error);}
 	}
+	// specular
+	else if (str == "side_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.side_tex,  error);}
+	else if (str == "roof_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.roof_tex,  error);}
+	else if (str == "wall_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.wall_tex,  error);}
+	else if (str == "ceil_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.ceil_tex,  error);}
+	else if (str == "floor_specular") {read_building_mat_specular(fp, str, global_building_params.cur_mat.floor_tex, error);}
+	else if (str == "house_ceil_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.house_ceil_tex,  error);}
+	else if (str == "house_floor_specular") {read_building_mat_specular(fp, str, global_building_params.cur_mat.house_floor_tex, error);}
 	// windows
 	else if (str == "window_width") {
 		if (!read_float(fp, global_building_params.window_width) || !check_01(global_building_params.window_width)) {buildings_file_err(str, error);}
@@ -2524,7 +2542,11 @@ public:
 					}
 				}
 				(*i)->building_draw_vbo.draw(s, shadow_only, force_wall_tex, 0, 1, exclude); // tex_filt_mode=1 (exterior walls only); no stencil test
-				if (force_wall_tex) {s.add_uniform_vector3d("texgen_origin", zero_vector);} // restore orig value
+				
+				if (force_wall_tex) { // restore orig value
+					s.add_uniform_vector3d("texgen_origin", zero_vector);
+					(*i)->buildings.front().get_material().wall_tex.unset_gl(s);
+				}
 			} // for i
 			reset_interior_lighting(s);
 			s.end_shader();

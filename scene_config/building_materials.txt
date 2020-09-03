@@ -27,6 +27,9 @@ buildings floor_tid plaster.png # default
 buildings floor_nm_tid none
 buildings ceil_tid particleb.png
 buildings ceil_nm_tid normal_maps/particleb_NRM.jpg
+buildings wall_specular  0.15 60.0
+buildings ceil_specular  0.10 40.0
+buildings floor_specular 0.0 0.0 # carpet, not specular
 
 # interior detail rug textures
 buildings add_rug_texture carpet/rug1.jpg
@@ -67,6 +70,8 @@ buildings house_floor_tid fence.jpg
 buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
 buildings house_ceil_tid stucco.jpg
 buildings house_ceil_nm_tid normal_maps/stucco_NRM.jpg
+buildings house_ceil_specular  0.15 60.0
+buildings house_floor_specular 1.0 60.0
 
 # brick buildings
 buildings house_prob 0.67 # 67%
