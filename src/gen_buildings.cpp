@@ -754,6 +754,8 @@ class building_draw_t {
 					assert(0);
 				}
 			}
+			// if new texture has specular and block does not, copy specular parameters from new texture; this is needed for house wood floors
+			if (tex.spec_mag && !block.tex.spec_mag) {block.tex.spec_mag = tex.spec_mag; block.tex.shininess = tex.shininess;}
 		}
 		return (quads_or_tris ? block.tri_verts : block.quad_verts);
 	}
@@ -1371,7 +1373,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			cube_t inner_cube(*i);
 			inner_cube.expand_by_xy(-spacing);
 			// add interior of elevator by drawing the inside of the cube with a slightly smaller size, with invert_normals=1; normal mapped?
-			bdraw.add_section(*this, empty_vc, inner_cube, tid_nm_pair_t(FENCE_TEX, -1, 16.0, 16.0), WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
+			tid_nm_pair_t wall_tex(FENCE_TEX, -1, 16.0, 16.0);
+			wall_tex.set_specular(0.5, 20.0);
+			bdraw.add_section(*this, empty_vc, inner_cube, wall_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
 			// add elevator doors
 			float const door_width(i->open ? 1.12*frame_width : 0.99*0.5*width);
 

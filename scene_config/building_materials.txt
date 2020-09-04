@@ -28,7 +28,7 @@ buildings floor_nm_tid none
 buildings ceil_tid particleb.png
 buildings ceil_nm_tid normal_maps/particleb_NRM.jpg
 buildings wall_specular  0.15 60.0
-buildings ceil_specular  0.10 40.0
+buildings ceil_specular  0.20 40.0
 buildings floor_specular 0.0 0.0 # carpet, not specular
 
 # interior detail rug textures
@@ -71,7 +71,7 @@ buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
 buildings house_ceil_tid stucco.jpg
 buildings house_ceil_nm_tid normal_maps/stucco_NRM.jpg
 buildings house_ceil_specular  0.15 60.0
-buildings house_floor_specular 1.0 60.0
+buildings house_floor_specular 0.40 50.0
 
 # brick buildings
 buildings house_prob 0.67 # 67%
@@ -121,6 +121,7 @@ buildings house_floor_tid paneling.png
 buildings house_floor_nm_tid normal_maps/paneling_NRM.jpg
 buildings floor_tid carpet/carpet2.jpg
 buildings floor_nm_tid none
+buildings house_floor_specular 0.60 50.0
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
@@ -145,6 +146,8 @@ buildings house_floor_tid fence.jpg
 buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
 buildings floor_tid carpet/office_carpet2.jpg # nice, but low contrast with walls
 buildings floor_nm_tid none
+buildings house_ceil_specular  0.00 30.0 # enable this when we have a normal map for this ceiling texture
+buildings house_floor_specular 0.40 50.0
 
 buildings side_color 0.7 0.7 0.7 1.0
 buildings add_material
