@@ -108,3 +108,4 @@ building_rooms.o
 building_room_geom.o
 simplifier.o
 city_model.o
+city_building_params.o
