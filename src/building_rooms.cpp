@@ -1031,11 +1031,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
-	float const extra_bathroom_prob(is_house ? 0.5 : 0.25);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0), num_light_stacks(0), num_bathrooms(0);
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
+	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0); // per-floor
@@ -1206,11 +1206,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			unsigned num_chairs(0);
 
 			// place room objects
-			// TODO: should room assignment depend on rooms.size() and possibly num_floors?
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool is_office_bathroom(r->is_office && r->rtype == RTYPE_BATH && !room_has_stairs_or_elevator(*r, room_center.z));
 
-			if (is_office_bathroom) { // bathroom is already assigned (should this be a row of toilets and sinks if the room is large?)
+			if (is_office_bathroom) { // bathroom is already assigned
 				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start); // add bathroom
 			}
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
@@ -1243,8 +1242,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				added_obj = can_place_book = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
 				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? RTYPE_STUDY : RTYPE_OFFICE), f);} // or other room type - may be overwritten below
 			}
-			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen
-				if (((!added_living && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r, 1))) { // front_door_only=1
+			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen and have enough rooms
+				if ((!added_living && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r, 1)) { // front_door_only=1
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
 					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
 					if (is_living) {r->assign_to(RTYPE_LIVING, f);}
@@ -1298,14 +1297,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
 
 			if (!is_bathroom && !is_bedroom && !is_kitchen) { // add potted plants to some room types
-				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()&3) == 0)); // 0-2 for living/dining rooms, 50% chance for houses, 25% chance for offices
+				// 0-2 for living/dining rooms, 50% chance for houses, 25% chance for offices
+				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()&3) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, num);}
 			}
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
 			if (is_bathroom) {add_bathroom_windows(*r, room_center.z, room_id, tot_light_amt, is_lit);} // find all windows and add frosted windows
-			//if (z == bcube.z1()) {} // any special logic that goes on the first floor is here
 		} // for f (floor)
 		num_light_stacks += num_lights_added;
 		if (added_bathroom) {++num_bathrooms;}
