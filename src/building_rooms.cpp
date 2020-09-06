@@ -564,7 +564,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &
 		objs_start = objs.size(); // exclude this from collision checks
 		zval = new_zval; // move the effective floor up
 	}
-	if (have_toilet && have_sink && room.is_office && min(place_area.dx(), place_area.dy()) > 1.8*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.6*floor_spacing) {
+	if (have_toilet && have_sink && room.is_office && min(place_area.dx(), place_area.dy()) > 1.5*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.6*floor_spacing) {
 		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit)) return 1; // large enough, try to divide into bathroom stalls
 	}
 	bool placed_obj(0), placed_toilet(0);
