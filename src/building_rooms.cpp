@@ -107,8 +107,13 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 	float const wall_thickness(get_wall_thickness());
 	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	cube_t avoid;
 	vect_cube_t doorways;
 
+	if (!objs.empty() && objs[objs_start].type == TYPE_TABLE) { // make sure there's enough space for the player to walk around the table
+		avoid = objs[objs_start];
+		avoid.expand_by_xy(get_min_front_clearance());
+	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->intersects(room_exp)) {doorways.push_back(*i);}
 	}
@@ -137,6 +142,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 		cube_t c(center, center);
 		c.expand_by_xy(radius);
 		c.z2() += height;
+		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
 		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (cylin ? room_obj_shape::SHAPE_CYLIN : room_obj_shape::SHAPE_CUBE));
 		objs.back().color = colors[rgen.rand()%NUM_COLORS];
