@@ -86,7 +86,7 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 	for (auto i = interior->room_geom->objs.begin() + objs_start; i != interior->room_geom->objs.end(); ++i) {
 		if (i->type != TYPE_CHAIR || !i->intersects(region)) continue;
 		i->z2() -= 0.25*i->dz();
-		i->type = TYPE_SM_CHAIR;
+		i->shape = SHAPE_SHORT;
 	}
 }
 

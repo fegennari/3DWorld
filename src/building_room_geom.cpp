@@ -350,7 +350,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 }
 
 void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
-	float const height(c.dz()*((c.type == TYPE_SM_CHAIR) ? 1.333 : 1.0)); // effective height if the chair wasn't short
+	float const height(c.dz()*((c.shape == SHAPE_SHORT) ? 1.333 : 1.0)); // effective height if the chair wasn't short
 	cube_t seat(c), back(c), legs_bcube(c);
 	seat.z1() += 0.32*height;
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
@@ -1265,7 +1265,7 @@ colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_col
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE:    return get_textured_wood_color();
-	case TYPE_CHAIR: case TYPE_SM_CHAIR: return (color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
+	case TYPE_CHAIR:    return (color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
 	case TYPE_STAIR:    return LT_GRAY; // close enough
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());
@@ -1297,7 +1297,6 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		switch (i->type) {
 		case TYPE_TABLE:   add_table   (*i, tscale); break;
 		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
-		case TYPE_SM_CHAIR:add_chair   (*i, tscale); break;
 		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
 		case TYPE_RUG:     add_rug     (*i); break;
 		case TYPE_PICTURE: add_picture (*i); break;
