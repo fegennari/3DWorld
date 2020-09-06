@@ -554,6 +554,7 @@ struct building_t : public building_geom_t {
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	float get_window_h_border() const;
 	float get_window_v_border() const;
+	float get_hspacing_for_part(cube_t const &part, bool dim) const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
@@ -598,10 +599,12 @@ struct building_t : public building_geom_t {
 	int get_room_containing_pt(point const &pt) const;
 	bool room_containing_pt_has_stairs(point const &pt) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
-	bool place_obj_along_wall(room_object type, cube_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
-		bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE);
-	bool place_model_along_wall(unsigned model_id, room_object type, cube_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
-		bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0, unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE);
+	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen,
+		float zval, unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
+		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
+	bool place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen,
+		float zval, unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
+		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_elevators(point const &player_pos);
 private:
