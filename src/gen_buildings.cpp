@@ -63,18 +63,11 @@ void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
 bool room_object_t::enable_rugs    () {return !global_building_params.rug_tids    .empty();}
 bool room_object_t::enable_pictures() {return !global_building_params.picture_tids.empty();}
 
-int room_object_t::get_rug_tid() const {
-	unsigned const num_tids(global_building_params.rug_tids.size());
-	return ((num_tids == 0) ? -1 : global_building_params.rug_tids[obj_id % num_tids]);
-}
-int room_object_t::get_picture_tid() const {
-	unsigned const num_tids(global_building_params.picture_tids.size());
-	return ((num_tids == 0) ? -1 : global_building_params.picture_tids[obj_id % num_tids]);
-}
-int room_object_t::get_sheet_tid() const {
-	unsigned const num_tids(global_building_params.sheet_tids.size());
-	return ((num_tids == 0) ? -1 : global_building_params.sheet_tids[obj_id % num_tids]);
-}
+int select_tid_from_list(vector<unsigned> const &tids, unsigned ix) {return (tids.empty() ? -1 : tids[ix % tids.size()]);}
+int room_object_t::get_rug_tid         () const {return select_tid_from_list(global_building_params.rug_tids,     obj_id);}
+int room_object_t::get_picture_tid     () const {return select_tid_from_list(global_building_params.picture_tids, obj_id);}
+int room_object_t::get_comp_monitor_tid() const {return select_tid_from_list(global_building_params.desktop_tids, obj_id);}
+int room_object_t::get_sheet_tid       () const {return select_tid_from_list(global_building_params.sheet_tids,   obj_id);}
 
 void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos) {
 	float const x(pos.x - center.x), y(pos.y - center.y); // translate to center

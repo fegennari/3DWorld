@@ -128,7 +128,7 @@ struct building_params_t {
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity; // {any, city_only, non_city}
-	vector<unsigned> rug_tids, picture_tids, sheet_tids;
+	vector<unsigned> rug_tids, picture_tids, desktop_tids, sheet_tids;
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), dome_roof(0),
 		onion_roof(0), enable_people_ai(0), add_city_interiors(0), num_place(num), num_tries(10), cur_prob(1), max_shadow_maps(32), ao_factor(0.0),
@@ -254,6 +254,7 @@ struct room_object_t : public cube_t {
 	static bool enable_pictures();
 	int get_rug_tid() const;
 	int get_picture_tid() const;
+	int get_comp_monitor_tid() const;
 	int get_sheet_tid() const;
 	colorRGBA get_color() const;
 };

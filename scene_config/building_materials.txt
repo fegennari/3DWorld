@@ -52,6 +52,15 @@ buildings add_picture_texture pictures/san_miguel.jpg
 buildings add_picture_texture pictures/spheres.jpg
 buildings add_picture_texture pictures/sponza.jpg
 
+# computer monitor desktop textures
+buildings add_desktop_texture pictures/fg_desktop.png
+buildings add_desktop_texture pictures/Ubuntu.jpg
+buildings add_desktop_texture pictures/ascii_art.png
+buildings add_desktop_texture pictures/macos_mojave.jpg
+buildings add_desktop_texture pictures/windows_vm.png
+buildings add_desktop_texture pictures/windows_messy.jpg
+buildings add_desktop_texture pictures/macos_sierra.jpg
+
 # interior detail sheet textures
 # Note: fabrics directory is not part of the git repo
 buildings add_sheet_texture white.png
