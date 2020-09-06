@@ -213,8 +213,9 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a desk
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		c.d[dim][ dir] = room_bounds.d[dim][dir] + rgen.rand_uniform(0.1, 1.0)*(dir ? -1.0 : 1.0)*get_wall_thickness(); // almost against this wall
-		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+		float const dsign(dir ? -1.0 : 1.0);
+		c.d[dim][ dir] = room_bounds.d[dim][dir] + rgen.rand_uniform(0.1, 1.0)*dsign*get_wall_thickness(); // almost against this wall
+		c.d[dim][!dir] = c.d[dim][dir] + dsign*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
 		c.d[!dim][0] = pos - 0.5*width;
 		c.d[!dim][1] = pos + 0.5*width;
@@ -225,6 +226,19 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 		objs.back().obj_id = (uint16_t)objs.size();
 		cube_t bc(c);
 
+		if (rgen.rand_bool() && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) { // add a computer monitor using the TV model
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
+			float const tv_height(1.1*height), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z), center(c.get_center_dim(!dim));
+			cube_t tv;
+			tv.z1() = c.z2();
+			tv.z2() = c.z2() + tv_height;
+			tv.d[dim][ dir] = c. d[dim][dir] + dsign*0.25*depth; // 25% of the way from the wall
+			tv.d[dim][!dir] = tv.d[dim][dir] + dsign*tv_depth;
+			tv.d[!dim][0] = center - tv_hwidth;
+			tv.d[!dim][1] = center + tv_hwidth;
+			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+			objs.back().obj_id = (uint16_t)objs.size();
+		}
 		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
 			point chair_pos;
 			chair_pos.z = zval;
@@ -1285,7 +1299,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					room_object_t const &obj(objs[i]);
 					bool place_book(0);
 					if      (obj.type == TYPE_TABLE && i == objs_start) {place_book = (rgen.rand_float() < 0.40*place_prob);} // only first table (not TV table)
-					else if (obj.type == TYPE_DESK) {place_book = (rgen.rand_float() < 0.75*place_prob);}
+					else if (obj.type == TYPE_DESK) {place_book = ((i+1 == objs_end || objs[i+1].type != TYPE_TV) && rgen.rand_float() < 0.8*place_prob);} // only if no TV
 					else if (obj.type == TYPE_COUNTER && !placed_on_counter) {place_book = placed_on_counter = (rgen.rand_float() < 0.5);}
 					if (place_book) {place_book_on_obj(rgen, obj, room_id, tot_light_amt, is_lit, (obj.type != TYPE_TABLE));}
 				}
