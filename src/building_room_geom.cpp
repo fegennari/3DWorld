@@ -1213,14 +1213,11 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_potted_plant(room_object_t const &c) {
-	// draw the pot
-	unsigned const num_colors = 8;
-	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
-	colorRGBA const pot_color(apply_light_color(c, pot_colors[c.obj_id % num_colors]));
+	// draw the pot, tapered with narrower bottom
 	float const plant_diameter(0.5f*(c.dx() + c.dy())), pot_radius(0.4*plant_diameter),stem_radius(0.035*plant_diameter);
 	float const pot_height(max(0.6*plant_diameter, 0.3*c.dz())), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height);
 	float const cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
-	get_material(untex_shad_mat, 1).add_vcylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, pot_color, 0, 0, 1, 0); // pot, tapered with narrower bottom
+	get_material(untex_shad_mat, 1).add_vcylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), 0, 0, 1, 0);
 	// draw dirt in the pot as a disk
 	rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
 	point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk

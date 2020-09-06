@@ -994,11 +994,14 @@ void building_t::add_plants_to_room(rand_gen_t &rgen, room_t const &room, float 
 	float const window_vspacing(get_window_vspace());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
+	unsigned const num_colors = 8;
+	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
 	
 	for (unsigned n = 0; n < num; ++n) {
 		float const height(rand_uniform(0.6, 0.9)*window_vspacing), width(rand_uniform(0.15, 0.35)*window_vspacing);
 		vector3d const sz_scale(width/height, width/height, 1.0);
-		place_obj_along_wall(TYPE_PLANT, room, height, sz_scale, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start); // no clearanc, pref_orient, or color
+		place_obj_along_wall(TYPE_PLANT, room, height, sz_scale, rgen, zval, room_id, tot_light_amt, is_lit,
+			place_area, objs_start, 0.0, 4, 0, pot_colors[rgen.rand() % num_colors]); // no clearanc, pref_orient, or color
 	}
 }
 
