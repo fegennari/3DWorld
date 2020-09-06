@@ -941,7 +941,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_section(b, empty_vc, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
 		}
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
-			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), WHITE);
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), door_color);
 		}
 		if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
 			cube_t const &top(parts.back()); // top/last part
@@ -1037,6 +1037,7 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 	float const thickness(opens_up ? 0.01*D.dz() : 0.02*D.get_sz_dim(!dim));
 	unsigned const num_sides((door_type == tquad_with_ix_t::TYPE_BDOOR) ? 2 : 1); // double doors for office building exterior door
 	tid_nm_pair_t const tp(tid, -1, 1.0f/num_sides, ty);
+	colorRGBA const &color(exterior ? door_color : WHITE);
 
 	for (unsigned side = 0; side < num_sides; ++side) { // {right, left}
 		cube_t dc(D);
@@ -1060,10 +1061,10 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 				swap(door_side.pts[2], door_side.pts[3]);
 				door_side.type = tquad_with_ix_t::TYPE_IDOOR2;
 			}
-			bdraw.add_tquad(*this, door_side, bcube, tp, WHITE, 0, exclude_frame);
+			bdraw.add_tquad(*this, door_side, bcube, tp, color, 0, exclude_frame);
 		} // for d
 		for (unsigned e = 0; e < num_edges; ++e) { // add untextured door edges
-			bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), WHITE); // Note: better to pick a single white texel in door tex and set tscale=0.0?
+			bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), color); // Note: better to pick a single white texel in door tex and set tscale=0.0?
 		}
 	} // for side
 }

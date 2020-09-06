@@ -481,7 +481,7 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 		if (c.dir ^ c.dim) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);} // change winding order/normal sign
 		rgeom_mat_t::vertex_t v;
 		v.set_norm(get_poly_norm(pts));
-		v.set_c4(WHITE);
+		v.set_c4(c.color);
 		float const tcs[2][4] = {{0,0,1,1}, {0,1,1,0}};
 
 		for (unsigned n = 0; n < 4; ++n) {
@@ -499,7 +499,7 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 		if (c.flags & RO_FLAG_ADJ_LO) {skip_faces |= ~get_face_mask(c.dim, 0);}
 		if (c.flags & RO_FLAG_ADJ_HI) {skip_faces |= ~get_face_mask(c.dim, 1);}
 		skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
-		mat.add_cube_to_verts(c, WHITE, tex_origin, skip_faces); // is_small, untextured, no shadows, not light scale
+		mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces); // is_small, untextured, no shadows, not light scale
 	}
 }
 

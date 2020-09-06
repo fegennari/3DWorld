@@ -1174,6 +1174,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
+	door_color = (rgen.rand_bool() ? LT_BROWN : WHITE);
 }
 
 void rotate_xy(point &pt, point const &origin, float angle) {
