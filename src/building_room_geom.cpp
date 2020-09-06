@@ -722,7 +722,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	// add shelves
 	rand_gen_t rgen;
 	rgen.set_state(c.obj_id+1, c.room_id+1);
-	unsigned const num_shelves(3 + ((rgen.rand() + c.obj_id)%3)); // 3-5
+	unsigned const num_shelves(3 + ((17*c.room_id + int(1000.0*fabs(c.z1())))%3)); // 3-5, randomly selected by room ID and floor
 	float const shelf_dz(middle.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
 	cube_t shelves[5];
 	

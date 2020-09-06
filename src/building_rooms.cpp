@@ -156,7 +156,9 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 	room_bounds.expand_by_xy(-0.1*get_wall_thickness());
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
-	float const width(0.4*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen.rand_uniform(1.0, 1.2));
+	rand_gen_t rgen2;
+	rgen2.set_state((room_id + 1), (13*mat_ix + interior->rooms.size() + 1)); // local rgen that's per-building/room; ensures bookcases are all the same size in a library
+	float const width(0.4*vspace*rgen2.rand_uniform(1.0, 1.2)), depth(0.12*vspace*rgen2.rand_uniform(1.0, 1.2)), height(0.7*vspace*rgen2.rand_uniform(1.0, 1.2));
 	float const clearance(max(0.2f*vspace, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
