@@ -444,7 +444,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	point const llc(doors.get_llc());
 
 	if (use_small_door) { // small house closet door
-		get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 1).add_cube_to_verts(doors, WHITE, llc, get_face_mask(c.dim, c.dir), !c.dim); // draw only front face
+		get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 1).add_cube_to_verts(doors, c.color, llc, get_face_mask(c.dim, c.dir), !c.dim); // draw only front face
 	}
 	else { // 4 panel folding door
 		float const doors_width(doors.get_sz_dim(!c.dim)), door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
@@ -458,13 +458,13 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			cube_t door(doors);
 			door.d[!c.dim][0] = doors.d[!c.dim][0] + n    *door_spacing + door_gap; // left edge
 			door.d[!c.dim][1] = doors.d[!c.dim][0] + (n+1)*door_spacing - door_gap; // right edge
-			door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
+			door_mat.add_cube_to_verts(door, c.color, llc, skip_faces);
 		}
 	}
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
-	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c, WHITE), tex_origin, ~EF_Z2); // top face only
+	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c, c.color), tex_origin, ~EF_Z2); // top face only
 }
 
 void building_room_geom_t::add_wall_trim(room_object_t const &c) {
@@ -545,7 +545,7 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_rug(room_object_t const &c) {
 	bool const swap_tex_st(c.dy() < c.dx()); // rug textures are oriented with the long side in X, so swap the coordinates (rotate 90 degrees) if our rug is oriented the other way
-	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, WHITE, c.get_llc(), 61, swap_tex_st); // only draw top/+z face
+	get_material(tid_nm_pair_t(c.get_rug_tid(), 0.0)).add_cube_to_verts(c, c.color, c.get_llc(), 61, swap_tex_st); // only draw top/+z face
 }
 
 void building_room_geom_t::add_picture(room_object_t const &c) { // also whiteboards
@@ -561,7 +561,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 	bool const mirror_x(!whiteboard && !(c.dim ^ c.dir));
 	vector3d const tex_origin(c.get_llc());
-	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, WHITE, tex_origin, skip_faces, !c.dim, mirror_x);
+	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim, mirror_x);
 	// add a frame
 	cube_t frame(c);
 	vector3d exp;
