@@ -1331,7 +1331,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	interior->room_geom->light_bcubes.resize(num_light_stacks); // allocate but don't fill un until needed
 }
 
-void building_t::add_wall_and_door_trim() {
+void building_t::add_wall_and_door_trim() { // and window trim
 
 	//highres_timer_t timer("Add Wall And Door Trim");
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
@@ -1487,7 +1487,7 @@ void building_t::add_wall_and_door_trim() {
 		} // for dim
 	} // for i
 	// add window trim
-	float const border_mult(0.95); // account for the frame part of the window texture, which is included in the interior cutout of the window
+	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
 	float const window_trim_width(0.75*wall_thickness), window_trim_depth(0.1*wall_thickness), windowsill_depth(0.1*wall_thickness);
