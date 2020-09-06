@@ -1224,7 +1224,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c) {
 	dirt_mat.add_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
 	// draw plant leaves
 	s_plant plant;
-	plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id);
+	plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id, 0, 1); // land_plants_only=1
 	static vector<vert_norm_comp> points;
 	points.clear();
 	plant.create_leaf_points(points, 10.0); // plant_scale=10.0 seems to work well

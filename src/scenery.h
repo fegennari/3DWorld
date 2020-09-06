@@ -195,7 +195,7 @@ public:
 	int get_leaf_tid() const;
 	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager);
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager);
-	void create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z=0);
+	void create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z=0, bool land_plants_only=0);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
 	void create_leaf_points(vector<vert_norm_comp> &points, float plant_scale) const;
