@@ -479,7 +479,7 @@ bool building_t::place_obj_along_wall(room_object type, cube_t const &room, floa
 	vector3d const place_area_sz(place_area.get_size());
 	if (max(place_area_sz.x, place_area_sz.y) <= min_space) return 0; // can't fit in either dim
 	unsigned const force_dim((place_area_sz.x <= min_space) ? 0 : ((place_area_sz.y <= min_space) ? 1 : 2)); // *other* dim; 2=neither
-	float const clearance(max(depth*front_clearance, get_min_front_clearance()));
+	float const obj_clearance(depth*front_clearance), clearance(max(obj_clearance, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z1() = zval;
@@ -500,7 +500,12 @@ bool building_t::place_obj_along_wall(room_object type, cube_t const &room, floa
 		c.d[!dim][   1] = center + hwidth;
 		cube_t c2(c); // used for collision tests
 		c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance;
-		if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
+		if (overlaps_other_room_obj(c2, objs_start) || interior->is_blocked_by_stairs_or_elevator(c2)) continue; // bad placement
+		// we don't need clearance for both the door and the object; test the object itself against the open door and the object with clearance against the closed door
+		if (is_cube_close_to_doorway(c, room, 0.0, 1)) continue; // bad placement
+		cube_t c3(c); // used for collision tests
+		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
+		if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
 		objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
 		objs.back().obj_id = (uint16_t)objs.size();
 		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
