@@ -352,16 +352,16 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
-			cube_t c_extended(*c);
-			c_extended.z1() -= camera_zh;
 
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 				float const radius(0.25f*(c->dx() + c->dy())); // average of x/y diameter
 				point const center(c->get_cube_center());
-				cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, c->z2()), radius, radius);
+				cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, (c->z2() + radius)), radius, radius); // extend upward by radius
 				had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, cylin, cnorm);
 			}
 			else { // assume it's a cube
+				cube_t c_extended(*c);
+				c_extended.z1() -= camera_zh; // handle the player's head
 				had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm); // skip_z=0
 			}
 		} // for c
