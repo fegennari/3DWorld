@@ -284,6 +284,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 // Note: pos and p_last are already in rotated coordinate space
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm) const {
+	pos.z = bcube.z1(); // start at building z1 rather than the terrain height in case we're at the foot of a steep hill
 	assert(interior);
 	float const floor_spacing(get_window_vspace());
 	bool had_coll(0), on_stairs(0);
