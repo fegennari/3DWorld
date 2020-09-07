@@ -557,6 +557,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						c.d[!min_dim][ 0] = pos;
 						c.d[!min_dim][ 1] = next_pos;
 						add_room(c, part_id, 1, 0, 1); // office
+						if (i == num_rooms/2) {interior->rooms.back().assign_to(RTYPE_BATH);} // assign the middle room to be a bathroom
 						door_t door(c, min_dim, d, DRAW_OPEN_DOORS); // copy zvals and wall pos
 						door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
