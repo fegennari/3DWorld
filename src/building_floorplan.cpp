@@ -207,11 +207,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			// Note: we could probably make these unsigned, but I want to avoid unepected negative numbers in the math
 			int const num_windows   (num_windows_per_side[!min_dim]);
 			int const num_windows_od(num_windows_per_side[min_dim]); // other dim, for use in hallway width calculation
-			int windows_per_room((num_windows > 5) ? 2 : 1); // 1-2 windows per room
+			int windows_per_room((num_windows >= 7 && num_windows_od >= 7) ? 2 : 1); // 1-2 windows per room (only assign 2 windows if we can get into the secondary hallway case below)
 			float const cube_len(psz[!min_dim]), wind_hspacing(cube_len/num_windows), min_hall_width(3.6*doorway_width);
 			float room_len(wind_hspacing*windows_per_room);
 
-			while (room_len < 1.2*min_wall_len) { // add more windows to increase room size if too small
+			while (room_len < 0.9*min_wall_len) { // add more windows to increase room size if too small
 				++windows_per_room;
 				room_len = wind_hspacing*windows_per_room;
 			}
