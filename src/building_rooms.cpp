@@ -547,7 +547,8 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 		is_lit, place_area, objs_start, front_clearance, pref_orient, pref_centered, color, not_at_window);
 }
 
-bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) { // Note: zval passed by reference
+bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, unsigned floor) {
+	// Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.5*wall_thickness);
@@ -565,7 +566,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &
 		zval = new_zval; // move the effective floor up
 	}
 	if (have_toilet && have_sink && room.is_office && min(place_area.dx(), place_area.dy()) > 1.5*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.6*floor_spacing) {
-		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit)) return 1; // large enough, try to divide into bathroom stalls
+		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit, floor)) return 1; // large enough, try to divide into bathroom stalls
 	}
 	bool placed_obj(0), placed_toilet(0);
 	
@@ -610,7 +611,8 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &
 	return placed_obj;
 }
 
-bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) { // assumes no prior placed objects
+bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned floor) {
+	// Note: assumes no prior placed objects
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 	vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK  )); // L, W, H
@@ -623,7 +625,15 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 
 	// determine men's room vs. women's room (however, they are currently the same because there is no urinal model)
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
-	bool const mens_room((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
+	bool mens_room((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
+	bool has_second_bathroom(0);
+
+	// if there are two bathrooms (one on each side of the building), assign a gender to each side; if only one, alternate gender per floor
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		if (r->part_id != room.part_id || &(*r) == &room) continue; // different part or same room
+		if (is_room_office_bathroom(*r, zval)) {has_second_bathroom = 1; break;}
+	}
+	if (!has_second_bathroom) {mens_room ^= (floor & 1);}
 
 	for (unsigned d = 0; d < 2 && !sink_side_set; ++d) {
 		for (unsigned side = 0; side < 2 && !sink_side_set; ++side) {
@@ -647,7 +657,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	float const room_len(place_area.get_sz_dim(!br_dim)), room_width(place_area.get_sz_dim(br_dim));
 	float const sinks_len(0.4*room_len), stalls_len(room_len - sinks_len), req_depth(2.0f*max(stall_depth, slength));
 	if (room_width < req_depth) return 0;
-	unsigned const num_stalls(floor(stalls_len/stall_width)), num_sinks(floor(sinks_len/sink_spacing));
+	unsigned const num_stalls(std::floor(stalls_len/stall_width)), num_sinks(std::floor(sinks_len/sink_spacing));
 	if (num_stalls < 2 || num_sinks < 2) return 0; // not enough space for 2 stalls and 2 sinks
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
@@ -1247,10 +1257,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			// place room objects
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
-			bool is_office_bathroom(r->is_office && r->rtype == RTYPE_BATH && !room_has_stairs_or_elevator(*r, room_center.z));
+			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z));
 
 			if (is_office_bathroom) { // bathroom is already assigned
-				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start); // add bathroom
+				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, f); // add bathroom
 			}
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
@@ -1261,7 +1271,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 				if (!added_obj && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < extra_bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings
-					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start); // add bathroom
+					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, f); // add bathroom
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
