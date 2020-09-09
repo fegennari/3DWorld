@@ -1475,6 +1475,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			if (!is_house && !pri_hall.is_all_zeros()) { // handle outside corners of office building hallway intersections
 				for (auto W = interior->walls[!dim].begin(); W != interior->walls[!dim].end(); ++W) { // check walls in other dim for an outside corner
 					for (unsigned d = 0; d < 2; ++d) {
+						if (W->z1() > w->z2() || W->z2() < w->z1()) continue; // no z overlap, wrong stack
 						if (W->d[!dim][0] > w->d[!dim][d] || W->d[!dim][1] < w->d[!dim][d]) continue; // not adjacent/overlapping
 						if (W->d[ dim][0] < w->d[ dim][0] && W->d[ dim][1] > w->d[ dim][1]) continue; // skip T junctions
 						trim.d[!dim][d] = W->d[!dim][d] + (d ? 1.0 : -1.0)*trim_thickness; // expand to cover gap at outside corners of hallway walls
