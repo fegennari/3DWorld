@@ -1198,7 +1198,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				else {color = colorRGBA(1.0, 1.0, 1.0);} // white - small office
 				unsigned num_lights(r->num_lights);
 
-				if (r->is_hallway && num_lights > 1) { // place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
+				if (r->is_hallway && num_lights > 1) { // hallway: place a light on each side (of the stairs if they exist), and also between stairs and elevator if there are both
 					if (r->has_elevator && r->has_stairs) {num_lights = 3;} // we really should have 3 lights in this case
 					float const offset(((num_lights == 3) ? 0.3 : 0.2)*r->get_sz_dim(light_dim)); // closer to the ends in the 3 lights case
 					cube_t valid_bounds(*r);
@@ -1229,7 +1229,26 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					} // for d
 					num_lights_added = num_lights;
 				}
-				else { // normal room
+				else if (r->is_office) { // office with possibly multiple lights
+					float const dx(r->dx()), dy(r->dy()), ldx(light.dx()), ldy(light.dy());
+					unsigned const nx(max(1U, unsigned(0.5*dx/window_vspacing))), ny(max(1U, unsigned(0.5*dy/window_vspacing))); // more lights for large offices
+					float const xstep(dx/nx), ystep(dy/ny);
+					vector3d const shrink(0.5*ldx*sqrt((nx - 1)/nx), 0.5*ldy*sqrt((ny - 1)/ny), 0.0);
+					unsigned cur_light_ix(num_light_stacks);
+
+					for (unsigned y = 0; y < ny; ++y) {
+						for (unsigned x = 0; x < nx; ++x) {
+							cube_t cur_light(light);
+							cur_light.expand_by_xy(-shrink);
+							cur_light.translate(point((-0.5f*dx + (x + 0.5)*xstep), (-0.5f*dy + (y + 0.5)*ystep), 0.0));
+							if (check_stairs && has_bcube_int_exp(cur_light, interior->stairwells, fc_thick)) continue; // what about blocked_by_stairs flag?
+							objs.emplace_back(cur_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
+							objs.back().obj_id = cur_light_ix++;
+						} // for x
+					} // for y
+					num_lights_added = nx*ny;
+				}
+				else { // normal room with a single light
 					if (check_stairs && has_bcube_int_exp(light, interior->stairwells, fc_thick)) {is_lit = 0;} // disable if blocked by stairs
 					else {
 						light_obj_ix = objs.size();
