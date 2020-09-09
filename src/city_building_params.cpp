@@ -154,6 +154,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "tub_model") {
 		if (!add_model(OBJ_MODEL_TUB, fp)) {return read_error(str);}
 	}
+	else if (str == "urinal_model") {
+		if (!add_model(OBJ_MODEL_URINAL, fp)) {return read_error(str);}
+	}
 	else if (str == "fridge_model") {
 		if (!add_model(OBJ_MODEL_FRIDGE, fp)) {return read_error(str);}
 	}
