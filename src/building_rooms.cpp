@@ -613,11 +613,19 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &
 
 bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned floor) {
 	// Note: assumes no prior placed objects
+	bool const use_sink_model(0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)); // not using sink models
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
-	vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK  )); // L, W, H
 	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z), stall_depth(2.2*tlength);
-	float const sheight(0.45*floor_spacing), swidth(sheight*ssz.y/ssz.z), slength(sheight*ssz.x/ssz.z);
+	float sheight, swidth, slength;
+
+	if (use_sink_model) {
+		vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK  )); // L, W, H
+		sheight = 0.45*floor_spacing; swidth = sheight*ssz.y/ssz.z; slength = sheight*ssz.x/ssz.z;
+	}
+	else {
+		sheight = 0.36*floor_spacing; swidth = 0.3*floor_spacing; slength = 0.32*floor_spacing;
+	}
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
 	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0);
 	cube_t place_area(room), br_door;
@@ -692,18 +700,44 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			stall_pos += stall_step;
 		} // for n
 		// add sinks
-		float sink_pos(place_area.d[!br_dim][sink_side] + 0.5*sink_step), sink_from_wall(wall_pos + dir_sign*(0.5*slength + wall_thickness));
+		float const sink_start(place_area.d[!br_dim][sink_side] + 0.5f*sink_step);
+		float const sink_from_wall(wall_pos + dir_sign*(0.5f*slength + (use_sink_model ? wall_thickness : 0.0f)));
+		float sink_pos(sink_start);
 
 		for (unsigned n = 0; n < num_sinks; ++n) {
 			point center(sink_from_wall, sink_pos, zval);
 			if (br_dim) {swap(center.x, center.y);} // R90 about z
 			cube_t sink(center, center);
 			sink.expand_in_dim( br_dim, 0.5*slength);
-			sink.expand_in_dim(!br_dim, 0.5*swidth);
 			sink.z2() += sheight;
-			objs.emplace_back(sink, TYPE_SINK, room_id, br_dim, !dir, flags, tot_light_amt);
+
+			if (use_sink_model) { // sink 3D model
+				sink.expand_in_dim(!br_dim, 0.5*swidth);
+				objs.emplace_back(sink, TYPE_SINK, room_id, br_dim, !dir, flags, tot_light_amt);
+			}
+			else { // flat basin sink
+				sink.expand_in_dim(!br_dim, 0.5*fabs(sink_step)); // tile exactly with the adjacent sink
+				objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, flags, tot_light_amt);
+			}
 			sink_pos += sink_step;
 		} // for n
+		if (mens_room) { // add urinals opposite the sinks
+#if 0
+			float const u_from_wall(place_area.d[br_dim][!dir] - dir_sign*(0.5*ulength + wall_thickness));
+			float u_pos(sink_start);
+
+			for (unsigned n = 0; n < num_sinks; ++n) {
+				point center(u_from_wall, u_pos, zval);
+				if (br_dim) {swap(center.x, center.y);} // R90 about z
+				cube_t urinal(center, center);
+				urinal.expand_in_dim( br_dim, 0.5*slength);
+				urinal.expand_in_dim(!br_dim, 0.5*swidth);
+				urinal.z2() += sheight;
+				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, !dir, flags, tot_light_amt);
+				u_pos += sink_step;
+			} // for n
+#endif
+		}
 	} // for dir
 	// add a sign outside the bathroom door
 	bool const shift_dir(room_center[br_dim] < part_center[br_dim]); // put the sign toward the outside of the building because there's more space and more light

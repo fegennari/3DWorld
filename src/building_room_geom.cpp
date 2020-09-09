@@ -1094,17 +1094,18 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 	float const dz(c.dz());
 	cube_t top(c);
 	top.z1() += 0.95*dz;
-	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("marble2.jpg"), 2.5*tscale), 1));
+	tid_nm_pair_t const marble_tex(get_texture_by_name("marble2.jpg"), 2.5*tscale);
+	rgeom_mat_t &top_mat(get_material(marble_tex, 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
 
-	if (c.type == TYPE_KSINK) { // counter with kitchen sink
+	if (c.type == TYPE_KSINK || c.type == TYPE_BRSINK) { // counter with kitchen or bathroom sink
 		float const sdepth(0.8*c.get_sz_dim(c.dim)), swidth(min(1.4f*sdepth, 0.75f*c.get_sz_dim(!c.dim)));
 		vector3d const center(c.get_cube_center());
 		vector3d faucet_pos(center);
 		faucet_pos[c.dim] += (c.dir ? -1.0 : 1.0)*0.56*sdepth;
 		cube_t sink(center, center), faucet1(faucet_pos, faucet_pos);
-		sink.z2() = top.z1();
-		sink.z1() = top.z1() - 0.25*dz;
+		sink.z2()    = top.z1();
+		sink.z1()    = top.z1() - 0.25*dz;
 		faucet1.z1() = top.z2();
 		faucet1.z2() = top.z2() + 0.30*dz;
 		sink.expand_in_dim( c.dim, 0.5*sdepth);
@@ -1112,7 +1113,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		faucet1.expand_in_dim( c.dim, 0.04*sdepth);
 		faucet1.expand_in_dim(!c.dim, 0.05*swidth);
 		cube_t faucet2(faucet1);
-		faucet2.z1() = faucet1.z2();
+		faucet2.z1()  = faucet1.z2();
 		faucet2.z2() += 0.035*dz;
 		faucet2.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.28*sdepth;
 		static vect_cube_t cubes;
@@ -1126,17 +1127,30 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		metal_mat.add_cube_to_verts(sink,    sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face
 		metal_mat.add_cube_to_verts(faucet1, sink_color, tex_origin, EF_Z12); // vertical part of faucet, skip top and bottom faces
 		metal_mat.add_cube_to_verts(faucet2, sink_color, tex_origin, 0); // horizontal part of faucet, draw all faces
+
+		if (c.type == TYPE_BRSINK) { // bathroom sink
+			get_material(tex, 1).add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2); // outside of basin, no top surface, shadowed
+			cube_t front(c);
+			front.z2() = top.z1();
+			front.z1() = sink.z1() - 0.1*dz; // slightly below the sink basin
+			front.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.94*c.get_sz_dim(c.dim);
+			get_material(marble_tex, 1).add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
+		}
+		if (c.type == TYPE_KSINK) { // kitchen sink
+			// TODO: dishwasher
+		}
 	}
 	else { // regular counter top
 		top_mat.add_cube_to_verts(top, top_color, tex_origin); // top surface, all faces
 	}
-	// add wood sides of counter
-	float const overhang(0.05*c.get_sz_dim(c.dim));
-	room_object_t rest(c);
-	rest.z2() = top.z1();
-	//rest.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
-	rest.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*overhang; // add front overhang
-	add_cabinet(rest, tscale); // draw the wood part
+	if (c.type != TYPE_BRSINK) { // add wood sides of counter/cabinet
+		float const overhang(0.05*c.get_sz_dim(c.dim));
+		room_object_t rest(c);
+		rest.z2() = top.z1();
+		//rest.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
+		rest.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*overhang; // add front overhang
+		add_cabinet(rest, tscale); // draw the wood part
+	}
 }
 
 void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
@@ -1314,6 +1328,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		case TYPE_SIGN:    add_sign    (*i, 1, 0); break;
 		case TYPE_COUNTER: add_counter (*i, tscale); break;
 		case TYPE_KSINK:   add_counter (*i, tscale); break; // counter with kitchen sink
+		case TYPE_BRSINK:  add_counter (*i, tscale); break; // counter with bathroom sink
 		case TYPE_CABINET: add_cabinet (*i, tscale); break;
 		case TYPE_PLANT:   add_potted_plant(*i); break;
 		case TYPE_DRESSER: add_dresser (*i, tscale); break;
