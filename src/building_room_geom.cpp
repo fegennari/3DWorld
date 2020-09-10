@@ -1091,18 +1091,18 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 }
 
 void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
-	float const dz(c.dz());
-	cube_t top(c);
+	float const dz(c.dz()), depth(c.get_sz_dim(c.dim)), dir_sign(c.dir ? 1.0 : -1.0);
+	cube_t top(c), cabinet_gap;
 	top.z1() += 0.95*dz;
 	tid_nm_pair_t const marble_tex(get_texture_by_name("marble2.jpg"), 2.5*tscale);
 	rgeom_mat_t &top_mat(get_material(marble_tex, 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
 
 	if (c.type == TYPE_KSINK || c.type == TYPE_BRSINK) { // counter with kitchen or bathroom sink
-		float const sdepth(0.8*c.get_sz_dim(c.dim)), swidth(min(1.4f*sdepth, 0.75f*c.get_sz_dim(!c.dim)));
+		float const sdepth(0.8*depth), width(c.get_sz_dim(!c.dim)), swidth(min(1.4f*sdepth, 0.75f*width));
 		vector3d const center(c.get_cube_center());
 		vector3d faucet_pos(center);
-		faucet_pos[c.dim] += (c.dir ? -1.0 : 1.0)*0.56*sdepth;
+		faucet_pos[c.dim] -= dir_sign*0.56*sdepth;
 		cube_t sink(center, center), faucet1(faucet_pos, faucet_pos);
 		sink.z2()    = top.z1();
 		sink.z1()    = top.z1() - 0.25*dz;
@@ -1115,7 +1115,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		cube_t faucet2(faucet1);
 		faucet2.z1()  = faucet1.z2();
 		faucet2.z2() += 0.035*dz;
-		faucet2.d[c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*0.28*sdepth;
+		faucet2.d[c.dim][c.dir] += dir_sign*0.28*sdepth;
 		static vect_cube_t cubes;
 		cubes.clear();
 		subtract_cube_from_cube(top, sink, cubes);
@@ -1133,27 +1133,54 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 			cube_t front(c);
 			front.z2() = top.z1();
 			front.z1() = sink.z1() - 0.1*dz; // slightly below the sink basin
-			front.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.94*c.get_sz_dim(c.dim);
+			front.d[c.dim][!c.dir] += dir_sign*0.94*depth;
 			get_material(marble_tex, 1).add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
 		}
-		if (c.type == TYPE_KSINK) { // kitchen sink
-			// TODO: dishwasher
+		if (c.type == TYPE_KSINK && width > 3.5*depth) { // kitchen sink - add dishwasher
+			bool const side((c.flags & RO_FLAG_ADJ_LO) ? 1 : ((c.flags & RO_FLAG_ADJ_HI) ? 0 : (c.obj_id & 1))); // left/right of the sink
+			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir));
+			cube_t dishwasher(c);
+			dishwasher.z1() += 0.05*dz;
+			dishwasher.z2() -= 0.05*dz;
+			dishwasher.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir] - dir_sign*0.1*depth;
+			dishwasher.d[ c.dim][ c.dir] += dir_sign*0.05*depth; // front
+			dishwasher.d[!c.dim][!side ]  = sink.d[!c.dim][side] + (side ? 1.0 : -1.0)*0.1*depth;
+			dishwasher.d[!c.dim][ side ]  = dishwasher.d[!c.dim][!side] + (side ? 1.0 : -1.0)*1.05*depth;
+			metal_mat.add_cube_to_verts(dishwasher, apply_light_color(c, LT_GRAY), tex_origin, dw_skip_faces);
+			cube_t handle(dishwasher);
+			handle.z1() += 0.77*dz;
+			handle.z2() -= 0.10*dz;
+			handle.expand_in_dim(!c.dim, -0.1*depth);
+			handle.d[c.dim][ c.dir]  = dishwasher.d[c.dim][c.dir];
+			handle.d[c.dim][ c.dir] += dir_sign*0.04*depth; // front
+			metal_mat.add_cube_to_verts(handle, sink_color, tex_origin, dw_skip_faces);
+			cabinet_gap = dishwasher;
 		}
 	}
 	else { // regular counter top
 		top_mat.add_cube_to_verts(top, top_color, tex_origin); // top surface, all faces
 	}
 	if (c.type != TYPE_BRSINK) { // add wood sides of counter/cabinet
-		float const overhang(0.05*c.get_sz_dim(c.dim));
-		room_object_t rest(c);
-		rest.z2() = top.z1();
-		//rest.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
-		rest.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*overhang; // add front overhang
-		add_cabinet(rest, tscale); // draw the wood part
+		float const overhang(0.05*depth);
+		room_object_t cabinet(c);
+		cabinet.z2() = top.z1();
+		//cabinet.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
+		cabinet.d[c.dim][c.dir] -= dir_sign*overhang; // add front overhang
+
+		if (!cabinet_gap.is_all_zeros()) { // split cabinet into two parts to avoid the dishwasher
+			room_object_t left_part(cabinet);
+			left_part.d[!c.dim][1] = cabinet_gap.d[!c.dim][0];
+			cabinet  .d[!c.dim][0] = cabinet_gap.d[!c.dim][1];
+			left_part.flags &= ~RO_FLAG_ADJ_HI;
+			cabinet  .flags &= ~RO_FLAG_ADJ_LO;
+			add_cabinet(left_part, tscale);
+		}
+		add_cabinet(cabinet, tscale); // draw the wood part
 	}
 }
 
 void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
+	assert(c.is_strictly_normalized());
 	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
 	get_wood_material(tscale).add_cube_to_verts(c, apply_light_color(c, WOOD_COLOR), tex_origin, skip_faces);
 	// add cabinet doors
@@ -1165,6 +1192,7 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	float door_spacing(1.2*door_width);
 	unsigned const num_doors(floor(cab_width/door_spacing));
 	if (num_doors == 0) return; // is this possible?
+	assert(num_doors < 1000); // sanity check
 	door_spacing = cab_width/num_doors;
 	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.16*door_width), dir_sign(c.dir ? 1.0 : -1.0);
 	float lo(front.d[!c.dim][0]);
@@ -1172,8 +1200,8 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
 	rgeom_mat_t &handle_mat(get_material(tid_nm_pair_t(), 0)); // untextured, unshadowed
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
-	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
-	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir)); // should be specular metal
+	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK)); // should be specular metal
+	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
 	cube_t door(c);
 	door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
 	door.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
