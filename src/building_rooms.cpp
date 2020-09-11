@@ -617,10 +617,10 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector3d const tsz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
 	float const theight(0.35*floor_spacing), twidth(theight*tsz.y/tsz.z), tlength(theight*tsz.x/tsz.z), stall_depth(2.2*tlength);
-	float sheight, swidth, slength;
+	float sheight(0), swidth(0), slength(0), uheight(0), uwidth(0), ulength(0);
 
 	if (use_sink_model) {
-		vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK  )); // L, W, H
+		vector3d const ssz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SINK)); // L, W, H
 		sheight = 0.45*floor_spacing; swidth = sheight*ssz.y/ssz.z; slength = sheight*ssz.x/ssz.z;
 	}
 	else {
@@ -631,10 +631,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	cube_t place_area(room), br_door;
 	place_area.expand_by(-0.5*wall_thickness);
 
-	// determine men's room vs. women's room (however, they are currently the same because there is no urinal model)
+	// determine men's room vs. women's room
 	point const part_center(get_part_for_room(room).get_cube_center()), room_center(room.get_cube_center());
-	bool mens_room((part_center.x < room_center.x) ^ (part_center.y < room_center.y));
-	bool has_second_bathroom(0);
+	bool mens_room((part_center.x < room_center.x) ^ (part_center.y < room_center.y)), has_second_bathroom(0);
 
 	// if there are two bathrooms (one on each side of the building), assign a gender to each side; if only one, alternate gender per floor
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
@@ -642,7 +641,12 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 		if (is_room_office_bathroom(*r, zval)) {has_second_bathroom = 1; break;}
 	}
 	if (!has_second_bathroom) {mens_room ^= (floor & 1);}
+	bool const add_urinals(mens_room && building_obj_model_loader.is_model_valid(OBJ_MODEL_URINAL));
 
+	if (add_urinals) { // use urinal model
+		vector3d const usz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_URINAL)); // L, W, H
+		uheight = 0.45*floor_spacing; uwidth = uheight*usz.y/usz.z; ulength = uheight*usz.x/usz.z;
+	}
 	for (unsigned d = 0; d < 2 && !sink_side_set; ++d) {
 		for (unsigned side = 0; side < 2 && !sink_side_set; ++side) {
 			cube_t c(room);
@@ -721,22 +725,20 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			}
 			sink_pos += sink_step;
 		} // for n
-		if (mens_room) { // add urinals opposite the sinks
-#if 0
-			float const u_from_wall(place_area.d[br_dim][!dir] - dir_sign*(0.5*ulength + wall_thickness));
+		if (add_urinals) { // add urinals opposite the sinks, using same spacing as sinks
+			float const u_from_wall(place_area.d[br_dim][!dir] - dir_sign*0.5*ulength);
 			float u_pos(sink_start);
 
 			for (unsigned n = 0; n < num_sinks; ++n) {
 				point center(u_from_wall, u_pos, zval);
 				if (br_dim) {swap(center.x, center.y);} // R90 about z
 				cube_t urinal(center, center);
-				urinal.expand_in_dim( br_dim, 0.5*slength);
-				urinal.expand_in_dim(!br_dim, 0.5*swidth);
-				urinal.z2() += sheight;
+				urinal.expand_in_dim( br_dim, 0.5*ulength);
+				urinal.expand_in_dim(!br_dim, 0.5*uwidth);
+				urinal.z2() += uheight;
 				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, !dir, flags, tot_light_amt);
 				u_pos += sink_step;
 			} // for n
-#endif
 		}
 	} // for dir
 	// add a sign outside the bathroom door
