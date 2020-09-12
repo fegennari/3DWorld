@@ -288,6 +288,8 @@ public:
 	void clear();
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
 		unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0, bool inverted=0);
+	void add_xy_cylin_to_verts(cube_t const &c, colorRGBA const &color, bool dim, bool draw_bot, bool draw_top,
+		bool two_sided=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0);
 	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top,
 		bool two_sided=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0);
 	void add_vcylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,

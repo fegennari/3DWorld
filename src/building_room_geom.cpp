@@ -79,6 +79,25 @@ template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &ind
 	for (unsigned i = 0; i < numi; ++i) {indices[ixs_end + i] = (indices[ixs_end - i - 1] + numv);} // copy in reverse order
 }
 
+void swap_cube_z_xy(cube_t &c, bool dim) {
+	swap(c.z1(), c.d[dim][0]);
+	swap(c.z2(), c.d[dim][1]);
+}
+
+void rgeom_mat_t::add_xy_cylin_to_verts(cube_t const &c, colorRGBA const &color, bool dim, bool draw_bot, bool draw_top,
+	bool two_sided, bool inv_tb, float rs_bot, float rs_top, float side_tscale)
+{
+	cube_t c_rot(c);
+	swap_cube_z_xy(c_rot, dim);
+	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
+	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale);
+	
+	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) { // swap triangle vertices and normals
+		std::swap(v->v[2], v->v[dim]);
+		std::swap(v->n[2], v->n[dim]);
+	}
+	std::reverse(indices.begin()+ixs_start_ix, indices.end()); // fix winding order
+}
 void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top,
 	bool two_sided, bool inv_tb, float rs_bot, float rs_top, float side_tscale)
 {
@@ -1151,9 +1170,9 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 			handle.z1() += 0.77*dz;
 			handle.z2() -= 0.10*dz;
 			handle.expand_in_dim(!c.dim, -0.1*depth);
-			handle.d[c.dim][ c.dir]  = dishwasher.d[c.dim][c.dir];
+			handle.d[c.dim][ c.dir]  = handle.d[c.dim][!c.dir] = dishwasher.d[c.dim][c.dir];
 			handle.d[c.dim][ c.dir] += dir_sign*0.04*depth; // front
-			metal_mat.add_cube_to_verts(handle, sink_color, tex_origin, dw_skip_faces);
+			metal_mat.add_xy_cylin_to_verts(handle, sink_color, !c.dim, 1, 1); // add handle as a cylinder in the proper dim with both ends
 			cabinet_gap = dishwasher;
 		}
 	}
