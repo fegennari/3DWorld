@@ -208,7 +208,7 @@ enum room_type      {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTY
 	                 RTYPE_LIBRARY, RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
 std::string const room_names[NUM_RTYPES] =
 	{"Not Set", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study", "Entryway", "Library", "Garage", "Shed"};
-enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED};
+enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES};
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
 enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_COUCH, OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, NUM_OBJ_MODELS};
 
