@@ -645,7 +645,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 
 	if (add_urinals) { // use urinal model
 		vector3d const usz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_URINAL)); // L, W, H
-		uheight = 0.45*floor_spacing; uwidth = uheight*usz.y/usz.z; ulength = uheight*usz.x/usz.z;
+		uheight = 0.4*floor_spacing; uwidth = uheight*usz.y/usz.z; ulength = uheight*usz.x/usz.z;
 	}
 	for (unsigned d = 0; d < 2 && !sink_side_set; ++d) {
 		for (unsigned side = 0; side < 2 && !sink_side_set; ++side) {
@@ -673,10 +673,11 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	if (num_stalls < 2 || num_sinks < 2) return 0; // not enough space for 2 stalls and 2 sinks
 	stall_width  = stalls_len/num_stalls; // reclaculate to fill the gaps
 	sink_spacing = sinks_len/num_sinks;
-	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(two_rows ? 0 : (room_id & 1)); // put stalls on a side consistent across floors
+	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(room_id & 1); // put stalls on a side consistent across floors
 	float const sink_side_sign(sink_side ? 1.0 : -1.0), stall_step(sink_side_sign*stall_width), sink_step(-sink_side_sign*sink_spacing);
 	float const floor_thickness(get_floor_thickness());
 	unsigned const flags(is_lit ? RO_FLAG_LIT : 0);
+	colorRGBA const stall_color(0.75, 1.0, 0.9, 1.0); // blue-green
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // each side of the wall
@@ -699,10 +700,11 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			
 			if (!interior->is_cube_close_to_doorway(stall, room, 0.0, 1, 1)) { // skip if close to a door (for rooms with doors at both ends); inc_open=1
 				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
-				objs.emplace_back(stall, TYPE_STALL, room_id, br_dim, dir, flags, tot_light_amt, SHAPE_CUBE, colorRGBA(0.75, 1.0, 0.9, 1.0)); // blue-green
+				objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, flags, tot_light_amt, SHAPE_CUBE, stall_color);
 			}
 			stall_pos += stall_step;
 		} // for n
+		if (add_urinals && dir == (unsigned)skip_stalls_side) continue; // no urinals and sinks are each on one side
 		// add sinks
 		float const sink_start(place_area.d[!br_dim][sink_side] + 0.5f*sink_step);
 		float const sink_from_wall(wall_pos + dir_sign*(0.5f*slength + (use_sink_model ? wall_thickness : 0.0f)));
@@ -726,19 +728,30 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			sink_pos += sink_step;
 		} // for n
 		if (add_urinals) { // add urinals opposite the sinks, using same spacing as sinks
-			float const u_from_wall(place_area.d[br_dim][!dir] - dir_sign*0.5*ulength);
+			float const u_wall(place_area.d[br_dim][!dir]), u_from_wall(u_wall - dir_sign*(0.5*ulength + 0.01*wall_thickness));
 			float u_pos(sink_start);
+			cube_t sep_wall;
+			sep_wall.z1() = zval + 0.15*uheight;
+			sep_wall.z2() = zval + 1.25*uheight;
+			sep_wall.d[br_dim][!dir] = u_wall;
+			sep_wall.d[br_dim][ dir] = u_wall - dir_sign*0.25*floor_spacing;
 
 			for (unsigned n = 0; n < num_sinks; ++n) {
-				point center(u_from_wall, u_pos, zval);
+				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
+				objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, flags, tot_light_amt, SHAPE_SHORT, stall_color);
+				point center(u_from_wall, u_pos, (zval + 0.2*uheight));
 				if (br_dim) {swap(center.x, center.y);} // R90 about z
 				cube_t urinal(center, center);
 				urinal.expand_in_dim( br_dim, 0.5*ulength);
 				urinal.expand_in_dim(!br_dim, 0.5*uwidth);
 				urinal.z2() += uheight;
-				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, !dir, flags, tot_light_amt);
+				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, dir, flags, tot_light_amt);
 				u_pos += sink_step;
 			} // for n
+			if (!two_rows) { // skip first wall if adjacent to a stall
+				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
+				objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, flags, tot_light_amt, SHAPE_SHORT, stall_color);
+			}
 		}
 	} // for dir
 	// add a sign outside the bathroom door

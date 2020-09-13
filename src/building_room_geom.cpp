@@ -972,6 +972,11 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
 	colorRGBA const color(apply_light_color(c));
 	point const tex_origin(c.get_llc()); // doesn't really need to be set, since stall is untextured
+
+	if (c.shape == SHAPE_SHORT) { // wall separating urinals, drawn as a single cube
+		mat.add_cube_to_verts(c, color, tex_origin, ~get_face_mask(c.dim, c.dir));
+		return;
+	}
 	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(2.0*wall_thick), door_gap(0.2*wall_thick);
 	cube_t sides(c), front(c);
 	sides.z2() -= 0.35*dz;
@@ -1475,6 +1480,7 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_
 	if (inc_small) {mats_small.draw(s, shadow_only);}
 	disable_blend();
 	vbo_wrap_t::post_render();
+	//if (!obj_model_insts.empty()) {glDisable(GL_CULL_FACE);} // better but slower?
 	bool obj_drawn(0);
 
 	// draw object models
@@ -1487,6 +1493,7 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_
 		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, i->dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
 		obj_drawn = 1;
 	}
+	//if (!obj_model_insts.empty()) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 }
 
