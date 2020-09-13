@@ -9,6 +9,8 @@
 
 bool const EXTRA_VERBOSE = 0;
 
+extern bool reverse_3ds_vert_winding_order;
+
 
 class file_reader_3ds : public base_file_reader {
 
@@ -87,7 +89,7 @@ protected:
 		for (unsigned i = 0; i < num; i++) {
 			// flags: 3 LSB are edge orderings (AB BC CA): ignored
 			if (!read_data(faces[i].ix, sizeof(unsigned short), 4, "face data")) return 0;
-			std::swap(faces[i].ix[0], faces[i].ix[2]); // reverse triangle vertex ordering to agree with 3DWorld coordinate system
+			if (reverse_3ds_vert_winding_order) {std::swap(faces[i].ix[0], faces[i].ix[2]);} // reverse triangle vertex ordering to agree with 3DWorld coordinate system
 			//cout << "flags: " << faces[i].flags << endl;
 		}
 		return 1;
