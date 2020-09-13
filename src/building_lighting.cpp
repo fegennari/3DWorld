@@ -603,7 +603,11 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	} // for i
 	if (closest_dist_sq == 0.0) return 0; // no light found
 	assert(closest_light < objs.size());
-	objs[closest_light].toggle_lit_state(); // Note: doesn't update indir lighting or room light value
+	room_object_t &light(objs[closest_light]);
+	
+	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
+		if (i->type == TYPE_LIGHT && i->room_id == light.room_id && i->z1() == light.z1()) {i->toggle_lit_state();} // Note: doesn't update indir lighting or room light value
+	}
 	interior->room_geom->clear_and_recreate_lights(); // recreate light geom with correct emissive properties
 	return 1;
 }
