@@ -1213,6 +1213,7 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	if (c.flags & RO_FLAG_ADJ_LO) {front.d[!c.dim][0] += cab_depth;} // exclude L-joins of cabinets from having doors; assumes all cabinets are the same depth
 	if (c.flags & RO_FLAG_ADJ_HI) {front.d[!c.dim][1] -= cab_depth;}
 	float const handle_thick(0.75*door_thick), cab_width(front.get_sz_dim(!c.dim));
+	if (cab_width < 0.0) return; // this seems to happen on occasion; maybe it's a bug, or maybe the random size parameters can lead to bad values; either way, skip it
 	float door_spacing(1.2*door_width);
 	unsigned const num_doors(floor(cab_width/door_spacing));
 	if (num_doors == 0) return; // is this possible?
