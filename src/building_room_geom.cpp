@@ -1141,9 +1141,9 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {top_mat.add_cube_to_verts(*i, top_color, tex_origin);} // should always be 4 cubes
 		tid_nm_pair_t tex;
 		tex.set_specular(0.8, 60.0);
-		rgeom_mat_t &metal_mat(get_material(tex, 0)); // unshadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
 		colorRGBA const sink_color(apply_light_color(c, GRAY));
-		metal_mat.add_cube_to_verts(sink,    sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face
+		get_material(tex, 0).add_cube_to_verts(sink,    sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
+		rgeom_mat_t &metal_mat(get_material(tex, 1)); // shadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
 		metal_mat.add_cube_to_verts(faucet1, sink_color, tex_origin, EF_Z12); // vertical part of faucet, skip top and bottom faces
 		metal_mat.add_cube_to_verts(faucet2, sink_color, tex_origin, 0); // horizontal part of faucet, draw all faces
 
