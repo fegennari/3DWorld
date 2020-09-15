@@ -817,7 +817,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
 		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {sshape = SHAPE_U;} // U-shape if there's enough room
-		else {sshape = SHAPE_WALLED_SIDES;} // still walled
+		else {sshape = SHAPE_HAS_RAILINGS;} // railings
 		if (sshape == SHAPE_U) {ewidth *= 1.6;} // increase the width of both the stairs and elevator
 		cube_t stairs(hall); // start as hallway
 
@@ -924,7 +924,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							} // for d
 						}
 					} // for dim
-					if (!against_wall) {sshape = SHAPE_WALLED_SIDES;} // don't add walls around stairs if they can be against/blocking a window
+					//if (!against_wall) {sshape = SHAPE_WALLED_SIDES;} // don't add walls around stairs if they can be against/blocking a window
+					sshape = SHAPE_HAS_RAILINGS;
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
 					stairs_cut      = cutout;
@@ -1260,7 +1261,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					}
 				}
 				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
-				stairs_shape const sshape(wall_clipped ? SHAPE_WALLED : SHAPE_STRAIGHT); // add walls around stairs if room walls were clipped
+				stairs_shape const sshape(wall_clipped ? SHAPE_WALLED : SHAPE_HAS_RAILINGS); // add walls around stairs if room walls were clipped; otherwise, add railings
 				landing_t landing(cand, 0, 0, dim, stairs_dir, sshape);
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);

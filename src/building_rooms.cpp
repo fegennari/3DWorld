@@ -1669,6 +1669,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	interior->room_geom->stairs_start = objs.size();
 	interior->room_geom->has_elevators = (!interior->elevators.empty());
+	colorRGBA const railing_colors[3] = {GOLD, LT_GRAY, BLACK};
+	colorRGBA const railing_color(railing_colors[rgen.rand()%3]); // set per-building
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator) continue; // for elevator, not stairs
@@ -1678,7 +1680,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i);
 
-		if (i->shape == SHAPE_STRAIGHT || i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES) { // straight stairs
+		if (i->shape != SHAPE_U) { // straight stairs
 			for (unsigned n = 0; n < NUM_STAIRS_PER_FLOOR; ++n, z += stair_dz, pos += step_len) {
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
 				stair.z1() = max(floor_z, z); // don't go below the floor
@@ -1686,7 +1688,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
 			}
 		}
-		else if (i->shape == SHAPE_U) { // U-shaped stairs
+		else { // U-shaped stairs
 			bool const side(0); // for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 			stair.d[!dim][side] = i->get_center_dim(!dim);
 			step_len *= 2.0;
@@ -1705,20 +1707,19 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.back().shape = SHAPE_STAIRS_U;
 			} // for n
 		}
-		else {assert(0);} // unknown stairs shape
-
-		if (i->shape == SHAPE_U || i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES) { // add walls around stairs for this floor
+		if (i->shape != SHAPE_STRAIGHT) { // add walls around stairs for this floor
 			float const wall_hw(0.15*step_len_pos), half_thick(0.5*floor_thickness);
 			stair = *i;
 			stair.z2() -= 0.5*floor_thickness; // prevent z-fighting on top floor
 			stair.z1()  = max(bcube.z1()+half_thick, floor_z-half_thick); // full height
 			set_wall_width(stair, i->d[dim][dir], wall_hw, dim);
-			if (i->shape != SHAPE_WALLED_SIDES) {objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir);} // back/end of stairs
+			if (i->shape != SHAPE_WALLED_SIDES && i->shape != SHAPE_HAS_RAILINGS) {objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir);} // back/end of stairs
 			stair.d[dim][!dir] = i->d[dim][!dir];
 
 			for (unsigned d = 0; d < 2; ++d) { // sides of stairs
 				set_wall_width(stair, i->d[!dim][d], wall_hw, !dim);
-				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir);
+				if (i->shape == SHAPE_HAS_RAILINGS) {objs.emplace_back(stair, TYPE_RAILING, 0, dim, dir, 0, 1.0, SHAPE_CUBE, railing_color);} // collision detection works like a cube
+				else                                {objs.emplace_back(stair, TYPE_STAIR,   0, dim, dir);}
 			}
 		}
 	} // for i

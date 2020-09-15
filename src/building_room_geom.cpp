@@ -103,9 +103,9 @@ void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, b
 {
 	point const center(c.get_cube_center());
 	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
-	add_vcylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top, color, draw_bot, draw_top, two_sided, inv_tb, side_tscale);
+	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top, color, draw_bot, draw_top, two_sided, inv_tb, side_tscale);
 }
-void rgeom_mat_t::add_vcylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
+void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
 	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale)
 {
 	point const ce[2] = {bot, top};
@@ -141,7 +141,7 @@ void rgeom_mat_t::add_vcylin_to_verts(point const &bot, point const &top, float 
 
 	for (unsigned bt = 0; bt < 2; ++bt) {
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
-		norm_comp const normal((bool(bt) ^ inv_tb) ? plus_z : -plus_z);
+		norm_comp const normal((bool(bt) ^ inv_tb) ? v12 : -v12);
 		unsigned const center_ix(itix);
 		itri_verts[itix++].assign(ce[bt], normal, 0.0, 0.0, cw.c); // center
 
@@ -519,6 +519,27 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 		if (c.flags & RO_FLAG_ADJ_HI) {skip_faces |= ~get_face_mask(c.dim, 1);}
 		skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
 		mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces); // is_small, untextured, no shadows, not light scale
+	}
+}
+
+void building_room_geom_t::add_railing(room_object_t const &c) {
+	float const radius(0.5*c.get_sz_dim(!c.dim)), pole_radius(0.75*radius), length(c.get_sz_dim(c.dim)), center(c.get_center_dim(!c.dim)), height(0.35*c.dz());
+	point p[2];
+
+	for (unsigned d = 0; d < 2; ++d) {
+		p[d].z = c.d[2][d] + height;
+		p[d][!c.dim] = center;
+		p[d][ c.dim] = c.d[c.dim][c.dir^bool(d)^1];
+	}
+	tid_nm_pair_t tex;
+	tex.set_specular(0.7, 70.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	mat.add_cylin_to_verts(p[0], p[1], radius, radius, c.color, 1, 1); // draw sloped railing with both ends
+
+	for (unsigned d = 0; d < 2; ++d) { // add the two vertical poles
+		point pt(p[d]);
+		pt[c.dim] += ((c.dir^bool(d)) ? 1.0 : -1.0)*0.01*length;
+		mat.add_cylin_to_verts((pt - vector3d(0, 0, height)), pt, pole_radius, pole_radius, c.color, 0, 0); // no ends
 	}
 }
 
@@ -1284,7 +1305,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c) {
 	float const plant_diameter(0.5f*(c.dx() + c.dy())), pot_radius(0.4*plant_diameter),stem_radius(0.035*plant_diameter);
 	float const pot_height(max(0.6*plant_diameter, 0.3*c.dz())), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height);
 	float const cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
-	get_material(untex_shad_mat, 1).add_vcylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), 0, 0, 1, 0);
+	get_material(untex_shad_mat, 1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), 0, 0, 1, 0);
 	// draw dirt in the pot as a disk
 	rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
 	point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk
@@ -1301,7 +1322,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c) {
 	for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
 	// draw plant stem
 	colorRGBA const stem_color(plant.get_stem_color());
-	get_wood_material(1.0).add_vcylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem
+	get_wood_material(1.0).add_cylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem
 }
 
 void building_room_geom_t::clear() {
@@ -1424,6 +1445,7 @@ void building_room_geom_t::create_small_static_vbos() {
 		case TYPE_BED:   add_bed     (*i, 0, 1, tscale); break;
 		case TYPE_SIGN:  add_sign    (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
+		case TYPE_RAILING:   add_railing(*i); break;
 		default: break;
 		}
 	} // for i

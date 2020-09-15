@@ -201,14 +201,14 @@ struct draw_range_t {
 
 enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
 	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL, TYPE_SIGN,
-	                 TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM, TYPE_TOILET,
-	                 TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR, TYPE_URINAL, NUM_TYPES};
+	                 TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM, TYPE_RAILING,
+	                 TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR, TYPE_URINAL, NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED};
 enum room_type      {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY, RTYPE_ENTRY,
 	                 RTYPE_LIBRARY, RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
 std::string const room_names[NUM_RTYPES] =
 	{"Not Set", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study", "Entryway", "Library", "Garage", "Shed"};
-enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES};
+enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_HAS_RAILINGS};
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
 enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_COUCH, OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, NUM_OBJ_MODELS};
 
@@ -292,7 +292,7 @@ public:
 		bool two_sided=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0);
 	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top,
 		bool two_sided=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0);
-	void add_vcylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
+	void add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
 		bool draw_bot, bool draw_top, bool two_sided=0, bool inv_tb=0, float side_tscale=1.0);
 	void add_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color);
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color);
@@ -363,6 +363,7 @@ struct building_room_geom_t {
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex);
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
+	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c);
 	void create_static_vbos(tid_nm_pair_t const &wall_tex);
 	void create_small_static_vbos();
