@@ -934,6 +934,31 @@ bool building_t::add_library_objs(rand_gen_t &rgen, room_t const &room, float zv
 	return (num_added > 0);
 }
 
+bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance()));
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	assert(interior && interior->room_geom);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	unsigned const num_crates(rgen.rand() % 9); // 0-8
+
+	// this is how many placements we try, not how many crates are actually added; for rooms that are not too small, most placements should succeed
+	for (unsigned n = 0; n < num_crates; ++n) {
+		point pos(0.0, 0.0, zval);
+		vector3d sz;
+		for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.1*window_vspacing*(1.0 + 0.6*rgen.rand_float());} // half size relative to window_vspacing
+		cube_t place_area(room_bounds);
+		place_area.expand_by_xy(-sz);
+		if (!place_area.is_strictly_normalized()) continue; // too large for this room
+		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);}
+		cube_t crate(pos);
+		crate.expand_by_xy(sz);
+		crate.z2() += 2.0*sz.z; // multiply by 2 since this is a size rather than half size/radius
+		if (overlaps_other_room_obj(crate, objs_start) || is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
+		objs.emplace_back(crate, TYPE_CRATE, room_id, 0, 0, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+	} // for n
+	return 1; // it's always a storage room, even if it's empty
+}
+
 void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
@@ -999,6 +1024,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 		// room in a commercial building - add whiteboard when there is a full wall to use
 	}
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
+	if (room.rtype == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms
 	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
 	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
@@ -1343,8 +1369,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
-			if (!added_obj && r->is_office) {added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);} // large office
-
+			if (!added_obj && r->is_office) { // add cubicles if this is a large office
+				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
+			}
 			if (!added_obj && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
@@ -1356,7 +1383,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_kitchen) {r->assign_to(RTYPE_KITCHEN, f); added_kitchen_mask |= floor_mask;}
 				}
 			}
-			if (!added_obj) { // try to place a desk if there's no table or bed
+			if (!added_obj && r->is_office && f == 0 && (rgen.rand()&3) == 0) {
+				// if we haven't added any objects yet, and this room is an office on the first floor, make it a storage room 25% of the time
+				added_obj = no_whiteboard = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
+			}
+			if (!added_obj) { // try to place a desk if there's no table, bed, etc.
 				added_obj = can_place_book = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
 				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? RTYPE_STUDY : RTYPE_OFFICE), f);} // or other room type - may be overwritten below
 			}
