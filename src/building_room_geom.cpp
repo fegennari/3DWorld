@@ -482,8 +482,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	}
 }
 
-void building_room_geom_t::add_crate(room_object_t const &c) { // TODO: add proper crate texture?
-	get_material(tid_nm_pair_t(FENCE_TEX, 0.0), 1).add_cube_to_verts(c, apply_light_color(c, c.color), zero_vector, EF_Z1); // skip bottom face
+void building_room_geom_t::add_crate(room_object_t const &c) {
+	get_material(tid_nm_pair_t(get_texture_by_name("crate.jpg"), 0.0), 1).add_cube_to_verts(c, apply_light_color(c, c.color), zero_vector, EF_Z1); // skip bottom face
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
