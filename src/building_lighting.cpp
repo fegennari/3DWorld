@@ -387,21 +387,28 @@ bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) co
 	return 0;
 }
 void building_t::clip_ray_to_walls(point const &p1, point &p2) const { // Note: assumes p1.z == p2.z
-	float t(1.0), tmin(0.0), tmax(1.0);
-
 	for (unsigned d = 0; d < 2; ++d) {
+		bool const dir(p2[d] < p1[d]);
+		float mult((p2[!d] - p1[!d])/(p2[d] - p1[d]));
+
 		for (auto c = interior->walls[d].begin(); c != interior->walls[d].end(); ++c) {
+			float const v(c->d[d][dir]);
+			if ((p1[d] < v) == (p2[d] < v)) continue; // no crossing
 			if (p1.z < c->z1() || p1.z > c->z2()) continue; // no z overlap
-			if (get_line_clip_xy(p1, p2, c->d, tmin, tmax) && tmin < t) {t = tmin;} // optimization: only clip p2?
-		}
-	}
-	if (t < 1.0) {p2 = p1 + (p2 - p1)*t;} // clip to t
+			if ((p1[!d] < c->d[!d][0] && p2[!d] < c->d[!d][0]) || (p1[!d] > c->d[!d][1] && p2[!d] > c->d[!d][1])) continue; // both to one side of the cube
+			float const cross_pos(p1[!d] + mult*(v - p1[d]));
+			if (cross_pos < c->d[!d][0] || cross_pos > c->d[!d][1]) continue; // doesn't cross within the cube bounds
+			p2[ d] = v;
+			p2[!d] = cross_pos;
+			mult   = (p2[!d] - p1[!d])/(p2[d] - p1[d]);
+		} // for c
+	} // for d
 }
 
 void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const {
 	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205 / no ls bcube expand: 74538
 	// starts with building bcube clipped to light bcube
-	//timer_t timer("refine_light_bcube");
+	//timer_t timer("refine_light_bcube"); // 0.062ms average
 	cube_t tight_bcube;
 
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
