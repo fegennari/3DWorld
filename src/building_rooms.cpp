@@ -936,14 +936,16 @@ bool building_t::add_library_objs(rand_gen_t &rgen, room_t const &room, float zv
 
 bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), room_pad(max(4.0f*wall_thickness, get_min_front_clearance()));
+	float const ceil_zval(zval + window_vspacing - get_floor_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	assert(interior && interior->room_geom);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	unsigned const num_crates(rgen.rand() % 20); // 0-19
+	unsigned const num_crates(2 + (rgen.rand() % 19)); // 2-20
 	vect_cube_t exclude;
 	cube_t test_cube(room);
 	test_cube.z1() = zval; // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
 	test_cube.z2() = zval + wall_thickness;
+	unsigned num_placed(0);
 
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (!is_cube_close_to_door(test_cube, 0.0, 0, *i, 2, 1)) continue; // check both dirs, check_zval=1
@@ -951,11 +953,10 @@ bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zv
 		exclude.back().expand_in_dim( i->dim, 0.6*room.get_sz_dim(i->dim));
 		exclude.back().expand_in_dim(!i->dim, 0.1*i->get_sz_dim(!i->dim));
 	}
-	// this is how many placements we try, not how many crates are actually added; for rooms that are not too small, most placements should succeed
-	for (unsigned n = 0; n < num_crates; ++n) {
+	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
 		point pos(0.0, 0.0, zval);
-		vector3d sz;
-		for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.1*window_vspacing*(1.0 + 0.6*rgen.rand_float());} // half size relative to window_vspacing
+		vector3d sz; // half size relative to window_vspacing
+		for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.1*window_vspacing*(1.0 + ((d == 2) ? 0.6 : 0.8)*rgen.rand_float());} // slightly more variation in XY
 		cube_t place_area(room_bounds);
 		place_area.expand_by_xy(-sz);
 		if (!place_area.is_strictly_normalized()) continue; // too large for this room
@@ -964,9 +965,18 @@ bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zv
 		crate.expand_by_xy(sz);
 		crate.z2() += 2.0*sz.z; // multiply by 2 since this is a size rather than half size/radius
 		if (has_bcube_int(crate, exclude)) continue; // don't place crates between the door and the center of the room
-		if (overlaps_other_room_obj(crate, objs_start)) continue; // TODO: allow for stacking of cubes
+		bool bad_placement(0);
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+			assert(i->type == TYPE_CRATE); // only crates in this room
+			if (!i->intersects(crate)) continue;
+			if (i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(i->dz(), 2);} // place this crate on the previous one
+			else {bad_placement = 1; break;}
+		}
+		if (bad_placement) continue;
 		if (is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
 		objs.emplace_back(crate, TYPE_CRATE, room_id, 0, 0, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		if (++num_placed == num_crates) break; // we're done
 	} // for n
 	return 1; // it's always a storage room, even if it's empty
 }
@@ -1395,8 +1405,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_kitchen) {r->assign_to(RTYPE_KITCHEN, f); added_kitchen_mask |= floor_mask;}
 				}
 			}
-			if (!added_obj && r->is_office && f == 0 && (rgen.rand()&3) == 0) {
-				// if we haven't added any objects yet, and this room is an office on the first floor, make it a storage room 25% of the time
+			if (!added_obj && r->is_office && r->interior && f == 0 && rgen.rand_bool()) {
+				// if we haven't added any objects yet, and this room is an interior office on the first floor, make it a storage room 50% of the time
 				added_obj = no_whiteboard = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}
