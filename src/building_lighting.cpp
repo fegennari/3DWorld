@@ -613,7 +613,10 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	room_object_t &light(objs[closest_light]);
 	
 	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (i->type == TYPE_LIGHT && i->room_id == light.room_id && i->z1() == light.z1()) {i->toggle_lit_state();} // Note: doesn't update indir lighting or room light value
+		if (i->type == TYPE_LIGHT && i->room_id == light.room_id && i->z1() == light.z1()) {
+			i->toggle_lit_state(); // Note: doesn't update indir lighting
+			//set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
+		}
 	}
 	interior->room_geom->clear_and_recreate_lights(); // recreate light geom with correct emissive properties
 	return 1;
@@ -634,6 +637,23 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 	} // for i
 	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
 	return updated;
+}
+
+void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state) {
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	float const obj_zmin(light_z2 - get_window_vspace()); // get_floor_thickness()?
+	bool was_updated(0);
+
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
+		if (i->is_lit() == lit_state) continue; // already at the correct state
+		if (i->type == TYPE_STAIR || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_WINDOW || i->type == TYPE_BLOCKER || i->type == TYPE_COLLIDER ||
+			i->type == TYPE_SIGN || i->type == TYPE_FLOORING || i->type == TYPE_CLOSET || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING) continue; // not a type that uses lit flags
+		i->toggle_lit_state(); // TODO: also need to adjust i->light_amt
+		was_updated = 1;
+	} // for i
+	if (was_updated) {interior->room_geom->clear_materials();} // need to recreate them
 }
 
 float room_t::get_light_amt() const { // Note: not normalized to 1.0

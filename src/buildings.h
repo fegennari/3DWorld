@@ -199,7 +199,7 @@ struct draw_range_t {
 	vertex_range_t vr[MAX_DRAW_BLOCKS]; // quad verts only for now
 };
 
-enum room_object    {TYPE_NONE =0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
+enum room_object    {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
 	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL, TYPE_SIGN,
 	                 TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM, TYPE_RAILING,
 	                 TYPE_CRATE, TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR, TYPE_URINAL,
@@ -585,6 +585,7 @@ struct building_t : public building_geom_t {
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
+	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
