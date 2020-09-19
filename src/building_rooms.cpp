@@ -709,6 +709,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 		float const sink_start(place_area.d[!br_dim][sink_side] + 0.5f*sink_step);
 		float const sink_from_wall(wall_pos + dir_sign*(0.5f*slength + (use_sink_model ? wall_thickness : 0.0f)));
 		float sink_pos(sink_start);
+		cube_t sinks_bcube;
 
 		for (unsigned n = 0; n < num_sinks; ++n) {
 			point center(sink_from_wall, sink_pos, zval);
@@ -725,6 +726,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 				sink.expand_in_dim(!br_dim, 0.5*fabs(sink_step)); // tile exactly with the adjacent sink
 				objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, flags, tot_light_amt);
 			}
+			sinks_bcube.assign_or_union_with_cube(sink);
 			sink_pos += sink_step;
 		} // for n
 		if (add_urinals) { // add urinals opposite the sinks, using same spacing as sinks
@@ -752,6 +754,15 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
 				objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, flags, tot_light_amt, SHAPE_SHORT, stall_color);
 			}
+		}
+		if (!sinks_bcube.is_all_zeros()) { // add a long mirror above the sink
+			cube_t mirror(sinks_bcube);
+			mirror.expand_in_dim(!br_dim, -0.25*wall_thickness); // slightly smaller
+			mirror.d[br_dim][ dir] = wall_pos;
+			mirror.d[br_dim][!dir] = wall_pos +  + dir_sign*0.1*wall_thickness;
+			mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
+			mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
+			if (mirror.is_strictly_normalized()) {objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, (flags | RO_FLAG_NOCOLL), tot_light_amt);}
 		}
 	} // for dir
 	// add a sign outside the bathroom door

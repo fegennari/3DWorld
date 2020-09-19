@@ -483,11 +483,15 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 }
 
 void building_room_geom_t::add_crate(room_object_t const &c) {
-	get_material(tid_nm_pair_t(get_texture_by_name("crate.jpg"), 0.0), 1).add_cube_to_verts(c, apply_light_color(c, c.color), zero_vector, EF_Z1); // skip bottom face
+	get_material(tid_nm_pair_t(get_texture_by_name("crate.jpg"), 0.0), 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
+}
+
+void building_room_geom_t::add_mirror(room_object_t const &c) { // TODO: add mirror reflection somehow
+	get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, c.color, zero_vector, ~get_face_mask(c.dim, !c.dir)); // draw all but that back face (or only the front face?)
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
-	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c, c.color), tex_origin, ~EF_Z2); // top face only
+	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only
 }
 
 void building_room_geom_t::add_wall_trim(room_object_t const &c) {
@@ -1414,6 +1418,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex); break;
 		case TYPE_CRATE:   add_crate   (*i); break;
+		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn
