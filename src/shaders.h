@@ -297,6 +297,7 @@ public:
 };
 
 unsigned const FONT_TEXTURE_ID = (1<<16); // some large number that will never be a valid texture ID
+unsigned const REFLECTION_TEXTURE_ID = FONT_TEXTURE_ID + 1; // another special texture ID
 
 struct tile_blend_tex_data_t {
 	unsigned tid_tinput, tid_lut, context_count;

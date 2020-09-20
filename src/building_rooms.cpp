@@ -1847,8 +1847,17 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 	}
 }
 
+void building_t::create_mirror_reflection_if_needed(vector3d const &xlate) const {
+	// TODO:
+	// find room containing the camera (or the connecting hallway?)
+	// see if that room contains a mirror
+	// draw this building's interior into a reflection image
+}
+
 void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building) {
-	if (interior && interior->room_geom) {interior->room_geom->draw(s, xlate, get_material().wall_tex, shadow_only, inc_small, player_in_building);}
+	if (!interior || !interior->room_geom) return;
+	//if (!shadow_only && player_in_building && !is_house) {create_mirror_reflection_if_needed(xlate);} // this doesn't really go here because we're already inside the draw code
+	interior->room_geom->draw(s, xlate, get_material().wall_tex, shadow_only, inc_small, player_in_building);
 }
 void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix,
 	int ped_ix, bool shadow_only, bool inc_small, bool player_in_building)

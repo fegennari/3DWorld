@@ -262,7 +262,6 @@ void rgeom_mat_t::create_vbo() {
 void rgeom_mat_t::draw(shader_t &s, bool shadow_only) {
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows
-	//if (no_small_features && tex.tid == FONT_TEXTURE_ID) return; // book text is always small
 	assert(vbo.vbo_valid());
 	assert(num_qverts > 0 || num_itverts > 0);
 	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
@@ -486,8 +485,8 @@ void building_room_geom_t::add_crate(room_object_t const &c) {
 	get_material(tid_nm_pair_t(get_texture_by_name("crate.jpg"), 0.0), 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
 }
 
-void building_room_geom_t::add_mirror(room_object_t const &c) { // TODO: add mirror reflection somehow
-	get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, c.color, zero_vector, ~get_face_mask(c.dim, !c.dir)); // draw all but that back face (or only the front face?)
+void building_room_geom_t::add_mirror(room_object_t const &c) {
+	get_material(tid_nm_pair_t(REFLECTION_TEXTURE_ID), 0).add_cube_to_verts(c, c.color, zero_vector, ~get_face_mask(c.dim, !c.dir)); // draw all but that back face (or only the front face?)
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {

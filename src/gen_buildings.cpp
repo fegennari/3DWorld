@@ -24,6 +24,7 @@ bool camera_in_building(0), interior_shadow_maps(0);
 building_params_t global_building_params;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
+extern unsigned reflection_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale;
 extern double camera_zh;
@@ -43,7 +44,12 @@ tid_nm_pair_t tid_nm_pair_t::get_scaled_version(float scale) const {
 	return tex;
 }
 void tid_nm_pair_t::set_gl(shader_t &s) const {
-	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();} else {select_texture(tid);}
+	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();}
+	else if (tid == REFLECTION_TEXTURE_ID) {
+		if (reflection_tid == 0) {select_texture(WHITE_TEX);}
+		else {bind_2d_texture(reflection_tid);}
+	}
+	else {select_texture(tid);}
 	select_multitex(get_nm_tid(), 5);
 	if (get_nm_tid() == FLAT_NMAP_TEX) {s.add_uniform_float("bump_map_mag", 0.0);} // disable bump map
 	if (emissive) {s.add_uniform_float("emissive_scale", 1.0);} // enable emissive
