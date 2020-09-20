@@ -1151,7 +1151,7 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 			// shrink by wall thickness to avoid problems at the corners of buildings
 			if (c.d[!dim][0] == bcube.d[!dim][0]) {c.d[!dim][0] += wall_thickness;}
 			if (c.d[!dim][1] == bcube.d[!dim][1]) {c.d[!dim][1] -= wall_thickness;}
-			objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, room_obj_shape::SHAPE_CUBE, WHITE); // always lit
+			objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, RO_FLAG_NOCOLL, max(tot_light_amt, 1.0f), room_obj_shape::SHAPE_CUBE, WHITE); // always lit
 		} // for dir
 	} // for dim
 }
