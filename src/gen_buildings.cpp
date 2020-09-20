@@ -1965,6 +1965,7 @@ public:
 		interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
 		building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 		interior_shadow_maps = 0;
+		create_mirror_reflection_if_needed();
 		draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);

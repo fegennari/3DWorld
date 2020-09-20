@@ -1848,16 +1848,35 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 	}
 }
 
-void building_t::create_mirror_reflection_if_needed(vector3d const &xlate) const {
-	// TODO:
+void create_mirror_reflection_if_needed() {
+	if (cur_room_mirror.type != TYPE_MIRROR) return;
+	bool const dim(cur_room_mirror.dim);
+	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]);
+	cur_room_mirror = room_object_t(); // reset for next frame
+}
+
+void building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
+	point const camera_bs(camera_pdu.pos - xlate);
+	vector<point> points;
+	if (!check_point_or_cylin_contained(camera_bs, 0.0, points)) return; // camera not in the building
+	
 	// find room containing the camera (or the connecting hallway?)
-	// see if that room contains a mirror
-	// draw this building's interior into a reflection image
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		if (!r->contains_pt(camera_bs)) continue;
+		uint32_t const room_id((r - interior->rooms.begin()) & 255);
+		vector<room_object_t> &objs(interior->room_geom->objs);
+		auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+
+		for (auto i = objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
+			if (i->room_id == room_id && i->type == TYPE_MIRROR) {cur_room_mirror = *i; break;}
+		}
+		break;
+	} // for r
 }
 
 void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building) {
 	if (!interior || !interior->room_geom) return;
-	//if (!shadow_only && player_in_building && !is_house) {create_mirror_reflection_if_needed(xlate);} // this doesn't really go here because we're already inside the draw code
+	if (!shadow_only && player_in_building && !is_house) {find_mirror_needing_reflection(xlate);} // Note: we're already inside the draw code
 	interior->room_geom->draw(s, xlate, get_material().wall_tex, shadow_only, inc_small, player_in_building);
 }
 void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix,
