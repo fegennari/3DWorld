@@ -640,7 +640,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 }
 
 void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state) {
-	assert(interior);
+	assert(has_room_geom());
 	assert(room_id < interior->rooms.size());
 	float const light_intensity(interior->rooms[room_id].light_intensity);
 	vector<room_object_t> &objs(interior->room_geom->objs);

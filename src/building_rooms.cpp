@@ -12,7 +12,7 @@ extern object_model_loader_t building_obj_model_loader;
 
 
 bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const {
-	assert(interior && interior->room_geom);
+	assert(has_room_geom());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
 
@@ -54,7 +54,6 @@ unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, 
 {
 	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance()));
 	vector3d const room_sz(room.get_size());
-	assert(interior && interior->room_geom);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	point table_pos(place_pos);
 	vector3d table_sz;
@@ -789,7 +788,7 @@ void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, 
 	blockers.push_back(door_exp);
 }
 void building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors, bool ignore_chairs) const {
-	assert(interior && interior->room_geom);
+	assert(has_room_geom());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
 	bool const first_floor(room.z1() < bcube.z1() + get_floor_thickness());
@@ -945,7 +944,6 @@ bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zv
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), room_pad(max(4.0f*wall_thickness, get_min_front_clearance()));
 	float const ceil_zval(zval + window_vspacing - get_floor_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
-	assert(interior && interior->room_geom);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const num_crates(2 + (rgen.rand() % 19)); // 2-20
 	vect_cube_t exclude;
