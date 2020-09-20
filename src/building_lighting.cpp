@@ -615,7 +615,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
 		if (i->type == TYPE_LIGHT && i->room_id == light.room_id && i->z1() == light.z1()) {
 			i->toggle_lit_state(); // Note: doesn't update indir lighting
-			//set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
+			set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
 		}
 	}
 	interior->room_geom->clear_and_recreate_lights(); // recreate light geom with correct emissive properties
@@ -640,6 +640,9 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 }
 
 void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state) {
+	assert(interior);
+	assert(room_id < interior->rooms.size());
+	float const light_intensity(interior->rooms[room_id].light_intensity);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	float const obj_zmin(light_z2 - get_window_vspace()); // get_floor_thickness()?
@@ -647,10 +650,9 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
-		if (i->is_lit() == lit_state) continue; // already at the correct state
 		if (i->type == TYPE_STAIR || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_WINDOW || i->type == TYPE_BLOCKER || i->type == TYPE_COLLIDER ||
 			i->type == TYPE_SIGN || i->type == TYPE_FLOORING || i->type == TYPE_CLOSET || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING) continue; // not a type that uses lit flags
-		i->toggle_lit_state(); // TODO: also need to adjust i->light_amt
+		if (lit_state) {i->light_amt += light_intensity;} else {i->light_amt = max((i->light_amt - light_intensity), 0.0f);} // shouldn't be negative, but clamp to 0 just in case
 		was_updated = 1;
 	} // for i
 	if (was_updated) {interior->room_geom->clear_materials();} // need to recreate them

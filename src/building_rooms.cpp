@@ -1229,7 +1229,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			light_size = max(0.06f*room_size, 0.67f*floor_thickness);
 		}
 		if (r->has_stairs && r->rtype == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS);} // default to stairs, may be re-assigned below
-		float const light_val(22.0*light_size), room_light_intensity(light_val*light_val/r->get_area_xy()); // average for room, unitless
+		float const light_val(22.0*light_size);
+		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
 		cube_t pri_light, sec_light;
 		set_light_xy(pri_light, room_center, light_size, room_dim, light_shape);
 		if (!r->contains_cube_xy(pri_light)) {pri_light.set_to_zeros();} // disable light if it doesn't fit (small room)
@@ -1359,7 +1360,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (is_lit) {r->lit_by_floor |= (1ULL << (f&63));} // flag this floor as being lit (for up to 64 floors)
 			} // end light placement
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
-			if (is_lit) {tot_light_amt += room_light_intensity;} // light surface area divided by room surface area with some fudge constant
+			if (is_lit) {tot_light_amt += r->light_intensity;}
 
 			if (r->no_geom) {
 				if (is_house && r->is_hallway) { // allow pictures and rugs in the hallways of houses

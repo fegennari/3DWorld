@@ -392,8 +392,10 @@ struct room_t : public cube_t {
 	uint8_t part_id, num_lights;
 	room_type rtype; // this applies to the first floor because some rooms can have variable per-floor assignment
 	uint64_t lit_by_floor;
+	float light_intensity; // due to room lights, if turned on
+
 	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), interior(0),
-		ext_sides(0), part_id(0), num_lights(0), rtype(RTYPE_NOTSET), lit_by_floor(0) {}
+		ext_sides(0), part_id(0), num_lights(0), rtype(RTYPE_NOTSET), lit_by_floor(0), light_intensity(0.0) {}
 	room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_);
 	void assign_to(room_type rt, unsigned floor=0);
 	float get_light_amt() const;
