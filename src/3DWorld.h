@@ -665,7 +665,8 @@ struct pos_dir_up { // defines a view frustum
 	void translate(vector3d const &tv) {pos += tv;}
 	void scale(float s) {pos *= s; near_ *= s; far_ *= s;}
 	void rotate(vector3d const &axis, float angle);
-	void apply_z_mirror(float zval);
+	void apply_z_mirror(float zval) {apply_dim_mirror(2, zval);}
+	void apply_dim_mirror(unsigned dim, float val);
 };
 
 

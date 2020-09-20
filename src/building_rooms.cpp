@@ -8,6 +8,9 @@
 #include "profiler.h"
 #pragma warning(disable : 26812) // prefer enum class over enum
 
+unsigned room_mirror_ref_tid(0);
+room_object_t cur_room_mirror;
+
 extern object_model_loader_t building_obj_model_loader;
 
 

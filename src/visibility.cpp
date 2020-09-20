@@ -217,11 +217,12 @@ void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but coul
 	// FIXME: what about pos?
 }
 
-void pos_dir_up::apply_z_mirror(float zval) {
+void pos_dir_up::apply_dim_mirror(unsigned dim, float val) {
 
-	pos.z = 2*zval - pos.z;
-	dir.z = -dir.z; // mirror
-	upv   = -upv;
+	assert(dim < 3);
+	pos[dim] = 2*val - pos[dim];
+	dir[dim] = -dir[dim]; // mirror
+	if (dim == 2) {upv = -upv;}
 	orthogonalize_up_dir();
 }
 

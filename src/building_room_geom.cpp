@@ -486,7 +486,11 @@ void building_room_geom_t::add_crate(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
-	get_material(tid_nm_pair_t(REFLECTION_TEXTURE_ID), 0).add_cube_to_verts(c, c.color, zero_vector, ~get_face_mask(c.dim, !c.dir)); // draw all but that back face (or only the front face?)
+	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
+	tp.emissive = 1;
+	bool const mirror_y = 1; // does this depend on c.dim?
+	get_material(tp, 0).add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir), 0, 0, mirror_y); // draw only the front face
+	get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, c.color, zero_vector, get_skip_mask_for_xy(c.dim)); // draw only the sides untextured
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {

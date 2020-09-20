@@ -96,6 +96,17 @@ void apply_z_mirror(float zval) {
 	//mirror_about_plane(plus_z, point(0.0, 0.0, zval));
 }
 
+void apply_dim_mirror(unsigned dim, float val) {
+
+	assert(dim < 3);
+	fgMatrixMode(FG_MODELVIEW);
+	fgPushMatrix();
+	vector3d xlate(zero_vector), normal(zero_vector);
+	xlate [dim] = val;
+	normal[dim] = 1.0;
+	mirror_about_plane(normal, xlate);
+}
+
 void setup_viewport_and_proj_matrix(unsigned xsize, unsigned ysize) {
 
 	glViewport(0, 0, xsize, ysize);
