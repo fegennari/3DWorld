@@ -419,7 +419,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 			unsigned flags(0);
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
-			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, 1.0);
+			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt);
 			placed_closet = 1; // done
 		} // for d
 	} // for n
@@ -559,7 +559,7 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &
 		cube_t floor(room_bounds);
 		floor.z1() = zval;
 		floor.z2() = new_zval;
-		objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0); // assume always lit, even if light starts off
+		objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
 		objs_start = objs.size(); // exclude this from collision checks
 		zval = new_zval; // move the effective floor up
 	}
