@@ -608,10 +608,10 @@ struct building_t : public building_geom_t {
 	bool room_containing_pt_has_stairs(point const &pt) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen,
-		float zval, unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
+		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
 		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
 	bool place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen,
-		float zval, unsigned room_id, float tot_light_amt, bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
+		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
 		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_elevators(point const &player_pos);
@@ -640,28 +640,28 @@ private:
 	bool is_room_office_bathroom(room_t const &room, float zval) const {return room.is_office && room.rtype == RTYPE_BATH && !room_has_stairs_or_elevator(room, zval);}
 	void gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1, bool ignore_chairs=0) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
-		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool is_lit);
+		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt);
 	unsigned add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
-		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit);
+		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt);
 	void shorten_chairs_in_region(cube_t const &region, unsigned objs_start);
-	void add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool check_last_obj);
-	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
-	bool add_desk_to_room    (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
-	bool create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
+	void add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj);
+	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_desk_to_room    (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt);
+	bool create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, float min_bed_space=0.0) const;
-	bool add_bedroom_objs    (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
-	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
-	bool add_bathroom_objs   (rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, unsigned floor);
-	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned floor);
-	bool add_kitchen_objs    (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool allow_adj_ext_door);
-	bool add_livingroom_objs (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
-	bool add_library_objs    (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
-	bool add_storage_objs    (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
-	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir);
-	void add_rug_to_room     (rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
-	bool hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start);
-	void add_plants_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, unsigned num);
-	void add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
+	bool add_bedroom_objs    (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt);
+	bool add_bathroom_objs   (rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor);
+	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor);
+	bool add_kitchen_objs    (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool allow_adj_ext_door);
+	bool add_livingroom_objs (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_library_objs    (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool add_storage_objs    (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir);
+	void add_rug_to_room     (rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt);
+	bool hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	void add_plants_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num);
+	void add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
 	bool can_be_bathroom(room_t const &room) const;
 	void add_wall_and_door_trim();

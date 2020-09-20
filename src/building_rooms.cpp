@@ -33,7 +33,7 @@ bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room
 }
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
-	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool is_lit)
+	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt)
 {
 	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_sz(0.1*window_vspacing); // half size
 	point chair_pos(place_pos); // same starting center and z1
@@ -43,17 +43,16 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	chair.expand_by_xy(chair_sz);
 	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0; // check proximity to doors
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+	objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, 0, tot_light_amt);
 	objs.back().color = chair_color;
 	return 1;
 }
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
 unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
-	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt, bool is_lit)
+	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt)
 {
 	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance()));
-	uint8_t const obj_flags(is_lit ? RO_FLAG_LIT : 0);
 	vector3d const room_sz(room.get_size());
 	assert(interior && interior->room_geom);
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -68,7 +67,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, 
 	urc.z = table_pos.z + rgen.rand_uniform(0.20, 0.22)*window_vspacing; // top
 	cube_t table(llc, urc);
 	if (!is_valid_placement_for_room(table, room, blockers, 0, room_pad)) return 0; // check proximity to doors and collision with blockers
-	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, obj_flags, tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
+	objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, 0, tot_light_amt, (is_round ? SHAPE_CYLIN : SHAPE_CUBE));
 	unsigned num_added(1); // start with the table
 
 	// place some chairs around the table
@@ -77,7 +76,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, 
 			if (rgen.rand_bool()) continue; // 50% of the time
 			point chair_pos(table_pos); // same starting center and z1
 			chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
-			num_added += add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, is_lit);
+			num_added += add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt);
 		}
 	}
 	return num_added;
@@ -90,7 +89,7 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 	}
 }
 
-void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool check_last_obj) {
+void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj) {
 	unsigned const NUM_COLORS = 6;
 	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
@@ -144,14 +143,14 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 		c.z2() += height;
 		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
 		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (cylin ? room_obj_shape::SHAPE_CYLIN : room_obj_shape::SHAPE_CUBE));
+		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? room_obj_shape::SHAPE_CYLIN : room_obj_shape::SHAPE_CUBE));
 		objs.back().color = colors[rgen.rand()%NUM_COLORS];
 		return; // done
 	} // for n
 }
 
 // Note: no blockers for people
-bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-0.1*get_wall_thickness());
 	float const vspace(get_window_vspace());
@@ -176,7 +175,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		cube_t tc(c);
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt); // Note: dir faces into the room, not the wall
+		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, 0, tot_light_amt); // Note: dir faces into the room, not the wall
 		objs.back().obj_id = (uint16_t)objs.size();
 		return 1; // done/success
 	} // for n
@@ -199,7 +198,7 @@ bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval) con
 
 // Note: must be first placed object
 bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
-	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_lit)
+	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt)
 {
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
@@ -222,7 +221,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 		if (num_placed > 0 && c.intersects(placed_desk)) continue; // intersects previously placed desk
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // make short if against an exterior wall or in an office
-		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
+		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		objs.back().obj_id = (uint16_t)objs.size();
 		cube_t bc(c);
 
@@ -236,7 +235,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 			tv.d[dim][!dir] = tv.d[dim][dir] + dsign*tv_depth;
 			tv.d[!dim][0] = center - tv_hwidth;
 			tv.d[!dim][1] = center + tv_hwidth;
-			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, 0, tot_light_amt, room_obj_shape::SHAPE_SHORT, BLACK); // monitors are shorter than TVs
 			objs.back().obj_id = (uint16_t)objs.size();
 		}
 		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
@@ -245,7 +244,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 			chair_pos[dim]  = c.d[dim][!dir];
 			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
 			
-			if (add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, is_lit)) {
+			if (add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt)) {
 				cube_t const &chair(objs.back());
 				if (num_placed > 0 && chair.intersects(placed_desk)) {objs.pop_back();} // intersects previously placed desk, remove it
 				else {bc.union_with_cube(chair);} // include the chair
@@ -258,7 +257,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	return (num_placed > 0);
 }
 
-bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) { // assumes no prior placed objects
+bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) { // assumes no prior placed objects
 	if (!room.is_office) return 0; // offices only
 	if (!room.interior && (rgen.rand()%3) == 0) return 0; // 66.7% chance for non-interior rooms
 	cube_t const room_bounds(get_walkable_room_bounds(room));
@@ -270,7 +269,6 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.75, 0.9)*floor_spacing))); // >= 4
 	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.2)); // not quite square
 	bool const add_middle_col(rwidth > 4.0*cube_depth + 2.0*interior->get_doorway_width()); // enough to fit 4 rows of cubes and 2 hallways in between
-	unsigned const cube_flags(is_lit ? RO_FLAG_LIT : 0);
 	uint16_t const bldg_id(uint16_t(mat_ix + interior->rooms.size())); // some value that's per-building
 	cube_t const &part(get_part_for_room(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -303,7 +301,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 				if (interior->is_cube_close_to_doorway(test_cube, room, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
 				bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
-				objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, cube_flags, tot_light_amt, ((against_window && !is_middle) ? SHAPE_SHORT : SHAPE_CUBE));
+				objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, 0, tot_light_amt, ((against_window && !is_middle) ? SHAPE_SHORT : SHAPE_CUBE));
 				objs.back().obj_id = bldg_id;
 				added_cube = 1;
 				// add colliders to allow the player to enter the cubicle but not cross the side walls
@@ -323,7 +321,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 					chair.z1() = zval;
 					chair.z2() = zval + chair_height;
 					chair.expand_by_xy(chair_radius);
-					objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, !long_dim, dir, cube_flags, tot_light_amt, room_obj_shape::SHAPE_CUBE, GRAY_BLACK);
+					objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, !long_dim, dir, 0, tot_light_amt, room_obj_shape::SHAPE_CUBE, GRAY_BLACK);
 				}
 			} // for d
 		} // for col
@@ -364,8 +362,8 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 	return (!overlaps_other_room_obj(c, objs_start) && !is_cube_close_to_doorway(c, room, 0.0, 1));
 }
 
-bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
-	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, is_lit)) return 0; // it's only a bedroom if there's bed
+bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt)) return 0; // it's only a bedroom if there's bed
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.1*wall_thickness); // shrink to leave a small gap
@@ -418,7 +416,7 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 				c = c2; // valid placement, update with larger cube
 			}
 			c.d[ dim][!dir] -= signed_front_clearance; // subtract off front clearance
-			unsigned flags(RO_FLAG_LIT);
+			unsigned flags(0);
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
 			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, 1.0);
@@ -428,16 +426,16 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 	// dresser
 	float const ds_height(rand_uniform(0.26, 0.32)*window_vspacing), ds_depth(rand_uniform(0.20, 0.25)*window_vspacing), ds_width(rand_uniform(0.6, 0.9)*window_vspacing);
 	vector3d const ds_sz_scale(ds_depth/ds_height, ds_width/ds_height, 1.0);
-	place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
+	place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
 	// nightstand
 	float const ns_height(rand_uniform(0.24, 0.26)*window_vspacing), ns_depth(rand_uniform(0.15, 0.2)*window_vspacing), ns_width(rand_uniform(1.0, 2.0)*ns_depth);
 	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
-	place_obj_along_wall(TYPE_DRESSER, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);
+	place_obj_along_wall(TYPE_DRESSER, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
 	return 1; // success
 }
 
 // Note: must be first placed object
-bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt) {
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -477,7 +475,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		} // for d
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		bool const dir((room_bounds.d[dim][1] - c.d[dim][1]) < (c.d[dim][0] - room_bounds.d[dim][0])); // head of the bed is closer to the wall
-		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		objs.emplace_back(c, TYPE_BED, room_id, dim, dir, 0, tot_light_amt);
 		room_object_t &bed(objs.back());
 		bed.obj_id = (uint16_t)objs.size();
 		// use white color if a texture is assigned that's not close to white
@@ -489,7 +487,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 }
 
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
-	bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window)
+	cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z), min_space(2.8*hwidth);
 	vector3d const place_area_sz(place_area.get_size());
@@ -531,7 +529,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		cube_t c3(c); // used for collision tests
 		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
 		if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
-		objs.emplace_back(c, type, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
+		objs.emplace_back(c, type, room_id, dim, !dir, 0, tot_light_amt, room_obj_shape::SHAPE_CUBE, color);
 		objs.back().obj_id = (uint16_t)objs.size();
 		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
 		return 1; // done
@@ -539,15 +537,15 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 	return 0; // failed
 }
 bool building_t::place_model_along_wall(unsigned model_id, room_object type, room_t const &room, float height, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
-	bool is_lit, cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window)
+	cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window)
 {
 	if (!building_obj_model_loader.is_model_valid(model_id)) return 0; // don't have a model of this type
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(model_id)); // D, W, H
 	return place_obj_along_wall(type, room, height*get_window_vspace(), sz, rgen, zval, room_id, tot_light_amt,
-		is_lit, place_area, objs_start, front_clearance, pref_orient, pref_centered, color, not_at_window);
+		place_area, objs_start, front_clearance, pref_orient, pref_centered, color, not_at_window);
 }
 
-bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, unsigned floor) {
+bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor) {
 	// Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
@@ -561,12 +559,12 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &
 		cube_t floor(room_bounds);
 		floor.z1() = zval;
 		floor.z2() = new_zval;
-		objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0); // assume always lit, even if light starts off
+		objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, 1.0); // assume always lit, even if light starts off
 		objs_start = objs.size(); // exclude this from collision checks
 		zval = new_zval; // move the effective floor up
 	}
 	if (have_toilet && room.is_office && min(place_area.dx(), place_area.dy()) > 1.5*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.0*floor_spacing) {
-		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, is_lit, floor)) return 1; // large enough, try to divide into bathroom stalls
+		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor)) return 1; // large enough, try to divide into bathroom stalls
 	}
 	bool placed_obj(0), placed_toilet(0);
 	
@@ -593,25 +591,25 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &
 				c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, to avoid placing other objects there (sink and tub)
 				c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
 				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
-				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, 0, tot_light_amt);
 				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_toilet = 1; // done
 			} // for d
 		} // for n
 		if (!placed_toilet) { // if the toilet can't be placed in a corner, allow it to be placed anywhere; needed for small offices
-			placed_obj |= place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, room, 0.35, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.8);
+			placed_obj |= place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, room, 0.35, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);
 		}
 	}
 	if (is_house) { // place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
 		cube_t place_area_tub(room_bounds);
 		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
-		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, 0.2, rgen, zval, room_id, tot_light_amt, is_lit, place_area_tub, objs_start, 0.4);
+		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, 0.2, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4);
 	}
-	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.6);
+	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);
 	return placed_obj;
 }
 
-bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned floor) {
+bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
 	// Note: assumes no prior placed objects
 	bool const use_sink_model(0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_SINK)); // not using sink models
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -676,7 +674,6 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	bool const two_rows(room_width > 1.5*req_depth), skip_stalls_side(room_id & 1); // put stalls on a side consistent across floors
 	float const sink_side_sign(sink_side ? 1.0 : -1.0), stall_step(sink_side_sign*stall_width), sink_step(-sink_side_sign*sink_spacing);
 	float const floor_thickness(get_floor_thickness());
-	unsigned const flags(is_lit ? RO_FLAG_LIT : 0);
 	colorRGBA const stall_color(0.75, 1.0, 0.9, 1.0); // blue-green
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
@@ -699,8 +696,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth;
 			
 			if (!interior->is_cube_close_to_doorway(stall, room, 0.0, 1, 1)) { // skip if close to a door (for rooms with doors at both ends); inc_open=1
-				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, flags, tot_light_amt);
-				objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, flags, tot_light_amt, SHAPE_CUBE, stall_color);
+				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, 0, tot_light_amt);
+				objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, 0, tot_light_amt, SHAPE_CUBE, stall_color);
 			}
 			stall_pos += stall_step;
 		} // for n
@@ -720,11 +717,11 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 
 			if (use_sink_model) { // sink 3D model
 				sink.expand_in_dim(!br_dim, 0.5*swidth);
-				objs.emplace_back(sink, TYPE_SINK, room_id, br_dim, !dir, flags, tot_light_amt);
+				objs.emplace_back(sink, TYPE_SINK, room_id, br_dim, !dir, 0, tot_light_amt);
 			}
 			else { // flat basin sink
 				sink.expand_in_dim(!br_dim, 0.5*fabs(sink_step)); // tile exactly with the adjacent sink
-				objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, flags, tot_light_amt);
+				objs.emplace_back(sink, TYPE_BRSINK, room_id, br_dim, !dir, 0, tot_light_amt);
 			}
 			sinks_bcube.assign_or_union_with_cube(sink);
 			sink_pos += sink_step;
@@ -740,19 +737,19 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 
 			for (unsigned n = 0; n < num_sinks; ++n) {
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
-				objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, flags, tot_light_amt, SHAPE_SHORT, stall_color);
+				objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
 				point center(u_from_wall, u_pos, (zval + 0.2*uheight));
 				if (br_dim) {swap(center.x, center.y);} // R90 about z
 				cube_t urinal(center, center);
 				urinal.expand_in_dim( br_dim, 0.5*ulength);
 				urinal.expand_in_dim(!br_dim, 0.5*uwidth);
 				urinal.z2() += uheight;
-				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, dir, flags, tot_light_amt);
+				objs.emplace_back(urinal, TYPE_URINAL, room_id, br_dim, dir, 0, tot_light_amt);
 				u_pos += sink_step;
 			} // for n
 			if (!two_rows) { // skip first wall if adjacent to a stall
 				set_wall_width(sep_wall, (u_pos - 0.5*sink_step), 0.2*wall_thickness, !br_dim);
-				objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, flags, tot_light_amt, SHAPE_SHORT, stall_color);
+				objs.emplace_back(sep_wall, TYPE_STALL, room_id, br_dim, !dir, 0, tot_light_amt, SHAPE_SHORT, stall_color);
 			}
 		}
 		if (!sinks_bcube.is_all_zeros()) { // add a long mirror above the sink
@@ -762,7 +759,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			mirror.d[br_dim][!dir] = wall_pos +  + dir_sign*0.1*wall_thickness;
 			mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
 			mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
-			if (mirror.is_strictly_normalized()) {objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, (flags | RO_FLAG_NOCOLL), tot_light_amt);}
+			if (mirror.is_strictly_normalized()) {objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);}
 		}
 	} // for dir
 	// add a sign outside the bathroom door
@@ -775,7 +772,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	sign.expand_in_dim(br_dim, -(mens_room ? 0.35 : 0.25)*door_width); // shrink a bit
 	sign.translate_dim(sink_side_sign*0.5*wall_thickness, !br_dim); // move to outside wall
 	sign.d[!br_dim][sink_side] += sink_side_sign*0.1*wall_thickness; // make nonzero area
-	objs.emplace_back(sign, TYPE_SIGN, room_id, !br_dim, sink_side, (RO_FLAG_LIT | RO_FLAG_NOCOLL), tot_light_amt, SHAPE_CUBE, DK_BLUE); // always lit; technically should use hallway room_id
+	objs.emplace_back(sign, TYPE_SIGN, room_id, !br_dim, sink_side, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
 	string const sign_text(mens_room ? "Men" : "Women");
 	objs.back().obj_id = register_sign_text(sign_text);
 	return 1;
@@ -819,7 +816,7 @@ void building_t::gather_room_placement_blockers(cube_t const &room, unsigned obj
 	}
 }
 
-bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, bool allow_adj_ext_door) {
+bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool allow_adj_ext_door) {
 	// Note: table and chairs have already been placed
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be kitchens
 	if (!is_house && rgen.rand_bool()) return 0; // some office buildings have kitchens, allow it half the time
@@ -829,13 +826,12 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.25*wall_thickness); // common spacing to wall for appliances
 	bool placed_obj(0);
-	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.2, 4, 0, WHITE, 1); // not at window
-	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, room, 0.46, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 1.0);}
+	placed_obj |= place_model_along_wall(OBJ_MODEL_FRIDGE, TYPE_FRIDGE, room, 0.75, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.2, 4, 0, WHITE, 1); // not at window
+	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, room, 0.46, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);}
 		
 	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
 		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height);
 		float const front_clearance(max(0.6f*height, get_min_front_clearance()));
-		unsigned const flags(is_lit ? RO_FLAG_LIT : 0);
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area
 		vector<room_object_t> &objs(interior->room_geom->objs);
@@ -877,13 +873,13 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 				if (i->d[i->dim][i->dir] != c.d[!dim][0] && i->d[i->dim][i->dir] != c.d[!dim][1]) continue; // not adjacent
 				i->flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 			}
-			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, flags, tot_light_amt);
+			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, 0, tot_light_amt);
 
 			if (1) { // add upper cabinets, always (for now); should we remove cabinets in front of windows?
 				cube_t c2(c);
 				c2.z1() = zval + 0.66*vspace;
 				c2.z2() = cabinet_area.z2(); // up to the ceiling
-				if (!has_bcube_int_no_adj(c2, blockers)) {objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, (flags | RO_FLAG_NOCOLL), tot_light_amt);} // no collision detection
+				if (!has_bcube_int_no_adj(c2, blockers)) {objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);} // no collision detection
 			}
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
 			is_sink = 0; // sink is in first placed counter only
@@ -892,7 +888,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	return placed_obj;
 }
 
-bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be living rooms
 	float const wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -905,14 +901,14 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	colorRGBA const &couch_color(colors[rgen.rand()%NUM_COLORS]);
 	unsigned tv_pref_orient(4), couch_ix(objs.size()), tv_ix(0);
 	
-	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 0.67, 4, 1, couch_color)) { // pref centered
+	if (place_model_along_wall(OBJ_MODEL_COUCH, TYPE_COUCH, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.67, 4, 1, couch_color)) { // pref centered
 		placed_couch   = 1;
 		tv_pref_orient = (2*objs[couch_ix].dim + !objs[couch_ix].dir); // TV should be across from couch
 	}
 	tv_ix = objs.size();
 
 	// place TV: pref centered; maybe should set not_at_window=1, but that seems too restrictive
-	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.45, rgen, zval, room_id, tot_light_amt, is_lit, place_area, objs_start, 4.0, tv_pref_orient, 1, BKGRAY, 0)) {
+	if (place_model_along_wall(OBJ_MODEL_TV, TYPE_TV, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 4.0, tv_pref_orient, 1, BKGRAY, 0)) {
 		placed_tv = 1;
 		// add a small table to place the TV on so that it's off the floor and not blocked as much by tables and chairs
 		room_object_t &tv(objs[tv_ix]);
@@ -920,7 +916,7 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 		cube_t table(tv); // same XY bounds as the TV
 		tv.translate_dim(height, 2); // move TV up
 		table.z2() = tv.z1();
-		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, 0, tot_light_amt);
 	}
 	if (placed_couch && placed_tv) {
 		room_object_t const &couch(objs[couch_ix]), &tv(objs[tv_ix]);
@@ -934,18 +930,18 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	return (placed_couch || placed_tv);
 }
 
-bool building_t::add_library_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+bool building_t::add_library_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be libraries
 	unsigned num_added(0);
 
 	for (unsigned n = 0; n < 8; ++n) { // place up to 8 bookcases
-		bool const added(add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, is_lit, objs_start));
+		bool const added(add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start));
 		if (added) {++num_added;} else {break;}
 	}
 	return (num_added > 0);
 }
 
-bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), room_pad(max(4.0f*wall_thickness, get_min_front_clearance()));
 	float const ceil_zval(zval + window_vspacing - get_floor_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -986,13 +982,13 @@ bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zv
 		}
 		if (bad_placement) continue;
 		if (is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
-		objs.emplace_back(crate, TYPE_CRATE, room_id, 0, 0, (is_lit ? RO_FLAG_LIT : 0), tot_light_amt);
+		objs.emplace_back(crate, TYPE_CRATE, room_id, 0, 0, 0, tot_light_amt);
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
 	return 1; // it's always a storage room, even if it's empty
 }
 
-void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool is_lit, bool use_dim_dir) {
+void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
 	float const book_sz(0.07*get_window_vspace());
@@ -1005,13 +1001,12 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	book.expand_by(book_scale);
 	book.z2() += book_sz*rgen.rand_uniform(0.1, 0.3);
 	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
-	uint8_t const flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, flags, tot_light_amt, room_obj_shape::SHAPE_CUBE, color); // Note: invalidates place_on reference
+	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, room_obj_shape::SHAPE_CUBE, color); // Note: invalidates place_on reference
 	objs.back().obj_id = (uint16_t)objs.size();
 }
 
-void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	if (!room_object_t::enable_rugs()) return; // disabled
 	vector3d const room_sz(room.get_size());
 	vector3d center(room.get_cube_center()); // Note: zvals ignored
@@ -1027,9 +1022,8 @@ void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zva
 		rug.d[d][0] = center[d] - radius;
 		rug.d[d][1] = center[d] + radius;
 	}
-	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, obj_flags, tot_light_amt);
+	objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
 	objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
 }
 
@@ -1049,7 +1043,7 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	return 1; // success
 }
 
-bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start) {
+bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!room_object_t::enable_pictures()) return 0; // disabled
 	
 	if (!is_house && !room.is_office) {
@@ -1060,7 +1054,6 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	if (room.rtype == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms
 	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
-	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool was_hung(0);
 
@@ -1077,7 +1070,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
 				c.expand_in_dim(!dim, -0.2*room.get_sz_dim(!dim)); // xy_space
 				if (!check_valid_picture_placement(room, c, 0.6*room.get_sz_dim(!dim), zval, dim, dir, objs_start)) continue;
-				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, obj_flags, tot_light_amt); // whiteboard faces dir opposite the wall
+				objs.emplace_back(c, TYPE_WBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // whiteboard faces dir opposite the wall
 				return 1; // done, only need to add one
 			} // for dir
 		} // for dim
@@ -1113,7 +1106,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 				if (ret == 1) break; // valid and good - keep this pos
 			} // for n
 			if (best_pos.is_all_zeros()) continue; // failed placement
-			objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, obj_flags, tot_light_amt); // picture faces dir opposite the wall
+			objs.emplace_back(best_pos, TYPE_PICTURE, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // picture faces dir opposite the wall
 			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix + 61*dim + 123*dir); // determines picture texture
 			was_hung = 1;
 		} // for dir
@@ -1121,7 +1114,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, flo
 	return was_hung;
 }
 
-void building_t::add_plants_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit, unsigned objs_start, unsigned num) {
+void building_t::add_plants_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num) {
 	return; // TODO: needs more work on alpha testing, etc.
 	float const window_vspacing(get_window_vspace());
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -1132,12 +1125,12 @@ void building_t::add_plants_to_room(rand_gen_t &rgen, room_t const &room, float 
 	for (unsigned n = 0; n < num; ++n) {
 		float const height(rand_uniform(0.6, 0.9)*window_vspacing), width(rand_uniform(0.15, 0.35)*window_vspacing);
 		vector3d const sz_scale(width/height, width/height, 1.0);
-		place_obj_along_wall(TYPE_PLANT, room, height, sz_scale, rgen, zval, room_id, tot_light_amt, is_lit,
+		place_obj_along_wall(TYPE_PLANT, room, height, sz_scale, rgen, zval, room_id, tot_light_amt,
 			place_area, objs_start, 0.0, 4, 0, pot_colors[rgen.rand() % num_colors]); // no clearanc, pref_orient, or color
 	}
 }
 
-void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
+void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	unsigned num_ext_walls(0);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
@@ -1147,7 +1140,6 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 	float const floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), window_thickness(0.05*wall_thickness);
 	float const z2(zval + get_window_vspace() - floor_thickness);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	uint8_t const obj_flags((is_lit ? RO_FLAG_LIT : 0) | RO_FLAG_NOCOLL);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
@@ -1159,7 +1151,7 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 			// shrink by wall thickness to avoid problems at the corners of buildings
 			if (c.d[!dim][0] == bcube.d[!dim][0]) {c.d[!dim][0] += wall_thickness;}
 			if (c.d[!dim][1] == bcube.d[!dim][1]) {c.d[!dim][1] -= wall_thickness;}
-			objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, obj_flags, tot_light_amt, room_obj_shape::SHAPE_CUBE, WHITE); // always lit
+			objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, room_obj_shape::SHAPE_CUBE, WHITE); // always lit
 		} // for dir
 	} // for dim
 }
@@ -1289,7 +1281,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				light.z2() = z + floor_height - fc_thick;
 				light.z1() = light.z2() - 0.5*fc_thick;
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
-				//is_lit |= r->is_sec_bldg; // lit for garages and sheds
 
 				// check ped_bcubes and set is_lit if any are people are in this floor of this room
 				for (auto p = ped_bcubes.begin(); p != ped_bcubes.end() && !is_lit; ++p) {
@@ -1372,8 +1363,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			if (r->no_geom) {
 				if (is_house && r->is_hallway) { // allow pictures and rugs in the hallways of houses
-					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs.size());
-					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);}
+					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());
+					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt);}
 				}
 				continue; // no other geometry for this room
 			}
@@ -1387,48 +1378,48 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z));
 
 			if (is_office_bathroom) { // bathroom is already assigned
-				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, f); // add bathroom
+				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f); // add bathroom
 			}
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
 				if (is_house && !must_be_bathroom && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
-					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, objs_start);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
 				if (!added_obj && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < extra_bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings
-					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, f); // add bathroom
+					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f); // add bathroom
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
 			if (!added_obj && r->is_office) { // add cubicles if this is a large office
-				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
+				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
 			if (!added_obj && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
-				unsigned const num_tcs(add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt, is_lit));
+				unsigned const num_tcs(add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt));
 				if (num_tcs > 0) {added_tc = added_obj = can_place_book = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
 				if (added_tc && !(added_kitchen_mask & floor_mask) && (!is_house || f == 0)) { // office buildings can also have kitchens, even on non-ground floors
-					is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, added_living);
+					is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living);
 					if (is_kitchen) {r->assign_to(RTYPE_KITCHEN, f); added_kitchen_mask |= floor_mask;}
 				}
 			}
 			if (!added_obj && r->is_office && r->interior && f == 0 && rgen.rand_bool()) {
 				// if we haven't added any objects yet, and this room is an interior office on the first floor, make it a storage room 50% of the time
-				added_obj = no_whiteboard = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+				added_obj = no_whiteboard = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}
 			if (!added_obj) { // try to place a desk if there's no table, bed, etc.
-				added_obj = can_place_book = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_lit);
+				added_obj = can_place_book = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt);
 				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? RTYPE_STUDY : RTYPE_OFFICE), f);} // or other room type - may be overwritten below
 			}
 			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen and have enough rooms
 				if ((!added_living && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r, 1)) { // front_door_only=1
 					// add a living room on the ground floor if it has a table or desk but isn't a kitchen
-					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+					added_living = is_living = add_livingroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					if (is_living) {r->assign_to(RTYPE_LIVING, f);}
 				}
 			}
@@ -1444,15 +1435,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if      (obj.type == TYPE_TABLE && i == objs_start) {place_book = (rgen.rand_float() < 0.40*place_prob);} // only first table (not TV table)
 					else if (obj.type == TYPE_DESK) {place_book = ((i+1 == objs_end || objs[i+1].type != TYPE_TV) && rgen.rand_float() < 0.8*place_prob);} // only if no TV
 					else if (obj.type == TYPE_COUNTER && !placed_on_counter) {place_book = placed_on_counter = (rgen.rand_float() < 0.5);}
-					if (place_book) {place_book_on_obj(rgen, obj, room_id, tot_light_amt, is_lit, (obj.type != TYPE_TABLE));}
+					if (place_book) {place_book_on_obj(rgen, obj, room_id, tot_light_amt, (obj.type != TYPE_TABLE));}
 				}
 			}
 			if (is_house) { // place house-specific items
 				if (!is_bathroom && !is_kitchen && rgen.rand_float() < 0.8) { // place bookcase 80% of the time, but not in bathrooms or kitchens
-					add_bookcase_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start);
+					add_bookcase_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
-					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit);
+					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt);
 				}
 			}
 			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
@@ -1467,7 +1458,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					r->assign_to(RTYPE_DINING, f);
 					is_dining = 1;
 				}
-				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start)) { // add library, at most one
+				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) { // add library, at most one
 					r->assign_to(RTYPE_LIBRARY, f);
 					added_library = 1;
 				}
@@ -1477,17 +1468,17 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 			}
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen || no_whiteboard)); // no whiteboards in office bathrooms or kitchens
-			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start));
+			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start));
 
 			if (!is_bathroom && !is_bedroom && !is_kitchen) { // add potted plants to some room types
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% chance for offices
 				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()&3) == 0));
-				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, num);}
+				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
-				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, is_lit, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
+				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
-			if (is_bathroom) {add_bathroom_windows(*r, room_center.z, room_id, tot_light_amt, is_lit);} // find all windows and add frosted windows
+			if (is_bathroom) {add_bathroom_windows(*r, room_center.z, room_id, tot_light_amt);} // find all windows and add frosted windows
 		} // for f (floor)
 		num_light_stacks += num_lights_added;
 		if (added_bathroom) {++num_bathrooms;}
@@ -1509,7 +1500,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
-	unsigned const flags(RO_FLAG_LIT | RO_FLAG_NOCOLL);
+	unsigned const flags(RO_FLAG_NOCOLL);
 	bool const has_ceil_trim(is_house); // ceiling trim on houses only, for now (though the code also handles office buildings)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vect_cube_t trim_cubes;
