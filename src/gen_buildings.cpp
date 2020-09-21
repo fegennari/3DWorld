@@ -1954,19 +1954,22 @@ public:
 	static void enable_linear_dlights(shader_t &s) { // to be called before begin_shader()
 		if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	}
-	static void multi_draw(int shadow_only, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
+	static void multi_draw(int shadow_only, bool reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 
 		if (shadow_only) {
+			assert(!reflection_pass);
 			draw_cars_in_garages(xlate, 1);
 			multi_draw_shadow(xlate, bcs);
 			return;
 		}
-		interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
-		building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
-		interior_shadow_maps = 0;
-		create_mirror_reflection_if_needed();
-		draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
+		if (!reflection_pass) {
+			interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
+			building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
+			interior_shadow_maps = 0;
+			create_mirror_reflection_if_needed();
+			draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
+		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
@@ -2009,7 +2012,7 @@ public:
 			float const interior_draw_dist(2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)), room_geom_draw_dist(0.4*interior_draw_dist);
 			float const room_geom_sm_draw_dist(0.05*interior_draw_dist), z_prepass_dist(0.25*interior_draw_dist);
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
-			glCullFace(GL_BACK);
+			glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
 
 			if (ADD_ROOM_LIGHTS) { // use z-prepass to reduce time taken for shading
 				setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0); // everything disabled, but same shader so that vertex transforms are identical
@@ -2145,7 +2148,7 @@ public:
 			set_interior_lighting(s, have_indir);
 			if (have_indir) {setup_indir_lighting(bcs, s);}
 			glEnable(GL_CULL_FACE);
-			glCullFace(GL_FRONT);
+			glCullFace(reflection_pass ? GL_BACK : GL_FRONT);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				unsigned const bcs_ix(i - bcs.begin());
@@ -2193,7 +2196,7 @@ public:
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, tex_filt_mode);}
 			reset_interior_lighting(s);
 			s.end_shader();
-			glCullFace(GL_BACK); // draw front faces
+			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
 
 			// draw windows and doors in depth pass to create holes
 			shader_t holes_shader;
@@ -2210,6 +2213,10 @@ public:
 		} // end draw_interior
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
+		if (reflection_pass) {
+			fgPopMatrix(); // do we need to restore depth func and depth clamp as well?
+			return;
+		}
 		city_dlight_pcf_offset_scale = 1.0; // restore city value
 		setup_city_lights(xlate);
 
@@ -2771,7 +2778,7 @@ void gen_buildings() {
 		building_creator.gen     (global_building_params, 0, 1, 0, 1); // non-city secondary buildings
 	} else {building_creator.gen (global_building_params, 0, 0, 0, 1);} // mixed buildings
 }
-void draw_buildings(int shadow_only, vector3d const &xlate) {
+void draw_buildings(int shadow_only, bool reflection_pass, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
@@ -2781,7 +2788,7 @@ void draw_buildings(int shadow_only, vector3d const &xlate) {
 	if (draw_city && building_creator_city.is_visible(xlate)) {bcs.push_back(&building_creator_city);}
 	if (draw_sec  && building_creator     .is_visible(xlate)) {bcs.push_back(&building_creator     );}
 	building_tiles.add_drawn(xlate, bcs);
-	building_creator_t::multi_draw(shadow_only, xlate, bcs);
+	building_creator_t::multi_draw(shadow_only, reflection_pass, xlate, bcs);
 }
 void draw_building_lights(vector3d const &xlate) {
 	building_creator_city.draw_building_lights(xlate);

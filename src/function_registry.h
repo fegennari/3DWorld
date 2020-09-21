@@ -993,7 +993,7 @@ void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigne
 // function prototypes - gen_buildings
 bool parse_buildings_option(FILE *fp);
 void gen_buildings();
-void draw_buildings(int shadow_only, vector3d const &xlate);
+void draw_buildings(int shadow_only, bool reflection_pass, vector3d const &xlate);
 void draw_building_lights(vector3d const &xlate);
 void set_buildings_pos_range(cube_t const &pos_range);
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only, bool check_interior=0);
