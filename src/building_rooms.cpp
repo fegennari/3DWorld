@@ -1848,11 +1848,46 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 	}
 }
 
+// TODO: either move this to reflections.cpp, or move these function prototypes elsewhere
+void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize);
+void setup_viewport_and_proj_matrix(unsigned xsize, unsigned ysize);
+void render_to_texture(unsigned tid, unsigned xsize, unsigned ysize);
+void restore_matrices_and_clear();
+void apply_dim_mirror(unsigned dim, float val);
+
+bool in_reflection_pass(0); // temp variable, remove this when building drawint takes a reflection_pass option
+
 void create_mirror_reflection_if_needed() {
 	if (cur_room_mirror.type != TYPE_MIRROR) return;
+	if (in_reflection_pass) return; // prevent infinite recursion
+	in_reflection_pass = 1;
 	bool const dim(cur_room_mirror.dim);
 	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]);
 	cur_room_mirror = room_object_t(); // reset for next frame
+	// FIXME: use FBO to avoid clearing what's currently in the buffers
+	// FIXME: mirror doesn't cover the entire screen - either make the view frustum match the mirror or clip the texture coordinates of the mirror to the subset of the screen
+	// FIXME: use a clipping plane to skip drawing the wall behind the mirror
+	unsigned const tsize = 1024;
+	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
+	camera_pdu.apply_dim_mirror(dim, reflect_plane); // setup reflected camera frustum
+	pos_dir_up const refl_camera_pdu(camera_pdu);
+	setup_viewport_and_proj_matrix(tsize, tsize);
+	apply_dim_mirror(dim, reflect_plane); // setup mirror transform
+	camera_pdu = refl_camera_pdu; // reset reflected PDU
+	glEnable(GL_CLIP_DISTANCE0);
+	vector4d clip_plane;
+	clip_plane[dim] = 1.0;
+	clip_plane.w = -reflect_plane;
+	//s.add_uniform_vector4d("clip_plane", &clip_plane.x);
+	draw_buildings(0, 1, get_tiled_terrain_model_xlate()); // reflection_pass=1
+	glDisable(GL_CLIP_DISTANCE0);
+	setup_reflection_texture(room_mirror_ref_tid, tsize, tsize);
+	render_to_texture(room_mirror_ref_tid, tsize, tsize); // render reflection to texture
+	camera_pdu = old_camera_pdu; // restore camera_pdu
+	restore_matrices_and_clear(); // reset state
+	//set_standard_viewport();
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	in_reflection_pass = 0;
 }
 
 void building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
