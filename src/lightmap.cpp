@@ -35,6 +35,7 @@ indir_dlight_group_manager_t indir_dlight_group_manager;
 
 extern int animate2, display_mode, frame_counter, camera_coll_id, scrolling, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
+extern bool disable_dlights;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, FAR_CLIP, CAMERA_RADIUS, indir_light_exp, light_int_scale[], force_czmin, force_czmax;
 extern colorRGB cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
@@ -634,8 +635,11 @@ void build_lightmap(bool verbose) {
 	DZ_VAL_INV2 = 1.0/DZ_VAL2;
 	czmin0      = czmin;//max(czmin, zbottom);
 	assert(lm_dz_adj >= 0.0);
-	ldynamic.resize(get_grid_xsize()*get_grid_ysize());
-	ldynamic_enabled.resize(ldynamic.size(), 0);
+
+	if (!disable_dlights) {
+		ldynamic.resize(get_grid_xsize()*get_grid_ysize());
+		ldynamic_enabled.resize(ldynamic.size(), 0);
+	}
 	if (MESH_Z_SIZE == 0) return;
 
 	RESET_TIME;
@@ -696,7 +700,7 @@ void build_lightmap(bool verbose) {
 		UNROLL_3X(init_lmcell.sc[i_] = init_lmcell.gc[i_] = 1.0;)
 	}
 	lmap_manager.alloc(nbins, MESH_X_SIZE, MESH_Y_SIZE, zsize, need_lmcell, init_lmcell);
-	assert(!ldynamic.empty() && lmap_manager.is_allocated());
+	assert(lmap_manager.is_allocated());
 	using_lightmap = (nonempty > 0);
 	lm_alloc       = 1;
 
@@ -865,6 +869,7 @@ void setup_2d_texture(unsigned &tid) {
 void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { // 0.21ms => 0.05ms with dlights_enabled
 
 	//RESET_TIME;
+	if (disable_dlights) return;
 	static bool last_dlights_empty(0);
 	bool const cur_dlights_empty(dl_sources.empty());
 	if (cur_dlights_empty && last_dlights_empty && dl_tid != 0 && elem_tid != 0 && gb_tid != 0) return; // no updates
@@ -978,6 +983,7 @@ void setup_dlight_shadow_maps(shader_t &s) {
 
 void setup_dlight_textures(shader_t &s, bool enable_dlights_smap) {
 
+	if (disable_dlights) return;
 	assert(dl_tid > 0 && elem_tid > 0 && gb_tid > 0 );
 	set_one_texture(s, dl_tid,   2, "dlight_tex");
 	set_one_texture(s, elem_tid, 3, "dlelm_tex");
@@ -1139,6 +1145,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 	//RESET_TIME;
 	sync_flashlight();
 	if (!animate2) return;
+	if (disable_dlights) {dl_sources.clear(); return;}
 	assert(!ldynamic.empty());
 	assert(ldynamic_enabled.size() == ldynamic.size());
 	clear_dynamic_lights();
@@ -1219,6 +1226,7 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh) {
 
 	//RESET_TIME;
+	if (disable_dlights) {dl_sources.clear(); return;}
 	assert(DL_GRID_BS == 0); // not supported
 	unsigned const ndl((unsigned)dl_sources.size()), gbx(MESH_X_SIZE), gby(MESH_Y_SIZE);
 	has_dl_sources     = (ndl > 0);

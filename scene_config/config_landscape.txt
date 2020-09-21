@@ -10,6 +10,7 @@ read_landscape 1
 read_heightmap 0
 ground_effects_level 0
 inf_terrain_scenery 0
+disable_dlights 1 # takes too much memory
 
 gravity 1.0
 mesh_height 1.0
