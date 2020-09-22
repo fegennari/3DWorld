@@ -37,6 +37,7 @@ gl_light_params_t gl_light_params[MAX_SHADER_LIGHTS];
 point const earth_pos(-22.0, -12.0, 31.0);
 sky_pos_orient cur_spo(point(0,0,0),1,0,0);
 vector3d up_norm(plus_z);
+vector4d clip_plane;
 vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
@@ -370,6 +371,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const use_wet_mask(ground_mode && is_wet && is_outside == 2);
 	bool const enable_puddles(ground_mode && enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	bool use_smap(ground_mode ? (use_smap_in != 0) : (use_smap_in == 2)); // TT shadow maps are only enabled when use_smap_in == 2
+	bool const use_clip_plane(clip_plane != vector4d());
 	smoke_en &= (ground_mode && have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (disable_dlights) {dlights = 0;}
 	string const &anim_shader(s.get_property("animation_shader")); // Note: if it exists, it should end with a '+'
@@ -381,6 +383,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
 	if (!anim_shader.empty()) {s.set_prefix("#define ENABLE_VERTEX_ANIMATION", 0);} // VS
+	if (use_clip_plane    ) {s.set_prefix("#define ENABLE_CLIP_PLANE",      0);} // VS
 	//if (0) {s.set_prefix("#define SCREEN_SPACE_DLIGHTS",   1);} // FS
 	if (enable_reflect == 2 && use_bmap && (enable_cube_map_bump_maps || is_cobj)) {s.set_prefix("#define ENABLE_CUBE_MAP_BUMP_MAPS",1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
@@ -466,6 +469,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	s.add_uniform_float("wet_effect",   (is_outside ? rain_wetness : 0.0)); // only enable when drawing cobjs?
 	s.add_uniform_float("reflectivity", (enable_reflect ?  1.0 : 0.0));
 	s.add_uniform_float("snow_cov_amt", snow_cov_amt); // Note: no longer depends on is_outside
+	if (use_clip_plane) {s.add_uniform_vector4d("clip_plane", clip_plane);}
 }
 
 

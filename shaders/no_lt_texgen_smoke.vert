@@ -3,7 +3,6 @@ uniform mat4 fg_ViewMatrix;
 uniform float tex_scale_s    = 1.0;
 uniform float tex_scale_t    = 1.0;
 uniform float tc_texgen_mix  = 0.0;
-//uniform float clip_plane_z = 0.0;
 uniform vec3 world_space_offset = vec3(0.0);
 uniform float vertex_offset_scale = 0.0; // hack to make vertex_offset ignored when unused/unset
 uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
@@ -14,8 +13,12 @@ in vec3 vertex_offset; // not always used
 out vec3 vpos, normal; // world space
 out vec4 epos;
 out vec3 eye_norm;
-//out float gl_ClipDistance[1];
 // tc comes from texture_gen.part.vert
+
+#ifdef ENABLE_CLIP_PLANE
+uniform vec4 clip_plane = vec4(0.0);
+out float gl_ClipDistance[1];
+#endif
 
 void main() {
 	if      (use_texgen == 1) {setup_texgen_st();}
@@ -48,5 +51,8 @@ void main() {
 #ifdef USE_BUMP_MAP
 	setup_tbn();
 #endif
-	//gl_ClipDistance[0] = vpos.z + clip_plane_z;
+
+#ifdef ENABLE_CLIP_PLANE
+	gl_ClipDistance[0] = dot(vec4(vpos, 1.0), clip_plane);
+#endif
 } 
