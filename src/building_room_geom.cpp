@@ -487,9 +487,9 @@ void building_room_geom_t::add_crate(room_object_t const &c) {
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
 	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
-	tp.emissive = 1;
-	get_material(tp, 0).add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir)); // draw only the front face
-	get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, c.color, zero_vector, get_skip_mask_for_xy(c.dim)); // draw only the sides untextured
+	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1;}
+	get_material(tp, 0).add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
+	get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, apply_light_color(c), zero_vector, get_skip_mask_for_xy(c.dim)); // draw only the sides untextured
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {

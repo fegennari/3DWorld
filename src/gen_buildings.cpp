@@ -2014,7 +2014,7 @@ public:
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
 
-			if (ADD_ROOM_LIGHTS) { // use z-prepass to reduce time taken for shading
+			if (ADD_ROOM_LIGHTS && !reflection_pass) { // use z-prepass to reduce time taken for shading; not valid when using clip plane for reflection pass
 				setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0); // everything disabled, but same shader so that vertex transforms are identical
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 				

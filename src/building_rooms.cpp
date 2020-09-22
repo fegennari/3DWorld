@@ -11,6 +11,7 @@
 unsigned room_mirror_ref_tid(0);
 room_object_t cur_room_mirror;
 
+extern vector4d clip_plane;
 extern object_model_loader_t building_obj_model_loader;
 
 
@@ -755,13 +756,15 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			}
 		}
 		if (!sinks_bcube.is_all_zeros()) { // add a long mirror above the sink
-			cube_t mirror(sinks_bcube);
-			mirror.expand_in_dim(!br_dim, -0.25*wall_thickness); // slightly smaller
-			mirror.d[br_dim][ dir] = wall_pos;
-			mirror.d[br_dim][!dir] = wall_pos +  + dir_sign*0.1*wall_thickness;
-			mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
-			mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
-			if (mirror.is_strictly_normalized()) {objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);}
+			if (!ENABLE_MIRROR_REFLECTIONS || dir != (unsigned)skip_stalls_side) { // don't add mirrors to both sides if reflections are enabled
+				cube_t mirror(sinks_bcube);
+				mirror.expand_in_dim(!br_dim, -0.25*wall_thickness); // slightly smaller
+				mirror.d[br_dim][ dir] = wall_pos;
+				mirror.d[br_dim][!dir] = wall_pos +  + dir_sign*0.1*wall_thickness;
+				mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
+				mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
+				if (mirror.is_strictly_normalized()) {objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);}
+			}
 		}
 	} // for dir
 	// add a sign outside the bathroom door
@@ -1862,31 +1865,30 @@ void create_mirror_reflection_if_needed() {
 	if (in_reflection_pass) return; // prevent infinite recursion
 	in_reflection_pass = 1;
 	bool const dim(cur_room_mirror.dim);
-	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]);
+	vector3d const xlate(get_tiled_terrain_model_xlate());
+	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]), reflect_plane_xf(reflect_plane + xlate[dim]);
+	float const reflect_sign(cur_room_mirror.dir ? -1.0 : 1.0);
 	cur_room_mirror = room_object_t(); // reset for next frame
 	// FIXME: use FBO to avoid clearing what's currently in the buffers
 	// FIXME: mirror doesn't cover the entire screen - either make the view frustum match the mirror or clip the texture coordinates of the mirror to the subset of the screen
-	// FIXME: use a clipping plane to skip drawing the wall behind the mirror
 	unsigned const tsize = 1024;
 	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
-	camera_pdu.apply_dim_mirror(dim, reflect_plane); // setup reflected camera frustum
+	camera_pdu.apply_dim_mirror(dim, reflect_plane_xf); // setup reflected camera frustum
 	pos_dir_up const refl_camera_pdu(camera_pdu);
 	setup_viewport_and_proj_matrix(tsize, tsize);
-	apply_dim_mirror(dim, reflect_plane); // setup mirror transform
+	apply_dim_mirror(dim, reflect_plane_xf); // setup mirror transform
 	camera_pdu = refl_camera_pdu; // reset reflected PDU
 	glEnable(GL_CLIP_DISTANCE0);
-	vector4d clip_plane;
-	clip_plane[dim] = 1.0;
-	clip_plane.w = -reflect_plane;
-	//s.add_uniform_vector4d("clip_plane", &clip_plane.x);
-	draw_buildings(0, 1, get_tiled_terrain_model_xlate()); // reflection_pass=1
+	clip_plane = vector4d();
+	clip_plane[dim] = -reflect_sign;
+	clip_plane.w = reflect_sign*reflect_plane;
+	draw_buildings(0, 1, xlate); // reflection_pass=1
+	clip_plane = vector4d(); // reset to disable
 	glDisable(GL_CLIP_DISTANCE0);
 	setup_reflection_texture(room_mirror_ref_tid, tsize, tsize);
 	render_to_texture(room_mirror_ref_tid, tsize, tsize); // render reflection to texture
 	camera_pdu = old_camera_pdu; // restore camera_pdu
 	restore_matrices_and_clear(); // reset state
-	//set_standard_viewport();
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	in_reflection_pass = 0;
 }
 
@@ -1911,7 +1913,7 @@ void building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 
 void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building) {
 	if (!interior || !interior->room_geom) return;
-	if (!shadow_only && player_in_building && !is_house) {find_mirror_needing_reflection(xlate);} // Note: we're already inside the draw code
+	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && player_in_building && !is_house) {find_mirror_needing_reflection(xlate);} // Note: we're already inside the draw code
 	interior->room_geom->draw(s, xlate, get_material().wall_tex, shadow_only, inc_small, player_in_building);
 }
 void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix,
