@@ -1377,6 +1377,12 @@
     <None Include="shaders\screen_space_ao_xenko.frag">
       <Filter>Shaders\frag\Fullscreen</Filter>
     </None>
+    <None Include="shaders\mirror_reflection.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
+    <None Include="shaders\mirror_reflection.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

@@ -1870,7 +1870,6 @@ void create_mirror_reflection_if_needed() {
 	float const reflect_sign(cur_room_mirror.dir ? -1.0 : 1.0);
 	cur_room_mirror = room_object_t(); // reset for next frame
 	// FIXME: use FBO to avoid clearing what's currently in the buffers
-	// FIXME: mirror doesn't cover the entire screen - either make the view frustum match the mirror or clip the texture coordinates of the mirror to the subset of the screen
 	unsigned const tsize = 1024;
 	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
 	camera_pdu.apply_dim_mirror(dim, reflect_plane_xf); // setup reflected camera frustum
