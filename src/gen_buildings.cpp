@@ -22,6 +22,7 @@ float const WIND_LIGHT_ON_RAND   = 0.08;
 
 bool camera_in_building(0), interior_shadow_maps(0);
 building_params_t global_building_params;
+shader_t reflection_shader;
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
 extern unsigned room_mirror_ref_tid;
@@ -37,8 +38,6 @@ void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
-shader_t reflection_shader;
-
 tid_nm_pair_t tid_nm_pair_t::get_scaled_version(float scale) const {
 	tid_nm_pair_t tex(*this);
 	tex.tscale_x *= scale;
@@ -51,10 +50,14 @@ void tid_nm_pair_t::set_gl(shader_t &s) const {
 		if (room_mirror_ref_tid == 0) {select_texture(WHITE_TEX);}
 		else { // use a custom shader that uses screen coordinates to clip the texture to the mirror bounds; inefficient (wastes texels), but simple
 			bind_2d_texture(room_mirror_ref_tid);
-			reflection_shader.set_vert_shader("mirror_reflection");
-			reflection_shader.set_frag_shader("mirror_reflection");
-			reflection_shader.begin_shader();
-			reflection_shader.add_uniform_int("reflection_tex", 0);
+
+			if (reflection_shader.is_setup()) {reflection_shader.make_current();}
+			else {
+				reflection_shader.set_vert_shader("mirror_reflection");
+				reflection_shader.set_frag_shader("mirror_reflection");
+				reflection_shader.begin_shader();
+				reflection_shader.add_uniform_int("reflection_tex", 0);
+			}
 			return;
 		}
 	}
@@ -66,7 +69,6 @@ void tid_nm_pair_t::set_gl(shader_t &s) const {
 }
 void tid_nm_pair_t::unset_gl(shader_t &s) const {
 	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {
-		reflection_shader.clear();
 		s.make_current();
 		return;
 	}
@@ -2134,6 +2136,7 @@ public:
 			camera_in_building = this_frame_camera_in_building; // update once; non-interior buildings (such as city buildings) won't update this
 			reset_interior_lighting(s);
 			s.end_shader();
+			reflection_shader.clear();
 
 			// update indir lighting using ray casting
 			if (indir_bcs_ix >= 0 && indir_bix >= 0) {bcs[indir_bcs_ix]->create_indir_texture_for_building(indir_bix, camera_xlated);}
