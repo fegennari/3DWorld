@@ -590,7 +590,6 @@ struct building_t : public building_geom_t {
 	bool toggle_room_light(point const &closest_to);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
-	void find_mirror_needing_reflection(vector3d const &xlate) const;
 	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix, bool shadow_only, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
@@ -668,6 +667,8 @@ private:
 	void add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
 	bool can_be_bathroom(room_t const &room) const;
+	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate) const;
+	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	void add_wall_and_door_trim();
 	unsigned count_num_int_doors(room_t const &room) const;
 	bool check_bcube_overlap_xy_one_dir(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;

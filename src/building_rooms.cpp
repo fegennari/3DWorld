@@ -1891,27 +1891,55 @@ void create_mirror_reflection_if_needed() {
 	in_reflection_pass = 0;
 }
 
-void building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
+bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate) const {
+	assert(interior);
+	point const camera_bs(camera_pdu.pos - xlate);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	float const floor_spacing(get_window_vspace());
+
+	for (auto i = objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
+		if (i->room_id != room_id || i->type != TYPE_MIRROR) continue; // wrong room, or not a mirror
+		if (i->z1() > (camera_bs.z + floor_spacing) || i->z2() < (camera_bs.z - floor_spacing)) continue; // wrong floor
+		if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing
+		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
+		cur_room_mirror = *i;
+		return 1;
+	}
+	return 0;
+}
+
+bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
+	assert(interior);
 	point const camera_bs(camera_pdu.pos - xlate);
 	vector<point> points;
-	if (!check_point_or_cylin_contained(camera_bs, 0.0, points)) return; // camera not in the building
+	if (!check_point_or_cylin_contained(camera_bs, 0.0, points)) return 0; // camera not in the building
+	float const wall_thickness(get_wall_thickness());
 	
-	// find room containing the camera (or the connecting hallway?)
+	// find room containing the camera
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		if (!r->contains_pt(camera_bs)) continue;
-		uint32_t const room_id((r - interior->rooms.begin()) & 255);
-		vector<room_object_t> &objs(interior->room_geom->objs);
-		auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+		if (find_mirror_in_room(((r - interior->rooms.begin()) & 255), xlate)) return 1;
+	}
+	// not found, look for a connecting hallway
+	for (auto h = interior->rooms.begin(); h != interior->rooms.end(); ++h) {
+		if (!h->is_hallway) continue;
+		cube_t hallway(*h);
+		hallway.expand_by_xy(2.0*wall_thickness); // expand so that it overlaps adjacent rooms
+		bool const short_dim(h->dy() < h->dx());
+		float const hallway_width(h->get_sz_dim(short_dim));
 
-		for (auto i = objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
-			if (i->room_id != room_id || i->type != TYPE_MIRROR) continue; // wrong room, or not a mirror
-			if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing
-			if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
-			cur_room_mirror = *i;
-			break;
+		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+			if (r->is_hallway) continue; // exclude other hallways (including *h)
+			if (!r->intersects(hallway)) continue; // wrong room
+			cube_t r_exp(*r);
+			r_exp.expand_in_dim( short_dim,      hallway_width);
+			r_exp.expand_in_dim(!short_dim, 0.25*hallway_width); // expand in the other dim to include a bit of buffer along the hallway
+			if (!r_exp.contains_pt(camera_bs)) continue; // camera not within the hallway across from the room
+			if (find_mirror_in_room(((r - interior->rooms.begin()) & 255), xlate)) return 1;
 		}
-		break;
-	} // for r
+	} // for h
+	return 0; // not found
 }
 
 void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building) {
