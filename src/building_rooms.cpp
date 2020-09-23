@@ -1904,7 +1904,11 @@ void building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 		auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
-			if (i->room_id == room_id && i->type == TYPE_MIRROR) {cur_room_mirror = *i; break;}
+			if (i->room_id != room_id || i->type != TYPE_MIRROR) continue; // wrong room, or not a mirror
+			if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing
+			if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
+			cur_room_mirror = *i;
+			break;
 		}
 		break;
 	} // for r
