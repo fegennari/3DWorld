@@ -1851,44 +1851,34 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 	}
 }
 
-// TODO: either move this to reflections.cpp, or move these function prototypes elsewhere
-void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize);
-void setup_viewport_and_proj_matrix(unsigned xsize, unsigned ysize);
-void render_to_texture(unsigned tid, unsigned xsize, unsigned ysize);
-void restore_matrices_and_clear();
-void apply_dim_mirror(unsigned dim, float val);
-
-bool in_reflection_pass(0); // temp variable, remove this when building drawint takes a reflection_pass option
-
 void create_mirror_reflection_if_needed() {
-	if (cur_room_mirror.type != TYPE_MIRROR) return;
-	if (in_reflection_pass) return; // prevent infinite recursion
-	in_reflection_pass = 1;
-	bool const dim(cur_room_mirror.dim);
+	if (cur_room_mirror.type != TYPE_MIRROR) return; // not enabled
+	bool const dim(cur_room_mirror.dim), interior_room(cur_room_mirror.flags & RO_FLAG_INTERIOR);
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]), reflect_plane_xf(reflect_plane + xlate[dim]);
 	float const reflect_sign(cur_room_mirror.dir ? -1.0 : 1.0);
 	cur_room_mirror = room_object_t(); // reset for next frame
-	// FIXME: use FBO to avoid clearing what's currently in the buffers
-	unsigned const tsize = 1024;
-	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
-	camera_pdu.apply_dim_mirror(dim, reflect_plane_xf); // setup reflected camera frustum
-	pos_dir_up const refl_camera_pdu(camera_pdu);
-	setup_viewport_and_proj_matrix(tsize, tsize);
-	apply_dim_mirror(dim, reflect_plane_xf); // setup mirror transform
-	camera_pdu = refl_camera_pdu; // reset reflected PDU
-	glEnable(GL_CLIP_DISTANCE0);
 	clip_plane = vector4d();
 	clip_plane[dim] = -reflect_sign;
 	clip_plane.w = reflect_sign*reflect_plane;
-	draw_buildings(0, 1, xlate); // reflection_pass=1
-	clip_plane = vector4d(); // reset to disable
+	unsigned const txsize(1024), tysize(512);
+	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
+	camera_pdu.apply_dim_mirror(dim, reflect_plane_xf); // setup reflected camera frustum
+	pos_dir_up const refl_camera_pdu(camera_pdu);
+	// Note: it may be more efficient to use an FBO here, but we would need both a color attachment (room_mirror_ref_tid) and a depth attachment
+	// Note: clearing the buffers at this point in the control flow will discard some geometry that has already been drawn such as the sky,
+	//       but these generally arent't visible from within the bathroom anyway
+	setup_viewport_and_proj_matrix(txsize, tysize);
+	apply_dim_mirror(dim, reflect_plane_xf); // setup mirror transform
+	camera_pdu = refl_camera_pdu; // reset reflected PDU
+	glEnable(GL_CLIP_DISTANCE0);
+	draw_buildings(0, (interior_room ? 2 : 1), xlate); // reflection_pass=1/2
 	glDisable(GL_CLIP_DISTANCE0);
-	setup_reflection_texture(room_mirror_ref_tid, tsize, tsize);
-	render_to_texture(room_mirror_ref_tid, tsize, tsize); // render reflection to texture
-	camera_pdu = old_camera_pdu; // restore camera_pdu
+	setup_reflection_texture(room_mirror_ref_tid, txsize, tysize);
+	render_to_texture(room_mirror_ref_tid, txsize, tysize); // render reflection to texture
 	restore_matrices_and_clear(); // reset state
-	in_reflection_pass = 0;
+	camera_pdu = old_camera_pdu; // restore camera_pdu
+	clip_plane = vector4d(); // reset to disable
 }
 
 bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate) const {
@@ -1942,13 +1932,13 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	return 0; // not found
 }
 
-void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool inc_small, bool player_in_building) {
+void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building) {
 	if (!interior || !interior->room_geom) return;
-	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && player_in_building && !is_house) {find_mirror_needing_reflection(xlate);} // Note: we're already inside the draw code
+	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building && !is_house) {find_mirror_needing_reflection(xlate);}
 	interior->room_geom->draw(s, xlate, get_material().wall_tex, shadow_only, inc_small, player_in_building);
 }
 void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix,
-	int ped_ix, bool shadow_only, bool inc_small, bool player_in_building)
+	int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (!interior) return;
 	if (is_rotated()) return; // no room geom for rotated buildings
@@ -1961,7 +1951,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect
 		gen_room_details(rgen, ped_bcubes); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	draw_room_geom(s, xlate, shadow_only, inc_small, player_in_building);
+	draw_room_geom(s, xlate, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 
 void building_t::clear_room_geom() {

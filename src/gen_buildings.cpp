@@ -1852,7 +1852,7 @@ public:
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
-						b.draw_room_geom(s, xlate, 1, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1 (draw everything, since shadow may be cached)
+						b.draw_room_geom(s, xlate, 1, 0, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1 (draw everything, since shadow may be cached)
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						if (b.get_real_num_parts() > 1) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
@@ -1970,7 +1970,8 @@ public:
 	static void enable_linear_dlights(shader_t &s) { // to be called before begin_shader()
 		if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	}
-	static void multi_draw(int shadow_only, bool reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
+	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall, 2 = reflection for room with interior wall
+	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 
 		if (shadow_only) {
@@ -2071,6 +2072,8 @@ public:
 				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.05 : 1.0); // if there are no windows, we can wait until the player is very close to draw the interior
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+					if (reflection_pass && !g->bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
+
 					if (!g->bcube.closest_dist_less_than(camera_xlated, ddist_scale*interior_draw_dist)) { // too far
 						if (g->has_room_geom) { // need to clear room geom
 							for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();}
@@ -2092,15 +2095,15 @@ public:
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
-						b.gen_and_draw_room_geom(s, xlate, ped_bcubes, bi->ix, ped_ix, 0, inc_small, b.bcube.contains_pt_xy(camera_xlated)); // shadow_only=0
+						b.gen_and_draw_room_geom(s, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, b.bcube.contains_pt_xy(camera_xlated)); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) continue; // camera not near building
-						//if (!b.check_point_or_cylin_contained(camera_xlated, door_open_dist, points)) continue; // camera not near building
+						if (reflection_pass == 2)  continue; // interior room, don't need to draw windows and exterior doors
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, door_type); // and draw opened door
-						b.update_grass_exclude_at_pos(camera_xlated, xlate); // disable any grass inside the building part(s) containing the player
+						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate);} // disable any grass inside the building part(s) containing the player
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
@@ -2109,6 +2112,7 @@ public:
 						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated, 0);
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
+						if (reflection_pass) continue; // don't execute the code below
 						this_frame_camera_in_building = 1;
 
 						if (display_mode & 0x10) { // compute indirect lighting
@@ -2133,16 +2137,16 @@ public:
 			} // for i
 			if (ADD_ROOM_LIGHTS) {glDepthFunc(GL_LESS);} // restore
 			glDisable(GL_CULL_FACE);
-			camera_in_building = this_frame_camera_in_building; // update once; non-interior buildings (such as city buildings) won't update this
+			if (!reflection_pass) {camera_in_building = this_frame_camera_in_building;} // update once; non-interior buildings (such as city buildings) won't update this
 			reset_interior_lighting(s);
 			s.end_shader();
 			reflection_shader.clear();
 
 			// update indir lighting using ray casting
 			if (indir_bcs_ix >= 0 && indir_bix >= 0) {bcs[indir_bcs_ix]->create_indir_texture_for_building(indir_bix, camera_xlated);}
-			else {end_building_rt_job();}
+			else if (!reflection_pass) {end_building_rt_job();}
 			
-			if (draw_interior && have_windows) { // write to stencil buffer, use stencil test for back facing building walls
+			if (draw_interior && have_windows && reflection_pass != 2) { // write to stencil buffer, use stencil test for back facing building walls
 				shader_t holes_shader;
 				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test
 				glClear(GL_STENCIL_BUFFER_BIT);
@@ -2159,7 +2163,7 @@ public:
 			}
 		} // end have_interior
 
-		if (draw_interior) {
+		if (draw_interior && reflection_pass != 2) { // skip for interior room reflections
 			// draw back faces of buildings, which will be interior walls
 			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 1, have_indir); // force_tsl=1, use_texgen=1
@@ -2796,7 +2800,7 @@ void gen_buildings() {
 		building_creator.gen     (global_building_params, 0, 1, 0, 1); // non-city secondary buildings
 	} else {building_creator.gen (global_building_params, 0, 0, 0, 1);} // mixed buildings
 }
-void draw_buildings(int shadow_only, bool reflection_pass, vector3d const &xlate) {
+void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate) {
 	//if (!building_tiles.empty()) {cout << "Building Tiles: " << building_tiles.size() << " Tiled Buildings: " << building_tiles.get_tot_num_buildings() << endl;} // debugging
 	if (world_mode != WMODE_INF_TERRAIN) {building_tiles.clear();}
 	vector<building_creator_t *> bcs;
