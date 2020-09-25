@@ -11,6 +11,7 @@
 unsigned room_mirror_ref_tid(0);
 room_object_t cur_room_mirror;
 
+extern int display_mode, window_width, window_height;
 extern vector4d clip_plane;
 extern object_model_loader_t building_obj_model_loader;
 
@@ -1861,11 +1862,11 @@ void create_mirror_reflection_if_needed() {
 	clip_plane = vector4d();
 	clip_plane[dim] = -reflect_sign;
 	clip_plane.w = reflect_sign*reflect_plane;
-	unsigned const txsize(1024), tysize(512);
+	unsigned const txsize(window_width/2), tysize(window_height/2); // half resolution for better performance
 	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
 	camera_pdu.apply_dim_mirror(dim, reflect_plane_xf); // setup reflected camera frustum
 	pos_dir_up const refl_camera_pdu(camera_pdu);
-	// Note: it may be more efficient to use an FBO here, but we would need both a color attachment (room_mirror_ref_tid) and a depth attachment
+	// Note: it may be more efficient to use an FBO here, but we would need both a color attachment (room_mirror_ref_tid) and a depth attachment (and stencil buffer?)
 	// Note: clearing the buffers at this point in the control flow will discard some geometry that has already been drawn such as the sky,
 	//       but these generally arent't visible from within the bathroom anyway
 	setup_viewport_and_proj_matrix(txsize, tysize);
