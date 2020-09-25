@@ -1914,7 +1914,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	}
 	// not found, look for a connecting hallway
 	for (auto h = interior->rooms.begin(); h != interior->rooms.end(); ++h) {
-		if (!h->is_hallway) continue;
+		if (!h->is_hallway || !h->contains_pt(camera_bs)) continue;
 		cube_t hallway(*h);
 		hallway.expand_by_xy(2.0*wall_thickness); // expand so that it overlaps adjacent rooms
 		bool const short_dim(h->dy() < h->dx());
@@ -1924,8 +1924,8 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 			if (r->is_hallway) continue; // exclude other hallways (including *h)
 			if (!r->intersects(hallway)) continue; // wrong room
 			cube_t r_exp(*r);
-			r_exp.expand_in_dim( short_dim,      hallway_width);
-			r_exp.expand_in_dim(!short_dim, 0.25*hallway_width); // expand in the other dim to include a bit of buffer along the hallway
+			r_exp.expand_in_dim( short_dim,     hallway_width);
+			r_exp.expand_in_dim(!short_dim, 0.5*hallway_width); // expand in the other dim to include a bit of buffer along the hallway
 			if (!r_exp.contains_pt(camera_bs)) continue; // camera not within the hallway across from the room
 			if (find_mirror_in_room(((r - interior->rooms.begin()) & 255), xlate)) return 1;
 		}
