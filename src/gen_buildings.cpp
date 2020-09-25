@@ -2031,19 +2031,22 @@ public:
 			glEnable(GL_CULL_FACE); // back face culling optimization, helps with expensive lighting shaders
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
 
-			if (ADD_ROOM_LIGHTS && !reflection_pass) { // use z-prepass to reduce time taken for shading; not valid when using clip plane for reflection pass
+			if (ADD_ROOM_LIGHTS) { // use z-prepass to reduce time taken for shading
 				setup_smoke_shaders(s, 0.0, 0, 0, 0, 0, 0, 0); // everything disabled, but same shader so that vertex transforms are identical
+				glPolygonOffset(1.0, 1.0);
+				if (reflection_pass) {glEnable(GL_POLYGON_OFFSET_FILL);} // not sure why, but a polygon offset is required for the reflection pass
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 				
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw interior for the tile containing the camera
 					float const ddist_scale((*i)->building_draw_windows.empty() ? 0.1 : 1.0);
 
 					for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) {
-						if (g->bcube.closest_dist_xy_less_than(camera_xlated, ddist_scale*z_prepass_dist)) {
+						if (reflection_pass ? g->bcube.contains_pt_xy(camera_xlated) : g->bcube.closest_dist_xy_less_than(camera_xlated, ddist_scale*z_prepass_dist)) {
 							(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 						}
 					}
 				}
+				if (reflection_pass) {glDisable(GL_POLYGON_OFFSET_FILL);}
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				s.end_shader();
 				glDepthFunc(GL_LEQUAL);
