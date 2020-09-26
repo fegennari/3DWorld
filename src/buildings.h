@@ -619,6 +619,7 @@ struct building_t : public building_geom_t {
 		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_elevators(point const &player_pos);
+	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 private:
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
@@ -668,7 +669,7 @@ private:
 	void add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
 	bool can_be_bathroom(room_t const &room) const;
-	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate) const;
+	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	void add_wall_and_door_trim();
 	unsigned count_num_int_doors(room_t const &room) const;
