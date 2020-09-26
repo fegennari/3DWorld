@@ -259,9 +259,10 @@ void rgeom_mat_t::create_vbo() {
 	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be cleared
 }
 
-void rgeom_mat_t::draw(shader_t &s, bool shadow_only) {
+void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows
+	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	assert(vbo.vbo_valid());
 	assert(num_qverts > 0 || num_itverts > 0);
 	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
@@ -304,8 +305,8 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 void building_materials_t::create_vbos() {
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo();}
 }
-void building_materials_t::draw(shader_t &s, bool shadow_only) {
-	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only);}
+void building_materials_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
+	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only, reflection_pass);}
 }
 
 float get_tc_leg_width(cube_t const &c, float width) {
@@ -1483,8 +1484,8 @@ void building_room_geom_t::create_dynamic_vbos() {
 	mats_dynamic.create_vbos();
 }
 
-
-void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_t const &wall_tex, bool shadow_only, bool inc_small, bool player_in_building) { // non-const because it creates the VBO
+// Note: non-const because it creates the VBO
+void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_t const &wall_tex, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building) {
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
 	static int last_frame(0);
@@ -1510,10 +1511,10 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_
 	if (mats_lights .empty()) {create_lights_vbos ();} // create lights  materials if needed (no limit)
 	if (mats_dynamic.empty()) {create_dynamic_vbos();} // create dynamic materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
-	mats_static .draw(s, shadow_only);
-	mats_lights .draw(s, shadow_only);
-	mats_dynamic.draw(s, shadow_only);
-	if (inc_small) {mats_small.draw(s, shadow_only);}
+	mats_static .draw(s, shadow_only, reflection_pass);
+	mats_lights .draw(s, shadow_only, reflection_pass);
+	mats_dynamic.draw(s, shadow_only, reflection_pass);
+	if (inc_small) {mats_small.draw(s, shadow_only, reflection_pass);}
 	disable_blend();
 	vbo_wrap_t::post_render();
 	//if (!obj_model_insts.empty()) {glDisable(GL_CULL_FACE);} // better but slower?

@@ -1959,7 +1959,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building) {
 	if (!interior || !interior->room_geom) return;
 	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building && !is_house) {find_mirror_needing_reflection(xlate);}
-	interior->room_geom->draw(s, xlate, get_material().wall_tex, shadow_only, inc_small, player_in_building);
+	interior->room_geom->draw(s, xlate, get_material().wall_tex, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix,
 	int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)

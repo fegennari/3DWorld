@@ -299,7 +299,7 @@ public:
 	void add_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color);
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color);
 	void create_vbo();
-	void draw(shader_t &s, bool shadow_only);
+	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
 };
 
 struct building_materials_t : public vector<rgeom_mat_t> {
@@ -307,7 +307,7 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	unsigned count_all_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos();
-	void draw(shader_t &s, bool shadow_only);
+	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
 };
 
 struct obj_model_inst_t {
@@ -373,7 +373,7 @@ struct building_room_geom_t {
 	void create_small_static_vbos();
 	void create_lights_vbos();
 	void create_dynamic_vbos();
-	void draw(shader_t &s, vector3d const &xlate, tid_nm_pair_t const &wall_tex, bool shadow_only, bool inc_small, bool player_in_building);
+	void draw(shader_t &s, vector3d const &xlate, tid_nm_pair_t const &wall_tex, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 };
 
 struct elevator_t : public cube_t {
