@@ -53,31 +53,35 @@ bool city_model_loader_t::is_model_valid(unsigned id) {
 }
 
 void city_model_loader_t::load_models() {
-	models_valid.resize(num_models(), 1); // assume valid
+	for (unsigned i = 0; i < num_models(); ++i) {load_model_id(i);}
+}
+bool city_model_loader_t::load_model_id(unsigned id) {
+	assert(id < num_models());
+	if (models_valid.empty()) {models_valid.resize(num_models(), 0);} // first call; start out invalid
+	if (models_valid[id]) return 1; // already loaded
+	city_model_t &model(get_model(id));
+	int const def_tid(-1); // should this be a model parameter?
+	colorRGBA const def_color(WHITE); // should this be a model parameter?
 
-	for (unsigned i = 0; i < num_models(); ++i) {
-		city_model_t &model(get_model(i));
-		int const def_tid(-1); // should this be a model parameter?
-		colorRGBA const def_color(WHITE); // should this be a model parameter?
-
-		if (!load_model_file(model.fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, model.recalc_normals, 0, city_params.convert_model_files, 1)) {
-			cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model (will use default low poly model)." << endl;
-			push_back(model3d(model.fn, tmgr)); // add a placeholder dummy model
-			models_valid[i] = 0;
-		}
-		if (model.shadow_mat_ids.empty()) { // empty shadow_mat_ids, create the list from all materials
-			model3d const &m(back());
-			unsigned const num_materials(max(m.num_materials(), 1U)); // max with 1 for unbound material
-			for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
-		}
-	} // for i
+	if (!load_model_file(model.fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, model.recalc_normals, 0, city_params.convert_model_files, 1)) {
+		cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model (will use default low poly model)." << endl;
+		push_back(model3d(model.fn, tmgr)); // add a placeholder dummy model
+		return 0;
+	}
+	if (model.shadow_mat_ids.empty()) { // empty shadow_mat_ids, create the list from all materials
+		model3d const &m(back());
+		unsigned const num_materials(max(m.num_materials(), 1U)); // max with 1 for unbound material
+		for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
+	}
+	models_valid[id] = 1;
+	return 1;
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations)
 {
 	assert(is_model_valid(model_id));
-	assert(size() == num_models()); // must be loaded
+	assert(model_id < size()); // must be loaded
 	city_model_t const &model_file(get_model(model_id));
 	model3d &model(at(model_id));
 	if (!is_shadow_pass && model_file.body_mat_id >= 0 && color.A != 0.0) {model.set_color_for_material(model_file.body_mat_id, color);} // use custom color for body material

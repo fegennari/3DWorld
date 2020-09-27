@@ -1185,6 +1185,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	pos_dir_up pdu(camera_pdu);
 	pdu.pos -= xlate; // adjust for local translate
 	unsigned const model_id = 0; // player is always the first model specified/loaded
+	if (city_params.num_peds == 0 && city_params.num_building_peds == 0) {ped_model_loader.load_model_id(model_id);} // only need to load this particular model
 	if (enable_animations) {s.add_uniform_int("animation_id", animation_id);}
 	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(1.1*player_eye_height), player_radius(player_height/PED_HEIGHT_SCALE);
 	point const pos(pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
