@@ -2961,6 +2961,9 @@ public:
 	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const {
 		ped_manager.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes);
 	}
+	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {
+		ped_manager.draw_player_model(s, xlate, shadow_only);
+	}
 	void setup_city_lights(vector3d const &xlate) {
 		if (world_mode != WMODE_INF_TERRAIN) return; // TT only
 		if (prev_city_lights_setup_frame == cur_display_iter) return; // already called this frame
@@ -3012,6 +3015,9 @@ void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d
 }
 void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) {
 	city_gen.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes);
+}
+void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {
+	city_gen.draw_player_model(s, xlate, shadow_only);
 }
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) {
 	if (!have_cities()) return 0;

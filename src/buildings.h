@@ -763,6 +763,7 @@ void enable_animations_for_shader(shader_t &s);
 void setup_city_lights(vector3d const &xlate);
 void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only); // from city_gen.cpp
 void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes); // from city_gen.cpp
+void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 vector3d get_nom_car_size();
 void draw_cars_in_garages(vector3d const &xlate, bool shadow_only);
 void create_mirror_reflection_if_needed();

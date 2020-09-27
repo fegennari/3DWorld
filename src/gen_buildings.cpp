@@ -28,7 +28,6 @@ extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale;
-extern double camera_zh;
 extern point sun_pos, pre_smap_player_pos;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
@@ -1871,9 +1870,7 @@ public:
 							}
 							else {draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1);} // no animations
 						}
-						if (add_player_shadow && camera_in_this_building) { // use a smaller radius, shift to center of player height
-							draw_sphere_vbo((pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)), 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0);
-						}
+						if (add_player_shadow && camera_in_this_building) {draw_player_model(s, xlate, 1);} // shadow_only=1
 					} // for bi
 				} // for g
 			}

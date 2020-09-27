@@ -13,6 +13,7 @@ bool const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes prob
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, animate2, frame_counter;
 extern float FAR_CLIP;
+extern double camera_zh;
 extern point pre_smap_player_pos;
 extern city_params_t city_params;
 
@@ -1164,5 +1165,29 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, ALPHA0, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
 	}
 	return 1;
+}
+
+void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {
+	if (ped_model_loader.num_models() == 0) { // no model - draw as sphere
+		point const player_pos(pre_smap_player_pos - vector3d(0.0, 0.0, 0.5f*camera_zh)); // shift to center of player height
+		draw_sphere_vbo(player_pos, 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0); // use a smaller radius
+		return;
+	}
+	bool const enable_animations = 0; // no animations yet
+	bool in_sphere_draw(0);
+	pos_dir_up pdu(camera_pdu);
+	pdu.pos -= xlate; // adjust for local translate
+	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(1.1*player_eye_height), player_radius(player_height/PED_HEIGHT_SCALE);
+	pedestrian_t ped(player_radius);
+	ped.model_id = 0; // player is always the first model specified/loaded
+	ped.pos      = pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height));
+	ped.dir      = cview_dir;
+	ped.dir.z    = 0.0; // cancel out vertical tilt since this won't look right for a person
+	ped.dir.normalize();
+	if (enable_animations) {s.add_uniform_int("animation_id", animation_id);}
+	draw_ped(ped, s, pdu, xlate, pdu.far_, pdu.far_*pdu.far_, in_sphere_draw, shadow_only, shadow_only, enable_animations); // dlight shadows only
+	end_sphere_draw(in_sphere_draw);
+	s.upload_mvm(); // not sure if this is needed
+	if (enable_animations) {s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
 }
 
