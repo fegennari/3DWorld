@@ -292,10 +292,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	float const wall_test_z(obj_z + radius); // hack to allow player to step over a wall that's below the stairs connecting stacked parts
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale); // XY radius can be smaller to allow player to fit between furniture
 
+	// Note: pos.z may be too small here and we should really use obj_z, so skip_z must be set to 1 in cube tests and obj_z tested explicitly instead
 	for (unsigned d = 0; d < 2; ++d) { // check XY collision with walls
 		for (auto i = interior->walls[d].begin(); i != interior->walls[d].end(); ++i) {
 			if (wall_test_z < i->z1() || wall_test_z > i->z2()) continue; // wrong part/floor
-			had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *i, p_last, 1, 0, cnorm); // skip_z=0 (required for stacked parts that have diff walls)
+			had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *i, p_last, 1, 1, cnorm); // skip_z=1 (handled by zval test above)
 		}
 	}
 	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
@@ -304,16 +305,16 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		if (1/*obj_z < e->z1() + floor_spacing*/) { // should players only be allowed in elevators on the ground floor?
 			cube_t cubes[5];
 			unsigned const num_cubes(e->get_coll_cubes(cubes));
-			for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
+			for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 1, 1, cnorm);} // skip_z=1
 		}
-		else {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *e, p_last, 1, 0, cnorm);} // skip_z=0
+		else {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *e, p_last, 1, 1, cnorm);} // skip_z=1
 	}
 	/*for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // doors tend to block the player, don't collide with them
 		if (obj_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
 		had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *i, p_last, 1, 0, cnorm); // skip_z=0
 	}*/
 	if (!xy_only && 2.2*radius < floor_spacing*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
-		// check Z collision with floors; no need to check ceilings
+		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
 		obj_z = max(pos.z, p_last.z);
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
