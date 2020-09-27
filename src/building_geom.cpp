@@ -1674,7 +1674,7 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 	float const width(door.get_sz_dim(!dim)), keepout(inc_open ? width : 0.0f);
 	float const lo_edge(door.d[!dim][0] - ((check_dirs == 1) ? 0 : keepout)), hi_edge(door.d[!dim][1] + ((check_dirs == 0) ? 0 : keepout));
 	if (c.d[!dim][0] > hi_edge || c.d[!dim][1] < lo_edge) return 0; // no overlap in !dim
-	float const min_dist((dmin == 0.0f) ? width : dmin); // if dmin==0, use door width (so that door has space to open)
+	float const min_dist((dmin == 0.0f) ? width : max(width, dmin)); // if dmin==0, use door width (so that door has space to open)
 	return (c.d[dim][0] < door.d[dim][1]+min_dist && c.d[dim][1] > door.d[dim][0]-min_dist); // within min_dist
 }
 bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // Note: inc_open only applies to interior doors
