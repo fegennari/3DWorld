@@ -1009,7 +1009,7 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 		mat.add_cube_to_verts(c, color, tex_origin, ~get_face_mask(c.dim, c.dir));
 		return;
 	}
-	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(2.0*wall_thick), door_gap(0.2*wall_thick);
+	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(2.0*wall_thick), door_gap(0.3*wall_thick);
 	cube_t sides(c), front(c);
 	sides.z2() -= 0.35*dz;
 	sides.z1() += 0.15*dz;
