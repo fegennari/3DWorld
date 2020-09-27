@@ -2057,6 +2057,7 @@ public:
 			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			set_interior_lighting(s, have_indir);
 			if (have_indir) {setup_indir_lighting(bcs, s);}
+			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
 			vect_cube_t ped_bcubes; // reused temporary
 			int indir_bcs_ix(-1), indir_bix(-1);
