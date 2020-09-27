@@ -1182,20 +1182,19 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 		prev_player_pos   = pre_smap_player_pos;
 		player_anim_time += fticks*city_params.ped_speed;
 	}
-	bool in_sphere_draw(0);
 	pos_dir_up pdu(camera_pdu);
 	pdu.pos -= xlate; // adjust for local translate
-	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(1.1*player_eye_height), player_radius(player_height/PED_HEIGHT_SCALE);
-	pedestrian_t ped(player_radius);
-	ped.model_id  = 0; // player is always the first model specified/loaded
-	ped.anim_time = player_anim_time;
-	ped.pos       = pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height));
-	ped.dir       = cview_dir;
-	ped.dir.z     = 0.0; // cancel out vertical tilt since this won't look right for a person
-	ped.dir.normalize();
+	unsigned const model_id = 0; // player is always the first model specified/loaded
 	if (enable_animations) {s.add_uniform_int("animation_id", animation_id);}
-	draw_ped(ped, s, pdu, xlate, pdu.far_, pdu.far_*pdu.far_, in_sphere_draw, shadow_only, shadow_only, enable_animations); // dlight shadows only
-	end_sphere_draw(in_sphere_draw); // probably not needed
+	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(1.1*player_eye_height), player_radius(player_height/PED_HEIGHT_SCALE);
+	point const pos(pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height)));
+	vector3d const dir_horiz(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm()); // always face a horizontal direction, even if walking on a slope
+	cube_t bcube;
+	bcube.set_from_sphere(pos, PED_WIDTH_SCALE*player_radius);
+	bcube.z1() = pos.z - player_radius;
+	bcube.z2() = bcube.z1() + player_height;
+	if (enable_animations) {s.add_uniform_float("animation_time", player_anim_time);}
+	ped_model_loader.draw_model(s, pos, bcube, dir_horiz, ALPHA0, xlate, model_id, shadow_only, 0, enable_animations);
 	s.upload_mvm(); // not sure if this is needed
 	if (enable_animations) {s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
 }
