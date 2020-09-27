@@ -1828,6 +1828,13 @@ public:
 		buildings.ai_room_update(ai_state, people, delta_dir, ai_rgen);
 	}
 
+	static void select_person_shadow_shader(shader_t &person_shader) {
+		if (!person_shader.is_setup()) {
+			enable_animations_for_shader(person_shader);
+			setup_smoke_shaders(person_shader, 0.0, 0, 0, 0, 0, 0, 0);
+		} else {person_shader.make_current();}
+	}
+
 	static void multi_draw_shadow(vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		//timer_t timer("Draw Buildings Shadow");
 		fgPushMatrix();
@@ -1861,16 +1868,20 @@ public:
 
 						if (ped_ix >= 0 && (camera_in_this_building || player_close)) { // draw people in this building
 							if (global_building_params.enable_people_ai) { // handle animations
-								if (!person_shader.is_setup()) {
-									enable_animations_for_shader(person_shader);
-									setup_smoke_shaders(person_shader, 0.0, 0, 0, 0, 0, 0, 0);
-								} else {person_shader.make_current();}
+								select_person_shadow_shader(person_shader);
 								draw_peds_in_building(ped_ix, bi->ix, person_shader, xlate, 1); // draw people in this building
 								s.make_current(); // switch back to normal building shader
 							}
 							else {draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1);} // no animations
 						}
-						if (add_player_shadow && camera_in_this_building) {draw_player_model(s, xlate, 1);} // shadow_only=1
+						if (add_player_shadow && camera_in_this_building) {
+							if (global_building_params.enable_people_ai) { // handle animations
+								select_person_shadow_shader(person_shader);
+								draw_player_model(person_shader, xlate, 1); // shadow_only=1
+								s.make_current(); // switch back to normal building shader
+							}
+							else {draw_player_model(s, xlate, 1);} // shadow_only=1
+						}
 					} // for bi
 				} // for g
 			}

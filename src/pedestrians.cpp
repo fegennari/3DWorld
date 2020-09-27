@@ -1174,20 +1174,28 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 		draw_sphere_vbo(player_pos, 0.5f*CAMERA_RADIUS, N_SPHERE_DIV, 0); // use a smaller radius
 		return;
 	}
-	bool const enable_animations = 0; // no animations yet
+	bool const enable_animations(enable_building_people_ai());
+	static float player_anim_time(0.0);
+	static point prev_player_pos;
+	
+	if (enable_animations && (pre_smap_player_pos.x != prev_player_pos.x || pre_smap_player_pos.y != prev_player_pos.y)) {
+		prev_player_pos   = pre_smap_player_pos;
+		player_anim_time += fticks*city_params.ped_speed;
+	}
 	bool in_sphere_draw(0);
 	pos_dir_up pdu(camera_pdu);
 	pdu.pos -= xlate; // adjust for local translate
 	float const player_eye_height(CAMERA_RADIUS + camera_zh), player_height(1.1*player_eye_height), player_radius(player_height/PED_HEIGHT_SCALE);
 	pedestrian_t ped(player_radius);
-	ped.model_id = 0; // player is always the first model specified/loaded
-	ped.pos      = pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height));
-	ped.dir      = cview_dir;
-	ped.dir.z    = 0.0; // cancel out vertical tilt since this won't look right for a person
+	ped.model_id  = 0; // player is always the first model specified/loaded
+	ped.anim_time = player_anim_time;
+	ped.pos       = pre_smap_player_pos + vector3d(0.0, 0.0, (player_radius - player_eye_height));
+	ped.dir       = cview_dir;
+	ped.dir.z     = 0.0; // cancel out vertical tilt since this won't look right for a person
 	ped.dir.normalize();
 	if (enable_animations) {s.add_uniform_int("animation_id", animation_id);}
 	draw_ped(ped, s, pdu, xlate, pdu.far_, pdu.far_*pdu.far_, in_sphere_draw, shadow_only, shadow_only, enable_animations); // dlight shadows only
-	end_sphere_draw(in_sphere_draw);
+	end_sphere_draw(in_sphere_draw); // probably not needed
 	s.upload_mvm(); // not sure if this is needed
 	if (enable_animations) {s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
 }
