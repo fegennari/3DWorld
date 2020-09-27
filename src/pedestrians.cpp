@@ -1178,7 +1178,7 @@ void ped_manager_t::draw_player_model(shader_t &s, vector3d const &xlate, bool s
 	static float player_anim_time(0.0);
 	static point prev_player_pos;
 	
-	if (enable_animations && (pre_smap_player_pos.x != prev_player_pos.x || pre_smap_player_pos.y != prev_player_pos.y)) {
+	if (enable_animations && p2p_dist_xy(pre_smap_player_pos, prev_player_pos) > 0.01*CAMERA_RADIUS) { // don't include minor differences related to turning in place
 		prev_player_pos   = pre_smap_player_pos;
 		player_anim_time += fticks*city_params.ped_speed;
 	}
