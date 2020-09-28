@@ -1853,19 +1853,14 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 }
 
 void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
-	glClear(GL_STENCIL_BUFFER_BIT);
-	glEnable(GL_STENCIL_TEST);
-	glStencilFunc(GL_ALWAYS, 0, ~0U);
+	setup_stencil_buffer_write();
 	glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
 	glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on front faces
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // disable color writing, we only want to write to the Z-Buffer
-	glDepthMask(GL_FALSE);
 	shader_t s;
 	s.begin_color_only_shader();
 	draw_simple_cube((cur_room_mirror + xlate), 0); // draw translated mirror
 	s.end_shader();
-	glDepthMask(GL_TRUE);
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	end_stencil_write();
 }
 void create_mirror_reflection_if_needed() {
 	if (cur_room_mirror.type != TYPE_MIRROR) return; // not enabled
@@ -1888,6 +1883,7 @@ void create_mirror_reflection_if_needed() {
 	camera_pdu = refl_camera_pdu; // reset reflected PDU
 	draw_mirror_to_stencil_buffer(xlate);
 	// enable stencil test for drawing building interiors as an optimization
+	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_NOTEQUAL, 0, ~0U); // keep if stencil bit has been set by the mirror draw
 	glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 	// draw the building interior

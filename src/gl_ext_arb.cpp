@@ -478,5 +478,18 @@ bool check_for_tess_shader() {
 	return 0;
 }
 
+void setup_stencil_buffer_write() {
+	glClear(GL_STENCIL_BUFFER_BIT);
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_ALWAYS, 0, ~0U);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // disable color writing, we only want to write to the stencil
+	glDepthMask(GL_FALSE);
+}
+void end_stencil_write() {
+	glDepthMask(GL_TRUE);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glDisable(GL_STENCIL_TEST);
+}
+
 
 

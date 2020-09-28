@@ -3402,11 +3402,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 			enable_blend();
 			shader_t s;
 			s.begin_color_only_shader(colorRGBA(get_inf_terrain_mod_color(), 0.2)); // make mostly transparent (wireframe?)
-			glClear(GL_STENCIL_BUFFER_BIT);
-			glDepthMask(GL_FALSE);
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-			glEnable(GL_STENCIL_TEST);
-			glStencilFunc(GL_ALWAYS, 0, ~0U);
+			setup_stencil_buffer_write();
 			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
 			glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
 			draw_brush_shape(hit_pos.x, hit_pos.y, radius, z1, z2, is_square);
@@ -3414,8 +3410,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			draw_brush_shape(hit_pos.x, hit_pos.y, radius, z1, z2, is_square);
-			glDepthMask(GL_TRUE);
-			glDisable(GL_STENCIL_TEST);
+			end_stencil_write();
 			disable_blend();
 			s.end_shader();
 		}

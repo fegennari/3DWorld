@@ -2161,17 +2161,11 @@ public:
 			if (draw_interior && have_windows && reflection_pass != 2) { // write to stencil buffer, use stencil test for back facing building walls
 				shader_t holes_shader;
 				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test
-				glClear(GL_STENCIL_BUFFER_BIT);
-				glEnable(GL_STENCIL_TEST);
-				glStencilFunc(GL_ALWAYS, 0, ~0U);
+				setup_stencil_buffer_write();
 				glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
 				glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on back faces
-				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // disable color writing, we only want to write to the Z-Buffer
-				glDepthMask(GL_FALSE);
 				interior_wind_draw.draw(holes_shader, 0, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
-				glDepthMask(GL_TRUE);
-				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-				glDisable(GL_STENCIL_TEST);
+				end_stencil_write();
 			}
 		} // end have_interior
 

@@ -66,6 +66,9 @@ inline void delete_and_zero_vao(unsigned &vao) {delete_vao(vao); vao = 0;}
 inline void check_bind_vbo(unsigned vbo, bool is_index=0) {assert(vbo); bind_vbo(vbo, is_index);}
 inline void check_bind_vao(unsigned vao) {assert(vao); bind_vao(vao);}
 
+void setup_stencil_buffer_write();
+void end_stencil_write();
+
 
 // templated vbo management utility functions/classes
 

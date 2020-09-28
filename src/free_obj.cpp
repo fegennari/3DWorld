@@ -676,11 +676,7 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 			global_translate(pos);
 
 			// draw shadow volume
-			glClear(GL_STENCIL_BUFFER_BIT);
-			glDepthMask(GL_FALSE);
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-			glEnable(GL_STENCIL_TEST);
-			glStencilFunc(GL_ALWAYS, 0, ~0U);
+			setup_stencil_buffer_write();
 			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
 			glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
 			assert(!sobjs.empty());
@@ -700,8 +696,7 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 			transform_and_draw_obj(udd, 1, 0, 1);
 
 			// reset state
-			glDepthMask(GL_TRUE);
-			glDisable(GL_STENCIL_TEST);
+			end_stencil_write();
 			set_std_blend_mode();
 			shader.reset_subroutine(1, "do_lighting_op", "normal_lighting");
 
