@@ -2166,7 +2166,7 @@ public:
 				glStencilFunc(GL_ALWAYS, 0, ~0U);
 				glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_KEEP); // ignore front faces
 				glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on back faces
-				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
+				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // disable color writing, we only want to write to the Z-Buffer
 				glDepthMask(GL_FALSE);
 				interior_wind_draw.draw(holes_shader, 0, 0, 1); // draw back facing windows; direct_draw_no_vbo=1
 				glDepthMask(GL_TRUE);

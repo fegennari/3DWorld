@@ -1852,17 +1852,31 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 	}
 }
 
+void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
+	glClear(GL_STENCIL_BUFFER_BIT);
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_ALWAYS, 0, ~0U);
+	glStencilOpSeparate(GL_BACK,  GL_KEEP, GL_KEEP, GL_KEEP); // ignore back faces
+	glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR); // mark stencil on front faces
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // disable color writing, we only want to write to the Z-Buffer
+	glDepthMask(GL_FALSE);
+	shader_t s;
+	s.begin_color_only_shader();
+	draw_simple_cube((cur_room_mirror + xlate), 0); // draw translated mirror
+	s.end_shader();
+	glDepthMask(GL_TRUE);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+}
 void create_mirror_reflection_if_needed() {
 	if (cur_room_mirror.type != TYPE_MIRROR) return; // not enabled
 	bool const dim(cur_room_mirror.dim), interior_room(cur_room_mirror.flags & RO_FLAG_INTERIOR);
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]), reflect_plane_xf(reflect_plane + xlate[dim]);
 	float const reflect_sign(cur_room_mirror.dir ? -1.0 : 1.0);
-	cur_room_mirror = room_object_t(); // reset for next frame
-	clip_plane = vector4d();
+	clip_plane      = vector4d();
 	clip_plane[dim] = -reflect_sign;
-	clip_plane.w = reflect_sign*reflect_plane;
-	unsigned const txsize(window_width/2), tysize(window_height/2); // half resolution for better performance
+	clip_plane.w    = reflect_sign*reflect_plane;
+	unsigned const txsize(window_width), tysize(window_height); // full resolution
 	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
 	camera_pdu.apply_dim_mirror(dim, reflect_plane_xf); // setup reflected camera frustum
 	pos_dir_up const refl_camera_pdu(camera_pdu);
@@ -1872,14 +1886,22 @@ void create_mirror_reflection_if_needed() {
 	setup_viewport_and_proj_matrix(txsize, tysize);
 	apply_dim_mirror(dim, reflect_plane_xf); // setup mirror transform
 	camera_pdu = refl_camera_pdu; // reset reflected PDU
+	draw_mirror_to_stencil_buffer(xlate);
+	// enable stencil test for drawing building interiors as an optimization
+	glStencilFunc(GL_NOTEQUAL, 0, ~0U); // keep if stencil bit has been set by the mirror draw
+	glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+	// draw the building interior
 	glEnable(GL_CLIP_DISTANCE0);
 	draw_buildings(0, (interior_room ? 2 : 1), xlate); // reflection_pass=1/2
 	glDisable(GL_CLIP_DISTANCE0);
+	glDisable(GL_STENCIL_TEST);
+	// write reflection to a texture and reset the state
 	setup_reflection_texture(room_mirror_ref_tid, txsize, tysize);
 	render_to_texture(room_mirror_ref_tid, txsize, tysize); // render reflection to texture
 	restore_matrices_and_clear(); // reset state
 	camera_pdu = old_camera_pdu; // restore camera_pdu
 	clip_plane = vector4d(); // reset to disable
+	cur_room_mirror = room_object_t(); // reset for next frame
 }
 
 bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const { // approximate
