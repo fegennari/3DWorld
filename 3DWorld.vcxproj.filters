@@ -423,6 +423,9 @@
     <ClCompile Include="src\city_building_params.cpp">
       <Filter>Source Files\City</Filter>
     </ClCompile>
+    <ClCompile Include="src\building_reflections.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">
