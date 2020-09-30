@@ -604,7 +604,21 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &
 		place_area_tub.expand_by(-0.05*wall_thickness); // just enough to prevent z-fighting
 		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, 0.2, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4);
 	}
-	placed_obj |= place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);
+	if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
+		placed_obj = 1;
+		room_object_t const &sink((objs.back().type == TYPE_SINK) ? objs.back() : objs[objs.size()-2]); // find sink, skip blocker
+		
+		if (classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
+			// add a mirror above the sink; could later make into medicine cabinet
+			cube_t mirror(sink); // start with the sink left and right position
+			mirror.expand_in_dim(!sink.dim, 0.1*mirror.get_sz_dim(!sink.dim)); // make slightly wider
+			mirror.z1() = sink.z2();
+			mirror.z2() = mirror.z1() + 0.3*floor_spacing;
+			mirror.d[sink.dim][!sink.dir] = room_bounds.d[sink.dim][!sink.dir];
+			mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
+			objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, RO_FLAG_NOCOLL, tot_light_amt);
+		}
+	}
 	return placed_obj;
 }
 
@@ -1849,7 +1863,7 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 
 void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building) {
 	if (!interior || !interior->room_geom) return;
-	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building && !is_house) {find_mirror_needing_reflection(xlate);}
+	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
 	interior->room_geom->draw(s, xlate, get_material().wall_tex, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix,

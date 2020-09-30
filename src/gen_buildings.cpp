@@ -2242,7 +2242,7 @@ public:
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
 		if (reflection_pass) {
-			fgPopMatrix(); // do we need to restore depth func and depth clamp as well?
+			fgPopMatrix();
 			return;
 		}
 		city_dlight_pcf_offset_scale = 1.0; // restore city value
