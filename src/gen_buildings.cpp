@@ -2216,27 +2216,29 @@ public:
 			reset_interior_lighting(s);
 			s.end_shader();
 
-			// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
-			int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
-			enable_linear_dlights(s);
-			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0
-			set_interior_lighting(s);
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, tex_filt_mode);}
-			reset_interior_lighting(s);
-			s.end_shader();
-			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
+			if (!reflection_pass) {
+				// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
+				int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
+				enable_linear_dlights(s);
+				city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0
+				set_interior_lighting(s);
+				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, tex_filt_mode);}
+				reset_interior_lighting(s);
+				s.end_shader();
+				glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
 
-			// draw windows and doors in depth pass to create holes
-			shader_t holes_shader;
-			setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
-			if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);}
-			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
-			glEnable(GL_DEPTH_CLAMP); // make sure holes are not clipped by the near plane
-			ext_door_draw.draw(holes_shader, 0, 0, 1); // direct_draw_no_vbo=1
-			setup_depth_clamp(); // restore
-			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			holes_shader.end_shader();
+				// draw windows and doors in depth pass to create holes
+				shader_t holes_shader;
+				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
+				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
+				if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);}
+				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_windows.draw(holes_shader, 0);} // draw windows on top of other buildings
+				glEnable(GL_DEPTH_CLAMP); // make sure holes are not clipped by the near plane
+				ext_door_draw.draw(holes_shader, 0, 0, 1); // direct_draw_no_vbo=1
+				setup_depth_clamp(); // restore
+				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+				holes_shader.end_shader();
+			}
 			glDisable(GL_CULL_FACE);
 		} // end draw_interior
 
