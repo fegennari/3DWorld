@@ -17,6 +17,7 @@ bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const ADD_ROOM_SHADOWS      = 1;
 bool const ADD_ROOM_LIGHTS       = 1;
 bool const DRAW_INTERIOR_DOORS   = 1;
+bool const DRAW_EXT_REFLECTIONS  = 1;
 bool const LINEAR_ROOM_DLIGHT_ATTEN = 1;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
@@ -2216,7 +2217,7 @@ public:
 			reset_interior_lighting(s);
 			s.end_shader();
 
-			if (!reflection_pass) {
+			if (DRAW_EXT_REFLECTIONS || !reflection_pass) {
 				// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
 				int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
 				enable_linear_dlights(s);
@@ -2225,9 +2226,10 @@ public:
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, tex_filt_mode);}
 				reset_interior_lighting(s);
 				s.end_shader();
-				glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
+			}
+			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
 
-				// draw windows and doors in depth pass to create holes
+			if (!reflection_pass) { // draw windows and doors in depth pass to create holes
 				shader_t holes_shader;
 				setup_smoke_shaders(holes_shader, 0.9, 0, 0, 0, 0, 0, 0); // min_alpha=0.9 for depth test - need same shader to avoid z-fighting
 				glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color writing, we only want to write to the Z-Buffer
@@ -2243,17 +2245,21 @@ public:
 		} // end draw_interior
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
-		if (reflection_pass) {
+		if (reflection_pass >= (DRAW_EXT_REFLECTIONS ? 2 : 1)) {
 			fgPopMatrix();
 			return;
 		}
 		city_dlight_pcf_offset_scale = 1.0; // restore city value
-		setup_city_lights(xlate);
+		if (!reflection_pass) {setup_city_lights(xlate);}
 
 		// main/batched draw pass
 		setup_smoke_shaders(s, min_alpha, 0, 0, indir, 1, dlights, 0, 0, (use_smap ? 2 : 1), use_bmap, 0, 0, 0, 0.0, 0.0, 0, 0, 1); // is_outside=1
-		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
+
+		if (!reflection_pass) { // don't want to do this in the reflection pass
+			for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw.init_draw_frame();}
+		}
 		glEnable(GL_CULL_FACE);
+		glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
 		if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);} // if an exterior door was drawn, make sure we don't clamp the walls over the holes
 
 		for (unsigned ix = 0; ix < max_draw_ix; ++ix) { // draw front faces of buildings
@@ -2337,6 +2343,7 @@ public:
 			disable_blend();
 		}
 		if (!ext_door_draw.empty()) {setup_depth_clamp();} // restore
+		glCullFace(GL_BACK);
 		glDepthFunc(GL_LESS);
 		fgPopMatrix();
 	}
