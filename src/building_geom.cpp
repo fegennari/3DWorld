@@ -928,7 +928,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	bool const gen_door(global_building_params.windows_enabled());
 	float const door_width_scale(0.5);
 	float door_height(get_door_height()), floor_spacing(get_window_vspace()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);;
-	bool door_dim(rgen.rand_bool()), door_dir(0), dim(0), dir(0), dir2(0);
+	bool door_dim(rgen.rand_bool()), door_dir(0), dim(0), dir(0), dir2(0), garage_dim(0);
 	unsigned door_part(0), detail_type(0);
 	real_num_parts = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
 	cube_t door_cube;
@@ -1019,6 +1019,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				float const wscale(is_garage ? 0.9*c.get_sz_dim(!long_dim)/door_height : door_width_scale);
 				add_door(place_door(c, long_dim, door_dir, door_height, 0.0, 0.0, 0.0, wscale, 0, rgen), parts.size(), long_dim, door_dir, 0);
 				if (is_garage) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
+				garage_dim = long_dim;
 			}
 			parts.push_back(c); // support column or shed/garage
 		} // end house details
@@ -1036,6 +1037,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			vector3d const dir(tree_pos - bcube.get_cube_center());
 			tree_pos  += (0.05f*(bcube.dx() + bcube.dy())/dir.mag())*dir; // shift slightly away from house center so that it's less likely to intersect the house
 			tree_pos.z = bcube.z1();
+		}
+		if (type == 1) { // L-shaped house
+			// TODO: add a fence section in dim (has_garage ? !garage_dim : rgen.rand_bool())
 		}
 		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	} // end type != 0  (multi-part house)
