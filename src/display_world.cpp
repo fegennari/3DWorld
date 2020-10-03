@@ -1216,7 +1216,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
-	pre_draw_tiled_terrain(0);
+	pre_draw_tiled_terrain();
 	if (TIMETEST) PRINT_TIME("3.26");
 	render_tt_models(0, 0); // opaque pass; draws city buildings, cars, etc.
 

@@ -27,6 +27,7 @@ void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
 void create_mirror_reflection_if_needed() {
 	if (cur_room_mirror.type != TYPE_MIRROR) return; // not enabled
 	bool const dim(cur_room_mirror.dim), interior_room(cur_room_mirror.flags & RO_FLAG_INTERIOR), is_house(cur_room_mirror.flags & RO_FLAG_IS_HOUSE);
+	int const reflection_pass(is_house ? 3 : (interior_room ? 2 : 1));
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]), reflect_plane_xf(reflect_plane + xlate[dim]);
 	float const reflect_sign(cur_room_mirror.dir ? -1.0 : 1.0);
@@ -48,10 +49,22 @@ void create_mirror_reflection_if_needed() {
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_NOTEQUAL, 0, ~0U); // keep if stencil bit has been set by the mirror draw
 	glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+
+	if (is_house) {
+		//draw_sun_moon_stars(1);
+		//draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
+		//render_tt_models(reflection_pass, 0); // reflection + opaque pass
+	}
 	// draw the building interior
 	glEnable(GL_CLIP_DISTANCE0);
-	draw_buildings(0, (is_house ? 3 : (interior_room ? 2 : 1)), xlate); // reflection_pass=1/2/3
+	draw_buildings(0, reflection_pass, xlate); // reflection_pass=1/2/3
 	glDisable(GL_CLIP_DISTANCE0);
+
+	if (is_house) {
+		draw_tiled_terrain(2);
+		//render_tt_models(reflection_pass, 1); // reflection + transparent pass
+		//draw_tiled_terrain_clouds(1);
+	}
 	glDisable(GL_STENCIL_TEST);
 	// write reflection to a texture and reset the state
 	setup_reflection_texture(room_mirror_ref_tid, txsize, tysize);

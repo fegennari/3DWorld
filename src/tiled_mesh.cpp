@@ -2465,7 +2465,7 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 }
 
 
-void tile_draw_t::pre_draw(bool reflection_pass) { // view-dependent updates/GPU uploads
+void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
 	//timer_t timer("TT Pre-Draw");
 	vector<tile_t *> to_update, to_gen_trees;
@@ -2551,7 +2551,7 @@ void tile_draw_t::occluder_pts_t::calc_cube_top_points(cube_t const &bcube) { //
 unsigned in_mb(unsigned long long v) {return v/1024/1024;}
 
 
-void tile_draw_t::draw(bool reflection_pass) {
+void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=water plane Z, 2=building mirror
 
 	//timer_t timer("TT Draw");
 	unsigned num_trees(0), num_smaps(0);
@@ -2587,7 +2587,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 		if (dist > DRAW_DIST_TILES || !tile->is_visible()) continue;
 		if (tile->was_last_occluded()) continue; // occluded in the shadow pass
 		tile_set_t tile_set;
-		if (reflection_pass && !can_have_reflection(tile, tile_set)) continue;
+		if (reflection_pass == 1 && !can_have_reflection(tile, tile_set)) continue; // check for water plane Z reflections only
 
 		if (!occluders.empty() && !tile->was_last_unoccluded()) {
 			occluder_pts_t tile_os, sub_tile_os;
@@ -3339,7 +3339,7 @@ bool tile_smap_data_t::needs_update(point const &lpos) {
 
 tile_t *get_tile_from_xy  (tile_xy_pair const &tp) {return terrain_tile_draw.get_tile_from_xy(tp);}
 float update_tiled_terrain(float &min_camera_dist) {return terrain_tile_draw.update(min_camera_dist);}
-void pre_draw_tiled_terrain(bool reflection_pass) {terrain_tile_draw.pre_draw(reflection_pass);}
+void pre_draw_tiled_terrain() {terrain_tile_draw.pre_draw();}
 
 
 colorRGBA get_inf_terrain_mod_color() {
@@ -3372,20 +3372,21 @@ void draw_brush_shape(float xval, float yval, float radius, float z1, float z2, 
 	}
 }
 
-void render_tt_models(bool reflection_pass, bool transparent_pass) {
+void render_tt_models(int reflection_pass, bool transparent_pass) {
 
 	if (reflection_pass && !enable_tt_model_reflect) return;
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	render_models(0, reflection_pass, (transparent_pass ? 2 : 1), xlate);
 }
 
-void draw_tiled_terrain(bool reflection_pass) {
+void draw_tiled_terrain(int reflection_pass) {
 
 	//RESET_TIME;
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
+	if (reflection_pass) return; // nothing else to do
 
-	if (inf_terrain_fire_mode != FM_NONE && !reflection_pass) { // use a bool instead?
+	if (inf_terrain_fire_mode != FM_NONE) { // use a bool instead?
 		point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
 		point hit_pos;
 		tile_t *tile(nullptr);
@@ -3415,7 +3416,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 			s.end_shader();
 		}
 	}
-	if (!reflection_pass && camera_surf_collide) {
+	if (camera_surf_collide) {
 		//int const tid(get_tiled_terrain_tid_under_point(get_camera_pos())); // TESTING
 	}
 }
