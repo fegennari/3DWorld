@@ -230,6 +230,7 @@ uint16_t const RO_FLAG_ADJ_LO  = 0x400; // for kitchen counters/closets/door tri
 uint16_t const RO_FLAG_ADJ_HI  = 0x800; // for kitchen counters/closets/door trim
 uint16_t const RO_FLAG_ADJ_BOT = 0x1000; // for door trim
 uint16_t const RO_FLAG_ADJ_TOP = 0x2000; // for door trim
+uint16_t const RO_FLAG_IS_HOUSE= 0x4000; // only used for mirror reflections
 
 struct room_object_t : public cube_t {
 	bool dim, dir;

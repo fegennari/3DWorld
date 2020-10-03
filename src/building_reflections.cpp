@@ -26,7 +26,7 @@ void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
 
 void create_mirror_reflection_if_needed() {
 	if (cur_room_mirror.type != TYPE_MIRROR) return; // not enabled
-	bool const dim(cur_room_mirror.dim), interior_room(cur_room_mirror.flags & RO_FLAG_INTERIOR);
+	bool const dim(cur_room_mirror.dim), interior_room(cur_room_mirror.flags & RO_FLAG_INTERIOR), is_house(cur_room_mirror.flags & RO_FLAG_IS_HOUSE);
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]), reflect_plane_xf(reflect_plane + xlate[dim]);
 	float const reflect_sign(cur_room_mirror.dir ? -1.0 : 1.0);
@@ -50,7 +50,7 @@ void create_mirror_reflection_if_needed() {
 	glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 	// draw the building interior
 	glEnable(GL_CLIP_DISTANCE0);
-	draw_buildings(0, (interior_room ? 2 : 1), xlate); // reflection_pass=1/2
+	draw_buildings(0, (is_house ? 3 : (interior_room ? 2 : 1)), xlate); // reflection_pass=1/2/3
 	glDisable(GL_CLIP_DISTANCE0);
 	glDisable(GL_STENCIL_TEST);
 	// write reflection to a texture and reset the state
@@ -98,6 +98,7 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
 		if (check_visibility && !is_cube_face_visible_from_pt(*i, camera_bs, i->dim, i->dir)) continue; // visibility test (slow)
 		cur_room_mirror = *i;
+		if (is_house) {cur_room_mirror.flags |= RO_FLAG_IS_HOUSE;}
 		return 1;
 	} // for i
 	return 0;

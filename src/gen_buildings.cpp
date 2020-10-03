@@ -1979,7 +1979,7 @@ public:
 	static void enable_linear_dlights(shader_t &s) { // to be called before begin_shader()
 		if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	}
-	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall, 2 = reflection for room with interior wall
+	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall, 2 = reflection for room with interior wall, 3 = reflection from mirror in a house
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
 
@@ -2245,7 +2245,7 @@ public:
 		} // end draw_interior
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
-		if (reflection_pass >= (DRAW_EXT_REFLECTIONS ? 2 : 1)) {
+		if (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3)) { // skip this early exit for house reflections if enabled
 			fgPopMatrix();
 			return;
 		}
