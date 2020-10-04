@@ -2262,7 +2262,7 @@ public:
 		glCullFace(reflection_pass ? GL_FRONT : GL_BACK);
 		if (!ext_door_draw.empty()) {glDisable(GL_DEPTH_CLAMP);} // if an exterior door was drawn, make sure we don't clamp the walls over the holes
 
-		if (!reflection_pass) { // draw front faces of buildings if not in shadow pass; nearby shadowed buildings will be drawn later
+		if (1/*!reflection_pass*/) { // draw front faces of buildings; nearby shadowed buildings will be drawn later
 			for (unsigned ix = 0; ix < max_draw_ix; ++ix) {
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 					if (!(*i)->use_smap_this_frame) {(*i)->building_draw_vbo.draw_block(s, ix, shadow_only);}
@@ -2291,8 +2291,8 @@ public:
 		glDisable(GL_CULL_FACE);
 		s.end_shader();
 
-		// post-pass to render building exteriors in nearby tiles that have shadow maps
-		if (use_tt_smap) {
+		// post-pass to render building exteriors in nearby tiles that have shadow maps; shadow maps don't work right when using reflections
+		if (use_tt_smap && !reflection_pass) {
 			//timer_t timer2("Draw Buildings Smap"); // 0.3
 			bool const use_city_dlights(!reflection_pass);
 			city_shader_setup(s, get_city_lights_bcube(), use_city_dlights, 1, use_bmap, min_alpha); // use_smap=1
