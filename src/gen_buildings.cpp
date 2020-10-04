@@ -821,21 +821,24 @@ public:
 	}
 
 	void add_fence(cube_t const &fence, tid_nm_pair_t const &tex, colorRGBA const &color) {
-#if 0
 		bool const dim(fence.dy() < fence.dx());
 		float const length(fence.get_sz_dim(!dim)), height(fence.dz());
-		unsigned const num_sections(max(round_fp(0.25*length/height), 1)), num_posts(num_sections + 1), num_beams(2);
-		float const post_spacing(length/num_sections), beam_spacing(height/(num_beams+1));
+		float const post_width(fence.get_sz_dim(dim)), post_hwidth(0.5*post_width), beam_hwidth(0.5*post_hwidth), beam_hheight(1.0*post_hwidth);
+		unsigned const num_sections(max(round_fp(0.25*length/height), 1)), num_posts(num_sections + 1), num_beams(2); // could also use 3 beams
+		float const post_spacing((length - post_width)/num_sections), beam_spacing(height/(num_beams+0.5f));
+		cube_t post(fence); // copy dim and Z values
+		cube_t beam(fence); // copy dim and !dim values
+		beam.expand_in_dim(!dim, -post_width); // remove overlap with end posts
+		beam.expand_in_dim( dim, (beam_hwidth - post_hwidth));
 
 		for (unsigned i = 0; i < num_posts; ++i) { // add posts
-			//add_cube(post, tex, color, 0, 7, 1, 0); // skip bottom
+			set_wall_width(post, (fence.d[!dim][0] + post_hwidth + i*post_spacing), post_hwidth, !dim);
+			add_cube(post, tex, color, 0, 7, 1, 0); // skip bottom
 		}
 		for (unsigned i = 0; i < num_beams; ++i) { // add beams
-			//add_cube(beam, tex, color, 0, x, 0, 0); // skip bottom
+			set_wall_width(beam, (fence.z1() + (i+1)*beam_spacing), beam_hheight, 2); // set beam zvals
+			add_cube(beam, tex, color, 0, (4U + (1U<<unsigned(dim))), 0, 0); // skip !dim sides
 		}
-#else
-		add_cube(fence, tex, color, 0, 7, 1, 0); // skip bottom
-#endif
 	}
 
 	void add_roof_dome(point const &pos, float rx, float ry, tid_nm_pair_t const &tex, colorRGBA const &color, bool onion) {

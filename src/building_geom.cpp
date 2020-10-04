@@ -1044,7 +1044,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (type == 1) { // L-shaped house, add a fence
 			//bool const fence_dim(has_garage ? !garage_dim : !door_dim); // dim separated by the fence; fence runs in the other dim
 			cube_t fence(bcube);
-			fence.z2() = fence.z1() + 0.55*door_height; // set fence height
+			fence.z2() = fence.z1() + 0.65*door_height; // set fence height
 			fence.d[!dim][!dir2] = fence.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*0.08*door_height; // set fence thickness; use the same dim as the shrunk house part
 
 			// we can calculate the exact location of the fence, but it depends on detail_type, garage/shed position, etc.,
