@@ -811,8 +811,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	// add stairwells and elevator shafts
 	if (num_floors == 1) {} // no need for stairs or elevator
 	else if (use_hallway) { // part is the hallway cube
-		add_elevator = 1; //rgen.rand_bool();
-		if (interior->landings.empty()) {interior->landings.reserve(add_elevator ? 1 : (num_floors-1));}
+		add_elevator = 1;
+		if (interior->landings.empty()) {interior->landings.reserve(add_elevator ? 1 : (num_floors-1));} // lower bound
 		assert(!interior->rooms.empty());
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
@@ -1003,7 +1003,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			float const zc(z - fc_thick);
 			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
-			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, sshape);
+			// don't add railings to straight roof access stairs because they intersect with the roof access door
+			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, ((sshape == SHAPE_HAS_RAILINGS) ? SHAPE_STRAIGHT : sshape));
 			landing.z1() = zc; landing.z2() = z; // no floor above
 			interior->landings.push_back(landing);
 			interior->stairwells.back().z2() += fc_thick; // extend upward
