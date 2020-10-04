@@ -1813,9 +1813,11 @@ void tile_t::draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const 
 	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
 }
 
-void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const {
+void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, int reflection_pass, int shader_locs[2]) const {
 
 	//timer_t timer("Draw Tile Mesh");
+	// check if the tile was visible in the building mirror reflection but not in normal view (so wasn't setup)
+	if (reflection_pass == 2 && !(weight_tid > 0 && height_tid > 0 && normal_tid > 0 && shadow_tid > 0)) return;
 	fgPushMatrix();
 	vector3d const xlate(get_mesh_xlate());
 	translate_to(xlate); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
@@ -2664,7 +2666,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 void tile_draw_t::end_lightning() const {lightning_strike.end_draw();} // in case it was enabled
 
 
-void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const {
+void tile_draw_t::draw_tiles(int reflection_pass, bool enable_shadow_map) const {
 
 	//timer_t timer("TT Draw Tiles");
 	shader_t s;

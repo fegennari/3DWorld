@@ -396,7 +396,7 @@ public:
 	bool try_bind_shadow_map(shader_t &s, bool check_only) const;
 	void bind_textures() const;
 	void draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], unsigned lod_level) const;
-	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const;
+	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, int reflection_pass, int shader_locs[2]) const;
 	void draw_shadow_pass(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1]);
 	void draw_water_cap(shader_t &s, bool textures_already_set) const;
 	void draw_water(shader_t &s, float z) const;
@@ -459,7 +459,7 @@ public:
 	void draw_decid_tree_shadows() {draw_shadow_pass(camera_pdu.pos, nullptr, 1);}
 	void draw_water(shader_t &s, float zval) const;
 private:
-	void draw_tiles(bool reflection_pass, bool enable_shadow_map) const;
+	void draw_tiles(int reflection_pass, bool enable_shadow_map) const;
 	void draw_tiles_shadow_pass(point const &lpos, tile_t const *const tile);
 	bool find_and_bind_any_valid_shadow_map(shader_t &s) const;
 	static void set_noise_tex(shader_t &s, unsigned tu_id);
