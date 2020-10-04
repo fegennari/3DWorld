@@ -162,7 +162,8 @@ public:
 
 	void init() {
 		if (!tid_to_slot_ix.empty()) return; // already inited
-		int const special_tids[4] = {WHITE_TEX, FENCE_TEX, PANELING_TEX, TILE_TEX}; // for elevators, etc.
+		unsigned const num_special_tids = 5;
+		int const special_tids[num_special_tids] = {WHITE_TEX, FENCE_TEX, PANELING_TEX, TILE_TEX, WOOD_TEX}; // for elevators, etc.
 		tid_to_slot_ix.push_back(0); // untextured case
 		register_tid(building_texture_mgr.get_window_tid());
 		register_tid(building_texture_mgr.get_hdoor_tid());
@@ -170,7 +171,7 @@ public:
 		register_tid(building_texture_mgr.get_gdoor_tid());
 		register_tid(building_texture_mgr.get_ac_unit_tid1());
 		register_tid(building_texture_mgr.get_ac_unit_tid2());
-		for (unsigned i = 0; i < 4; ++i) {register_tid(special_tids[i]);}
+		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
 			register_tex(i->side_tex);
@@ -271,8 +272,8 @@ public:
 
 #define EMIT_VERTEX_SIMPLE() \
 	vert.v = pt*sz + llc; \
-	vert.t[ st] = tscale[ st]*pt[d]; \
-	vert.t[!st] = tscale[!st]*pt[i]; \
+	vert.t[ st] = tscale[ st]*(ws_texture ? vert.v[d] : pt[d]); \
+	vert.t[!st] = tscale[!st]*(ws_texture ? vert.v[i] : pt[i]); \
 	verts.push_back(vert);
 
 class building_draw_t {
@@ -789,7 +790,7 @@ public:
 		} // for i
 	}
 
-	void add_cube(cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color, bool swap_txy, unsigned dim_mask, bool skip_bottom, bool skip_top) {
+	void add_cube(cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color, bool swap_txy, unsigned dim_mask, bool skip_bottom, bool skip_top, bool ws_texture) {
 		assert(dim_mask != 0); // must draw at least some face
 		auto &verts(get_verts(tex));
 		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
@@ -824,7 +825,7 @@ public:
 		bool const dim(fence.dy() < fence.dx());
 		float const length(fence.get_sz_dim(!dim)), height(fence.dz());
 		float const post_width(fence.get_sz_dim(dim)), post_hwidth(0.5*post_width), beam_hwidth(0.5*post_hwidth), beam_hheight(1.0*post_hwidth);
-		unsigned const num_sections(max(round_fp(0.25*length/height), 1)), num_posts(num_sections + 1), num_beams(2); // could also use 3 beams
+		unsigned const num_sections(ceil(0.3*length/height)), num_posts(num_sections + 1), num_beams(2); // could also use 3 beams
 		float const post_spacing((length - post_width)/num_sections), beam_spacing(height/(num_beams+0.5f));
 		cube_t post(fence); // copy dim and Z values
 		cube_t beam(fence); // copy dim and !dim values
@@ -833,11 +834,11 @@ public:
 
 		for (unsigned i = 0; i < num_posts; ++i) { // add posts
 			set_wall_width(post, (fence.d[!dim][0] + post_hwidth + i*post_spacing), post_hwidth, !dim);
-			add_cube(post, tex, color, 0, 7, 1, 0); // skip bottom
+			add_cube(post, tex, color, 0, 7, 1, 0, 1); // skip bottom, ws_texture=1
 		}
 		for (unsigned i = 0; i < num_beams; ++i) { // add beams
 			set_wall_width(beam, (fence.z1() + (i+1)*beam_spacing), beam_hheight, 2); // set beam zvals
-			add_cube(beam, tex, color, 0, (4U + (1U<<unsigned(dim))), 0, 0); // skip !dim sides
+			add_cube(beam, tex, color, 0, (4U + (1U<<unsigned(dim))), 0, 0, 1); // skip !dim sides, ws_texture=1
 		}
 	}
 
@@ -957,8 +958,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bool const swap_st(i->dx() > i->dy());
 				bool const tex_id((details.size() + parts.size() + mat_ix) & 1); // somewhat of a hash of various things; deterministic
 				int const ac_tid(tex_id ? building_texture_mgr.get_ac_unit_tid1() : building_texture_mgr.get_ac_unit_tid2());
-				bdraw.add_cube(*i, tid_nm_pair_t(ac_tid, -1, 1.0, 1.0), WHITE, swap_st, 4, 1, 0); // Z, skip bottom
-				bdraw.add_cube(*i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0); // XY with stretched texture
+				bdraw.add_cube(*i, tid_nm_pair_t(ac_tid, -1, 1.0, 1.0), WHITE, swap_st, 4, 1, 0, 0); // Z, skip bottom, ws_texture=0
+				bdraw.add_cube(*i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
 				continue;
 			}
 			bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
@@ -982,7 +983,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), dcolor);
 		}
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
-			bdraw.add_fence(*i, tid_nm_pair_t(), WHITE);
+			bdraw.add_fence(*i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE);
 		}
 		if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
 			cube_t const &top(parts.back()); // top/last part
