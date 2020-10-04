@@ -956,7 +956,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_section(b, empty_vc, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
 		}
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
-			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), door_color);
+			colorRGBA const &dcolor((i->type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : door_color); // garage doors are always white
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), dcolor);
 		}
 		if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
 			cube_t const &top(parts.back()); // top/last part
