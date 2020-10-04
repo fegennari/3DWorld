@@ -70,7 +70,7 @@ bool city_model_loader_t::load_model_id(unsigned id) {
 	}
 	if (model.shadow_mat_ids.empty()) { // empty shadow_mat_ids, create the list from all materials
 		model3d const &m(back());
-		unsigned const num_materials(max(m.num_materials(), 1U)); // max with 1 for unbound material
+		unsigned const num_materials(max(m.num_materials(), size_t(1))); // max with 1 for unbound material
 		for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
 	}
 	models_valid[id] = 1;
