@@ -10,6 +10,7 @@ unsigned room_mirror_ref_tid(0);
 room_object_t cur_room_mirror;
 
 extern int display_mode, window_width, window_height;
+extern float CAMERA_RADIUS;
 extern vector4d clip_plane;
 
 
@@ -35,8 +36,10 @@ void create_mirror_reflection_if_needed() {
 	clip_plane[dim] = -reflect_sign;
 	clip_plane.w    = reflect_sign*reflect_plane;
 	unsigned const txsize(window_width), tysize(window_height); // full resolution
+	point const old_camera_pos(camera_pos);
 	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
 	camera_pdu.apply_dim_mirror(dim, reflect_plane_xf); // setup reflected camera frustum
+	//camera_pos = camera_pdu.pos; // this can move the camera outside the building, so we can't use it
 	pos_dir_up const refl_camera_pdu(camera_pdu);
 	// Note: it may be more efficient to use an FBO here, but we would need both a color attachment (room_mirror_ref_tid) and a depth attachment (and stencil buffer?)
 	// Note: clearing the buffers at this point in the control flow will discard some geometry that has already been drawn such as the sky,
@@ -51,7 +54,6 @@ void create_mirror_reflection_if_needed() {
 	glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 
 	if (is_house) {
-		//draw_sun_moon_stars(1);
 		//draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
 		//render_tt_models(reflection_pass, 0); // reflection + opaque pass
 	}
@@ -70,6 +72,7 @@ void create_mirror_reflection_if_needed() {
 	setup_reflection_texture(room_mirror_ref_tid, txsize, tysize);
 	render_to_texture(room_mirror_ref_tid, txsize, tysize); // render reflection to texture
 	restore_matrices_and_clear(); // reset state
+	camera_pos = old_camera_pos;
 	camera_pdu = old_camera_pdu; // restore camera_pdu
 	clip_plane = vector4d(); // reset to disable
 	cur_room_mirror = room_object_t(); // reset for next frame
@@ -102,10 +105,11 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 	point const camera_bs(camera_pdu.pos - xlate);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	float const camera_z1(camera_bs.z - CAMERA_RADIUS), camera_z2(camera_bs.z + CAMERA_RADIUS);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
 		if (i->room_id != room_id || i->type != TYPE_MIRROR) continue; // wrong room, or not a mirror
-		if (i->z1() > camera_bs.z || i->z2() < camera_bs.z)  continue; // wrong floor
+		if (i->z1() > camera_z2   || i->z2() < camera_z1)    continue; // wrong floor
 		// Note: we could probably return 0 rather than continuing after this point, but that may change if rooms with multiple mirrors are enabled
 		if (((camera_bs[i->dim] - i->get_center_dim(i->dim)) < 0.0f) ^ i->dir ^ 1) continue; // back facing
 		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
