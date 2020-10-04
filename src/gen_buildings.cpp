@@ -2296,15 +2296,16 @@ public:
 		glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting on building windows
 
 		if (have_windows) { // draw windows, front facing only (not viewed from interior)
+			bool const transparent_windows(draw_interior && !reflection_pass);
 			enable_blend();
 			glDepthMask(GL_FALSE); // disable depth writing
 			glEnable(GL_POLYGON_OFFSET_FILL);
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) { // draw windows on top of other buildings
 				// need to swap opaque window texture with transparent texture for this draw pass
-				if (draw_interior) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 				(*i)->building_draw_windows.draw(s, 0);
-				if (draw_interior) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
+				if (transparent_windows) {(*i)->building_draw_windows.toggle_transparent_windows_mode();}
 			}
 			//interior_wind_draw.draw(0, 0, 1); // draw opaque front facing windows of building the player is in; direct_draw_no_vbo=1
 			glDisable(GL_POLYGON_OFFSET_FILL);
