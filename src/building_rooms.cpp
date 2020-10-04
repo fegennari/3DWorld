@@ -616,7 +616,8 @@ bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &
 			mirror.z2() = mirror.z1() + 0.3*floor_spacing;
 			mirror.d[sink.dim][!sink.dir] = room_bounds.d[sink.dim][!sink.dir];
 			mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
-			objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, RO_FLAG_NOCOLL, tot_light_amt);
+			// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
+			objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, RO_FLAG_IS_HOUSE, tot_light_amt);
 		}
 	}
 	return placed_obj;
@@ -1901,5 +1902,6 @@ room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool 
 }
 void room_t::assign_to(room_type rt, unsigned floor) {
 	if (rtype == RTYPE_NOTSET || floor == 0) {rtype = rt;} // rtype is not per floor: assign if not yet assigned or this is the first floor (first floor has priority)
+	if (rt == RTYPE_BATH) {has_bathroom = 1;} // tag as has_bathroom even if bathroom is not on the ground floor
 }
 

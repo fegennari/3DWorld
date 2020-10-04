@@ -388,7 +388,7 @@ struct elevator_t : public cube_t {
 };
 
 struct room_t : public cube_t {
-	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg, interior;
+	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg, interior, has_bathroom;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	//uint8_t sides_with_doors; // is this useful/needed?
 	uint8_t part_id, num_lights;
@@ -396,7 +396,7 @@ struct room_t : public cube_t {
 	uint64_t lit_by_floor;
 	float light_intensity; // due to room lights, if turned on
 
-	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), interior(0),
+	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), interior(0), has_bathroom(0),
 		ext_sides(0), part_id(0), num_lights(0), rtype(RTYPE_NOTSET), lit_by_floor(0), light_intensity(0.0) {}
 	room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_);
 	void assign_to(room_type rt, unsigned floor=0);

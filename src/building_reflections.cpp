@@ -115,7 +115,6 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 		if (!camera_pdu.cube_visible(*i + xlate)) continue; // VFC
 		if (check_visibility && !is_cube_face_visible_from_pt(*i, camera_bs, i->dim, i->dir)) continue; // visibility test (slow)
 		cur_room_mirror = *i;
-		if (is_house) {cur_room_mirror.flags |= RO_FLAG_IS_HOUSE;}
 		return 1;
 	} // for i
 	return 0;
@@ -130,7 +129,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	
 	// find room containing the camera
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (r->rtype != RTYPE_BATH)     continue;
+		if (!r->has_bathroom) continue;
 		if (!r->contains_pt(camera_bs)) continue;
 		if (find_mirror_in_room(((r - interior->rooms.begin()) & 255), xlate, 0)) return 1;
 	}
