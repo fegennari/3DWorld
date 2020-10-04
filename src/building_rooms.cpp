@@ -958,7 +958,7 @@ bool building_t::add_library_objs(rand_gen_t &rgen, room_t const &room, float zv
 }
 
 bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), room_pad(max(4.0f*wall_thickness, get_min_front_clearance()));
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const ceil_zval(zval + window_vspacing - get_floor_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);

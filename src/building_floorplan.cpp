@@ -924,7 +924,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 							} // for d
 						}
 					} // for dim
-					//if (!against_wall) {sshape = SHAPE_WALLED_SIDES;} // don't add walls around stairs if they can be against/blocking a window
+					if (!against_wall) {/*sshape = SHAPE_WALLED_SIDES;*/} // don't add walls around stairs if they can be against/blocking a window
 					sshape = SHAPE_HAS_RAILINGS;
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());

@@ -394,7 +394,7 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	rand_gen_t rgen;
 	rgen.set_state(c.obj_id, c.room_id);
 	rgen.rand_mix();
-	float const depth(middle.get_sz_dim(c.dim)), width(middle.get_sz_dim(!c.dim)), height(middle.dz());
+	float const width(middle.get_sz_dim(!c.dim)), height(middle.dz());
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
 	float const row_spacing(height/num_rows), door_thick(0.05*height), handle_thick(0.75*door_thick);
