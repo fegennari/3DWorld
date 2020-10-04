@@ -790,6 +790,7 @@ public:
 	}
 
 	void add_cube(cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color, bool swap_txy, unsigned dim_mask, bool skip_bottom, bool skip_top) {
+		assert(dim_mask != 0); // must draw at least some face
 		auto &verts(get_verts(tex));
 		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 		vert_norm_comp_tc_color vert;
@@ -817,6 +818,24 @@ public:
 				EMIT_VERTEX_SIMPLE(); // 1 !j
 			} // for j
 		} // for i
+	}
+
+	void add_fence(cube_t const &fence, tid_nm_pair_t const &tex, colorRGBA const &color) {
+#if 0
+		bool const dim(fence.dy() < fence.dx());
+		float const length(fence.get_sz_dim(!dim)), height(fence.dz());
+		unsigned const num_sections(max(round_fp(0.25*length/height), 1)), num_posts(num_sections + 1), num_beams(2);
+		float const post_spacing(length/num_sections), beam_spacing(height/(num_beams+1));
+
+		for (unsigned i = 0; i < num_posts; ++i) { // add posts
+			//add_cube(post, tex, color, 0, 7, 1, 0); // skip bottom
+		}
+		for (unsigned i = 0; i < num_beams; ++i) { // add beams
+			//add_cube(beam, tex, color, 0, x, 0, 0); // skip bottom
+		}
+#else
+		add_cube(fence, tex, color, 0, 7, 1, 0); // skip bottom
+#endif
 	}
 
 	void add_roof_dome(point const &pos, float rx, float ry, tid_nm_pair_t const &tex, colorRGBA const &color, bool onion) {
@@ -958,6 +977,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
 			colorRGBA const &dcolor((i->type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : door_color); // garage doors are always white
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), dcolor);
+		}
+		for (auto i = fences.begin(); i != fences.end(); ++i) {
+			bdraw.add_fence(*i, tid_nm_pair_t(), WHITE);
 		}
 		if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
 			cube_t const &top(parts.back()); // top/last part

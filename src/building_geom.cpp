@@ -237,6 +237,9 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 			if (part_coll) {part_z2 = i->z2();}
 			had_coll |= part_coll;
 		} // for i
+		for (auto i = fences.begin(); i != fences.end(); ++i) {
+			had_coll |= sphere_cube_int_update_pos(pos2, radius, *i, p_last, 1, xy_only, cnorm_ptr);
+		}
 		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
 			for (auto i = details.begin(); i != details.end(); ++i) {
 				if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
@@ -973,6 +976,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		detail_type = ((type == 1) ? (rgen.rand()%3) : 0); // 0=none, 1=porch, 2=detatched garage/shed
 		door_dir = ((door_dim == dim) ? dir : dir2); // if we have a porch/shed/garage, put the door on that side
 		if (door_dim == dim && detail_type == 0) {door_dir ^= 1;} // put it on the opposite side so that the second part isn't in the way
+		vect_cube_t cubes; // reused for tree and fence
 
 		if (detail_type != 0) { // add details to L-shaped house
 			cube_t c(pre_shrunk_p1);
@@ -1024,7 +1028,6 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			parts.push_back(c); // support column or shed/garage
 		} // end house details
 		else if (type == 1 && has_city_trees()) { // place a tree for L-shaped house with no garage or shed
-			vect_cube_t cubes;
 			cube_t empty_space(bcube);
 
 			for (unsigned e = 0; e < 2; ++e) {
@@ -1038,8 +1041,22 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			tree_pos  += (0.05f*(bcube.dx() + bcube.dy())/dir.mag())*dir; // shift slightly away from house center so that it's less likely to intersect the house
 			tree_pos.z = bcube.z1();
 		}
-		if (type == 1) { // L-shaped house
-			// TODO: add a fence section in dim (has_garage ? !garage_dim : rgen.rand_bool())
+		if (type == 1) { // L-shaped house, add a fence
+			//bool const fence_dim(has_garage ? !garage_dim : !door_dim); // dim separated by the fence; fence runs in the other dim
+			cube_t fence(bcube);
+			fence.z2() = fence.z1() + 0.55*door_height; // set fence height
+			fence.d[!dim][!dir2] = fence.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*0.08*door_height; // set fence thickness; use the same dim as the shrunk house part
+
+			// we can calculate the exact location of the fence, but it depends on detail_type, garage/shed position, etc.,
+			// so it's easier to start with the entire edge and clip it by the house parts and optional garage/shed
+			for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
+				if (!p->intersects(fence)) continue;
+				cubes.clear();
+				subtract_cube_from_cube(fence, *p, cubes);
+				assert(cubes.size() == 1); // each part should either not intersect the fence, or clip off one side of it
+				fence = cubes.back();
+			}
+			fences.push_back(fence);
 		}
 		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	} // end type != 0  (multi-part house)

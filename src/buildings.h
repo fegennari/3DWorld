@@ -500,7 +500,7 @@ struct building_t : public building_geom_t {
 	bool is_house, has_chimney, has_garage, has_shed, has_courtyard, has_complex_floorplan;
 	colorRGBA side_color, roof_color, detail_color, door_color;
 	cube_t bcube, pri_hall;
-	vect_cube_t parts;
+	vect_cube_t parts, fences;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;
 	std::shared_ptr<building_interior_t> interior;
