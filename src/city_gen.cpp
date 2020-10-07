@@ -2949,7 +2949,7 @@ public:
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0));} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows, 0);
 		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
-		road_gen.draw_label(); // after drawing cars so that it's in front
+		if (trans_op_mask & 1) {road_gen.draw_label();} // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {
