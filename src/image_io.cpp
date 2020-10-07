@@ -104,11 +104,15 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			else if (ext == "raw") {format = ((ncolors == 4) ? 3 : 0);}
 			else if (ext == "bmp") {format = 1;}
 			else if (ext == "tga" || ext == "targa") {format = 4;}
-			else if (ext == "jpg" || ext == "jpeg") {format = 5;}
+			else if (ext == "jpg" || ext == "jpeg" ) {format = 5;}
 			else if (ext == "png") {format = 6;}
 			else if (ext == "tif" || ext == "tiff") {format = 8;}
 			else if (ext == "dds") {format = 10;}
 			else if (ext == "ppm") {format = 11;}
+			else if (ext == "hdr") {
+				cerr << "Error: HDR texture format is not yet supported: " << name << endl;
+				exit(1);
+			}
 			else {
 				cerr << "Error: Unidentified image file format for autodetect: " << ext << " in filename " << name << endl;
 				exit(1);
