@@ -2952,6 +2952,9 @@ public:
 		road_gen.draw_label(); // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
+	void draw_roads(int trans_op_mask, vector3d const &xlate) {
+		road_gen.draw(trans_op_mask, xlate, enable_lights(), 0); // shadow_only=0
+	}
 	void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {
 		car_manager.draw(1, xlate, 1, shadow_only, 0, 1); // opaque + garages pass
 	}
@@ -3008,6 +3011,7 @@ void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.ge
 void get_city_plot_bcubes(vector<cube_with_zval_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
+void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_roads(trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
 void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only) {

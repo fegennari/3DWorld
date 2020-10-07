@@ -768,4 +768,5 @@ void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 vector3d get_nom_car_size();
 void draw_cars_in_garages(vector3d const &xlate, bool shadow_only);
 void create_mirror_reflection_if_needed();
+void draw_city_roads(int trans_op_mask, vector3d const &xlate);
 

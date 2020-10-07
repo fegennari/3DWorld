@@ -52,20 +52,15 @@ void create_mirror_reflection_if_needed() {
 	glEnable(GL_STENCIL_TEST);
 	glStencilFunc(GL_NOTEQUAL, 0, ~0U); // keep if stencil bit has been set by the mirror draw
 	glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-
-	if (is_house) {
-		//draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
-		//render_tt_models(reflection_pass, 0); // reflection + opaque pass
-	}
-	// draw the building interior
 	glEnable(GL_CLIP_DISTANCE0);
 	draw_buildings(0, reflection_pass, xlate); // reflection_pass=1/2/3
 	glDisable(GL_CLIP_DISTANCE0);
 
 	if (is_house) {
-		draw_tiled_terrain(2);
-		//render_tt_models(reflection_pass, 1); // reflection + transparent pass
-		//draw_tiled_terrain_clouds(1);
+		if (world_mode == WMODE_INF_TERRAIN) {draw_city_roads(1, xlate);} // opaque only
+		draw_tiled_terrain(2); // reflection_pass=2; TODO: fix shadows
+		draw_building_lights(xlate);
+		//draw_tiled_terrain_clouds(1); // clouds are unlikely to be reflected in bathroom mirrors so probably don't need to be drawn
 	}
 	glDisable(GL_STENCIL_TEST);
 	// write reflection to a texture and reset the state
