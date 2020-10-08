@@ -29,7 +29,7 @@ string const &gen_book_title(unsigned rand_id, string *author, unsigned split_le
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
-tid_nm_pair_t get_tex_auto_nm(int tid, float tscale) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);}
+tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);}
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
@@ -1311,29 +1311,35 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	get_material(tex).add_cube_to_verts(screen, WHITE, c.get_llc(), skip_faces, !c.dim, !(c.dim ^ c.dir));
 }
 
-void building_room_geom_t::add_potted_plant(room_object_t const &c) {
-	// draw the pot, tapered with narrower bottom
-	float const plant_diameter(0.5f*(c.dx() + c.dy())), pot_radius(0.4*plant_diameter),stem_radius(0.035*plant_diameter);
+void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant) {
+	float const plant_diameter(0.5f*(c.dx() + c.dy())), stem_radius(0.035*plant_diameter);
 	float const pot_height(max(0.6*plant_diameter, 0.3*c.dz())), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height);
 	float const cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
-	get_material(untex_shad_mat, 1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), 0, 0, 1, 0);
-	// draw dirt in the pot as a disk
-	rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
 	point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk
-	dirt_mat.add_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
-	// draw plant leaves
-	s_plant plant;
-	plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id, 0, 1); // land_plants_only=1
-	static vector<vert_norm_comp> points;
-	points.clear();
-	plant.create_leaf_points(points, 10.0); // plant_scale=10.0 seems to work well
-	auto &leaf_verts(get_material(tid_nm_pair_t(plant.get_leaf_tid()), 1).quad_verts);
-	color_wrapper const leaf_cw(apply_light_color(c, plant.get_leaf_color()));
-	float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
-	for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
-	// draw plant stem
-	colorRGBA const stem_color(plant.get_stem_color());
-	get_wood_material(1.0).add_cylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem
+
+	if (inc_pot) {
+		// draw the pot, tapered with narrower bottom
+		float const pot_radius(0.4*plant_diameter);
+		get_material(untex_shad_mat, 1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), 0, 0, 1, 0);
+		// draw dirt in the pot as a disk
+		rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
+		dirt_mat.add_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
+	}
+	if (inc_plant) {
+		// draw plant leaves
+		s_plant plant;
+		plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id, 0, 1); // land_plants_only=1
+		static vector<vert_norm_comp> points;
+		points.clear();
+		plant.create_leaf_points(points, 10.0); // plant_scale=10.0 seems to work well
+		auto &leaf_verts(mats_plants.get_material(tid_nm_pair_t(plant.get_leaf_tid()), 1).quad_verts);
+		color_wrapper const leaf_cw(apply_light_color(c, plant.get_leaf_color()));
+		float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
+		for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
+		// draw plant stem
+		colorRGBA const stem_color(plant.get_stem_color());
+		mats_plants.get_material(get_tex_auto_nm(WOOD2_TEX), 1).add_cylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem
+	}
 }
 
 void building_room_geom_t::clear() {
@@ -1347,6 +1353,7 @@ void building_room_geom_t::clear_materials() { // can be called to update textur
 	mats_small.clear();
 	mats_dynamic.clear();
 	mats_lights.clear();
+	mats_plants.clear();
 }
 void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 	mats_static.clear();
@@ -1356,7 +1363,7 @@ void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, bool small) {
 	return (dynamic ? mats_dynamic : (small ? mats_small : mats_static)).get_material(tex, inc_shadows);
 }
-rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale) {
+rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale=1.0) {
 	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale), 1); // hard-coded for common material
 }
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));}
@@ -1416,7 +1423,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		case TYPE_KSINK:   add_counter (*i, tscale); break; // counter with kitchen sink
 		case TYPE_BRSINK:  add_counter (*i, tscale); break; // counter with bathroom sink
 		case TYPE_CABINET: add_cabinet (*i, tscale); break;
-		case TYPE_PLANT:   add_potted_plant(*i); break;
+		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
 		case TYPE_DRESSER: add_dresser (*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex); break;
@@ -1460,10 +1467,12 @@ void building_room_geom_t::create_small_static_vbos() {
 		case TYPE_SIGN:  add_sign    (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
 		case TYPE_RAILING:   add_railing(*i); break;
+		case TYPE_PLANT: add_potted_plant(*i, 0, 1); break; // plant only
 		default: break;
 		}
 	} // for i
 	mats_small.create_vbos();
+	mats_plants.create_vbos();
 }
 void building_room_geom_t::create_lights_vbos() {
 	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
@@ -1514,7 +1523,11 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_
 	mats_static .draw(s, shadow_only, reflection_pass);
 	mats_lights .draw(s, shadow_only, reflection_pass);
 	mats_dynamic.draw(s, shadow_only, reflection_pass);
-	if (inc_small) {mats_small.draw(s, shadow_only, reflection_pass);}
+	
+	if (inc_small) {
+		mats_small.draw(s, shadow_only, reflection_pass);
+		mats_plants.draw(s, shadow_only, reflection_pass); // TODO: use custom shader with alpha support when player_in_building=1
+	}
 	disable_blend();
 	vbo_wrap_t::post_render();
 	//if (!obj_model_insts.empty()) {glDisable(GL_CULL_FACE);} // better but slower?

@@ -327,7 +327,7 @@ struct building_room_geom_t {
 	vector3d tex_origin;
 	vector<room_object_t> objs; // for drawing and collision detection
 	vector<obj_model_inst_t> obj_model_insts;
-	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights; // {large static, small static, dynamic, lights} materials
+	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants; // {large static, small static, dynamic, lights, plants} materials
 	vect_cube_t light_bcubes;
 
 	building_room_geom_t(vector3d const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_) {}
@@ -336,7 +336,8 @@ struct building_room_geom_t {
 	void clear_materials();
 	void clear_static_vbos();
 	void clear_and_recreate_lights() {lights_changed = 1;} // cache the state and apply the change later in case this is called from a different thread
-	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_dynamic.count_all_verts() + mats_lights.count_all_verts());}
+	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() +
+		mats_dynamic.count_all_verts() + mats_lights.count_all_verts() + mats_plants.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0);
 	rgeom_mat_t &get_wood_material(float tscale);
 	// Note: these functions are all for drawing objects / adding them to the vertex list
@@ -369,7 +370,7 @@ struct building_room_geom_t {
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
 	void add_railing(room_object_t const &c);
-	void add_potted_plant(room_object_t const &c);
+	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void create_static_vbos(tid_nm_pair_t const &wall_tex);
 	void create_small_static_vbos();
 	void create_lights_vbos();
