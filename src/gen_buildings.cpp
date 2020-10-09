@@ -1972,6 +1972,14 @@ public:
 		s.add_uniform_float("ambient_scale", 1.0); // reset to default
 		s.add_uniform_float("hemi_lighting_scale", 0.5); // reset to default
 	}
+	static void setup_building_draw_shader(shader_t &s, cube_t const &lights_bcube, float min_alpha, float pcf_scale,
+		bool use_smaps, bool use_bmap, bool have_indir, bool force_tsl, bool use_texgen)
+	{
+		if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
+		city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir);
+		set_interior_lighting(s, have_indir);
+		if (have_indir) {indir_tex_mgr.setup_for_building(s);}
+	}
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) { // Note: non const because this caches light bcubes
 		if (!ADD_ROOM_LIGHTS) return;
@@ -1996,9 +2004,6 @@ public:
 		} // for g
 	}
 
-	static void enable_linear_dlights(shader_t &s) { // to be called before begin_shader()
-		if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
-	}
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall, 2 = reflection for room with interior wall, 3 = reflection from mirror in a house
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
@@ -2083,10 +2088,7 @@ public:
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
 			if (enable_animations) {enable_animations_for_shader(s);}
-			enable_linear_dlights(s);
-			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
-			set_interior_lighting(s, have_indir);
-			if (have_indir) {indir_tex_mgr.setup_for_building(s);}
+			setup_building_draw_shader(s, lights_bcube, min_alpha, pcf_scale, interior_use_smaps, use_bmap, have_indir, 0, 0); // force_tsl=0, use_texgen=0
 			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
@@ -2191,10 +2193,7 @@ public:
 
 		if (draw_interior && reflection_pass != 2) { // skip for interior room reflections
 			// draw back faces of buildings, which will be interior walls
-			enable_linear_dlights(s);
-			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 1, have_indir); // force_tsl=1, use_texgen=1
-			set_interior_lighting(s, have_indir);
-			if (have_indir) {indir_tex_mgr.setup_for_building(s);}
+			setup_building_draw_shader(s, lights_bcube, min_alpha, pcf_scale, interior_use_smaps, use_bmap, have_indir, 1, 1); // force_tsl=1, use_texgen=1
 			glEnable(GL_CULL_FACE);
 			glCullFace(reflection_pass ? GL_BACK : GL_FRONT);
 
@@ -2239,9 +2238,7 @@ public:
 			if (DRAW_EXT_REFLECTIONS || !reflection_pass) {
 				// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
 				int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
-				enable_linear_dlights(s);
-				city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 0); // force_tsl=1, use_texgen=0
-				set_interior_lighting(s);
+				setup_building_draw_shader(s, lights_bcube, min_alpha, pcf_scale, interior_use_smaps, use_bmap, 0, 1, 0); // have_indir=0, force_tsl=1, use_texgen=0
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, tex_filt_mode);}
 				reset_interior_lighting(s);
 				s.end_shader();
