@@ -244,6 +244,58 @@ public:
 indir_tex_mgr_t indir_tex_mgr;
 
 
+struct building_lights_manager_t : public city_lights_manager_t {
+	void setup_building_lights(vector3d const &xlate) {
+		//timer_t timer("Building Dlights Setup");
+		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
+		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
+		add_building_interior_lights(xlate, lights_bcube);
+		if (flashlight_on /*&& camera_in_building*/) {add_player_flashlight(0.12);} // add player flashlight
+		clamp_to_max_lights(xlate, dl_sources);
+		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
+		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps);}
+		finalize_lights(dl_sources);
+	}
+	virtual bool enable_lights() const {return ((draw_building_interiors && ADD_ROOM_LIGHTS) || flashlight_on);}
+}; // city_gen_t
+
+building_lights_manager_t building_lights_manager;
+
+
+void set_interior_lighting(shader_t &s, bool have_indir) {
+	if (have_indir) {
+		s.add_uniform_float("diffuse_scale", 0.0); // no diffuse from sun/moon
+		s.add_uniform_float("ambient_scale", 0.0); // no ambient
+		s.add_uniform_float("hemi_lighting_scale", 0.0); // disable hemispherical lighting (should we set hemi_lighting=0 in the shader?)
+	}
+	else if (ADD_ROOM_LIGHTS) {
+		s.add_uniform_float("diffuse_scale", 0.1); // very small diffuse and specular lighting for sun/moon
+		s.add_uniform_float("ambient_scale", 0.6); // dimmer ambient
+		s.add_uniform_float("hemi_lighting_scale", 0.1); // low hemispherical lighting
+	}
+	else {
+		s.add_uniform_float("diffuse_scale", 0.2); // reduce diffuse and specular lighting for sun/moon
+		s.add_uniform_float("ambient_scale", 1.2); // brighter ambient
+		s.add_uniform_float("hemi_lighting_scale", 0.3); // reduced hemispherical lighting
+	}
+}
+void reset_interior_lighting(shader_t &s) {
+	s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
+	s.add_uniform_float("ambient_scale", 1.0); // reset to default
+	s.add_uniform_float("hemi_lighting_scale", 0.5); // reset to default
+}
+void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen) {
+	float const pcf_scale = 0.2;
+	bool const have_indir(enable_indir && indir_tex_mgr.enabled());
+	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
+	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
+	if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
+	city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir);
+	set_interior_lighting(s, have_indir);
+	if (have_indir) {indir_tex_mgr.setup_for_building(s);}
+}
+
+
 /*static*/ void building_draw_utils::calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
 
 	assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
@@ -1377,24 +1429,6 @@ void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 }
 
 
-struct building_lights_manager_t : public city_lights_manager_t {
-	void setup_building_lights(vector3d const &xlate) {
-		//timer_t timer("Building Dlights Setup");
-		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
-		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
-		add_building_interior_lights(xlate, lights_bcube);
-		if (flashlight_on /*&& camera_in_building*/) {add_player_flashlight(0.12);} // add player flashlight
-		clamp_to_max_lights(xlate, dl_sources);
-		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
-		if (ADD_ROOM_SHADOWS) {setup_shadow_maps(dl_sources, (camera_pdu.pos - xlate), global_building_params.max_shadow_maps);}
-		finalize_lights(dl_sources);
-	}
-	virtual bool enable_lights() const {return ((draw_building_interiors && ADD_ROOM_LIGHTS) || flashlight_on);}
-}; // city_gen_t
-
-building_lights_manager_t building_lights_manager;
-
-
 class building_creator_t {
 
 	unsigned grid_sz, gpu_mem_usage;
@@ -1950,36 +1984,6 @@ public:
 	static bool check_tile_smap(bool shadow_only) {
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
 	}
-	static void set_interior_lighting(shader_t &s, bool have_indir=0) {
-		if (have_indir) {
-			s.add_uniform_float("diffuse_scale", 0.0); // no diffuse from sun/moon
-			s.add_uniform_float("ambient_scale", 0.0); // no ambient
-			s.add_uniform_float("hemi_lighting_scale", 0.0); // disable hemispherical lighting (should we set hemi_lighting=0 in the shader?)
-		}
-		else if (ADD_ROOM_LIGHTS) {
-			s.add_uniform_float("diffuse_scale", 0.1); // very small diffuse and specular lighting for sun/moon
-			s.add_uniform_float("ambient_scale", 0.6); // dimmer ambient
-			s.add_uniform_float("hemi_lighting_scale", 0.1); // low hemispherical lighting
-		}
-		else {
-			s.add_uniform_float("diffuse_scale", 0.2); // reduce diffuse and specular lighting for sun/moon
-			s.add_uniform_float("ambient_scale", 1.2); // brighter ambient
-			s.add_uniform_float("hemi_lighting_scale", 0.3); // reduced hemispherical lighting
-		}
-	}
-	static void reset_interior_lighting(shader_t &s) {
-		s.add_uniform_float("diffuse_scale", 1.0); // re-enable diffuse and specular lighting for sun/moon
-		s.add_uniform_float("ambient_scale", 1.0); // reset to default
-		s.add_uniform_float("hemi_lighting_scale", 0.5); // reset to default
-	}
-	static void setup_building_draw_shader(shader_t &s, cube_t const &lights_bcube, float min_alpha, float pcf_scale,
-		bool use_smaps, bool use_bmap, bool have_indir, bool force_tsl, bool use_texgen)
-	{
-		if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
-		city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir);
-		set_interior_lighting(s, have_indir);
-		if (have_indir) {indir_tex_mgr.setup_for_building(s);}
-	}
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) { // Note: non const because this caches light bcubes
 		if (!ADD_ROOM_LIGHTS) return;
@@ -2024,7 +2028,7 @@ public:
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
-		bool const night(is_night(WIND_LIGHT_ON_RAND)), have_indir(indir_tex_mgr.enabled());
+		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0);
@@ -2046,15 +2050,12 @@ public:
 		bool const draw_interior(DRAW_WINDOWS_AS_HOLES && (have_windows || global_building_params.add_city_interiors) && draw_building_interiors);
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
-		float const pcf_scale = 0.2;
 		city_dlight_pcf_offset_scale = 0.67; // reduced for building interiors
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw, ext_door_draw;
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
-		cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
-		int const interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -2088,7 +2089,7 @@ public:
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
 			bool const enable_animations(global_building_params.enable_people_ai && draw_interior);
 			if (enable_animations) {enable_animations_for_shader(s);}
-			setup_building_draw_shader(s, lights_bcube, min_alpha, pcf_scale, interior_use_smaps, use_bmap, have_indir, 0, 0); // force_tsl=0, use_texgen=0
+			setup_building_draw_shader(s, min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
 			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
@@ -2193,7 +2194,7 @@ public:
 
 		if (draw_interior && reflection_pass != 2) { // skip for interior room reflections
 			// draw back faces of buildings, which will be interior walls
-			setup_building_draw_shader(s, lights_bcube, min_alpha, pcf_scale, interior_use_smaps, use_bmap, have_indir, 1, 1); // force_tsl=1, use_texgen=1
+			setup_building_draw_shader(s, min_alpha, 1, 1, 1); // enable_indir=1, force_tsl=1, use_texgen=1
 			glEnable(GL_CULL_FACE);
 			glCullFace(reflection_pass ? GL_BACK : GL_FRONT);
 
@@ -2238,7 +2239,7 @@ public:
 			if (DRAW_EXT_REFLECTIONS || !reflection_pass) {
 				// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
 				int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
-				setup_building_draw_shader(s, lights_bcube, min_alpha, pcf_scale, interior_use_smaps, use_bmap, 0, 1, 0); // have_indir=0, force_tsl=1, use_texgen=0
+				setup_building_draw_shader(s, min_alpha, 0, 1, 0); // enable_indir=0, force_tsl=1, use_texgen=0
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, shadow_only, 0, 0, tex_filt_mode);}
 				reset_interior_lighting(s);
 				s.end_shader();
