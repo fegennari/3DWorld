@@ -1385,7 +1385,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);
-			bool added_tc(0), added_desk(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), no_whiteboard(0);
+			bool added_tc(0), added_desk(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), no_whiteboard(0);
 			unsigned num_chairs(0);
 
 			// place room objects
@@ -1424,7 +1424,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (!added_obj && r->is_office && r->interior && f == 0 && rgen.rand_bool()) {
 				// if we haven't added any objects yet, and this room is an interior office on the first floor, make it a storage room 50% of the time
-				added_obj = no_whiteboard = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}
 			if (!added_obj) { // try to place a desk if there's no table, bed, etc.
@@ -1485,9 +1485,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool const can_hang(is_house || !(is_bathroom || is_kitchen || no_whiteboard)); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start));
 
-			if (!is_bathroom && !is_bedroom && !is_kitchen) { // add potted plants to some room types
-				// 0-2 for living/dining rooms, 50% chance for houses, 25% chance for offices
-				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()&3) == 0));
+			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage) { // add potted plants to some room types
+				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
+				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
