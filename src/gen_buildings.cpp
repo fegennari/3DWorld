@@ -219,6 +219,31 @@ public:
 };
 
 
+class indir_tex_mgr_t {
+	unsigned tid; // Note: owned by building_indir_light_mgr, not us
+	cube_t lighting_bcube;
+public:
+	indir_tex_mgr_t() : tid(0) {}
+	bool enabled() const {return (tid > 0);}
+
+	bool create_for_building(building_t const &b, unsigned bix, point const &target) {
+		b.create_building_volume_light_texture(bix, target, tid);
+		lighting_bcube = b.bcube;
+		return 1;
+	}
+	bool setup_for_building(shader_t &s) const {
+		if (!enabled()) return 0; // no texture set
+		float const dx(lighting_bcube.dx()/MESH_X_SIZE), dy(lighting_bcube.dy()/MESH_Y_SIZE), dxy_offset(0.5f*(dx + dy));
+		set_3d_texture_as_current(tid, 1); // indir texture uses TU_ID=1
+		s.add_uniform_vector3d("alt_scene_llc",   lighting_bcube.get_llc());
+		s.add_uniform_vector3d("alt_scene_scale", lighting_bcube.get_size());
+		s.add_uniform_float("half_dxy", dxy_offset);
+		return 1;
+	}
+};
+indir_tex_mgr_t indir_tex_mgr;
+
+
 /*static*/ void building_draw_utils::calc_normals(building_geom_t const &bg, vector<vector3d> &nv, unsigned ndiv) {
 
 	assert(bg.flat_side_amt >= 0.0 && bg.flat_side_amt < 0.5); // generates a flat side
@@ -1971,38 +1996,6 @@ public:
 		} // for g
 	}
 
-	class indir_tex_mgr_t {
-		unsigned tid; // Note: owned by building_indir_light_mgr, not us
-		cube_t lighting_bcube;
-	public:
-		indir_tex_mgr_t() : tid(0) {}
-		bool enabled() const {return (tid > 0);}
-
-		bool create_for_building(building_creator_t const &bc, unsigned bix, point const &target) {
-			building_t const &b(bc.get_building(bix));
-			b.create_building_volume_light_texture(bix, target, tid);
-			lighting_bcube = b.bcube;
-			return 1;
-		}
-		bool setup_for_building(building_creator_t const &bc, shader_t &s) const {
-			if (!enabled()) return 0; // no texture set
-			float const dx(lighting_bcube.dx()/MESH_X_SIZE), dy(lighting_bcube.dy()/MESH_Y_SIZE), dxy_offset(0.5f*(dx + dy));
-			set_3d_texture_as_current(tid, 1); // indir texture uses TU_ID=1
-			s.add_uniform_vector3d("alt_scene_llc",   lighting_bcube.get_llc());
-			s.add_uniform_vector3d("alt_scene_scale", lighting_bcube.get_size());
-			s.add_uniform_float("half_dxy", dxy_offset);
-			return 1;
-		}
-	};
-	indir_tex_mgr_t indir_tex_mgr;
-	void create_indir_texture_for_building(unsigned bix, point const &camera) {indir_tex_mgr.create_for_building(*this, bix, camera);}
-	bool setup_indir_texture_for_building(shader_t &s) const {return indir_tex_mgr.setup_for_building(*this, s);}
-	bool have_indir_texture() const {return indir_tex_mgr.enabled();}
-
-	static void setup_indir_lighting(vector<building_creator_t *> const &bcs, shader_t &s) {
-		// one of these must have an indir texture
-		for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->setup_indir_texture_for_building(s);}
-	}
 	static void enable_linear_dlights(shader_t &s) { // to be called before begin_shader()
 		if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	}
@@ -2026,10 +2019,10 @@ public:
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
-		bool const night(is_night(WIND_LIGHT_ON_RAND));
+		bool const night(is_night(WIND_LIGHT_ON_RAND)), have_indir(indir_tex_mgr.enabled());
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), have_indir(0), this_frame_camera_in_building(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0);
 		unsigned max_draw_ix(0), door_type(0);
 		shader_t s;
 
@@ -2038,7 +2031,6 @@ public:
 			have_windows     |= !(*i)->building_draw_windows.empty();
 			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
 			have_interior    |= (draw_building_interiors && !(*i)->building_draw_interior.empty());
-			have_indir       |= (*i)->have_indir_texture();
 			max_eq(max_draw_ix, (*i)->building_draw_vbo.get_num_draw_blocks());
 			if (night) {(*i)->ensure_window_lights_vbos();}
 			
@@ -2093,9 +2085,9 @@ public:
 			if (enable_animations) {enable_animations_for_shader(s);}
 			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 0, pcf_scale, 0, have_indir); // force_tsl=0
-			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			set_interior_lighting(s, have_indir);
-			if (have_indir) {setup_indir_lighting(bcs, s);}
+			if (have_indir) {indir_tex_mgr.setup_for_building(s);}
+			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
 			vect_cube_t ped_bcubes; // reused temporary
@@ -2183,7 +2175,7 @@ public:
 			reflection_shader.clear();
 
 			// update indir lighting using ray casting
-			if (indir_bcs_ix >= 0 && indir_bix >= 0) {bcs[indir_bcs_ix]->create_indir_texture_for_building(indir_bix, camera_xlated);}
+			if (indir_bcs_ix >= 0 && indir_bix >= 0) {indir_tex_mgr.create_for_building(bcs[indir_bcs_ix]->get_building(indir_bix), indir_bix, camera_xlated);}
 			else if (!reflection_pass) {end_building_rt_job();}
 			
 			if (draw_interior && have_windows && reflection_pass != 2) { // write to stencil buffer, use stencil test for back facing building walls
@@ -2202,7 +2194,7 @@ public:
 			enable_linear_dlights(s);
 			city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, 1, pcf_scale, 1, have_indir); // force_tsl=1, use_texgen=1
 			set_interior_lighting(s, have_indir);
-			if (have_indir) {setup_indir_lighting(bcs, s);}
+			if (have_indir) {indir_tex_mgr.setup_for_building(s);}
 			glEnable(GL_CULL_FACE);
 			glCullFace(reflection_pass ? GL_BACK : GL_FRONT);
 
