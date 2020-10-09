@@ -1832,7 +1832,8 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 		s.ensure_uniform_loc(shader_locs[1], "tc_xlate");
 		s.set_uniform_vector3d(shader_locs[1], xlate);
 	}
-	shader_shadow_map_setup(s);
+	if (reflection_pass == 2) {disable_shadow_maps(s);} // disabled for mirror reflections because shadows don't work
+	else {shader_shadow_map_setup(s);}
 	unsigned const lod_level(get_lod_level(reflection_pass));
 	draw_mesh_vbo(vbo_mgr, ivbo_ixs, lod_level);
 	

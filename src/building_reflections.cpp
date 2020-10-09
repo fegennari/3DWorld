@@ -6,6 +6,7 @@
 #include "shaders.h"
 #pragma warning(disable : 26812) // prefer enum class over enum
 
+bool disable_city_shadow_maps(0);
 unsigned room_mirror_ref_tid(0);
 room_object_t cur_room_mirror;
 
@@ -57,10 +58,12 @@ void create_mirror_reflection_if_needed() {
 	glDisable(GL_CLIP_DISTANCE0);
 
 	if (is_house) {
+		disable_city_shadow_maps = 1; // shadows don't work due to the mirror transform and are disabled for both the terrain and the city roads/objects
 		if (world_mode == WMODE_INF_TERRAIN) {draw_city_roads(1, xlate);} // opaque only
-		draw_tiled_terrain(2); // reflection_pass=2; TODO: fix shadows
+		draw_tiled_terrain(2); // reflection_pass=2
 		draw_building_lights(xlate);
 		//draw_tiled_terrain_clouds(1); // clouds are unlikely to be reflected in bathroom mirrors so probably don't need to be drawn
+		disable_city_shadow_maps = 0;
 	}
 	glDisable(GL_STENCIL_TEST);
 	// write reflection to a texture and reset the state
