@@ -1526,7 +1526,18 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_
 	
 	if (inc_small) {
 		mats_small.draw(s, shadow_only, reflection_pass);
-		mats_plants.draw(s, shadow_only, reflection_pass); // TODO: use custom shader with alpha support when player_in_building=1
+
+		if (player_in_building) { // if we're not in the building, don't draw plants at all; without the special shader they won't look correct when drawn through windows
+			if (!shadow_only && !reflection_pass) { // this is expensive: only enable for the current building and the main draw pass
+				shader_t plant_shader;
+				setup_building_draw_shader(plant_shader, 0.9, 1, 1, 0); // min_alpha=0.5, enable_indir=1, force_tsl=1, use_texgen=1
+				mats_plants.draw(plant_shader, shadow_only, reflection_pass);
+				s.make_current(); // switch back to the normal shader
+			}
+			else {
+				mats_plants.draw(s, shadow_only, reflection_pass);
+			}
+		}
 	}
 	disable_blend();
 	vbo_wrap_t::post_render();

@@ -758,6 +758,7 @@ int get_bath_wind_tid ();
 int get_int_door_tid  ();
 int get_normal_map_for_bldg_tid(int tid);
 unsigned register_sign_text(std::string const &text);
+void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);
