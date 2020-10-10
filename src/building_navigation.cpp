@@ -760,20 +760,35 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
-	ai_room_lights_update(state, person, person_ix); // non-const part
+	ai_room_lights_update(state, person, people, person_ix); // non-const part
 	return AI_MOVING;
 }
 
-void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t &person, unsigned person_ix) {
+void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t &person, vector<pedestrian_t> const &people, unsigned person_ix) {
 	if (!(display_mode & 0x20)) return; // disabled by default, enable with key '6'
 	if ((frame_counter + person_ix) & 7) return; // update room info only every 8 frames
 	int const room_ix(get_room_containing_pt(person.pos));
 	if (room_ix < 0) return; // room is not valid (between rooms, etc.)
 	assert((unsigned)room_ix < interior->rooms.size());
-	set_room_light_state_to(interior->rooms[room_ix], person.pos.z, 1); // make sure current room light is on
+	room_t const &cur_room(interior->rooms[room_ix]);
+	set_room_light_state_to(cur_room, person.pos.z, 1); // make sure current room light is on
 	if ((unsigned)room_ix == state.cur_room) return; // same room as last time - done
 	assert(state.cur_room < interior->rooms.size());
-	set_room_light_state_to(interior->rooms[state.cur_room], person.pos.z, 0); // make sure old room light is off (check for other people in the room?)
+	room_t const &prev_room(interior->rooms[state.cur_room]);
+	bool other_person_in_room(0);
+
+	// check for other people in the room before turning the lights off on them
+	for (unsigned i = person_ix; i-- ;) { // look behind
+		pedestrian_t const &p(people[i]);
+		if (p.dest_bldg != person.dest_bldg) break; // done with this building
+		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
+	}
+	for (unsigned i = person_ix+1; i < people.size() && !other_person_in_room; ++i) { // look ahead
+		pedestrian_t const &p(people[i]);
+		if (p.dest_bldg != person.dest_bldg) break; // done with this building
+		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
+	}
+	if (!other_person_in_room) {set_room_light_state_to(interior->rooms[state.cur_room], person.pos.z, 0);} // make sure old room light is off
 	state.cur_room = room_ix;
 }
 
