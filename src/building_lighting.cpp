@@ -14,6 +14,7 @@ extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, an
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
 extern std::string lighting_update_text;
+extern building_dest_t cur_player_building_loc;
 extern vector<light_source> dl_sources;
 
 bool enable_building_people_ai();
@@ -465,6 +466,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			camera_by_stairs = room.has_stairs;
 			assert(room.rtype < NUM_RTYPES);
 			if (display_mode & 0x20) {lighting_update_text = room_names[room.rtype];} // debugging, key '6'
+			cur_player_building_loc = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
 		}
 	}
 	else {

@@ -402,6 +402,7 @@ struct room_t : public cube_t {
 	room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_);
 	void assign_to(room_type rt, unsigned floor=0);
 	float get_light_amt() const;
+	unsigned get_floor_containing_zval(float zval, float floor_spacing) const;
 };
 
 struct landing_t : public cube_t {
@@ -476,6 +477,14 @@ struct building_loc_t {
 	unsigned floor;
 	building_loc_t() : part_ix(-1), room_ix(-1), stairs_ix(-1), floor(0) {}
 	bool operator==(building_loc_t const &loc) const {return (part_ix == loc.part_ix && room_ix == loc.room_ix && stairs_ix == loc.stairs_ix && floor == loc.floor);}
+};
+
+struct building_dest_t : public building_loc_t {
+	int building_ix;
+	point pos;
+	building_dest_t() {}
+	building_dest_t(building_loc_t const &b, point const &pos_, int bix=-1) : building_loc_t(b), pos(pos_), building_ix(bix) {}
+	bool is_valid() const {return (building_ix >= 0 && part_ix >= 0 && room_ix >= 0);}
 };
 
 enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING};

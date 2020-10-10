@@ -11,6 +11,8 @@
 
 bool const STAY_ON_ONE_FLOOR = 0;
 
+building_dest_t cur_player_building_loc;
+
 extern int frame_counter, display_mode;
 extern float fticks;
 
@@ -469,11 +471,42 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 	state.dest_room   = state.cur_room; // set to the same room and pos just in case
 	person.target_pos = person.pos; // set but not yet used
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
+	building_dest_t const &goal(cur_player_building_loc);
+	float const floor_spacing(get_window_vspace());
 
+	if ((display_mode & 0x20) && goal.is_valid() && goal.building_ix == person.dest_bldg && goal.room_ix != loc.room_ix) { // player is in a different room of our building
+		unsigned const cand_room(goal.room_ix);
+		assert(cand_room < interior->rooms.size());
+		room_t const &room(interior->rooms[cand_room]);
+
+		if (person.pos.z > room.z1() && person.pos.z < room.z2()) { // room contains our zval
+			if (interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) {
+				state.dest_room     = cand_room; // set but not yet used
+				person.target_pos   = get_center_of_room(cand_room);
+				person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
+
+				if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
+					unsigned const cur_floor(room.get_floor_containing_zval(person.pos.z, floor_spacing));
+					cube_t const &part(get_part_for_room(room));
+
+					if (goal.floor < cur_floor) { // try one floor below
+						float const new_z(person.target_pos.z - floor_spacing);
+						if (new_z > part.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
+					}
+					else if (goal.floor > cur_floor) { // try one floor above
+						float const new_z(person.target_pos.z + floor_spacing);
+						if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
+					}
+					// else if floors differ by more than 1, we'll end up visiting the room on the wrong floor
+				}
+				return 1;
+			}
+		}
+	}
 	for (unsigned n = 0; n < 100; ++n) { // make 100 attempts at finding a valid room
 		unsigned const cand_room(rgen.rand() % interior->rooms.size());
 		if (cand_room == (unsigned)loc.room_ix) continue;
-		room_t const room(interior->rooms[cand_room]);
+		room_t const &room(interior->rooms[cand_room]);
 		if (room.is_hallway) continue; // don't select a hallway
 
 		if (1 || same_floor) { // for now, always do this so that we don't have to handle walking between stacked parts
@@ -489,11 +522,11 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 			unsigned const rand_val(rgen.rand() & 3); // 0-3
 
 			if (rand_val == 0) { // try one floor below
-				float const new_z(person.target_pos.z - get_window_vspace());
+				float const new_z(person.target_pos.z - floor_spacing);
 				if (new_z > part.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
 			}
 			else if (rand_val == 1) { // try one floor above
-				float const new_z(person.target_pos.z + get_window_vspace());
+				float const new_z(person.target_pos.z + floor_spacing);
 				if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
 			}
 		}
@@ -679,6 +712,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			wait_time = 1.0*TICKS_PER_SECOND; // stop for 1 second then try again
 			return AI_WAITING;
 		}
+		assert(!state.path.empty());
 		state.is_first_path = 0;
 		state.next_path_pt(person, stay_on_one_floor);
 		return AI_BEGIN_PATH;
@@ -779,6 +813,11 @@ void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vect
 	}
 }
 
+unsigned room_t::get_floor_containing_zval(float zval, float floor_spacing) const {
+	if (is_sec_bldg) return 0; // only one floor
+	return unsigned((zval - z1())/floor_spacing);
+}
+
 int building_t::get_room_containing_pt(point const &pt) const {
 	assert(interior);
 	float const wall_thickness(get_wall_thickness());
@@ -798,12 +837,8 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	}
 	if (interior) { // rooms and stairwells, no elevators yet
 		loc.room_ix = get_room_containing_pt(pt);
+		if (loc.room_ix >= 0) {loc.floor = interior->rooms[loc.room_ix].get_floor_containing_zval(pt.z, get_window_vspace());}
 
-		if (loc.room_ix >= 0) {
-			room_t const &room(interior->rooms[loc.room_ix]);
-			if (room.is_sec_bldg) {loc.floor = 0;} // only one floor
-			else {loc.floor = unsigned((pt.z - room.z1())/get_window_vspace());}
-		}
 		for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 			if (s->contains_pt(pt)) {loc.stairs_ix = (s - interior->stairwells.begin()); break;}
 		}
