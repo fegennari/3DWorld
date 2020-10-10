@@ -917,6 +917,16 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	return door;
 }
 
+void building_t::clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const { // use for fences
+	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
+		if (!p->intersects(c)) continue;
+		cubes.clear();
+		subtract_cube_from_cube(c, *p, cubes);
+		assert(cubes.size() == 1); // each part should either not intersect the fence, or clip off one side of it
+		c = cubes.back();
+	}
+}
+
 void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
 	assert(parts.empty());
@@ -930,8 +940,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
 	float const door_width_scale(0.5);
+	unsigned const rand_num(rgen.rand()); // some bits will be used for random bools
 	float door_height(get_door_height()), floor_spacing(get_window_vspace()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);;
-	bool door_dim(rgen.rand_bool()), door_dir(0), dim(0), dir(0), dir2(0), garage_dim(0);
+	bool door_dim(rand_num & 1), door_dir(0), dim(0), dir(0), dir2(0), garage_dim(0);
 	unsigned door_part(0), detail_type(0);
 	real_num_parts = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
 	cube_t door_cube;
@@ -1041,22 +1052,28 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			tree_pos  += (0.05f*(bcube.dx() + bcube.dy())/dir.mag())*dir; // shift slightly away from house center so that it's less likely to intersect the house
 			tree_pos.z = bcube.z1();
 		}
-		if (type == 1) { // L-shaped house, add a fence
-			// use the same dim as the shrunk house part; or should we use garage_dim?
-			cube_t fence(bcube);
-			fence.z2() = fence.z1() + 0.65*door_height; // set fence height
-			fence.d[!dim][!dir2] = fence.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*0.08*door_height; // set fence thickness
-
+		if (type == 1 && (rand_num & 6) != 0) { // L-shaped house, add a fence 75% of the time
+			// use the same dim as the shrunk house part for the full fence section; or should we use garage_dim?
+			float const fence_thickness(0.08*door_height);
+			cube_t fence(bcube), fence2(bcube);
+			fence.z2() = fence2.z2() = bcube.z1() + 0.65*door_height; // set fence height
+			fence.d[!dim][!dir2] = fence.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*fence_thickness;
 			// we can calculate the exact location of the fence, but it depends on detail_type, garage/shed position, etc.,
 			// so it's easier to start with the entire edge and clip it by the house parts and optional garage/shed
-			for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
-				if (!p->intersects(fence)) continue;
-				cubes.clear();
-				subtract_cube_from_cube(fence, *p, cubes);
-				assert(cubes.size() == 1); // each part should either not intersect the fence, or clip off one side of it
-				fence = cubes.back();
-			}
+			clip_cube_to_parts(fence, cubes);
 			fences.push_back(fence);
+
+			if ((rand_num & 6) != 2) { // 67% of the time
+				fence2.d[dim][!dir] = fence2.d[dim][dir] + (dir ? -1.0 : 1.0)*fence_thickness;
+				clip_cube_to_parts(fence2, cubes);
+				float const center_pt(fence2.get_center_dim(!dim)), gate_width(0.8*door_height);
+
+				for (unsigned d = 0; d < 2; ++d) { // split fence, add gap for gate, and add each segment if it's large enough
+					cube_t seg(fence2);
+					seg.d[!dim][d] = center_pt + (d ? -0.5f : 0.5f)*gate_width;
+					if (seg.get_sz_dim(!dim) > gate_width) {fences.push_back(seg);}
+				}
+			}
 		}
 		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	} // end type != 0  (multi-part house)

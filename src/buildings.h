@@ -623,6 +623,7 @@ struct building_t : public building_geom_t {
 	void update_elevators(point const &player_pos);
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 private:
+	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const;
 	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior) const;
