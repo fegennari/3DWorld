@@ -797,12 +797,12 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 		if (p->contains_pt(pt)) {loc.part_ix = (p - parts.begin()); break;}
 	}
 	if (interior) { // rooms and stairwells, no elevators yet
-		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-			if (!r->contains_pt(pt)) continue;
-			loc.room_ix = (r - interior->rooms.begin());
-			if (r->is_sec_bldg) {loc.floor = 0;} // only one floor
-			else {loc.floor = unsigned((pt.z - r->z1())/get_window_vspace());}
-			break;
+		loc.room_ix = get_room_containing_pt(pt);
+
+		if (loc.room_ix >= 0) {
+			room_t const &room(interior->rooms[loc.room_ix]);
+			if (room.is_sec_bldg) {loc.floor = 0;} // only one floor
+			else {loc.floor = unsigned((pt.z - room.z1())/get_window_vspace());}
 		}
 		for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 			if (s->contains_pt(pt)) {loc.stairs_ix = (s - interior->stairwells.begin()); break;}
