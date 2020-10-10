@@ -781,9 +781,12 @@ void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vect
 
 int building_t::get_room_containing_pt(point const &pt) const {
 	assert(interior);
+	float const wall_thickness(get_wall_thickness());
 
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (r->contains_pt(pt)) {return (r - interior->rooms.begin());}
+		cube_t tc(*r);
+		tc.expand_by_xy(wall_thickness); // to include point in doorway
+		if (tc.contains_pt(pt)) {return (r - interior->rooms.begin());}
 	}
 	return -1; // room not found
 }
