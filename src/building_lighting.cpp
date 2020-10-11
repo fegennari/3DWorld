@@ -544,6 +544,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		clipped_bc.intersect_with_cube(bcube);
 		if (!stairs_light) {clipped_bc.z1() = floor_z; clipped_bc.z2() = ceil_z;} // clip zval to current floor if light not in a room with stairs or elevator
 		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC
+		//if (line_intersect_walls(lpos, camera_bs)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		// update lights_bcube and add light(s)
 		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
 		max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up

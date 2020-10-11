@@ -76,6 +76,14 @@ void create_mirror_reflection_if_needed() {
 	cur_room_mirror = room_object_t(); // reset for next frame
 }
 
+bool building_t::line_intersect_walls(point const &p1, point const &p2) const {
+	for (unsigned d = 0; d < 2; ++d) {
+		for (auto c = interior->walls[d].begin(); c != interior->walls[d].end(); ++c) {
+			if (check_line_clip(p1, p2, c->d)) return 1;
+		}
+	}
+	return 0;
+}
 bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const { // approximate
 	assert(dim < 2); // X or Y only
 	unsigned const steps(21), d1(1-dim);
@@ -86,15 +94,8 @@ bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, u
 
 	for (unsigned i = 0; i < steps; ++i) {
 		cpt[d1] = c.d[d1][0] + i*delta;
-		bool blocked(0);
-			
-		for (unsigned d = 0; d < 2 && !blocked; ++d) {
-			for (auto c = interior->walls[d].begin(); c != interior->walls[d].end(); ++c) {
-				if (check_line_clip(p, cpt, c->d)) {blocked = 1; break;}
-			}
-		}
-		if (!blocked) return 1; // this point is visible
-	} // for i
+		if (!line_intersect_walls(p, cpt)) return 1; // this point is visible
+	}
 	return 0;
 }
 

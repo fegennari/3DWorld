@@ -630,6 +630,7 @@ struct building_t : public building_geom_t {
 		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_elevators(point const &player_pos);
+	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 private:
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
