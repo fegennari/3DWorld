@@ -450,7 +450,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	unsigned camera_part(parts.size()); // start at an invalid value
-	bool camera_by_stairs(0), camera_near_building(camera_in_building);
+	bool camera_by_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
 	int camera_room(-1);
 	ped_bcubes.clear();
 
@@ -462,8 +462,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 		if (room_ix >= 0) { // Note: stairs connecting stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
 			room_t const &room(interior->rooms[room_ix]);
-			camera_room      = room_ix;
-			camera_by_stairs = room.has_stairs;
+			camera_room       = room_ix;
+			camera_by_stairs  = room.has_stairs;
+			camera_in_hallway = room.is_hallway;
 			assert(room.rtype < NUM_RTYPES);
 			if (display_mode & 0x20) {lighting_update_text = room_names[room.rtype];} // debugging, key '6'
 			cur_player_building_loc = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
@@ -488,14 +489,19 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool stairs_light(0);
 
 		if ((camera_z > floor_z-window_vspacing) && (camera_z < ceil_z+window_vspacing)) { // light is on the floor above or below the camera
-			stairs_light = (i->has_stairs() || room.has_stairs || camera_by_stairs); // either the light or the camera is by the stairs
+			if (camera_in_hallway && camera_by_stairs && room.part_id == camera_part) { // special case for player in an office building primary hallway with stairs
+				stairs_light = ((int)i->room_id == camera_room); // only handle the case where the light is in the hallway above or below
+			}
+			else {
+				stairs_light = (i->has_stairs() || room.has_stairs || camera_by_stairs); // either the light or the camera is by the stairs
 
-			if (!stairs_light /*&& floor_is_below*/ && camera_room >= 0) { // what about camera in room adjacent to one with stairs?
-				cube_t cr(interior->rooms[camera_room]);
-				cr.expand_by_xy(2.0*wall_thickness);
+				if (!stairs_light /*&& floor_is_below*/ && camera_room >= 0) { // what about camera in room adjacent to one with stairs?
+					cube_t cr(interior->rooms[camera_room]);
+					cr.expand_by_xy(2.0*wall_thickness);
 
-				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-					if (r->has_stairs && r->intersects_no_adj(cr)) {stairs_light = 1; break;}
+					for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+						if (r->has_stairs && r->intersects_no_adj(cr)) {stairs_light = 1; break;}
+					}
 				}
 			}
 		}
