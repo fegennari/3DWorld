@@ -117,6 +117,7 @@ struct vao_wrap_t {
 	unsigned vao;
 
 	vao_wrap_t() : vao(0) {}
+	bool is_valid() const {return (vao != 0);}
 	void clear() {delete_and_zero_vao(vao);}
 
 	void ensure_vao_bound() {
@@ -204,6 +205,7 @@ struct indexed_vao_manager_with_shadow_t : public indexed_vbo_manager_t {
 private:
 	vao_wrap_t vaos[2]; // {regular, shadow}
 public:
+	bool is_vao_setup(bool shadow) const {return vaos[shadow].is_valid();}
 	void reset_vbos_to_zero() {indexed_vbo_manager_t::reset_vbos_to_zero(); vaos[0].vao = vaos[1].vao = 0;} // virtual?
 	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); vaos[0].clear(); vaos[1].clear();} // and VAOs
 

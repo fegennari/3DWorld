@@ -595,7 +595,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		prev_ucc = use_core_context;
 	}
 	if (use_core_context && npts == 4) {
-		if (!this->ivbo) {
+		if (!this->ivbo || !this->is_vao_setup(is_shadow_pass)) { // have to setup IVBO once (okay to redo for shadow pass), and VAO for both passes
 			vector<unsigned> tixs;
 			convert_quad_ixs_to_tri_ixs(indices, tixs); // Note: can use geometry shader, see http://github.prideout.net/quad-meshes
 			this->create_and_upload(*this, tixs, is_shadow_pass, 0, 1); // dynamic_level=0, setup_pointers=1
