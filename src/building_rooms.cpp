@@ -962,7 +962,7 @@ bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zv
 	float const ceil_zval(zval + window_vspacing - get_floor_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	unsigned const num_crates(2 + (rgen.rand() % 19)); // 2-20
+	unsigned const num_crates(4 + (rgen.rand() % 30)); // 4-33
 	vect_cube_t exclude;
 	cube_t test_cube(room);
 	test_cube.z1() = zval; // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
@@ -978,7 +978,7 @@ bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zv
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
 		point pos(0.0, 0.0, zval);
 		vector3d sz; // half size relative to window_vspacing
-		for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.1*window_vspacing*(1.0 + ((d == 2) ? 0.6 : 0.8)*rgen.rand_float());} // slightly more variation in XY
+		for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.06*window_vspacing*(1.0 + ((d == 2) ? 1.2 : 2.0)*rgen.rand_float());} // slightly more variation in XY
 		cube_t place_area(room_bounds);
 		place_area.expand_by_xy(-sz);
 		if (!place_area.is_strictly_normalized()) continue; // too large for this room
@@ -998,6 +998,7 @@ bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zv
 		if (bad_placement) continue;
 		if (is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
 		objs.emplace_back(crate, TYPE_CRATE, room_id, 0, 0, 0, tot_light_amt);
+		objs.back().obj_id = (uint16_t)objs.size(); // used to select texture
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
 	return 1; // it's always a storage room, even if it's empty

@@ -484,7 +484,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 void building_room_geom_t::add_crate(room_object_t const &c) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	get_material(tid_nm_pair_t(get_texture_by_name("crate.jpg"), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
+	int const tid(get_texture_by_name((c.obj_id & 1) ? "crate2.jpg" : "crate.jpg"));
+	get_material(tid_nm_pair_t(tid, 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
 }
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
