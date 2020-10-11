@@ -483,7 +483,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 }
 
 void building_room_geom_t::add_crate(room_object_t const &c) {
-	get_material(tid_nm_pair_t(get_texture_by_name("crate.jpg"), 0.0), 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
+	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
+	get_material(tid_nm_pair_t(get_texture_by_name("crate.jpg"), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
 }
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
@@ -1427,7 +1428,6 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		case TYPE_DRESSER: add_dresser (*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex); break;
-		case TYPE_CRATE:   add_crate   (*i); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
@@ -1468,6 +1468,7 @@ void building_room_geom_t::create_small_static_vbos() {
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
 		case TYPE_RAILING:   add_railing(*i); break;
 		case TYPE_PLANT: add_potted_plant(*i, 0, 1); break; // plant only
+		case TYPE_CRATE: add_crate   (*i); break; // not small but only added to windowless rooms
 		default: break;
 		}
 	} // for i
