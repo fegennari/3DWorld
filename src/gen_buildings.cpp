@@ -1945,7 +1945,7 @@ public:
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
-						b.draw_room_geom(s, xlate, 1, 0, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1 (draw everything, since shadow may be cached)
+						b.draw_room_geom(s, xlate, bi->ix, 1, 0, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1 (draw everything, since shadow may be cached)
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						if (b.get_real_num_parts() > 1) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);

@@ -380,7 +380,8 @@ struct building_room_geom_t {
 	void create_small_static_vbos();
 	void create_lights_vbos();
 	void create_dynamic_vbos();
-	void draw(shader_t &s, vector3d const &xlate, tid_nm_pair_t const &wall_tex, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+	void draw(shader_t &s, building_t const &building, vector3d const &xlate, tid_nm_pair_t const &wall_tex, unsigned building_ix,
+		bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 };
 
 struct elevator_t : public cube_t {
@@ -606,7 +607,7 @@ struct building_t : public building_geom_t {
 	bool toggle_room_light(point const &closest_to);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
-	void draw_room_geom(shader_t &s, vector3d const &xlate, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+	void draw_room_geom(shader_t &s, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix,
 		bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
@@ -637,6 +638,7 @@ struct building_t : public building_geom_t {
 	void update_elevators(point const &player_pos);
 	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
+	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building) const;
 private:
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;

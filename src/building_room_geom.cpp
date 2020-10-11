@@ -17,6 +17,7 @@ colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood textu
 
 object_model_loader_t building_obj_model_loader;
 
+extern bool camera_in_building;
 extern int display_mode, frame_counter;
 extern pos_dir_up camera_pdu;
 
@@ -1495,8 +1496,26 @@ void building_room_geom_t::create_dynamic_vbos() {
 	mats_dynamic.create_vbos();
 }
 
+struct occlusion_stats_t {
+	unsigned nobj, next, nnear, nvis, ndraw;
+	int last_frame_counter;
+	occlusion_stats_t() : last_frame_counter(0) {reset();}
+	void reset() {nobj = next = nnear = nvis = ndraw = 0;}
+
+	void update() {
+		if (frame_counter == last_frame_counter) return; // same frame
+		last_frame_counter = frame_counter;
+		cout << TXT(nobj) << TXT(next) << TXT(nnear) << TXT(nvis) << TXT(ndraw) << endl;
+		reset();
+	}
+};
+
+occlusion_stats_t occlusion_stats;
+
 // Note: non-const because it creates the VBO
-void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_t const &wall_tex, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building) {
+void building_room_geom_t::draw(shader_t &s, building_t const &building, vector3d const &xlate, tid_nm_pair_t const &wall_tex, unsigned building_ix,
+	bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
+{
 	if (empty()) return; // no geom
 	unsigned const num_screenshot_tids(get_num_screenshot_tids());
 	static int last_frame(0);
@@ -1544,20 +1563,68 @@ void building_room_geom_t::draw(shader_t &s, vector3d const &xlate, tid_nm_pair_
 	disable_blend();
 	vbo_wrap_t::post_render();
 	//if (!obj_model_insts.empty()) {glDisable(GL_CULL_FACE);} // better but slower?
+	point const camera_bs(camera_pdu.pos - xlate);
+	occlusion_checker_t oc(0);
+	oc.set_exclude_bix(building_ix);
 	bool obj_drawn(0);
 
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		assert(i->obj_id < objs.size());
 		auto const &obj(objs[i->obj_id]);
+		//++occlusion_stats.nobj;
 		if (!player_in_building && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
-		if (!shadow_only && !dist_less_than((camera_pdu.pos - xlate), obj.get_llc(), 100.0*obj.dz())) continue; // too far away
+		//++occlusion_stats.next;
+		if (!shadow_only && !dist_less_than(camera_bs, obj.get_llc(), 100.0*obj.dz())) continue; // too far away
+		//++occlusion_stats.nnear;
 		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
+		//++occlusion_stats.nvis;
+		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, player_in_building)) continue;
+		//++occlusion_stats.ndraw;
 		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, i->dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
 		obj_drawn = 1;
-	}
+	} // for i
+	//occlusion_stats.update();
 	//if (!obj_model_insts.empty()) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
+}
+
+bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts, vect_cube_t const &cubes, unsigned dim) {
+	assert(npts > 0 && dim <= 2);
+
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		// TODO: use dim as an optimization?
+		if (!check_line_clip(pt, pts[0], c->d)) continue; // first point does not intersect
+		bool not_occluded(0);
+
+		for (unsigned p = 1; p < npts; ++p) { // skip first point
+			if (!check_line_clip(pt, pts[p], c->d)) {not_occluded = 1; break;}
+		}
+		if (!not_occluded) return 1;
+	} // for c
+	return 0;
+}
+
+bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building) const {
+	if (!interior) return 0; // could probably make this an assert
+	//highres_timer_t timer("Check Object Occlusion");
+	point pts[8];
+	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
+	
+	for (unsigned d = 0; d < 2; ++d) { // check walls of this building
+		if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->walls[d], d)) return 1;
+	}
+	if (player_in_this_building) { // check floors of this building (and technically also ceilings)
+		if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->floors, 2)) return 1;
+	}
+	else if (camera_in_building) { // player in some other building
+		// check walls of the building the player is in?
+	}
+	else { // player not in a building
+		if (!oc.get_is_setup()) {oc.set_camera(camera_pdu);}
+		if (oc.is_occluded(c)) return 1; // check other buildings
+	}
+	return 0;
 }
 
 
