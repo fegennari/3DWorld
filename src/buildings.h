@@ -20,14 +20,18 @@ colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY
 class light_source;
 class lmap_manager_t;
 class building_nav_graph_t;
+class occlusion_checker_t;
 struct pedestrian_t;
+struct building_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 
 struct building_occlusion_state_t {
+	int exclude_bix;
 	point pos;
 	vector3d xlate;
 	vector<unsigned> building_ids;
 	vector<point> temp_points;
+	building_occlusion_state_t() : exclude_bix(-1) {}
 
 	void init(point const &pos_, vector3d const &xlate_) {
 		pos   = pos_;

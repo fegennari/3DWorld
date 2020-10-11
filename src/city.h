@@ -531,9 +531,11 @@ public:
 
 class occlusion_checker_t {
 	building_occlusion_state_t state;
-	bool for_city;
+	bool for_city, is_setup;
 public:
-	occlusion_checker_t(bool for_city_) : for_city(for_city_) {}
+	occlusion_checker_t(bool for_city_) : for_city(for_city_), is_setup(0) {}
+	bool get_is_setup() const {return is_setup;}
+	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
 	void set_camera(pos_dir_up const &pdu);
 	bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
 };

@@ -2681,6 +2681,7 @@ public:
 			if (!pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + state.xlate))) continue; // VFC
 			
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
+				if ((int)b->ix == state.exclude_bix) continue; // excluded
 				if (pdu.cube_visible(*b + state.xlate)) {state.building_ids.push_back(b->ix);}
 			}
 		}
