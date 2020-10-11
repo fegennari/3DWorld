@@ -1061,6 +1061,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			// we can calculate the exact location of the fence, but it depends on detail_type, garage/shed position, etc.,
 			// so it's easier to start with the entire edge and clip it by the house parts and optional garage/shed
 			clip_cube_to_parts(fence, cubes);
+			fence.expand_in_dim(dim, -0.01*door_height); // shrink slightly to avoid clipping through the exterior wall
 			fences.push_back(fence);
 
 			if ((rand_num & 6) != 2) { // 67% of the time
@@ -1071,7 +1072,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				for (unsigned d = 0; d < 2; ++d) { // split fence, add gap for gate, and add each segment if it's large enough
 					cube_t seg(fence2);
 					seg.d[!dim][d] = center_pt + (d ? -0.5f : 0.5f)*gate_width;
-					if (seg.get_sz_dim(!dim) > gate_width) {fences.push_back(seg);}
+					if (seg.get_sz_dim(!dim) < gate_width) continue; // too small
+					seg.expand_in_dim(!dim, -0.01*door_height); // shrink slightly to avoid clipping through the exterior wall
+					fences.push_back(seg);
 				}
 			}
 		}
