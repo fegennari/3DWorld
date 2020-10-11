@@ -320,7 +320,7 @@ bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, fl
 					chair.z1() = zval;
 					chair.z2() = zval + chair_height;
 					chair.expand_by_xy(chair_radius);
-					objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, !long_dim, dir, 0, tot_light_amt, room_obj_shape::SHAPE_CUBE, GRAY_BLACK);
+					objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, !long_dim, dir, RO_FLAG_RAND_ROT, tot_light_amt, room_obj_shape::SHAPE_CUBE, GRAY_BLACK);
 				}
 			} // for d
 		} // for col

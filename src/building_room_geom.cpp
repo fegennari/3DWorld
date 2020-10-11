@@ -1439,7 +1439,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 			vector3d dir(zero_vector);
 			dir[i->dim] = (i->dir ? 1.0 : -1.0);
 
-			if (i->type == TYPE_OFFICE_CHAIR) {
+			if (i->flags & RO_FLAG_RAND_ROT) {
 				float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
 				vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
 				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
