@@ -529,18 +529,22 @@ public:
 	void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only);
 }; // road_draw_state_t
 
+class occlusion_checker_t {
+	building_occlusion_state_t state;
+	bool for_city;
+public:
+	occlusion_checker_t(bool for_city_) : for_city(for_city_) {}
+	void set_camera(pos_dir_up const &pdu);
+	bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
+};
+
 class ao_draw_state_t : public draw_state_t {
 
 protected:
-	class occlusion_checker_t {
-		building_occlusion_state_t state;
-	public:
-		void set_camera(pos_dir_up const &pdu);
-		bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
-	};
 	occlusion_checker_t occlusion_checker;
 public:
 	quad_batch_draw ao_qbd;
+	ao_draw_state_t() : occlusion_checker(1) {} // for_city=1
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
 	bool is_occluded(cube_t const &bcube) {return (!shadow_only && occlusion_checker.is_occluded(bcube + xlate));} // Note: non-const - OC state temp_points is modified
 	void draw_ao_qbd();

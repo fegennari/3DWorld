@@ -2907,8 +2907,12 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 	building_tiles.add_interior_lights(xlate, lights_bcube);
 }
 // cars + peds
-void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
-bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
+void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state, bool for_city) {
+	(for_city ? building_creator_city : building_creator).get_occluders(pdu, state);
+}
+bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state, bool for_city) {
+	return (for_city ? building_creator_city : building_creator).check_pts_occluded(pts, npts, state);
+}
 cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bcube();}
 // used for pedestrians
 cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}
