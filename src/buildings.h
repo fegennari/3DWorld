@@ -342,7 +342,7 @@ struct building_room_geom_t {
 	rgeom_mat_t &get_wood_material(float tscale);
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
-	void add_table(room_object_t const &c, float tscale, float top_dz=0.15, float leg_width=0.08);
+	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
 	void add_chair(room_object_t const &c, float tscale);
 	void add_dresser(room_object_t const &c, float tscale);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);

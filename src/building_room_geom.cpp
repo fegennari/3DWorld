@@ -341,7 +341,7 @@ tid_nm_pair_t const untex_shad_mat(-1, 2.0); // make sure it's different from de
 
 void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
 	cube_t top(c), legs_bcube(c);
-	top.z1() += (1.0 - top_dz)*c.dz(); // 15% of height
+	top.z1() += (1.0 - top_dz)*c.dz();
 	legs_bcube.z2() = top.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	rgeom_mat_t &mat(get_wood_material(tscale));
@@ -849,7 +849,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	// desk top and legs, similar to add_table()
 	cube_t top(c), legs_bcube(c);
-	top.z1() += 0.8*c.dz();
+	top.z1() += 0.85*c.dz();
 	legs_bcube.z2() = top.z1();
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	get_wood_material(tscale).add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
@@ -1404,7 +1404,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		assert(i->type < NUM_TYPES);
 
 		switch (i->type) {
-		case TYPE_TABLE:   add_table   (*i, tscale); break;
+		case TYPE_TABLE:   add_table   (*i, tscale, 0.12, 0.08); break; // top_dz=12% of height, leg_width=8% of height
 		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
 		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
 		case TYPE_RUG:     add_rug     (*i); break;
