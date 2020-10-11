@@ -33,18 +33,36 @@ bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room
 }
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
-	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt)
+	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model)
 {
-	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_sz(0.1*window_vspacing); // half size
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {office_chair_model = 0;}
+	float const window_vspacing(get_window_vspace()), room_pad(4.0f*get_wall_thickness()), chair_height(0.4*window_vspacing);
+	float chair_hwidth(0.0), push_out(0.0);
 	point chair_pos(place_pos); // same starting center and z1
-	chair_pos[dim] += (dir ? -1.0f : 1.0f)*rgen.rand_uniform(-0.5, 1.2)*chair_sz;
+
+	if (office_chair_model) {
+		vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_OFFICE_CHAIR));
+		chair_hwidth = 0.5f*chair_height*(0.5f*(chair_sz.x + chair_sz.y))/chair_sz.z; // assume square and take average of xsize and ysize
+		push_out     = 0.5; // pushed out a bit so that the arms don't intersect the table top
+	}
+	else {
+		chair_hwidth = 0.1*window_vspacing; // half width
+		push_out     = rgen.rand_uniform(-0.5, 1.2); // varible amount of pushed in/out
+	}
+	chair_pos[dim] += (dir ? -1.0f : 1.0f)*push_out*chair_hwidth;
 	cube_t chair(chair_pos, chair_pos);
-	chair.z2() += 0.4*get_window_vspace(); // chair height
-	chair.expand_by_xy(chair_sz);
+	chair.z2() += chair_height;
+	chair.expand_by_xy(chair_hwidth);
 	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0; // check proximity to doors
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, 0, tot_light_amt);
-	objs.back().color = chair_color;
+
+	if (office_chair_model) {
+		float const lum(0.4*chair_color.R + 0.2*chair_color.B + 0.1*chair_color.G); // calculate grayscale luminance
+		objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, dim, dir, 0, tot_light_amt, room_obj_shape::SHAPE_CUBE, colorRGBA(lum, lum, lum));
+	}
+	else {
+		objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, 0, tot_light_amt, room_obj_shape::SHAPE_CUBE, chair_color);
+	}
 	return 1;
 }
 
@@ -75,7 +93,7 @@ unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, 
 			if (rgen.rand_bool()) continue; // 50% of the time
 			point chair_pos(table_pos); // same starting center and z1
 			chair_pos[dim] += (dir ? -1.0f : 1.0f)*table_sz[dim];
-			num_added += add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt);
+			num_added += add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, 0); // office_chair_model=0
 		}
 	}
 	return num_added;
@@ -142,8 +160,7 @@ void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, floa
 		c.z2() += height;
 		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
 		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? room_obj_shape::SHAPE_CYLIN : room_obj_shape::SHAPE_CUBE));
-		objs.back().color = colors[rgen.rand()%NUM_COLORS];
+		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? room_obj_shape::SHAPE_CYLIN : room_obj_shape::SHAPE_CUBE), colors[rgen.rand()%NUM_COLORS]);
 		return; // done
 	} // for n
 }
@@ -223,8 +240,9 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		objs.back().obj_id = (uint16_t)objs.size();
 		cube_t bc(c);
+		bool const add_monitor(rgen.rand_bool() && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV));
 
-		if (rgen.rand_bool() && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV)) { // add a computer monitor using the TV model
+		if (add_monitor) { // add a computer monitor using the TV model
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
 			float const tv_height(1.1*height), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z), center(c.get_center_dim(!dim));
 			cube_t tv;
@@ -242,8 +260,10 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 			chair_pos.z = zval;
 			chair_pos[dim]  = c.d[dim][!dir];
 			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
+			// there are too many desks in office buildings, and they have office chairs in cubicles anyway, so only use chair models for desks in houses with computer monitors
+			bool const office_chair_model(add_monitor && is_house);
 			
-			if (add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt)) {
+			if (add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair_model)) {
 				cube_t const &chair(objs.back());
 				if (num_placed > 0 && chair.intersects(placed_desk)) {objs.pop_back();} // intersects previously placed desk, remove it
 				else {bc.union_with_cube(chair);} // include the chair

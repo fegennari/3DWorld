@@ -659,7 +659,7 @@ private:
 	bool is_room_office_bathroom(room_t const &room, float zval) const {return room.is_office && room.rtype == RTYPE_BATH && !room_has_stairs_or_elevator(room, zval);}
 	void gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1, bool ignore_chairs=0) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
-		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt);
+		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model);
 	unsigned add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 		point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt);
 	void shorten_chairs_in_region(cube_t const &region, unsigned objs_start);
