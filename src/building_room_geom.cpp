@@ -1579,7 +1579,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		//++occlusion_stats.nnear;
 		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
 		//++occlusion_stats.nvis;
-		if ((display_mode & 0x08) && !shadow_only && building.check_obj_occluded(obj, camera_bs, oc, player_in_building)) continue;
+		if ((display_mode & 0x08) && !shadow_only && !reflection_pass && building.check_obj_occluded(obj, camera_bs, oc, player_in_building)) continue;
 		//++occlusion_stats.ndraw;
 		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, i->dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
 		obj_drawn = 1;
