@@ -40,6 +40,18 @@ struct building_occlusion_state_t {
 	}
 };
 
+class occlusion_checker_t {
+	building_occlusion_state_t state;
+	bool for_city, is_setup;
+public:
+	occlusion_checker_t(bool for_city_) : for_city(for_city_), is_setup(0) {}
+	bool get_is_setup() const {return is_setup;}
+	void clear() {state.building_ids.clear(); is_setup = 0;}
+	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
+	void set_camera(pos_dir_up const &pdu);
+	bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
+};
+
 struct cube_with_zval_t : public cube_t {
 	float zval;
 	cube_with_zval_t() : zval(0.0) {}
@@ -380,8 +392,8 @@ struct building_room_geom_t {
 	void create_small_static_vbos();
 	void create_lights_vbos();
 	void create_dynamic_vbos();
-	void draw(shader_t &s, building_t const &building, vector3d const &xlate, tid_nm_pair_t const &wall_tex, unsigned building_ix,
-		bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+	void draw(shader_t &s, building_t const &building, occlusion_checker_t &oc, vector3d const &xlate, tid_nm_pair_t const &wall_tex,
+		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 };
 
 struct elevator_t : public cube_t {
@@ -607,9 +619,9 @@ struct building_t : public building_geom_t {
 	bool toggle_room_light(point const &closest_to);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
-	void draw_room_geom(shader_t &s, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
-	void gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix, int ped_ix,
-		bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+	void draw_room_geom(shader_t &s, occlusion_checker_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+	void gen_and_draw_room_geom(shader_t &s, occlusion_checker_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
+		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;

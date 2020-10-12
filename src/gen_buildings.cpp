@@ -24,6 +24,7 @@ float const WIND_LIGHT_ON_RAND   = 0.08;
 bool camera_in_building(0), interior_shadow_maps(0);
 building_params_t global_building_params;
 shader_t reflection_shader;
+building_t const *player_building(nullptr);
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
 extern unsigned room_mirror_ref_tid;
@@ -1931,6 +1932,7 @@ public:
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
 		vector<point> points; // reused temporary
 		building_draw_t ext_parts_draw; // roof and exterior walls
+		occlusion_checker_t oc(0);
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -1945,7 +1947,7 @@ public:
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
-						b.draw_room_geom(s, xlate, bi->ix, 1, 0, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1 (draw everything, since shadow may be cached)
+						b.draw_room_geom(s, oc, xlate, bi->ix, 1, 0, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1 (draw everything, since shadow may be cached)
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
 						if (b.get_real_num_parts() > 1) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
@@ -2024,6 +2026,7 @@ public:
 			interior_shadow_maps = 0;
 			create_mirror_reflection_if_needed();
 			draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
+			player_building = nullptr; // reset, may be set below
 		}
 		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
@@ -2094,6 +2097,7 @@ public:
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
 			vect_cube_t ped_bcubes; // reused temporary
+			occlusion_checker_t oc(0);
 			int indir_bcs_ix(-1), indir_bix(-1);
 
 			if (draw_interior) {
@@ -2130,7 +2134,7 @@ public:
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
-						b.gen_and_draw_room_geom(s, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, b.bcube.contains_pt_xy(camera_xlated)); // shadow_only=0
+						b.gen_and_draw_room_geom(s, oc, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, b.bcube.contains_pt_xy(camera_xlated)); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
@@ -2149,6 +2153,7 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
 						this_frame_camera_in_building = 1;
+						player_building = &b;
 
 						if (display_mode & 0x10) { // compute indirect lighting
 #if 0

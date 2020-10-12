@@ -1882,13 +1882,15 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 	}
 }
 
-void building_t::draw_room_geom(shader_t &s, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building) {
+void building_t::draw_room_geom(shader_t &s, occlusion_checker_t &oc, vector3d const &xlate, unsigned building_ix,
+	bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
+{
 	if (!interior || !interior->room_geom) return;
 	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
-	interior->room_geom->draw(s, *this, xlate, get_material().wall_tex, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+	interior->room_geom->draw(s, *this, oc, xlate, get_material().wall_tex, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
-void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect_cube_t &ped_bcubes, unsigned building_ix,
-	int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
+void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
+	unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (!interior) return;
 	if (is_rotated()) return; // no room geom for rotated buildings
@@ -1901,7 +1903,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, vector3d const &xlate, vect
 		gen_room_details(rgen, ped_bcubes); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	draw_room_geom(s, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+	draw_room_geom(s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 
 void building_t::clear_room_geom() {
