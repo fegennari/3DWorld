@@ -239,7 +239,6 @@ void occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
 	pos_dir_up near_pdu(pdu);
 	near_pdu.far_ = 2.0*city_params.road_spacing; // set far clipping plane to one city block
 	get_building_occluders(near_pdu, state, for_city);
-	is_setup = 1;
 	//cout << "occluders: " << state.building_ids.size() << endl;
 }
 bool occlusion_checker_t::is_occluded(cube_t const &c) {

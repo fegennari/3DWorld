@@ -1932,7 +1932,7 @@ public:
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
 		vector<point> points; // reused temporary
 		building_draw_t ext_parts_draw; // roof and exterior walls
-		occlusion_checker_t oc(0);
+		occlusion_checker_t oc(0); // not actually used
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -2098,6 +2098,7 @@ public:
 			vector<point> points; // reused temporary
 			vect_cube_t ped_bcubes; // reused temporary
 			occlusion_checker_t oc(0);
+			if (!reflection_pass) {oc.set_camera(camera_pdu);}
 			int indir_bcs_ix(-1), indir_bix(-1);
 
 			if (draw_interior) {
@@ -2693,6 +2694,7 @@ public:
 	}
 	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) const {
 		for (vector<unsigned>::const_iterator b = state.building_ids.begin(); b != state.building_ids.end(); ++b) {
+			if ((int)*b == state.exclude_bix) continue;
 			building_t const &building(get_building(*b));
 			bool occluded(1);
 

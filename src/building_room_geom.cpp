@@ -1629,7 +1629,6 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlus
 		}
 	}
 	else { // player not in a building
-		if (!oc.get_is_setup()) {oc.set_camera(camera_pdu);}
 		if (oc.is_occluded(c)) return 1; // check other buildings
 	}
 	return 0;
