@@ -80,7 +80,8 @@ bool city_model_loader_t::load_model_id(unsigned id) {
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations)
 {
-	assert(is_model_valid(model_id));
+	bool const is_valid(is_model_valid(model_id));
+	assert(is_valid);
 	assert(model_id < size()); // must be loaded
 	city_model_t const &model_file(get_model(model_id));
 	model3d &model(at(model_id));
