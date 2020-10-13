@@ -1052,7 +1052,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			tree_pos  += (0.05f*(bcube.dx() + bcube.dy())/dir.mag())*dir; // shift slightly away from house center so that it's less likely to intersect the house
 			tree_pos.z = bcube.z1();
 		}
-		if (type == 1 && (rand_num & 6) != 0) { // L-shaped house, add a fence 75% of the time
+		if (type == 1 && (rand_num & 6) != 0 && !is_rotated()) { // L-shaped house, add a fence 75% of the time
 			// use the same dim as the shrunk house part for the full fence section; or should we use garage_dim?
 			float const fence_thickness(0.08*door_height);
 			cube_t fence(bcube), fence2(bcube);
