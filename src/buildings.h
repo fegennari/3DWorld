@@ -597,7 +597,7 @@ struct building_t : public building_geom_t {
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
-	void gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes);
+	void gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes, unsigned building_ix);
 	void add_stairs_and_elevators(rand_gen_t &rgen);
 	void add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);
 	void add_exterior_door_signs(rand_gen_t &rgen);

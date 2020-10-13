@@ -1207,7 +1207,7 @@ template<typename T> bool has_bcube_int_exp(cube_t const &bcube, vector<T> const
 }
 
 // Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
-void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes) {
+void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes, unsigned building_ix) {
 
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
@@ -1900,7 +1900,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_t &oc, ve
 		rgen.set_state(building_ix, parts.size()); // set to something canonical per building
 		ped_bcubes.clear();
 		if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, building_ix, ped_bcubes);}
-		gen_room_details(rgen, ped_bcubes); // generate so that we can draw it
+		gen_room_details(rgen, ped_bcubes, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}
 	draw_room_geom(s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
