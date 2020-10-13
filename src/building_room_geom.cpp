@@ -1579,7 +1579,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		//++occlusion_stats.nnear;
 		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
 		//++occlusion_stats.nvis;
-		if ((display_mode & 0x08) && !shadow_only && !reflection_pass && building.check_obj_occluded(obj, camera_bs, oc, player_in_building)) continue;
+		if ((display_mode & 0x08) && !shadow_only && building.check_obj_occluded(obj, camera_bs, oc, player_in_building, reflection_pass)) continue;
 		//++occlusion_stats.ndraw;
 		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, i->dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
 		obj_drawn = 1;
@@ -1605,17 +1605,20 @@ bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsi
 	return 0;
 }
 
-bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building) const {
+bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building, bool reflection_pass) const {
 	if (!interior) return 0; // could probably make this an assert
 	//highres_timer_t timer("Check Object Occlusion");
+	if (reflection_pass) {assert(player_in_this_building);}
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	
-	for (unsigned d = 0; d < 2; ++d) { // check walls of this building
-		if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->walls[d], d)) return 1;
+	if (!reflection_pass) { // check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
+		for (unsigned d = 0; d < 2; ++d) {
+			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->walls[d], d)) return 1;
+		}
 	}
 	if (player_in_this_building) { // check floors of this building (and technically also ceilings)
-		if (fabs(viewer.z - c.get_center_dim(2)) > 0.5*get_window_vspace()) { // on different floors
+		if (fabs(viewer.z - c.get_center_dim(2)) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
 			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->floors, 2)) return 1;
 		}
 	}
