@@ -2711,9 +2711,16 @@ public:
 
 class building_tiles_t {
 	typedef pair<int, int> xy_pair;
-	map<xy_pair, building_creator_t> tiles; // key is {x, y} pair
+	typedef map<xy_pair, building_creator_t> tile_map_t;
+	tile_map_t tiles; // key is {x, y} pair
 	//set<xy_pair> generated; // only used in heightmap terrain mode, and generally limited to the size of the heightmap in tiles
 	vector3d max_extent;
+
+	tile_map_t::const_iterator get_tile_by_pos(point const &pos) const { // Note: pos is in camera space
+		vector3d const xlate(get_camera_coord_space_xlate());
+		int const x(round_fp(0.5f*(pos.x - xlate.x)/X_SCENE_SIZE)), y(round_fp(0.5f*(pos.y - xlate.y)/Y_SCENE_SIZE));
+		return tiles.find(make_pair(x, y));
+	}
 public:
 	building_tiles_t() : max_extent(zero_vector) {}
 	bool     empty() const {return tiles.empty();}
@@ -2758,9 +2765,7 @@ public:
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
 		if (radius == 0.0) { // single point, use map lookup optimization (for example for grass)
-			vector3d const xlate(get_camera_coord_space_xlate());
-			int const x(round_fp(0.5f*(pos.x - xlate.x)/X_SCENE_SIZE)), y(round_fp(0.5f*(pos.y - xlate.y)/Y_SCENE_SIZE));
-			auto it(tiles.find(make_pair(x, y)));
+			auto it(get_tile_by_pos(pos));
 			if (it == tiles.end()) return 0;
 			return it->second.check_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior);
 		}
@@ -2770,14 +2775,12 @@ public:
 		return 0;
 	}
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
-		vector3d const xlate(get_camera_coord_space_xlate());
-
 		if (p1.x == p2.x && p1.y == p2.y) { // vertical line, use map lookup optimization (for overhead map mode)
-			int const x(round_fp(0.5f*(p1.x - xlate.x)/X_SCENE_SIZE)), y(round_fp(0.5f*(p1.y - xlate.y)/Y_SCENE_SIZE));
-			auto it(tiles.find(make_pair(x, y)));
+			auto it(get_tile_by_pos(p1));
 			if (it == tiles.end()) return 0;
 			return it->second.get_building_hit_color(p1, p2, color);
 		}
+		vector3d const xlate(get_camera_coord_space_xlate());
 		cube_t const line_bcube((p1 - xlate), (p2 - xlate));
 
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
@@ -2803,6 +2806,14 @@ public:
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			i->second.add_interior_lights(xlate, lights_bcube);
 		}
+	}
+	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
+		auto it(get_tile_by_pos(pdu.pos));
+		if (it != tiles.end()) {it->second.get_occluders(pdu, state);}
+	}
+	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) const {
+		auto it(get_tile_by_pos(state.pos));
+		return ((it == tiles.end()) ? 0 : it->second.check_pts_occluded(pts, npts, state));
 	}
 	void get_all_garages(vect_cube_t &garages) const {
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_all_garages(garages);}
@@ -2916,9 +2927,11 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 }
 // cars + peds
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state, bool for_city) {
-	(for_city ? building_creator_city : building_creator).get_occluders(pdu, state);
+	if (!for_city && global_building_params.gen_inf_buildings()) {building_tiles.get_occluders(pdu, state);}
+	else {(for_city ? building_creator_city : building_creator).get_occluders(pdu, state);}
 }
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state, bool for_city) {
+	if (!for_city && global_building_params.gen_inf_buildings()) {return building_tiles.check_pts_occluded(pts, npts, state);}
 	return (for_city ? building_creator_city : building_creator).check_pts_occluded(pts, npts, state);
 }
 cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bcube();}
