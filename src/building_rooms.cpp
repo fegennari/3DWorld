@@ -240,7 +240,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		objs.back().obj_id = (uint16_t)objs.size();
 		cube_t bc(c);
-		bool const add_monitor(rgen.rand_bool() && building_obj_model_loader.is_model_valid(OBJ_MODEL_TV));
+		bool const add_monitor(building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
 
 		if (add_monitor) { // add a computer monitor using the TV model
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
@@ -443,11 +443,11 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 		} // for d
 	} // for n
 	// dresser
-	float const ds_height(rand_uniform(0.26, 0.32)*window_vspacing), ds_depth(rand_uniform(0.20, 0.25)*window_vspacing), ds_width(rand_uniform(0.6, 0.9)*window_vspacing);
+	float const ds_height(rgen.rand_uniform(0.26, 0.32)*window_vspacing), ds_depth(rgen.rand_uniform(0.20, 0.25)*window_vspacing), ds_width(rgen.rand_uniform(0.6, 0.9)*window_vspacing);
 	vector3d const ds_sz_scale(ds_depth/ds_height, ds_width/ds_height, 1.0);
 	place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
 	// nightstand
-	float const ns_height(rand_uniform(0.24, 0.26)*window_vspacing), ns_depth(rand_uniform(0.15, 0.2)*window_vspacing), ns_width(rand_uniform(1.0, 2.0)*ns_depth);
+	float const ns_height(rgen.rand_uniform(0.24, 0.26)*window_vspacing), ns_depth(rgen.rand_uniform(0.15, 0.2)*window_vspacing), ns_width(rgen.rand_uniform(1.0, 2.0)*ns_depth);
 	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
 	place_obj_along_wall(TYPE_DRESSER, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
 	return 1; // success
@@ -1158,7 +1158,7 @@ void building_t::add_plants_to_room(rand_gen_t &rgen, room_t const &room, float 
 	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
 	
 	for (unsigned n = 0; n < num; ++n) {
-		float const height(rand_uniform(0.6, 0.9)*window_vspacing), width(rand_uniform(0.15, 0.35)*window_vspacing);
+		float const height(rgen.rand_uniform(0.6, 0.9)*window_vspacing), width(rgen.rand_uniform(0.15, 0.35)*window_vspacing);
 		vector3d const sz_scale(width/height, width/height, 1.0);
 		place_obj_along_wall(TYPE_PLANT, room, height, sz_scale, rgen, zval, room_id, tot_light_amt,
 			place_area, objs_start, 0.0, 4, 0, pot_colors[rgen.rand() % num_colors]); // no clearanc, pref_orient, or color
