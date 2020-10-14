@@ -30,6 +30,7 @@ protected:
 	void ensure_models_loaded() {if (empty()) {load_models();}}
 public:
 	virtual ~city_model_loader_t() {}
+	virtual bool has_low_poly_model() {return 0;}
 	virtual unsigned num_models() const = 0;
 	virtual city_model_t const &get_model(unsigned id) const = 0;
 	virtual city_model_t &get_model(unsigned id) = 0;
@@ -43,6 +44,7 @@ public:
 
 class car_model_loader_t : public city_model_loader_t {
 public:
+	bool has_low_poly_model() {return 1;}
 	unsigned num_models() const;
 	city_model_t const &get_model(unsigned id) const;
 	city_model_t &get_model(unsigned id);

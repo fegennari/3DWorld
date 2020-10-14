@@ -60,11 +60,18 @@ bool city_model_loader_t::load_model_id(unsigned id) {
 	if (models_valid.empty()) {models_valid.resize(num_models(), 0);} // first call; start out invalid
 	if (models_valid[id]) return 1; // already loaded
 	city_model_t &model(get_model(id));
+
+	if (model.fn.empty()) {
+		push_back(model3d(model.fn, tmgr)); // add a placeholder dummy model
+		return 0;
+	}
 	int const def_tid(-1); // should this be a model parameter?
 	colorRGBA const def_color(WHITE); // should this be a model parameter?
 
 	if (!load_model_file(model.fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, model.recalc_normals, 0, city_params.convert_model_files, 1)) {
-		cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model (will use default low poly model)." << endl;
+		cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model";
+		if (has_low_poly_model()) {cerr << " (will use default low poly model)";}
+		cerr << "." << endl;
 		push_back(model3d(model.fn, tmgr)); // add a placeholder dummy model
 		return 0;
 	}
