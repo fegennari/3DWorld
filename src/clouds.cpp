@@ -442,8 +442,9 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 
 /*static*/ vector<volume_part_cloud::vert_type_t> volume_part_cloud::unscaled_points[2];
 
-/*static*/ void volume_part_cloud::calc_unscaled_points(bool simplified) {
+/*static*/ void volume_part_cloud::calc_unscaled_points(bool simplified) { // in [-1, 1] range
 
+	float const normal_offset = 0.06; // offset in direction of normal, so that planes don't all cross at the same point
 	unsigned ix(0);
 	vector<vert_type_t> &pts(unscaled_points[simplified]);
 	pts.resize(4*(simplified ? 9 : 13));
@@ -460,7 +461,7 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 				get_ortho_vectors(normal, vab);
 
 				for (unsigned j = 0; j < 4; ++j) { // Note: quads will extend beyond radius, but will be rendered as alpha=0 outside radius
-					pts[ix+j].v = ((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1];
+					pts[ix+j].v = ((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1] + normal_offset*normal;
 					pts[ix+j].set_norm(normal);
 				}
 				ix += 4;
