@@ -172,6 +172,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "office_chair_model") {
 		if (!add_model(OBJ_MODEL_OFFICE_CHAIR, fp)) {return read_error(str);}
 	}
+	else if (str == "lamp_model") {
+		if (!add_model(OBJ_MODEL_LAMP, fp)) {return read_error(str);}
+	}
 	else {
 		cout << "Unrecognized city keyword in input file: " << str << endl;
 		return 0;

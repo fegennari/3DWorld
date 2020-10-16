@@ -99,6 +99,7 @@ city tv_model "../models/interiors/SmartTV/Smart TV.model3d"  1 0 -1 90  1 1.0 1
 city couch_model ../models/interiors/couch/OBJ.model3d  1 0 -1 90  1 1.0 1.0
 #city office_chair_model ../models/interiors/chairs/chair_f.model3d  1 0 -1 90  1 1.0 1.0
 city office_chair_model ../models/interiors/chairs/Free3d_office_chair1/Office_chair.model3d  1 0 -1 90  1 1.0 1.0
+city lamp_model ../models/interiors/lamp1.obj  1 0 0 0  1 1.0 1.0
 
 city max_lights 1024
 city max_shadow_maps 40
