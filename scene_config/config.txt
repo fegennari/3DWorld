@@ -11,6 +11,7 @@ tree_density_thresh 0.4
 bush_probability 0.3 0.25 0.1 0.2 0.15
 tree_coll_level 4
 tree_type_rand_zone 0.02
+pine_tree_radius_scale 1.0
 
 nsmileys 6
 verbose 0

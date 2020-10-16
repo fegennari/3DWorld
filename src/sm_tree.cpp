@@ -30,7 +30,7 @@ extern bool tree_indir_lighting, only_pine_palm_trees;
 extern int window_width, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class, mesh_gen_mode;
 extern unsigned max_unique_trees;
-extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale, CAMERA_RADIUS, tree_type_rand_zone;
+extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale, CAMERA_RADIUS, tree_type_rand_zone, pine_tree_radius_scale;
 
 
 struct sm_tree_type {
@@ -539,7 +539,7 @@ int get_tree_type_from_height(float zpos, rand_gen_t &rgen, bool for_scenery) {
 	//return T_DECID; // TESTING
 	switch (get_tree_class_from_height(zpos, (world_mode == WMODE_INF_TERRAIN && (tree_mode == 2 || (!for_scenery && tree_mode == 3))))) { // force pine trees in small tree mode
 	case TREE_CLASS_NONE: return TREE_NONE;
-	case TREE_CLASS_PINE: return ((rgen.rand()%10 == 0) ? T_SH_PINE : T_PINE);
+	case TREE_CLASS_PINE: return ((rgen.rand()%10 == 0) ? (int)T_SH_PINE : (int)T_PINE);
 	case TREE_CLASS_PALM: return T_PALM;
 	case TREE_CLASS_DECID:
 		//if (tree_mode == 3) return TREE_NONE; // use a large (complex) tree here
@@ -899,9 +899,8 @@ void small_tree::calc_palm_tree_points() {
 
 
 float small_tree::get_pine_tree_radius() const {
-
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height/tree_height_scale);
-	return 0.35*(height0 + 0.03/tree_scale);
+	return 0.35*pine_tree_radius_scale*(height0 + 0.03/tree_scale);
 }
 
 void small_tree::alloc_pine_tree_pts(vbo_vnc_block_manager_t &vbo_manager) {
