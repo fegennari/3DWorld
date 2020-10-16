@@ -36,6 +36,7 @@ default_ground_tex 0
 destroy_thresh 0
 ground_effects_level 1
 tree_deadness 1.0
+wind_velocity 0.04 0.02 0.0 # small wind because it doesn't work well yet
 
 #grass_density 200
 #grass_size 0.02 0.002

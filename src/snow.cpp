@@ -21,6 +21,7 @@ map<int, unsigned> x_strip_map;
 extern int display_mode, camera_mode, read_snow_file, write_snow_file;
 extern unsigned num_snowflakes;
 extern float ztop, zbottom, temperature, snow_depth, snow_random;
+extern vector3d wind;
 extern char *snow_file;
 extern model3ds all_models;
 
@@ -492,6 +493,8 @@ void create_snow_map(voxel_map &vmap) {
 	int const num_per_dim(1024*(unsigned)sqrt((float)num_snowflakes)); // in M, so sqrt div by 1024
 	float const zval(max(ztop, czmax)), zv_scale(1.0f/(zval - zbottom));
 	float const xscale(2.0*X_SCENE_SIZE/num_per_dim), yscale(2.0*Y_SCENE_SIZE/num_per_dim);
+	vector3d wind_vector(0.25*(zval - zbottom)*wind);
+	wind_vector.z = 0.0; // zval is unused/ignored
 	all_models.build_cobj_trees(1);
 	cout << "Snow accumulation progress (out of " << num_per_dim << "):     0";
 
@@ -502,13 +505,13 @@ void create_snow_map(voxel_map &vmap) {
 		rgen.set_state(123, y);
 
 		for (int x = 0; x < num_per_dim; ++x) {
-			point pos1(-X_SCENE_SIZE + x*xscale, -Y_SCENE_SIZE + y*yscale, zval);
+			point pos1(-X_SCENE_SIZE + x*xscale, -Y_SCENE_SIZE + y*yscale, zval), pos2;
 			// add slightly more randomness for numerical precision reasons
 			for (unsigned d = 0; d < 2; ++d) {pos1[d] += SMALL_NUMBER*rgen.signed_rand_float();}
-			point pos2;
-			if (!get_mesh_ice_pt(pos1, pos2)) continue; // invalid point
+			if (!get_mesh_ice_pt(pos1, pos2)) continue; // only pos1/pos2 zvals differ; skip if invalid point
 			assert(pos2.z < pos1.z);
 			pos1 += get_rand_snow_vect(rgen, 1.0); // add some gaussian randomness for better distribution
+			pos1 -= wind_vector; // offset starting point by wind vector (upwind)
 			point cpos;
 			vector3d cnorm;
 			bool invalid(0);
