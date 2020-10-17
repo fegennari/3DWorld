@@ -1437,7 +1437,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		case TYPE_COLLIDER: break; // not drawn
 		default: break;
 		} // end switch
-		if (i->type >= TYPE_TOILET && i->type <= TYPE_URINAL) { // handle drawing of 3D models
+		if (i->type >= TYPE_TOILET && i->type <= TYPE_LAMP) { // handle drawing of 3D models
 			vector3d dir(zero_vector);
 			dir[i->dim] = (i->dir ? 1.0 : -1.0);
 

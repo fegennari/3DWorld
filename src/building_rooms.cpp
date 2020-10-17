@@ -450,6 +450,24 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 	float const ns_height(rgen.rand_uniform(0.24, 0.26)*window_vspacing), ns_depth(rgen.rand_uniform(0.15, 0.2)*window_vspacing), ns_width(rgen.rand_uniform(1.0, 2.0)*ns_depth);
 	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
 	place_obj_along_wall(TYPE_DRESSER, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
+
+	// maybe place objects on dressers and nightstands that were added to this room
+	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
+		if (i->type != TYPE_DRESSER) continue;
+		if (rgen.rand_bool()) continue; // add 50% of the time
+		// try to place a lamp
+		if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP)) continue;
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_LAMP)); // L, W, H
+		float const height(0.25*window_vspacing), width(height*0.5f*(sz.x + sz.y)/sz.z);
+		cube_t lamp(i->get_cube_center()); // move off to one side?
+		lamp.z1() = i->z2();
+		lamp.z2() = i->z2() + height;
+		lamp.expand_by_xy(0.5*width); // expand by half width
+		lamp.translate_dim((i->dir ? 1.0 : -1.0)*0.1*width, i->dim); // move slightly toward the front to avoid clipping through the wall
+		colorRGBA const color(WHITE); // TODO - use a custom color
+		objs.emplace_back(lamp, TYPE_LAMP, room_id, i->dim, i->dir, RO_FLAG_NOCOLL, tot_light_amt, room_obj_shape::SHAPE_CYLIN, color);
+		break; // the above line invalidates our iteration, so we must break
+	} // for i
 	return 1; // success
 }
 
