@@ -31,5 +31,6 @@ textures/skybox/ely_hills
 textures/pictures
 textures/fabrics
 dependencies/meshoptimizer/src/*.o
+house/snow.wind.map
 TAGS
 *~

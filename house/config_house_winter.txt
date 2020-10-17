@@ -36,7 +36,8 @@ default_ground_tex 0
 destroy_thresh 0
 ground_effects_level 1
 tree_deadness 1.0
-wind_velocity 0.04 0.02 0.0 # small wind because it doesn't work well yet
+wind_velocity 0.04 0.02 0.0 # small wind
+#wind_velocity 0.8 0.4 0.0 # large wind - looks interesting but not very realistic
 
 #grass_density 200
 #grass_size 0.02 0.002
@@ -50,6 +51,7 @@ unlimited_weapons 0
 snow_depth 0.04
 snow_random 0.1
 num_test_snowflakes 1000 # in M
+#snow_file house/snow.wind.map 0
 snow_file house/snow.no_leaves.map 0
 #snow_file house/snow.no_leaves.smoothed.map 0
 
