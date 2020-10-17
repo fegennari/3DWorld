@@ -1757,7 +1757,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	}
 	else if (!cflight) { // tiled terrain mode
 		pos.z -= radius; // bottom of camera sphere
-		adjust_zval_for_model_coll(pos, get_max_mesh_height_within_radius(pos, radius, 1), C_STEP_HEIGHT*radius);
+		adjust_zval_for_model_coll(pos, radius, get_max_mesh_height_within_radius(pos, radius, 1), C_STEP_HEIGHT*radius);
 		pos.z += radius;
 		proc_player_city_sphere_coll(pos);
 		camera_last_pos = pos;

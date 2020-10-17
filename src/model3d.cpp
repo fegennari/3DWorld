@@ -2546,7 +2546,7 @@ void get_all_model_bcubes(vector<cube_t> &bcubes) {all_models.get_all_model_bcub
 
 void write_models_to_cobj_file(ostream &out) {all_models.write_to_cobj_file(out);}
 
-void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height) {
+void adjust_zval_for_model_coll(point &pos, float radius, float mesh_zval, float step_height) { // used for player
 
 	if (pos.z > mesh_zval) { // above the mesh
 		assert(step_height >= 0.0);
@@ -2561,8 +2561,20 @@ void adjust_zval_for_model_coll(point &pos, float mesh_zval, float step_height) 
 		
 		// ray cast from step height above current point down to mesh
 		if (all_models.check_coll_line(p1, p2, cpos, cnorm, color, 1, 1)) { // exact=1 build_bvh_if_needed=1
-			//cout << TXT(pos.z) << TXT(step_height) << TXT(mesh_zval) << TXT(cpos.z) << endl;
 			pos.z = cpos.z; // only update zval
+
+			if (radius > 0.0) { // test 4 points around the center to avoid falling into a small hole
+				float const test_dist(radius/SQRT2);
+
+				for (unsigned dim = 0; dim < 2; ++dim) {
+					for (unsigned dir = 0; dir < 2; ++dir) {
+						point p1b(p1), p2b(p2);
+						p1b[dim] += (dir ? -1.0 : 1.0)*test_dist;
+						p2b[dim] += (dir ? -1.0 : 1.0)*test_dist;
+						if (all_models.check_coll_line(p1b, p2b, cpos, cnorm, color, 1, 1)) {max_eq(pos.z, cpos.z);} // take highest point
+					}
+				}
+			}
 			return;
 		}
 	}
