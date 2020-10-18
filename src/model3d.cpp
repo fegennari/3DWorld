@@ -1205,13 +1205,8 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 
 	colorRGBA avg_color(get_ad_color());
 	int tex_id(get_render_texture());
-	
-	if (tex_id >= 0) {
-		return avg_color.modulate_with(tmgr.get_tex_avg_color(tex_id));
-	}
-	else if (default_tid >= 0) {
-		return avg_color.modulate_with(texture_color(default_tid));
-	}
+	if (tex_id >= 0) {return avg_color.modulate_with(tmgr.get_tex_avg_color(tex_id));}
+	else if (default_tid >= 0) {return avg_color.modulate_with(texture_color(default_tid));}
 	return avg_color;
 }
 
@@ -1500,6 +1495,14 @@ void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const 
 	cout << "polygons: " << num_polys << ", hquads: " << num_horiz_quads << ", pre_merged_cubes: " << num_pre_merged_cubes << ", cubes: " << cubes.size() << endl;
 }
 
+
+colorRGBA model3d::get_avg_color() const {
+	colorRGBA avg_color(BLACK);
+	for (auto m = materials.begin(); m != materials.end(); ++m) {avg_color += m->get_avg_color(tmgr, unbound_mat.tid);} // Note: should be weighted by area?
+	if (!unbound_geom.empty()) {avg_color += unbound_mat.color.modulate_with(texture_color(unbound_mat.tid));}
+	if (avg_color.alpha > 0.0) {avg_color = avg_color/avg_color.alpha; avg_color.alpha = 1.0;} // normalize to alpha of 1.0
+	return avg_color;
+}
 
 unsigned model3d::get_gpu_mem() const {
 	unsigned mem(unbound_geom.get_gpu_mem());

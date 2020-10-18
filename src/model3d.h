@@ -530,6 +530,7 @@ public:
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0, bool apply_transforms=0, unsigned lod_level=0) const;
 	void get_transformed_bcubes(vector<cube_t> &bcubes) const;
 	void get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const;
+	colorRGBA get_avg_color() const;
 	unsigned get_gpu_mem() const;
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);

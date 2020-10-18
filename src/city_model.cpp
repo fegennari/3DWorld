@@ -44,7 +44,10 @@ vector3d city_model_loader_t::get_model_world_space_size(unsigned id) { // Note:
 	if (round_fp(model_file.xy_rot/90.0) & 1) {std::swap(sz.x, sz.y);} // swap x/y for 90 and 270 degree rotations
 	return sz;
 }
-
+colorRGBA city_model_loader_t::get_avg_color(unsigned id) {
+	if (!is_model_valid(id)) return BLACK; // error?
+	return at(id).get_avg_color();
+}
 bool city_model_loader_t::is_model_valid(unsigned id) {
 	assert(id < num_models());
 	ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid

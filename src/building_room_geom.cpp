@@ -1399,7 +1399,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
-	// what about 3D models, is there some equivalent get_model_avg_color()?
+	if (type >= TYPE_TOILET && type < NUM_TYPES) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
 	return color; // Note: probably should always set color so that we can return it here
 }
 
@@ -1445,7 +1445,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		case TYPE_COLLIDER: break; // not drawn
 		default: break;
 		} // end switch
-		if (i->type >= TYPE_TOILET && i->type <= TYPE_LAMP) { // handle drawing of 3D models
+		if (i->type >= TYPE_TOILET && i->type < NUM_TYPES) { // handle drawing of 3D models
 			vector3d dir(zero_vector);
 			dir[i->dim] = (i->dir ? 1.0 : -1.0);
 
@@ -1454,7 +1454,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 				vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
 				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
 			}
-			obj_model_insts.emplace_back((i - objs.begin()), (i->type + OBJ_MODEL_TOILET - TYPE_TOILET), i->flags, i->color, dir);
+			obj_model_insts.emplace_back((i - objs.begin()), i->get_model_id(), i->flags, i->color, dir);
 			//get_material(tid_nm_pair_t()).add_cube_to_verts(*i, WHITE, tex_origin); // for debugging of model bcubes
 		}
 	} // for i

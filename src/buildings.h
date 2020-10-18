@@ -276,6 +276,7 @@ struct room_object_t : public cube_t {
 	int get_picture_tid() const;
 	int get_comp_monitor_tid() const;
 	int get_sheet_tid() const;
+	int get_model_id() const {return (type + OBJ_MODEL_TOILET - TYPE_TOILET);}
 	colorRGBA get_color() const;
 };
 
