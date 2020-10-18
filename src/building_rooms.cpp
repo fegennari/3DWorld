@@ -67,7 +67,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 }
 
 // Note: must be first placed objects; returns the number of total objects added (table + optional chairs)
-unsigned building_t::add_table_and_chairs(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
+unsigned building_t::add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
 	point const &place_pos, colorRGBA const &chair_color, float rand_place_off, float tot_light_amt)
 {
 	float const window_vspacing(get_window_vspace()), room_pad(max(4.0f*get_wall_thickness(), get_min_front_clearance()));
@@ -106,7 +106,7 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 	}
 }
 
-void building_t::add_trashcan_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj) {
+void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj) {
 	unsigned const NUM_COLORS = 6;
 	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
@@ -213,7 +213,7 @@ bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval) con
 }
 
 // Note: must be first placed object
-bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers,
+bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers,
 	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt)
 {
 	cube_t const room_bounds(get_walkable_room_bounds(room));
@@ -276,7 +276,7 @@ bool building_t::add_desk_to_room(rand_gen_t &rgen, room_t const &room, vect_cub
 	return (num_placed > 0);
 }
 
-bool building_t::create_office_cubicles(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) { // assumes no prior placed objects
+bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) { // assumes no prior placed objects
 	if (!room.is_office) return 0; // offices only
 	if (!room.interior && (rgen.rand()%3) == 0) return 0; // 66.7% chance for non-interior rooms
 	cube_t const room_bounds(get_walkable_room_bounds(room));
@@ -381,7 +381,7 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 	return (!overlaps_other_room_obj(c, objs_start) && !is_cube_close_to_doorway(c, room, 0.0, 1));
 }
 
-bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt)) return 0; // it's only a bedroom if there's bed
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
@@ -584,7 +584,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 		place_area, objs_start, front_clearance, pref_orient, pref_centered, color, not_at_window);
 }
 
-bool building_t::add_bathroom_objs(rand_gen_t &rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor) {
+bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor) {
 	// Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
@@ -872,7 +872,7 @@ void building_t::gather_room_placement_blockers(cube_t const &room, unsigned obj
 	}
 }
 
-bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool allow_adj_ext_door) {
+bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool allow_adj_ext_door) {
 	// Note: table and chairs have already been placed
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be kitchens
 	if (!is_house && rgen.rand_bool()) return 0; // some office buildings have kitchens, allow it half the time
@@ -944,7 +944,7 @@ bool building_t::add_kitchen_objs(rand_gen_t &rgen, room_t const &room, float zv
 	return placed_obj;
 }
 
-bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be living rooms
 	float const wall_thickness(get_wall_thickness());
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -986,7 +986,7 @@ bool building_t::add_livingroom_objs(rand_gen_t &rgen, room_t const &room, float
 	return (placed_couch || placed_tv);
 }
 
-bool building_t::add_library_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be libraries
 	unsigned num_added(0);
 
@@ -997,7 +997,7 @@ bool building_t::add_library_objs(rand_gen_t &rgen, room_t const &room, float zv
 	return (num_added > 0);
 }
 
-bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const ceil_zval(zval + window_vspacing - get_floor_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -1044,7 +1044,7 @@ bool building_t::add_storage_objs(rand_gen_t &rgen, room_t const &room, float zv
 	return 1; // it's always a storage room, even if it's empty
 }
 
-void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir) {
+void building_t::place_book_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
 	float const book_sz(0.07*get_window_vspace());
@@ -1062,7 +1062,7 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 	objs.back().obj_id = (uint16_t)objs.size();
 }
 
-void building_t::add_rug_to_room(rand_gen_t &rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+void building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	if (!room_object_t::enable_rugs()) return; // disabled
 	vector3d const room_sz(room.get_size());
 	vector3d center(room.get_cube_center()); // Note: zvals ignored
@@ -1099,7 +1099,7 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	return 1; // success
 }
 
-bool building_t::hang_pictures_in_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!room_object_t::enable_pictures()) return 0; // disabled
 	
 	if (!is_house && !room.is_office) {
@@ -1416,6 +1416,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			} // end light placement
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
+			rgen.rand_mix();
 
 			if (r->no_geom) {
 				if (is_house && r->is_hallway) { // allow pictures and rugs in the hallways of houses
@@ -1496,7 +1497,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (is_house) { // place house-specific items
 				if (!is_bathroom && !is_kitchen && rgen.rand_float() < 0.8) { // place bookcase 80% of the time, but not in bathrooms or kitchens
-					add_bookcase_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
+					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt);
