@@ -1726,6 +1726,11 @@ void model3d::render_material(shader_t &shader, unsigned mat_id, bool is_shadow_
 	else {get_material(mat_id).render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, is_bmap_pass, xlate);}
 }
 
+material_t *model3d::get_material_by_name(string const &name) {
+	int const mat_ix(find_material(name));
+	return ((mat_ix < 0) ? nullptr : &materials[mat_ix]);
+}
+
 void model3d::set_color_for_material(unsigned mat_id, colorRGBA const &color) {
 	if (mat_id == materials.size()) {unbound_mat.color = color;} // unbound geom is material ID materials.size() (one past the end)
 	else {
