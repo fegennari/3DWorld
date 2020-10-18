@@ -150,9 +150,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 		if (c->shape == SHAPE_CYLIN  ) continue; // cylinders (lights) are not cubes
 		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
 		if (c->type  == TYPE_BLOCKER || c->type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
+		if (c->type  == TYPE_WALL_TRIM || c->type == TYPE_BOOK)   continue; // too small to count (optimization)
 		// to be more accurate, we could use the actual cubes of tables and chairs, but this adds a lot of complexity, increases lighting time, and makes little difference
 		cc.emplace_back(*c, c->get_color());
-		if (c->type == TYPE_TABLE) {cc.back().z1() += 0.85*c->dz();} // at least be a bit more accurate for tables by using only the top
+		if (c->type == TYPE_TABLE) {cc.back().z1() += 0.88*c->dz();} // at least be a bit more accurate for tables by using only the top
+		if (c->type == TYPE_DESK ) {cc.back().z1() += 0.85*c->dz();} // at least be a bit more accurate for desks  by using only the top
 	}
 }
 
