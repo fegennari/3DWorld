@@ -489,7 +489,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_lit()) continue; // light not on
-		if (i->type != TYPE_LIGHT && i->type != TYPE_LAMP) continue; // not a light
+		if (i->type != TYPE_LIGHT && i->type != TYPE_LAMP) continue; // not a light or lamp
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
 		//if (is_light_occluded(lpos, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
@@ -560,26 +560,38 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC
 		//if (line_intersect_walls(lpos, camera_bs)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		// update lights_bcube and add light(s)
-		min_eq(lights_bcube.z1(), (lpos.z - light_radius));
-		max_eq(lights_bcube.z2(), (lpos.z + (is_lamp ? 0.2f : 0.1f)*light_radius)); // pointed down - don't extend as far up
+
+		if (is_lamp) { // lamps are generally against a wall and not in a room with stairs and only illuminate that one room
+			min_eq(lights_bcube.z1(), (lpos.z - min(window_vspacing, light_radius)));
+			max_eq(lights_bcube.z2(), (lpos.z + min(window_vspacing, light_radius)));
+		}
+		else {
+			min_eq(lights_bcube.z1(), (lpos.z - light_radius));
+			max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
+		}
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA color;
 
 		if (is_lamp) { // no light refinement, since lamps are not aligned between floors; refinement doesn't help as much with houses anyway
-			color = colorRGBA(1.0, 0.8, 0.6); // soft white
-		}
-		else { // light refinement and cached bcubes are only valid for ceiling lights because they're the same across all floors
-			assert(i->obj_id < light_bcubes.size());
-			cube_t &light_bcube(light_bcubes[i->obj_id]);
-
-			if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
-				light_bcube = clipped_bc;
-				refine_light_bcube(lpos, light_radius, light_bcube);
+			if (i->obj_id == 0) { // this lamp has not yet been assigned a light bcube (ID 0 will never be valid because the bedroom will have a light assigned first)
+				assert(!light_bcubes.empty());
+				i->obj_id = (uint16_t)light_bcubes.size();
+				light_bcubes.push_back(cube_t()); // allocate a new entry
 			}
-			clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
-			clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
+			color = LAMP_COLOR; // soft white
+		}
+		else {
 			color = i->get_color()*1.1; // make it extra bright
 		}
+		assert(i->obj_id < light_bcubes.size());
+		cube_t &light_bcube(light_bcubes[i->obj_id]);
+
+		if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
+			light_bcube = clipped_bc;
+			refine_light_bcube(lpos, light_radius, light_bcube);
+		}
+		clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
+		clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
 		clipped_bc.expand_by_xy(wall_thickness); // expand by wall thickness so that offset exterior doors are properly handled
 		clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		assert(clipped_bc.contains_cube(lpos));
@@ -601,7 +613,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		
 		if (camera_near_building && (is_lamp || lpos.z > camera_bs.z)) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			if (is_lamp) { // add a second shadowed light source pointing up
-				dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, plus_z, bwidth); // points up
+				dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, plus_z, 0.5*bwidth); // points up
 				setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc, dynamic_shadows);
 			}
 			else {

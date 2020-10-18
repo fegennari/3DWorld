@@ -472,7 +472,6 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 		unsigned flags(RO_FLAG_NOCOLL); // no collisions, as an optimization since the player and AI can't get onto the dresser/nightstand anyway
 		if (!room_is_lit && rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // 50% chance of being lit if the room is dark
 		objs.emplace_back(lamp, TYPE_LAMP, room_id, i->dim, i->dir, flags, tot_light_amt, room_obj_shape::SHAPE_CYLIN, colors[rgen.rand()%NUM_COLORS]);
-		objs.back().obj_id = (uint16_t)objs.size(); // may not be needed
 		break; // the above line invalidates our iteration, so we must break
 	} // for i
 	return 1; // success

@@ -1582,7 +1582,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		if ((display_mode & 0x08) && !shadow_only && building.check_obj_occluded(obj, camera_bs, oc, player_in_building, reflection_pass)) continue;
 		//++occlusion_stats.ndraw;
 		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && (i->flags & RO_FLAG_LIT));
-		if (is_emissive) {s.set_color_e(colorRGBA(1.0, 0.8, 0.6)*0.5);}
+		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, i->dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
 		if (is_emissive) {s.set_color_e(BLACK);}
 		obj_drawn = 1;

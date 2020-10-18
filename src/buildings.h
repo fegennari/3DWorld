@@ -16,6 +16,7 @@ float const FLOOR_THICK_VAL        = 0.1; // 10% of floor spacing
 
 unsigned const NUM_BOOK_COLORS = 16;
 colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
+colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 
 class light_source;
 class lmap_manager_t;
