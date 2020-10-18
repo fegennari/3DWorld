@@ -1172,8 +1172,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (need_blend) {enable_blend();}
 		float const min_alpha(min(0.99*alpha, (get_needs_alpha_test() ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
 		shader.add_uniform_float("min_alpha", min_alpha);
-		if (ns > 0.0) {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
-		shader.set_color_e(colorRGBA(ke, alpha));
+		if (ns > 0.0)    {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
+		if (ke != BLACK) {shader.set_color_e(colorRGBA(ke, alpha));}
 		// Note: ka is ignored here because it represents a "fake" lighting model;
 		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material;
 		// however, it might make sense to use ka instead of ke when ke is not specified?
@@ -1181,11 +1181,12 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		geom.render(shader, 0, xlate);
 		geom_tan.render(shader, 0, xlate);
 		shader.clear_color_e();
-		if (ns > 0.0) {shader.clear_specular();}
-		if (need_blend) {disable_blend();}
-		if (set_ref_ix) {shader.add_uniform_float("refract_ix", 1.0);}
+		if (ke != BLACK) {shader.set_color_e(BLACK);}
+		if (ns > 0.0)    {shader.clear_specular();}
+		if (need_blend)  {disable_blend();}
+		if (set_ref_ix)  {shader.add_uniform_float("refract_ix", 1.0);}
 		if (metalness >= 0.0) {shader.add_uniform_float("metalness", 0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
-		if (bmap_disabled) {shader.add_uniform_float("bump_map_mag", 1.0);} // reset back to default
+		if (bmap_disabled)    {shader.add_uniform_float("bump_map_mag", 1.0);} // reset back to default
 	}
 }
 
