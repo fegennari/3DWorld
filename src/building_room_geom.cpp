@@ -484,10 +484,11 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	}
 }
 
+int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "crate2.jpg" : "crate.jpg");}
+
 void building_room_geom_t::add_crate(room_object_t const &c) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	int const tid(get_texture_by_name((c.obj_id & 1) ? "crate2.jpg" : "crate.jpg"));
-	get_material(tid_nm_pair_t(tid, 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
+	get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
 }
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
@@ -1036,9 +1037,10 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	mat.add_cube_to_verts(door,   color, tex_origin);
 }
 
+int get_cubicle_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg");} // select from one of 2 textures
+
 void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
-	int const tid(get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg")); // select from one of 2 textures
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(tid, tscale), 1));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_cubicle_tid(c), tscale), 1));
 	colorRGBA const color(apply_light_color(c));
 	point const tex_origin(c.get_llc());
 	float const dz(c.dz()), wall_thick(0.07*dz), frame_thick(8.0*wall_thick), dir_sign(c.dir ? 1.0 : -1.0);
@@ -1150,11 +1152,13 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	}
 }
 
+int get_counter_tid() {return get_texture_by_name("marble2.jpg");}
+
 void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
 	float const dz(c.dz()), depth(c.get_sz_dim(c.dim)), dir_sign(c.dir ? 1.0 : -1.0);
 	cube_t top(c), cabinet_gap;
 	top.z1() += 0.95*dz;
-	tid_nm_pair_t const marble_tex(get_texture_by_name("marble2.jpg"), 2.5*tscale);
+	tid_nm_pair_t const marble_tex(get_counter_tid(), 2.5*tscale);
 	rgeom_mat_t &top_mat(get_material(marble_tex, 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
 
@@ -1371,6 +1375,7 @@ rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale=1.0) {
 	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale), 1); // hard-coded for common material
 }
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));}
+colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
 
 colorRGBA room_object_t::get_color() const {
 	switch (type) {
@@ -1380,18 +1385,21 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());
 	case TYPE_PICTURE:  return texture_color(get_picture_tid());
-	case TYPE_WBOARD:   return WHITE;
 	case TYPE_BCASE:    return get_textured_wood_color();
 	case TYPE_DESK:     return get_textured_wood_color();
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
-	case TYPE_COUNTER:  return (get_textured_wood_color()*0.75 + WHITE*0.25);
+	case TYPE_COUNTER:  return get_counter_color();
+	case TYPE_KSINK:    return (get_counter_color()*0.9 + GRAY*0.1); // counter, with a bit of gray mixed in from the sink
+	case TYPE_BRSINK:   return texture_color(get_counter_tid()).modulate_with(color);
 	case TYPE_CABINET:  return get_textured_wood_color();
-	case TYPE_PLANT:    return blend_color(GREEN, BROWN, 0.5, 0); // halfway between green and brown, as a guess
+	case TYPE_PLANT:    return (color*0.75 + blend_color(GREEN, BROWN, 0.5, 0)*0.25); // halfway between green and brown, as a guess; mix in 75% of pot color
 	case TYPE_DRESSER:  return get_textured_wood_color();
-	case TYPE_FLOORING: return colorRGBA(0.8, 0.8, 0.8); // account for texture color
-	case TYPE_CRATE:    return texture_color(FENCE_TEX);
+	case TYPE_FLOORING: return texture_color(MARBLE_TEX).modulate_with(color);
+	case TYPE_CRATE:    return texture_color(get_crate_tid(*this));
+	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
+	// what about 3D models, is there some equivalent get_model_avg_color()?
 	return color; // Note: probably should always set color so that we can return it here
 }
 
