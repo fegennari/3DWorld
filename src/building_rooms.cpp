@@ -464,8 +464,10 @@ bool building_t::add_bedroom_objs(rand_gen_t &rgen, room_t const &room, vect_cub
 		lamp.z2() = i->z2() + height;
 		lamp.expand_by_xy(0.5*width); // expand by half width
 		lamp.translate_dim((i->dir ? 1.0 : -1.0)*0.1*width, i->dim); // move slightly toward the front to avoid clipping through the wall
-		colorRGBA const color(WHITE); // TODO - use a custom color
-		objs.emplace_back(lamp, TYPE_LAMP, room_id, i->dim, i->dir, RO_FLAG_NOCOLL, tot_light_amt, room_obj_shape::SHAPE_CYLIN, color);
+		lamp.translate_dim(rgen.rand_uniform(-1.0, 1.0)*0.3f*(i->get_sz_dim(!i->dim) - width), !i->dim); // randomly not centered
+		unsigned const NUM_COLORS = 6;
+		colorRGBA const colors[NUM_COLORS] = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
+		objs.emplace_back(lamp, TYPE_LAMP, room_id, i->dim, i->dir, RO_FLAG_NOCOLL, tot_light_amt, room_obj_shape::SHAPE_CYLIN, colors[rgen.rand()%NUM_COLORS]);
 		break; // the above line invalidates our iteration, so we must break
 	} // for i
 	return 1; // success
