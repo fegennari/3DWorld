@@ -1002,9 +1002,9 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	float const ceil_zval(zval + window_vspacing - get_floor_thickness());
-	cube_t room_bounds(get_walkable_room_bounds(room));
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
+	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_width(0.2*window_vspacing);
+	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const num_crates(4 + (rgen.rand() % 30)); // 4-33
 	vect_cube_t exclude;
@@ -1019,11 +1019,26 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		exclude.back().expand_in_dim( i->dim, 0.6*room.get_sz_dim(i->dim));
 		exclude.back().expand_in_dim(!i->dim, 0.1*i->get_sz_dim(!i->dim));
 	}
+	// add shelves on walls (avoiding the door), and have crates avoid them
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		if (room_bounds.get_sz_dim(dim) < 6.0*shelf_width) continue; // too narrow to add shelves in this dim
+
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			if (rgen.rand_bool()) continue; // only add shelves to 50% of the walls
+			cube_t shelves(room_bounds);
+			shelves.z1() = zval;
+			shelves.z2() = ceil_zval - floor_thickness;
+			crate_bounds.d[dim][dir] = shelves.d[dim][!dir] = shelves.d[dim][dir] + (dir ? -1.0 : 1.0)*shelf_width; // outer edge of shelves, which is also the crate bounds
+			shelves.expand_in_dim(!dim, -(shelf_width + 1.0f*wall_thickness)); // shorten shelves
+			if (has_bcube_int(shelves, exclude)) continue; // too close to a doorway
+			objs.emplace_back(shelves, TYPE_SHELVES, room_id, dim, dir, 0, tot_light_amt);
+		} // for dir
+	} // for dim
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
 		point pos(0.0, 0.0, zval);
 		vector3d sz; // half size relative to window_vspacing
 		for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.06*window_vspacing*(1.0 + ((d == 2) ? 1.2 : 2.0)*rgen.rand_float());} // slightly more variation in XY
-		cube_t place_area(room_bounds);
+		cube_t place_area(crate_bounds);
 		place_area.expand_by_xy(-sz);
 		if (!place_area.is_strictly_normalized()) continue; // too large for this room
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);}
@@ -1034,7 +1049,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		bool bad_placement(0);
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-			assert(i->type == TYPE_CRATE); // only crates in this room
+			if (i->type != TYPE_CRATE) continue; // only handle stacking of crates on other crates
 			if (!i->intersects(crate)) continue;
 			if (i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(i->dz(), 2);} // place this crate on the previous one
 			else {bad_placement = 1; break;}

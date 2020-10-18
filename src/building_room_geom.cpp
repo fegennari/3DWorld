@@ -405,8 +405,8 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
 	rgeom_mat_t &handle_mat(get_material(tid_nm_pair_t(), 0)); // untextured, unshadowed
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
-	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
-	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir)); // should be specular metal
+	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK)); // should be specular metal
+	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
 	cube_t door(middle);
 	door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
 	door.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
@@ -489,6 +489,52 @@ int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id 
 void building_room_geom_t::add_crate(room_object_t const &c) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
+}
+
+void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
+	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
+	tid_nm_pair_t metal_tex;
+	metal_tex.set_specular(0.8, 60.0);
+	get_material(metal_tex, 1, 0, 1); // pre-allocate the material to avoid invalidating the wood_mat reference
+	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)); // skip back fact at wall
+	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	rgeom_mat_t &metal_mat(get_material(metal_tex,  1, 0, 1)); // shadowed, specular metal
+	colorRGBA const shelf_color(apply_light_color(c)), bracket_color(apply_light_color(c, LT_GRAY));
+	float const dz(c.dz()), length(c.get_sz_dim(!c.dim)), width(c.get_sz_dim(c.dim)), thickness(0.02*dz), bracket_thickness(0.8*thickness);
+	unsigned const num_shelves(2 + (c.room_id % 3)); // 2-4
+	unsigned const num_brackets(2 + round_fp(0.5*length/dz));
+	float const z_step(dz/(num_shelves + 1)); // include a space at the bottom
+	float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness);
+	cube_t shelf(c);
+	shelf.z2() = shelf.z1() + thickness; // set shelf thickness
+	shelf.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*bracket_thickness; // leave space behind the shelf for brackets
+
+	for (unsigned s = 0; s < num_shelves; ++s) {
+		// add wooden shelf
+		shelf.translate_dim(z_step, 2); // move up one step
+		wood_mat.add_cube_to_verts(shelf, shelf_color, c.get_llc(), skip_faces, !c.dim); // make wood grain horizontal
+		// add support brackets
+		cube_t bracket(shelf);
+		bracket.z2()  = shelf.z1(); // below the shelf
+		bracket.z1() -= bracket_thickness;
+		bracket.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.1*width; // shorten slightly
+		bracket.d[!c.dim][1] = bracket.d[!c.dim][0] + bracket_width; // set width
+		bracket.translate_dim(b_offset, !c.dim);
+
+		for (unsigned b = 0; b < num_brackets; ++b) {
+			metal_mat.add_cube_to_verts(bracket, bracket_color, zero_vector, (skip_faces | EF_Z2)); // skip back and top faces
+
+			if (s == 0) { // add vertical brackets on first shelf
+				cube_t vbracket(bracket);
+				vbracket.z1() = c.z1();
+				vbracket.z2() = c.z2();
+				vbracket.d[c.dim][ c.dir] = c    .d[c.dim][c.dir]; // against the wall
+				vbracket.d[c.dim][!c.dir] = shelf.d[c.dim][c.dir]; // against the shelf
+				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip back and top/bottom faces
+			}
+			bracket.translate_dim(b_step, !c.dim);
+		} // for b
+	} // for n
 }
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
@@ -1371,8 +1417,8 @@ void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, bool small) {
 	return (dynamic ? mats_dynamic : (small ? mats_small : mats_static)).get_material(tex, inc_shadows);
 }
-rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale=1.0) {
-	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale), 1); // hard-coded for common material
+rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, bool small) {
+	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale), inc_shadows, dynamic, small); // hard-coded for common material
 }
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));}
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
@@ -1397,6 +1443,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_FLOORING: return texture_color(MARBLE_TEX).modulate_with(color);
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this));
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
+	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	if (type >= TYPE_TOILET && type < NUM_TYPES) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
@@ -1479,7 +1526,8 @@ void building_room_geom_t::create_small_static_vbos() {
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
 		case TYPE_RAILING:   add_railing(*i); break;
 		case TYPE_PLANT: add_potted_plant(*i, 0, 1); break; // plant only
-		case TYPE_CRATE: add_crate   (*i); break; // not small but only added to windowless rooms
+		case TYPE_CRATE: add_crate    (*i); break; // not small but only added to windowless rooms
+		case TYPE_SHELVES: add_shelves(*i, tscale); break; // not small but only added to windowless rooms
 		default: break;
 		}
 	} // for i

@@ -215,11 +215,14 @@ struct draw_range_t {
 	vertex_range_t vr[MAX_DRAW_BLOCKS]; // quad verts only for now
 };
 
-enum room_object    {TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
-	                 TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL, TYPE_SIGN,
-	                 TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM, TYPE_RAILING,
-	                 TYPE_CRATE, TYPE_MIRROR, TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR,
-	                 TYPE_URINAL, TYPE_LAMP, NUM_TYPES};
+enum room_object    {
+	TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
+	TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL, TYPE_SIGN,
+	TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM, TYPE_RAILING,
+	TYPE_CRATE, TYPE_MIRROR, TYPE_SHELVES,
+	/* these next ones are all 3D models */
+	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR, TYPE_URINAL, TYPE_LAMP,
+	NUM_TYPES};
 enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED};
 enum room_type      {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY, RTYPE_ENTRY,
 	                 RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
@@ -357,7 +360,7 @@ struct building_room_geom_t {
 	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() +
 		mats_dynamic.count_all_verts() + mats_lights.count_all_verts() + mats_plants.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0);
-	rgeom_mat_t &get_wood_material(float tscale);
+	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, bool small=0);
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
@@ -384,6 +387,7 @@ struct building_room_geom_t {
 	void add_cabinet(room_object_t const &c, float tscale);
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex);
 	void add_crate(room_object_t const &c);
+	void add_shelves(room_object_t const &c, float tscale);
 	void add_mirror(room_object_t const &c);
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
