@@ -488,34 +488,39 @@ int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id 
 
 void building_room_geom_t::add_crate(room_object_t const &c) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face
+	get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
 }
 
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	tid_nm_pair_t metal_tex;
-	metal_tex.set_specular(0.8, 60.0);
-	get_material(metal_tex, 1, 0, 1); // pre-allocate the material to avoid invalidating the wood_mat reference
 	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)); // skip back fact at wall
-	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	rgeom_mat_t &metal_mat(get_material(metal_tex,  1, 0, 1)); // shadowed, specular metal
-	colorRGBA const shelf_color(apply_light_color(c)), bracket_color(apply_light_color(c, LT_GRAY));
 	float const dz(c.dz()), length(c.get_sz_dim(!c.dim)), width(c.get_sz_dim(c.dim)), thickness(0.02*dz), bracket_thickness(0.8*thickness);
-	unsigned const num_shelves(2 + (c.room_id % 3)); // 2-4
-	unsigned const num_brackets(2 + round_fp(0.5*length/dz));
+	unsigned const num_shelves(2 + (c.room_id % 3)), num_brackets(2 + round_fp(0.5*length/dz)); // 2-4 shelves
 	float const z_step(dz/(num_shelves + 1)); // include a space at the bottom
 	float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness);
+
+	// add wooden shelves
 	cube_t shelf(c);
 	shelf.z2() = shelf.z1() + thickness; // set shelf thickness
 	shelf.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*bracket_thickness; // leave space behind the shelf for brackets
+	cube_t shelves[4]; // max number
+	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	colorRGBA const shelf_color(apply_light_color(c));
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
-		// add wooden shelf
 		shelf.translate_dim(z_step, 2); // move up one step
 		wood_mat.add_cube_to_verts(shelf, shelf_color, c.get_llc(), skip_faces, !c.dim); // make wood grain horizontal
-		// add support brackets
-		cube_t bracket(shelf);
-		bracket.z2()  = shelf.z1(); // below the shelf
+		shelves[s] = shelf; // record for later use
+	}
+	// add support brackets
+	tid_nm_pair_t metal_tex;
+	metal_tex.set_specular(0.8, 60.0);
+	rgeom_mat_t &metal_mat(get_material(metal_tex,  1, 0, 1)); // shadowed, specular metal
+	colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
+
+	for (unsigned s = 0; s < num_shelves; ++s) {
+		cube_t bracket(shelves[s]);
+		bracket.z2()  = bracket.z1(); // below the shelf
 		bracket.z1() -= bracket_thickness;
 		bracket.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.1*width; // shorten slightly
 		bracket.d[!c.dim][1] = bracket.d[!c.dim][0] + bracket_width; // set width
@@ -528,13 +533,38 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 				cube_t vbracket(bracket);
 				vbracket.z1() = c.z1();
 				vbracket.z2() = c.z2();
-				vbracket.d[c.dim][ c.dir] = c    .d[c.dim][c.dir]; // against the wall
-				vbracket.d[c.dim][!c.dir] = shelf.d[c.dim][c.dir]; // against the shelf
+				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir]; // against the wall
+				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
 				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip back and top/bottom faces
 			}
 			bracket.translate_dim(b_step, !c.dim);
 		} // for b
-	} // for n
+	} // for s
+	// add crates on the shelves
+	rand_gen_t rgen;
+	rgen.set_state(c.room_id+1, c.obj_id+123);
+
+	for (unsigned s = 0; s < num_shelves; ++s) {
+		cube_t const &S(shelves[s]);
+		unsigned const num(rgen.rand() % 11); // 0-10
+		room_object_t C(c);
+		vector3d sz;
+		point center;
+
+		for (unsigned n = 0; n < num; ++n) {
+			for (unsigned d = 0; d < 2; ++d) {
+				sz[d] = 0.5*width*rgen.rand_uniform(0.5, 0.8); // x,y half width
+				center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
+			}
+			// TODO: check for collisions with other crates
+			C.obj_id = uint16_t(rgen.rand()); // used to select texture
+			C.set_from_point(center);
+			C.z1() = S.z2();
+			C.z2() = C.z1() + (z_step - thickness)*rgen.rand_uniform(0.3, 0.9);
+			C.expand_by_xy(sz);
+			add_crate(C);
+		} // for n
+	} // for s
 }
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {

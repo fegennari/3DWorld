@@ -1032,6 +1032,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			shelves.expand_in_dim(!dim, -(shelf_width + 1.0f*wall_thickness)); // shorten shelves
 			if (has_bcube_int(shelves, exclude)) continue; // too close to a doorway
 			objs.emplace_back(shelves, TYPE_SHELVES, room_id, dim, dir, 0, tot_light_amt);
+			objs.back().obj_id = (uint16_t)objs.size();
 		} // for dir
 	} // for dim
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
