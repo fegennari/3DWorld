@@ -11,6 +11,7 @@
 using namespace std;
 
 
+bool const APPLY_2X_EROSION_DOWNSAMPLE = 0; // faster, but more noise
 unsigned const TEX_EDGE_MODE = 2; // 0 = clamp, 1 = cliff/underwater, 2 = mirror
 
 extern unsigned hmap_filter_width, erosion_iters_tt;
@@ -133,7 +134,35 @@ void heightmap_t::postprocess_height() {
 	if (erosion_iters_tt > 0) {
 		float min_zval(vals.front());
 		for (auto i = vals.begin(); i != vals.end(); ++i) {min_eq(min_zval, *i);}
-		apply_erosion(&vals.front(), width, height, min_zval, erosion_iters_tt);
+
+		if (APPLY_2X_EROSION_DOWNSAMPLE) { // downsample 2x in X and Y
+			int const dsx(width/2), dsy(height/2);
+			vector<float> vals_ds(dsx*dsy);
+
+			for (int y = 0; y < dsy; ++y) {
+				for (int x = 0; x < dsx; ++x) {
+					int const ix(2*(y*width + x));
+					vals_ds[y*dsx + x] = 0.25f*(vals[ix] + vals[ix+1] + vals[ix+width] + vals[ix+width+1]); // average of 4 values
+				}
+			}
+			vector<float> const orig_vals_ds(vals_ds); // deep copy
+			apply_erosion(&vals_ds.front(), dsx, dsy, min_zval, erosion_iters_tt/4); // use 4x fewer iterations as well
+
+			for (int y = 0; y < height; ++y) {
+				for (int x = 0; x < width; ++x) {
+					float avg_delta(0.0);
+					int const x2(x/2), y2(y/2);
+
+					for (int yy = max(y2-1, 0); yy <= min(y2+1, dsy-1); ++yy) { // 3x3 averaging window
+						for (int xx = max(x2-1, 0); xx <= min(x2+1, dsx-1); ++xx) {avg_delta += (vals_ds[yy*dsx + xx] - orig_vals_ds[yy*dsx + xx]);}
+					}
+					vals[y*width + x] += avg_delta/9.0;
+				}
+			}
+		}
+		else {
+			apply_erosion(&vals.front(), width, height, min_zval, erosion_iters_tt);
+		}
 	}
 	gen_cities(&vals.front(), width, height);
 
