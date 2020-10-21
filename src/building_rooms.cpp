@@ -1484,7 +1484,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_kitchen) {r->assign_to(RTYPE_KITCHEN, f); added_kitchen_mask |= floor_mask;}
 				}
 			}
-			if (!added_obj && r->is_office && r->interior && f == 0 && rgen.rand_bool()) {
+			if (!added_obj && r->is_office && r->interior && f == 0 /*&& r->z1() == bcube.z1()*/ && rgen.rand_bool()) {
 				// if we haven't added any objects yet, and this room is an interior office on the first floor, make it a storage room 50% of the time
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}

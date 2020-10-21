@@ -543,26 +543,29 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// add crates on the shelves
 	rand_gen_t rgen;
 	rgen.set_state(c.room_id+1, c.obj_id+123);
+	static vect_cube_t cubes;
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
-		unsigned const num(rgen.rand() % 11); // 0-10
+		unsigned const num(rgen.rand() % 13); // 0-12
 		room_object_t C(c);
 		vector3d sz;
 		point center;
+		cubes.clear();
 
 		for (unsigned n = 0; n < num; ++n) {
 			for (unsigned d = 0; d < 2; ++d) {
-				sz[d] = 0.5*width*rgen.rand_uniform(0.5, 0.8); // x,y half width
+				sz[d] = 0.5*width*rgen.rand_uniform(0.45, 0.8); // x,y half width
 				center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
 			}
-			// TODO: check for collisions with other crates
 			C.obj_id = uint16_t(rgen.rand()); // used to select texture
 			C.set_from_point(center);
 			C.z1() = S.z2();
-			C.z2() = C.z1() + (z_step - thickness)*rgen.rand_uniform(0.3, 0.9);
+			C.z2() = C.z1() + (z_step - thickness)*rgen.rand_uniform(0.4, 0.95);
 			C.expand_by_xy(sz);
+			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			add_crate(C);
+			cubes.push_back(C);
 		} // for n
 	} // for s
 }
