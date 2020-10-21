@@ -669,11 +669,33 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	};
 
+	struct tree_planter_t {
+		point pos;
+		float height, radius;
+	public:
+		tree_planter_t(point const &pos_, float height_, float radius_) : pos(pos_), height(height_), radius(radius_) {}
+
+		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
+			//if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
+		}
+		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
+
+		void draw(draw_state_t &dstate, quad_batch_draw &qbd, bool shadow_only) const {
+			return; // TODO: enable when this is working
+			//if (!dstate.check_cube_visible(bcube, 0.16, shadow_only)) return; // dist_scale=0.16
+			if (!dstate.check_sphere_visible(pos, radius)) return;
+			dstate.ensure_shader_active(); // needed for use_smap=0 case
+			dstate.begin_tile(pos, 1);
+			qbd.draw_and_clear(); // draw with current smap
+		}
+	};
+
 	class city_obj_placer_t {
 	public: // road network needs access to parking lots for drawing
 		vector<parking_lot_t> parking_lots;
 	private:
 		vector<bench_t> benches;
+		vector<tree_planter_t> planters;
 		vector<cube_with_ix_t> parking_lot_groups, bench_groups; // index is last object in group
 		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
@@ -808,13 +830,14 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for t
 			return 0;
 		}
-		static void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders) {
+		static void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> &tree_pos) {
 			tree_placer.add(pos, 0, ttype); // use same tree type
 			cube_t bcube; bcube.set_from_sphere(pos, 0.1*radius); // use 10% of the placement radius for collision
 			bcube.z2() += radius; // increase cube height
 			colliders.push_back(bcube);
+			tree_pos.push_back(pos);
 		}
-		static void place_trees_in_plot(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
+		static void place_trees_in_plot(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen) {
 			if (city_params.max_trees_per_plot == 0) return;
 			float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
 			float const spacing(max(radius, get_min_obj_spacing())), radius_exp(2.0*spacing);
@@ -825,7 +848,7 @@ class city_road_gen_t : public road_gen_base_t {
 				point pos;
 				if (!try_place_obj(plot, blockers, rgen, spacing, radius, 10, pos)) continue; // 10 tries per tree
 				int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
-				place_tree(pos, radius, ttype, colliders); // size is randomly selected by the tree generator using default values
+				place_tree(pos, radius, ttype, colliders, tree_pos); // size is randomly selected by the tree generator using default values
 				// now that we're here, try to place more trees at this same distance from the road in a row
 				bool const dim(min((pos.x - plot.x1()), (plot.x2() - pos.x)) < min((pos.y - plot.y1()), (plot.y2() - pos.y)));
 				bool const dir((pos[dim] - plot.d[dim][0]) < (plot.d[dim][1] - pos[dim]));
@@ -835,7 +858,7 @@ class city_road_gen_t : public road_gen_base_t {
 					pos[dim] += step;
 					if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
 					if (!check_pt_and_place_blocker(pos, blockers, spacing, spacing)) break; // placement failed
-					place_tree(pos, radius, ttype, colliders); // use same tree type
+					place_tree(pos, radius, ttype, colliders, tree_pos); // use same tree type
 				} // for n
 			} // for n
 		}
@@ -845,13 +868,14 @@ class city_road_gen_t : public road_gen_base_t {
 			else {groups.back().union_with_cube(bcube);}
 			groups.back().ix = objs.size();
 		}
-		void place_detail_objects(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
+		void place_detail_objects(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile) {
+			float const car_length(city_params.get_nom_car_size().x);
 			bench_t bench;
-			bench.radius = 0.3*city_params.get_nom_car_size().x;
-			float const spacing(max(bench.radius, get_min_obj_spacing()));
+			bench.radius = 0.3*car_length;
+			float const bench_spacing(max(bench.radius, get_min_obj_spacing()));
 
 			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
-				if (!try_place_obj(plot, blockers, rgen, spacing, 0.0, 1, bench.pos)) continue; // 1 try
+				if (!try_place_obj(plot, blockers, rgen, bench_spacing, 0.0, 1, bench.pos)) continue; // 1 try
 				float dmin(0.0);
 
 				for (unsigned dim = 0; dim < 2; ++dim) {
@@ -864,6 +888,8 @@ class city_road_gen_t : public road_gen_base_t {
 				add_obj_to_group(bench, bench.bcube, benches, bench_groups, is_new_tile);
 				colliders.push_back(bench.bcube);
 			} // for n
+			float const planter_height(0.05*car_length), planter_radius(0.25*car_length);
+			for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {planters.emplace_back(*i, planter_height, planter_radius);}
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) {
 			if (objs.empty()) return;
@@ -877,7 +903,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	public:
 		city_obj_placer_t() : num_spaces(0), filled_spaces(0) {}
-		void clear() {parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); bench_groups.clear(); num_spaces = filled_spaces = 0;}
+		void clear() {parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); bench_groups.clear(); planters.clear(); num_spaces = filled_spaces = 0;}
 
 		struct cube_by_x1 {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
@@ -886,6 +912,7 @@ class city_road_gen_t : public road_gen_base_t {
 			// Note: fills in plots.has_parking
 			//timer_t timer("Gen Parking Lots and Place Objects");
 			vect_cube_t bcubes; // reused across calls
+			vector<point> tree_pos;
 			rand_gen_t rgen, detail_rgen;
 			parking_lots.clear();
 			rgen.set_state(city_id, 123);
@@ -904,8 +931,8 @@ class city_road_gen_t : public road_gen_base_t {
 				assert(plot_id < plot_colliders.size());
 				vect_cube_t &colliders(plot_colliders[plot_id]);
 				if (add_parking_lots) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, (i - plots.begin()), bcubes, colliders, rgen, is_new_tile);}
-				place_trees_in_plot (*i, bcubes, colliders, detail_rgen);
-				place_detail_objects(*i, bcubes, colliders, detail_rgen, is_new_tile);
+				place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
+				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile);
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
 				prev_tile_id = tile_id;
 			} // for i
@@ -914,7 +941,8 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
-			draw_objects(benches, dstate, shadow_only);
+			draw_objects(benches,  dstate, shadow_only);
+			draw_objects(planters, dstate, shadow_only);
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
 			vector3d const xlate(get_camera_coord_space_xlate());
@@ -922,9 +950,10 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = benches.begin(); i != benches.end(); ++i) { // Note: could use bench_groups
 				if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 			}
+			// Note: no coll with tree_planters because the tree coll should take care of it
 			return 0;
 		}
-		bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: nothing to do for parking lots
+		bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: nothing to do for parking lots or tree_planters
 			bool ret(0);
 			for (auto i = benches.begin(); i != benches.end(); ++i) {ret |= check_line_clip_update_t(p1, p2, t, i->bcube);} // check bounding cube
 			return ret;
@@ -957,6 +986,7 @@ class city_road_gen_t : public road_gen_base_t {
 					if (benches[b].bcube.contains_pt_xy(pos)) {color = texture_color(FENCE_TEX); return 1;}
 				}
 			}
+			// TODO: handle trees/tree_planters?
 			return 0;
 		}
 	}; // city_obj_placer_t
