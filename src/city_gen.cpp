@@ -724,13 +724,10 @@ class city_road_gen_t : public road_gen_base_t {
 				assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 				assert(park.dx() > 0.0 && park.dy() > 0.0);
 				car.cur_seg = (unsigned short)parking_lots.size(); // store parking lot index in cur_seg
-				parking_lots.push_back(park);
-				//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
+				add_obj_to_group(park, park, parking_lots, parking_lot_groups, is_new_tile);
 				bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
 				//colliders.push_back(park); // added per-filled space below
-				if (parking_lot_groups.empty() || is_new_tile) {parking_lot_groups.push_back(cube_with_ix_t(park));}
-				else {parking_lot_groups.back().union_with_cube(park);}
-				parking_lot_groups.back().ix = parking_lots.size();
+				//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
 				unsigned const nspaces(park.row_sz*park.num_rows);
 				num_spaces += nspaces;
 
@@ -842,6 +839,12 @@ class city_road_gen_t : public road_gen_base_t {
 				} // for n
 			} // for n
 		}
+		template<typename T> void add_obj_to_group(T const &obj, cube_t const &bcube, vector<T> &objs, vector<cube_with_ix_t> &groups, bool is_new_tile) {
+			objs.push_back(obj);
+			if (groups.empty() || is_new_tile) {groups.push_back(cube_with_ix_t(bcube));}
+			else {groups.back().union_with_cube(bcube);}
+			groups.back().ix = objs.size();
+		}
 		void place_detail_objects(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
 			bench_t bench;
 			bench.radius = 0.3*city_params.get_nom_car_size().x;
@@ -858,11 +861,8 @@ class city_road_gen_t : public road_gen_base_t {
 					}
 				}
 				bench.calc_bcube();
-				benches.push_back(bench);
+				add_obj_to_group(bench, bench.bcube, benches, bench_groups, is_new_tile);
 				colliders.push_back(bench.bcube);
-				if (bench_groups.empty() || is_new_tile) {bench_groups.push_back(cube_with_ix_t(bench.bcube));}
-				else {bench_groups.back().union_with_cube(bench.bcube);}
-				bench_groups.back().ix = benches.size();
 			} // for n
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) {
