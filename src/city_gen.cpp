@@ -669,23 +669,31 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	};
 
-	struct tree_planter_t {
+	struct tree_planter_t : public cube_t {
 		point pos;
-		float height, radius;
-	public:
-		tree_planter_t(point const &pos_, float height_, float radius_) : pos(pos_), height(height_), radius(radius_) {}
+		float radius;
 
+		tree_planter_t(point const &pos_, float radius_, float height) : pos(pos_), radius(radius_) {
+			set_from_point(pos);
+			expand_by_xy(radius);
+			z2() += height;
+		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
-			//if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
+			if (!shadow_only) {select_texture(DIRT_TEX);}
 		}
 		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, bool shadow_only) const {
-			return; // TODO: enable when this is working
-			//if (!dstate.check_cube_visible(bcube, 0.16, shadow_only)) return; // dist_scale=0.16
-			if (!dstate.check_sphere_visible(pos, radius)) return;
+			// TODO: draw by tile/group
+			if (!(display_mode & 0x10)) return; // FIXME
+			if (!dstate.check_cube_visible(*this, 0.1, shadow_only)) return; // dist_scale=0.1
 			dstate.ensure_shader_active(); // needed for use_smap=0 case
-			dstate.begin_tile(pos, 1);
+			dstate.begin_tile(get_cube_center(), 1);
+			// TODO: stone outer cube with dirt inner quad
+			color_wrapper const cw(WHITE);
+			dstate.draw_cube(qbd, *this, cw, 1);
+			//point const pts[4] = {point(x1(), y1(), z2()), point(x2(), y1(), z2()), point(x2(), y2(), z2()), point(x1(), y2(), z2())};
+			//qbd.add_quad_pts(pts, WHITE, plus_z);
 			qbd.draw_and_clear(); // draw with current smap
 		}
 	};
@@ -696,7 +704,7 @@ class city_road_gen_t : public road_gen_base_t {
 	private:
 		vector<bench_t> benches;
 		vector<tree_planter_t> planters;
-		vector<cube_with_ix_t> parking_lot_groups, bench_groups; // index is last object in group
+		vector<cube_with_ix_t> parking_lot_groups, bench_groups, planter_groups; // index is last object in group
 		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
 
@@ -889,7 +897,11 @@ class city_road_gen_t : public road_gen_base_t {
 				colliders.push_back(bench.bcube);
 			} // for n
 			float const planter_height(0.05*car_length), planter_radius(0.25*car_length);
-			for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {planters.emplace_back(*i, planter_height, planter_radius);}
+
+			for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {
+				tree_planter_t const planter(*i, planter_radius, planter_height);
+				add_obj_to_group(planter, planter, planters, planter_groups, is_new_tile);
+			}
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) {
 			if (objs.empty()) return;
@@ -903,8 +915,11 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	public:
 		city_obj_placer_t() : num_spaces(0), filled_spaces(0) {}
-		void clear() {parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); bench_groups.clear(); planters.clear(); num_spaces = filled_spaces = 0;}
-
+		
+		void clear() {
+			parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); planters.clear(); bench_groups.clear(); planter_groups.clear();
+			num_spaces = filled_spaces = 0;
+		}
 		struct cube_by_x1 {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
 		};
@@ -941,8 +956,8 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
-			draw_objects(benches,  dstate, shadow_only);
-			draw_objects(planters, dstate, shadow_only);
+			draw_objects(benches, dstate, shadow_only);
+			if (!shadow_only) {draw_objects(planters, dstate, shadow_only);} // low profile, not drawn in shadow pass
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
 			vector3d const xlate(get_camera_coord_space_xlate());
@@ -986,7 +1001,7 @@ class city_road_gen_t : public road_gen_base_t {
 					if (benches[b].bcube.contains_pt_xy(pos)) {color = texture_color(FENCE_TEX); return 1;}
 				}
 			}
-			// TODO: handle trees/tree_planters?
+			// TODO: handle trees/tree_planters/planter_groups?
 			return 0;
 		}
 	}; // city_obj_placer_t
