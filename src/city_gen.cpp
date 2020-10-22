@@ -941,6 +941,7 @@ class city_road_gen_t : public road_gen_base_t {
 				uint64_t const tile_id(road_network_t::get_tile_id_for_cube(*i));
 				bool const is_new_tile(tile_id != prev_tile_id);
 				bcubes.clear();
+				tree_pos.clear();
 				get_building_bcubes(*i, bcubes);
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
