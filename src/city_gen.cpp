@@ -610,10 +610,8 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 
-		void draw(draw_state_t &dstate, quad_batch_draw &qbd, bool shadow_only) const {
-			if (!dstate.check_cube_visible(bcube, 0.16, shadow_only)) return; // dist_scale=0.16
-			dstate.ensure_shader_active(); // needed for use_smap=0 case
-			dstate.begin_tile(pos, 1);
+		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+			if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 
 			cube_t cubes[] = { // Note: taken from mapx/bench.txt
 				cube_t(-0.4, 0.0,  -5.0,   5.0,   1.6, 5.0), // back (straight)
@@ -662,7 +660,6 @@ class city_road_gen_t : public road_gen_base_t {
 				point const s[4] = {f[i], b[i], b[j], f[j]};
 				qbd.add_quad_pts(s, WHITE, get_poly_norm(s, 1));
 			}
-			qbd.draw_and_clear(); // draw with current smap
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const {
 			return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 1, 0, cnorm);
@@ -683,18 +680,11 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 
-		void draw(draw_state_t &dstate, quad_batch_draw &qbd, bool shadow_only) const {
-			// TODO: draw by tile/group
-			if (!(display_mode & 0x10)) return; // FIXME
-			if (!dstate.check_cube_visible(*this, 0.1, shadow_only)) return; // dist_scale=0.1
-			dstate.ensure_shader_active(); // needed for use_smap=0 case
-			dstate.begin_tile(get_cube_center(), 1);
-			// TODO: stone outer cube with dirt inner quad
+		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+			if (!dstate.check_cube_visible(*this, dist_scale, shadow_only)) return;
 			color_wrapper const cw(WHITE);
 			dstate.draw_cube(qbd, *this, cw, 1);
-			//point const pts[4] = {point(x1(), y1(), z2()), point(x2(), y1(), z2()), point(x2(), y2(), z2()), point(x1(), y2(), z2())};
-			//qbd.add_quad_pts(pts, WHITE, plus_z);
-			qbd.draw_and_clear(); // draw with current smap
+			// TODO: stone outer cube with dirt inner quad
 		}
 	};
 
@@ -903,13 +893,24 @@ class city_road_gen_t : public road_gen_base_t {
 				add_obj_to_group(planter, planter, planters, planter_groups, is_new_tile);
 			}
 		}
-		template<typename T> void draw_objects(vector<T> const &objs, draw_state_t &dstate, bool shadow_only) {
+		template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups, draw_state_t &dstate, float dist_scale, bool shadow_only) {
 			if (objs.empty()) return;
 			T::pre_draw(dstate, shadow_only);
+			unsigned start_ix(0);
 
-			for (auto i = objs.begin(); i != objs.end(); ++i) {
-				if (dstate.check_sphere_visible(i->pos, i->radius)) {i->draw(dstate, qbd, shadow_only);}
-			}
+			for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
+				if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling gor group
+					
+				for (unsigned i = start_ix; i < g->ix; ++i) {
+					T const &obj(objs[i]);
+					if (dstate.check_sphere_visible(obj.pos, obj.radius)) {obj.draw(dstate, qbd, dist_scale, shadow_only);}
+				}
+				if (!qbd.empty()) { // we have something to draw
+					dstate.ensure_shader_active(); // needed for use_smap=0 case
+					dstate.begin_tile(g->get_cube_center(), 1);
+					qbd.draw_and_clear(); // draw this group with current smap
+				}
+			} // for g
 			qbd.draw_and_clear();
 			T::post_draw(dstate, shadow_only);
 		}
@@ -957,8 +958,8 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
-			draw_objects(benches, dstate, shadow_only);
-			if (!shadow_only) {draw_objects(planters, dstate, shadow_only);} // low profile, not drawn in shadow pass
+			draw_objects(benches, bench_groups, dstate, 0.16, shadow_only); // dist_scale=0.16
+			if (!shadow_only) {draw_objects(planters, planter_groups, dstate, 0.1, shadow_only);} // low profile, not drawn in shadow pass; dist_scale=0.1
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
 			vector3d const xlate(get_camera_coord_space_xlate());
