@@ -355,13 +355,14 @@ struct draw_state_t {
 	shader_t s;
 	vector3d xlate;
 	bool use_building_lights;
+	unsigned pass_ix;
 protected:
 	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
 	string label_str;
 	point label_pos;
 public:
-	draw_state_t() : use_building_lights(0), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
+	draw_state_t() : use_building_lights(0), pass_ix(0), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
  	virtual ~draw_state_t() {}
 	void set_enable_normal_map(bool val) {use_bmap = val;}
 	virtual void draw_unshadowed() {}
@@ -377,8 +378,9 @@ public:
 	static void set_cube_pts(cube_t const &c, float z1, float z2, bool d, bool D, point p[8]) {set_cube_pts(c, z1, z1, z2, z2, d, D, p);}
 	static void set_cube_pts(cube_t const &c, bool d, bool D, point p[8]) {set_cube_pts(c, c.z1(), c.z2(), d, D, p);}
 	static void rotate_pts(point const &center, float sine_val, float cos_val, int d, int e, point p[8]);
-	void draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom, bool invert_normals=0, float tscale=0.0) const;
-	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale=0.0) const;
+	void draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom,
+		bool invert_normals=0, float tscale=0.0, unsigned skip_dims=0) const;
+	void draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale=0.0, unsigned skip_dims=0) const;
 	bool add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius);
 	void set_label_text(string const &str, point const &pos) {label_str = str; label_pos = pos;}
 	void show_label_text();

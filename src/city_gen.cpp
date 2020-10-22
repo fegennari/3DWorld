@@ -146,7 +146,9 @@ bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale, bool s
 		v += center; // translate back
 	}
 }
-void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8], bool skip_bottom, bool invert_normals, float tscale) const {
+void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, point const &center, point const p[8],
+	bool skip_bottom, bool invert_normals, float tscale, unsigned skip_dims) const
+{
 	vector3d const cview_dir((camera_pdu.pos - xlate) - center);
 	float const sign(invert_normals ? -1.0 : 1.0);
 	vector3d const top_n  (cross_product((p[2] - p[1]), (p[0] - p[1]))*sign); // Note: normalization not needed
@@ -159,17 +161,23 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, poin
 		tr_front = tex_range_t(0.0, 0.0, tscale*(p[0] - p[1]).mag(), tscale*(p[5] - p[1]).mag());
 		tr_right = tex_range_t(0.0, 0.0, tscale*(p[1] - p[2]).mag(), tscale*(p[6] - p[2]).mag());
 	}
-	if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, cw,  top_n, tr_top);} // top
-	else if (!skip_bottom)                 {qbd.add_quad_pts(p+0, cw, -top_n, tr_top);} // bottom - not always drawn
-	if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw,  front_n, tr_front);} // front
-	else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n, tr_front);} // back
-	if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n, tr_right);} // right
-	else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // left
+	if (!(skip_dims & 4)) { // Z
+		if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, cw,  top_n, tr_top);} // top
+		else if (!skip_bottom)                 {qbd.add_quad_pts(p+0, cw, -top_n, tr_top);} // bottom - not always drawn
+	}
+	if (!(skip_dims & 1)) { // X
+		if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw,  front_n, tr_front);} // front
+		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n, tr_front);} // back
+	}
+	if (!(skip_dims & 2)) { // Y
+		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n, tr_right);} // right
+		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // left
+	}
 }
-void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale) const {
+void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale, unsigned skip_dims) const {
 	point pts[8];
 	set_cube_pts(c, 0, 0, pts);
-	draw_cube(qbd, cw, c.get_cube_center(), pts, skip_bottom, 0, tscale);
+	draw_cube(qbd, cw, c.get_cube_center(), pts, skip_bottom, 0, tscale, skip_dims);
 }
 bool draw_state_t::add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
 	point pos(xlate + flare_pos);
@@ -676,15 +684,33 @@ class city_road_gen_t : public road_gen_base_t {
 			z2() += height;
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
-			if (!shadow_only) {select_texture(DIRT_TEX);}
+			if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? DIRT_TEX : ROCK_TEX);}
 		}
 		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 			if (!dstate.check_cube_visible(*this, dist_scale, shadow_only)) return;
 			color_wrapper const cw(WHITE);
-			dstate.draw_cube(qbd, *this, cw, 1);
-			// TODO: stone outer cube with dirt inner quad
+			cube_t dirt(*this);
+			dirt.expand_by_xy(-0.1*dirt.get_size()); // shrink 10% on all XY sides
+
+			if (dstate.pass_ix == 0) { // draw dirt
+				dirt.z2() -= 0.25*dz(); // move down 25%
+				dstate.draw_cube(qbd, dirt, cw, 1, 0.0, 3); // top only (skip X, Y, and bottom)
+			}
+			else { // draw stone
+				cube_t walls[4] = {*this, *this, *this, *this}; // -X, +X, -Y, +Y
+				walls[0].x2() = walls[2].x1() = walls[3].x1() = dirt.x1();
+				walls[1].x1() = walls[2].x2() = walls[3].x2() = dirt.x2();
+				walls[2].y2() = dirt.y1();
+				walls[3].y1() = dirt.y2();
+				float const tscale(40.0);
+			
+				for (unsigned d = 0; d < 2; ++d) {
+					dstate.draw_cube(qbd, walls[d  ], cw, 1, tscale, 0); // X
+					dstate.draw_cube(qbd, walls[d+2], cw, 1, tscale, 1); // Y, skip X dims
+				}
+			}
 		}
 	};
 
@@ -959,7 +985,13 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 			draw_objects(benches, bench_groups, dstate, 0.16, shadow_only); // dist_scale=0.16
-			if (!shadow_only) {draw_objects(planters, planter_groups, dstate, 0.1, shadow_only);} // low profile, not drawn in shadow pass; dist_scale=0.1
+			
+			if (!shadow_only) { // low profile, not drawn in shadow pass
+				draw_objects(planters, planter_groups, dstate, 0.1, shadow_only); // dirt pass, dist_scale=0.1
+				dstate.pass_ix = 1;
+				draw_objects(planters, planter_groups, dstate, 0.1, shadow_only); // stone pass, dist_scale=0.1
+				dstate.pass_ix = 0;
+			}
 		}
 		bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
 			vector3d const xlate(get_camera_coord_space_xlate());
