@@ -3658,6 +3658,7 @@ bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
 
 void change_inf_terrain_fire_mode(int val) {
 
+	if (have_buildings()) return; // no terrain editing when there are buildings as this doesn't work properly
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_FIRE_MODES + val) % NUM_FIRE_MODES;
 	
 	if (!using_tiled_terrain_hmap_tex() && inf_terrain_fire_mode >= FM_INC_MESH && inf_terrain_fire_mode <= FM_FLATTEN) {
