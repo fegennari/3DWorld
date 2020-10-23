@@ -684,13 +684,13 @@ class city_road_gen_t : public road_gen_base_t {
 			z2() += height;
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
-			if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? DIRT_TEX : ROCK_TEX);}
+			if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? (int)DIRT_TEX : get_texture_by_name("roads/sidewalk.jpg"));}
 		}
 		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 			if (!dstate.check_cube_visible(*this, dist_scale, shadow_only)) return;
-			color_wrapper const cw(WHITE);
+			color_wrapper const cw(LT_GRAY);
 			cube_t dirt(*this);
 			dirt.expand_by_xy(-0.1*dirt.get_size()); // shrink 10% on all XY sides
 
