@@ -17,7 +17,7 @@ extern city_params_t city_params;
 void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
 	timer_t timer("Load Road Textures");
-	string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", "parking_lot.png", "rail_tracks.jpg"};
+	string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg"};
 	float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0};
 	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
 	sl_tid = get_texture_by_name("roads/traffic_light.png");
@@ -736,6 +736,8 @@ bool tunnel_t::line_intersect(point const &p1, point const &p2, float &t) const 
 road_mat_mgr_t road_mat_mgr;
 
 void road_draw_state_t::draw_road_region_int(quad_batch_draw &cache, unsigned type_ix) {
+	if (cache.verts.empty()) return; // nothing to draw
+
 	if (emit_now) { // draw shadow blocks directly
 		road_mat_mgr.set_texture(type_ix);
 		cache.draw();

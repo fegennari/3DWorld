@@ -28,6 +28,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "num_conn_tries") {
 		if (!read_uint(fp, num_conn_tries) || num_conn_tries == 0) {return read_error(str);}
 	}
+	else if (str == "plots_to_parks_ratio") {
+		if (!read_uint(fp, park_rate)) {return read_error(str);}
+	}
 	else if (str == "city_size_min") {
 		if (!read_uint(fp, city_size_min)) {return read_error(str);}
 		if (city_size_max == 0) {city_size_max = city_size_min;}

@@ -17,13 +17,13 @@ using std::string;
 unsigned const CONN_CITY_IX((1<<16)-1); // uint16_t max
 unsigned const NO_CITY_IX(CONN_CITY_IX-1); // used for cars not in any city (in house garages)
 
-enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  NUM_RD_TIDS};
-enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, TYPE_BUILDING, NUM_RD_TYPES};
+enum {TID_SIDEWLAK=0, TID_STRAIGHT, TID_BEND_90, TID_3WAY,   TID_4WAY,   TID_PARK_LOT,  TID_TRACKS,  TID_PARK,  /*none for bldg*/ NUM_RD_TIDS};
+enum {TYPE_PLOT   =0, TYPE_RSEG,    TYPE_ISEC2,  TYPE_ISEC3, TYPE_ISEC4, TYPE_PARK_LOT, TYPE_TRACKS, TYPE_PARK, TYPE_BUILDING,    NUM_RD_TYPES};
 enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
-enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING};
+enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING, INT_PARK};
 enum {RTYPE_ROAD=0, RTYPE_TRACKS};
 unsigned const CONN_TYPE_NONE = 0;
-colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE}; // parking lots are darker than roads
+colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, LT_GRAY, WHITE}; // all white except for parks
 
 int       const FORCE_MODEL_ID = -1; // -1 disables
 unsigned  const NUM_CAR_COLORS = 10;
@@ -55,7 +55,7 @@ inline float signed_rand_hash(float to_hash) {return 0.5*(rand_hash(to_hash) - 1
 
 struct city_params_t {
 
-	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width, num_rr_tracks;
+	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width, num_rr_tracks, park_rate;
 	float road_width, road_spacing, conn_road_seg_len, max_road_slope;
 	unsigned make_4_way_ints; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 4=only 4-way (no straight roads)
 	// cars
@@ -82,7 +82,7 @@ struct city_params_t {
 	city_model_t building_models[NUM_OBJ_MODELS];
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0),
-		num_rr_tracks(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0), car_speed(0.0),
+		num_rr_tracks(0), park_rate(0), road_width(0.0), road_spacing(0.0), conn_road_seg_len(1000.0), max_road_slope(1.0), make_4_way_ints(0), num_cars(0), car_speed(0.0),
 		traffic_balance_val(0.5), new_city_prob(1.0), max_car_scale(1.0), enable_car_path_finding(0), convert_model_files(0), min_park_spaces(12), min_park_rows(1),
 		min_park_density(0.0), max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0), smap_size(0), max_trees_per_plot(0),
 		tree_spacing(1.0), max_benches_per_plot(0), num_peds(0), num_building_peds(0), ped_speed(0.0), ped_respawn_at_dest(0) {}
@@ -260,8 +260,8 @@ struct road_seg_t : public road_t {
 
 struct road_plot_t : public cube_t {
 	uint8_t xpos, ypos; // position within the city grid
-	bool has_parking;
-	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_) : cube_t(c), xpos(xpos_), ypos(ypos_), has_parking(0) {}
+	bool has_parking, is_park;
+	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_) : cube_t(c), xpos(xpos_), ypos(ypos_), has_parking(0), is_park(0) {}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 };
 
@@ -509,10 +509,12 @@ public:
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only);
 	virtual void draw_unshadowed();
 	virtual void post_draw();
-	template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color) {add_flat_road_quad(r, qbd, color, ar);} // generic flat road case (plot/park)
-	void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar);} // road segment
-	void add_road_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
-
+	template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix) {add_flat_road_quad(r, qbd, color, ar);} // generic flat road case
+	void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix) {r.add_road_quad(qbd, color, ar);} // road segment
+	void add_road_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
+	void add_road_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix) { // plots and parks
+		if ((type_ix == TYPE_PARK) == r.is_park) {add_flat_road_quad(r, qbd, color, ar);}
+	}
 	template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
 		if (rp.s == rp.e) return; // empty
 		assert(rp.s <= rp.e);
@@ -521,7 +523,7 @@ public:
 		colorRGBA const color(road_colors[type_ix]);
 
 		if (cache.empty()) { // generate and cache quads
-			for (unsigned i = rp.s; i < rp.e; ++i) {add_road_quad(v[i], cache, color);}
+			for (unsigned i = rp.s; i < rp.e; ++i) {add_road_quad(v[i], cache, color, type_ix);}
 		}
 		draw_road_region_int(cache, type_ix);
 	}
