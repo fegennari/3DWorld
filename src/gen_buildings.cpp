@@ -105,7 +105,7 @@ void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
 
 
 class building_texture_mgr_t {
-	int window_tid, hdoor_tid, bdoor_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2, bath_wind_tid;
+	int window_tid, hdoor_tid, bdoor_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2, bath_wind_tid, helipad_tex;
 
 	int ensure_tid(int &tid, const char *name) {
 		if (tid < 0) {tid = get_texture_by_name(name);}
@@ -113,7 +113,7 @@ class building_texture_mgr_t {
 		return tid;
 	}
 public:
-	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), gdoor_tid(-1), ac_unit_tid1(-1), ac_unit_tid2(-1), bath_wind_tid(-1) {}
+	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), gdoor_tid(-1), ac_unit_tid1(-1), ac_unit_tid2(-1), bath_wind_tid(-1), helipad_tex(-1) {}
 	int get_window_tid   () const {return window_tid;}
 	int get_hdoor_tid    () {return ensure_tid(hdoor_tid,     "textures/white_door.jpg");} // house door
 	int get_bdoor_tid    () {return ensure_tid(bdoor_tid,     "textures/buildings/building_door.jpg");} // building door
@@ -121,6 +121,7 @@ public:
 	int get_ac_unit_tid1 () {return ensure_tid(ac_unit_tid1,  "textures/buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
 	int get_ac_unit_tid2 () {return ensure_tid(ac_unit_tid2,  "textures/buildings/AC_unit2.jpg");} // AC unit
 	int get_bath_wind_tid() {return ensure_tid(bath_wind_tid, "textures/buildings/window_blocks.jpg");} // bathroom window
+	int get_helipad_tid  () {return ensure_tid(helipad_tex,   "textures/buildings/helipad.jpg");}
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
@@ -172,6 +173,7 @@ public:
 		register_tid(building_texture_mgr.get_gdoor_tid());
 		register_tid(building_texture_mgr.get_ac_unit_tid1());
 		register_tid(building_texture_mgr.get_ac_unit_tid2());
+		register_tid(building_texture_mgr.get_helipad_tid());
 		for (unsigned i = 0; i < num_special_tids; ++i) {register_tid(special_tids[i]);}
 
 		for (auto i = global_building_params.materials.begin(); i != global_building_params.materials.end(); ++i) {
@@ -650,7 +652,7 @@ public:
 				if (fabs(normal.z) > 0.5) {vert.t[0] = vert.v.x*tsx; vert.t[1] = vert.v.y*tsy;} // facing up, use XY plane
 				else {vert.t[0] = (vert.v.x + vert.v.y)*tsx; vert.t[1] = vert.v.z*tsy;} // facing to the side, use XZ or YZ plane
 			}
-			else if (tquad.is_exterior_door()) { // door - textured from (0,0) to (1,1)
+			else if (tquad.is_exterior_door() || tquad.type == tquad_with_ix_t::TYPE_HELIPAD) { // door or helipad - textured from (0,0) to (1,1)
 				vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
 				vert.t[1] = float((i == 2 || i == 3));
 			}
@@ -1029,7 +1031,10 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 			bool const is_wall_tex(i->type != tquad_with_ix_t::TYPE_ROOF && i->type != tquad_with_ix_t::TYPE_ROOF_ACC);
-			bdraw.add_tquad(*this, *i, bcube, (is_wall_tex ? mat.side_tex : mat.roof_tex), (is_wall_tex ? side_color : roof_color)); // use type to select roof vs. side texture
+			bool const is_helipad(i->type == tquad_with_ix_t::TYPE_HELIPAD);
+			tid_nm_pair_t const &tex(is_helipad ? building_texture_mgr.get_helipad_tid() : (is_wall_tex ? mat.side_tex : mat.roof_tex));
+			colorRGBA const &color(is_helipad ? WHITE : (is_wall_tex ? side_color : roof_color));
+			bdraw.add_tquad(*this, *i, bcube, tex, color); // use type to select roof vs. side texture
 		}
 		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
 			if (i->type == ROOF_OBJ_AC) {

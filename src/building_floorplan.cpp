@@ -992,7 +992,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	} // for f
 	bool has_roof_access(0);
 
-	if (must_add_stairs && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT) { // add roof access for stairs
+	if (must_add_stairs && has_stairs && !is_house && roof_type == ROOF_TYPE_FLAT && !has_helipad) { // add roof access for stairs
 		bool const is_sloped(sshape != SHAPE_U);
 		cube_t box(stairs_cut);
 		if (!is_sloped) {box.expand_by_xy(fc_thick);}
@@ -1377,7 +1377,7 @@ void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lig
 
 void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
 	if (add) {interior->elevators.push_back(elevator);}
-	if (is_house || roof_type != ROOF_TYPE_FLAT) return; // sloped roof, not flat, can't add elevator cap
+	if (is_house || roof_type != ROOF_TYPE_FLAT || has_helipad) return; // sloped roof, not flat, can't add elevator cap
 	float const window_vspacing(get_material().get_floor_spacing());
 	cube_t ecap(elevator);
 	ecap.z1()  = elevator.z2();

@@ -1548,11 +1548,28 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		details.shrink_to_fit();
 		return;
 	}
+	cube_t const &top(parts.back()); // top/last part
+	float const helipad_radius(2.0*window_vspacing);
+	has_helipad = (flat_roof /*&& is_simple_cube()*/ && !is_house && min(top.dx(), top.dy()) > 3.2*helipad_radius && bcube.dz() > 8.0*window_vspacing && !(rgen.rand() & 15));
+	cube_t helipad_bcube;
+
+	if (has_helipad) { // add helipad
+		tquad_t helipad(4); // quad
+		point const center(top.get_cube_center());
+		float const z(top.z2() + 0.01*window_vspacing); // slightly above the roof to avoid Z-fighting
+		float const x1(center.x - helipad_radius), x2(center.x + helipad_radius), y1(center.y - helipad_radius), y2(center.y + helipad_radius);
+		bool const dir(rgen.rand_bool()); // R90 50% of the time
+		helipad.pts[ dir+0   ].assign(x1, y1, z);
+		helipad.pts[ dir+1   ].assign(x2, y1, z);
+		helipad.pts[ dir+2   ].assign(x2, y2, z);
+		helipad.pts[(dir+3)&3].assign(x1, y2, z);
+		roof_tquads.emplace_back(helipad, tquad_with_ix_t::TYPE_HELIPAD);
+		helipad_bcube = helipad.get_bcube();
+	}
 	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
-	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && (rgen.rand() & 1));
+	bool const add_antenna((flat_roof || roof_type == ROOF_TYPE_SLOPE) && !has_helipad && (rgen.rand() & 1));
 	unsigned const num_details(num_blocks + num_ac_units + 4*add_walls + add_antenna);
 	if (num_details == 0) return; // nothing to do
-	cube_t const &top(parts.back()); // top/last part
 	if (add_walls && min(top.dx(), top.dy()) < 4.0*wall_width) return; // too small
 	float const xy_sz(top.get_size().xy_mag()); // better to use bcube for size?
 	cube_t bounds(top);
@@ -1570,6 +1587,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			c.set_from_point(point(rgen.rand_uniform(bounds.x1(), bounds.x2()), rgen.rand_uniform(bounds.y1(), bounds.y2()), top.z2()));
 			c.expand_by_xy(vector3d(xy_sz*rgen.rand_uniform(0.01, 0.07), xy_sz*rgen.rand_uniform(0.01, 0.07), 0.0));
 			if (!bounds.contains_cube_xy(c)) continue; // not contained
+			if (has_helipad && c.intersects_xy(helipad_bcube)) continue; // bad placement
 			placed = 1;
 			if (is_simple_cube()) break; // success/done
 
@@ -1582,8 +1600,11 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		c.z2() += height; // z2
 		details.push_back(c);
 	} // for i
-	if (num_ac_units > 0) {place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, vect_cube_t(), add_antenna, rgen);}
-
+	if (num_ac_units > 0) {
+		vect_cube_t avoid;
+		if (has_helipad) {avoid.push_back(helipad_bcube);}
+		place_roof_ac_units(num_ac_units, xy_sz*rgen.rand_uniform(0.012, 0.02), bounds, avoid, add_antenna, rgen);
+	}
 	if (add_walls) {
 		cube_t cubes[4];
 		add_roof_walls(top, wall_width, 0, cubes); // overlap_corners=0
