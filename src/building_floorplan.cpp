@@ -225,7 +225,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 			float const hwall_extend(0.5f*(room_len - doorway_width - wall_thick));
 			float const wall_pos(p->d[!min_dim][0] + room_len); // pos of first wall separating first from second rooms
 			float const hall_wall_pos[2] = {(p->d[min_dim][0] + room_width), (p->d[min_dim][1] - room_width)};
-			hallway_dim = !min_dim; // cache in building for later use
+			if (hallway_dim == 2) {hallway_dim = !min_dim;} // cache in building for later use, only for first part (ground floor)
 			vect_cube_t &room_walls(interior->walls[!min_dim]), &hall_walls(interior->walls[min_dim]);
 			hall = *p;
 			for (unsigned e = 0; e < 2; ++e) {hall.d[min_dim][e] = hall_wall_pos[e];}
