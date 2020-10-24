@@ -913,7 +913,7 @@ void display() {
 				mesh_invalidated    = 0;
 			}
 			if (show_fog || underwater) {fog_enabled = 1;}
-			if (!show_lightning) {l_strike.disable();}
+			if (!show_lightning && animate2) {l_strike.disable();} // Note: only legal to call this when lighting is updated (animate2)
 			compute_brightness();
 			if (TIMETEST) PRINT_TIME("D");
 

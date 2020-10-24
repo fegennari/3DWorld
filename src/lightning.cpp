@@ -7,8 +7,10 @@
 #include "openal_wrap.h"
 #include "shaders.h"
 #include "physics_objects.h" // for lightning_t
+#include "cube_map_shadow_manager.h"
 
 
+bool   const ENABLE_LT_SHADOWS= 1;
 int    const PATH_FORK_MOD    = 15;
 int    const PATH_END_MOD     = 15;
 float  const FORK_ATTEN       = 0.8;
@@ -21,13 +23,15 @@ double const CHARGE_HALF_D    = 5.0;
 float  const EVAP_AMOUNT      = 10.0;
 float  const LITNING_ICE_EFF  = 0.5;
 unsigned const MAX_LITN_FORKS = 25;
+unsigned const smap_obj_id    = 0; //  0
 
 
 point litning_pos;
 lightning_t l_strike;
+cube_map_shadow_manager lightning_smgr; // should this be inside lightning_t?
 
 extern int is_cloudy, game_mode, world_mode, iticks, DISABLE_WATER, animate2;
-extern float zmin, temperature, lt_green_int, water_plane_z, ztop, fticks;
+extern float zmin, temperature, lt_green_int, water_plane_z, ztop, fticks, XY_SCENE_SIZE;
 extern vector<valley> valleys;
 
 
@@ -44,6 +48,7 @@ inline float get_lit_h(int xpos, int ypos) {
 void lightning_t::disable() {
 	enabled = 0;
 	paths.clear();
+	if (ENABLE_LT_SHADOWS) {lightning_smgr.remove_obj_light(smap_obj_id);}
 }
 
 void lightning_t::gen() {
@@ -119,6 +124,12 @@ void lightning_t::gen() {
 	litning_pos    = hit_pos = paths[pri_path].points.back();
 	litning_pos.z += 0.01;
 	play_thunder(litning_pos, 4.0, 0.0);
+
+	if (ENABLE_LT_SHADOWS) {
+		float const radius(7.8*LITNING_LINEAR_I*sqrt(0.1*XY_SCENE_SIZE)); // see add_dynamic_light()
+		cube_map_lix_t lix(lightning_smgr.add_obj(smap_obj_id, 1));
+		lix.add_cube_face_lights(litning_pos, radius, LITN_C, (DX_VAL + DY_VAL), 1); // outdoor_shadows=1
+	}
 	draw();
 }
 
@@ -237,7 +248,6 @@ void do_lightning_damage(point &pos, float damage, int hit_water) {
 void lightning_t::draw() const {
 
 	if (!is_enabled()) return;
-	float const lscale(LITNING_LINEAR_I);
 	enable_blend();
 	set_additive_blend_mode();
 	glDepthMask(GL_FALSE); // no depth writing
@@ -246,13 +256,13 @@ void lightning_t::draw() const {
 
 	for (auto i = paths.begin(); i != paths.end(); ++i) {
 		assert(i->points.size() >= 2);
-		if (animate2) {add_dynamic_light(0.6*i->width*lscale, i->points.back(), LITN_C);}
+		if (animate2) {add_dynamic_light(0.6*i->width*LITNING_LINEAR_I, i->points.back(), LITN_C);} // unshadowed
 		i->draw_lines(1, (i+1 != paths.end())); // fade_ends=1
 	}
 	s.end_shader();
 	glDepthMask(GL_TRUE);
 	set_std_blend_mode();
 	disable_blend();
-	if (animate2) {add_dynamic_light(7.8*lscale, litning_pos, LITN_C);}
+	if (animate2 && !ENABLE_LT_SHADOWS) {add_dynamic_light(7.8*LITNING_LINEAR_I, litning_pos, LITN_C);}
 }
 

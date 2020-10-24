@@ -37,7 +37,7 @@ extern vector<light_source_trig> light_sources_d;
 extern vector<texture_t> textures;
 
 
-void cube_map_lix_t::add_cube_face_lights(point const &pos, float radius, colorRGBA const &color, float near_clip) {
+void cube_map_lix_t::add_cube_face_lights(point const &pos, float radius, colorRGBA const &color, float near_clip, bool outdoor_shadows) {
 
 	for (unsigned ldim = 0; ldim < 3; ++ldim) { // setup 6 light sources, one per cube face
 		vector3d dir(zero_vector);
@@ -46,7 +46,7 @@ void cube_map_lix_t::add_cube_face_lights(point const &pos, float radius, colorR
 			unsigned const ix(ixs[2*ldim + ldir]);
 			assert(ix < light_sources_d.size());
 			light_source_trig &ls(light_sources_d[ix]);
-			ls = light_source_trig(light_source(radius, pos, pos, color, 0, dir, cube_map_beamwidth, 0.0, 1, near_clip), 1, -1, 0);
+			ls = light_source_trig(light_source(radius, pos, pos, color, 0, dir, cube_map_beamwidth, 0.0, 1, near_clip), 1, -1, 0, sensor_t(), outdoor_shadows);
 			//ls.bind_to_pos(obj.pos, 1); // dynamic binding
 		} // for ldir
 	} // for ldim
@@ -82,6 +82,7 @@ unsigned cube_map_shadow_manager::alloc_light() {
 cube_map_lix_t cube_map_shadow_manager::add_obj(unsigned obj_id, bool add_light) {
 	remove_obj_light(obj_id);
 	cube_map_lix_t ret;
+	
 	if (add_light) {
 		for (unsigned i = 0; i < 6; ++i) {ret.ixs[i] = alloc_light();}
 		obj_to_light_map[obj_id] = ret;
