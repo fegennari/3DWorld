@@ -861,7 +861,7 @@ class city_road_gen_t : public road_gen_base_t {
 			colliders.push_back(bcube);
 			tree_pos.push_back(pos);
 		}
-		static void place_trees_in_plot(cube_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen) {
+		static void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen) {
 			if (city_params.max_trees_per_plot == 0) return;
 			float const radius(city_params.tree_spacing*city_params.get_nom_car_size().x); // in multiples of car length
 			float const spacing(max(radius, get_min_obj_spacing())), radius_exp(2.0*spacing);
@@ -873,6 +873,7 @@ class city_road_gen_t : public road_gen_base_t {
 				if (!try_place_obj(plot, blockers, rgen, spacing, radius, 10, pos)) continue; // 10 tries per tree
 				int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
 				place_tree(pos, radius, ttype, colliders, tree_pos); // size is randomly selected by the tree generator using default values
+				if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
 				// now that we're here, try to place more trees at this same distance from the road in a row
 				bool const dim(min((pos.x - plot.x1()), (plot.x2() - pos.x)) < min((pos.y - plot.y1()), (plot.y2() - pos.y)));
 				bool const dir((pos[dim] - plot.d[dim][0]) < (plot.d[dim][1] - pos[dim]));
