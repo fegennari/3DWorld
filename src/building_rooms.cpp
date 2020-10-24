@@ -1810,6 +1810,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator) continue; // for elevator, not stairs
 		bool const dim(i->dim), dir(i->dir), has_side_walls(i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES || i->shape == SHAPE_U);
+		bool const side(0); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/NUM_STAIRS_PER_FLOOR);
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), wall_hw(0.15*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
@@ -1824,7 +1825,6 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			}
 		}
 		else { // U-shaped stairs
-			bool const side(0); // for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 			stair.d[!dim][side] = i->get_center_dim(!dim);
 			step_len *= 2.0;
 
@@ -1855,15 +1855,21 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			if (has_side_walls) {objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir);} // add walls around stairs for this floor
 
 			if (i->has_railing) { // add railings
+				bool railing_dir(dir);
 				cube_t railing(wall);
+				uint16_t flags(has_side_walls ? RO_FLAG_NOCOLL : 0);
 
 				if (has_side_walls) {
 					railing.translate_dim((d ? -1.0 : 1.0)*2.0*wall_hw, !dim); // shift railing inside of walls
 					railing.expand_in_dim(dim, -wall_hw); // shrink slightly to avoid clipping through an end wall
 				}
-				objs.emplace_back(railing, TYPE_RAILING, 0, dim, dir, (has_side_walls ? RO_FLAG_NOCOLL : 0), 1.0, SHAPE_CUBE, railing_color); // collision detection works like a cube
+				if (i->shape == SHAPE_U) { // adjust railing height/angle to match stairs
+					if (d == side) {railing.z1() = wall.get_center_dim(2); flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
+					else           {railing.z2() = wall.get_center_dim(2); flags |= RO_FLAG_ADJ_LO; }
+				}
+				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color); // collision works like a cube
 			}
-		}
+		} // for d
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id

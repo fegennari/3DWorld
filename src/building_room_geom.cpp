@@ -618,7 +618,9 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_railing(room_object_t const &c) {
-	float const radius(0.5*c.get_sz_dim(!c.dim)), pole_radius(0.75*radius), length(c.get_sz_dim(c.dim)), center(c.get_center_dim(!c.dim)), height(0.35*c.dz());
+	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI));
+	float const radius(0.5*c.get_sz_dim(!c.dim)), pole_radius(0.75*radius), length(c.get_sz_dim(c.dim)), center(c.get_center_dim(!c.dim));
+	float const height((is_u_stairs ? 0.70 : 0.35)*c.dz()); // use a larger relative height for lo/hi railings on U-shaped stairs
 	point p[2];
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -631,10 +633,12 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	mat.add_cylin_to_verts(p[0], p[1], radius, radius, c.color, 1, 1); // draw sloped railing with both ends
 
-	for (unsigned d = 0; d < 2; ++d) { // add the two vertical poles
-		point pt(p[d]);
-		pt[c.dim] += ((c.dir^bool(d)) ? 1.0 : -1.0)*0.01*length;
-		mat.add_cylin_to_verts((pt - vector3d(0, 0, height)), pt, pole_radius, pole_radius, c.color, 0, 0); // no ends
+	if (!is_u_stairs) {
+		for (unsigned d = 0; d < 2; ++d) { // add the two vertical poles
+			point pt(p[d]);
+			pt[c.dim] += ((c.dir^bool(d)) ? 1.0 : -1.0)*0.01*length;
+			mat.add_cylin_to_verts((pt - vector3d(0, 0, height)), pt, pole_radius, pole_radius, c.color, 0, 0); // no ends
+		}
 	}
 }
 

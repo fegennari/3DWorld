@@ -817,7 +817,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
 		// U-shape if there's enough room
-		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {sshape = SHAPE_U; ewidth *= 1.6; stairs_have_railing = 0;} // increase the width of both the stairs and elevator
+		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {sshape = SHAPE_U; ewidth *= 1.6;} // increase the width of both the stairs and elevator
 		else {sshape = SHAPE_WALLED_SIDES;} // walled sides to meet fire codes
 		cube_t stairs(hall); // start as hallway
 
