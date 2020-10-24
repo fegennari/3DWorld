@@ -1847,7 +1847,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		wall.z2() -= 0.5*floor_thickness; // prevent z-fighting on top floor
 		wall.z1()  = max(bcube.z1()+half_thick, floor_z-half_thick); // full height
 		set_wall_width(wall, i->d[dim][dir], wall_hw, dim);
-		if (i->shape == SHAPE_WALLED || i->shape == SHAPE_U) {objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir);} // wall at back/end of stairs
+		if (i->shape == SHAPE_WALLED || i->shape == SHAPE_U) {objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir);} // add wall at back/end of stairs
 		wall.d[dim][!dir] = i->d[dim][!dir];
 
 		for (unsigned d = 0; d < 2; ++d) { // sides of stairs
