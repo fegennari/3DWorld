@@ -621,7 +621,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		keep_sin_table = 0;
 		st_valid = 1;
 	}
-	l_strike.time = LITNING_TIME; // reset lightning
+	l_strike.reset_time(); // reset lightning
 	kill_current_raytrace_threads();
 	if (!keep_sin_table) {clear_tiled_terrain();}
 	calc_uw_atten_colors();

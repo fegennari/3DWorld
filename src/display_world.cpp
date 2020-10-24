@@ -913,7 +913,7 @@ void display() {
 				mesh_invalidated    = 0;
 			}
 			if (show_fog || underwater) {fog_enabled = 1;}
-			if (!show_lightning) {l_strike.enabled = 0;}
+			if (!show_lightning) {l_strike.disable();}
 			compute_brightness();
 			if (TIMETEST) PRINT_TIME("D");
 
@@ -987,9 +987,9 @@ void display() {
 			draw_stuff(underwater, timer1);
 			if (TIMETEST) PRINT_TIME("T");
 
-			if (show_lightning && l_strike.enabled == 1 && animate2) {
-				if ((rand()&1) == 0) {gen_smoke(l_strike.hit_pos);}
-				if ((rand()&7) == 0) {gen_fire(l_strike.hit_pos, 1.0, NO_SOURCE);}
+			if (show_lightning && l_strike.is_enabled() && animate2) {
+				if ((rand()&1) == 0) {gen_smoke(l_strike.get_hit_pos());}
+				if ((rand()&7) == 0) {gen_fire(l_strike.get_hit_pos(), 1.0, NO_SOURCE);}
 			}
 			update_blasts(); // not really an update, but needed for draw_blasts
 			draw_game_elements(timer1);

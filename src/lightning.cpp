@@ -41,35 +41,34 @@ inline float get_lit_h(int xpos, int ypos) {
 }
 
 
+void lightning_t::disable() {
+	enabled = 0;
+	paths.clear();
+}
+
 void lightning_t::gen() {
 
 	is_cloudy = 1;
 
-	if (enabled == -1) {
-		enabled = 0;
-		paths.clear();
-		return;
-	}
-	if (!animate2) {
+	if (!animate2) { // physics stopped - draw but don't update
 		draw();
 		return;
 	}
 	int const rnum(int(LIGHTNING_PERIOD/fticks));
 
-	if (rnum <= 1 || (rgen.rand()%rnum) != 0) {
-		if (enabled == 1) {
+	if (rnum <= 1 || (rgen.rand()%rnum) != 0) { // update timestep randomly
+		if (enabled) {
 			if (time < int(0.1f*LITNING_TIME/fticks)) {
 				draw();
-				if (!animate2) return;
-				time += iticks;
+				if (animate2) {time += iticks;}
 			}
-			else {enabled = 0;}
+			else {disable();} // time is up
 		}
 		return;
 	}
-	enabled = 0;
-	time    = 0;
-	paths.clear();
+	// generate a new lightning strike
+	disable();
+	time = 0;
 	float const cloud_zval(CLOUD_CEILING + ztop);
 	int xpos(0), ypos(0);
 	float max_e(0.0), charge(0);
@@ -237,6 +236,7 @@ void do_lightning_damage(point &pos, float damage, int hit_water) {
 
 void lightning_t::draw() const {
 
+	if (!is_enabled()) return;
 	float const lscale(LITNING_LINEAR_I);
 	enable_blend();
 	set_additive_blend_mode();

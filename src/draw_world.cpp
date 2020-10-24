@@ -194,7 +194,7 @@ void calc_cur_ambient_diffuse() {
 
 	unsigned ncomp(0);
 	cur_ambient = cur_diffuse = colorRGB(0,0,0);
-	if (l_strike.enabled) {cur_ambient += LITN_C*0.25;}
+	if (l_strike.is_enabled()) {cur_ambient += LITN_C*0.25;}
 
 	for (unsigned i = 0; i < 2; ++i) { // sun, moon
 		if (!is_light_enabled(i)) continue;

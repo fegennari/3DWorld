@@ -990,7 +990,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	
 	if (has_leaves && ground_mode && !reflection_pass) {
 		burn_leaves();
-		if (l_strike.enabled == 1 && animate2) {lightning_damage(l_strike.hit_pos);}
+		if (l_strike.is_enabled() && animate2) {lightning_damage(l_strike.get_hit_pos());}
 		if (begin_motion && animate2) {drop_leaves();}
 	}
 	not_visible = !is_visible_to_camera(xlate); // first pass only

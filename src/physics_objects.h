@@ -130,7 +130,7 @@ struct fire : public basic_physics_obj { // size = 60
 };
 
 
-struct lightning_t { // size = 40
+class lightning_t { // size = 40
 
 	struct lseg_t : public line3d {
 		unsigned parent_len;
@@ -141,16 +141,22 @@ struct lightning_t { // size = 40
 		unsigned get_len() const {return (points.size() + parent_len);}
 		void set_params(unsigned pl, float d, bool fp, bool hw, bool hc) {parent_len = pl; damage = d; full_path = fp; hit_water = hw; has_child = hc;}
 	};
-	int time, enabled;
+	bool enabled;
+	int time;
 	point hit_pos;
 	vector<lseg_t> paths;
 	rand_gen_t rgen;
 
-	lightning_t() : time(0), enabled(-1) {}
+	void gen_recur(point const &start, vector3d const &start_dir, float strength, unsigned parent_len);
+
+public:
+	lightning_t() : enabled(0), time(0) {}
+	void reset_time() {time = LITNING_TIME;}
+	void disable();
+	bool is_enabled() const {return (enabled && !paths.empty());}
+	point const &get_hit_pos() const {return hit_pos;}
 	void gen();
 	void draw() const;
-private:
-	void gen_recur(point const &start, vector3d const &start_dir, float strength, unsigned parent_len);
 };
 
 
