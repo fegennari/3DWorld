@@ -804,7 +804,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	float ewidth(1.5*doorway_width); // for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
-	bool stairs_dim(0), add_elevator(0);
+	bool stairs_dim(0), add_elevator(0), stairs_have_railing(1);
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
 
@@ -816,9 +816,9 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		assert(!interior->rooms.empty());
 		room_t &room(interior->rooms.back()); // hallway is always the last room to be added
 		bool const long_dim(hall.dx() < hall.dy());
-		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {sshape = SHAPE_U;} // U-shape if there's enough room
-		else {sshape = SHAPE_HAS_RAILINGS;} // railings
-		if (sshape == SHAPE_U) {ewidth *= 1.6;} // increase the width of both the stairs and elevator
+		// U-shape if there's enough room
+		if (room.get_sz_dim(!long_dim) > 6.0*doorway_width) {sshape = SHAPE_U; ewidth *= 1.6; stairs_have_railing = 0;} // increase the width of both the stairs and elevator
+		else {sshape = SHAPE_WALLED_SIDES;} // walled sides to meet fire codes
 		cube_t stairs(hall); // start as hallway
 
 		if (add_elevator) {
@@ -925,7 +925,6 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 						}
 					} // for dim
 					if (!against_wall) {/*sshape = SHAPE_WALLED_SIDES;*/} // don't add walls around stairs if they can be against/blocking a window
-					sshape = SHAPE_HAS_RAILINGS;
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
 					stairs_cut      = cutout;
@@ -970,7 +969,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				assert(found);
 			}
 			if (has_stairs) { // add landings and stairwells
-				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, sshape);
+				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing, sshape);
 				landing.z1() = zc; landing.z2() = zf;
 				interior->landings.push_back(landing);
 				if (f == 1) {interior->stairwells.emplace_back(stairs_cut, num_floors, stairs_dim, stairs_dir, sshape);} // only add for first floor
@@ -1004,7 +1003,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
 			// don't add railings to straight roof access stairs because they intersect with the roof access door
-			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, ((sshape == SHAPE_HAS_RAILINGS) ? SHAPE_STRAIGHT : sshape));
+			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 0, sshape); // stairs_have_railing=0
 			landing.z1() = zc; landing.z2() = z; // no floor above
 			interior->landings.push_back(landing);
 			interior->stairwells.back().z2() += fc_thick; // extend upward
@@ -1263,8 +1262,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					}
 				}
 				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
-				stairs_shape const sshape(wall_clipped ? SHAPE_WALLED : SHAPE_HAS_RAILINGS); // add walls around stairs if room walls were clipped; otherwise, add railings
-				landing_t landing(cand, 0, 0, dim, stairs_dir, sshape);
+				stairs_shape const sshape(wall_clipped ? SHAPE_WALLED : SHAPE_STRAIGHT); // add walls around stairs if room walls were clipped; otherwise, straight with railings
+				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape);
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
 				interior->stairwells.emplace_back(cand, 1, dim, stairs_dir, sshape, 0, 1); // roof_access=0, stack_conn=1

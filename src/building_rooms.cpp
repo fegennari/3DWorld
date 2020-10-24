@@ -1799,7 +1799,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness());
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
 	float const stair_dz(window_vspacing/(NUM_STAIRS_PER_FLOOR+1)), stair_height(stair_dz + floor_thickness);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	interior->room_geom->stairs_start = objs.size();
@@ -1809,10 +1809,10 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator) continue; // for elevator, not stairs
-		bool const dim(i->dim), dir(i->dir);
+		bool const dim(i->dim), dir(i->dir), has_side_walls(i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES || i->shape == SHAPE_U);
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/NUM_STAIRS_PER_FLOOR);
-		float step_len((dir ? 1.0 : -1.0)*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
+		float step_len((dir ? 1.0 : -1.0)*step_len_pos), wall_hw(0.15*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
 		cube_t stair(*i);
 
 		if (i->shape != SHAPE_U) { // straight stairs
@@ -1842,19 +1842,26 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.back().shape = SHAPE_STAIRS_U;
 			} // for n
 		}
-		if (i->shape != SHAPE_STRAIGHT) { // add walls around stairs for this floor
-			float const wall_hw(0.15*step_len_pos), half_thick(0.5*floor_thickness);
-			stair = *i;
-			stair.z2() -= 0.5*floor_thickness; // prevent z-fighting on top floor
-			stair.z1()  = max(bcube.z1()+half_thick, floor_z-half_thick); // full height
-			set_wall_width(stair, i->d[dim][dir], wall_hw, dim);
-			if (i->shape != SHAPE_WALLED_SIDES && i->shape != SHAPE_HAS_RAILINGS) {objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir);} // back/end of stairs
-			stair.d[dim][!dir] = i->d[dim][!dir];
+		// add walls and railings
+		cube_t wall(*i);
+		wall.z2() -= 0.5*floor_thickness; // prevent z-fighting on top floor
+		wall.z1()  = max(bcube.z1()+half_thick, floor_z-half_thick); // full height
+		set_wall_width(wall, i->d[dim][dir], wall_hw, dim);
+		if (i->shape == SHAPE_WALLED || i->shape == SHAPE_U) {objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir);} // wall at back/end of stairs
+		wall.d[dim][!dir] = i->d[dim][!dir];
 
-			for (unsigned d = 0; d < 2; ++d) { // sides of stairs
-				set_wall_width(stair, i->d[!dim][d], wall_hw, !dim);
-				if (i->shape == SHAPE_HAS_RAILINGS) {objs.emplace_back(stair, TYPE_RAILING, 0, dim, dir, 0, 1.0, SHAPE_CUBE, railing_color);} // collision detection works like a cube
-				else                                {objs.emplace_back(stair, TYPE_STAIR,   0, dim, dir);}
+		for (unsigned d = 0; d < 2; ++d) { // sides of stairs
+			set_wall_width(wall, i->d[!dim][d], wall_hw, !dim);
+			if (has_side_walls) {objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir);} // add walls around stairs for this floor
+
+			if (i->has_railing) { // add railings
+				cube_t railing(wall);
+
+				if (has_side_walls) {
+					railing.translate_dim((d ? -1.0 : 1.0)*2.0*wall_hw, !dim); // shift railing inside of walls
+					railing.expand_in_dim(dim, -wall_hw); // shrink slightly to avoid clipping through an end wall
+				}
+				objs.emplace_back(railing, TYPE_RAILING, 0, dim, dir, (has_side_walls ? RO_FLAG_NOCOLL : 0), 1.0, SHAPE_CUBE, railing_color); // collision detection works like a cube
 			}
 		}
 	} // for i

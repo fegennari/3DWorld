@@ -228,7 +228,7 @@ enum room_type      {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTY
 	                 RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
 std::string const room_names[NUM_RTYPES] =
 	{"Not Set", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study", "Entryway", "Library", "Storage Room", "Garage", "Shed"};
-enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES, SHAPE_HAS_RAILINGS};
+enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES};
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
 enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_COUCH, OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP,
 	  NUM_OBJ_MODELS};
@@ -429,12 +429,12 @@ struct room_t : public cube_t {
 };
 
 struct landing_t : public cube_t {
-	bool for_elevator, dim, dir;
+	bool for_elevator, dim, dir, has_railing;
 	uint8_t floor;
 	stairs_shape shape;
-	landing_t() : for_elevator(0), dim(0), dir(0), floor(0), shape(SHAPE_STRAIGHT) {}
-	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, stairs_shape shape_=SHAPE_STRAIGHT) :
-		cube_t(c), for_elevator(e), dim(dim_), dir(dir_), floor(f), shape(shape_) {assert(is_strictly_normalized());}
+	landing_t() : for_elevator(0), dim(0), dir(0), has_railing(0), floor(0), shape(SHAPE_STRAIGHT) {}
+	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT) :
+		cube_t(c), for_elevator(e), dim(dim_), dir(dir_), has_railing(railing), floor(f), shape(shape_) {assert(is_strictly_normalized());}
 	unsigned get_face_id() const {return (2*dim + dir);}
 };
 
