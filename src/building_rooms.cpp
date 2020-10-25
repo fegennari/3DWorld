@@ -384,6 +384,8 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers,
 	float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool room_is_lit)
 {
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
 	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt)) return 0; // it's only a bedroom if there's bed
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
@@ -394,7 +396,6 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
 	cube_t const part(get_part_for_room(room));
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool is_ext_wall[2][2] = {0}; // precompute which walls are exterior, {dim}x{dir}
 	for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 	bool placed_closet(0);
@@ -453,27 +454,44 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
 	place_obj_along_wall(TYPE_DRESSER, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
 
-	// maybe place objects on dressers and nightstands that were added to this room
-	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (i->type != TYPE_DRESSER) continue;
-		if (rgen.rand_bool()) continue; // add 50% of the time
-		// try to place a lamp
-		if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP)) continue;
+	// try to place a lamp on a dresser or nightstand that was added to this room
+	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP) && (rgen.rand()&3) != 0) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_LAMP)); // L, W, H
 		float const height(0.25*window_vspacing), width(height*0.5f*(sz.x + sz.y)/sz.z);
-		cube_t lamp(i->get_cube_center()); // move off to one side?
-		lamp.z1() = i->z2();
-		lamp.z2() = i->z2() + height;
-		lamp.expand_by_xy(0.5*width); // expand by half width
-		lamp.translate_dim((i->dir ? 1.0 : -1.0)*0.1*width, i->dim); // move slightly toward the front to avoid clipping through the wall
-		lamp.translate_dim(rgen.rand_uniform(-1.0, 1.0)*0.3f*(i->get_sz_dim(!i->dim) - width), !i->dim); // randomly not centered
-		unsigned const NUM_COLORS = 6;
-		colorRGBA const colors[NUM_COLORS] = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
-		unsigned flags(RO_FLAG_NOCOLL); // no collisions, as an optimization since the player and AI can't get onto the dresser/nightstand anyway
-		if (!room_is_lit && rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // 50% chance of being lit if the room is dark
-		objs.emplace_back(lamp, TYPE_LAMP, room_id, i->dim, i->dir, flags, tot_light_amt, room_obj_shape::SHAPE_CYLIN, colors[rgen.rand()%NUM_COLORS]);
-		break; // the above line invalidates our iteration, so we must break
-	} // for i
+		assert(bed_obj_ix < objs.size());
+		room_object_t const &bed(objs[bed_obj_ix]);
+		point pillow_center(bed.get_cube_center());
+		pillow_center[bed.dim] += (bed.dir ? 1.0 : -1.0)*0.5*bed.get_sz_dim(bed.dim); // adjust from bed center to near the pillow(s)
+		int obj_id(-1);
+		float dmin_sq(0.0);
+
+		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // choose the dresser or nightstand closest to be bed
+			if (i->type != TYPE_DRESSER) continue; // not a dresser or nightstand
+			float const dist_sq(p2p_dist_xy_sq(i->get_cube_center(), pillow_center));
+			if (dmin_sq == 0.0 || dist_sq < dmin_sq) {obj_id = (i - objs.begin()); dmin_sq = dist_sq;}
+		}
+		if (obj_id >= 0) { // found a valid object to place this on
+			room_object_t const &obj(objs[obj_id]);
+			cube_t lamp(obj.get_cube_center());
+			lamp.z1() = obj.z2();
+			lamp.z2() = obj.z2() + height;
+			lamp.expand_by_xy(0.5*width); // expand by half width
+			lamp.translate_dim((obj.dir ? 1.0 : -1.0)*0.1*width, obj.dim); // move slightly toward the front to avoid clipping through the wall
+			float const shift_range(0.4f*(obj.get_sz_dim(!obj.dim) - width)), obj_center(obj.get_center_dim(!obj.dim)), targ_pos(pillow_center[!obj.dim]);
+			float shift_val(0.0), dmin(0.0);
+
+			for (unsigned n = 0; n < 4; ++n) { // generate several random positions on the top of the object and choose the one closest to the bed
+				float const cand_shift(rgen.rand_uniform(-1.0, 1.0)*shift_range), dist(fabs((obj_center + cand_shift) - targ_pos));
+				if (dmin == 0.0 || dist < dmin) {shift_val = cand_shift; dmin = dist;}
+			}
+			lamp.translate_dim(shift_val, !obj.dim);
+			unsigned const NUM_COLORS = 6;
+			colorRGBA const colors[NUM_COLORS] = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
+			unsigned flags(RO_FLAG_NOCOLL); // no collisions, as an optimization since the player and AI can't get onto the dresser/nightstand anyway
+			if (!room_is_lit && rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // 50% chance of being lit if the room is dark
+			objs.emplace_back(lamp, TYPE_LAMP, room_id, obj.dim, obj.dir, flags, tot_light_amt, room_obj_shape::SHAPE_CYLIN, colors[rgen.rand()%NUM_COLORS]); // Note: invalidates obj ref
+		}
+	}
 	return 1; // success
 }
 
