@@ -558,12 +558,12 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor
 	cube_t clip_cube(door.get_bcube());
 	float const dz(clip_cube.dz());
 	float xy_border(0.0), z_border(0.0);
-	if      (door.type == tquad_with_ix_t::TYPE_GDOOR) {xy_border = 0.016; z_border = 0.04;}
-	else if (door.type == tquad_with_ix_t::TYPE_BDOOR) {xy_border = z_border = 0.04;}
-	else {xy_border = z_border = 0.06;}
+	if      (door.type == tquad_with_ix_t::TYPE_GDOOR) {xy_border = 0.016; z_border = 0.02;} // garage door
+	else if (door.type == tquad_with_ix_t::TYPE_BDOOR) {xy_border = 0.04;  z_border = 0.03;} // building door
+	else {xy_border = 0.06; z_border = 0.03;} // house door
 	// clip off bottom for floor if clip_to_floor==1 and not a roof door; somewhat arbitrary, should we use interior->floors.back().z2() instead?
 	if (door.type != tquad_with_ix_t::TYPE_RDOOR) {clip_cube.z1() += (clip_to_floor ? 0.7*get_floor_thickness() : 0.04*dz);}
-	clip_cube.z2() -= 0.5*z_border*dz;
+	clip_cube.z2() -= z_border*dz;
 	bool const dim(clip_cube.dx() < clip_cube.dy()); // border dim
 	clip_cube.expand_in_dim(dim, -xy_border*clip_cube.get_sz_dim(dim)); // shrink by border
 	for (unsigned n = 0; n < door.npts; ++n) {clip_cube.clamp_pt(door.pts[n]);}

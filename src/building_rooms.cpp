@@ -1582,6 +1582,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
+	float const door_height(get_door_height()), floor_to_ceil_height(window_vspacing - floor_thickness);
 	unsigned const flags(RO_FLAG_NOCOLL);
 	bool const has_ceil_trim(is_house); // ceiling trim on houses only, for now (though the code also handles office buildings)
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1598,7 +1599,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		}
 		// add trim at top of door
 		unsigned const num_floors(calc_num_floors(*d, window_vspacing, floor_thickness));
-		float z(d->z1() + window_vspacing - floor_thickness);
+		float z(d->z1() + floor_to_ceil_height);
 		trim.d[!d->dim][0] = d->d[!d->dim][0] + door_trim_width;
 		trim.d[!d->dim][1] = d->d[!d->dim][1] - door_trim_width;
 
@@ -1640,15 +1641,11 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		trim.z2() = trim.z1() + 2.0*trim_thickness;
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, door_color);
 
-		if (d->type == tquad_with_ix_t::TYPE_HDOOR) { // add trim at top of door, houses only
-			float z(door.z1() + window_vspacing - floor_thickness);
-			trim.z1() = z - 0.03*door.dz(); // see logic in clip_door_to_interior()
-			trim.z2() = z; // top of door texture
+		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->type == tquad_with_ix_t::TYPE_BDOOR) { // add trim at top of door, houses and office buildings
+			trim.z1() = door.z2() - 0.03*door.dz(); // see logic in clip_door_to_interior()
+			trim.z2() = door.z2(); // top of door texture
 		}
-		else if (d->type == tquad_with_ix_t::TYPE_BDOOR) { // different logic for building doors, which are higher
-			float z(door.z1() + window_vspacing - 0.01*door.dz());
-			trim.z1() = z - fc_thick;
-			trim.z2() = z;
+		if (d->type == tquad_with_ix_t::TYPE_BDOOR) { // different logic for building doors
 			ext_flags = flags; // unlike hdoors, need to draw the back face to hide the gap betweeen ceiling and floor above
 			trim.d[dim][dir] += (dir ? -1.0 : 1.0)*0.005*window_vspacing; // minor shift back toward building to prevent z-fighting
 		}
@@ -1677,7 +1674,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				trim.z2() = z + trim_height;
 				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_CUBE); // floor trim
 				if (!has_ceil_trim) continue;
-				trim.z2() = z + window_vspacing - floor_thickness; // ceil height
+				trim.z2() = z + floor_to_ceil_height; // ceil height
 				trim.z1() = trim.z2() - trim_height;
 
 				for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
@@ -1703,7 +1700,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					trim.z2() = z + trim_height;
 					trim_cubes.clear();
 					trim_cubes.push_back(trim); // start with entire length
-					float const ceil_trim_z2(z + window_vspacing - floor_thickness), ceil_trim_z1(ceil_trim_z2 - trim_height); // ceil height
+					float const ceil_trim_z2(z + floor_to_ceil_height), ceil_trim_z1(ceil_trim_z2 - trim_height); // ceil height
 
 					for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
 						if (j == i) continue; // skip self
