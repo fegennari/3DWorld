@@ -1616,7 +1616,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	tree_wideness          = 70;
 	branch_curveness       = 90.0;
 	branch_1_var           = 100.0*0.85;
-	branch_1_rad_var       = 100.0*0.64;
+	branch_1_rad_var       = 100.0*0.64; // Note: to be physically correct, branching should preserve cross-sectional area
 	branch_1_start         = 0.45;
 	branch_2_start         = 0.9;
 	branch_2_var           = 100.0*0.85;
@@ -1637,11 +1637,10 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	float const branch_1_random_rotate = 40.0;
 	int const min_num_roots(10), max_num_roots(12);
 	base_color = colorRGBA(0.5*rgen.signed_rand_float(), 0.5*rgen.signed_rand_float(), 0.0, 1.0); // no blue
-
-	//temporary variables
+	// temporary variables
 	int const nbr(num_1_branches*(num_2_branches_max+1)), nbranches(nbr*num_3_branches_max);
 	
-	//allocate all the memory required for the tree------------------------------------------------
+	// allocate all the memory required for the tree ------------------------------------------------
 	branch_ptr_cache.resize(num_1_branches);
 	branches = &branch_ptr_cache.front();
 	unsigned const tot_branches(nbr + nbranches + max(num_34_branches[1], 1)); // allocate at least one branches_34[1] so we can set the first cylin
@@ -1671,7 +1670,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		cur_ptr += ncib;
 	}
 
-	//create tree base -------------------------------------------------------------
+	// create tree base -------------------------------------------------------------
 	int num_b_so_far(0);
 
 	for (int i = 0; i < base_num_cylins; i++) {
@@ -1712,7 +1711,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	} // for i
 	num_1_branches = num_b_so_far; // clamp to the number actually created
 	
-	//done with base ------------------------------------------------------------------
+	// done with base ------------------------------------------------------------------
 	if (has_4th_branches) {create_4th_order_branches(nbranches, size_scale*br_scale);}
 	root_num_cylins = ((gen_tree_roots && !create_bush) ? CYLINS_PER_ROOT*rgen.rand_int(min_num_roots, max_num_roots) : 0);
 
