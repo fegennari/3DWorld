@@ -1847,19 +1847,23 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		wall.z2() -= 0.5*floor_thickness; // prevent z-fighting on top floor
 		wall.z1()  = max(bcube.z1()+half_thick, floor_z-half_thick); // full height
 		set_wall_width(wall, i->d[dim][dir], wall_hw, dim);
-		if (i->shape == SHAPE_WALLED || i->shape == SHAPE_U) {objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir);} // add wall at back/end of stairs
+
+		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1])) || i->shape == SHAPE_U) {
+			objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir); // add wall at back/end of stairs
+		}
 		wall.d[dim][!dir] = i->d[dim][!dir];
 
 		for (unsigned d = 0; d < 2; ++d) { // sides of stairs
 			set_wall_width(wall, i->d[!dim][d], wall_hw, !dim);
-			if (has_side_walls) {objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir);} // add walls around stairs for this floor
+			bool const add_wall(has_side_walls && !i->against_wall[d]); // don't add a wall if the stairs are already against a wall
+			if (add_wall) {objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir);} // add walls around stairs for this floor
 
 			if (i->has_railing) { // add railings
 				bool railing_dir(dir);
 				cube_t railing(wall);
-				uint16_t flags(has_side_walls ? RO_FLAG_NOCOLL : 0);
+				uint16_t flags(add_wall ? RO_FLAG_NOCOLL : 0);
 
-				if (has_side_walls) {
+				if (add_wall) {
 					railing.translate_dim((d ? -1.0 : 1.0)*2.0*wall_hw, !dim); // shift railing inside of walls
 					railing.expand_in_dim(dim, -wall_hw); // shrink slightly to avoid clipping through an end wall
 				}

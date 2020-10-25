@@ -804,7 +804,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	float ewidth(1.5*doorway_width); // for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
-	bool stairs_dim(0), add_elevator(0), stairs_have_railing(1);
+	bool stairs_dim(0), add_elevator(0), stairs_have_railing(1), stairs_against_wall[2] = {0, 0};
 	stairs_shape sshape(SHAPE_STRAIGHT); // straight by default
 	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
 
@@ -902,7 +902,6 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					else if (dy > 1.2*dx) {stairs_dim = 1;}
 					else {stairs_dim = rgen.rand_bool();} // close to square
 					if (cutout.get_sz_dim(stairs_dim) < 4.0*stairs_sz || cutout.get_sz_dim(!stairs_dim) < 3.0*stairs_sz) continue; // not enough space for stairs
-					bool against_wall(0);
 
 					for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY
 						bool const is_step_dim(bool(dim) == stairs_dim);
@@ -920,11 +919,11 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 								cube_t cand(cutout);
 								float const shift(0.95f*(cand.d[dim][dir] - room.d[dim][dir])); // negative if dir==1, add small gap to prevent z-fighting and FP accuracy asserts
 								cand.d[dim][0] -= shift; cand.d[dim][1] -= shift; // close the gap - flush with the wall
-								if (!is_cube_close_to_doorway(cand, room)) {cutout = cand; against_wall = 1; break;} // keep if it's good
+								if (!is_cube_close_to_doorway(cand, room)) {cutout = cand; stairs_against_wall[dir] = 1; break;} // keep if it's good
 							} // for d
 						}
 					} // for dim
-					if (!against_wall) {/*sshape = SHAPE_WALLED_SIDES;*/} // don't add walls around stairs if they can be against/blocking a window
+					if (!is_house && (stairs_against_wall[0] || stairs_against_wall[1])) {sshape = SHAPE_WALLED_SIDES;} // add wall between room and office stairs if against a room wall
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
 					stairs_cut      = cutout;
@@ -972,6 +971,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				// make sure to enable back wall for the first flight of stairs
 				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing, ((f == 1 && sshape == SHAPE_WALLED_SIDES) ? SHAPE_WALLED : sshape));
 				landing.z1() = zc; landing.z2() = zf;
+				for (unsigned d = 0; d < 2; ++d) {landing.against_wall[d] = stairs_against_wall[d];}
 				interior->landings.push_back(landing);
 				if (f == 1) {interior->stairwells.emplace_back(stairs_cut, num_floors, stairs_dim, stairs_dir, sshape);} // only add for first floor
 			}
