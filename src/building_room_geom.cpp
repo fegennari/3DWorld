@@ -648,7 +648,7 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
 	// elevator car, all materials are dynamic; no lighting scale
-	float const thickness(0.051*c.dz());
+	float const thickness(1.005*0.5*FLOOR_THICK_VAL_OFFICE*c.dz());
 	cube_t floor(c), ceil(c), back(c);
 	floor.z2() = floor.z1() + thickness;
 	ceil. z1() = ceil. z2() - thickness;

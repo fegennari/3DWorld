@@ -1136,13 +1136,15 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 	if (!is_house || room.is_office) { // add whiteboards
 		if (rgen.rand_float() < 0.2) return 0; // skip 20% of the time
 		bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
+		float const floor_thick(get_floor_thickness());
 
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
 			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {
 				bool const dim(bool(dim2) ^ pref_dim), dir(bool(dir2) ^ pref_dir);
 				if (fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
 				cube_t c(room);
-				c.z1() = zval + 0.25*floor_height; c.z2() = zval + 0.8*floor_height;
+				c.z1() = zval + 0.25*floor_height;
+				c.z2() = zval + 0.9*floor_height - floor_thick;
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
 				c.expand_in_dim(!dim, -0.2*room.get_sz_dim(!dim)); // xy_space
 				if (!check_valid_picture_placement(room, c, 0.6*room.get_sz_dim(!dim), zval, dim, dir, objs_start)) continue;

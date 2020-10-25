@@ -289,7 +289,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm) const {
 	pos.z = bcube.z1(); // start at building z1 rather than the terrain height in case we're at the foot of a steep hill
 	assert(interior);
-	float const floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness());
 	bool had_coll(0), on_stairs(0);
 	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
 	float const wall_test_z(obj_z + radius); // hack to allow player to step over a wall that's below the stairs connecting stacked parts
@@ -316,7 +316,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		if (obj_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
 		had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *i, p_last, 1, 0, cnorm); // skip_z=0
 	}*/
-	if (!xy_only && 2.2*radius < floor_spacing*(1.0 - FLOOR_THICK_VAL)) { // diameter is smaller than space between floor and ceiling
+	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
 		obj_z = max(pos.z, p_last.z);
 
