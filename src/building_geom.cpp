@@ -319,11 +319,12 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
 		obj_z = max(pos.z, p_last.z);
+		float const floor_test_zval(obj_z + radius); // move up a bit to better handle steep stairs
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
 			if (!i->contains_pt_xy(pos)) continue; // sphere not in this part/cube
 			float const z1(i->z1());
-			if (obj_z < z1 || obj_z > z1 + floor_spacing) continue; // this is not the floor the sphere is on
+			if (floor_test_zval < z1 || floor_test_zval > z1 + floor_spacing) continue; // this is not the floor the sphere is on
 			if (pos.z < z1 + radius) {pos.z = z1 + radius; had_coll = 1;} // move up
 			break; // only change zval once
 		}

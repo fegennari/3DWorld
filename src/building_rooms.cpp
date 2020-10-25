@@ -1258,6 +1258,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
+	float const light_thick(0.025*window_vspacing), def_light_size(0.1*window_vspacing);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0), num_light_stacks(0), num_bathrooms(0);
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
@@ -1290,7 +1291,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		// determine light pos and size for this stack of rooms
 		bool const room_dim(r->dx() < r->dy()); // longer room dim
 		bool const must_be_bathroom(room_id == cand_bathroom && num_bathrooms == 0); // cand bathroom, and bathroom not already placed
-		float light_size(floor_thickness); // default size for houses
+		float light_size(def_light_size); // default size for houses
 		unsigned const room_objs_start(objs.size());
 
 		if (r->is_sec_bldg) {
@@ -1299,11 +1300,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		}
 		if (r->is_office) { // light size varies by office size
 			float const room_size(r->dx() + r->dy()); // normalized to office size
-			light_size = max(0.015f*room_size, 0.67f*floor_thickness);
+			light_size = max(0.015f*room_size, 0.67f*def_light_size);
 		}
 		if (r->is_hallway) { // light size varies by hallway size
 			float const room_size(min(r->dx(), r->dy())); // normalized to hallway width
-			light_size = max(0.06f*room_size, 0.67f*floor_thickness);
+			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 		}
 		if (r->has_stairs && r->rtype == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS);} // default to stairs, may be re-assigned below
 		float const light_val(22.0*light_size);
@@ -1357,7 +1358,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			if (!light.is_all_zeros()) { // add a light to the center of the ceiling of this room if there's space (always for top of stairs)
 				light.z2() = z + floor_height - fc_thick;
-				light.z1() = light.z2() - 0.5*fc_thick;
+				light.z1() = light.z2() - light_thick;
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
 
 				// check ped_bcubes and set is_lit if any are people are in this floor of this room
