@@ -387,6 +387,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
 	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt)) return 0; // it's only a bedroom if there's bed
+	assert(bed_obj_ix < objs.size());
+	room_object_t const bed(objs[bed_obj_ix]); // deep copy so that we don't need to worry about invalidating the reference below
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.1*wall_thickness); // shrink to leave a small gap
@@ -450,16 +452,15 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	vector3d const ds_sz_scale(ds_depth/ds_height, ds_width/ds_height, 1.0);
 	place_obj_along_wall(TYPE_DRESSER, room, ds_height, ds_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
 	// nightstand
+	unsigned const pref_orient(2*bed.dim + (!bed.dir)); // prefer the same orient as the bed so that it's placed on the same wall next to the bed
 	float const ns_height(rgen.rand_uniform(0.24, 0.26)*window_vspacing), ns_depth(rgen.rand_uniform(0.15, 0.2)*window_vspacing), ns_width(rgen.rand_uniform(1.0, 2.0)*ns_depth);
 	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
-	place_obj_along_wall(TYPE_DRESSER, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
+	place_obj_along_wall(TYPE_DRESSER, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, pref_orient);
 
 	// try to place a lamp on a dresser or nightstand that was added to this room
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP) && (rgen.rand()&3) != 0) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_LAMP)); // L, W, H
 		float const height(0.25*window_vspacing), width(height*0.5f*(sz.x + sz.y)/sz.z);
-		assert(bed_obj_ix < objs.size());
-		room_object_t const &bed(objs[bed_obj_ix]);
 		point pillow_center(bed.get_cube_center());
 		pillow_center[bed.dim] += (bed.dir ? 1.0 : -1.0)*0.5*bed.get_sz_dim(bed.dim); // adjust from bed center to near the pillow(s)
 		int obj_id(-1);
