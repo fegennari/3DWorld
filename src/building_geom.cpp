@@ -1758,6 +1758,8 @@ bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float do
 	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
 		cube_t tc(*s);
 		tc.expand_in_dim(s->dim, doorway_width); // add extra space at both ends of stairs
+		float const wall_hw(0.15*s->get_sz_dim(s->dim)/NUM_STAIRS_PER_FLOOR); // see step_len_pos logic in building_t::add_stairs_and_elevators()
+		tc.expand_in_dim(!s->dim, wall_hw); // add extra space to account for walls and railings on stairs
 		if (tc.intersects(bcube)) return 1;
 	}
 	return 0;
