@@ -148,14 +148,16 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
 		float const zval(max(pos2.z, p_last2.z) - xlate.z); // this is the real zval for use in collsion detection, in building space
-		cube_t sc; sc.set_from_sphere((pos2 - xlate), radius); // sphere bounding cube
+		point const pos2_bs(pos2 - xlate);
+		cube_t sc; sc.set_from_sphere(pos2_bs, radius); // sphere bounding cube
 
 		if ((zval + radius) > bcube.z1() && zval < (bcube.z1() + get_door_height())) { // on the ground floor
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
 				if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // doesn't apply to roof door
 				cube_t bc(d->get_bcube());
-				bc.expand_in_dim((bc.dy() < bc.dx()), 0.1*radius); // expand slightly in door dim to allow a bit of tolerance
-				if (bc.intersects(sc)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
+				bool const door_dim(bc.dy() < bc.dx());
+				bc.expand_in_dim(door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
+				if (bc.contains_pt(pos2_bs)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
 			}
 		}
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // include garages and sheds
