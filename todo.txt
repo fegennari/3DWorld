@@ -2,7 +2,7 @@ Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 TT lower res distant shadow map for tiled terrain mode with smooth blend
 - Planet water reflection map
-- Dynamic volume lighting at higher res near the player
+- Rocky planets with gas giant cloud layer
 
 Load/display model3d models in tiled terrain mode
   - Model Shadow Maps
@@ -12,3 +12,5 @@ Cities:
 - Wider connector roads/intersections
 - Railroad tracks
 - Interiors for non-rectangular buildings
+- Larger spacing between office building floors
+- Higher ambient lighting in city building bottom floors at night
