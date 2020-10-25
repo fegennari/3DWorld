@@ -1863,9 +1863,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				cube_t railing(wall);
 				uint16_t flags(add_wall ? RO_FLAG_NOCOLL : 0);
 
-				if (add_wall) {
+				if (add_wall || i->roof_access) {
 					railing.translate_dim((d ? -1.0 : 1.0)*2.0*wall_hw, !dim); // shift railing inside of walls
-					railing.expand_in_dim(dim, -wall_hw); // shrink slightly to avoid clipping through an end wall
+					railing.expand_in_dim(dim, -(i->roof_access ? 1.5 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
 				}
 				if (i->shape == SHAPE_U) { // adjust railing height/angle to match stairs
 					if (d == side) {railing.z1() = wall.get_center_dim(2); flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}

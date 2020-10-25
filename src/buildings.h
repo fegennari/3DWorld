@@ -429,13 +429,13 @@ struct room_t : public cube_t {
 };
 
 struct landing_t : public cube_t {
-	bool for_elevator, dim, dir, has_railing, against_wall[2];
+	bool for_elevator, dim, dir, has_railing, roof_access, against_wall[2];
 	uint8_t floor;
 	stairs_shape shape;
 
-	landing_t() : for_elevator(0), dim(0), dir(0), has_railing(0), floor(0), shape(SHAPE_STRAIGHT) {against_wall[0] = against_wall[1] = 0;}
-	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT) :
-		cube_t(c), for_elevator(e), dim(dim_), dir(dir_), has_railing(railing), floor(f), shape(shape_)
+	landing_t() : for_elevator(0), dim(0), dir(0), has_railing(0), roof_access(0), floor(0), shape(SHAPE_STRAIGHT) {against_wall[0] = against_wall[1] = 0;}
+	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0) :
+		cube_t(c), for_elevator(e), dim(dim_), dir(dir_), has_railing(railing), roof_access(roof_access_), floor(f), shape(shape_)
 	{
 		against_wall[0] = against_wall[1] = 0;
 		assert(is_strictly_normalized());

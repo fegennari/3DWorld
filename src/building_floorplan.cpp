@@ -1003,8 +1003,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			float const zc(z - fc_thick);
 			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
-			// don't add railings to straight roof access stairs because they intersect with the roof access door
-			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 0, sshape); // stairs_have_railing=0
+			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 1, sshape, 1); // stairs_have_railing=1, roof_access=1
 			landing.z1() = zc; landing.z2() = z; // no floor above
 			interior->landings.push_back(landing);
 			interior->stairwells.back().z2() += fc_thick; // extend upward
