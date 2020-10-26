@@ -1062,6 +1062,23 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.back().obj_id = (uint16_t)objs.size();
 		} // for dir
 	} // for dim
+	// add a random office chair if there's space
+	if (min(crate_bounds.dx(), crate_bounds.dy()) > 1.2*window_vspacing && building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
+		vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_OFFICE_CHAIR));
+		float const chair_height(0.425*window_vspacing), chair_radius(0.5f*chair_height*(0.5f*(chair_sz.x + chair_sz.y))/chair_sz.z); // assume square
+		cube_t place_area(crate_bounds);
+		point pos(0.0, 0.0, zval);
+		place_area.expand_by_xy(-chair_radius);
+		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);}
+		cube_t chair(pos);
+		chair.expand_by_xy(chair_radius);
+		chair.z2() += chair_height;
+		
+		// for now, just make one random attempt; if it fails then there's no chair in this room
+		if (!has_bcube_int(chair, exclude) && !is_cube_close_to_doorway(chair, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(chair)) {
+			objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt);
+		}
+	}
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
 		point pos(0.0, 0.0, zval);
 		vector3d sz; // half size relative to window_vspacing
@@ -1077,9 +1094,9 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		bool bad_placement(0);
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-			if (i->type != TYPE_CRATE) continue; // only handle stacking of crates on other crates
 			if (!i->intersects(crate)) continue;
-			if (i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(i->dz(), 2);} // place this crate on the previous one
+			// only handle stacking of crates on other crates
+			if (i->type == TYPE_CRATE && i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(i->dz(), 2);}
 			else {bad_placement = 1; break;}
 		}
 		if (bad_placement) continue;
