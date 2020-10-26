@@ -36,6 +36,12 @@ float get_radius_for_square_model(unsigned model_id) {
 	vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(model_id));
 	return 0.5f*(chair_sz.x + chair_sz.y)/chair_sz.z; // assume square and take average of xsize and ysize
 }
+template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height) { // T can be float or vector3d
+	cube_t c(center);
+	c.expand_by_xy(radius);
+	c.z2() += height;
+	return c;
+}
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model)
@@ -54,9 +60,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		push_out     = rgen.rand_uniform(-0.5, 1.2); // varible amount of pushed in/out
 	}
 	chair_pos[dim] += (dir ? -1.0f : 1.0f)*push_out*chair_hwidth;
-	cube_t chair(chair_pos, chair_pos);
-	chair.z2() += chair_height;
-	chair.expand_by_xy(chair_hwidth);
+	cube_t const chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
 	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0; // check proximity to doors
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
@@ -159,9 +163,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 			}
 			if (is_good) break; // done; may never get here if no points are good, but the code below will handle that
 		} // for m
-		cube_t c(center, center);
-		c.expand_by_xy(radius);
-		c.z2() += height;
+		cube_t const c(get_cube_height_radius(center, radius, height));
 		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
 		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? room_obj_shape::SHAPE_CYLIN : room_obj_shape::SHAPE_CUBE), colors[rgen.rand()%NUM_COLORS]);
@@ -347,10 +349,8 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 					point center(c.get_cube_center());
 					center[!long_dim] += dir_sign*0.2*cube_depth;
 					for (unsigned d = 0; d < 2; ++d) {center[d] += 0.15*chair_radius*rgen.signed_rand_float();} // slightly random XY position
-					cube_t chair(center, center);
-					chair.z1() = zval;
-					chair.z2() = zval + chair_height;
-					chair.expand_by_xy(chair_radius);
+					center.z = zval;
+					cube_t const chair(get_cube_height_radius(center, chair_radius, chair_height));
 					objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, !long_dim, dir, RO_FLAG_RAND_ROT, tot_light_amt, room_obj_shape::SHAPE_CUBE, GRAY_BLACK);
 				}
 			} // for d
@@ -484,10 +484,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 		}
 		if (obj_id >= 0) { // found a valid object to place this on
 			room_object_t const &obj(objs[obj_id]);
-			cube_t lamp(obj.get_cube_center());
-			lamp.z1() = obj.z2();
-			lamp.z2() = obj.z2() + height;
-			lamp.expand_by_xy(0.5*width); // expand by half width
+			point center(obj.get_cube_center());
+			center.z = obj.z2();
+			cube_t lamp(get_cube_height_radius(center, 0.5*width, height));
 			lamp.translate_dim((obj.dir ? 1.0 : -1.0)*0.1*width, obj.dim); // move slightly toward the front to avoid clipping through the wall
 			float const shift_range(0.4f*(obj.get_sz_dim(!obj.dim) - width)), obj_center(obj.get_center_dim(!obj.dim)), targ_pos(pillow_center[!obj.dim]);
 			float shift_val(0.0), dmin(0.0);
@@ -1072,9 +1071,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		point pos(0.0, 0.0, zval);
 		place_area.expand_by_xy(-chair_radius);
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);}
-		cube_t chair(pos);
-		chair.expand_by_xy(chair_radius);
-		chair.z2() += chair_height;
+		cube_t chair(get_cube_height_radius(pos, chair_radius, chair_height));
 		
 		// for now, just make one random attempt; if it fails then there's no chair in this room
 		if (!has_bcube_int(chair, exclude) && !is_cube_close_to_doorway(chair, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(chair)) {
@@ -1089,9 +1086,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		place_area.expand_by_xy(-sz);
 		if (!place_area.is_strictly_normalized()) continue; // too large for this room
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);}
-		cube_t crate(pos);
-		crate.expand_by_xy(sz);
-		crate.z2() += 2.0*sz.z; // multiply by 2 since this is a size rather than half size/radius
+		cube_t crate(get_cube_height_radius(pos, sz, 2.0*sz.z)); // multiply by 2 since this is a size rather than half size/radius
 		if (has_bcube_int(crate, exclude)) continue; // don't place crates between the door and the center of the room
 		bool bad_placement(0);
 
