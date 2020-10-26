@@ -32,6 +32,11 @@ bool building_t::is_valid_placement_for_room(cube_t const &c, cube_t const &room
 	return 1;
 }
 
+float get_radius_for_square_model(unsigned model_id) {
+	vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(model_id));
+	return 0.5f*(chair_sz.x + chair_sz.y)/chair_sz.z; // assume square and take average of xsize and ysize
+}
+
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model)
 {
@@ -41,8 +46,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	point chair_pos(place_pos); // same starting center and z1
 
 	if (office_chair_model) {
-		vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_OFFICE_CHAIR));
-		chair_hwidth = 0.5f*chair_height*(0.5f*(chair_sz.x + chair_sz.y))/chair_sz.z; // assume square and take average of xsize and ysize
+		chair_hwidth = 0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
 		push_out     = 0.5; // pushed out a bit so that the arms don't intersect the table top
 	}
 	else {
@@ -307,9 +311,8 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 	bool added_cube(0);
 
 	if (has_office_chair) {
-		vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_OFFICE_CHAIR));
 		chair_height = 0.425*floor_spacing;
-		chair_radius = 0.5f*chair_height*(0.5f*(chair_sz.x + chair_sz.y))/chair_sz.z; // assume square and take average of xsize and ysize
+		chair_radius = 0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR);
 	}
 	for (unsigned n = 0; n < num_cubes; ++n) {
 		float const hi_pos(lo_pos + cube_width);
@@ -1064,8 +1067,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	} // for dim
 	// add a random office chair if there's space
 	if (min(crate_bounds.dx(), crate_bounds.dy()) > 1.2*window_vspacing && building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
-		vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_OFFICE_CHAIR));
-		float const chair_height(0.425*window_vspacing), chair_radius(0.5f*chair_height*(0.5f*(chair_sz.x + chair_sz.y))/chair_sz.z); // assume square
+		float const chair_height(0.425*window_vspacing), chair_radius(0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
 		cube_t place_area(crate_bounds);
 		point pos(0.0, 0.0, zval);
 		place_area.expand_by_xy(-chair_radius);
