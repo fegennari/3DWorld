@@ -570,6 +570,12 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	} // for s
 }
 
+void building_room_geom_t::add_keyboard(room_object_t const &c) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("keyboard.jpg"), 0.0), 1, 0, 1)); // shadows, small
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
+	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(c, apply_light_color(c, BKGRAY), zero_vector, EF_Z12); // sides, no shadows, small
+}
+
 void building_room_geom_t::add_mirror(room_object_t const &c) {
 	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
 	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1;}
@@ -1481,6 +1487,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this));
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
 	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
+	case TYPE_KEYBOARD: return BLACK;
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	if (type >= TYPE_TOILET && type < NUM_TYPES) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
@@ -1564,7 +1571,8 @@ void building_room_geom_t::create_small_static_vbos() {
 		case TYPE_RAILING:   add_railing(*i); break;
 		case TYPE_PLANT: add_potted_plant(*i, 0, 1); break; // plant only
 		case TYPE_CRATE: add_crate    (*i); break; // not small but only added to windowless rooms
-		case TYPE_SHELVES: add_shelves(*i, tscale); break; // not small but only added to windowless rooms
+		case TYPE_SHELVES:  add_shelves(*i, tscale); break; // not small but only added to windowless rooms
+		case TYPE_KEYBOARD: add_keyboard(*i); break;
 		default: break;
 		}
 	} // for i

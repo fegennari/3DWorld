@@ -250,10 +250,18 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			tv.z2() = c.z2() + tv_height;
 			tv.d[dim][ dir] = c. d[dim][dir] + dsign*0.25*depth; // 25% of the way from the wall
 			tv.d[dim][!dir] = tv.d[dim][dir] + dsign*tv_depth;
-			tv.d[!dim][0] = center - tv_hwidth;
-			tv.d[!dim][1] = center + tv_hwidth;
+			set_wall_width(tv, center, tv_hwidth, !dim);
 			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, 0, tot_light_amt, room_obj_shape::SHAPE_SHORT, BLACK); // monitors are shorter than TVs
 			objs.back().obj_id = (uint16_t)objs.size();
+			// add a keyboard as well
+			float const kbd_hwidth(0.7*tv_hwidth);
+			cube_t keyboard;
+			keyboard.z1() = c.z2();
+			keyboard.z2() = c.z2() + 0.06*kbd_hwidth;
+			keyboard.d[dim][!dir] = c.d[dim][!dir] - dsign*0.06*depth; // close to front edge
+			keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*0.6*kbd_hwidth;
+			set_wall_width(keyboard, center, kbd_hwidth, !dim);
+			objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // add as white, will be drawn with gray/black texture
 		}
 		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
 			point chair_pos;
