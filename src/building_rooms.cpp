@@ -1860,7 +1860,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		if (i->shape != SHAPE_U) { // straight stairs
 			for (unsigned n = 0; n < NUM_STAIRS_PER_FLOOR; ++n, z += stair_dz, pos += step_len) {
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
-				stair.z1() = max(floor_z, (z + half_thick)); // don't go below the floor
+				stair.z1() = max(bcube.z1(), (z + 0.5f*half_thick)); // don't go below the floor
 				stair.z2() = z + stair_height;
 				assert(stair.z1() < stair.z2());
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
@@ -1907,7 +1907,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 				if (add_wall || i->roof_access) {
 					railing.translate_dim((d ? -1.0 : 1.0)*2.0*wall_hw, !dim); // shift railing inside of walls
-					railing.expand_in_dim(dim, -(i->roof_access ? 1.5 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
+					railing.expand_in_dim(dim, -(i->roof_access ? 2.0 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
 				}
 				if (i->shape == SHAPE_U) { // adjust railing height/angle to match stairs
 					if (d == side && i->is_at_top) continue; // no railing for top flight (or need to add a vertical pole at the high end)
