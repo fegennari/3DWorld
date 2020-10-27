@@ -1005,6 +1005,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			subtract_cube_xy(part, stairs_cut, to_add);
 			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 1, sshape, 1); // stairs_have_railing=1, roof_access=1
 			landing.z1() = zc; landing.z2() = z; // no floor above
+			for (unsigned d = 0; d < 2; ++d) {landing.against_wall[d] = stairs_against_wall[d];}
 			interior->landings.push_back(landing);
 			interior->stairwells.back().z2() += fc_thick; // extend upward
 			interior->stairwells.back().z1() += fc_thick; // requiured to trick roof clipping into treating this as a stack connector stairwell
