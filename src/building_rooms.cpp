@@ -1910,8 +1910,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					railing.expand_in_dim(dim, -(i->roof_access ? 1.5 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
 				}
 				if (i->shape == SHAPE_U) { // adjust railing height/angle to match stairs
+					if (d == side && i->is_at_top) continue; // no railing for top flight (or need to add a vertical pole at the high end)
 					if (d == side) {railing.z1() = wall.get_center_dim(2); flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
-					else           {railing.z2() = wall.get_center_dim(2); flags |= RO_FLAG_ADJ_LO; }
+					else           {railing.z2() = wall.get_center_dim(2); flags |= RO_FLAG_ADJ_LO;}
 				}
 				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color); // collision works like a cube
 			}

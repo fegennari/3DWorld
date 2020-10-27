@@ -953,6 +953,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 		if (!has_stairs && !has_elevator) {to_add[0] = part;} // neither - add single cube
 		else {
+			bool const is_at_top(f+1 == num_floors);
 			subtract_cube_xy(part, first_cut, to_add);
 
 			if (has_stairs && has_elevator) { // both
@@ -969,7 +970,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			}
 			if (has_stairs) { // add landings and stairwells
 				// make sure to enable back wall for the first flight of stairs
-				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing, ((f == 1 && sshape == SHAPE_WALLED_SIDES) ? SHAPE_WALLED : sshape));
+				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing, ((f == 1 && sshape == SHAPE_WALLED_SIDES) ? SHAPE_WALLED : sshape), 0, is_at_top);
 				landing.z1() = zc; landing.z2() = zf;
 				for (unsigned d = 0; d < 2; ++d) {landing.against_wall[d] = stairs_against_wall[d];}
 				interior->landings.push_back(landing);
@@ -1003,7 +1004,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			float const zc(z - fc_thick);
 			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
-			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 1, sshape, 1); // stairs_have_railing=1, roof_access=1
+			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 1, sshape, 1, 1); // stairs_have_railing=1, roof_access=1, is_at_top=1
 			landing.z1() = zc; landing.z2() = z; // no floor above
 			for (unsigned d = 0; d < 2; ++d) {landing.against_wall[d] = stairs_against_wall[d];}
 			interior->landings.push_back(landing);
@@ -1264,7 +1265,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				}
 				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
 				stairs_shape const sshape(wall_clipped ? SHAPE_WALLED : SHAPE_STRAIGHT); // add walls around stairs if room walls were clipped; otherwise, straight with railings
-				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape);
+				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape, 0, 1); // roof_access=0, is_at_top=1
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
 				interior->stairwells.emplace_back(cand, 1, dim, stairs_dir, sshape, 0, 1); // roof_access=0, stack_conn=1
