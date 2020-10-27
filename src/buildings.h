@@ -267,7 +267,8 @@ struct room_object_t : public cube_t {
 	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, uint16_t f=0, float light=1.0,
 		room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
 		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_)
-	{assert(is_strictly_normalized());}
+	{check_normalized();}
+	void check_normalized() const;
 	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}
 	bool has_stairs () const {return  (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 	bool is_visible () const {return !(flags & RO_FLAG_INVIS);}
