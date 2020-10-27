@@ -14,6 +14,7 @@ unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currentl
 unsigned const NUM_STAIRS_PER_FLOOR= 12;
 float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
+float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 
 unsigned const NUM_BOOK_COLORS = 16;
 colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
@@ -568,7 +569,7 @@ struct building_t : public building_geom_t {
 	building_mat_t const &get_material() const;
 	float get_window_vspace  () const {return get_material().get_floor_spacing();}
 	float get_floor_thickness() const {return (is_house ? FLOOR_THICK_VAL_HOUSE : FLOOR_THICK_VAL_OFFICE)*get_window_vspace();}
-	float get_wall_thickness () const {return 0.5*get_floor_thickness();}
+	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
 	float get_door_height    () const {return 0.95f*(get_window_vspace() - get_floor_thickness());} // set height based on window spacing, 95% of ceiling height (may be too large)
 	unsigned get_real_num_parts() const {return (is_house ? min(2U, unsigned(parts.size() - has_chimney)) : parts.size());}
 	void gen_rotation(rand_gen_t &rgen);

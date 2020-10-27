@@ -178,12 +178,14 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 			break; // flag for interior collision detection
 		} // for i
 		if (!is_interior) { // not interior to a part - check roof access
+			float const floor_thickness(get_floor_thickness());
+
 			for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
 				if (!i->roof_access) continue;
 				cube_t test_cube(*i);
 				test_cube.expand_by_xy(-0.5f*radius);
 				if (!test_cube.contains_pt_xy(pos2 - xlate)) continue; // pos not over stairs
-				if (zval < i->z2() + 1.5f*radius) {is_interior = 1; break;} // Note: don't have to check zval > i->z2() because we know that !is_interior
+				if (zval < i->z2() + radius + floor_thickness) {is_interior = 1; break;} // Note: don't have to check zval > i->z2() because we know that !is_interior
 			}
 		}
 	}
@@ -321,7 +323,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
 		obj_z = max(pos.z, p_last.z);
-		float const floor_test_zval(obj_z + radius); // move up a bit to better handle steep stairs
+		float const floor_test_zval(obj_z + floor_thickness); // move up by floor thickness to better handle steep stairs
 
 		for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) {
 			if (!i->contains_pt_xy(pos)) continue; // sphere not in this part/cube
