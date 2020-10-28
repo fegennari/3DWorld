@@ -946,6 +946,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	bool const has_stairs(!stairs_cut.is_all_zeros()), has_elevator(!elevator_cut.is_all_zeros());
 	bool const stairs_dir(has_stairs ? rgen.rand_bool() : 0); // same for every floor, could maybe alternate for stairwells
 	cube_t &first_cut(has_elevator ? elevator_cut : stairs_cut); // elevator is larger
+	unsigned last_landing_ix(0);
 
 	for (unsigned f = 1; f < num_floors; ++f, z += window_vspacing) { // skip first floor - draw pairs of floors and ceilings
 		cube_t to_add[8]; // up to 2 cuts for stairs + elevator
@@ -973,6 +974,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing, ((f == 1 && sshape == SHAPE_WALLED_SIDES) ? SHAPE_WALLED : sshape), 0, is_at_top);
 				landing.z1() = zc; landing.z2() = zf;
 				for (unsigned d = 0; d < 2; ++d) {landing.against_wall[d] = stairs_against_wall[d];}
+				last_landing_ix = interior->landings.size();
 				interior->landings.push_back(landing);
 				if (f == 1) {interior->stairwells.emplace_back(stairs_cut, num_floors, stairs_dim, stairs_dir, sshape);} // only add for first floor
 			}
@@ -1004,6 +1006,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			float const zc(z - fc_thick);
 			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
+			interior->landings[last_landing_ix].is_at_top = 0; // previous landing is no longer at the top
 			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 1, sshape, 1, 1); // stairs_have_railing=1, roof_access=1, is_at_top=1
 			landing.z1() = zc; landing.z2() = z; // no floor above
 			for (unsigned d = 0; d < 2; ++d) {landing.against_wall[d] = stairs_against_wall[d];}
