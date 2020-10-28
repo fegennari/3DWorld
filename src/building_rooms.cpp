@@ -1908,6 +1908,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 		for (unsigned d = 0; d < 2; ++d) { // sides of stairs
 			set_wall_width(wall, i->d[!dim][d], wall_hw, !dim);
+			wall.expand_in_dim(dim, 0.01*wall_hw); // just enough to avoid z-fighting with stairs
 			bool const add_wall(has_side_walls && !i->against_wall[d]); // don't add a wall if the stairs are already against a wall
 			if (add_wall) {objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir);} // add walls around stairs for this floor
 
