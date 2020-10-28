@@ -557,7 +557,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 		} // end camera on different floor case
-		float const light_radius(6.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius); // what about light_radius for lamps?
+		float const light_radius(6.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius), dshadow_radius(0.8*light_radius); // what about light_radius for lamps?
 		if (!camera_pdu.sphere_visible_test((lpos + xlate), cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t sphere_bc; // in building space
@@ -608,14 +608,16 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool dynamic_shadows(0);
 
 		if (camera_near_building) {
-			if (camera_surf_collide && camera_in_building && lpos.z > camera_bs.z && (camera_on_stairs || lpos.z < (camera_bs.z + window_vspacing)) && clipped_bc.contains_pt(camera_bs)) {
+			if (camera_surf_collide && camera_in_building && lpos.z > camera_bs.z && (camera_on_stairs || lpos.z < (camera_bs.z + window_vspacing)) &&
+				clipped_bc.contains_pt(camera_bs) && dist_less_than(lpos, camera_bs, dshadow_radius))
+			{
 				dynamic_shadows = 1; // camera shadow
 			}
 			else if (animate2 && enable_building_people_ai()) { // check moving people
 				if (ped_ix >= 0 && ped_bcubes.empty()) {get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes);} // get cubes on first light
 
 				for (auto c = ped_bcubes.begin(); c != ped_bcubes.end(); ++c) {
-					if (lpos.z > c->z2() && c->intersects(clipped_bc)) {dynamic_shadows = 1; break;}
+					if (lpos.z > c->z2() && c->intersects(clipped_bc) && dist_less_than(lpos, c->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
 				}
 			}
 		}
