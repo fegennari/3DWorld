@@ -464,7 +464,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	unsigned camera_part(parts.size()); // start at an invalid value
-	bool camera_by_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
+	bool camera_by_stairs(0), camera_on_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
 	int camera_room(-1);
 	ped_bcubes.clear();
 
@@ -482,6 +482,12 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			assert(room.rtype < NUM_RTYPES);
 			if (display_mode & 0x20) {lighting_update_text = room_names[room.rtype];} // debugging, key '6'
 			cur_player_building_loc = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
+
+			if (camera_by_stairs) {
+				for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
+					if (i->contains_pt(camera_bs)) {camera_on_stairs = 1; break;}
+				}
+			}
 		}
 	}
 	else {
@@ -602,7 +608,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool dynamic_shadows(0);
 
 		if (camera_near_building) {
-			if (camera_surf_collide && camera_in_building && lpos.z > camera_bs.z && clipped_bc.contains_pt(camera_bs)) {dynamic_shadows = 1;} // camera shadow
+			if (camera_surf_collide && camera_in_building && lpos.z > camera_bs.z && (camera_on_stairs || lpos.z < (camera_bs.z + window_vspacing)) && clipped_bc.contains_pt(camera_bs)) {
+				dynamic_shadows = 1; // camera shadow
+			}
 			else if (animate2 && enable_building_people_ai()) { // check moving people
 				if (ped_ix >= 0 && ped_bcubes.empty()) {get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes);} // get cubes on first light
 
