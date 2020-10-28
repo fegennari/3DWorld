@@ -665,7 +665,7 @@ struct building_t : public building_geom_t {
 	void update_elevators(point const &player_pos);
 	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
-	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building, bool reflection_pass) const;
+	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const;
 private:
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;

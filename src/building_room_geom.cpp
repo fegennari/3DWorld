@@ -1682,7 +1682,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		//++occlusion_stats.nnear;
 		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
 		//++occlusion_stats.nvis;
-		if ((display_mode & 0x08) && !shadow_only && building.check_obj_occluded(obj, camera_bs, oc, player_in_building, reflection_pass)) continue;
+		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, player_in_building, shadow_only, reflection_pass)) continue;
 		//++occlusion_stats.ndraw;
 		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && (i->flags & RO_FLAG_LIT));
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
@@ -1711,7 +1711,7 @@ bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsi
 	return 0;
 }
 
-bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building, bool reflection_pass) const {
+bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const {
 	if (!interior) return 0; // could probably make this an assert
 	//highres_timer_t timer("Check Object Occlusion");
 	if (reflection_pass) {assert(player_in_this_building);}
@@ -1727,6 +1727,9 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlus
 		if (fabs(viewer.z - c.get_center_dim(2)) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
 			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->floors, 2)) return 1;
 		}
+	}
+	else if (shadow_only) {
+		return 0; // no additional checks for shadow pass
 	}
 	else if (camera_in_building) { // player in some other building
 		if (player_building != nullptr && player_building->interior) { // check walls of the building the player is in
