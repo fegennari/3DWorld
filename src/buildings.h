@@ -219,10 +219,10 @@ struct draw_range_t {
 };
 
 enum room_object    {
-	TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD, TYPE_BOOK,
-	TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL, TYPE_SIGN,
-	TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM, TYPE_RAILING,
-	TYPE_CRATE, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD,
+	TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_STAIR_WALL, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD,
+	TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL,
+	TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM,
+	TYPE_RAILING, TYPE_CRATE, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD,
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR, TYPE_URINAL, TYPE_LAMP,
 	NUM_TYPES};
@@ -371,6 +371,7 @@ struct building_room_geom_t {
 	void add_chair(room_object_t const &c, float tscale);
 	void add_dresser(room_object_t const &c, float tscale);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
+	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_elevator(room_object_t const &c, float tscale);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);

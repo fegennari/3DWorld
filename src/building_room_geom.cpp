@@ -13,7 +13,8 @@
 bool const ADD_BOOK_COVERS = 1;
 bool const ADD_BOOK_TITLES = 1;
 unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
-colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color
+colorRGBA const WOOD_COLOR  (0.90, 0.70, 0.50); // light brown, multiplies wood texture color
+colorRGBA const STAIRS_COLOR(0.85, 0.85, 0.85);
 
 object_model_loader_t building_obj_model_loader;
 
@@ -440,6 +441,13 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	} // for n
 }
 
+tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
+	tid_nm_pair_t wall_tex_scaled(wall_tex);
+	wall_tex_scaled.tscale_x *= 2.0;
+	wall_tex_scaled.tscale_y *= 2.0;
+	return wall_tex_scaled;
+}
+
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex) { // no lighting scale
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
 	bool const use_small_door(width < 1.2*height);
@@ -448,10 +456,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	cube_t doors(c), walls[2] = {c, c}; // left, right
 	walls[0].d[!c.dim][1] -= wall_shift;
 	walls[1].d[!c.dim][0] += wall_shift;
-	tid_nm_pair_t wall_tex_scaled(wall_tex);
-	wall_tex_scaled.tscale_x *= 2.0;
-	wall_tex_scaled.tscale_y *= 2.0;
-	rgeom_mat_t &wall_mat(get_material(wall_tex_scaled, 1));
+	rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir) | EF_Z12); // skip top, bottom, and face that's against the wall
 	
 	for (unsigned d = 0; d < 2; ++d) {
@@ -650,8 +655,12 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) {
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, colorRGBA(0.85, 0.85, 0.85), tex_origin); // all faces drawn
+void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) { // Note: no room lighting color atten
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, STAIRS_COLOR, tex_origin); // all faces drawn
+}
+
+void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) { // Note: no room lighting color atten
+	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, WHITE, tex_origin); // all faces drawn
 }
 
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
@@ -1472,7 +1481,8 @@ colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE:    return get_textured_wood_color();
 	case TYPE_CHAIR:    return (color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
-	case TYPE_STAIR:    return LT_GRAY; // close enough
+	case TYPE_STAIR:    return STAIRS_COLOR.modulate_with(texture_color(MARBLE_TEX));
+	case TYPE_STAIR_WALL: return texture_color(STUCCO_TEX);
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());
 	case TYPE_PICTURE:  return texture_color(get_picture_tid());
@@ -1510,6 +1520,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		case TYPE_TABLE:   add_table   (*i, tscale, 0.12, 0.08); break; // top_dz=12% of height, leg_width=8% of height
 		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
 		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
+		case TYPE_STAIR_WALL: add_stairs_wall(*i, tex_origin, wall_tex); break;
 		case TYPE_RUG:     add_rug     (*i); break;
 		case TYPE_PICTURE: add_picture (*i); break;
 		case TYPE_WBOARD:  add_picture (*i); break;

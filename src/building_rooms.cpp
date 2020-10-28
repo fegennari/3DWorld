@@ -1896,20 +1896,20 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		set_wall_width(wall, i->d[dim][dir], wall_hw, dim);
 
 		if ((i->shape == SHAPE_WALLED && !(i->against_wall[0] || i->against_wall[1])) || i->shape == SHAPE_U) {
-			objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir); // add wall at back/end of stairs
+			objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
 		}
 		else if ((i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES) && extend_walls_up) { // add upper section only
 			cube_t wall_upper(wall);
 			set_wall_width(wall_upper, (i->d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_hw), wall_hw, dim); // move to the other side
 			wall_upper.z1() = railing_z2;
-			objs.emplace_back(wall_upper, TYPE_STAIR, 0, dim, dir); // add wall at back/end of stairs
+			objs.emplace_back(wall_upper, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
 		}
 		wall.d[dim][!dir] = i->d[dim][!dir];
 
 		for (unsigned d = 0; d < 2; ++d) { // sides of stairs
 			set_wall_width(wall, i->d[!dim][d], wall_hw, !dim);
 			bool const add_wall(has_side_walls && !i->against_wall[d]); // don't add a wall if the stairs are already against a wall
-			if (add_wall) {objs.emplace_back(wall, TYPE_STAIR, 0, dim, dir);} // add walls around stairs for this floor
+			if (add_wall) {objs.emplace_back(wall, TYPE_STAIR_WALL, 0, dim, dir);} // add walls around stairs for this floor
 
 			if (i->has_railing) { // add railings
 				bool railing_dir(dir);

@@ -349,7 +349,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			if (!is_u || c->dir == 0) {min_eq(pos[!c->dim], (c->d[!c->dim][1] - xy_radius));}
 			had_coll = on_stairs = 1;
 		} // for c
-		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with
+		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if (c->no_coll()) continue;
 			if (c->type == TYPE_BLOCKER) continue; // skip blockers because they only block other objects, not the player
 			if (c->type == TYPE_CHAIR || c->type == TYPE_TCAN) continue; // skip chair and trashcan collisions because they can be in the way and block the path in some rooms

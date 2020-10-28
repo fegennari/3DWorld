@@ -705,8 +705,8 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
-		if (i->type == TYPE_STAIR || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_WINDOW || i->type == TYPE_BLOCKER || i->type == TYPE_COLLIDER ||
-			i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING) continue; // not a type that uses lit flags
+		if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_WINDOW ||
+			i->type == TYPE_BLOCKER || i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING) continue; // not a type that uses lit flags
 		if (lit_state) {i->light_amt += light_intensity;} else {i->light_amt = max((i->light_amt - light_intensity), 0.0f);} // shouldn't be negative, but clamp to 0 just in case
 		was_updated = 1;
 	} // for i
