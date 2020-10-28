@@ -642,9 +642,10 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 	if (!is_u_stairs) {
 		for (unsigned d = 0; d < 2; ++d) { // add the two vertical poles
 			point pt(p[d]);
-			pt[c.dim] += ((c.dir^bool(d)) ? 1.0 : -1.0)*0.01*length;
-			float const hscale((c.dir^bool(d)) ? 1.0 : 1.1); // shorten for lower end, which rests on the step
-			mat.add_cylin_to_verts((pt - vector3d(0, 0, hscale*height)), pt, pole_radius, pole_radius, c.color, 0, 0); // no ends
+			pt[c.dim] += (c.dir^bool(d) ? 1.0 : -1.0)*0.01*length;
+			float const hscale(d ? 1.25 : 1.0); // shorten for lower end, which rests on the step
+			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, 0.02*(d ? 1.0 : -1.0)*height));
+			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, 0, 0); // no top or bottom
 		}
 	}
 }

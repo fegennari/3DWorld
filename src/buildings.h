@@ -12,6 +12,7 @@ bool const ENABLE_MIRROR_REFLECTIONS = 1;
 unsigned const MAX_CYLIN_SIDES     = 36;
 unsigned const MAX_DRAW_BLOCKS     = 8; // for building interiors only; currently have floor, ceiling, walls, and doors
 unsigned const NUM_STAIRS_PER_FLOOR= 12;
+unsigned const NUM_STAIRS_PER_FLOOR_U = 16;
 float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
