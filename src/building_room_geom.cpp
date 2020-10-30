@@ -13,8 +13,9 @@
 bool const ADD_BOOK_COVERS = 1;
 bool const ADD_BOOK_TITLES = 1;
 unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
-colorRGBA const WOOD_COLOR  (0.90, 0.70, 0.50); // light brown, multiplies wood texture color
-colorRGBA const STAIRS_COLOR(0.85, 0.85, 0.85);
+colorRGBA const WOOD_COLOR      (0.9, 0.7, 0.5); // light brown, multiplies wood texture color
+colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
+colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
 
 object_model_loader_t building_obj_model_loader;
 
@@ -656,7 +657,14 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin) { // Note: no room lighting color atten
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1).add_cube_to_verts(c, STAIRS_COLOR, tex_origin); // all faces drawn
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale), 1));
+	float const width(c.get_sz_dim(!c.dim)); // use width as a size reference because this is constant for a set of stairs and in a relative small range
+	cube_t top(c), bot(c);
+	bot.z2() = top.z1() = c.z2() - min(0.025*width, 0.25*c.dz()); // set top thickness
+	top.d[c.dim][!c.dir] += (c.dir ? -1.0 : 1.0)*0.0125*width; // extension
+	top.expand_in_dim(!c.dim, 0.01*width); // make slightly wider
+	mat.add_cube_to_verts(top, STAIRS_COLOR_TOP, tex_origin); // all faces drawn
+	mat.add_cube_to_verts(bot, STAIRS_COLOR_BOT, tex_origin, EF_Z2); // skip top face
 }
 
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) { // Note: no room lighting color atten
@@ -1481,7 +1489,7 @@ colorRGBA room_object_t::get_color() const {
 	switch (type) {
 	case TYPE_TABLE:    return get_textured_wood_color();
 	case TYPE_CHAIR:    return (color + get_textured_wood_color())*0.5; // 50% seat color / 50% wood legs color
-	case TYPE_STAIR:    return STAIRS_COLOR.modulate_with(texture_color(MARBLE_TEX));
+	case TYPE_STAIR:    return (STAIRS_COLOR_TOP*0.5 + STAIRS_COLOR_BOT*0.5).modulate_with(texture_color(MARBLE_TEX));
 	case TYPE_STAIR_WALL: return texture_color(STUCCO_TEX);
 	case TYPE_ELEVATOR: return LT_BROWN; // ???
 	case TYPE_RUG:      return texture_color(get_rug_tid());

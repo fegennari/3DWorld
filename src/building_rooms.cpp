@@ -1852,7 +1852,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		unsigned const num_stairs((i->shape == SHAPE_U) ? NUM_STAIRS_PER_FLOOR_U : NUM_STAIRS_PER_FLOOR);
 		float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
 		bool const dim(i->dim), dir(i->dir), has_side_walls(i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES || i->shape == SHAPE_U);
-		bool const side(0); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
+		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()
 		// Note: stairs always start at floor_thickness above the landing z1, ignoring landing z2/height
 		float const tot_len(i->get_sz_dim(dim)), floor_z(i->z1() + floor_thickness - window_vspacing), step_len_pos(tot_len/num_stairs);
 		float step_len((dir ? 1.0 : -1.0)*step_len_pos), wall_hw(0.15*step_len_pos), z(floor_z - floor_thickness), pos(i->d[dim][!dir]);
@@ -1878,8 +1878,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 					stair.d[!dim][!side] = i->get_center_dim(!dim);
 				}
 				assert(!(num_stairs & 1)); // require num_stairs to be an even number
-				bool const is_rev(n >= num_stairs/2);
-				stair.d[dim][dir^is_rev^1] = pos; stair.d[dim][dir^is_rev] = pos + step_len;
+				bool const is_rev(n >= num_stairs/2), stairs_dir(dir^is_rev);
+				stair.d[dim][!stairs_dir] = pos; stair.d[dim][stairs_dir] = pos + step_len;
 				stair.z1() = max(floor_z, z); // don't go below the floor
 				stair.z2() = z + stair_height;
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, side^is_rev); // Note: room_id=0, not tracked, unused
@@ -1924,8 +1924,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				}
 				if (i->shape == SHAPE_U) { // adjust railing height/angle to match stairs
 					float const z_split(railing.get_center_dim(2));
-					if (d == side) {railing.z1() = z_split; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
-					else           {railing.z2() = z_split; flags |= RO_FLAG_ADJ_LO;}
+					if (bool(d) == side) {railing.z1() = z_split; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
+					else                 {railing.z2() = z_split; flags |= RO_FLAG_ADJ_LO;}
 				}
 				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color); // collision works like a cube
 			}
