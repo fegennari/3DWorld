@@ -656,6 +656,7 @@ struct building_t : public building_geom_t {
 	int get_room_containing_pt(point const &pt) const;
 	bool room_containing_pt_has_stairs(point const &pt) const;
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
+	bool maybe_teleport_to_screenshot() const;
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen,
 		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
 		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
@@ -782,6 +783,8 @@ template<typename T> bool has_bcube_int_no_adj(cube_t const &bcube, vector<T> co
 	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects_no_adj(bcube)) return 1;}
 	return 0;
 }
+
+inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_terrain_model_xlate());}
 
 void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos);
 void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n);

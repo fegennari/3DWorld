@@ -26,7 +26,7 @@ building_params_t global_building_params;
 shader_t reflection_shader;
 building_t const *player_building(nullptr);
 
-extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
+extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, teleport_to_screenshot;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale;
@@ -2176,10 +2176,8 @@ public:
 #endif
 							indir_bcs_ix = bcs_ix; indir_bix = bi->ix;
 						}
-						if (toggle_room_light) {
-							b.toggle_room_light(camera_xlated);
-							toggle_room_light = 0;
-						}
+						if (toggle_room_light) {b.toggle_room_light(camera_xlated);}
+						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2 && camera_surf_collide) {b.update_elevators(camera_xlated);} // update elevators if the player is in the building
 					} // for bi
 				} // for g
@@ -2205,6 +2203,7 @@ public:
 				end_stencil_write();
 			}
 		} // end have_interior
+		if (!reflection_pass) {toggle_room_light = teleport_to_screenshot = 0;} // reset these even if the player wasn't in a building
 
 		if (draw_interior && reflection_pass != 2) { // skip for interior room reflections
 			// draw back faces of buildings, which will be interior walls

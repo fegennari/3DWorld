@@ -222,6 +222,7 @@ void gen_noise_texture();
 void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
 bool endswith(string const &value, string const &ending);
+void set_camera_pos_dir(point const &pos, vector3d const &dir);
 
 
 bool is_tex_disabled(int i) {
@@ -2052,15 +2053,28 @@ void texture_atlas_t::ensure_tid(unsigned base_tsize, bool mipmap) {
 }
 
 
+vector3d get_global_camera_space_offset() {return vector3d((xoff2 - xoff)*DX_VAL, (yoff2 - yoff)*DY_VAL, 0.0);}
+
 // Note: currently used for pictures hanging on building room walls, but could be made more generally useful
 class screenshot_manager_t {
-	vector<unsigned> tids; // indices into textures array
+	struct screenshot_info_t {
+		unsigned tid; // index into textures array
+		point cpos; // camera position at the time the screenshot was taken, in global space
+		vector3d cdir; // camera view direction at the time the screenshot was taken
+		screenshot_info_t(unsigned tid_) : tid(tid_), cpos(get_camera_pos() + get_global_camera_space_offset()), cdir(cview_dir) {}
+	};
+	vector<screenshot_info_t> screenshots;
 public:
-	unsigned size() const {return tids.size();}
-	bool empty   () const {return tids.empty();}
-	void clear() {tids.clear();}
-	int get_rand_tid(unsigned rand_ix) const {return (empty() ? -1 : tids[rand_ix%size()]);}
+	unsigned size() const {return screenshots.size();}
+	bool empty   () const {return screenshots.empty();}
+	void clear() {screenshots.clear();}
+	int get_rand_tid(unsigned rand_ix) const {return (empty() ? -1 : screenshots[rand_ix%size()].tid);}
 
+	void restore_camera_for_rand_ix(unsigned rand_ix) const {
+		if (empty()) return;
+		screenshot_info_t const &si(screenshots[rand_ix%size()]);
+		set_camera_pos_dir((si.cpos - get_global_camera_space_offset()), si.cdir); // convert back to local camera space
+	}
 	void add_screenshot() {
 		print_text_onscreen("Screenshot Saved as Texture", WHITE, 1.0, 2*TICKS_PER_SECOND, 0);
 		unsigned tid(0);
@@ -2068,14 +2082,14 @@ public:
 		//tids.push_back(tid);
 		unsigned const tex_ix(textures.size());
 		std::ostringstream oss;
-		oss << "screenshot_" << tids.size();
+		oss << "screenshot_" << screenshots.size();
 		string const name(oss.str());
 		// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
 		texture_t new_tex(0, 9, window_width, window_height, 0, 3, 0, name, 0, def_tex_compress, def_tex_aniso, 1.0, 0);
 		new_tex.set_existing_tid(tid, WHITE); // not sure what to set the color to
 		textures.push_back(new_tex);
 		texture_name_map[name] = tex_ix;
-		tids.push_back(tex_ix);
+		screenshots.emplace_back(tex_ix);
 	}
 };
 
@@ -2084,5 +2098,6 @@ screenshot_manager_t screenshot_manager;
 void take_screenshot_texture() {screenshot_manager.add_screenshot();}
 int get_rand_screenshot_texture(unsigned rand_ix) {return screenshot_manager.get_rand_tid(rand_ix);}
 unsigned get_num_screenshot_tids() {return screenshot_manager.size();}
+void restore_camera_for_rand_ix(unsigned rand_ix) {screenshot_manager.restore_camera_for_rand_ix(rand_ix);}
 
 
