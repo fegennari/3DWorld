@@ -1772,6 +1772,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		} // for dim
 	} // for i
 	// add window trim
+	if (is_rotated()) return; // not yet working for rotated buildings
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
@@ -2009,7 +2010,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_t &oc, ve
 	unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (!interior) return;
-	if (is_rotated()) return; // no room geom for rotated buildings
+	if (is_rotated()) return; // no room geom for rotated buildings (need to fix light shadows, texture coords, room object collision detection, etc.)
 
 	if (!has_room_geom()) {
 		rand_gen_t rgen;
@@ -2019,7 +2020,19 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_t &oc, ve
 		gen_room_details(rgen, ped_bcubes, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}
+	if (is_rotated()) {
+		point const center(bcube.get_cube_center());
+		fgPushMatrix();
+		translate_to( center);
+		rotate_about(TO_DEG*acosf(rot_cos), plus_z); // XY rotate
+		translate_to(-center);
+	}
 	draw_room_geom(s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+	
+	if (is_rotated()) {
+		fgPopMatrix();
+		check_mvm_update();
+	}
 }
 
 void building_t::clear_room_geom() {
