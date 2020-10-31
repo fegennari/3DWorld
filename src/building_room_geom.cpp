@@ -593,6 +593,10 @@ void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only
 }
 
+void building_room_geom_t::add_driveway(room_object_t const &c, float tscale) {
+	get_material(tid_nm_pair_t(get_texture_by_name("roads/asphalt.jpg"), 1.0*tscale)).add_cube_to_verts(c, c.color, tex_origin, ~EF_Z2); // top face only, unshadowed
+}
+
 void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
 
@@ -1508,6 +1512,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
 	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
 	case TYPE_KEYBOARD: return BLACK;
+	case TYPE_DRIVEWAY: return GRAY; // texture color? not interior, so doesn't really need to be correct
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	if (type >= TYPE_TOILET && type < NUM_TYPES) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
@@ -1552,6 +1557,7 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
+		case TYPE_DRIVEWAY:add_driveway(*i, tscale); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn
