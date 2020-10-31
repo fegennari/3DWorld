@@ -433,6 +433,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 		float const angle(TWO_PI*n/NUM_RAYS), dx(light_radius*sin(angle)), dy(light_radius*cos(angle));
 		point p1(lpos), p2(lpos + point(dx, dy, 0.0));
 		bool const ret(do_line_clip(p1, p2, tight_bcube.d));
+		if ((!ret || p1 != lpos) && is_rotated()) continue; // bad ray - this can fail on rotated buildings if lights aren't rotated properly
 		assert(ret);
 		assert(p1 == lpos);
 		clip_ray_to_walls(p1, p2);
@@ -447,10 +448,22 @@ void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cub
 	// also need to handle the case where the light is added on the frame the room geom is generated when the shadow map is not yet created;
 	// requiring two consecutive frames of no dynamic objects should fix both problems
 	bool const cache_shadows(!dynamic_shadows && (obj.flags & RO_FLAG_NODYNAM)); // no dynamic object on this frame or the last frame
-	ls.set_custom_bcube(light_bcube);
+	if (!light_bcube.is_all_zeros()) {ls.set_custom_bcube(light_bcube);}
 	if (cache_shadows) {ls.assign_smap_id(uintptr_t(&obj)/sizeof(void *));} // use memory address as a unique ID
 	if (dynamic_shadows) {obj.flags &= ~RO_FLAG_NODYNAM;} else {obj.flags |= RO_FLAG_NODYNAM;}
 	ls.assign_smap_mgr_id(1); // use a different smap manager than the city (cars + streetlights) so that they don't interfere with each other
+}
+
+cube_t get_rotated_bcube(cube_t const &c, float rot_sin, float rot_cos, point const &center) {
+	point pts[8];
+	unsigned const npts(get_cube_corners(c.d, pts)); // should be 8, but we could actually only use the 4 bottom corners or 4 top corners
+	for (unsigned n = 0; n < npts; ++n) {do_xy_rotate(rot_sin, rot_cos, center, pts[n]);}
+	cube_t ret;
+	ret.set_from_points(pts, npts);
+	return ret;
+}
+bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const {
+	return camera_pdu.cube_visible((is_rotated() ? get_rotated_bcube(c, rot_sin, rot_cos, bcube.get_cube_center()) : c) + xlate);
 }
 
 // Note: non const because this caches light_bcubes
@@ -459,7 +472,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	if (!has_room_geom()) return; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs); // non-const, light flags are updated
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
-	point const camera_bs(camera_pdu.pos - xlate); // camera in building space
+	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), camera_z(camera_bs.z);
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
@@ -499,8 +512,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!i->is_lit()) continue; // light not on
 		if (i->type != TYPE_LIGHT && i->type != TYPE_LAMP) continue; // not a light or lamp
 		point const lpos(i->get_cube_center()); // centered in the light fixture
-		if (!lights_bcube.contains_pt_xy(lpos)) continue; // not contained within the light volume
-		//if (is_light_occluded(lpos, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
+		point lpos_rot(lpos);
+		if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, building_center, lpos_rot);}
+		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
+		//if (is_light_occluded(lpos_rot, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
@@ -536,8 +551,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (camera_z < (floor_z - window_vspacing) || camera_z > (ceil_z + window_vspacing)) continue; // light is on the stairs, add if one floor above/below
 			}
 			else { // camera outside the building (or the part that contains this light)
-				float const xy_dist(p2p_dist_xy(camera_bs, lpos));
-				if (!stairs_light && ((camera_z - lpos.z) > 2.0f*xy_dist || (lpos.z - camera_z) > 1.0f*xy_dist)) continue; // light viewed at too high an angle
+				float const xy_dist(p2p_dist_xy(camera_bs, lpos_rot));
+				if (!stairs_light && ((camera_z - lpos_rot.z) > 2.0f*xy_dist || (lpos_rot.z - camera_z) > 1.0f*xy_dist)) continue; // light viewed at too high an angle
 
 				if (camera_in_building) { // camera and light are in different buildings/parts
 					if (camera_part >= real_num_parts) continue; // camera in garage or shed
@@ -549,7 +564,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					bool visible[2] = {0};
 
 					for (unsigned d = 0; d < 2; ++d) { // for each dim
-						bool const dir(camera_bs[d] > lpos[d]);
+						bool const dir(camera_bs[d] > lpos_rot[d]);
 						if ((camera_bs[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
 						visible[d] = (room.ext_sides & (1 << (2*d + dir)));
 					}
@@ -558,24 +573,24 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 		} // end camera on different floor case
 		float const light_radius(6.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius), dshadow_radius(0.8*light_radius); // what about light_radius for lamps?
-		if (!camera_pdu.sphere_visible_test((lpos + xlate), cull_radius)) continue; // VFC
+		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t sphere_bc; // in building space
 		sphere_bc.set_from_sphere(lpos, cull_radius);
 		cube_t clipped_bc(sphere_bc);
 		clipped_bc.intersect_with_cube(bcube);
 		if (!stairs_light) {clipped_bc.z1() = floor_z; clipped_bc.z2() = ceil_z;} // clip zval to current floor if light not in a room with stairs or elevator
-		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC
+		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
 		//if (line_intersect_walls(lpos, camera_bs)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		// update lights_bcube and add light(s)
 
 		if (is_lamp) { // lamps are generally against a wall and not in a room with stairs and only illuminate that one room
-			min_eq(lights_bcube.z1(), (lpos.z - min(window_vspacing, light_radius)));
-			max_eq(lights_bcube.z2(), (lpos.z + min(window_vspacing, light_radius)));
+			min_eq(lights_bcube.z1(), (lpos_rot.z - min(window_vspacing, light_radius)));
+			max_eq(lights_bcube.z2(), (lpos_rot.z + min(window_vspacing, light_radius)));
 		}
 		else {
-			min_eq(lights_bcube.z1(), (lpos.z - light_radius));
-			max_eq(lights_bcube.z2(), (lpos.z + 0.1f*light_radius)); // pointed down - don't extend as far up
+			min_eq(lights_bcube.z1(), (lpos_rot.z - light_radius));
+			max_eq(lights_bcube.z2(), (lpos_rot.z + 0.1f*light_radius)); // pointed down - don't extend as far up
 		}
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA color;
@@ -603,13 +618,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		clipped_bc.expand_by_xy(wall_thickness); // expand by wall thickness so that offset exterior doors are properly handled
 		clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		assert(clipped_bc.contains_cube(lpos));
-		if (!camera_pdu.cube_visible(clipped_bc + xlate)) continue; // VFC - post clip
-		dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, -plus_z, bwidth); // points down
+		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
+		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, -plus_z, bwidth); // points down
 		bool dynamic_shadows(0);
 
 		if (camera_near_building) {
-			if (camera_surf_collide && camera_in_building && lpos.z > camera_bs.z && (camera_on_stairs || lpos.z < (camera_bs.z + window_vspacing)) &&
-				clipped_bc.contains_pt(camera_bs) && dist_less_than(lpos, camera_bs, dshadow_radius))
+			if (camera_surf_collide && camera_in_building && lpos_rot.z > camera_bs.z && (camera_on_stairs || lpos_rot.z < (camera_bs.z + window_vspacing)) &&
+				clipped_bc.contains_pt(camera_bs) && dist_less_than(lpos_rot, camera_bs, dshadow_radius))
 			{
 				dynamic_shadows = 1; // camera shadow
 			}
@@ -617,32 +632,34 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				if (ped_ix >= 0 && ped_bcubes.empty()) {get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes);} // get cubes on first light
 
 				for (auto c = ped_bcubes.begin(); c != ped_bcubes.end(); ++c) {
-					if (lpos.z > c->z2() && c->intersects(clipped_bc) && dist_less_than(lpos, c->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
+					if (lpos_rot.z > c->z2() && c->intersects(clipped_bc) && dist_less_than(lpos_rot, c->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
 				}
 			}
 		}
-		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc, dynamic_shadows);
+		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc, rot_sin, rot_cos, building_center) : clipped_bc);
+		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, dynamic_shadows);
 		
-		if (camera_near_building && (is_lamp || lpos.z > camera_bs.z)) { // only when the player is near/inside a building and can't see the light bleeding through the floor
+		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			cube_t light_bc2(clipped_bc);
 			light_bc2.intersect_with_cube(room); // upward facing light is for this room only
 			min_eq(light_bc2.z2(), ceil_z); // doesn't reach higher than the ceiling of this room
+			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2, rot_sin, rot_cos, building_center);}
 
 			if (is_lamp) { // add a second shadowed light source pointing up
-				dl_sources.emplace_back(light_radius, lpos, lpos, color, 0, plus_z, 0.5*bwidth); // points up
+				dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, plus_z, 0.5*bwidth); // points up
 				setup_light_for_building_interior(dl_sources.back(), *i, light_bc2, dynamic_shadows);
-				dl_sources.emplace_back(0.15*light_radius, lpos, lpos, color); // add an additional small unshadowed light for ambient effect
+				dl_sources.emplace_back(0.15*light_radius, lpos_rot, lpos_rot, color); // add an additional small unshadowed light for ambient effect
 			}
 			else {
 				// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting;
 				// since we're not enabling shadows for this light, it could incorrectly illuminate objects on the floor above or adjacent rooms,
 				// so we must make it small, unless it's on the top floor
-				bool const at_top(lpos.z > room.z2() - 0.5f*get_window_vspace());
+				bool const at_top(lpos_rot.z > room.z2() - 0.5f*get_window_vspace());
 				float const radius_scale(at_top ? 0.55 : 0.5);
-				point const lpos_up(lpos - vector3d(0.0, 0.0, 2.0*i->dz()));
+				point const lpos_up(lpos_rot - vector3d(0.0, 0.0, 2.0*i->dz()));
 				dl_sources.emplace_back(radius_scale*((room.is_hallway ? 0.3 : room.is_office ? 0.35 : 0.5))*light_radius, lpos_up, lpos_up, color);
 			}
-			dl_sources.back().set_custom_bcube(light_bc2);
+			if (!light_bc2.is_all_zeros()) {dl_sources.back().set_custom_bcube(light_bc2);}
 			dl_sources.back().disable_shadows();
 		}
 	} // for i
