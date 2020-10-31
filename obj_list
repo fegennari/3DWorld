@@ -107,6 +107,7 @@ building_navigation.o
 building_rooms.o
 building_room_geom.o
 building_reflections.o
+building_pictures.o
 simplifier.o
 city_model.o
 city_building_params.o

@@ -5,7 +5,6 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "city.h" // for pedestrian_t
-#include "openal_wrap.h" // for teleport sound
 #include <queue>
 #pragma warning(disable : 26812) // prefer enum class over enum
 
@@ -16,9 +15,6 @@ building_dest_t cur_player_building_loc;
 
 extern int frame_counter, display_mode;
 extern float fticks;
-
-unsigned get_num_screenshot_tids();
-void restore_camera_for_rand_ix(unsigned rand_ix);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
@@ -869,28 +865,6 @@ bool building_t::room_containing_pt_has_stairs(point const &pt) const {
 	if (room_ix < 0) return 0; // no room contains this point
 	assert((unsigned)room_ix < interior->rooms.size());
 	return interior->rooms[room_ix].has_stairs;
-}
-
-bool building_t::maybe_teleport_to_screenshot() const {
-	if (!has_room_geom()) return 0;
-	if (!is_house) return 0; // currently only houses have pictures hanging on walls
-	if (get_num_screenshot_tids() == 0) return 0;
-	vector3d const xlate(get_tiled_terrain_model_xlate());
-	point const camera_bs(get_camera_building_space());
-	int closest_obj_id(-1);
-	float dmin_sq(0.0);
-
-	// find nearest screenshot picture
-	for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
-		if (i->type != TYPE_PICTURE) continue;
-		if (!camera_pdu.cube_visible(*i + xlate)) continue; // skip if invisible
-		float const dist_sq(p2p_dist_sq(i->get_cube_center(), camera_bs));
-		if (dmin_sq == 0.0 || dist_sq < dmin_sq) {closest_obj_id = i->obj_id; dmin_sq = dist_sq;}
-	} // for i
-	if (closest_obj_id < 0) return 0;
-	restore_camera_for_rand_ix(closest_obj_id);
-	gen_sound(SOUND_POWERUP, get_camera_pos(), 1.0, 0.6); // play teleport sound
-	return 1;
 }
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
