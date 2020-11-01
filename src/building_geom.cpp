@@ -1040,6 +1040,15 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				add_door(place_door(c, long_dim, door_dir, door_height, 0.0, 0.0, 0.0, wscale, 0, rgen), parts.size(), long_dim, door_dir, 0);
 				if (is_garage) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
 				garage_dim = long_dim;
+
+				if (is_garage) { // add driveway TODO: need to disable grass
+					bool const ddir((long_dim == dim) ? dir : dir2);
+					driveway = c;
+					driveway.z2() = driveway.z1() + 0.02*door_height;
+					driveway.expand_in_dim(!long_dim, -0.05*c.get_sz_dim(!long_dim));
+					driveway.d[long_dim][!ddir] = driveway.d[long_dim][ddir];
+					driveway.d[long_dim][ ddir] += (ddir ? 1.0 : -1.0)*0.4*c.get_sz_dim(long_dim); // set length
+				}
 			}
 			parts.push_back(c); // support column or shed/garage
 		} // end house details

@@ -225,7 +225,7 @@ enum room_object    {
 	TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_STAIR_WALL, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD,
 	TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL,
 	TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM,
-	TYPE_RAILING, TYPE_CRATE, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_DRIVEWAY,
+	TYPE_RAILING, TYPE_CRATE, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD,
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR, TYPE_URINAL, TYPE_LAMP,
 	NUM_TYPES};
@@ -399,7 +399,6 @@ struct building_room_geom_t {
 	void add_keyboard(room_object_t const &c);
 	void add_mirror(room_object_t const &c);
 	void add_flooring(room_object_t const &c, float tscale);
-	void add_driveway(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
@@ -547,7 +546,7 @@ struct building_t : public building_geom_t {
 	uint8_t hallway_dim, real_num_parts, roof_type; // main hallway dim: 0=x, 1=y, 2=none
 	bool is_house, has_chimney, has_garage, has_shed, has_courtyard, has_complex_floorplan, has_helipad;
 	colorRGBA side_color, roof_color, detail_color, door_color;
-	cube_t bcube, pri_hall;
+	cube_t bcube, pri_hall, driveway;
 	vect_cube_t parts, fences;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;
