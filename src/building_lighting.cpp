@@ -456,11 +456,12 @@ void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cub
 
 cube_t building_t::get_rotated_bcube(cube_t const &c) const {
 	point const center(bcube.get_cube_center());
-	point pts[8];
-	unsigned const npts(get_cube_corners(c.d, pts)); // should be 8, but we could actually only use the 4 bottom corners or 4 top corners
-	for (unsigned n = 0; n < npts; ++n) {do_xy_rotate(center, pts[n]);}
+	float const z(c.z2()); // top edge
+	point corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
+	for (unsigned n = 0; n < 4; ++n) {do_xy_rotate(center, corners[n]);}
 	cube_t ret;
-	ret.set_from_points(pts, npts);
+	ret.set_from_points(corners, 4);
+	ret.z1() = c.z1();
 	return ret;
 }
 bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const {
