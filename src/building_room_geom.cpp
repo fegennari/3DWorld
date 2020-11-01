@@ -1587,6 +1587,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 				vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
 				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
 			}
+			if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
 			obj_model_insts.emplace_back((i - objs.begin()), i->get_model_id(), i->flags, i->color, dir);
 			//get_material(tid_nm_pair_t()).add_cube_to_verts(*i, WHITE, tex_origin); // for debugging of model bcubes
 		}
@@ -1708,7 +1709,8 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	disable_blend();
 	vbo_wrap_t::post_render();
 	//if (!obj_model_insts.empty()) {glDisable(GL_CULL_FACE);} // better but slower?
-	point const camera_bs(camera_pdu.pos - xlate);
+	point const camera_bs(camera_pdu.pos - xlate), building_center(building.bcube.get_cube_center());
+	bool const is_rotated(building.is_rotated());
 	oc.set_exclude_bix(building_ix);
 	bool obj_drawn(0);
 
@@ -1719,15 +1721,17 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		//++occlusion_stats.nobj;
 		if (!player_in_building && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
 		//++occlusion_stats.next;
-		if (!shadow_only && !dist_less_than(camera_bs, obj.get_llc(), 100.0*obj.dz())) continue; // too far away
+		point obj_center(obj.get_cube_center());
+		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
+		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*obj.dz())) continue; // too far away
 		//++occlusion_stats.nnear;
-		if (!camera_pdu.cube_visible(obj + xlate)) continue; // VFC
+		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		//++occlusion_stats.nvis;
 		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, player_in_building, shadow_only, reflection_pass)) continue;
 		//++occlusion_stats.ndraw;
 		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && (i->flags & RO_FLAG_LIT));
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
-		building_obj_model_loader.draw_model(s, obj.get_cube_center(), obj, i->dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
+		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
 		if (is_emissive) {s.set_color_e(BLACK);}
 		obj_drawn = 1;
 	} // for i
@@ -1754,6 +1758,7 @@ bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsi
 
 bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const {
 	if (!interior) return 0; // could probably make this an assert
+	if (is_rotated()) return 0; // TODO: implement rotated building occlusion culling; cubes are not actually cubes; seems messy
 	//highres_timer_t timer("Check Object Occlusion");
 	if (reflection_pass) {assert(player_in_this_building);}
 	point pts[8];
