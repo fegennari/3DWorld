@@ -120,6 +120,7 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 }
 
 bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
+	if (is_rotated()) return 0; // mirrors don't yet work in rotated buildings, so disable for now
 	assert(interior);
 	point const camera_bs(camera_pdu.pos - xlate);
 	vector<point> points;

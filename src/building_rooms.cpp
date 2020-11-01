@@ -2011,7 +2011,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_t &oc, ve
 	unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (!interior) return;
-	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collision detection, etc.
+	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collision detection, mirrors, etc.
 
 	if (!has_room_geom()) {
 		rand_gen_t rgen;
