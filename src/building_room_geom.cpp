@@ -1665,6 +1665,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	static int last_frame(0);
 	static unsigned num_geom_this_frame(0); // used to limit per-frame geom gen time; doesn't apply to shadow pass, in case shadows are cached
 	if (frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;}
+	bool const can_update_geom(shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME); // must be consistent for static and small geom
 
 	if (lights_changed) {
 		mats_lights.clear();
@@ -1674,11 +1675,11 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		clear_static_vbos(); // user created a new screenshot texture, and this building has pictures - recreate room geom
 		num_pic_tids = num_screenshot_tids;
 	}
-	if (mats_static.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create static materials if needed
+	if (mats_static.empty() && can_update_geom) { // create static materials if needed
 		create_static_vbos(building, wall_tex);
 		++num_geom_this_frame;
 	}
-	if (inc_small && mats_small.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create small materials if needed
+	if (inc_small && mats_small.empty() && can_update_geom) { // create small materials if needed
 		create_small_static_vbos(building);
 		++num_geom_this_frame;
 	}
