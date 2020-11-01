@@ -454,16 +454,17 @@ void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cub
 	ls.assign_smap_mgr_id(1); // use a different smap manager than the city (cars + streetlights) so that they don't interfere with each other
 }
 
-cube_t get_rotated_bcube(cube_t const &c, float rot_sin, float rot_cos, point const &center) {
+cube_t building_t::get_rotated_bcube(cube_t const &c) const {
+	point const center(bcube.get_cube_center());
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts)); // should be 8, but we could actually only use the 4 bottom corners or 4 top corners
-	for (unsigned n = 0; n < npts; ++n) {do_xy_rotate(rot_sin, rot_cos, center, pts[n]);}
+	for (unsigned n = 0; n < npts; ++n) {do_xy_rotate(center, pts[n]);}
 	cube_t ret;
 	ret.set_from_points(pts, npts);
 	return ret;
 }
 bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const {
-	return camera_pdu.cube_visible((is_rotated() ? get_rotated_bcube(c, rot_sin, rot_cos, bcube.get_cube_center()) : c) + xlate);
+	return camera_pdu.cube_visible((is_rotated() ? get_rotated_bcube(c) : c) + xlate);
 }
 
 // Note: non const because this caches light_bcubes
@@ -513,7 +514,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (i->type != TYPE_LIGHT && i->type != TYPE_LAMP) continue; // not a light or lamp
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		point lpos_rot(lpos);
-		if (is_rotated()) {do_xy_rotate(rot_sin, rot_cos, building_center, lpos_rot);}
+		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
 		//if (is_light_occluded(lpos_rot, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
@@ -636,14 +637,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 		}
-		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc, rot_sin, rot_cos, building_center) : clipped_bc);
+		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc) : clipped_bc);
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, dynamic_shadows);
 		
 		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building and can't see the light bleeding through the floor
 			cube_t light_bc2(clipped_bc);
 			light_bc2.intersect_with_cube(room); // upward facing light is for this room only
 			min_eq(light_bc2.z2(), ceil_z); // doesn't reach higher than the ceiling of this room
-			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2, rot_sin, rot_cos, building_center);}
+			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2);}
 
 			if (is_lamp) { // add a second shadowed light source pointing up
 				dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, plus_z, 0.5*bwidth); // points up

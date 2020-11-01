@@ -37,7 +37,7 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 
 	for (unsigned i = 0; i < 4; ++i) {
 		point corner(bc.d[0][i&1], bc.d[1][i>>1], bc.d[2][i&1]);
-		do_xy_rotate(rot_sin, rot_cos, center, corner);
+		do_xy_rotate(center, corner);
 		if (i == 0) {bcube.set_from_point(corner);} else {bcube.union_with_pt(corner);} // Note: detail cubes are excluded
 	}
 }
@@ -70,16 +70,16 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 		if (b.parts.size() == 1) {pts[0] = center1;} // single cube: we know we're rotating about its center
 		else {
 			pts[0] = p1->get_cube_center();
-			do_xy_rotate(b.rot_sin, b.rot_cos, center1, pts[0]); // rotate into global space
+			b.do_xy_rotate(center1, pts[0]); // rotate into global space
 		}
 		cube_t c_exp(*p1);
 		c_exp.expand_by_xy(expand_rel*p1->get_size() + vector3d(expand_abs, expand_abs, expand_abs));
 
 		for (unsigned i = 0; i < 4; ++i) { // {00, 10, 01, 11}
 			pts[i+1].assign(c_exp.d[0][i&1], c_exp.d[1][i>>1], 0.0); // XY only
-			do_xy_rotate(b.rot_sin, b.rot_cos, center1, pts[i+1]); // rotate into global space
+			b.do_xy_rotate(center1, pts[i+1]); // rotate into global space
 		}
-		for (unsigned i = 0; i < 5; ++i) {do_xy_rotate(-rot_sin, rot_cos, center2, pts[i]);} // inverse rotate into local coord space - negate the sine term
+		for (unsigned i = 0; i < 5; ++i) {do_xy_rotate_inv(center2, pts[i]);} // inverse rotate into local coord space - negate the sine term
 		cube_t c_exp_rot(pts+1, 4); // use points 1-4
 		pts[5] = 0.5*(pts[1] + pts[3]); // x0 edge center
 		pts[6] = 0.5*(pts[2] + pts[4]); // x1 edge center
@@ -143,8 +143,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 
 	if (is_rotated()) {
 		center = bcube.get_cube_center() + xlate;
-		do_xy_rotate(-rot_sin, rot_cos, center, pos2); // inverse rotate - negate the sine term
-		do_xy_rotate(-rot_sin, rot_cos, center, p_last2);
+		do_xy_rotate_inv(center, pos2); // inverse rotate - negate the sine term
+		do_xy_rotate_inv(center, p_last2);
 	}
 	if (check_interior && draw_building_interiors && interior != nullptr) { // check for interior case first
 		float const zval(max(pos2.z, p_last2.z) - xlate.z); // this is the real zval for use in collsion detection, in building space
@@ -281,8 +281,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 	if (!had_coll) return 0; // Note: no collisions with windows or doors, since they're colinear with walls
 
 	if (is_rotated()) {
-		do_xy_rotate(rot_sin, rot_cos, center, pos2); // rotate back around center
-		if (cnorm_ptr) {do_xy_rotate(rot_sin, rot_cos, all_zeros, *cnorm_ptr);} // rotate back (pure rotation)
+		do_xy_rotate(center, pos2); // rotate back around center
+		if (cnorm_ptr) {do_xy_rotate_normal(*cnorm_ptr);} // rotate normal back
 	}
 	pos = pos2;
 	return had_coll;
@@ -399,8 +399,8 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 
 	if (is_rotated()) {
 		point const center(bcube.get_cube_center() + xlate);
-		do_xy_rotate(-rot_sin, rot_cos, center, p1r); // inverse rotate - negate the sine term
-		do_xy_rotate(-rot_sin, rot_cos, center, p2r);
+		do_xy_rotate_inv(center, p1r); // inverse rotate - negate the sine term
+		do_xy_rotate_inv(center, p2r);
 	}
 	p1r -= xlate; p2r -= xlate;
 	float const pzmin(min(p1r.z, p2r.z)), pzmax(max(p1r.z, p2r.z));
@@ -489,7 +489,7 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 
 	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection
 	point pr(pos);
-	if (is_rotated()) {do_xy_rotate(-rot_sin, rot_cos, bcube.get_cube_center(), pr);} // inverse rotate - negate the sine term
+	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), pr);} // inverse rotate - negate the sine term
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (pr.z > i->z2() || pr.z < i->z1()) continue; // no overlap in z

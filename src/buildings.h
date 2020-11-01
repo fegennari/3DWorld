@@ -193,6 +193,9 @@ struct building_geom_t { // describes the physical shape of a building
 	bool is_cube()    const {return (num_sides == 4);}
 	bool is_simple_cube()    const {return (is_cube() && !half_offset && flat_side_amt == 0.0 && alt_step_factor == 0.0);}
 	bool use_cylinder_coll() const {return (num_sides > 8 && flat_side_amt == 0.0);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
+	void do_xy_rotate(point const &center, point &pos) const;
+	void do_xy_rotate_inv(point const &center, point &pos) const;
+	void do_xy_rotate_normal(point &n) const;
 };
 
 struct tquad_with_ix_t : public tquad_t {
@@ -731,6 +734,7 @@ private:
 	bool is_light_occluded(point const &lpos, point const &camera_bs) const;
 	void clip_ray_to_walls(point const &p1, point &p2) const;
 	void refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const;
+	cube_t get_rotated_bcube(cube_t const &c) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
 	cube_t get_part_for_room(room_t const &room) const {assert(room.part_id < parts.size()); return parts[room.part_id];}
 	bool are_parts_stacked(cube_t const &p1, cube_t const &p2) const;
@@ -788,8 +792,6 @@ template<typename T> bool has_bcube_int_no_adj(cube_t const &bcube, vector<T> co
 
 inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_terrain_model_xlate());}
 
-void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos);
-void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n);
 void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state, bool for_city);
 bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state, bool for_city);
 cube_t get_building_lights_bcube();

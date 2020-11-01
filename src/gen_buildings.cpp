@@ -100,7 +100,10 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 	pos.x = x*rot_cos - y*rot_sin + center.x;
 	pos.y = y*rot_cos + x*rot_sin + center.y;
 }
-void do_xy_rotate_normal(float rot_sin, float rot_cos, point &n) {
+void building_geom_t::do_xy_rotate    (point const &center, point &pos) const {::do_xy_rotate( rot_sin, rot_cos, center, pos);}
+void building_geom_t::do_xy_rotate_inv(point const &center, point &pos) const {::do_xy_rotate(-rot_sin, rot_cos, center, pos);}
+
+void building_geom_t::do_xy_rotate_normal(point &n) const { // point rotate without the translate
 	float const x(n.x), y(n.y);
 	n.x = x*rot_cos - y*rot_sin;
 	n.y = y*rot_cos + x*rot_sin;
@@ -559,7 +562,7 @@ public:
 				cur_perim[0]  = cur_perim[1];
 				cur_perim[1] += p2p_dist(n1, n2);
 				vector3d normal(n1 + n2); normal.x *= ry; normal.y *= rx; // average the two vertex normals for the flat face normal
-				if (bg.is_rotated()) {do_xy_rotate_normal(bg.rot_sin, bg.rot_cos, normal);}
+				if (bg.is_rotated()) {bg.do_xy_rotate_normal(normal);}
 				bool const cur_smooth_normals(smooth_normals && (bg.flat_side_amt == 0.0 || S+1 != ndiv)); // flat side of cylindrical building is not smooth
 				if (!cur_smooth_normals) {vert.set_norm(normal.get_norm());}
 
@@ -569,7 +572,7 @@ public:
 					
 					if (cur_smooth_normals) {
 						vector3d normal(n); normal.x *= ry; normal.y *= rx; // scale normal by radius (swapped)
-						if (bg.is_rotated()) {do_xy_rotate_normal(bg.rot_sin, bg.rot_cos, normal);}
+						if (bg.is_rotated()) {bg.do_xy_rotate_normal(normal);}
 						vert.set_norm(normal.get_norm());
 					}
 					vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), 0.0);
@@ -636,7 +639,7 @@ public:
 		}
 		vert.set_c4(color);
 		vector3d normal(tquad.get_norm());
-		if (bg.is_rotated()) {do_xy_rotate_normal(bg.rot_sin, bg.rot_cos, normal);}
+		if (bg.is_rotated()) {bg.do_xy_rotate_normal(normal);}
 		vert.set_norm(normal);
 		invert_tc_x ^= (tquad.type == tquad_with_ix_t::TYPE_IDOOR2); // interior door, back face
 		
