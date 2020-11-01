@@ -1061,7 +1061,7 @@ void setup_wind_for_shader(shader_t &s, unsigned tu_id) {
 
 
 bool no_grass() {
-	return (grass_density == 0 || !grass_enabled || snow_enabled() || vegetation == 0.0 || read_landscape);
+	return (grass_density == 0 || !grass_enabled || snow_enabled() || vegetation == 0.0 || (world_mode == WMODE_GROUND && read_landscape));
 }
 
 
