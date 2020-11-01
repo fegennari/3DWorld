@@ -3161,6 +3161,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		shader_t s;
 		lighting_with_cloud_shadows_setup(s, 1, use_cloud_shadows);
 		set_smap_enable_for_shader(s, (spass == 0), 1); // FS
+		if (!grass_exclude1.is_all_zeros()) {s.set_prefix("#define ENABLE_VERTEX_CLIP", 0);} // VS - based on primary cube
 		s.set_vert_shader("texture_gen.part+wind.part*+flowers_tiled");
 		//s.set_vert_shader("texture_gen.part+wind.part*+flowers_tiled_gs");
 		//s.set_geom_shader("flower_from_pt"); // point => 1 quad
