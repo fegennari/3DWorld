@@ -485,6 +485,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "add_city_interiors") {
 		if (!read_bool(fp, global_building_params.add_city_interiors)) {buildings_file_err(str, error);}
 	}
+	else if (str == "enable_rotated_room_geom") {
+		if (!read_bool(fp, global_building_params.enable_rotated_room_geom)) {buildings_file_err(str, error);}
+	}
 	else {
 		cout << "Unrecognized buildings keyword in input file: " << str << endl;
 		error = 1;

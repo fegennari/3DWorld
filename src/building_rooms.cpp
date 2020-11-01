@@ -8,6 +8,7 @@
 #include "profiler.h"
 #pragma warning(disable : 26812) // prefer enum class over enum
 
+extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
 
 
@@ -2010,7 +2011,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_t &oc, ve
 	unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (!interior) return;
-	if (is_rotated()) return; // no room geom for rotated buildings (need to fix light shadows, texture coords, room object collision detection, etc.)
+	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix light shadows, texture coords, room object collision detection, etc.
 
 	if (!has_room_geom()) {
 		rand_gen_t rgen;
