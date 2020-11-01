@@ -678,7 +678,9 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 		if (i->type != TYPE_LIGHT) continue; // not a light
 		assert(i->room_id < interior->rooms.size());
 		if (i->z1() < closest_to.z || (i->z1() > (closest_to.z + window_vspacing) && !interior->rooms[i->room_id].is_sec_bldg)) continue; // light is on the wrong floor
-		float const dist_sq(p2p_dist_sq(closest_to, i->get_cube_center()));
+		point center(i->get_cube_center());
+		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
+		float const dist_sq(p2p_dist_sq(closest_to, center));
 		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; closest_light = (i - objs.begin());}
 	} // for i
 	if (closest_dist_sq == 0.0) return 0; // no light found
