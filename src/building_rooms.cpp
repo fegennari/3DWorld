@@ -1664,6 +1664,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		trim.expand_in_dim(dim, door_trim_exp);
 		bool dir(0);
 		unsigned ext_flags(flags);
+		colorRGBA const &trim_color(garage_door ? WHITE : door_color); // garage doors are always white
 
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
 			if (!i->intersects_no_adj(trim)) continue;
@@ -1676,14 +1677,14 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
 			trim.d[!dim][0] = door.d[!dim][side] - (side ? door_trim_width : 0.0);
 			trim.d[!dim][1] = door.d[!dim][side] + (side ? 0.0 : door_trim_width);
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, (ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, door_color); // abuse tall flag
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, (ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color); // abuse tall flag
 		}
 		// add trim at bottom of door for threshold
 		trim.d[!dim][0] = door.d[!dim][0];
 		trim.d[!dim][1] = door.d[!dim][1];
 		trim.z1() = door.z1() + fc_thick; // floor height
 		trim.z2() = trim.z1() + 2.0*trim_thickness;
-		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, door_color);
+		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, trim_color);
 
 		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->type == tquad_with_ix_t::TYPE_BDOOR) { // add trim at top of door, houses and office buildings
 			trim.z1() = door.z2() - 0.03*door.dz(); // see logic in clip_door_to_interior()
@@ -1693,7 +1694,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			ext_flags = flags; // unlike hdoors, need to draw the back face to hide the gap betweeen ceiling and floor above
 			trim.d[dim][dir] += (dir ? -1.0 : 1.0)*0.005*window_vspacing; // minor shift back toward building to prevent z-fighting
 		}
-		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_SHORT, door_color); // top of door
+		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_SHORT, trim_color); // top of door
 	} // for d
 	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor/ceiling
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {

@@ -1172,7 +1172,7 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 	float const thickness(opens_up ? 0.01*D.dz() : 0.02*D.get_sz_dim(!dim));
 	unsigned const num_sides((door_type == tquad_with_ix_t::TYPE_BDOOR) ? 2 : 1); // double doors for office building exterior door
 	tid_nm_pair_t const tp(tid, -1, 1.0f/num_sides, ty);
-	colorRGBA const &color(exterior ? door_color : WHITE);
+	colorRGBA const &color((exterior && !opens_up) ? door_color : WHITE); // garage doors are always white
 
 	for (unsigned side = 0; side < num_sides; ++side) { // {right, left}
 		cube_t dc(D);
