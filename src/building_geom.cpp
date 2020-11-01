@@ -1718,6 +1718,11 @@ void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &
 void building_t::update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const {
 	get_exclude_cube(pos, cube_t(),       grass_exclude1); // first/closest cube
 	get_exclude_cube(pos, grass_exclude1, grass_exclude2); // second closest cube
+	
+	if (!driveway.is_all_zeros()) { // make driveway a grass exclude cube if one is available; this generally fails, but is a good idea if we can extend grass_exclude to more cubes
+		if      (grass_exclude1.is_all_zeros()) {grass_exclude1 = driveway;}
+		else if (grass_exclude2.is_all_zeros()) {grass_exclude2 = driveway;}
+	}
 	if (!grass_exclude1.is_all_zeros()) {grass_exclude1 += xlate;}
 	if (!grass_exclude2.is_all_zeros()) {grass_exclude2 += xlate;}
 }
