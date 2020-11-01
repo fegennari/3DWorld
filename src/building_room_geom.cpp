@@ -244,7 +244,22 @@ void rgeom_mat_t::clear() {
 	num_qverts = num_itverts = num_ixs = 0;
 }
 
-void rgeom_mat_t::create_vbo() {
+void rotate_vertst(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building) {
+	point const center(building.bcube.get_cube_center());
+
+	for (auto i = verts.begin(); i != verts.end(); ++i) {
+		building.do_xy_rotate(center, i->v);
+		vector3d n(i->get_norm());
+		building.do_xy_rotate_normal(n);
+		i->set_norm(n);
+	}
+}
+
+void rgeom_mat_t::create_vbo(building_t const &building) {
+	if (building.is_rotated()) { // rotate all vertices to match the building rotation
+		rotate_vertst(quad_verts, building);
+		rotate_vertst(itri_verts, building);
+	}
 	num_qverts  = quad_verts.size();
 	num_itverts = itri_verts.size();
 	num_ixs     = indices.size();
@@ -306,8 +321,8 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 	rgeom_alloc.alloc(back());
 	return back();
 }
-void building_materials_t::create_vbos() {
-	for (iterator m = begin(); m != end(); ++m) {m->create_vbo();}
+void building_materials_t::create_vbos(building_t const &building) {
+	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
 }
 void building_materials_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
 	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only, reflection_pass);}
@@ -1519,7 +1534,7 @@ colorRGBA room_object_t::get_color() const {
 	return color; // Note: probably should always set color so that we can return it here
 }
 
-void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
+void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm_pair_t const &wall_tex) {
 	//highres_timer_t timer("Gen Room Geom"); // 2.1ms
 	float const tscale(2.0/obj_scale);
 	obj_model_insts.clear();
@@ -1578,9 +1593,9 @@ void building_room_geom_t::create_static_vbos(tid_nm_pair_t const &wall_tex) {
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
 	//timer_t timer2("Create VBOs"); // < 2ms
-	mats_static.create_vbos();
+	mats_static.create_vbos(building);
 }
-void building_room_geom_t::create_small_static_vbos() {
+void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 1.3ms
 	float const tscale(2.0/obj_scale);
 
@@ -1603,26 +1618,26 @@ void building_room_geom_t::create_small_static_vbos() {
 		default: break;
 		}
 	} // for i
-	mats_small.create_vbos();
-	mats_plants.create_vbos();
+	mats_small.create_vbos(building);
+	mats_plants.create_vbos(building);
 }
-void building_room_geom_t::create_lights_vbos() {
+void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->is_visible() && i->type == TYPE_LIGHT) {add_light(*i, tscale);}
 	}
-	mats_lights.create_vbos();
+	mats_lights.create_vbos(building);
 }
-void building_room_geom_t::create_dynamic_vbos() {
+void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 	if (!has_elevators) return; // currently only elevators are dynamic, can skip this step if there are no elevators
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible() || i->type != TYPE_ELEVATOR) continue; // only elevators for now
 		add_elevator(*i, 2.0/obj_scale);
 	}
-	mats_dynamic.create_vbos();
+	mats_dynamic.create_vbos(building);
 }
 
 struct occlusion_stats_t {
@@ -1660,15 +1675,15 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		num_pic_tids = num_screenshot_tids;
 	}
 	if (mats_static.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create static materials if needed
-		create_static_vbos(wall_tex);
+		create_static_vbos(building, wall_tex);
 		++num_geom_this_frame;
 	}
 	if (inc_small && mats_small.empty() && (shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME)) { // create small materials if needed
-		create_small_static_vbos();
+		create_small_static_vbos(building);
 		++num_geom_this_frame;
 	}
-	if (mats_lights .empty()) {create_lights_vbos ();} // create lights  materials if needed (no limit)
-	if (mats_dynamic.empty()) {create_dynamic_vbos();} // create dynamic materials if needed (no limit)
+	if (mats_lights .empty()) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
+	if (mats_dynamic.empty()) {create_dynamic_vbos(building);} // create dynamic materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	mats_static .draw(s, shadow_only, reflection_pass);
 	mats_lights .draw(s, shadow_only, reflection_pass);

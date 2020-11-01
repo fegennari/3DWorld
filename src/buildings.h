@@ -327,7 +327,7 @@ public:
 		bool draw_bot, bool draw_top, bool two_sided=0, bool inv_tb=0, float side_tscale=1.0);
 	void add_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color);
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color);
-	void create_vbo();
+	void create_vbo(building_t const &building);
 	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
 };
 
@@ -335,7 +335,7 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	void clear();
 	unsigned count_all_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
-	void create_vbos();
+	void create_vbos(building_t const &building);
 	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
 };
 
@@ -403,10 +403,10 @@ struct building_room_geom_t {
 	void add_wall_trim(room_object_t const &c);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
-	void create_static_vbos(tid_nm_pair_t const &wall_tex);
-	void create_small_static_vbos();
-	void create_lights_vbos();
-	void create_dynamic_vbos();
+	void create_static_vbos(building_t const &building, tid_nm_pair_t const &wall_tex);
+	void create_small_static_vbos(building_t const &building);
+	void create_lights_vbos(building_t const &building);
+	void create_dynamic_vbos(building_t const &building);
 	void draw(shader_t &s, building_t const &building, occlusion_checker_t &oc, vector3d const &xlate, tid_nm_pair_t const &wall_tex,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 };

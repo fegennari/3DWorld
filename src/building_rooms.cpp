@@ -2021,19 +2021,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_t &oc, ve
 		gen_room_details(rgen, ped_bcubes, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	if (is_rotated()) {
-		point const center(bcube.get_cube_center());
-		fgPushMatrix();
-		translate_to( center);
-		rotate_about(TO_DEG*acosf(rot_cos), plus_z); // XY rotate
-		translate_to(-center);
-	}
 	draw_room_geom(s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
-	
-	if (is_rotated()) {
-		fgPopMatrix();
-		check_mvm_update();
-	}
 }
 
 void building_t::clear_room_geom() {
