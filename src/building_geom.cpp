@@ -1723,8 +1723,8 @@ void building_t::update_grass_exclude_at_pos(point const &pos, vector3d const &x
 		if      (grass_exclude1.is_all_zeros()) {grass_exclude1 = driveway;}
 		else if (grass_exclude2.is_all_zeros()) {grass_exclude2 = driveway;}
 	}
-	if (!grass_exclude1.is_all_zeros()) {grass_exclude1 += xlate;}
-	if (!grass_exclude2.is_all_zeros()) {grass_exclude2 += xlate;}
+	if (!grass_exclude1.is_all_zeros()) {grass_exclude1 = get_rotated_bcube(grass_exclude1) + xlate;}
+	if (!grass_exclude2.is_all_zeros()) {grass_exclude2 = get_rotated_bcube(grass_exclude2) + xlate;}
 }
 
 void building_t::update_stats(building_stats_t &s) const { // calculate all of the counts that are easy to get

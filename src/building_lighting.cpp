@@ -455,6 +455,7 @@ void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cub
 }
 
 cube_t building_t::get_rotated_bcube(cube_t const &c) const {
+	if (!is_rotated()) return c;
 	point const center(bcube.get_cube_center());
 	float const z(c.z2()); // top edge
 	point corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
