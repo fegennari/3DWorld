@@ -607,6 +607,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 		bench_t() : dim(0), dir(0) {}
 		bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : sphere_t(pos_, radius_), dim(dim_), dir(dir_) {calc_bcube();}
+		bool operator<(bench_t const &b) const {return (bcube.x1() < b.bcube.x1());} // sort by bcube x1
 
 		void calc_bcube() {
 			bcube.set_from_point(pos);
@@ -683,6 +684,8 @@ class city_road_gen_t : public road_gen_base_t {
 			expand_by_xy(radius);
 			z2() += height;
 		}
+		bool operator<(tree_planter_t const &p) const {return (x1() < p.x1());} // sort by bcube x1
+
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
 			if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? (int)DIRT_TEX : get_texture_by_name("roads/sidewalk.jpg"));}
 		}
@@ -893,6 +896,10 @@ class city_road_gen_t : public road_gen_base_t {
 			else {groups.back().union_with_cube(bcube);}
 			groups.back().ix = objs.size();
 		}
+		template<typename T> void sort_grouped_objects(vector<T> &objs, vector<cube_with_ix_t> const &groups) {
+			unsigned start_ix(0);
+			for (auto i = groups.begin(); i != groups.end(); start_ix = i->ix, ++i) {sort(objs.begin()+start_ix, objs.begin()+i->ix);}
+		}
 		void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile) {
 			float const car_length(city_params.get_nom_car_size().x);
 			bench_t bench;
@@ -982,6 +989,9 @@ class city_road_gen_t : public road_gen_base_t {
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
 				prev_tile_id = tile_id;
 			} // for i
+			sort_grouped_objects(benches,  bench_groups  );
+			sort_grouped_objects(planters, planter_groups);
+
 			if (add_parking_lots) {
 				cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 			}
@@ -1034,11 +1044,24 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = bench_groups.begin(); i != bench_groups.end(); start_ix = i->ix, ++i) {
 				if (!i->contains_pt_xy(pos)) continue;
 					
-				for (unsigned b = start_ix; b < i->ix; ++b) {
-					if (benches[b].bcube.contains_pt_xy(pos)) {color = texture_color(FENCE_TEX); return 1;}
+				for (auto b = benches.begin()+start_ix; b != benches.begin()+i->ix; ++b) {
+					if (pos.x < b->bcube.x1()) break; // benches are sorted by x1, no bench after this can match
+					if (b->bcube.contains_pt_xy(pos)) {color = texture_color(FENCE_TEX); return 1;}
 				}
-			}
-			// TODO: handle trees/tree_planters/planter_groups?
+			} // for i
+			float const expand(0.15*city_params.road_width), x_test(pos.x + expand); // expand to approx tree diameter
+			start_ix = 0;
+
+			for (auto i = planter_groups.begin(); i != planter_groups.end(); start_ix = i->ix, ++i) {
+				if (!i->contains_pt_xy_exp(pos, expand)) continue;
+
+				for (auto p = planters.begin()+start_ix; p != planters.begin()+i->ix; ++p) {
+					if (x_test < p->x1()) break; // planters are sorted by x1, no bench after this can match
+					if (!p->contains_pt_xy_exp(pos, expand)) continue;
+					// treat this as a tree rather than a planter by testing against a circle, since trees aren't otherwise included
+					if (dist_xy_less_than(pos, p->get_cube_center(), (0.5*p->dx() + expand))) {color = DK_GREEN; return 1;}
+				}
+			} // for i
 			return 0;
 		}
 	}; // city_obj_placer_t
