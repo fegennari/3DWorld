@@ -50,7 +50,7 @@ extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
-extern float def_atmosphere, def_vegetation, clip_plane_z, ambient_scale;
+extern float def_atmosphere, def_vegetation, clip_plane_z, ambient_scale, sunlight_brightness, moonlight_brightness;
 extern double camera_zh;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
@@ -444,14 +444,14 @@ void setup_lighting() {
 	}
 	if (light_factor <= 0.4) { // moon
 		calc_moon_atten(ambient, diffuse, mlf);
-		set_colors_and_enable_light(1, ambient, diffuse);
+		set_colors_and_enable_light(1, ambient, diffuse*moonlight_brightness);
 	}
 	else if (light_factor >= 0.6) { // sun
 		for (unsigned i = 0; i < 3; ++i) { // add more brightness
 			diffuse[i] += 0.2;
 			ambient[i] += 0.1;
 		}
-		set_colors_and_enable_light(0, ambient, diffuse);
+		set_colors_and_enable_light(0, ambient, diffuse*sunlight_brightness);
 	}
 	else { // sun and moon
 		float const lfd(get_light_factor_scale()), lfn(1.0 - lfd);
@@ -460,14 +460,14 @@ void setup_lighting() {
 			diffuse[i] = (diffuse[i] + 0.2)*lfd;
 			ambient[i] = (ambient[i] + 0.1)*lfd;
 		}
-		set_colors_and_enable_light(0, ambient, diffuse); // sun
+		set_colors_and_enable_light(0, ambient, diffuse*sunlight_brightness); // sun
 
 		for (unsigned i = 0; i < 3; ++i) {
 			diffuse[i] = (diffuse[i]/lfd - 0.2)*lfn;
 			ambient[i] = (ambient[i]/lfd - 0.1)*lfn;
 		}
 		calc_moon_atten(ambient, diffuse, mlf);
-		set_colors_and_enable_light(1, ambient, diffuse); // moon
+		set_colors_and_enable_light(1, ambient, diffuse*moonlight_brightness); // moon
 	}
 
 	// setup light position (after enabling lights)
