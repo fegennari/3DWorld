@@ -119,7 +119,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	unsigned const NUM_COLORS = 6;
 	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
-	float const radius(0.02f*(3 + rr)*get_window_vspace()), height(0.54f*(3 + rar)*radius);
+	float const radius(0.02f*(3 + rr)*get_window_vspace()), height(0.55f*(3 + rar)*radius); // radius={0.06, 0.08, 0.10} x AR={1.65, 2.2, 2.75}
 	cube_t room_bounds(get_walkable_room_bounds(room)), room_exp(room);
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
