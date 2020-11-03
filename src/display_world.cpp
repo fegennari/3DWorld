@@ -444,7 +444,6 @@ void setup_lighting() {
 	}
 	if (light_factor <= 0.4) { // moon
 		calc_moon_atten(ambient, diffuse, mlf);
-		sm_green_int = diffuse[1];
 		set_colors_and_enable_light(1, ambient, diffuse);
 	}
 	else if (light_factor >= 0.6) { // sun
@@ -452,7 +451,6 @@ void setup_lighting() {
 			diffuse[i] += 0.2;
 			ambient[i] += 0.1;
 		}
-		sm_green_int = diffuse[1];
 		set_colors_and_enable_light(0, ambient, diffuse);
 	}
 	else { // sun and moon
@@ -462,7 +460,6 @@ void setup_lighting() {
 			diffuse[i] = (diffuse[i] + 0.2)*lfd;
 			ambient[i] = (ambient[i] + 0.1)*lfd;
 		}
-		sm_green_int = lfd*diffuse[1];
 		set_colors_and_enable_light(0, ambient, diffuse); // sun
 
 		for (unsigned i = 0; i < 3; ++i) {
@@ -470,7 +467,6 @@ void setup_lighting() {
 			ambient[i] = (ambient[i]/lfd - 0.1)*lfn;
 		}
 		calc_moon_atten(ambient, diffuse, mlf);
-		sm_green_int += lfn*diffuse[1];
 		set_colors_and_enable_light(1, ambient, diffuse); // moon
 	}
 

@@ -28,7 +28,7 @@ struct fp_ratio {
 
 // Global Variables
 bool clear_landscape_vbo(0), clear_mvd_vbo(0);
-float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
+float lt_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava, fog_enabled;
