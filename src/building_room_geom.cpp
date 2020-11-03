@@ -961,7 +961,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			}
 			assert(book.is_strictly_normalized());
 			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
-			bool const backwards((rgen.rand()&3) == 0), book_dir(c.dir ^ backwards ^ 1); // spine facing out 75% of the time
+			bool const backwards((rgen.rand()%10) == 0), book_dir(c.dir ^ backwards ^ 1); // spine facing out 90% of the time
 			room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color);
 			obj.obj_id = c.obj_id + 123*i + 1367*n;
 			add_book(obj, inc_lg, inc_sm, tilt_angle, skip_faces, backwards); // detailed book, no title if backwards
