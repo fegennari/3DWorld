@@ -518,16 +518,19 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	expand[ dim] = -wall_thick; // small amount of space
 	expand[!dim] = -0.3f*vspace; // leave at least some space between the bed and the wall
 	room_bounds.expand_by_xy(expand);
-	if (room_bounds.get_sz_dim(dim) < 1.3*vspace || room_bounds.get_sz_dim(!dim) < 0.8*vspace) return 0; // room is too small to fit a bed
-	if (room_bounds.get_sz_dim(dim) > 4.0*vspace || room_bounds.get_sz_dim(!dim) > 2.5*vspace) return 0; // room is too large to be a bedroom
+	float const room_len(room_bounds.get_sz_dim(dim)), room_width(room_bounds.get_sz_dim(!dim));
+	if (room_len < 1.3*vspace || room_width < 0.7*vspace) return 0; // room is too small to fit a bed
+	if (room_len > 4.0*vspace || room_width > 2.5*vspace) return 0; // room is too large to be a bedroom
 	bool const first_head_dir(rgen.rand_bool()), first_wall_dir(rgen.rand_bool());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
 	c.z1() = zval;
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bed
-		bed_sz[ dim] = 0.8*vspace*rgen.rand_uniform(1.0, 1.2); // length
-		bed_sz[!dim] = 0.5*vspace*rgen.rand_uniform(1.0, 1.5); // width
+		float const sizes[6][2] = {{38, 75}, {38, 80}, {53, 75}, {60, 80}, {76, 80}, {72, 84}}; // twin, twin XL, full, queen, king, cal king
+		unsigned const size_ix((room_width < 0.9*vspace) ? (rgen.rand() % 6) : (2 + (rgen.rand() % 4))); // only add twin beds to narrow rooms
+		bed_sz[ dim] = 0.01f*vspace*(sizes[size_ix][1] + 8.0f); // length (mattress + headboard + footboard)
+		bed_sz[!dim] = 0.01f*vspace*(sizes[size_ix][0] + 4.0f); // width  (mattress + small gaps)
 		if (room_bounds.dx() < 1.5*bed_sz.x || room_bounds.dy() < 1.5*bed_sz.y) continue; // room is too small for a bed of this size
 		bed_sz.z = 0.3*vspace*rgen.rand_uniform(1.0, 1.2); // height
 		c.z2()   = zval + bed_sz.z;
