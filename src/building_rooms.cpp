@@ -1079,7 +1079,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		
 		// for now, just make one random attempt; if it fails then there's no chair in this room
 		if (!has_bcube_int(chair, exclude) && !is_cube_close_to_doorway(chair, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(chair)) {
-			objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt);
+			objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt, room_obj_shape::SHAPE_CYLIN, GRAY_BLACK);
 		}
 	}
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
