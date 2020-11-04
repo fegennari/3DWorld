@@ -331,9 +331,7 @@ void building_materials_t::draw(shader_t &s, bool shadow_only, bool reflection_p
 float get_tc_leg_width(cube_t const &c, float width) {
 	return 0.5f*width*(c.dx() + c.dy()); // make legs square
 }
-void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
-	float const leg_width(get_tc_leg_width(c, width));
-
+void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, cube_t cubes[4]) {
 	for (unsigned y = 0; y < 2; ++y) {
 		for (unsigned x = 0; x < 2; ++x) {
 			cube_t leg(c);
@@ -342,6 +340,9 @@ void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
 			cubes[2*y+x] = leg;
 		}
 	}
+}
+void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]) {
+	get_tc_leg_cubes_abs_width(c, get_tc_leg_width(c, width), cubes);
 }
 void building_room_geom_t::add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale) {
 	rgeom_mat_t &mat(get_wood_material(tscale));
@@ -1038,15 +1039,16 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vecto
 
 void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
 	float const height(c.dz()), length(c.get_sz_dim(c.dim)), width(c.get_sz_dim(!c.dim));
-	bool const is_wide(width > 0.7*length);
+	bool const is_wide(width > 0.7*length), add_posts(is_wide && (c.obj_id & 1)), add_canopy(add_posts && (c.obj_id & 2)); // no posts for twin beds
+	float const head_width(0.04), foot_width(add_posts ? head_width : 0.03f); // relative to length
 	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c), pillow(c);
-	head.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.96*length;
-	foot.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.97*length;
+	head.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(1.0 - head_width)*length;
+	foot.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*(1.0 - foot_width)*length;
 	mattress.d[c.dim][ c.dir] = head.d[c.dim][!c.dir];
 	mattress.d[c.dim][!c.dir] = foot.d[c.dim][ c.dir];
 	frame.z1() += 0.3*height;
 	frame.z2() -= 0.65*height;
-	foot.z2()  -= 0.15*height;
+	foot.z2()  -= 0.2*height;
 	mattress.z1()   = head.z1()   = foot.z1() = frame.z2();
 	mattress.z2()   = pillow.z1() = mattress.z1() + 0.2*height;
 	pillow.z2()     = pillow.z1() + 0.13*height;
@@ -1061,12 +1063,38 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 
 	if (inc_lg) {
 		colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-		add_tc_legs(legs_bcube, color, 0.04, tscale);
+		add_tc_legs(legs_bcube, color, max(head_width, foot_width), tscale);
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
 		vector3d const tex_origin(c.get_llc());
 		wood_mat.add_cube_to_verts(frame, color, tex_origin);
 		wood_mat.add_cube_to_verts(head, color, tex_origin, EF_Z1);
 		wood_mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1);
+		
+		if (add_posts) { // maybe add bed posts and canopy; these extend outside of the bed bcube, but that probably doesn't matter
+			float const post_width(min(head_width, foot_width)*length);
+			cube_t posts_area(c);
+			posts_area.z1() = foot.z2(); // start at the foot
+			posts_area.z2() = posts_area.z1() + (add_canopy ? 1.4 : 0.6)*height; // higher posts for canopy bed
+			cube_t posts[4];
+			get_tc_leg_cubes_abs_width(posts_area, post_width, posts);
+
+			for (unsigned i = 0; i < 4; ++i) {
+				if (!add_canopy && posts[i].d[c.dim][!c.dir] == c.d[c.dim][!c.dir]) {posts[i].translate_dim(-(head.z2() - foot.z2()), 2);} // make footboard posts shorter
+				wood_mat.add_cube_to_verts(posts[i], color, tex_origin, EF_Z1); // skip bottom face
+			}
+			if (add_canopy) {
+				for (unsigned i = 0; i < 4; ++i) { // add 4 horizontal cube bars along the top of the bed connecting each adjacent pair of posts
+					cube_t top(posts[i]);
+					unsigned const next_ix[4] = {1, 3, 0, 2};
+					top.union_with_cube(posts[next_ix[i]]); // next post
+					top.z1() = top.z2() - post_width; // height = width
+					bool const dim(top.dx() < top.dy());
+					top.expand_in_dim(dim, -post_width); // remove overlaps with the post
+					wood_mat.add_cube_to_verts(top, color, tex_origin, get_skip_mask_for_xy(dim));
+				}
+				// TODO: add material to the top?
+			}
+		}
 		unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
 		rgeom_mat_t &sheet_mat(get_material(sheet_tex, 1));
 		sheet_mat.add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);
