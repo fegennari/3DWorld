@@ -225,7 +225,7 @@ enum room_object    {
 	TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_STAIR_WALL, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD,
 	TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL,
 	TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM,
-	TYPE_RAILING, TYPE_CRATE, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD,
+	TYPE_RAILING, TYPE_CRATE, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_SHOWER, TYPE_RDESK,
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR, TYPE_URINAL, TYPE_LAMP,
 	NUM_TYPES};
@@ -383,6 +383,7 @@ struct building_room_geom_t {
 	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0);
 	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0);
 	void add_desk(room_object_t const &c, float tscale);
+	void add_reception_desk(room_object_t const &c, float tscale);
 	void add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_window(room_object_t const &c, float tscale);
 	void add_tub_outer(room_object_t const &c);
@@ -398,6 +399,7 @@ struct building_room_geom_t {
 	void add_shelves(room_object_t const &c, float tscale);
 	void add_keyboard(room_object_t const &c);
 	void add_mirror(room_object_t const &c);
+	void add_shower(room_object_t const &c, float tscale);
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
 	void add_railing(room_object_t const &c);

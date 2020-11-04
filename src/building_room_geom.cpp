@@ -605,6 +605,17 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 	get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, apply_light_color(c), zero_vector, get_skip_mask_for_xy(c.dim)); // draw only the sides untextured
 }
 
+void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
+	bool const xdir(c.dim), ydir(c.dir); // placed in this corner
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &tile_mat(get_material(tid_nm_pair_t(TILE_TEX, 2.0*tscale), 0)); // no shadows
+	cube_t sides[2] = {c, c};
+	sides[0].d[0][!xdir] -= (xdir ? -1.0 : 1.0)*0.98*c.dx();
+	sides[1].d[1][!ydir] -= (ydir ? -1.0 : 1.0)*0.98*c.dy();
+	tile_mat.add_cube_to_verts(sides[0], color, zero_vector, (EF_Z1 | (xdir ? EF_X2 : EF_X1)));
+	tile_mat.add_cube_to_verts(sides[1], color, zero_vector, (EF_Z1 | (ydir ? EF_Y2 : EF_Y1)));
+}
+
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only
 }
@@ -989,6 +1000,25 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 		c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim);
 		add_bookcase(c_top_back, 1, 1, tscale, 1, 0.4); // no_shelves=1, side_width=0.4, both large and small
 	}
+}
+
+void building_room_geom_t::add_reception_desk(room_object_t const &c, float tscale) {
+	//colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	//get_wood_material(tscale).add_cube_to_verts(c, color, c.get_llc()); // all faces drawn
+	/*X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
+	l 0.66 1.0 1.0 1.0 1.0 26 1 # paneling
+	B 1.1 1.9  1.75 1.85  0.019 0.14
+	B 1.1 1.2  1.85 2.3   0.019 0.14
+	B 1.8 1.9  1.85 2.3   0.019 0.14
+	
+	l 0.82 0.6 0.5 0.4 1.0 9 1 # snow texture (marble)
+	r 0.8 60.0 # set specularity
+	B 1.15 1.85  1.72 1.88  0.14 0.15
+	B 1.07 1.23  1.80 2.33  0.14 0.15
+	B 1.77 1.93  1.80 2.33  0.14 0.15
+	C 1.15 1.80 0.1401  1.15 1.80 0.15  0.08 0.08
+	C 1.85 1.80 0.1401  1.85 1.80 0.15  0.08 0.08
+	*/
 }
 
 void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vector3d const &tex_origin) {
@@ -1539,6 +1569,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_PICTURE:  return texture_color(get_picture_tid());
 	case TYPE_BCASE:    return get_textured_wood_color();
 	case TYPE_DESK:     return get_textured_wood_color();
+	case TYPE_RDESK:    return get_textured_wood_color(); // TODO
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
 	case TYPE_COUNTER:  return get_counter_color();
 	case TYPE_KSINK:    return (get_counter_color()*0.9 + GRAY*0.1); // counter, with a bit of gray mixed in from the sink
@@ -1551,6 +1582,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
 	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
 	case TYPE_KEYBOARD: return BLACK;
+	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
 	}
 	if (type >= TYPE_TOILET && type < NUM_TYPES) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
@@ -1578,6 +1610,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_BOOK:    add_book    (*i, 1, 0); break;
 		case TYPE_BCASE:   add_bookcase(*i, 1, 0, tscale, 0); break;
 		case TYPE_DESK:    add_desk    (*i, tscale); break;
+		case TYPE_RDESK:   add_reception_desk(*i, tscale); break;
 		case TYPE_TCAN:    add_trashcan(*i); break;
 		case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
 		case TYPE_WINDOW:  add_window  (*i, tscale); break;
@@ -1595,6 +1628,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
+		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn

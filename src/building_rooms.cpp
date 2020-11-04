@@ -697,6 +697,28 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 			objs.emplace_back(mirror, TYPE_MIRROR, room_id, sink.dim, sink.dir, RO_FLAG_IS_HOUSE, tot_light_amt);
 		}
 	}
+	if (is_house && 1) { // try to add a shower; TODO: not on first floor?
+		float const shower_height(0.75*floor_spacing), shower_dx(rgen.rand_uniform(0.4, 0.5)*floor_spacing), shower_dy(rgen.rand_uniform(0.4, 0.5)*floor_spacing);
+		unsigned const first_corner(rgen.rand() & 3);
+
+		for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
+			unsigned const corner_ix((first_corner + n)&3);
+			bool const xdir(corner_ix&1), ydir(corner_ix>>1);
+			point const corner(place_area.d[0][xdir], place_area.d[1][ydir], zval);
+			cube_t c(corner, corner);
+			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*shower_dx;
+			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*shower_dy;
+			c.z2() += shower_height; // set height
+			cube_t c2(c); // used for placement tests
+			c2.d[0][!xdir] += (xdir ? -1.0 : 1.0)*0.5*shower_dx;
+			c2.d[1][!ydir] += (ydir ? -1.0 : 1.0)*0.5*shower_dy;
+			// TODO: not too close to windows?
+			if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
+			objs.emplace_back(c, TYPE_SHOWER, room_id, xdir, ydir, 0, tot_light_amt);
+			placed_obj = 1;
+			break; // done
+		} // for n
+	}
 	return placed_obj;
 }
 
