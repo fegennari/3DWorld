@@ -1791,7 +1791,6 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	mats_static .draw(s, shadow_only, reflection_pass);
 	mats_lights .draw(s, shadow_only, reflection_pass);
 	mats_dynamic.draw(s, shadow_only, reflection_pass);
-	if (!shadow_only) {mats_alpha.draw(s, shadow_only, reflection_pass);} // draw last; not shadow casters
 	
 	if (inc_small) {
 		mats_small.draw(s, shadow_only, reflection_pass);
@@ -1840,6 +1839,13 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	//occlusion_stats.update();
 	//if (!obj_model_insts.empty()) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
+
+	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters
+		enable_blend();
+		mats_alpha.draw(s, shadow_only, reflection_pass);
+		disable_blend();
+		vbo_wrap_t::post_render();
+	}
 }
 
 bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts, vect_cube_t const &cubes, unsigned dim) {
