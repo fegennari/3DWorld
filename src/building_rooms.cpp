@@ -1662,6 +1662,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	float const door_height(get_door_height()), floor_to_ceil_height(window_vspacing - floor_thickness);
 	unsigned const flags(RO_FLAG_NOCOLL);
 	bool const has_ceil_trim(is_house); // ceiling trim on houses only, for now (though the code also handles office buildings)
+	colorRGBA const &trim_color(is_house ? WHITE : DK_GRAY);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vect_cube_t trim_cubes;
 
@@ -1672,7 +1673,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
 			trim.d[!d->dim][0] = d->d[!d->dim][side] - (side ? door_trim_width : trim_thickness);
 			trim.d[!d->dim][1] = d->d[!d->dim][side] + (side ? trim_thickness : door_trim_width);
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL); // abuse tall flag
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, side, (flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color); // abuse tall flag
 		}
 		// add trim at top of door
 		unsigned const num_floors(calc_num_floors(*d, window_vspacing, floor_thickness));
@@ -1683,7 +1684,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 			trim.z1() = z - trim_thickness;
 			trim.z2() = z; // ceil height
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, 0, (flags | RO_FLAG_ADJ_TOP), 1.0, SHAPE_SHORT);
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, 0, (flags | RO_FLAG_ADJ_TOP), 1.0, SHAPE_SHORT, trim_color);
 		}
 	} // for d
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
@@ -1699,7 +1700,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		trim.expand_in_dim(dim, door_trim_exp);
 		bool dir(0);
 		unsigned ext_flags(flags);
-		colorRGBA const &trim_color(garage_door ? WHITE : door_color); // garage doors are always white
+		colorRGBA const &ext_trim_color(garage_door ? WHITE : door_color); // garage doors are always white
 
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
 			if (!i->intersects_no_adj(trim)) continue;
@@ -1712,14 +1713,14 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
 			trim.d[!dim][0] = door.d[!dim][side] - (side ? door_trim_width : 0.0);
 			trim.d[!dim][1] = door.d[!dim][side] + (side ? 0.0 : door_trim_width);
-			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, (ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, trim_color); // abuse tall flag
+			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, (ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, ext_trim_color); // abuse tall flag
 		}
 		// add trim at bottom of door for threshold
 		trim.d[!dim][0] = door.d[!dim][0];
 		trim.d[!dim][1] = door.d[!dim][1];
 		trim.z1() = door.z1() + fc_thick; // floor height
 		trim.z2() = trim.z1() + 2.0*trim_thickness;
-		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, trim_color);
+		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, ext_trim_color);
 
 		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->type == tquad_with_ix_t::TYPE_BDOOR) { // add trim at top of door, houses and office buildings
 			trim.z1() = door.z2() - 0.03*door.dz(); // see logic in clip_door_to_interior()
@@ -1729,7 +1730,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			ext_flags = flags; // unlike hdoors, need to draw the back face to hide the gap betweeen ceiling and floor above
 			trim.d[dim][dir] += (dir ? -1.0 : 1.0)*0.005*window_vspacing; // minor shift back toward building to prevent z-fighting
 		}
-		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_SHORT, trim_color); // top of door
+		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_SHORT, ext_trim_color); // top of door
 	} // for d
 	for (unsigned dim = 0; dim < 2; ++dim) { // add horizontal strips along each wall at each floor/ceiling
 		for (auto w = interior->walls[dim].begin(); w != interior->walls[dim].end(); ++w) {
@@ -1752,7 +1753,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 				trim.z1() = z; // floor height
 				trim.z2() = z + trim_height;
-				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_CUBE); // floor trim
+				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_CUBE, trim_color); // floor trim
 				if (!has_ceil_trim) continue;
 				trim.z2() = z + floor_to_ceil_height; // ceil height
 				trim.z1() = trim.z2() - trim_height;
@@ -1760,7 +1761,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				for (unsigned dir = 0; dir < 2; ++dir) { // for each side of wall
 					cube_t ceil_trim(trim);
 					ceil_trim.d[dim][!dir] = w->d[dim][dir];
-					objs.emplace_back(ceil_trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_ANGLED); // ceiling trim
+					objs.emplace_back(ceil_trim, TYPE_WALL_TRIM, 0, dim, dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
 				}
 			} // for f
 		} // for w
@@ -1798,13 +1799,13 @@ void building_t::add_wall_and_door_trim() { // and window trim
 						}
 					}
 					for (auto c = trim_cubes.begin(); c != trim_cubes.end(); ++c) {
-						objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE); // floor trim
+						objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE, trim_color); // floor trim
 						if (!has_ceil_trim) continue;
 						if (is_house && c != trim_cubes.begin()) continue;
 						cube_t ceil_trim(is_house ? trim : *c); // houses have shorter doors and ceiling trim extends above the door, so draw full range
 						ceil_trim.z2() = ceil_trim_z2;
 						ceil_trim.z1() = ceil_trim_z1;
-						objs.emplace_back(ceil_trim, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED); // ceiling trim
+						objs.emplace_back(ceil_trim, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
 					}
 				} // for f
 			} // for dir
@@ -1865,13 +1866,13 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				bot.d[dim][!dir] += (dir ? -1.0f : 1.0f)*(windowsill_depth - window_trim_depth); // shift out further for windowsill
 				top.expand_in_dim(!dim, window_trim_width);
 				bot.expand_in_dim(!dim, window_trim_width);
-				objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL);
-				objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL);
+				objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
+				objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 
 				for (unsigned s = 0; s < 2; ++s) { // left/right sides
 					side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*window_trim_width;
 					side.d[!dim][!s] = window.d[!dim][s];
-					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL);
+					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				}
 			} // for xy
 		} // for z
