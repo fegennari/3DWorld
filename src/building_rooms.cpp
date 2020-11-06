@@ -991,14 +991,17 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (bad_place) continue;
 			assert(c.contains_cube(c_min));
 			c.d[dim][!dir] = front_pos; // remove front clearance
+			bool const add_backsplash(classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // only add to interior walls to avoid windows
 
 			for (auto i = objs.begin()+counters_start; i != objs.end(); ++i) { // find adjacencies to previously placed counters and flag to avoid placing doors
 				if (i->dim == dim) continue; // not perpendicular
 				if (i->d[!i->dim][dir] != wall_pos) continue; // not against the wall on this side
 				if (i->d[i->dim][i->dir] != c.d[!dim][0] && i->d[i->dim][i->dir] != c.d[!dim][1]) continue; // not adjacent
 				i->flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
+				if (add_backsplash) {i->flags2 |= (1 << (dir+1));} // flag side as having a backsplash
 			}
 			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, 0, tot_light_amt);
+			if (add_backsplash) {objs.back().flags2 |= 1;} // flag back as having a backsplash
 
 			if (1) { // add upper cabinets, always (for now); should we remove cabinets in front of windows?
 				cube_t c2(c);

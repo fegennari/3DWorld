@@ -261,6 +261,7 @@ uint16_t const RO_FLAG_RAND_ROT= 0x8000; // random rotation for 3D models; used 
 struct room_object_t : public cube_t {
 	bool dim, dir;
 	uint16_t flags;
+	uint8_t flags2; // currently only used by cabinets
 	uint8_t room_id; // for at most 256 rooms per floor
 	uint16_t obj_id; // currently only used for lights and random property hashing
 	room_object type;
@@ -268,10 +269,10 @@ struct room_object_t : public cube_t {
 	float light_amt;
 	colorRGBA color;
 
-	room_object_t() : dim(0), dir(0), flags(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
+	room_object_t() : dim(0), dir(0), flags(0), flags2(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, uint16_t f=0, float light=1.0,
 		room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
-		cube_t(c), dim(dim_), dir(dir_), flags(f), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_)
+		cube_t(c), dim(dim_), dir(dir_), flags(f), flags2(0), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
 	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}

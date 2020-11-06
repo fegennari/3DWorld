@@ -1462,6 +1462,24 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		}
 		add_cabinet(cabinet, tscale); // draw the wood part
 	}
+	if (c.flags2) { // add backsplash
+		rgeom_mat_t &bs_mat(get_material(tid_nm_pair_t(TILE_TEX, 4.0*tscale), 0)); // no shadows TODO: better texture, closer to white than red
+		cube_t bsz(c);
+		bsz.z1()  = c.z2();
+		bsz.z2() += 0.25*c.dz();
+
+		if (c.flags2 & 1) { // back
+			cube_t bs(bsz);
+			bs.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.99*depth;
+			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(c.dim, !c.dir)));
+		}
+		for (unsigned d = 0; d < 2; ++d) { // handle the other dim
+			if (!(c.flags2 & (1<<(d+1)))) continue; // not adjacent in this dir
+			cube_t bs(bsz);
+			bs.d[!c.dim][!d] -= (d ? -1.0 : 1.0)*(c.get_sz_dim(!c.dim) - 0.01*depth);
+			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(!c.dim, d)));
+		}
+	}
 }
 
 void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
