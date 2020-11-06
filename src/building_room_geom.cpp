@@ -610,7 +610,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	colorRGBA const color(apply_light_color(c));
 	// add tile material along walls and floor
 	int const skip_faces[2] = {(EF_Z1 | (xdir ? EF_X2 : EF_X1)), (EF_Z1 | (ydir ? EF_Y2 : EF_Y1))};
-	rgeom_mat_t &tile_mat(get_material(tid_nm_pair_t(TILE_TEX, 2.5*tscale), 0)); // no shadows
+	rgeom_mat_t &tile_mat(get_material(tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale), 0)); // no shadows
 	cube_t bottom(c), sides[2] = {c, c};
 	bottom.z2() = c.z1() + 0.025*sz.z;
 	tile_mat.add_cube_to_verts(bottom,   color, zero_vector, (skip_faces[0] | skip_faces[1]));
@@ -1463,10 +1463,10 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		add_cabinet(cabinet, tscale); // draw the wood part
 	}
 	if (c.flags2) { // add backsplash
-		rgeom_mat_t &bs_mat(get_material(tid_nm_pair_t(TILE_TEX, 4.0*tscale), 0)); // no shadows TODO: better texture, closer to white than red
+		rgeom_mat_t &bs_mat(get_material(tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale), 0)); // no shadows
 		cube_t bsz(c);
 		bsz.z1()  = c.z2();
-		bsz.z2() += 0.25*c.dz();
+		bsz.z2() += 0.33*c.dz();
 
 		if (c.flags2 & 1) { // back
 			cube_t bs(bsz);
