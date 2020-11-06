@@ -1543,10 +1543,11 @@ void building_room_geom_t::clear_materials() { // can be called to update textur
 void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 	mats_static.clear();
 	obj_model_insts.clear(); // these are associated with static VBOs
+	mats_alpha.clear();
 }
 
-rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, bool small) {
-	return (dynamic ? mats_dynamic : (small ? mats_small : mats_static)).get_material(tex, inc_shadows);
+rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, bool small, bool transparent) {
+	return (dynamic ? mats_dynamic : (small ? mats_small : (transparent ? mats_alpha : mats_static))).get_material(tex, inc_shadows);
 }
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, bool small) {
 	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale), inc_shadows, dynamic, small); // hard-coded for common material
@@ -1652,6 +1653,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
 	//timer_t timer2("Create VBOs"); // < 2ms
 	mats_static.create_vbos(building);
+	mats_alpha .create_vbos(building);
 }
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 1.3ms
@@ -1747,6 +1749,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	mats_static .draw(s, shadow_only, reflection_pass);
 	mats_lights .draw(s, shadow_only, reflection_pass);
 	mats_dynamic.draw(s, shadow_only, reflection_pass);
+	if (!shadow_only) {mats_alpha.draw(s, shadow_only, reflection_pass);} // draw last; not shadow casters
 	
 	if (inc_small) {
 		mats_small.draw(s, shadow_only, reflection_pass);
