@@ -1147,10 +1147,12 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 			posts_area.z2() = posts_area.z1() + (add_canopy ? 1.4 : 0.6)*height; // higher posts for canopy bed
 			cube_t posts[4];
 			get_tc_leg_cubes_abs_width(posts_area, post_width, posts);
+			bool const use_cylinders(!add_canopy && (c.obj_id & 4));
 
 			for (unsigned i = 0; i < 4; ++i) {
 				if (!add_canopy && posts[i].d[c.dim][!c.dir] == c.d[c.dim][!c.dir]) {posts[i].translate_dim(-(head.z2() - foot.z2()), 2);} // make footboard posts shorter
-				wood_mat.add_cube_to_verts(posts[i], color, tex_origin, EF_Z1); // skip bottom face
+				if (use_cylinders) {wood_mat.add_vcylin_to_verts(posts[i], color, 0, 1);}
+				else {wood_mat.add_cube_to_verts(posts[i], color, tex_origin, EF_Z1);} // skip bottom face
 			}
 			if (add_canopy) {
 				for (unsigned i = 0; i < 4; ++i) { // add 4 horizontal cube bars along the top of the bed connecting each adjacent pair of posts
