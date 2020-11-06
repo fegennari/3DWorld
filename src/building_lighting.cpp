@@ -625,7 +625,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, -plus_z, bwidth); // points down
 		bool dynamic_shadows(0);
 
-		if (camera_near_building) {
+		if (camera_near_building && !is_lamp) {
 			if (camera_surf_collide && camera_in_building && lpos_rot.z > camera_bs.z && (camera_on_stairs || lpos_rot.z < (camera_bs.z + window_vspacing)) &&
 				clipped_bc.contains_pt(camera_bs) && dist_less_than(lpos_rot, camera_bs, dshadow_radius))
 			{
