@@ -604,14 +604,56 @@ void building_room_geom_t::add_mirror(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
-	bool const xdir(c.dim), ydir(c.dir); // placed in this corner
+	bool const xdir(c.dim), ydir(c.dir), dirs[2] = {xdir, ydir}; // placed in this corner
+	vector3d const sz(c.get_size());
+	float const signs[2] = {(xdir ? -1.0f : 1.0f), (ydir ? -1.0f : 1.0f)};
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &tile_mat(get_material(tid_nm_pair_t(TILE_TEX, 2.0*tscale), 0)); // no shadows
-	cube_t sides[2] = {c, c};
-	sides[0].d[0][!xdir] -= (xdir ? -1.0 : 1.0)*0.98*c.dx();
-	sides[1].d[1][!ydir] -= (ydir ? -1.0 : 1.0)*0.98*c.dy();
-	tile_mat.add_cube_to_verts(sides[0], color, zero_vector, (EF_Z1 | (xdir ? EF_X2 : EF_X1)));
-	tile_mat.add_cube_to_verts(sides[1], color, zero_vector, (EF_Z1 | (ydir ? EF_Y2 : EF_Y1)));
+	// add tile material along walls and floor
+	int const skip_faces[2] = {(EF_Z1 | (xdir ? EF_X2 : EF_X1)), (EF_Z1 | (ydir ? EF_Y2 : EF_Y1))};
+	rgeom_mat_t &tile_mat(get_material(tid_nm_pair_t(TILE_TEX, 2.5*tscale), 0)); // no shadows
+	cube_t bottom(c), sides[2] = {c, c};
+	bottom.z2() = c.z1() + 0.025*sz.z;
+	tile_mat.add_cube_to_verts(bottom,   color, zero_vector, (skip_faces[0] | skip_faces[1]));
+
+	for (unsigned d = 0; d < 2; ++d) {
+		sides[d].d[d][!dirs[d]] -= signs[d]*0.98*sz[d];
+		sides[d].z1() = bottom.z2();
+		tile_mat.add_cube_to_verts(sides[d], color, zero_vector, skip_faces[d]);
+	}
+	// add metal frame around glass
+	colorRGBA const metal_color(apply_light_color(c, GRAY));
+	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal
+	cube_t fc(c); // corner frame
+	fc.z2() = c.z2() - 0.05*sz.z; // slightly shorter than tile
+	fc.z1() = bottom.z2();
+	cube_t fxy[2] = {fc, fc};
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t &f(fxy[d]);
+		f.d[ d][ dirs[ d]]  = sides[d].d[d][!dirs[d]];
+		f.d[ d][!dirs[ d]]  = sides[d].d[d][!dirs[d]] + signs[d]*0.04*sz[d];
+		f.d[!d][ dirs[!d]] += signs[!d]*0.94*sz[!d];
+		f.d[!d][!dirs[!d]] -= signs[!d]*0.02*sz[!d];
+		metal_mat.add_cube_to_verts(f, metal_color, zero_vector, skip_faces[d]);
+		fc.d[!d][0] = f.d[!d][0]; fc.d[!d][1] = f.d[!d][1];
+	}
+	metal_mat.add_cube_to_verts(fc, metal_color, zero_vector, EF_Z1);
+	// add transparent glass
+	float const frame_width(fc.dx());
+	colorRGBA const glass_color(apply_light_color(c, colorRGBA(1.0, 1.0, 1.0, 0.25)));
+	rgeom_mat_t &glass_mat(get_material(tid_nm_pair_t(), 0, 0, 0, 1)); // no shadows; transparent=1
+
+	for (unsigned d = 0; d < 2; ++d) {
+		cube_t glass(fc);
+		glass.z2() -= 0.020*sz.z; // slightly shorter than frame
+		glass.z1() += 0.002*sz.z; // to prevent z-fighting
+		glass.d[d][!dirs[d]] = glass. d[d][ dirs[d]]; // remove overlap with frame
+		glass.d[d][ dirs[d]] = fxy[d].d[d][!dirs[d]];
+		glass.expand_in_dim( d, -0.01*frame_width); // to prevent z-fighting
+		glass.expand_in_dim(!d, -0.20*frame_width);
+		glass_mat.add_cube_to_verts(glass, glass_color, zero_vector, 0, 0, 0, 0, 1); // inside surface, inverted
+		glass_mat.add_cube_to_verts(glass, glass_color, zero_vector, (EF_Z1 | (d ? EF_Y12 : EF_X12))); // outside surface
+	}
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
