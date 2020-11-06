@@ -368,6 +368,7 @@ struct building_room_geom_t {
 		mats_dynamic.count_all_verts() + mats_lights.count_all_verts() + mats_plants.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0);
 	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, bool small=0);
+	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, bool small=0);
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);

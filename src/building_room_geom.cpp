@@ -535,9 +535,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		shelves[s] = shelf; // record for later use
 	}
 	// add support brackets
-	tid_nm_pair_t metal_tex;
-	metal_tex.set_specular(0.8, 60.0);
-	rgeom_mat_t &metal_mat(get_material(metal_tex,  1, 0, 1)); // shadowed, specular metal
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
 	colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
@@ -1365,16 +1363,14 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		cubes.clear();
 		subtract_cube_from_cube(top, sink, cubes);
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {top_mat.add_cube_to_verts(*i, top_color, tex_origin);} // should always be 4 cubes
-		tid_nm_pair_t tex;
-		tex.set_specular(0.8, 60.0);
 		colorRGBA const sink_color(apply_light_color(c, GRAY));
-		get_material(tex, 0).add_cube_to_verts(sink,    sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
-		rgeom_mat_t &metal_mat(get_material(tex, 1)); // shadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
+		get_metal_material(0).add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
+		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
 		metal_mat.add_cube_to_verts(faucet1, sink_color, tex_origin, EF_Z12); // vertical part of faucet, skip top and bottom faces
 		metal_mat.add_cube_to_verts(faucet2, sink_color, tex_origin, 0); // horizontal part of faucet, draw all faces
 
 		if (c.type == TYPE_BRSINK) { // bathroom sink
-			get_material(tex, 1).add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2); // outside of basin, no top surface, shadowed
+			metal_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2); // outside of basin, no top surface, shadowed
 			cube_t front(c);
 			front.z2() = top.z1();
 			front.z1() = sink.z1() - 0.1*dz; // slightly below the sink basin
@@ -1554,6 +1550,11 @@ rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool i
 }
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, bool small) {
 	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale), inc_shadows, dynamic, small); // hard-coded for common material
+}
+rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, bool small) {
+	tid_nm_pair_t tex;
+	tex.set_specular(0.8, 60.0);
+	return get_material(tex, inc_shadows, dynamic, small);
 }
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));}
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
