@@ -667,7 +667,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 				c2.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.8*length; // extra padding in front of toilet, to avoid placing other objects there (sink and tub)
 				c2.expand_in_dim(!dim, 0.4*width); // more padding on the sides
 				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
-				objs.emplace_back(c, TYPE_TOILET, room_id, dim, !dir, 0, tot_light_amt);
+				objs.emplace_back(c,  TYPE_TOILET,  room_id, dim, !dir, 0, tot_light_amt);
 				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_toilet = 1; // done
 			} // for d
@@ -681,8 +681,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 		unsigned const first_corner(rgen.rand() & 3);
 		bool is_ext_wall[2][2] = {0}; // precompute which walls are exterior, {dim}x{dir}
 		for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
-		cube_t const part(get_part_for_room(room));
-		float const window_h_border(get_window_h_border()), window_hspacing[2] = {get_hspacing_for_part(part, 0), get_hspacing_for_part(part, 1)};
+		//cube_t const part(get_part_for_room(room));
 
 		for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
 			unsigned const corner_ix((first_corner + n)&3);
@@ -695,14 +694,16 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 			bool is_bad(0);
 
 			for (unsigned d = 0; d < 2; ++d) { // check for window intersection
-				if (is_ext_wall[!d][dirs[!d]] && is_val_inside_window(part, d, c.d[d][!dirs[d]], window_hspacing[d], window_h_border)) {is_bad = 1; break;}
+				// Update: exterior walls aren't drawn in the correct order for glass alpha blend, so skip any exterior walls
+				if (is_ext_wall[!d][dirs[!d]] /*&& is_val_inside_window(part, d, c.d[d][!dirs[d]], get_hspacing_for_part(part, d), get_window_h_border())*/) {is_bad = 1; break;}
 			}
 			if (is_bad) continue;
 			cube_t c2(c); // used for placement tests
 			c2.d[0][!xdir] += (xdir ? -1.0 : 1.0)*0.25*shower_dx;
 			c2.d[1][!ydir] += (ydir ? -1.0 : 1.0)*0.25*shower_dy;
 			if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
-			objs.emplace_back(c, TYPE_SHOWER, room_id, xdir, ydir, 0, tot_light_amt);
+			objs.emplace_back(c,  TYPE_SHOWER,  room_id, xdir, ydir, 0, tot_light_amt);
+			objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 			placed_obj = 1;
 			break; // done
 		} // for n
