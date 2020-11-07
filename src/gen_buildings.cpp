@@ -1115,7 +1115,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
-				bdraw.add_section(*this, empty_vc, *i, mat.wall_tex, mat.wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
+				bdraw.add_section(*this, empty_vc, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
 			}
 		}
 		// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
@@ -2080,6 +2080,8 @@ public:
 		building_draw_t interior_wind_draw, ext_door_draw;
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
+		building_t const *nearest_building(0);
+		float dmin_sq(0.0);
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -2160,6 +2162,8 @@ public:
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, shadow_only);} // draw people in this building
+						float const dist_sq(p2p_dist_sq(b.bcube.closest_pt(camera_xlated), camera_xlated));
+						if (nearest_building == nullptr || dist_sq < dmin_sq) {nearest_building = &b; dmin_sq = dist_sq;} // record closest building for wall_tex
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) continue; // camera not near building
 						if (reflection_pass == 2)  continue; // interior room, don't need to draw windows and exterior doors
@@ -2226,13 +2230,14 @@ public:
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				unsigned const bcs_ix(i - bcs.begin());
-				bool const force_wall_tex(!(*i)->buildings.empty());
+				bool const force_wall_tex(nearest_building != nullptr);
 				vertex_range_t const *exclude(nullptr);
 
-				if (force_wall_tex) {
-					building_mat_t const &mat((*i)->buildings.front().get_material()); // assume all buildings have the same interior wall texture/scale
+				if (force_wall_tex) { // assume all buildings have the same interior wall texture/scale/color
+					building_mat_t const &mat(nearest_building->get_material());
 					mat.wall_tex.set_gl(s);
-					s.set_cur_color(mat.wall_color);
+					// TODO: how to set color per-building to avoid color transitions when moving between buildings?
+					s.set_cur_color(nearest_building->wall_color); // Note: per-building wall color for houses, not mat.wall_color
 					// translate texture near the camera to get better tex coord resolution; make a multiple of tscale to avoid visible shift
 					vector3d texgen_origin(xoff2*DX_VAL, yoff2*DY_VAL, 0.0);
 					for (unsigned d = 0; d < 2; ++d) {texgen_origin[d] = mat.wall_tex.tscale_x*int(texgen_origin[d]/mat.wall_tex.tscale_x);}

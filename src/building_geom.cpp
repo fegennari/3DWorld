@@ -646,6 +646,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	rand_gen_t rgen;
 	rgen.set_state(123+rseed1, 345*rseed2);
 	ao_bcz2 = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
+	wall_color = mat.wall_color; // start with default wall color
 	if (is_house) {gen_house(base, rgen); return;}
 
 	// determine building shape (cube, cylinder, other)
@@ -1232,6 +1233,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
 	door_color = (rgen.rand_bool() ? LT_BROWN : WHITE);
+	// white, white, white, white, pink, peach, lt green, lt blue
+	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
+	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
 }
 
 void rotate_xy(point &pt, point const &origin, float angle) {
