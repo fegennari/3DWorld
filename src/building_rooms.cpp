@@ -1144,6 +1144,10 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 1; // it's always a storage room, even if it's empty
 }
 
+void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
+	// TODO: add objects of type TYPE_RDESK
+}
+
 void building_t::place_book_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
@@ -1576,6 +1580,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt);}
 				}
+				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway
+					add_pri_hall_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
+				}
 				continue; // no other geometry for this room
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
@@ -1656,7 +1663,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					}
 					r->assign_to(RTYPE_DINING, f);
 					is_dining = 1;
-				}
+				} // TODO: what about office building libraries?
 				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) { // add library, at most one
 					r->assign_to(RTYPE_LIBRARY, f);
 					added_library = 1;
