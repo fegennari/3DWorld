@@ -656,6 +656,24 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	}
 }
 
+void building_room_geom_t::add_bottle(room_object_t const &c) {
+	// for now, no texture, but could use a bottle label texture for the central cylinder
+	tid_nm_pair_t tex;
+	tex.set_specular(0.5, 80.0);
+	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	colorRGBA const color(apply_light_color(c));
+	float const dz(c.dz()), radius(0.25f*(c.dx() + c.dy())); // dx should equal dy
+	cube_t sphere(c), main_cylin(c), top_cylin(c);
+	sphere.z1() = c.z1() + 0.5*dz;
+	sphere.z2() = sphere.z1() + 2.0*radius;
+	main_cylin.z2() = sphere.z1() + radius;
+	top_cylin .z1() = main_cylin.z2(); // there will be some intersection, but that should be okay
+	top_cylin.expand_by(vector3d(-0.3*c.dx(), -0.3*c.dy(), 0.0)); // smaller radius
+	mat.add_sphere_to_verts(sphere, color);
+	mat.add_vcylin_to_verts(main_cylin, color, 0, 0);
+	mat.add_vcylin_to_verts(top_cylin,  color, 0, 1); // draw top surface
+}
+
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only
 }
@@ -1737,6 +1755,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_CRATE: add_crate    (*i); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:  add_shelves(*i, tscale); break; // not small but only added to windowless rooms
 		case TYPE_KEYBOARD: add_keyboard(*i); break;
+		case TYPE_BOTTLE:   add_bottle(*i); break;
 		default: break;
 		}
 	} // for i

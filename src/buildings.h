@@ -225,7 +225,7 @@ enum room_object    {
 	TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_STAIR_WALL, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD,
 	TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL,
 	TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM,
-	TYPE_RAILING, TYPE_CRATE, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_SHOWER, TYPE_RDESK,
+	TYPE_RAILING, TYPE_CRATE, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_SHOWER, TYPE_RDESK, TYPE_BOTTLE,
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR, TYPE_URINAL, TYPE_LAMP,
 	NUM_TYPES};
@@ -402,6 +402,7 @@ struct building_room_geom_t {
 	void add_keyboard(room_object_t const &c);
 	void add_mirror(room_object_t const &c);
 	void add_shower(room_object_t const &c, float tscale);
+	void add_bottle(room_object_t const &c);
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
 	void add_railing(room_object_t const &c);
@@ -726,6 +727,7 @@ private:
 	bool hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_plants_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num);
 	void add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt);
+	void place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
 	bool can_be_bathroom(room_t const &room) const;
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const;

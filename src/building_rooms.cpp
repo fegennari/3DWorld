@@ -1313,6 +1313,56 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 	} // for dim
 }
 
+void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	assert(objs.size() > objs_start);
+	float const window_vspacing(get_window_vspace()), bottle_height(0.102*window_vspacing), bottle_radius(0.015*window_vspacing);
+	float const place_book_prob((is_house ? 1.0 : 0.5)*(room.is_office ? 0.8 : 1.0));
+	float const place_bottle_prob(is_house ? 1.0 : (room.is_office ? 0.75 : 0.0));
+	unsigned const objs_end(objs.size());
+	bool placed_book_on_counter(0);
+
+	// see if we can place books or bottles on any room object top surfaces
+	for (unsigned i = objs_start; i < objs_end; ++i) { // can't iterate over objs because we modify it
+		room_object_t const &obj(objs[i]);
+		float book_prob(0.0), bottle_prob(0.0);
+		cube_t book;
+
+		if (obj.type == TYPE_TABLE && i == objs_start) { // only first table (not TV table)
+			book_prob   = 0.4*place_book_prob;
+			bottle_prob = 0.5*place_bottle_prob;
+		}
+		else if (obj.type == TYPE_DESK && (i+1 == objs_end || objs[i+1].type != TYPE_TV)) { // desk with no computer monitor
+			book_prob   = 0.8*place_book_prob;
+			bottle_prob = 0.3*place_bottle_prob;
+		}
+		else if (obj.type == TYPE_COUNTER) {
+			book_prob   = (placed_book_on_counter ? 0.0 : 0.5); // only place one book per counter
+			bottle_prob = 0.2*place_bottle_prob;
+		}
+		if (book_prob > 0.0 && rgen.rand_float() < book_prob) {
+			placed_book_on_counter |= (obj.type == TYPE_COUNTER);
+			place_book_on_obj(rgen, obj, room_id, tot_light_amt, (obj.type != TYPE_TABLE));
+			book = objs.back();
+		}
+		if (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob) {
+			room_object_t const &obj2(objs[i]); // capture a new reference in case it was invalidated by placing the book above
+			point center;
+			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((obj2.d[d][0] + 2.0*bottle_radius), (obj2.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
+			cube_t bottle; // bottle bcube
+			bottle.set_from_sphere(center, bottle_radius);
+			bottle.z1() = obj2.z2();
+			bottle.z2() = bottle.z1() + bottle_height;
+			
+			if (book.is_all_zeros() || !bottle.intersects(book)) {
+				colorRGBA const bottle_colors[2] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05)}; // only 2 colors for now
+				colorRGBA const &color(bottle_colors[rgen.rand()%2]);
+				objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, room_obj_shape::SHAPE_CYLIN, color);
+			}
+		}
+	} // for i
+}
+
 void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		float const sz(((light_shape == SHAPE_CYLIN || light_shape == SHAPE_SPHERE) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
@@ -1530,7 +1580,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			//if (has_stairs && !pri_hall.is_all_zeros()) continue; // no other geometry in office building base part rooms that have stairs
 			unsigned const objs_start(objs.size()), floor_mask(1<<f);
-			bool added_tc(0), added_desk(0), added_obj(0), can_place_book(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), no_whiteboard(0);
+			bool added_tc(0), added_desk(0), added_obj(0), can_place_onto(0), is_bathroom(0), is_bedroom(0), is_kitchen(0), is_living(0), is_dining(0), is_storage(0), no_whiteboard(0);
 			unsigned num_chairs(0);
 
 			// place room objects
@@ -1560,7 +1610,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt));
-				if (num_tcs > 0) {added_tc = added_obj = can_place_book = 1; num_chairs = num_tcs - 1;}
+				if (num_tcs > 0) {added_tc = added_obj = can_place_onto = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
 				if (added_tc && !(added_kitchen_mask & floor_mask) && (!is_house || f == 0)) { // office buildings can also have kitchens, even on non-ground floors
 					is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living);
@@ -1573,7 +1623,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}
 			if (!added_obj) { // try to place a desk if there's no table, bed, etc.
-				added_obj = can_place_book = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt);
+				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt);
 				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? RTYPE_STUDY : RTYPE_OFFICE), f);} // or other room type - may be overwritten below
 			}
 			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen and have enough rooms
@@ -1583,20 +1633,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_living) {r->assign_to(RTYPE_LIVING, f);}
 				}
 			}
-			if (can_place_book) { // an object was placed (table, desk, counter, etc.), maybe add a book on top of it
-				assert(objs.size() > objs_start);
-				float const place_prob((is_house ? 1.0 : 0.5)*(r->is_office ? 0.8 : 1.0));
-				unsigned const objs_end(objs.size());
-				bool placed_on_counter(0);
-
-				for (unsigned i = objs_start; i < objs_end; ++i) { // see if we can place books on any room objects
-					room_object_t const &obj(objs[i]);
-					bool place_book(0);
-					if      (obj.type == TYPE_TABLE && i == objs_start) {place_book = (rgen.rand_float() < 0.40*place_prob);} // only first table (not TV table)
-					else if (obj.type == TYPE_DESK) {place_book = ((i+1 == objs_end || objs[i+1].type != TYPE_TV) && rgen.rand_float() < 0.8*place_prob);} // only if no TV
-					else if (obj.type == TYPE_COUNTER && !placed_on_counter) {place_book = placed_on_counter = (rgen.rand_float() < 0.5);}
-					if (place_book) {place_book_on_obj(rgen, obj, room_id, tot_light_amt, (obj.type != TYPE_TABLE));}
-				}
+			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
+				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start);
 			}
 			if (is_house) { // place house-specific items
 				if (!is_bathroom && !is_kitchen && rgen.rand_float() < 0.8) { // place bookcase 80% of the time, but not in bathrooms or kitchens
