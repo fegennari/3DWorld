@@ -419,11 +419,11 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
 	float const row_spacing(height/num_rows), door_thick(0.05*height), handle_thick(0.75*door_thick);
 	float const border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
-	get_material(tid_nm_pair_t(), 0); // ensure material exists so that door_mat reference is not invalidated
+	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
-	rgeom_mat_t &handle_mat(get_material(tid_nm_pair_t(), 0)); // untextured, unshadowed
+	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
-	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK)); // should be specular metal
+	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
 	cube_t door(middle);
 	door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
@@ -1502,9 +1502,9 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	float lo(front.d[!c.dim][0]);
 	get_material(tid_nm_pair_t(), 0); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
-	rgeom_mat_t &handle_mat(get_material(tid_nm_pair_t(), 0)); // untextured, unshadowed
+	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
-	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK)); // should be specular metal
+	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
 	cube_t door(c);
 	door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
