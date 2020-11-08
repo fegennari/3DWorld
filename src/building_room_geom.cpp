@@ -643,6 +643,29 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 		fc.d[!d][0] = f.d[!d][0]; fc.d[!d][1] = f.d[!d][1];
 	}
 	metal_mat.add_cube_to_verts(fc, metal_color, zero_vector, EF_Z1);
+	// add shower head
+	float const radius(0.5f*(sz.x + sz.y));
+	bool const head_dim(sz.y < sz.x);
+	point start_pos, end_pos, base_pos, head_pos;
+	start_pos.z = c.z1() + 0.75*sz.z;
+	start_pos[ head_dim] = sides[head_dim].d[head_dim][!dirs[head_dim]];
+	start_pos[!head_dim] = c.get_center_dim(!head_dim);
+	base_pos = start_pos;
+	base_pos[head_dim] += signs[head_dim]*0.06*sz[head_dim]; // move out from the wall
+	end_pos  = base_pos;
+	end_pos[head_dim] += signs[head_dim]*0.02*sz[head_dim]; // move out from the wall a bit more
+	head_pos = base_pos;
+	head_pos.z -= 0.05*sz.z;
+	head_pos[ head_dim] += signs[head_dim]*0.09*sz[head_dim];
+	metal_mat.add_cylin_to_verts(base_pos,  head_pos, 0.02*radius, 0.10*radius, metal_color, 0, 1); // draw top/wide end only
+	metal_mat.add_cylin_to_verts(start_pos, end_pos,  0.02*radius, 0.02*radius, metal_color, 0, 0); // no ends
+	// add drain
+	cube_t drain;
+	drain.set_from_point(bottom.get_cube_center());
+	drain.z1() = bottom.z2();
+	drain.z2() = bottom.z2() + 0.05*bottom.dz(); // very small height
+	drain.expand_by_xy(0.06*radius); // set radius
+	get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0).add_vcylin_to_verts(drain, metal_color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only, not sides, unshadowed
 	// add transparent glass
 	float const frame_width(fc.dx());
 	colorRGBA const glass_color(apply_light_color(c, colorRGBA(1.0, 1.0, 1.0, 0.25)));
