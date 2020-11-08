@@ -634,7 +634,7 @@ struct building_t : public building_geom_t {
 	void gen_sloped_roof(rand_gen_t &rgen, cube_t const &top);
 	void add_roof_to_bcube();
 	void gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float imax);
-	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior);
+	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior, bool get_int_ext_walls);
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0, point const *const only_cont_pt=nullptr) const;
 	void get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const;
 	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) const;
