@@ -2715,7 +2715,7 @@ public:
 			}
 		}
 	}
-	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) const {
+	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) const { // pts are in building space
 		for (vector<unsigned>::const_iterator b = state.building_ids.begin(); b != state.building_ids.end(); ++b) {
 			if ((int)*b == state.exclude_bix) continue;
 			building_t const &building(get_building(*b));
@@ -2723,7 +2723,8 @@ public:
 
 			for (unsigned i = 0; i < npts; ++i) {
 				float t(1.0); // start at end of line
-				if (!building.check_line_coll(state.pos, pts[i], state.xlate, t, state.temp_points, 1)) {occluded = 0; break;}
+				// Note: check_line_coll() expects both points in camera space, so we add xlate to our points
+				if (!building.check_line_coll(state.pos, (pts[i] + state.xlate), state.xlate, t, state.temp_points, 1)) {occluded = 0; break;}
 			}
 			if (occluded) return 1;
 		} // for b
