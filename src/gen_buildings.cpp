@@ -1391,11 +1391,11 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
 		if (make_all_front || i->contains_pt(only_cont_pt)) { // part containing the point
-			bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, 3, 0, 0, 0, 0); // XY
+			bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
 			continue;
 		}
 		if (are_parts_stacked(*i, cont_part)) { // stacked building parts, contained, draw as front in case player can see through stairs
-			bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, 3, 0, 0, 0, 0); // XY
+			bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
 			continue;
 		}
 		unsigned back_dim_mask(3), front_dim_mask(0); // enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
@@ -1417,14 +1417,14 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 				if (i->d[!d][e] != cont_part.d[!d][e] && ((i->d[!d][e] < cont_part.d[!d][e]) ^ e)) {
 					cube_t back_clip_cube(*i);
 					front_clip_cube.d[!d][e] = back_clip_cube.d[!d][!e] = cont_part.d[!d][e]; // split point
-					bdraw_back.add_section(*this, parts, *i, mat.wall_tex, wall_color, back_dim_mask, 0, 0, 0, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
+					bdraw_back.add_section(*this, parts, *i, mat.wall_tex, wall_color, back_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
 				}
 			}
 			back_dim_mask &= ~(1<<d); front_dim_mask |= (1<<d); // draw only the other dim as back and this dim as front
 			break;
 		} // for d
-		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, parts, *i, mat.wall_tex, wall_color, back_dim_mask,  0, 0, 0, 0);}
-		if (front_dim_mask > 0) {bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, front_dim_mask, 0, 0, 0, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
+		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, parts, *i, mat.wall_tex, wall_color, back_dim_mask,  0, 0, 1, 0);}
+		if (front_dim_mask > 0) {bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, front_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
 	} // for i
 }
 
@@ -1432,7 +1432,7 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 	building_mat_t const &mat(get_material());
 
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-		bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, 0, 0); // XY
+		bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, 1, 0); // XY
 	}
 }
 
