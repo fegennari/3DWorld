@@ -470,7 +470,7 @@ tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
 	return wall_tex_scaled;
 }
 
-void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex) { // no lighting scale
+void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
 	bool const use_small_door(width < 1.2*height);
 	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : 0.05*width), wall_shift(width - wall_width);
@@ -478,35 +478,68 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	cube_t doors(c), walls[2] = {c, c}; // left, right
 	walls[0].d[!c.dim][1] -= wall_shift;
 	walls[1].d[!c.dim][0] += wall_shift;
-	rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
-	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir) | EF_Z12); // skip top, bottom, and face that's against the wall
+
+	if (inc_lg) { // draw closet walls and doors
+		rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
+		unsigned const skip_faces(~get_face_mask(c.dim, !c.dir) | EF_Z12); // skip top, bottom, and face that's against the wall
 	
-	for (unsigned d = 0; d < 2; ++d) {
-		unsigned wall_skip_faces(skip_faces);
-		if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {wall_skip_faces |= ~get_face_mask(!c.dim, d);} // adjacent to room wall, skip that face
-		wall_mat.add_cube_to_verts(walls[d], c.color, tex_origin, wall_skip_faces); // Note: c.color should be wall color
-		doors.d[!c.dim][d] = walls[d].d[!c.dim][!d]; // clip door to space between walls
-	}
-	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.04*depth; // shift in slightly
-	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.92*depth; // make it narrow
-	point const llc(doors.get_llc());
+		for (unsigned d = 0; d < 2; ++d) {
+			unsigned wall_skip_faces(skip_faces);
+			if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {wall_skip_faces |= ~get_face_mask(!c.dim, d);} // adjacent to room wall, skip that face
+			wall_mat.add_cube_to_verts(walls[d], c.color, tex_origin, wall_skip_faces); // Note: c.color should be wall color
+			doors.d[!c.dim][d] = walls[d].d[!c.dim][!d]; // clip door to space between walls
+		}
+		doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.04*depth; // shift in slightly
+		doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.92*depth; // make it narrow
+		point const llc(doors.get_llc());
 
-	if (use_small_door) { // small house closet door
-		get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 1).add_cube_to_verts(doors, WHITE, llc, get_face_mask(c.dim, c.dir), !c.dim); // draw only front face
-	}
-	else { // 4 panel folding door
-		float const doors_width(doors.get_sz_dim(!c.dim)), door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
-		int const tid(get_rect_panel_tid());
-		float tx(1.0/doors_width), ty(0.25/doors.dz());
-		if (!c.dim) {swap(tx, ty);} // swap so that ty is always in Z
-		tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
-		rgeom_mat_t &door_mat(get_material(door_tex, 1));
+		if (use_small_door) { // small house closet door
+			get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 1).add_cube_to_verts(doors, WHITE, llc, get_face_mask(c.dim, c.dir), !c.dim); // draw only front face
+		}
+		else { // 4 panel folding door
+			float const doors_width(doors.get_sz_dim(!c.dim)), door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
+			int const tid(get_rect_panel_tid());
+			float tx(1.0/doors_width), ty(0.25/doors.dz());
+			if (!c.dim) {swap(tx, ty);} // swap so that ty is always in Z
+			tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
+			rgeom_mat_t &door_mat(get_material(door_tex, 1));
 
-		for (unsigned n = 0; n < 4; ++n) { // draw closet door in 4 parts
-			cube_t door(doors);
-			door.d[!c.dim][0] = doors.d[!c.dim][0] + n    *door_spacing + door_gap; // left edge
-			door.d[!c.dim][1] = doors.d[!c.dim][0] + (n+1)*door_spacing - door_gap; // right edge
-			door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
+			for (unsigned n = 0; n < 4; ++n) { // draw closet door in 4 parts
+				cube_t door(doors);
+				door.d[!c.dim][0] = doors.d[!c.dim][0] + n    *door_spacing + door_gap; // left edge
+				door.d[!c.dim][1] = doors.d[!c.dim][0] + (n+1)*door_spacing - door_gap; // right edge
+				door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
+			}
+		}
+	}
+	if (inc_sm) { // add wall trim for each side of the closet door
+		float const window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE)), trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing);
+		colorRGBA const trim_color(WHITE); // assume trim is white
+
+		for (unsigned is_side = 0; is_side < 2; ++is_side) { // front wall, side wall
+			for (unsigned d = 0; d < 2; ++d) {
+				cube_t trim;
+				
+				if (is_side) { // sides of closet
+					if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) continue; // adjacent to room wall, skip that wall
+					trim = c;
+					trim.d[!c.dim][!d]     = trim.d[!c.dim][d];
+					trim.d[!c.dim][ d]    += (d     ? 1.0 : -1.0)*trim_thickness;
+					trim.d[ c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*trim_thickness; // expand to cover the outside corner gap; doesn't really line up properly for angled ceiling trim though
+				}
+				else { // front of closet on sides of door
+					trim = walls[d];
+					trim.d[ c.dim][!c.dir]  = trim.d[c.dim][c.dir];
+					trim.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*trim_thickness;
+					trim.d[!c.dim][d]      += (d     ? 1.0 : -1.0)*trim_thickness; // expand to cover the outside corner gap; doesn't really line up properly for angled ceiling trim though
+				}
+				bool const trim_dim(c.dim ^ bool(is_side)), trim_dir(is_side ? d : c.dir);
+				trim.z2() = c.z1() + trim_height;
+				get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(trim, trim_color, tex_origin, (~get_face_mask(c.dim, !c.dir) | EF_Z1)); // is_small, untextured, no shadows
+				trim.z2() = c.z2();
+				trim.z1() = c.z2() - trim_height;
+				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color)); // ceiling trim, missing end caps
+			} // for d
 		}
 	}
 }
@@ -1781,7 +1814,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
 		case TYPE_DRESSER: add_dresser (*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
-		case TYPE_CLOSET:  add_closet  (*i, wall_tex); break;
+		case TYPE_CLOSET:  add_closet  (*i, wall_tex, 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
 		case TYPE_ELEVATOR: break; // not handled here
@@ -1823,6 +1856,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_BED:   add_bed     (*i, 0, 1, tscale); break;
 		case TYPE_SIGN:  add_sign    (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
+		case TYPE_CLOSET:add_closet(*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim, don't need wall_tex
 		case TYPE_RAILING:   add_railing(*i); break;
 		case TYPE_PLANT: add_potted_plant(*i, 0, 1); break; // plant only
 		case TYPE_CRATE: add_crate    (*i); break; // not small but only added to windowless rooms

@@ -404,7 +404,7 @@ struct building_room_geom_t {
 	void add_sign(room_object_t const &c, bool inc_back, bool inc_text);
 	void add_counter(room_object_t const &c, float tscale);
 	void add_cabinet(room_object_t const &c, float tscale);
-	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex);
+	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm);
 	void add_crate(room_object_t const &c);
 	void add_shelves(room_object_t const &c, float tscale);
 	void add_keyboard(room_object_t const &c);
