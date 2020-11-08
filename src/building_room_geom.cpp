@@ -632,6 +632,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	fc.z2() = c.z2() - 0.05*sz.z; // slightly shorter than tile
 	fc.z1() = bottom.z2();
 	cube_t fxy[2] = {fc, fc};
+	float const glass_bot(fc.z1() + 0.02*sz.z), glass_top(fc.z2() - 0.02*sz.z);
 
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t &f(fxy[d]);
@@ -643,6 +644,17 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 		fc.d[!d][0] = f.d[!d][0]; fc.d[!d][1] = f.d[!d][1];
 	}
 	metal_mat.add_cube_to_verts(fc, metal_color, zero_vector, EF_Z1);
+
+	for (unsigned d = 0; d < 2; ++d) { // add top and bottom bars; these overlap with vertical frame cubes, but it should be okay and simplifies the math
+		unsigned const bar_skip_faces(get_skip_mask_for_xy(d));
+		cube_t tb_bars(fxy[d]);
+		tb_bars.union_with_cube(fc);
+		cube_t bot_bar(tb_bars), top_bar(tb_bars);
+		bot_bar.z2() = glass_bot;
+		top_bar.z1() = glass_top;
+		metal_mat.add_cube_to_verts(bot_bar, metal_color, zero_vector, bar_skip_faces); // the track
+		metal_mat.add_cube_to_verts(top_bar, metal_color, zero_vector, bar_skip_faces);
+	}
 	// add shower head
 	float const radius(0.5f*(sz.x + sz.y));
 	bool const head_dim(sz.y < sz.x);
@@ -659,6 +671,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	head_pos[ head_dim] += signs[head_dim]*0.09*sz[head_dim];
 	metal_mat.add_cylin_to_verts(base_pos,  head_pos, 0.02*radius, 0.10*radius, metal_color, 0, 1); // draw top/wide end only
 	metal_mat.add_cylin_to_verts(start_pos, end_pos,  0.02*radius, 0.02*radius, metal_color, 0, 0); // no ends
+	// TODO: what about a door handle?
 	// add drain
 	cube_t drain;
 	drain.set_from_point(bottom.get_cube_center());
@@ -673,8 +686,10 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t glass(fc);
-		glass.z2() -= 0.020*sz.z; // slightly shorter than frame
+		glass.z1()  = glass_bot;
+		glass.z2()  = glass_top;
 		glass.z1() += 0.002*sz.z; // to prevent z-fighting
+		glass.z2() -= 0.002*sz.z; // to prevent z-fighting
 		glass.d[d][!dirs[d]] = glass. d[d][ dirs[d]]; // remove overlap with frame
 		glass.d[d][ dirs[d]] = fxy[d].d[d][!dirs[d]];
 		glass.expand_in_dim( d, -0.01*frame_width); // to prevent z-fighting
