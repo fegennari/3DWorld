@@ -1100,21 +1100,27 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_reception_desk(room_object_t const &c, float tscale) {
-	//colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	//get_wood_material(tscale).add_cube_to_verts(c, color, c.get_llc()); // all faces drawn
-	/*X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
-	l 0.66 1.0 1.0 1.0 1.0 26 1 # paneling
-	B 1.1 1.9  1.75 1.85  0.019 0.14
-	B 1.1 1.2  1.85 2.3   0.019 0.14
-	B 1.8 1.9  1.85 2.3   0.019 0.14
-	
-	l 0.82 0.6 0.5 0.4 1.0 9 1 # snow texture (marble)
-	r 0.8 60.0 # set specularity
-	B 1.15 1.85  1.72 1.88  0.14 0.15
-	B 1.07 1.23  1.80 2.33  0.14 0.15
-	B 1.77 1.93  1.80 2.33  0.14 0.15
-	C 1.15 1.80 0.1401  1.15 1.80 0.15  0.08 0.08
-	C 1.85 1.80 0.1401  1.85 1.80 0.15  0.08 0.08
+	vector3d const sz(c.get_size());
+	float const top_z1(c.z1() + 0.9*sz.z), overhang(0.04*sz[c.dim]);
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(PANELING_TEX, tscale), 1)); // with shadows (normal_maps/paneling_NRM.jpg?)
+	cube_t base(c), top(c);
+	base.z2() = top_z1;
+	base.expand_by_xy(-overhang);
+	side_mat.add_cube_to_verts(base, color, c.get_llc(), EF_Z2); // skip top face
+	/*B 1.1 1.9  1.75 1.85  0.019 0.14
+	  B 1.1 1.2  1.85 2.3   0.019 0.14
+	  B 1.8 1.9  1.85 2.3   0.019 0.14*/
+	tid_nm_pair_t top_tex(MARBLE_TEX, 4.0*tscale);
+	top_tex.set_specular(0.5, 80.0);
+	rgeom_mat_t &top_mat(get_material(top_tex, 1)); // with shadows
+	top.z1() = top_z1;
+	top_mat.add_cube_to_verts(top, color, c.get_llc(), 0); // all faces drawn
+	/*B 1.15 1.85  1.72 1.88  0.14 0.15
+	  B 1.07 1.23  1.80 2.33  0.14 0.15
+	  B 1.77 1.93  1.80 2.33  0.14 0.15
+	  C 1.15 1.80 0.1401  1.15 1.80 0.15  0.08 0.08
+	  C 1.85 1.80 0.1401  1.85 1.80 0.15  0.08 0.08
 	*/
 }
 
