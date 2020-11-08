@@ -89,12 +89,12 @@ void swap_cube_z_xy(cube_t &c, bool dim) {
 }
 
 void rgeom_mat_t::add_xy_cylin_to_verts(cube_t const &c, colorRGBA const &color, bool dim, bool draw_bot, bool draw_top,
-	bool two_sided, bool inv_tb, float rs_bot, float rs_top, float side_tscale)
+	bool two_sided, bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides)
 {
 	cube_t c_rot(c);
 	swap_cube_z_xy(c_rot, dim);
 	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
-	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale);
+	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides);
 	
 	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) { // swap triangle vertices and normals
 		std::swap(v->v[2], v->v[dim]);
@@ -103,39 +103,44 @@ void rgeom_mat_t::add_xy_cylin_to_verts(cube_t const &c, colorRGBA const &color,
 	std::reverse(indices.begin()+ixs_start_ix, indices.end()); // fix winding order
 }
 void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top,
-	bool two_sided, bool inv_tb, float rs_bot, float rs_top, float side_tscale)
+	bool two_sided, bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides)
 {
 	point const center(c.get_cube_center());
 	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
-	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top, color, draw_bot, draw_top, two_sided, inv_tb, side_tscale);
+	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top,
+		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides);
 }
 void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
-	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale)
+	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides)
 {
+	assert((!skip_sides) || draw_bot || draw_top); // must draw something
 	point const ce[2] = {bot, top};
 	unsigned const ndiv(N_CYL_SIDES);
-	float const ndiv_inv(1.0/ndiv);
+	float const ndiv_inv(1.0/ndiv), half_end_tscale(0.5*end_tscale);
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, bot_radius, top_radius, ndiv, v12));
 	color_wrapper const cw(color);
 	unsigned itris_start(itri_verts.size()), ixs_start(indices.size()), itix(itris_start), iix(ixs_start);
-	itri_verts.resize(itris_start + 2*(ndiv+1));
-	indices.resize(ixs_start + 6*ndiv);
-	unsigned const ixs_off[6] = {1,2,0, 3,2,1}; // 1 quad = 2 triangles
 
-	for (unsigned i = 0; i <= ndiv; ++i) { // vertex data
-		unsigned const s(i%ndiv);
-		float const ts(side_tscale*(1.0f - i*ndiv_inv));
-		norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
-		itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, ts, 0.0, cw.c);
-		itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw.c);
+	if (!skip_sides) {
+		itri_verts.resize(itris_start + 2*(ndiv+1));
+		indices.resize(ixs_start + 6*ndiv);
+		unsigned const ixs_off[6] = {1,2,0, 3,2,1}; // 1 quad = 2 triangles
+
+		for (unsigned i = 0; i <= ndiv; ++i) { // vertex data
+			unsigned const s(i%ndiv);
+			float const ts(side_tscale*(1.0f - i*ndiv_inv));
+			norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
+			itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, ts, 0.0, cw.c);
+			itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw.c);
+		}
+		for (unsigned i = 0; i < ndiv; ++i) { // index data
+			unsigned const ix0(itris_start + 2*i);
+			for (unsigned j = 0; j < 6; ++j) {indices[iix++] = ix0 + ixs_off[j];}
+		}
+		// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
+		if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
 	}
-	for (unsigned i = 0; i < ndiv; ++i) { // index data
-		unsigned const ix0(itris_start + 2*i);
-		for (unsigned j = 0; j < 6; ++j) {indices[iix++] = ix0 + ixs_off[j];}
-	}
-	// room object drawing uses back face culling and single sided lighting; to make lighting two sided, need to add verts with inverted normals/winding dirs
-	if (two_sided) {add_inverted_triangles(itri_verts, indices, itris_start, ixs_start);}
 	// maybe add top and bottom end cap using triangles, currently using all TCs=0.0
 	unsigned const num_ends((unsigned)draw_top + (unsigned)draw_bot);
 	itris_start = itix = itri_verts.size();
@@ -147,12 +152,12 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
 		norm_comp const normal((bool(bt) ^ inv_tb) ? v12 : -v12);
 		unsigned const center_ix(itix);
-		itri_verts[itix++].assign(ce[bt], normal, 0.0, 0.0, cw.c); // center
+		itri_verts[itix++].assign(ce[bt], normal, half_end_tscale, half_end_tscale, cw.c); // center
 
 		for (unsigned I = 0; I < ndiv; ++I) {
 			unsigned const i(bt ? ndiv-I-1 : I); // invert winding order for top face
 			vector3d const &side_normal(vpn.n[i]);
-			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, side_normal.x, side_normal.y, cw.c); // assign tcs based on side normal
+			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, half_end_tscale*(side_normal.x + 1.0), half_end_tscale*(side_normal.y + 1.0), cw.c); // assign tcs from side normal
 			indices[iix++] = center_ix; // center
 			indices[iix++] = center_ix + i + 1;
 			indices[iix++] = center_ix + ((i+1)%ndiv) + 1;
@@ -369,7 +374,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 	if (c.shape == SHAPE_CYLIN) { // cylindrical table
 		vector3d const size(c.get_size());
 		legs_bcube.expand_by_xy(-0.46*size);
-		mat.add_vcylin_to_verts(top, color, 1, 1, 0, 0, 1.0, 1.0, 16.0); // draw top and bottom with scaled side texture coords
+		mat.add_vcylin_to_verts(top, color, 1, 1, 0, 0, 1.0, 1.0, 16.0, 2.0); // draw top and bottom with scaled side texture coords
 		mat.add_vcylin_to_verts(legs_bcube, color, 1, 1, 0, 0, 1.0, 1.0, 1.0); // support
 		cube_t feet(c);
 		feet.z2() = c.z1() + 0.1*c.dz();
