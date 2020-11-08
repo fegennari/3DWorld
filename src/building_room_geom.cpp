@@ -479,7 +479,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	for (unsigned d = 0; d < 2; ++d) {
 		unsigned wall_skip_faces(skip_faces);
 		if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {wall_skip_faces |= ~get_face_mask(!c.dim, d);} // adjacent to room wall, skip that face
-		wall_mat.add_cube_to_verts(walls[d], WHITE, tex_origin, wall_skip_faces);
+		wall_mat.add_cube_to_verts(walls[d], c.color, tex_origin, wall_skip_faces); // Note: c.color should be wall color
 		doors.d[!c.dim][d] = walls[d].d[!c.dim][!d]; // clip door to space between walls
 	}
 	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.04*depth; // shift in slightly
@@ -487,7 +487,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	point const llc(doors.get_llc());
 
 	if (use_small_door) { // small house closet door
-		get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 1).add_cube_to_verts(doors, c.color, llc, get_face_mask(c.dim, c.dir), !c.dim); // draw only front face
+		get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 1).add_cube_to_verts(doors, WHITE, llc, get_face_mask(c.dim, c.dir), !c.dim); // draw only front face
 	}
 	else { // 4 panel folding door
 		float const doors_width(doors.get_sz_dim(!c.dim)), door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
@@ -501,7 +501,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			cube_t door(doors);
 			door.d[!c.dim][0] = doors.d[!c.dim][0] + n    *door_spacing + door_gap; // left edge
 			door.d[!c.dim][1] = doors.d[!c.dim][0] + (n+1)*door_spacing - door_gap; // right edge
-			door_mat.add_cube_to_verts(door, c.color, llc, skip_faces);
+			door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
 		}
 	}
 }
@@ -757,7 +757,7 @@ void building_room_geom_t::add_stair(room_object_t const &c, float tscale, vecto
 }
 
 void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex) { // Note: no room lighting color atten
-	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, WHITE, tex_origin); // all faces drawn
+	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin); // all faces drawn
 }
 
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
@@ -1662,6 +1662,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BRSINK:   return texture_color(get_counter_tid()).modulate_with(color);
 	case TYPE_CABINET:  return get_textured_wood_color();
 	case TYPE_PLANT:    return (color*0.75 + blend_color(GREEN, BROWN, 0.5, 0)*0.25); // halfway between green and brown, as a guess; mix in 75% of pot color
+	case TYPE_CLOSET:   return (color*0.5 + WHITE*0.5); // half white door and half wall color
 	case TYPE_DRESSER:  return get_textured_wood_color();
 	case TYPE_FLOORING: return texture_color(MARBLE_TEX).modulate_with(color);
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this));

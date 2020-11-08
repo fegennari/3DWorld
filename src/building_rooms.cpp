@@ -455,7 +455,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			unsigned flags(0);
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
-			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt);
+			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color); // closet door is always white; sides should match interior walls
 			placed_closet = 1; // done
 		} // for d
 	} // for n
