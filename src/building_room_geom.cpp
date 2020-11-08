@@ -88,13 +88,13 @@ void swap_cube_z_xy(cube_t &c, bool dim) {
 	swap(c.z2(), c.d[dim][1]);
 }
 
-void rgeom_mat_t::add_xy_cylin_to_verts(cube_t const &c, colorRGBA const &color, bool dim, bool draw_bot, bool draw_top,
-	bool two_sided, bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides)
+void rgeom_mat_t::add_xy_cylin_to_verts(cube_t const &c, colorRGBA const &color, bool dim, bool draw_bot, bool draw_top, bool two_sided,
+	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv)
 {
 	cube_t c_rot(c);
 	swap_cube_z_xy(c_rot, dim);
 	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
-	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides);
+	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv);
 	
 	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) { // swap triangle vertices and normals
 		std::swap(v->v[2], v->v[dim]);
@@ -102,20 +102,19 @@ void rgeom_mat_t::add_xy_cylin_to_verts(cube_t const &c, colorRGBA const &color,
 	}
 	std::reverse(indices.begin()+ixs_start_ix, indices.end()); // fix winding order
 }
-void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top,
-	bool two_sided, bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides)
+void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided,
+	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv)
 {
 	point const center(c.get_cube_center());
 	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
 	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top,
-		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides);
+		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv);
 }
 void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
-	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides)
+	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv)
 {
 	assert((!skip_sides) || draw_bot || draw_top); // must draw something
 	point const ce[2] = {bot, top};
-	unsigned const ndiv(N_CYL_SIDES);
 	float const ndiv_inv(1.0/ndiv), half_end_tscale(0.5*end_tscale);
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(ce, bot_radius, top_radius, ndiv, v12));
@@ -766,10 +765,18 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, 0.02*(d ? 1.0 : -1.0)*height));
 			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, 0, 0); // no top or bottom
 		}
-		// add baluster(s)
-		point pt(0.5*(p[0] + p[1]));
-		point const p1(pt - vector3d(0, 0, height));
-		mat.add_cylin_to_verts(p1, pt, 0.75*pole_radius, 0.75*pole_radius, c.color, 1, 0); // draw bottom in case it's exposed, but not top
+		if (c.flags & RO_FLAG_OPEN) { // add balusters
+			unsigned const num(NUM_STAIRS_PER_FLOOR - 1);
+			float const step_sz(1.0/(num+1)), radius(0.75*pole_radius), bot_radius(0.85*pole_radius);
+			vector3d const delta(0, 0, -height);
+
+			for (unsigned n = 0; n < num; ++n) {
+				float const t((n+1)*step_sz);
+				point const pt(t*p[0] + (1.0 - t)*p[1]);
+				mat.add_cylin_to_verts((pt + delta), pt, radius, radius, c.color, 0, 0, 0, 0, 1.0, 1.0, 0, 16); // only 16 sides, no top or bottom
+			}
+			mat.add_cylin_to_verts((p[0] + delta), (p[1] + delta), bot_radius, bot_radius, c.color, 1, 1); // bottom bar with both ends
+		}
 	}
 }
 
