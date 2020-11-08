@@ -539,7 +539,6 @@ protected:
 	occlusion_checker_t occlusion_checker;
 public:
 	quad_batch_draw ao_qbd;
-	ao_draw_state_t() : occlusion_checker(1) {} // for_city=1
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
 	bool is_occluded(cube_t const &bcube) {return (!shadow_only && occlusion_checker.is_occluded(bcube + xlate));} // Note: non-const - OC state temp_points is modified
 	void draw_ao_qbd();

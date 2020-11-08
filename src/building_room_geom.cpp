@@ -1803,7 +1803,7 @@ struct occlusion_stats_t {
 occlusion_stats_t occlusion_stats;
 
 // Note: non-const because it creates the VBO
-void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusion_checker_t &oc, vector3d const &xlate, tid_nm_pair_t const &wall_tex,
+void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate, tid_nm_pair_t const &wall_tex,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (empty()) return; // no geom
@@ -1908,7 +1908,7 @@ bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsi
 	return 0;
 }
 
-bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const {
+bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const {
 	if (!interior) return 0; // could probably make this an assert
 	if (is_rotated()) return 0; // TODO: implement rotated building occlusion culling; cubes are not actually cubes; seems messy
 	//highres_timer_t timer("Check Object Occlusion");

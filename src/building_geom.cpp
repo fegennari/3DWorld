@@ -465,7 +465,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 			if (occlusion_only) return 1; // early exit
 			if (vert) {coll = 2;} // roof
 			else {
-				float const zval(p1.z + t*(p2.z - p1.z));
+				float const zval(p1r.z + t*(p2.z - p1r.z));
 				coll = ((fabs(zval - i->z2()) < 0.0001*i->dz()) ? 2 : 1); // test if clipped zval is close to the roof zval
 			}
 			if (ret_any_pt) return coll;

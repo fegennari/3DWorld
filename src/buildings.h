@@ -24,9 +24,9 @@ colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 class light_source;
 class lmap_manager_t;
 class building_nav_graph_t;
-class occlusion_checker_t;
 struct pedestrian_t;
 struct building_t;
+class building_creator_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 
 struct building_occlusion_state_t {
@@ -46,9 +46,17 @@ struct building_occlusion_state_t {
 
 class occlusion_checker_t {
 	building_occlusion_state_t state;
-	bool for_city;
 public:
-	occlusion_checker_t(bool for_city_) : for_city(for_city_) {}
+	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
+	void set_camera(pos_dir_up const &pdu);
+	bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
+};
+
+class occlusion_checker_noncity_t {
+	building_occlusion_state_t state;
+	building_creator_t const &bc;
+public:
+	occlusion_checker_noncity_t(building_creator_t const &bc_) : bc(bc_) {}
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
 	void set_camera(pos_dir_up const &pdu);
 	bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
@@ -411,7 +419,7 @@ struct building_room_geom_t {
 	void create_small_static_vbos(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
-	void draw(shader_t &s, building_t const &building, occlusion_checker_t &oc, vector3d const &xlate, tid_nm_pair_t const &wall_tex,
+	void draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate, tid_nm_pair_t const &wall_tex,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 };
 
@@ -645,8 +653,8 @@ struct building_t : public building_geom_t {
 	bool toggle_room_light(point const &closest_to);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
-	void draw_room_geom(shader_t &s, occlusion_checker_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
-	void gen_and_draw_room_geom(shader_t &s, occlusion_checker_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
+	void draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+	void gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom();
@@ -678,7 +686,7 @@ struct building_t : public building_geom_t {
 	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
-	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const;
+	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const;
 private:
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
@@ -800,8 +808,8 @@ template<typename T> bool has_bcube_int_no_adj(cube_t const &bcube, vector<T> co
 
 inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_terrain_model_xlate());}
 
-void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state, bool for_city);
-bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state, bool for_city);
+void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
+bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 cube_t get_building_lights_bcube();
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_t const &door, cube_t const &room);

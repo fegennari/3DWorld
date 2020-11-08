@@ -238,14 +238,14 @@ void occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
 	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
 	pos_dir_up near_pdu(pdu);
 	near_pdu.far_ = 2.0*city_params.road_spacing; // set far clipping plane to one city block
-	get_building_occluders(near_pdu, state, for_city);
+	get_city_building_occluders(near_pdu, state);
 	//cout << "occluders: " << state.building_ids.size() << endl;
 }
 bool occlusion_checker_t::is_occluded(cube_t const &c) {
 	if (state.building_ids.empty()) return 0;
 	float const z(c.z2()); // top edge
 	point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
-	return check_pts_occluded(corners, 4, state, for_city);
+	return check_city_pts_occluded(corners, 4, state);
 }
 
 void ao_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_) {

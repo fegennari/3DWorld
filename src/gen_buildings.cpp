@@ -1956,10 +1956,10 @@ public:
 		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
 		vector<point> points; // reused temporary
 		building_draw_t ext_parts_draw; // roof and exterior walls
-		occlusion_checker_t oc(0); // not actually used
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
+				occlusion_checker_noncity_t oc(**i); // not actually used
 				point const lpos(get_camera_pos() - xlate); // Note: camera_pos is actually the light pos
 
 				// draw interior for the building containing the light
@@ -2121,8 +2121,6 @@ public:
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
 			vect_cube_t ped_bcubes; // reused temporary
-			occlusion_checker_t oc(0);
-			if (!reflection_pass) {oc.set_camera(camera_pdu);}
 			int indir_bcs_ix(-1), indir_bix(-1);
 
 			if (draw_interior) {
@@ -2134,6 +2132,8 @@ public:
 				unsigned const bcs_ix(i - bcs.begin());
 				float const door_open_dist(get_door_open_dist());
 				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.05 : 1.0); // if there are no windows, we can wait until the player is very close to draw the interior
+				occlusion_checker_noncity_t oc(**i);
+				if (!reflection_pass) {oc.set_camera(camera_pdu);}
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (reflection_pass && !g->bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
@@ -2854,6 +2854,21 @@ public:
 }; // end building_tiles_t
 
 
+void occlusion_checker_noncity_t::set_camera(pos_dir_up const &pdu) {
+	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
+	pos_dir_up near_pdu(pdu);
+	near_pdu.far_ = (X_SCENE_SIZE + Y_SCENE_SIZE); // set far clipping plane to one tile
+	bc.get_occluders(near_pdu, state);
+	//cout << "buildings: " << bc.get_num_buildings() << ", occluders: " << state.building_ids.size() << endl;
+}
+bool occlusion_checker_noncity_t::is_occluded(cube_t const &c) {
+	if (state.building_ids.empty()) return 0;
+	float const z(c.z2()); // top edge
+	point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
+	return bc.check_pts_occluded(corners, 4, state);
+}
+
+
 building_creator_t building_creator(0), building_creator_city(1);
 building_tiles_t building_tiles;
 
@@ -2949,14 +2964,8 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 	building_tiles.add_interior_lights(xlate, lights_bcube);
 }
 // cars + peds
-void get_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state, bool for_city) {
-	if (!for_city && global_building_params.gen_inf_buildings()) {building_tiles.get_occluders(pdu, state);}
-	else {(for_city ? building_creator_city : building_creator).get_occluders(pdu, state);}
-}
-bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state, bool for_city) {
-	if (!for_city && global_building_params.gen_inf_buildings()) {return building_tiles.check_pts_occluded(pts, npts, state);}
-	return (for_city ? building_creator_city : building_creator).check_pts_occluded(pts, npts, state);
-}
+void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
+bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
 cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bcube();}
 // used for pedestrians
 cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}
