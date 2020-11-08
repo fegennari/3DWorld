@@ -34,6 +34,7 @@ string const &gen_book_title(unsigned rand_id, string *author, unsigned split_le
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);}
+int get_counter_tid() {return get_texture_by_name("marble2.jpg");}
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
@@ -699,6 +700,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	mat.add_sphere_to_verts(sphere, color);
 	mat.add_vcylin_to_verts(main_cylin, color, 0, 0);
 	mat.add_vcylin_to_verts(top_cylin,  color, 0, 1); // draw top surface
+	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
@@ -1101,27 +1103,39 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_reception_desk(room_object_t const &c, float tscale) {
 	vector3d const sz(c.get_size());
-	float const top_z1(c.z1() + 0.9*sz.z), overhang(0.04*sz[c.dim]);
+	float const top_z1(c.z1() + 0.94*sz.z), depth(sz[c.dim]), width(sz[!c.dim]), overhang(0.04*depth), lr_width(0.2*width), cutlen(depth - lr_width);
+	assert(width > depth && cutlen > 0.0);
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(PANELING_TEX, tscale), 1)); // with shadows (normal_maps/paneling_NRM.jpg?)
-	cube_t base(c), top(c);
+	// wood paneling sides
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(PANELING_TEX, get_texture_by_name("normal_maps/paneling_NRM.jpg"), 4.0*tscale, 4.0*tscale), 1)); // with shadows
+	vector3d const tex_origin(c.get_llc());
+	unsigned const lr_dim_mask(~get_face_mask(c.dim, c.dir));
+	cube_t base(c);
 	base.z2() = top_z1;
 	base.expand_by_xy(-overhang);
-	side_mat.add_cube_to_verts(base, color, c.get_llc(), EF_Z2); // skip top face
-	/*B 1.1 1.9  1.75 1.85  0.019 0.14
-	  B 1.1 1.2  1.85 2.3   0.019 0.14
-	  B 1.8 1.9  1.85 2.3   0.019 0.14*/
-	tid_nm_pair_t top_tex(MARBLE_TEX, 4.0*tscale);
+	cube_t front(base), left(base), right(base);
+	front.d[ c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*cutlen;
+	left .d[!c.dim][1] -= (width - lr_width);
+	right.d[!c.dim][0] += (width - lr_width);
+	left .d[ c.dim][c.dir] = right.d[ c.dim][c.dir] = front.d[ c.dim][!c.dir];
+	side_mat.add_cube_to_verts(front, color, tex_origin, EF_Z2);
+	side_mat.add_cube_to_verts(left,  color, tex_origin, (EF_Z2 | lr_dim_mask)); // skip top face
+	side_mat.add_cube_to_verts(right, color, tex_origin, (EF_Z2 | lr_dim_mask)); // skip top face
+	// shiny marble top
+	// Note: I wanted to add cylinders to the left and right top to round the corners like in the mapx lobby, but it's not easy to get the textures to line up here
+	tid_nm_pair_t top_tex(get_counter_tid(), 2.5*tscale);
 	top_tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &top_mat(get_material(top_tex, 1)); // with shadows
-	top.z1() = top_z1;
-	top_mat.add_cube_to_verts(top, color, c.get_llc(), 0); // all faces drawn
-	/*B 1.15 1.85  1.72 1.88  0.14 0.15
-	  B 1.07 1.23  1.80 2.33  0.14 0.15
-	  B 1.77 1.93  1.80 2.33  0.14 0.15
-	  C 1.15 1.80 0.1401  1.15 1.80 0.15  0.08 0.08
-	  C 1.85 1.80 0.1401  1.85 1.80 0.15  0.08 0.08
-	*/
+	cube_t top_front(front), top_left(left), top_right(right);
+	top_front.z1() = top_left.z1() = top_right.z1() = top_z1;
+	top_front.z2() = top_left.z2() = top_right.z2() = c.z2();
+	top_front.expand_by_xy(overhang);
+	top_left .expand_by_xy(overhang);
+	top_right.expand_by_xy(overhang);
+	top_left.d[c.dim][c.dir] = top_right.d[c.dim][c.dir] = top_front.d[c.dim][!c.dir]; // remove the overlap
+	top_mat.add_cube_to_verts(top_front, color, tex_origin, 0); // all faces drawn
+	top_mat.add_cube_to_verts(top_left,  color, tex_origin, lr_dim_mask);
+	top_mat.add_cube_to_verts(top_right, color, tex_origin, lr_dim_mask);
 }
 
 void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vector3d const &tex_origin) {
@@ -1437,8 +1451,6 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 		mat.quad_verts.emplace_back(vert_norm_comp_tc(i->v, nc, i->t[0], i->t[1]), cw);
 	}
 }
-
-int get_counter_tid() {return get_texture_by_name("marble2.jpg");}
 
 void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
 	float const dz(c.dz()), depth(c.get_sz_dim(c.dim)), dir_sign(c.dir ? 1.0 : -1.0);

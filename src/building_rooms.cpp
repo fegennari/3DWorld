@@ -1145,11 +1145,11 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
-	float const window_vspacing(get_window_vspace()), desk_width(0.8*window_vspacing);
+	float const window_vspacing(get_window_vspace()), desk_width(0.9*window_vspacing);
 	bool const long_dim(room.dx() < room.dy());
 	if (room.get_sz_dim(!long_dim) < (desk_width + 1.6*interior->get_doorway_width())) return; // hallway is too narrow
 	bool const entrance_dir(rgen.rand_bool()); // doors should be at both ends, so either is a valid entrance (or should there be desks at both ends?)
-	float const centerline(room.get_center_dim(!long_dim));
+	float const centerline(room.get_center_dim(!long_dim)), desk_depth(0.6*desk_width);
 	float const hall_len(room.get_sz_dim(long_dim)), hall_start(room.d[long_dim][entrance_dir]), dir_sign(entrance_dir ? -1.0 : 1.0);
 	float const val1(hall_start + max(0.1f*hall_len, window_vspacing)*dir_sign), val2(hall_start + 0.3*hall_len*dir_sign); // range of reasonable desk placements along the hall
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1160,7 +1160,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 
 	for (unsigned n = 0; n < 10; ++n) { // try to find the closest valid placement to the door, make 10 random attempts
 		float const val(rgen.rand_uniform(min(val1, val2), max(val1, val2)));
-		set_wall_width(desk, val, 0.3*desk_width, long_dim);
+		set_wall_width(desk, val, 0.5*desk_depth, long_dim);
 		if (/*is_cube_close_to_doorway(desk, room, 0.0, 1) ||*/ interior->is_blocked_by_stairs_or_elevator(desk)) continue; // bad location, try a new one
 
 		if (building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
@@ -1168,7 +1168,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 			point pos;
 			pos.z = zval;
 			pos[!long_dim] = centerline;
-			pos[ long_dim] = val + dir_sign*(0.3*window_vspacing + chair_radius);
+			pos[ long_dim] = val + dir_sign*(-0.05*desk_depth + chair_radius); // push the chair into the cutout of the desk
 			cube_t const chair(get_cube_height_radius(pos, chair_radius, chair_height));
 			if (interior->is_blocked_by_stairs_or_elevator(chair)) continue; // bad location, try a new one
 			objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, long_dim, entrance_dir, 0, tot_light_amt, room_obj_shape::SHAPE_CYLIN, GRAY_BLACK);
