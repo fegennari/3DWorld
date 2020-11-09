@@ -44,6 +44,7 @@ pt_line_drawer bubble_pld;
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting, display_frame_time;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
 extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z, enable_cube_map_bump_maps, enable_tt_model_indir, fast_transparent_spheres, disable_dlights;
+extern bool enable_dlight_bcubes;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid, skybox_tid;
@@ -219,6 +220,7 @@ bool set_dlights_booleans(shader_t &s, bool enable, int shader_type, bool no_dl_
 		if (has_spotlights)  {s.set_prefix("#define HAS_SPOTLIGHTS",  shader_type);}
 		if (has_line_lights) {s.set_prefix("#define HAS_LINE_LIGHTS", shader_type);}
 		if (dl_smap_enabled && !no_dl_smap) {s.set_prefix("#define HAS_DLIGHT_SMAP", shader_type);}
+		if (enable_dlight_bcubes) {s.set_prefix("#define USE_DLIGHT_BCUBES", shader_type);}
 	}
 	s.set_prefix(make_shader_bool_prefix("enable_dlights", dl_en), shader_type);
 	return dl_en;
@@ -353,7 +355,8 @@ void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
 
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7: shadow map,
-//                     8: specular map, 9: depth map/future gloss map (unused), 10: burn mask/sky_zval, 11: noise, 12: ground texture, 13: depth, 14: reflection, 15: ripples, 16-31: dlight shadow maps
+//                     8: specular map, 9: depth map/future gloss map (unused), 10: burn mask/sky_zval, 11: noise, 12: ground texture,
+//                     13: depth, 14: reflection, 15: ripples/dlight bcubes, 16-31: dlight shadow maps
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t,
 //             3 = use vertex id for texture, 4 = use bent quad vertex id for texture, 5 = mix between tc and texgen using tc_texgen_mix
 // use_bmap  : 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute

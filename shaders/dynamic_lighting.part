@@ -5,6 +5,10 @@ uniform vec3 camera_pos; // world space
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
+#ifdef USE_DLIGHT_BCUBES
+uniform sampler2D dlbcube_tex;
+#endif
+
 #ifdef SCREEN_SPACE_DLIGHTS
 uniform vec2 resolution; // for screen space tiles
 #endif
@@ -126,6 +130,11 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 	
 	for (uint i = st_ix; i < end_ix; ++i) { // iterate over grid bag elements
 		uint dl_ix  = texelFetch(dlelm_tex,  ivec2((i%elem_tex_x), (i/elem_tex_x)), 0).r; // get dynamic light index (uint16)
+#ifdef USE_DLIGHT_BCUBES
+		vec3 llc = (texelFetch(dlbcube_tex, ivec2(0, dl_ix), 0).xyz * scene_scale) + scene_llc; // light bcube LLC in world space
+		vec3 urc = (texelFetch(dlbcube_tex, ivec2(1, dl_ix), 0).xyz * scene_scale) + scene_llc; // light bcube URC in world space
+		if (any(lessThan(dlpos, llc)) || any(greaterThan(dlpos, urc))) continue; // fragment is outside the light bcube, skip this light
+#endif
 		vec4 lpos_r = texelFetch(dlight_tex, ivec2(0, dl_ix), 0); // light center, radius
 		lpos_r.xyz *= scene_scale; // convert from [0,1] back into world space
 		lpos_r.xyz += scene_llc;

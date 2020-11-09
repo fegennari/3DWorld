@@ -26,7 +26,7 @@ building_params_t global_building_params;
 shader_t reflection_shader;
 building_t const *player_building(nullptr);
 
-extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, teleport_to_screenshot;
+extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, teleport_to_screenshot, enable_dlight_bcubes;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale;

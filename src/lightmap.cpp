@@ -19,8 +19,9 @@ float const FLASHLIGHT_RAD   = 4.0;
 colorRGBA const flashlight_colors[2] = {colorRGBA(1.0, 0.8, 0.5, 1.0), colorRGBA(0.8, 0.8, 1.0, 1.0)}; // incandescent, LED
 
 
-bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0), dl_smap_enabled(0), flashlight_on(0);
-unsigned dl_tid(0), elem_tid(0), gb_tid(0), DL_GRID_BS(0), flashlight_color_id(0);
+bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0);
+bool dl_smap_enabled(0), flashlight_on(0), enable_dlight_bcubes(0);
+unsigned dl_tid(0), elem_tid(0), gb_tid(0), dl_bc_tid(0), DL_GRID_BS(0), flashlight_color_id(0);
 float DZ_VAL2(0.0), DZ_VAL_INV2(0.0);
 float czmin0(0.0), lm_dz_adj(0.0);
 cube_t dlight_bcube(all_zeros_cube);
@@ -866,6 +867,7 @@ void setup_2d_texture(unsigned &tid) {
 // 7: reserved for shadow map moon
 // 8: reserved for specular maps
 // 11: reserved for detail normal map
+// 15: dlight bounding cubes (optionally enabled)
 void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { // 0.21ms => 0.05ms with dlights_enabled
 
 	//RESET_TIME;
@@ -904,11 +906,37 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	}
 	if (dl_tid == 0) {
 		setup_2d_texture(dl_tid);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data_ptr); // 2 x M
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, ysz, max_dlights, 0, GL_RGBA, GL_FLOAT, dl_data_ptr);
 	}
 	else {
 		bind_2d_texture(dl_tid);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ysz, ndl, GL_RGBA, GL_FLOAT, dl_data_ptr);
+	}
+
+	// step 1b: optionally setup dlights bcubes texture
+	if (enable_dlight_bcubes) {
+		unsigned const bc_data_sz(6*max_dlights); // we need 2 RGB values to store 6 bcube floats
+		vector<float> dl_bc_data(bc_data_sz, 0);
+		float *bc_data_ptr(dl_bc_data.data());
+
+		for (unsigned i = 0; i < ndl; ++i) {
+			cube_t const bcube(dl_sources[i].calc_bcube());
+			float *data(bc_data_ptr + 6*i); // stride is texel RGB, encoded as {x1, y1, z1, x2, y2, z2}
+
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				for (unsigned dim = 0; dim < 3; ++dim) {
+					*(data++) = (bcube.d[dim][dir] - poff[dim])*pscale[dim]; // scale to [0,1] range
+				}
+			}
+		}
+		if (dl_bc_tid == 0) {
+			setup_2d_texture(dl_bc_tid);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, 2, max_dlights, 0, GL_RGB, GL_FLOAT, bc_data_ptr);
+		}
+		else {
+			bind_2d_texture(dl_bc_tid);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 2, ndl, GL_RGB, GL_FLOAT, bc_data_ptr);
+		}
 	}
 
 	// step 2: grid bag entries
@@ -986,6 +1014,7 @@ void setup_dlight_textures(shader_t &s, bool enable_dlights_smap) {
 	set_one_texture(s, dl_tid,   2, "dlight_tex");
 	set_one_texture(s, elem_tid, 3, "dlelm_tex");
 	set_one_texture(s, gb_tid,   4, "dlgb_tex");
+	if (enable_dlight_bcubes) {set_one_texture(s, dl_bc_tid, 15, "dlbcube_tex");} // TU_ID 15 is shared with ripples texture, hopefully we won't have a situation where we need both
 	set_active_texture(0);
 	if (enable_dlights_smap && shadow_map_enabled()) {setup_dlight_shadow_maps(s);}
 	s.add_uniform_float("LT_DIR_FALLOFF", LT_DIR_FALLOFF);
