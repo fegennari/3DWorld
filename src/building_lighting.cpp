@@ -653,8 +653,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			if (is_lamp) { // add a second shadowed light source pointing up
 				dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, plus_z, 0.5*bwidth); // points up
-				setup_light_for_building_interior(dl_sources.back(), *i, light_bc2, dynamic_shadows);
+				// lamps are static and have no dynamic shadows, so always cache their shadow maps
+				light_source &ls(dl_sources.back());
+				ls.set_custom_bcube(light_bc2);
+				ls.assign_smap_id(uintptr_t(&(*i))/sizeof(void *) + 1); // use memory address as a unique ID, but add 1 to keep it separate from the main light
+				ls.assign_smap_mgr_id(1); // use a different smap manager than the city (cars + streetlights) so that they don't interfere with each other
 				dl_sources.emplace_back(0.15*light_radius, lpos_rot, lpos_rot, color); // add an additional small unshadowed light for ambient effect
+				dl_sources.back().set_custom_bcube(light_bc2); // not sure if this is helpful, but should be okay
 			}
 			else {
 				// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting;
