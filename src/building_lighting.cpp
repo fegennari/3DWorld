@@ -524,7 +524,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		room_t const &room(interior->rooms[i->room_id]);
 		bool const is_lamp(i->type == TYPE_LAMP);
 		int const cur_floor((i->z1() - room.z1())/window_vspacing);
-		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(level_z + fc_thick), ceil_z(level_z + window_vspacing - fc_thick);
+		float const level_z(room.z1() + cur_floor*window_vspacing);
+		float const floor_z(room.is_sec_bldg ? room.z1() : (level_z + fc_thick)), ceil_z(level_z + window_vspacing - fc_thick); // garages and sheds are all one floor
 		bool const floor_is_above((camera_z < floor_z) && !room.is_sec_bldg), floor_is_below(camera_z > ceil_z); // secondary buildings are all one floor independent of height
 		// less culling if either the light or the camera is by stairs and light is on the floor above or below
 		bool stairs_light(0);
