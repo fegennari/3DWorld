@@ -476,7 +476,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	vector<room_object_t> &objs(interior->room_geom->objs); // non-const, light flags are updated
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
-	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), camera_z(camera_bs.z);
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(0.5*get_floor_thickness()), camera_z(camera_bs.z);
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	unsigned camera_part(parts.size()); // start at an invalid value
@@ -523,7 +523,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		assert(i->room_id < interior->rooms.size());
 		room_t const &room(interior->rooms[i->room_id]);
 		bool const is_lamp(i->type == TYPE_LAMP);
-		float const floor_z(i->z2() - (is_lamp ? 0.5 : 1.0)*window_vspacing), ceil_z(i->z2() + (is_lamp ? 0.5 : 0.0)*window_vspacing);
+		int const cur_floor((i->z1() - room.z1())/window_vspacing);
+		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(level_z + fc_thick), ceil_z(level_z + window_vspacing - fc_thick);
 		bool const floor_is_above((camera_z < floor_z) && !room.is_sec_bldg), floor_is_below(camera_z > ceil_z); // secondary buildings are all one floor independent of height
 		// less culling if either the light or the camera is by stairs and light is on the floor above or below
 		bool stairs_light(0);
@@ -582,7 +583,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		sphere_bc.set_from_sphere(lpos, cull_radius);
 		cube_t clipped_bc(sphere_bc);
 		clipped_bc.intersect_with_cube(bcube);
-		if (!stairs_light) {clipped_bc.z1() = floor_z; clipped_bc.z2() = ceil_z;} // clip zval to current floor if light not in a room with stairs or elevator
+		if (!stairs_light) {clipped_bc.z1() = floor_z - fc_thick; clipped_bc.z2() = ceil_z + fc_thick;} // clip zval to current floor if light not in a room with stairs or elevator
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
 		//if (line_intersect_walls(lpos, camera_bs)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		// update lights_bcube and add light(s)
@@ -643,9 +644,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, dynamic_shadows);
 		
 		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building and can't see the light bleeding through the floor
+			cube_t room_exp(room);
+			room_exp.expand_by(0.5*wall_thickness); // expand slightly so that points exactly on the room bounds are included
 			cube_t light_bc2(clipped_bc);
-			light_bc2.intersect_with_cube(room); // upward facing light is for this room only
-			min_eq(light_bc2.z2(), ceil_z); // doesn't reach higher than the ceiling of this room
+			light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
+			min_eq(light_bc2.z2(), (ceil_z + fc_thick)); // doesn't reach higher than the ceiling of this room
 			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2);}
 
 			if (is_lamp) { // add a second shadowed light source pointing up
