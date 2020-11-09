@@ -880,11 +880,10 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 	unsigned const base_floats_per_light = 12; // XYZ pos, radius, RGBA color, XYZ dir/pos2, beamwidth
 	unsigned const max_floats_per_light  = base_floats_per_light + 1; // add one for shadow map index
 	//unsigned const max_floats_per_light      = base_floats_per_light + dl_smap_enabled;
-	unsigned const ysz((max_floats_per_light+3)/4); // round up to nearest power of 2
+	unsigned const ysz((max_floats_per_light+3)/4); // round up to nearest multiple of 4
 	unsigned const data_sz(max_dlights*(4*ysz));
-	std::unique_ptr<float> dl_data(new float[data_sz]); // use max possible size
-	float *dl_data_ptr(dl_data.get());
-	memset(dl_data_ptr, 0, data_sz*sizeof(float));
+	vector<float> dl_data(data_sz, 0);
+	float *dl_data_ptr(dl_data.data());
 	if (dl_sources.size() > max_dlights) {cerr << "Warning: Exceeded max lights of " << max_dlights << endl;}
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
 	float const radius_scale(1.0/(0.5*bounds.dx())); // bounds x radius inverted
@@ -896,7 +895,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 		bool const line_light(dl_sources[i].is_line_light());
 		float *data(dl_data_ptr + 4*i*ysz); // stride is texel RGBA
 		dl_sources[i].pack_to_floatv(data); // {center,radius, color, dir,beamwidth}
-		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale to [0,1] range
+		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale pos to [0,1] range
 		UNROLL_3X(data[i_+4] *= 0.1;) // scale color down
 		if (line_light) {UNROLL_3X(data[i_+8] = (data[i_+8] - poff[i_])*pscale[i_];)} // scale to [0,1] range
 		data[3] *= radius_scale;
