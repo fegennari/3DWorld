@@ -2044,6 +2044,8 @@ public:
 			multi_draw_shadow(xlate, bcs);
 			return;
 		}
+		enable_dlight_bcubes = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
+
 		if (!reflection_pass) {
 			interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
 			building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
@@ -2285,6 +2287,7 @@ public:
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
 		if (reflection_pass && (!DRAW_EXT_REFLECTIONS || reflection_pass != 3)) { // skip this early exit for house reflections if enabled
 			fgPopMatrix();
+			enable_dlight_bcubes = 0;
 			return;
 		}
 		city_dlight_pcf_offset_scale = 1.0; // restore city value
@@ -2388,6 +2391,7 @@ public:
 		glCullFace(GL_BACK);
 		glDepthFunc(GL_LESS);
 		fgPopMatrix();
+		enable_dlight_bcubes = 0;
 	}
 
 	void draw_building_lights(vector3d const &xlate) { // add night time lights to buildings; non-const because it modifies building_lights
