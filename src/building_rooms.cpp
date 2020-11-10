@@ -1058,6 +1058,12 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 	return (placed_couch || placed_tv);
 }
 
+// Note: this room is decided by the caller and the failure to add objects doesn't make it not a dining room
+void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	//if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return; // still applies, but unnecessary
+	// TODO: maybe add wine rack
+}
+
 bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be libraries
 	unsigned num_added(0);
@@ -1691,6 +1697,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 						light.z2() += 0.5f*light.dz();
 						light.z1() -= 0.22f*(light.dx() + light.dy());
 					}
+					add_diningroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 					r->assign_to(RTYPE_DINING, f);
 					is_dining = 1;
 				} // TODO: what about office building libraries?
