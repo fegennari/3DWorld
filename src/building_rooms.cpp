@@ -1389,8 +1389,8 @@ void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &roo
 			bottle.z2() = bottle.z1() + bottle_height;
 			
 			if (book.is_all_zeros() || !bottle.intersects(book)) {
-				colorRGBA const bottle_colors[2] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05)}; // only 2 colors for now
-				colorRGBA const &color(bottle_colors[rgen.rand()%2]);
+				colorRGBA const bottle_colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
+				colorRGBA const &color(bottle_colors[rgen.rand()%3]);
 				objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, room_obj_shape::SHAPE_CYLIN, color);
 			}
 		}

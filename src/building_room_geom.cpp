@@ -1131,6 +1131,17 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	} // for i
 }
 
+void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
+	if (inc_lg) {
+		colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+		rgeom_mat_t &wood_mat(get_wood_material(tscale));
+		// TODO: add wooden frame
+	}
+	if (inc_sm) {
+		// TODO: add_bottle() calls with custom black color
+	}
+}
+
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	// desk top and legs, similar to add_table()
 	cube_t top(c), legs_bcube(c);
@@ -1755,6 +1766,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_RUG:      return texture_color(get_rug_tid());
 	case TYPE_PICTURE:  return texture_color(get_picture_tid());
 	case TYPE_BCASE:    return get_textured_wood_color();
+	case TYPE_WINE_RACK:return get_textured_wood_color();
 	case TYPE_DESK:     return get_textured_wood_color();
 	case TYPE_RDESK:    return get_textured_wood_color(); // TODO
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
@@ -1797,6 +1809,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_WBOARD:  add_picture (*i); break;
 		case TYPE_BOOK:    add_book    (*i, 1, 0); break;
 		case TYPE_BCASE:   add_bookcase(*i, 1, 0, tscale, 0); break;
+		case TYPE_WINE_RACK: add_wine_rack(*i, 1, 0, tscale); break;
 		case TYPE_DESK:    add_desk    (*i, tscale); break;
 		case TYPE_RDESK:   add_reception_desk(*i, tscale); break;
 		case TYPE_TCAN:    add_trashcan(*i); break;
