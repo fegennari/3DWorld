@@ -644,7 +644,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc) : clipped_bc);
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, dynamic_shadows);
 		
-		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building and can't see the light bleeding through the floor
+		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building (optimization)
 			cube_t room_exp(room);
 			room_exp.expand_by(0.5*wall_thickness); // expand slightly so that points exactly on the room bounds are included
 			cube_t light_bc2(clipped_bc);
@@ -662,14 +662,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				dl_sources.emplace_back(0.15*light_radius, lpos_rot, lpos_rot, color); // add an additional small unshadowed light for ambient effect
 				dl_sources.back().set_custom_bcube(light_bc2); // not sure if this is helpful, but should be okay
 			}
-			else {
-				// add a smaller unshadowed light with 360 deg FOV to illuminate the ceiling and other areas as cheap indirect lighting;
-				// since we're not enabling shadows for this light, it could incorrectly illuminate objects on the floor above or adjacent rooms,
-				// so we must make it small, unless it's on the top floor
-				bool const at_top(lpos_rot.z > room.z2() - 0.5f*get_window_vspace());
-				float const radius_scale(at_top ? 0.55 : 0.5);
+			else { // add a second, smaller unshadowed light for the upper hemisphere
 				point const lpos_up(lpos_rot - vector3d(0.0, 0.0, 2.0*i->dz()));
-				dl_sources.emplace_back(radius_scale*((room.is_hallway ? 0.3 : room.is_office ? 0.35 : 0.5))*light_radius, lpos_up, lpos_up, color);
+				dl_sources.emplace_back((room.is_hallway ? 0.25 : room.is_office ? 0.45 : 0.5)*light_radius, lpos_up, lpos_up, color, 0, plus_z, 0.5);
 			}
 			if (!light_bc2.is_all_zeros()) {dl_sources.back().set_custom_bcube(light_bc2);}
 			dl_sources.back().disable_shadows();
