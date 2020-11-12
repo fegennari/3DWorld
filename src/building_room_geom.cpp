@@ -749,6 +749,9 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	mat.add_vcylin_to_verts(main_cylin, color, 0, 0);
 	mat.add_vcylin_to_verts(top_cylin,  color, 0, 1); // draw top surface
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
+	main_cylin.expand_by_xy(0.01*radius); // expand slightly in XY
+	main_cylin.z1() += 2.0*radius; main_cylin.z2() -= 1.0*radius; // shrink in Z
+	get_material(tid_nm_pair_t(), 0, 0, 1).add_vcylin_to_verts(main_cylin, apply_light_color(c, WHITE), 0, 0); // label, white for now
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
