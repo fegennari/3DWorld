@@ -417,7 +417,7 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	// add drawers
 	middle.expand_in_dim(!c.dim, -0.5*leg_width);
 	rand_gen_t rgen;
-	rgen.set_state(c.obj_id, c.room_id);
+	c.set_rand_gen_state(rgen);
 	rgen.rand_mix();
 	float const width(middle.get_sz_dim(!c.dim)), height(middle.dz());
 	bool is_lg(width > 2.0*height);
@@ -600,7 +600,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	} // for s
 	// add crates on the shelves
 	rand_gen_t rgen;
-	rgen.set_state(c.room_id+1, c.obj_id+123);
+	c.set_rand_gen_state(rgen);
 	static vect_cube_t cubes;
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
@@ -1062,7 +1062,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	if (no_shelves) return;
 	// add shelves
 	rand_gen_t rgen;
-	rgen.set_state(c.obj_id+1, c.room_id+1);
+	c.set_rand_gen_state(rgen);
 	unsigned const num_shelves(3 + ((17*c.room_id + int(1000.0*fabs(c.z1())))%3)); // 3-5, randomly selected by room ID and floor
 	float const shelf_dz(middle.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
 	cube_t shelves[5];

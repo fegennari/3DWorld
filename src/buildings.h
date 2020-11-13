@@ -297,6 +297,7 @@ struct room_object_t : public cube_t {
 	int get_sheet_tid() const;
 	int get_model_id() const {return (type + OBJ_MODEL_TOILET - TYPE_TOILET);}
 	colorRGBA get_color() const;
+	void set_rand_gen_state(rand_gen_t &rgen) const {rgen.set_state(obj_id+1, room_id+1);}
 };
 
 struct rgeom_storage_t {
