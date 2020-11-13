@@ -43,6 +43,7 @@ template<typename T> cube_t get_cube_height_radius(point const &center, T radius
 	c.z2() += height;
 	return c;
 }
+void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model)
@@ -184,8 +185,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 	float const clearance(max(0.2f*vspace, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
-	c.z1() = zval;
-	c.z2() = zval + height;
+	set_cube_zvals(c, zval, zval+height);
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bookcase
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
@@ -193,8 +193,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		c.d[dim][ dir] = room_bounds.d[dim][dir]; // against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
-		c.d[!dim][0] = pos - 0.5*width;
-		c.d[!dim][1] = pos + 0.5*width;
+		set_wall_width(c, pos, 0.5*width, !dim);
 		cube_t tc(c);
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
@@ -210,8 +209,7 @@ bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval) con
 	if (!room.has_stairs ) return 0; // no stairs
 	assert(interior);
 	cube_t c(room);
-	c.z1() = zval;
-	c.z2() = zval + 0.9*get_window_vspace();
+	set_cube_zvals(c, zval, zval+0.9*get_window_vspace());
 
 	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 		if (s->intersects(c)) return 1;
@@ -230,8 +228,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned num_placed(0);
 	cube_t c, placed_desk;
-	c.z1() = zval;
-	c.z2() = zval + height;
+	set_cube_zvals(c, zval, zval+height);
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a desk
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
@@ -239,8 +236,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		c.d[dim][ dir] = room_bounds.d[dim][dir] + rgen.rand_uniform(0.1, 1.0)*dsign*get_wall_thickness(); // almost against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + dsign*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
-		c.d[!dim][0] = pos - 0.5*width;
-		c.d[!dim][1] = pos + 0.5*width;
+		set_wall_width(c, pos, 0.5*width, !dim);
 		if (num_placed > 0 && c.intersects(placed_desk)) continue; // intersects previously placed desk
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // make short if against an exterior wall or in an office
@@ -253,8 +249,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
 			float const tv_height(1.1*height), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z), center(c.get_center_dim(!dim));
 			cube_t tv;
-			tv.z1() = c.z2();
-			tv.z2() = c.z2() + tv_height;
+			set_cube_zvals(tv, c.z2(), c.z2()+tv_height);
 			tv.d[dim][ dir] = c. d[dim][dir] + dsign*0.25*depth; // 25% of the way from the wall
 			tv.d[dim][!dir] = tv.d[dim][dir] + dsign*tv_depth;
 			set_wall_width(tv, center, tv_hwidth, !dim);
@@ -263,8 +258,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			// add a keyboard as well
 			float const kbd_hwidth(0.7*tv_hwidth);
 			cube_t keyboard;
-			keyboard.z1() = c.z2();
-			keyboard.z2() = c.z2() + 0.06*kbd_hwidth;
+			set_cube_zvals(keyboard, c.z2(), c.z2()+0.06*kbd_hwidth);
 			keyboard.d[dim][!dir] = c.d[dim][!dir] - dsign*0.06*depth; // close to front edge
 			keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*0.6*kbd_hwidth;
 			set_wall_width(keyboard, center, kbd_hwidth, !dim);
@@ -309,8 +303,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 	bool const has_office_chair(building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR));
 	float lo_pos(room_bounds.d[long_dim][0]), chair_height(0.0), chair_radius(0.0);
 	cube_t c;
-	c.z1() = zval;
-	c.z2() = zval + 0.425*floor_spacing; // set height
+	set_cube_zvals(c, zval, zval+0.425*floor_spacing);
 	bool added_cube(0);
 
 	if (has_office_chair) {
@@ -572,8 +565,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 	float const obj_clearance(depth*front_clearance), clearance(max(obj_clearance, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
-	c.z1() = zval;
-	c.z2() = zval + height;
+	set_cube_zvals(c, zval, zval+height);
 	bool center_tried[4] = {};
 
 	for (unsigned n = 0; n < 25; ++n) { // make 25 attempts to place the object
@@ -633,8 +625,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	if (!is_house && (have_toilet || have_sink)) { // office with at least a toilet or sink - replace carpet with tile
 		float const new_zval(zval + 0.05*wall_thickness);
 		cube_t floor(room_bounds);
-		floor.z1() = zval;
-		floor.z2() = new_zval;
+		set_cube_zvals(floor, zval, new_zval);
 		objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
 		objs_start = objs.size(); // exclude this from collision checks
 		zval = new_zval; // move the effective floor up
@@ -721,8 +712,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 			// add a mirror above the sink; could later make into medicine cabinet
 			cube_t mirror(sink); // start with the sink left and right position
 			mirror.expand_in_dim(!sink.dim, 0.1*mirror.get_sz_dim(!sink.dim)); // make slightly wider
-			mirror.z1() = sink.z2();
-			mirror.z2() = mirror.z1() + 0.3*floor_spacing;
+			set_cube_zvals(mirror, sink.z2(), sink.z2()+0.3*floor_spacing);
 			mirror.d[sink.dim][!sink.dir] = room_bounds.d[sink.dim][!sink.dir];
 			mirror.d[sink.dim][ sink.dir] = mirror.d[sink.dim][!sink.dir] + (sink.dir ? 1.0 : -1.0)*1.0*wall_thickness; // thickness
 			// this mirror is actually 3D, so we enable collision detection; treat as a house even if it's in an office building
@@ -771,8 +761,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	for (unsigned d = 0; d < 2 && !sink_side_set; ++d) {
 		for (unsigned side = 0; side < 2 && !sink_side_set; ++side) {
 			cube_t c(room);
-			c.z1() = zval; // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
-			c.z2() = zval + wall_thickness;
+			set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
 			c.d[!br_dim][!side] = c.d[!br_dim][side] + (side ? -1.0 : 1.0)*wall_thickness; // shrink to near zero area in this dim
 
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
@@ -853,8 +842,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			float const u_wall(place_area.d[br_dim][!dir]), u_from_wall(u_wall - dir_sign*(0.5*ulength + 0.01*wall_thickness));
 			float u_pos(sink_start);
 			cube_t sep_wall;
-			sep_wall.z1() = zval + 0.15*uheight;
-			sep_wall.z2() = zval + 1.25*uheight;
+			set_cube_zvals(sep_wall, zval+0.15*uheight, zval+1.25*uheight);
 			sep_wall.d[br_dim][!dir] = u_wall;
 			sep_wall.d[br_dim][ dir] = u_wall - dir_sign*0.25*floor_spacing;
 
@@ -891,8 +879,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	bool const shift_dir(room_center[br_dim] < part_center[br_dim]); // put the sign toward the outside of the building because there's more space and more light
 	float const door_width(br_door.get_sz_dim(br_dim));
 	cube_t sign(br_door);
-	sign.z1() = zval + 0.50*floor_spacing;
-	sign.z2() = zval + 0.55*floor_spacing;
+	set_cube_zvals(sign, zval+0.50*floor_spacing, zval+0.55*floor_spacing);
 	sign.translate_dim((shift_dir ? -1.0 : 1.0)*0.8*door_width, br_dim);
 	sign.expand_in_dim(br_dim, -(mens_room ? 0.35 : 0.25)*door_width); // shrink a bit
 	sign.translate_dim(sink_side_sign*0.5*wall_thickness, !br_dim); // move to outside wall
@@ -962,10 +949,8 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		vector<room_object_t> &objs(interior->room_geom->objs);
 		unsigned const counters_start(objs.size());
 		cube_t c;
-		c.z1() = zval;
-		c.z2() = zval + height;
-		cabinet_area.z1() = zval;
-		cabinet_area.z2() = zval + vspace - get_floor_thickness();
+		set_cube_zvals(c, zval, zval+height);
+		set_cube_zvals(cabinet_area, zval, zval+vspace-get_floor_thickness());
 		static vect_cube_t blockers;
 		gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1); // inc_open_doors=1, ignore_chairs=1
 		bool is_sink(1);
@@ -1005,8 +990,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 
 			if (1) { // add upper cabinets, always (for now); should we remove cabinets in front of windows?
 				cube_t c2(c);
-				c2.z1() = zval + 0.66*vspace;
-				c2.z2() = cabinet_area.z2(); // up to the ceiling
+				set_cube_zvals(c2, zval+0.66*vspace, cabinet_area.z2()); // up to the ceiling
 				if (!has_bcube_int_no_adj(c2, blockers)) {objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);} // no collision detection
 			}
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
@@ -1083,8 +1067,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	unsigned const num_crates(4 + (rgen.rand() % 30)); // 4-33
 	vect_cube_t exclude;
 	cube_t test_cube(room);
-	test_cube.z1() = zval; // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
-	test_cube.z2() = zval + wall_thickness;
+	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
 	unsigned num_placed(0);
 
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
@@ -1100,8 +1083,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (rgen.rand_bool()) continue; // only add shelves to 50% of the walls
 			cube_t shelves(room_bounds);
-			shelves.z1() = zval;
-			shelves.z2() = ceil_zval - floor_thickness;
+			set_cube_zvals(shelves, zval, ceil_zval-floor_thickness);
 			crate_bounds.d[dim][dir] = shelves.d[dim][!dir] = shelves.d[dim][dir] + (dir ? -1.0 : 1.0)*shelf_width; // outer edge of shelves, which is also the crate bounds
 			shelves.expand_in_dim(!dim, -(shelf_width + 1.0f*wall_thickness)); // shorten shelves
 			if (has_bcube_int(shelves, exclude)) continue; // too close to a doorway
@@ -1160,8 +1142,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 	float const val1(hall_start + max(0.1f*hall_len, window_vspacing)*dir_sign), val2(hall_start + 0.3*hall_len*dir_sign); // range of reasonable desk placements along the hall
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t desk;
-	desk.z1() = zval;
-	desk.z2() = zval + 0.32*window_vspacing;
+	set_cube_zvals(desk, zval, zval+0.32*window_vspacing);
 	set_wall_width(desk, centerline, 0.5*desk_width, !long_dim);
 
 	for (unsigned n = 0; n < 10; ++n) { // try to find the closest valid placement to the door, make 10 random attempts
@@ -1209,8 +1190,7 @@ void building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 	bool const min_dim(room_sz.y < room_sz.x);
 	float const ar(rgen.rand_uniform(0.65, 0.85)), length(min(0.7f*room_sz[min_dim]/ar, room_sz[!min_dim]*rgen.rand_uniform(0.4, 0.7))), width(length*ar);
 	cube_t rug;
-	rug.z1() = zval;
-	rug.z2() = rug.z1() + 0.001*get_window_vspace(); // almost flat
+	set_cube_zvals(rug, zval, zval+0.001*get_window_vspace()); // almost flat
 
 	for (unsigned d = 0; d < 2; ++d) {
 		float const radius(0.5*((bool(d) == min_dim) ? width : length));
@@ -1263,8 +1243,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				bool const dim(bool(dim2) ^ pref_dim), dir(bool(dir2) ^ pref_dir);
 				if (fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
 				cube_t c(room);
-				c.z1() = zval + 0.25*floor_height;
-				c.z2() = zval + 0.9*floor_height - floor_thick;
+				set_cube_zvals(c, zval+0.25*floor_height, zval+0.9*floor_height-floor_thick);
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
 				c.expand_in_dim(!dim, -0.2*room.get_sz_dim(!dim)); // xy_space
 				if (!check_valid_picture_placement(room, c, 0.6*room.get_sz_dim(!dim), zval, dim, dir, objs_start)) continue;
@@ -1342,7 +1321,7 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (classify_room_wall(room, zval, dim, dir, 1) != ROOM_WALL_EXT) continue; // exterior walls only
 			cube_t c(room);
-			c.z1() = zval; c.z2() = z2;
+			set_cube_zvals(c, zval, z2);
 			c.d[dim][!dir]  = c.d[dim][dir] + (dir ? -1.0 : 1.0)*window_thickness;
 			c.d[dim][ dir] -= (dir ? -1.0 : 1.0)*window_thickness;
 			// shrink by wall thickness to avoid problems at the corners of buildings
@@ -1391,8 +1370,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &roo
 			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((obj2.d[d][0] + 2.0*bottle_radius), (obj2.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
 			cube_t bottle; // bottle bcube
 			bottle.set_from_sphere(center, bottle_radius);
-			bottle.z1() = obj2.z2();
-			bottle.z2() = bottle.z1() + bottle_height;
+			set_cube_zvals(bottle, obj2.z2(), obj2.z2()+bottle_height);
 			
 			if (book.is_all_zeros() || !bottle.intersects(book)) {
 				colorRGBA const bottle_colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
@@ -1767,8 +1745,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		trim.d[!d->dim][1] = d->d[!d->dim][1] - door_trim_width;
 
 		for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
-			trim.z1() = z - trim_thickness;
-			trim.z2() = z; // ceil height
+			set_cube_zvals(trim, z-trim_thickness, z); // z2=ceil height
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, d->dim, 0, (flags | RO_FLAG_ADJ_TOP), 1.0, SHAPE_SHORT, trim_color);
 		}
 	} // for d
@@ -1803,13 +1780,11 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		// add trim at bottom of door for threshold
 		trim.d[!dim][0] = door.d[!dim][0];
 		trim.d[!dim][1] = door.d[!dim][1];
-		trim.z1() = door.z1() + fc_thick; // floor height
-		trim.z2() = trim.z1() + 2.0*trim_thickness;
+		set_cube_zvals(trim, door.z1()+fc_thick, door.z1()+fc_thick+2.0*trim_thickness); // floor height
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, ext_trim_color);
 
 		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->type == tquad_with_ix_t::TYPE_BDOOR) { // add trim at top of door, houses and office buildings
-			trim.z1() = door.z2() - 0.03*door.dz(); // see logic in clip_door_to_interior()
-			trim.z2() = door.z2(); // top of door texture
+			set_cube_zvals(trim, door.z2()-0.03*door.dz(), door.z2()); // ends at top of door texture; see logic in clip_door_to_interior()
 		}
 		if (d->type == tquad_with_ix_t::TYPE_BDOOR) { // different logic for building doors
 			ext_flags = flags; // unlike hdoors, need to draw the back face to hide the gap betweeen ceiling and floor above
@@ -1836,8 +1811,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			float z(w->z1());
 
 			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
-				trim.z1() = z; // floor height
-				trim.z2() = z + trim_height;
+				set_cube_zvals(trim, z, z+trim_height); // starts at floor height
 				objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, 0, flags, 1.0, SHAPE_CUBE, trim_color); // floor trim
 				if (!has_ceil_trim) continue;
 				trim.z2() = z + floor_to_ceil_height; // ceil height
@@ -1862,8 +1836,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				float z(i->z1() + fc_thick);
 
 				for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
-					trim.z1() = z; // floor height
-					trim.z2() = z + trim_height;
+					set_cube_zvals(trim, z, z+trim_height); // starts at floor height
 					trim_cubes.clear();
 					trim_cubes.push_back(trim); // start with entire length
 					float const ceil_trim_z2(z + floor_to_ceil_height), ceil_trim_z1(ceil_trim_z2 - trim_height); // ceil height
@@ -1888,8 +1861,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 						if (!has_ceil_trim) continue;
 						if (is_house && c != trim_cubes.begin()) continue;
 						cube_t ceil_trim(is_house ? trim : *c); // houses have shorter doors and ceiling trim extends above the door, so draw full range
-						ceil_trim.z2() = ceil_trim_z2;
-						ceil_trim.z1() = ceil_trim_z1;
+						set_cube_zvals(ceil_trim, ceil_trim_z1, ceil_trim_z2);
 						objs.emplace_back(ceil_trim, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
 					}
 				} // for f
@@ -1936,8 +1908,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
-			window.z1() = bot_edge + border_z;
-			window.z2() = bot_edge + window_height - border_z;
+			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
 
 			for (float xy = tx1; xy < tx2; xy += 1.0) { // windows along each wall
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
@@ -1987,8 +1958,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		if (i->shape != SHAPE_U) { // straight stairs
 			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
 				stair.d[dim][!dir] = pos; stair.d[dim][dir] = pos + step_len;
-				stair.z1() = max(bcube.z1(), (z + 0.5f*half_thick)); // don't go below the floor
-				stair.z2() = z + stair_height;
+				set_cube_zvals(stair, max(bcube.z1(), (z + 0.5f*half_thick)), z+stair_height); // don't go below the floor
 				assert(stair.z1() < stair.z2());
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, dir); // Note: room_id=0, not tracked, unused
 			}
@@ -2006,8 +1976,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				assert(!(num_stairs & 1)); // require num_stairs to be an even number
 				bool const is_rev(n >= num_stairs/2), stairs_dir(dir^is_rev);
 				stair.d[dim][!stairs_dir] = pos; stair.d[dim][stairs_dir] = pos + step_len;
-				stair.z1() = max(floor_z, z); // don't go below the floor
-				stair.z2() = z + stair_height;
+				set_cube_zvals(stair, max(floor_z, z), z+stair_height);
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, side^is_rev); // Note: room_id=0, not tracked, unused
 				objs.back().shape = SHAPE_STAIRS_U;
 			} // for n
