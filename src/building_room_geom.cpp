@@ -1135,13 +1135,33 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 }
 
 void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
-	if (inc_lg) {
+	float const height(c.dz()), width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), shelf_thick(0.1*depth);
+	unsigned const num_rows(max(1, round_fp(2.0*height/depth))), num_cols(max(1, round_fp(2.0*width/depth)));
+	float const row_step((height - shelf_thick)/num_rows), col_step((width - shelf_thick)/num_cols);
+
+	if (inc_lg) { // add wooden frame
 		colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
-		// TODO: add wooden frame
+		//wood_mat.add_cube_to_verts(c, color, tex_origin, ~get_face_mask(c.dim, !c.dir));
+
+		// create rows and columns of cubbies by intersecting horizontal and vertical cubes
+		for (unsigned i = 0; i <= num_rows; ++i) { // rows/horizontal
+			cube_t hc(c);
+			hc.z1() = c .z1() + row_step*i;
+			hc.z2() = hc.z1() + shelf_thick;
+			wood_mat.add_cube_to_verts(hc, color, tex_origin, 0); // draw all faces, even the back, in case it's visible through the window
+		}
+		for (unsigned i = 0; i <= num_cols; ++i) { // columns/vertical
+			cube_t vc(c);
+			vc.d[!c.dim][0] = c .d[!c.dim][0] + col_step*i;
+			vc.d[!c.dim][1] = vc.d[!c.dim][0] + shelf_thick;
+			wood_mat.add_cube_to_verts(vc, color, tex_origin, 0); // draw all faces, even the back, in case it's visible through the window
+		}
 	}
-	if (inc_sm) {
-		// TODO: add_bottle() calls with custom black color
+	if (inc_sm) { // add wine bottles
+		rand_gen_t rgen;
+		c.set_rand_gen_state(rgen);
+		// TODO: add_bottle() calls with custom black color, randomly populated
 	}
 }
 

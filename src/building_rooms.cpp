@@ -1045,7 +1045,28 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 // Note: this room is decided by the caller and the failure to add objects doesn't make it not a dining room
 void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	//if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return; // still applies, but unnecessary
-	// TODO: maybe add wine rack
+	cube_t room_bounds(get_walkable_room_bounds(room));
+	room_bounds.expand_by_xy(-0.1*get_wall_thickness());
+	float const vspace(get_window_vspace()), clearance(max(0.2f*vspace, get_min_front_clearance()));
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	// add a wine rack
+	float const width(0.3*vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.15*vspace*rgen.rand_uniform(1.0, 1.1)), height(0.4*vspace*rgen.rand_uniform(1.0, 1.5));
+	cube_t c;
+	set_cube_zvals(c, zval, zval+height);
+
+	for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place a wine rack; similar to placing a bookcase
+		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+		c.d[dim][ dir] = room_bounds.d[dim][dir]; // against this wall
+		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
+		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
+		set_wall_width(c, pos, 0.5*width, !dim);
+		cube_t tc(c);
+		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
+		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
+		objs.emplace_back(c, TYPE_WINE_RACK, room_id, dim, !dir, 0, tot_light_amt); // Note: dir faces into the room, not the wall
+		objs.back().obj_id = (uint16_t)objs.size();
+		break; // done/success
+	} // for n
 }
 
 bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
