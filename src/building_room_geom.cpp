@@ -1150,26 +1150,42 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 	if (inc_lg) { // add wooden frame
 		colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
-		//wood_mat.add_cube_to_verts(c, color, tex_origin, ~get_face_mask(c.dim, !c.dir));
+		cube_t frame(c);
+		frame.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.1*c.get_sz_dim(c.dim); // slightly less depth so that bottles stick out a bit
 
 		// create rows and columns of cubbies by intersecting horizontal and vertical cubes
 		for (unsigned i = 0; i <= num_rows; ++i) { // rows/horizontal
-			cube_t hc(c);
+			cube_t hc(frame);
 			hc.z1() = c .z1() + row_step*i;
 			hc.z2() = hc.z1() + shelf_thick;
 			wood_mat.add_cube_to_verts(hc, color, tex_origin, 0); // draw all faces, even the back, in case it's visible through the window
 		}
 		for (unsigned i = 0; i <= num_cols; ++i) { // columns/vertical
-			cube_t vc(c);
+			cube_t vc(frame);
 			vc.d[!c.dim][0] = c .d[!c.dim][0] + col_step*i;
 			vc.d[!c.dim][1] = vc.d[!c.dim][0] + shelf_thick;
 			wood_mat.add_cube_to_verts(vc, color, tex_origin, 0); // draw all faces, even the back, in case it's visible through the window
 		}
 	}
 	if (inc_sm) { // add wine bottles
+		float const space_w(col_step - 2.0*shelf_thick), space_h(row_step - 2.0*shelf_thick), diameter(min(space_w, space_h));
 		rand_gen_t rgen;
 		c.set_rand_gen_state(rgen);
-		// TODO: add_bottle() calls with custom black color, randomly populated
+		room_object_t bottle(c);
+		bottle.dir  ^= 1;
+		bottle.color = BLACK; // black wine bottle
+		set_wall_width(bottle, (c.d[!c.dim][0] + 0.5*(col_step + shelf_thick)), 0.5*diameter, !c.dim); // center in this dim
+
+		for (unsigned i = 0; i < num_cols; ++i) { // columns/vertical
+			bottle.z1() = c.z1() + shelf_thick; // rest on the top of the shelf
+			bottle.z2() = bottle.z1() + diameter;
+		
+			for (unsigned j = 0; j < num_rows; ++j) { // rows/horizontal
+				if (rgen.rand()%3) {add_bottle(bottle, 1);} // add a bottle 67% of the time; add_bottom=1
+				bottle.translate_dim(row_step, 2); // translate in Z
+			}
+			bottle.translate_dim(col_step, !c.dim); // translate in !dim
+		} // for i
 	}
 }
 
@@ -1906,6 +1922,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_CRATE: add_crate    (*i); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:  add_shelves(*i, tscale); break; // not small but only added to windowless rooms
 		case TYPE_KEYBOARD: add_keyboard(*i); break;
+		case TYPE_WINE_RACK:add_wine_rack(*i, 0, 1, tscale); break;
 		case TYPE_BOTTLE:   add_bottle(*i); break;
 		default: break;
 		}

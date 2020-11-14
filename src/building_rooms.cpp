@@ -1050,7 +1050,7 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 	float const vspace(get_window_vspace()), clearance(max(0.2f*vspace, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	// add a wine rack
-	float const width(0.3*vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.15*vspace*rgen.rand_uniform(1.0, 1.1)), height(0.4*vspace*rgen.rand_uniform(1.0, 1.5));
+	float const width(0.3*vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.15*vspace), height(0.4*vspace*rgen.rand_uniform(1.0, 1.5)); // depth is based on bottle length, which is constant
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
 
