@@ -1045,6 +1045,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 // Note: this room is decided by the caller and the failure to add objects doesn't make it not a dining room
 void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	//if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return; // still applies, but unnecessary
+	if ((rgen.rand()&3) == 0) return; // no additional objects 25% of the time
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-0.1*get_wall_thickness());
 	float const vspace(get_window_vspace()), clearance(max(0.2f*vspace, get_min_front_clearance()));
