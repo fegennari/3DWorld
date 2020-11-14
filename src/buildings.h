@@ -329,7 +329,7 @@ public:
 	void clear();
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
 		unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0, bool inverted=0);
-	void add_xy_cylin_to_verts(cube_t const &c, colorRGBA const &color, bool dim, bool draw_bot, bool draw_top,
+	void add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top,
 		bool two_sided=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES);
 	void add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top,
 		bool two_sided=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES);
@@ -412,7 +412,7 @@ struct building_room_geom_t {
 	void add_keyboard(room_object_t const &c);
 	void add_mirror(room_object_t const &c);
 	void add_shower(room_object_t const &c, float tscale);
-	void add_bottle(room_object_t const &c);
+	void add_bottle(room_object_t const &c, bool add_bottom=0);
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
 	void add_railing(room_object_t const &c);

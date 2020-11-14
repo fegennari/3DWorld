@@ -89,9 +89,13 @@ void swap_cube_z_xy(cube_t &c, bool dim) {
 	swap(c.z2(), c.d[dim][1]);
 }
 
-void rgeom_mat_t::add_xy_cylin_to_verts(cube_t const &c, colorRGBA const &color, bool dim, bool draw_bot, bool draw_top, bool two_sided,
+void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided,
 	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv)
 {
+	if (dim == 2) { // Z: this is our standard v_cylinder
+		add_vcylin_to_verts(c, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv);
+		return;
+	}
 	cube_t c_rot(c);
 	swap_cube_z_xy(c_rot, dim);
 	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
@@ -732,26 +736,30 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	}
 }
 
-void building_room_geom_t::add_bottle(room_object_t const &c) {
+void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	// for now, no texture, but could use a bottle label texture for the central cylinder
 	tid_nm_pair_t tex;
 	tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	colorRGBA const color(apply_light_color(c));
-	float const dz(c.dz()), radius(0.25f*(c.dx() + c.dy())); // dx should equal dy
+	vector3d const sz(c.get_size());
+	int const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
+	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square
 	cube_t sphere(c), main_cylin(c), top_cylin(c);
-	sphere.z1() = c.z1() + 0.5*dz;
-	sphere.z2() = sphere.z1() + 2.0*radius;
-	main_cylin.z2() = sphere.z1() + radius;
-	top_cylin .z1() = main_cylin.z2(); // there will be some intersection, but that should be okay
-	top_cylin.expand_by(vector3d(-0.3*c.dx(), -0.3*c.dy(), 0.0)); // smaller radius
+	sphere.d[dim][ c.dir] = c.d[dim][c.dir] + dir_sign*0.5*sz[dim];
+	sphere.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*2.0*radius;
+	main_cylin.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*radius;
+	top_cylin .d[dim][ c.dir] = main_cylin.d[dim][!c.dir]; // there will be some intersection, but that should be okay
+	top_cylin.expand_in_dim(dim1, -0.3*sz[dim1]); // smaller radius
+	top_cylin.expand_in_dim(dim2, -0.3*sz[dim2]); // smaller radius
 	mat.add_sphere_to_verts(sphere, color);
-	mat.add_vcylin_to_verts(main_cylin, color, 0, 0);
-	mat.add_vcylin_to_verts(top_cylin,  color, 0, 1); // draw top surface
+	mat.add_ortho_cylin_to_verts(main_cylin, color, dim, add_bottom, add_bottom);
+	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 1, 1); // draw top surface
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
-	main_cylin.expand_by_xy(0.01*radius); // expand slightly in XY
-	main_cylin.z1() += 2.0*radius; main_cylin.z2() -= 1.0*radius; // shrink in Z
-	get_material(tid_nm_pair_t(), 0, 0, 1).add_vcylin_to_verts(main_cylin, apply_light_color(c, WHITE), 0, 0); // label, white for now
+	main_cylin.expand_in_dim(dim1, 0.01*radius); // expand slightly in radius
+	main_cylin.expand_in_dim(dim2, 0.01*radius); // expand slightly in radius
+	main_cylin.d[dim][c.dir] += dir_sign*2.0*radius; main_cylin.d[dim][!c.dir] -= dir_sign*1.0*radius; // shrink in length
+	get_material(tid_nm_pair_t(), 0, 0, 1).add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0); // label, white for now
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
@@ -1595,7 +1603,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 			handle.expand_in_dim(!c.dim, -0.1*depth);
 			handle.d[c.dim][ c.dir]  = handle.d[c.dim][!c.dir] = dishwasher.d[c.dim][c.dir];
 			handle.d[c.dim][ c.dir] += dir_sign*0.04*depth; // front
-			metal_mat.add_xy_cylin_to_verts(handle, sink_color, !c.dim, 1, 1); // add handle as a cylinder in the proper dim with both ends
+			metal_mat.add_ortho_cylin_to_verts(handle, sink_color, !c.dim, 1, 1); // add handle as a cylinder in the proper dim with both ends
 			cabinet_gap = dishwasher;
 		}
 	}
