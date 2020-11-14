@@ -753,8 +753,8 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	top_cylin.expand_in_dim(dim1, -0.3*sz[dim1]); // smaller radius
 	top_cylin.expand_in_dim(dim2, -0.3*sz[dim2]); // smaller radius
 	mat.add_sphere_to_verts(sphere, color);
-	mat.add_ortho_cylin_to_verts(main_cylin, color, dim, add_bottom, add_bottom);
-	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 1, 1); // draw top surface
+	mat.add_ortho_cylin_to_verts(main_cylin, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir));
+	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, c.dir, !c.dir); // draw top surface
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
 	main_cylin.expand_in_dim(dim1, 0.01*radius); // expand slightly in radius
 	main_cylin.expand_in_dim(dim2, 0.01*radius); // expand slightly in radius
