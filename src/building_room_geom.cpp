@@ -1605,6 +1605,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		if (c.type == TYPE_KSINK && width > 3.5*depth) { // kitchen sink - add dishwasher
 			bool const side((c.flags & RO_FLAG_ADJ_LO) ? 1 : ((c.flags & RO_FLAG_ADJ_HI) ? 0 : (c.obj_id & 1))); // left/right of the sink
 			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir));
+			colorRGBA const dw_color(apply_light_color(c, LT_GRAY));
 			cube_t dishwasher(c);
 			dishwasher.z1() += 0.05*dz;
 			dishwasher.z2() -= 0.05*dz;
@@ -1612,8 +1613,10 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 			dishwasher.d[ c.dim][ c.dir] += dir_sign*0.05*depth; // front
 			dishwasher.d[!c.dim][!side ]  = sink.d[!c.dim][side] + (side ? 1.0 : -1.0)*0.1*depth;
 			dishwasher.d[!c.dim][ side ]  = dishwasher.d[!c.dim][!side] + (side ? 1.0 : -1.0)*1.05*depth;
-			metal_mat.add_cube_to_verts(dishwasher, apply_light_color(c, LT_GRAY), tex_origin, dw_skip_faces);
-			cube_t handle(dishwasher);
+			metal_mat.add_cube_to_verts(dishwasher, dw_color, tex_origin, dw_skip_faces);
+			cube_t dishwasher_back(dishwasher), handle(dishwasher);
+			dishwasher_back.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // flush with the cabinet
+			metal_mat.add_cube_to_verts(dishwasher_back, dw_color, tex_origin, ~dw_skip_faces); // draw only the back face, in case it's visible through a window
 			handle.z1() += 0.77*dz;
 			handle.z2() -= 0.10*dz;
 			handle.expand_in_dim(!c.dim, -0.1*depth);
