@@ -646,7 +646,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		
 		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building (optimization)
 			cube_t room_exp(room);
-			room_exp.expand_by(0.5*wall_thickness); // expand slightly so that points exactly on the room bounds are included
+			room_exp.expand_by(wall_thickness); // expand slightly so that points exactly on the room bounds and exterior doors are included
 			cube_t light_bc2(clipped_bc);
 			light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
 			min_eq(light_bc2.z2(), (ceil_z + fc_thick)); // doesn't reach higher than the ceiling of this room
