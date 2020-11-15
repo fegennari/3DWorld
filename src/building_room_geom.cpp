@@ -2025,14 +2025,20 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		mats_small.draw(s, shadow_only, reflection_pass);
 
 		if (player_in_building) { // if we're not in the building, don't draw plants at all; without the special shader they won't look correct when drawn through windows
-			if (!shadow_only && !reflection_pass) { // this is expensive: only enable for the current building and the main draw pass
+			if (shadow_only) {
 				shader_t plant_shader;
-				setup_building_draw_shader(plant_shader, 0.9, 1, 1, 0); // min_alpha=0.5, enable_indir=1, force_tsl=1, use_texgen=1
-				mats_plants.draw(plant_shader, shadow_only, reflection_pass);
+				plant_shader.begin_simple_textured_shader(0.9); // need to use texture with alpha test
+				mats_plants.draw(s, 0, 0);
 				s.make_current(); // switch back to the normal shader
 			}
-			else {
-				mats_plants.draw(s, shadow_only, reflection_pass);
+			else if (reflection_pass) {
+				mats_plants.draw(s, 0, 1);
+			}
+			else { // this is expensive: only enable for the current building and the main draw pass
+				shader_t plant_shader;
+				setup_building_draw_shader(plant_shader, 0.9, 1, 1, 0); // min_alpha=0.5, enable_indir=1, force_tsl=1, use_texgen=1
+				mats_plants.draw(plant_shader, 0, 0);
+				s.make_current(); // switch back to the normal shader
 			}
 		}
 	}
