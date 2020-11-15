@@ -1075,7 +1075,7 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 }
 
 bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	if (room.is_hallway || room.is_sec_bldg || room.is_office) return 0; // these can't be libraries
+	if (room.is_hallway || room.is_sec_bldg) return 0; // these can't be libraries
 	unsigned num_added(0);
 
 	for (unsigned n = 0; n < 8; ++n) { // place up to 8 bookcases
@@ -1636,7 +1636,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f));
 
 			if (is_office_bathroom) { // bathroom is already assigned
-				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f); // add bathroom
+				added_obj = is_bathroom = added_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f); // add bathroom
 			}
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
@@ -1705,11 +1705,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (!added_dining_room) {add_diningroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // only one room is the primary dining room
 					r->assign_to(RTYPE_DINING, f);
 					is_dining = added_dining_room = 1;
-				} // TODO: what about office building libraries?
+				}
 				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) { // add library, at most one
 					r->assign_to(RTYPE_LIBRARY, f);
 					added_library = 1;
 				}
+			}
+			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30 : 50)) == 0) {
+				// office, no cubicles or bathroom - try to make it a library (in rare cases)
+				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {r->assign_to(RTYPE_LIBRARY, f);}
 			}
 			if (r->get_room_type(f) == RTYPE_NOTSET) {
 				if (f == 0 && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if on first floor and has exterior door and is unassigned
