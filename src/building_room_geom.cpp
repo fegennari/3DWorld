@@ -1138,7 +1138,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 			assert(book.is_strictly_normalized());
 			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 			bool const backwards((rgen.rand()%10) == 0), book_dir(c.dir ^ backwards ^ 1); // spine facing out 90% of the time
-			room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, room_obj_shape::SHAPE_CUBE, book_color);
+			room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, SHAPE_CUBE, book_color);
 			obj.obj_id = c.obj_id + 123*i + 1367*n;
 			add_book(obj, inc_lg, inc_sm, tilt_angle, skip_faces, backwards); // detailed book, no title if backwards
 			pos += width;
@@ -1381,7 +1381,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
 	colorRGBA const color(apply_light_color(c));
 
-	if (c.shape == room_obj_shape::SHAPE_CYLIN) {
+	if (c.shape == SHAPE_CYLIN) {
 		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.7, 1.0); // untextured, bottom only, two_sided cylinder with inverted bottom normal
 	}
 	else { // sloped cube; this shape is rather unique, so is drawn inline; untextured

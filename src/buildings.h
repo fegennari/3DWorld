@@ -229,7 +229,7 @@ struct draw_range_t {
 	vertex_range_t vr[MAX_DRAW_BLOCKS]; // quad verts only for now
 };
 
-enum room_object    {
+enum {
 	TYPE_NONE=0, TYPE_TABLE, TYPE_CHAIR, TYPE_STAIR, TYPE_STAIR_WALL, TYPE_ELEVATOR, TYPE_LIGHT, TYPE_RUG, TYPE_PICTURE, TYPE_WBOARD,
 	TYPE_BOOK, TYPE_BCASE, TYPE_TCAN, TYPE_DESK, TYPE_BED, TYPE_WINDOW, TYPE_BLOCKER, TYPE_COLLIDER, TYPE_CUBICLE, TYPE_STALL,
 	TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_FLOORING, TYPE_CLOSET, TYPE_WALL_TRIM,
@@ -237,12 +237,16 @@ enum room_object    {
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_COUCH, TYPE_OFFICE_CHAIR, TYPE_URINAL, TYPE_LAMP,
 	NUM_TYPES};
-enum room_obj_shape {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED};
-enum room_type      {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY, RTYPE_ENTRY,
-	                 RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
+typedef uint8_t room_object;
+enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED};
+typedef uint8_t room_obj_shape;
+enum {RTYPE_NOTSET=0, RTYPE_HALL, RTYPE_STAIRS, RTYPE_OFFICE, RTYPE_BATH, RTYPE_BED, RTYPE_KITCHEN, RTYPE_LIVING, RTYPE_DINING, RTYPE_STUDY, RTYPE_ENTRY,
+	  RTYPE_LIBRARY, RTYPE_STORAGE, RTYPE_GARAGE, RTYPE_SHED, NUM_RTYPES};
+typedef uint8_t room_type;
 std::string const room_names[NUM_RTYPES] =
 	{"Not Set", "Hallway", "Stairs", "Office", "Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining Room", "Study", "Entryway", "Library", "Storage Room", "Garage", "Shed"};
-enum stairs_shape   {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES};
+enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES};
+typedef uint8_t stairs_shape;
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
 enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_COUCH, OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP,
 	  NUM_OBJ_MODELS};
@@ -279,7 +283,7 @@ struct room_object_t : public cube_t {
 
 	room_object_t() : dim(0), dir(0), flags(0), flags2(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, uint16_t f=0, float light=1.0,
-		room_obj_shape shape_=room_obj_shape::SHAPE_CUBE, colorRGBA const color_=WHITE) :
+		room_obj_shape shape_=SHAPE_CUBE, colorRGBA const color_=WHITE) :
 		cube_t(c), dim(dim_), dir(dir_), flags(f), flags2(0), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
