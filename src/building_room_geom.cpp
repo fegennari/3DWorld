@@ -709,7 +709,17 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	head_pos[ head_dim] += signs[head_dim]*0.09*sz[head_dim];
 	metal_mat.add_cylin_to_verts(base_pos,  head_pos, 0.02*radius, 0.10*radius, metal_color, 0, 1); // draw top/wide end only
 	metal_mat.add_cylin_to_verts(start_pos, end_pos,  0.02*radius, 0.02*radius, metal_color, 0, 0); // no ends
-	// TODO: what about a door handle?
+	// add door handle
+	bool const hdim(c.dx() < c.dy()), hdir(dirs[hdim]); // large dim
+	float const frame_width(fc.dx()), door_width(sz[!hdim]);
+	cube_t handle(c);
+	handle.d[ hdim][ hdir] = c.d[hdim][!hdir]     - (hdir ? -1.0 : 1.0)*(0.19*frame_width + 0.02*sz[hdir]); // place on the glass but slightly offset
+	handle.d[ hdim][!hdir] = handle.d[hdim][hdir] + (hdir ? -1.0 : 1.0)*1.0*frame_width;
+	handle.d[!hdim][0] += 0.20*door_width;
+	handle.d[!hdim][1] -= 0.77*door_width;
+	handle.z1() += 0.48*sz.z;
+	handle.z2() -= 0.42*sz.z;
+	metal_mat.add_cube_to_verts(handle, metal_color, zero_vector, 0); // draw all faces
 	// add drain
 	cube_t drain;
 	drain.set_from_point(bottom.get_cube_center());
@@ -718,7 +728,6 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	drain.expand_by_xy(0.06*radius); // set radius
 	get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0).add_vcylin_to_verts(drain, metal_color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only, not sides, unshadowed
 	// add transparent glass
-	float const frame_width(fc.dx());
 	colorRGBA const glass_color(apply_light_color(c, colorRGBA(1.0, 1.0, 1.0, 0.25)));
 	rgeom_mat_t &glass_mat(get_material(tid_nm_pair_t(), 0, 0, 0, 1)); // no shadows; transparent=1
 
