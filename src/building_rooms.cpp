@@ -1620,8 +1620,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt);}
 				}
-				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway
+				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway, make it the lobby
 					add_pri_hall_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
+					r->assign_to(RTYPE_LOBBY, f);
 				}
 				continue; // no other geometry for this room
 			}
