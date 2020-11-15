@@ -129,7 +129,7 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 	
 	// find room containing the camera
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (!r->has_bathroom) continue;
+		if (!r->has_bathroom()) continue; // for now, mirrors are only in bathrooms
 		if (!r->contains_pt(camera_bs)) continue;
 		if (find_mirror_in_room(((r - interior->rooms.begin()) & 255), xlate, 0)) return 1;
 	}

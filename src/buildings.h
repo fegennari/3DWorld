@@ -439,19 +439,24 @@ struct elevator_t : public cube_t {
 	unsigned get_coll_cubes(cube_t cubes[5]) const; // returns 1 or 5 cubes
 };
 
+unsigned const NUM_RTYPE_SLOTS = 5; // enough for houses
+
 struct room_t : public cube_t {
-	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg, interior, has_bathroom;
+	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg, interior;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	//uint8_t sides_with_doors; // is this useful/needed?
 	uint8_t part_id, num_lights;
-	room_type rtype; // this applies to the first floor because some rooms can have variable per-floor assignment
+	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first floor because some rooms can have variable per-floor assignment
 	uint64_t lit_by_floor;
 	float light_intensity; // due to room lights, if turned on
 
-	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), interior(0), has_bathroom(0),
-		ext_sides(0), part_id(0), num_lights(0), rtype(RTYPE_NOTSET), lit_by_floor(0), light_intensity(0.0) {}
+	room_t() : has_stairs(0), has_elevator(0), no_geom(0), is_hallway(0), is_office(0), is_sec_bldg(0), interior(0),
+		ext_sides(0), part_id(0), num_lights(0), lit_by_floor(0), light_intensity(0.0) {assign_all_to(RTYPE_NOTSET);}
 	room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_);
-	void assign_to(room_type rt, unsigned floor=0);
+	void assign_all_to(room_type rt);
+	void assign_to(room_type rt, unsigned floor);
+	room_type get_room_type(unsigned floor) const {return rtype[min(floor, NUM_RTYPE_SLOTS-1U)];}
+	bool has_bathroom() const;
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const;
 };
@@ -716,7 +721,7 @@ private:
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const;
 	int classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const;
 	bool room_has_stairs_or_elevator(room_t const &room, float zval) const;
-	bool is_room_office_bathroom(room_t const &room, float zval) const {return room.is_office && room.rtype == RTYPE_BATH && !room_has_stairs_or_elevator(room, zval);}
+	bool is_room_office_bathroom(room_t const &room, float zval, unsigned floor) const;
 	void gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1, bool ignore_chairs=0) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model);

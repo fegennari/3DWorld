@@ -492,11 +492,13 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 		if (room_ix >= 0) { // Note: stairs connecting stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
 			room_t const &room(interior->rooms[room_ix]);
+			unsigned const cur_floor(max(0.0f, (camera_bs.z - room.z1()))/window_vspacing);
 			camera_room       = room_ix;
 			camera_by_stairs  = room.has_stairs;
 			camera_in_hallway = room.is_hallway;
-			assert(room.rtype < NUM_RTYPES);
-			if (display_mode & 0x20) {lighting_update_text = room_names[room.rtype];} // debugging, key '6'
+			unsigned const room_type(room.get_room_type(cur_floor));
+			assert(room_type < NUM_RTYPES);
+			if (display_mode & 0x20) {lighting_update_text = room_names[room_type];} // debugging, key '6'
 			cur_player_building_loc = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
 
 			if (camera_by_stairs) {

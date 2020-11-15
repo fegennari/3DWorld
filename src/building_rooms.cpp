@@ -217,6 +217,10 @@ bool building_t::room_has_stairs_or_elevator(room_t const &room, float zval) con
 	return 0;
 }
 
+bool building_t::is_room_office_bathroom(room_t const &room, float zval, unsigned floor) const {
+	return room.is_office && room.get_room_type(floor) == RTYPE_BATH && !room_has_stairs_or_elevator(room, zval);
+}
+
 // Note: must be first placed object
 bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers,
 	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt)
@@ -749,7 +753,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	// if there are two bathrooms (one on each side of the building), assign a gender to each side; if only one, alternate gender per floor
 	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 		if (r->part_id != room.part_id || &(*r) == &room) continue; // different part or same room
-		if (is_room_office_bathroom(*r, zval)) {has_second_bathroom = 1; break;}
+		if (is_room_office_bathroom(*r, zval, floor)) {has_second_bathroom = 1; break;}
 	}
 	if (!has_second_bathroom) {mens_room ^= (floor & 1);}
 	bool const add_urinals(mens_room && building_obj_model_loader.is_model_valid(OBJ_MODEL_URINAL));
@@ -1249,7 +1253,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 		// room in a commercial building - add whiteboard when there is a full wall to use
 	}
 	if (room.is_sec_bldg) return 0; // no pictures in secondary buildings
-	if (room.rtype == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms
+	if (room.get_room_type(0) == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms (always first floor)
 	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1466,8 +1470,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		unsigned const room_objs_start(objs.size());
 
 		if (r->is_sec_bldg) {
-			if    (has_garage) {r->assign_to(RTYPE_GARAGE);}
-			else if (has_shed) {r->assign_to(RTYPE_SHED);}
+			if    (has_garage) {r->assign_all_to(RTYPE_GARAGE);}
+			else if (has_shed) {r->assign_all_to(RTYPE_SHED);}
 		}
 		if (r->is_office) { // light size varies by office size
 			float const room_size(r->dx() + r->dy()); // normalized to office size
@@ -1477,7 +1481,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			float const room_size(min(r->dx(), r->dy())); // normalized to hallway width
 			light_size = max(0.06f*room_size, 0.67f*def_light_size);
 		}
-		if (r->has_stairs && r->rtype == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS);} // default to stairs, may be re-assigned below
 		float const light_val(22.0*light_size);
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
 		cube_t pri_light, sec_light;
@@ -1629,7 +1632,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			// place room objects
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
-			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z));
+			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f));
 
 			if (is_office_bathroom) { // bathroom is already assigned
 				added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f); // add bathroom
@@ -1707,8 +1710,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					added_library = 1;
 				}
 			}
-			if (r->rtype == RTYPE_NOTSET) {
-				if (is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if has exterior door and is unassigned
+			if (r->get_room_type(f) == RTYPE_NOTSET) {
+				if (f == 0 && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if on first floor and has exterior door and is unassigned
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 			}
 			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage) { // add potted plants to some room types
@@ -1724,6 +1727,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
 			if (is_bathroom) {add_bathroom_windows(*r, room_center.z, room_id, tot_light_amt);} // find all windows and add frosted windows
+			if (r->has_stairs && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);} // default to stairs if not set above
 		} // for f (floor)
 		num_light_stacks += num_lights_added;
 		if (added_bathroom) {++num_bathrooms;}
@@ -2149,16 +2153,25 @@ void building_t::clear_room_geom() {
 
 room_t::room_t(cube_t const &c, unsigned p, unsigned nl, bool is_hallway_, bool is_office_, bool is_sec_bldg_) :
 	cube_t(c), has_stairs(0), has_elevator(0), no_geom(is_hallway_), is_hallway(is_hallway_), is_office(is_office_), // no geom in hallways
-	is_sec_bldg(is_sec_bldg_), interior(0), has_bathroom(0), ext_sides(0), part_id(p), num_lights(nl), lit_by_floor(0), light_intensity(0.0)
+	is_sec_bldg(is_sec_bldg_), interior(0), ext_sides(0), part_id(p), num_lights(nl), lit_by_floor(0), light_intensity(0.0)
 {
-	if      (is_sec_bldg) {rtype = RTYPE_GARAGE;} // or RTYPE_SHED - will be set later
-	else if (is_hallway)  {rtype = RTYPE_HALL;}
-	else if (is_office)   {rtype = RTYPE_OFFICE;}
-	else if (has_stairs)  {rtype = RTYPE_STAIRS;}
-	else                  {rtype = RTYPE_NOTSET;}
+	if      (is_sec_bldg) {assign_all_to(RTYPE_GARAGE);} // or RTYPE_SHED - will be set later
+	else if (is_hallway)  {assign_all_to(RTYPE_HALL);}
+	else if (is_office)   {assign_all_to(RTYPE_OFFICE);}
+	else if (has_stairs)  {assign_all_to(RTYPE_STAIRS);}
+	else                  {assign_all_to(RTYPE_NOTSET);}
+}
+void room_t::assign_all_to(room_type rt) {
+	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {rtype[n] = rt;}
 }
 void room_t::assign_to(room_type rt, unsigned floor) {
-	if (rtype == RTYPE_NOTSET || floor == 0) {rtype = rt;} // rtype is not per floor: assign if not yet assigned or this is the first floor (first floor has priority)
-	if (rt == RTYPE_BATH) {has_bathroom = 1;} // tag as has_bathroom even if bathroom is not on the ground floor
+	min_eq(floor, NUM_RTYPE_SLOTS-1U); // room types are only tracked up to the 4th floor, and every floor above that has the same type as the 4th floor; good enough for houses at least
+	if (rtype[floor] != RTYPE_BATH) {rtype[floor] = rt;} // assign unless already set to a bathroom, since we need that for has_bathroom()
+}
+bool room_t::has_bathroom() const {
+	for (unsigned n = 0; n < NUM_RTYPE_SLOTS; ++n) {
+		if (rtype[n] == RTYPE_BATH) return 1;
+	}
+	return 0;
 }
 
