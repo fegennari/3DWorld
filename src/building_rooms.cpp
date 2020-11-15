@@ -1958,6 +1958,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				}
 			} // for xy
+			// TODO: add curtains or blinds to some windows based on the containing room type for this floor
 		} // for z
 	} // for i
 }
