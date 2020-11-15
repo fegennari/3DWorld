@@ -1442,7 +1442,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0); // per-floor
-	bool added_bedroom(0), added_living(0), added_library(0);
+	bool added_bedroom(0), added_living(0), added_library(0), added_dining_room(0);
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0);
@@ -1702,9 +1702,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 						light.z2() += 0.5f*light.dz();
 						light.z1() -= 0.22f*(light.dx() + light.dy());
 					}
-					add_diningroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					if (!added_dining_room) {add_diningroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // only one room is the primary dining room
 					r->assign_to(RTYPE_DINING, f);
-					is_dining = 1;
+					is_dining = added_dining_room = 1;
 				} // TODO: what about office building libraries?
 				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) { // add library, at most one
 					r->assign_to(RTYPE_LIBRARY, f);
