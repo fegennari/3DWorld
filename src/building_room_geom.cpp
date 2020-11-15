@@ -742,6 +742,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	colorRGBA const color(apply_light_color(c));
+	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD};
 	vector3d const sz(c.get_size());
 	int const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square
@@ -750,11 +751,16 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	sphere.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*2.0*radius;
 	main_cylin.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*radius;
 	top_cylin .d[dim][ c.dir] = main_cylin.d[dim][!c.dir]; // there will be some intersection, but that should be okay
-	top_cylin.expand_in_dim(dim1, -0.3*sz[dim1]); // smaller radius
-	top_cylin.expand_in_dim(dim2, -0.3*sz[dim2]); // smaller radius
+	top_cylin.expand_in_dim(dim1, -0.32*sz[dim1]); // smaller radius
+	top_cylin.expand_in_dim(dim2, -0.32*sz[dim2]); // smaller radius
+	cube_t cap(top_cylin);
+	top_cylin.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*sz[dim]; // set cap thickness
+	cap.expand_in_dim(dim1, 0.035*sz[dim1]); // slightly larger radius
+	cap.expand_in_dim(dim2, 0.035*sz[dim2]); // slightly larger radius
 	mat.add_sphere_to_verts(sphere, color);
 	mat.add_ortho_cylin_to_verts(main_cylin, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir));
-	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, c.dir, !c.dir); // draw top surface
+	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 0, 0); // draw neck of bottle
+	mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[c.obj_id % 2]), dim, c.dir, !c.dir); // draw cap
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
 	main_cylin.expand_in_dim(dim1, 0.01*radius); // expand slightly in radius
 	main_cylin.expand_in_dim(dim2, 0.01*radius); // expand slightly in radius
@@ -1168,20 +1174,23 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 		}
 	}
 	if (inc_sm) { // add wine bottles
-		float const space_w(col_step - 2.0*shelf_thick), space_h(row_step - 2.0*shelf_thick), diameter(min(space_w, space_h));
+		float const space_w(col_step - shelf_thick), space_h(row_step - shelf_thick), diameter(min(space_w, space_h) - shelf_thick);
 		rand_gen_t rgen;
 		c.set_rand_gen_state(rgen);
 		room_object_t bottle(c);
 		bottle.dir  ^= 1;
 		bottle.color = BLACK; // black wine bottle
-		set_wall_width(bottle, (c.d[!c.dim][0] + 0.5*(col_step + shelf_thick)), 0.5*diameter, !c.dim); // center in this dim
+		set_wall_width(bottle, (c.d[!c.dim][0] + 0.5f*(col_step + shelf_thick)), 0.5*diameter, !c.dim); // center in this dim
 
 		for (unsigned i = 0; i < num_cols; ++i) { // columns/vertical
 			bottle.z1() = c.z1() + shelf_thick; // rest on the top of the shelf
 			bottle.z2() = bottle.z1() + diameter;
 		
 			for (unsigned j = 0; j < num_rows; ++j) { // rows/horizontal
-				if (rgen.rand()%3) {add_bottle(bottle, 1);} // add a bottle 67% of the time; add_bottom=1
+				if (rgen.rand()%3) { // add a bottle 67% of the time; add_bottom=1
+					bottle.obj_id = (uint16_t)rgen.rand();
+					add_bottle(bottle, 1);
+				}
 				bottle.translate_dim(row_step, 2); // translate in Z
 			}
 			bottle.translate_dim(col_step, !c.dim); // translate in !dim

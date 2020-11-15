@@ -1051,7 +1051,7 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 	float const vspace(get_window_vspace()), clearance(max(0.2f*vspace, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	// add a wine rack
-	float const width(0.3*vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.15*vspace), height(0.4*vspace*rgen.rand_uniform(1.0, 1.5)); // depth is based on bottle length, which is constant
+	float const width(0.3*vspace*rgen.rand_uniform(1.0, 1.5)), depth(0.16*vspace), height(0.4*vspace*rgen.rand_uniform(1.0, 1.5)); // depth is based on bottle length, which is constant
 	cube_t c;
 	set_cube_zvals(c, zval, zval+height);
 
@@ -1398,6 +1398,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &roo
 				colorRGBA const bottle_colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
 				colorRGBA const &color(bottle_colors[rgen.rand()%3]);
 				objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, room_obj_shape::SHAPE_CYLIN, color);
+				objs.back().obj_id = (uint16_t)objs.size();
 			}
 		}
 	} // for i
