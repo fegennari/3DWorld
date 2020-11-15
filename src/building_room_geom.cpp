@@ -34,7 +34,8 @@ string const &gen_book_title(unsigned rand_id, string *author, unsigned split_le
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);}
-int get_counter_tid() {return get_texture_by_name("marble2.jpg");}
+int get_counter_tid () {return get_texture_by_name("marble2.jpg");}
+int get_paneling_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg");}
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
@@ -1222,7 +1223,7 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	assert(width > depth && cutlen > 0.0);
 	colorRGBA const color(apply_light_color(c));
 	// wood paneling sides
-	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(PANELING_TEX, get_texture_by_name("normal_maps/paneling_NRM.jpg"), 4.0*tscale, 4.0*tscale), 1)); // with shadows
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(PANELING_TEX, get_paneling_tid(), 4.0*tscale, 4.0*tscale), 1)); // with shadows
 	vector3d const tex_origin(c.get_llc());
 	unsigned const lr_dim_mask(~get_face_mask(c.dim, c.dir));
 	cube_t base(c);
@@ -1827,7 +1828,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BCASE:    return get_textured_wood_color();
 	case TYPE_WINE_RACK:return get_textured_wood_color();
 	case TYPE_DESK:     return get_textured_wood_color();
-	case TYPE_RDESK:    return get_textured_wood_color(); // TODO
+	case TYPE_RDESK:    return (texture_color(get_paneling_tid())*0.5 + texture_color(get_counter_tid())*0.5);
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
 	case TYPE_COUNTER:  return get_counter_color();
 	case TYPE_KSINK:    return (get_counter_color()*0.9 + GRAY*0.1); // counter, with a bit of gray mixed in from the sink
@@ -1842,7 +1843,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
 	case TYPE_KEYBOARD: return BLACK;
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
-	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BED
+	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, etc.
 	}
 	if (type >= TYPE_TOILET && type < NUM_TYPES) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
 	return color; // Note: probably should always set color so that we can return it here
