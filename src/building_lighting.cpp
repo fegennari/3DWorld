@@ -408,7 +408,7 @@ void building_t::clip_ray_to_walls(point const &p1, point &p2) const { // Note: 
 	} // for d
 }
 
-void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t &light_bcube) const {
+void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t const &room, cube_t &light_bcube) const {
 	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205 / no ls bcube expand: 74538
 	// starts with building bcube clipped to light bcube
 	//timer_t timer("refine_light_bcube"); // 0.062ms average
@@ -427,7 +427,8 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	// next cast a number of horizontal rays in a circle around the light to see how far they reach; any walls hit occlude the light and reduce the bcube
 	unsigned const NUM_RAYS = 180; // every 2 degrees
 	if (NUM_RAYS == 0) {light_bcube = tight_bcube; return;}
-	cube_t rays_bcube(lpos, lpos);
+	cube_t rays_bcube(lpos, lpos), room_exp(room);
+	room_exp.expand_by_xy(get_wall_thickness()); // to include points on the border
 
 	for (unsigned n = 0; n < NUM_RAYS; ++n) {
 		float const angle(TWO_PI*n/NUM_RAYS), dx(light_radius*sin(angle)), dy(light_radius*cos(angle));
@@ -435,7 +436,15 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 		bool const ret(do_line_clip(p1, p2, tight_bcube.d));
 		// test for bad rays; this can fail on rotated buildings if lights aren't rotated properly, and in other cases when I'm experimenting, so it's allowed
 		if (!ret || p1 != lpos) continue; // bad ray, skip
-		clip_ray_to_walls(p1, p2);
+		point room_exit_pt(p2);
+		room_exp.clamp_pt_xy(room_exit_pt);
+		bool inside_building(0);
+
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			if (p->contains_pt(room_exit_pt)) {inside_building = 1; break;}
+		}
+		if (inside_building) {clip_ray_to_walls(p1, p2);} // point remains inside the building, it must have intersected an interior wall
+		else {p2 = room_exit_pt;} // point outside the building, ray intersected an exterior wall, end it at the intersection point
 		rays_bcube.union_with_pt(p2);
 	} // for n
 	light_bcube = rays_bcube;
@@ -620,7 +629,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 			if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
 				light_bcube = clipped_bc;
-				refine_light_bcube(lpos, light_radius, light_bcube);
+				refine_light_bcube(lpos, light_radius, room, light_bcube);
 			}
 			clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 			clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
