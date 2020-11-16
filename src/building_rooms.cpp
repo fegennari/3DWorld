@@ -904,16 +904,21 @@ void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, 
 	if (inc_open) {door_exp.d[!dim][edir] += (edir ? 1.0 : -1.0)*0.75*width;} // expand the remainder of the door width in this dir
 	blockers.push_back(door_exp);
 }
-void building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors, bool ignore_chairs) const {
+int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors, bool ignore_chairs) const {
 	assert(has_room_geom());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
 	bool const first_floor(room.z1() < bcube.z1() + get_floor_thickness());
 	blockers.clear();
+	int table_blocker_ix(-1);
 
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (ignore_chairs && i->type == TYPE_CHAIR) continue;
-		if (!(i->flags & RO_FLAG_NOCOLL) && i->intersects(room)) {blockers.push_back(*i);}
+		
+		if (!(i->flags & RO_FLAG_NOCOLL) && i->intersects(room)) {
+			if (i->type == TYPE_TABLE) {table_blocker_ix = int(blockers.size());} // track which blocker is the table, for use with kitchen counters
+			blockers.push_back(*i);
+		}
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {add_door_if_blocker(i->get_bcube(), room, 0, 0, blockers);} // exterior doors, inc_open=0
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {add_door_if_blocker(*i, room, door_opens_inward(*i, room), i->open_dir, blockers);} // interior doors
@@ -930,6 +935,7 @@ void building_t::gather_room_placement_blockers(cube_t const &room, unsigned obj
 		tc.d[e->dim][e->dir] += doorway_width*(e->dir ? 1.0 : -1.0); // add extra space in front of the elevator
 		if (tc.intersects(bcube)) {blockers.push_back(tc);}
 	}
+	return table_blocker_ix;
 }
 
 bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool allow_adj_ext_door) {
@@ -947,7 +953,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		
 	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
 		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height);
-		float const front_clearance(max(0.6f*height, get_min_front_clearance()));
+		float const min_clearance(get_min_front_clearance()), front_clearance(max(0.6f*height, min_clearance));
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area
 		vector<room_object_t> &objs(interior->room_geom->objs);
@@ -956,7 +962,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		set_cube_zvals(c, zval, zval+height);
 		set_cube_zvals(cabinet_area, zval, zval+vspace-get_floor_thickness());
 		static vect_cube_t blockers;
-		gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1); // inc_open_doors=1, ignore_chairs=1
+		int const table_blocker_ix(gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1)); // inc_open_doors=1, ignore_chairs=1
 		bool is_sink(1);
 
 		for (unsigned n = 0; n < 50; ++n) { // 50 attempts
@@ -972,11 +978,13 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			bool bad_place(0);
 
 			for (auto i = blockers.begin(); i != blockers.end(); ++i) {
-				if (!i->intersects(c)) continue; // optimization - no cube interaction
-				if (i->intersects(c_min)) {bad_place = 1; break;}
-				if (i->d[!dim][1] < c_min.d[!dim][0]) {max_eq(c.d[!dim][0], i->d[!dim][1]);} // clip on lo side
-				if (i->d[!dim][0] > c_min.d[!dim][1]) {min_eq(c.d[!dim][1], i->d[!dim][0]);} // clip on hi side
-			}
+				cube_t b(*i); // expand tables by an extra clearance to allow the player to fit in the diagonal gap between the table and the counter
+				if (int(i - blockers.begin()) == table_blocker_ix) {b.expand_in_dim(!dim, min_clearance);}
+				if (!b.intersects(c)) continue; // optimization - no cube interaction
+				if (b.intersects(c_min)) {bad_place = 1; break;}
+				if (b.d[!dim][1] < c_min.d[!dim][0]) {max_eq(c.d[!dim][0], b.d[!dim][1]);} // clip on lo side
+				if (b.d[!dim][0] > c_min.d[!dim][1]) {min_eq(c.d[!dim][1], b.d[!dim][0]);} // clip on hi side
+			} // for i
 			if (bad_place) continue;
 			assert(c.contains_cube(c_min));
 			c.d[dim][!dir] = front_pos; // remove front clearance
