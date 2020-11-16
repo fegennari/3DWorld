@@ -1851,6 +1851,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
 	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
 	case TYPE_KEYBOARD: return BLACK;
+	case TYPE_COMPUTER: return BLACK;
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, etc.
 	}
@@ -1944,6 +1945,8 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_CRATE: add_crate    (*i); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:  add_shelves(*i, tscale); break; // not small but only added to windowless rooms
 		case TYPE_KEYBOARD: add_keyboard(*i); break;
+		//case TYPE_COMPUTER: add_computer(*i); break; // or are these 3D models?
+		//case TYPE_MWAVE:    add_mwave(*i); break; // or are these 3D models?
 		case TYPE_WINE_RACK:add_wine_rack(*i, 0, 1, tscale); break;
 		case TYPE_BOTTLE:   add_bottle(*i); break;
 		default: break;
