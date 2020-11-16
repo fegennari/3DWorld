@@ -1807,7 +1807,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		unsigned ext_flags(flags);
 		colorRGBA const &ext_trim_color(garage_door ? WHITE : door_color); // garage doors are always white
 
-		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (!i->intersects_no_adj(trim)) continue;
 			trim.intersect_with_cube_xy(*i); // clip to containing part
 			dir = (i->get_center_dim(dim) < trim.get_center_dim(dim));
