@@ -476,7 +476,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	vector<room_object_t> &objs(interior->room_geom->objs); // non-const, light flags are updated
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
-	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(0.5*get_floor_thickness()), camera_z(camera_bs.z);
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(0.5*get_floor_thickness());
+	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness);
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	unsigned camera_part(parts.size()); // start at an invalid value
@@ -622,7 +623,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
 		clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
-		clipped_bc.expand_by_xy(wall_thickness); // expand by wall thickness so that offset exterior doors are properly handled
+		clipped_bc.expand_by_xy(room_xy_expand); // expand so that offset exterior doors are properly handled
 		clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		assert(clipped_bc.contains_cube(lpos));
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
@@ -648,7 +649,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		
 		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building (optimization)
 			cube_t room_exp(room);
-			room_exp.expand_by(wall_thickness); // expand slightly so that points exactly on the room bounds and exterior doors are included
+			room_exp.expand_by(room_xy_expand); // expand slightly so that points exactly on the room bounds and exterior doors are included
 			cube_t light_bc2(clipped_bc);
 			light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
 			min_eq(light_bc2.z2(), (ceil_z + fc_thick)); // doesn't reach higher than the ceiling of this room
