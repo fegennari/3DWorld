@@ -415,7 +415,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	cube_t tight_bcube;
 
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
-	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // secondary buildings aren't handled here
 		//if (lpos.z < p->z1() || lpos.z > p->z2()) continue; // light zval not included (doesn't seem to work)
 		if (!light_bcube.intersects_xy(*p)) continue;
 		cube_t c(light_bcube);
@@ -613,15 +613,18 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		else {
 			color = i->get_color()*1.1; // make it extra bright
 		}
-		assert(i->obj_id < light_bcubes.size());
-		cube_t &light_bcube(light_bcubes[i->obj_id]);
+		if (room.is_sec_bldg) {clipped_bc.intersect_with_cube(room);} // secondary buildings only light their single room
+		else {
+			assert(i->obj_id < light_bcubes.size());
+			cube_t &light_bcube(light_bcubes[i->obj_id]);
 
-		if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
-			light_bcube = clipped_bc;
-			refine_light_bcube(lpos, light_radius, light_bcube);
+			if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
+				light_bcube = clipped_bc;
+				refine_light_bcube(lpos, light_radius, light_bcube);
+			}
+			clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
+			clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
 		}
-		clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
-		clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
 		clipped_bc.expand_by_xy(room_xy_expand); // expand so that offset exterior doors are properly handled
 		clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
 		assert(clipped_bc.contains_cube(lpos));
