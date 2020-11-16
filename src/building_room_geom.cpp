@@ -603,20 +603,21 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			bracket.translate_dim(b_step, !c.dim);
 		} // for b
 	} // for s
-	// add crates on the shelves
+	// add objects to the shelves
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	static vect_cube_t cubes;
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
-		unsigned const num(rgen.rand() % 13); // 0-12
 		room_object_t C(c);
 		vector3d sz;
 		point center;
 		cubes.clear();
+		// add crates
+		unsigned const num_crates(rgen.rand() % 13); // 0-12
 
-		for (unsigned n = 0; n < num; ++n) {
+		for (unsigned n = 0; n < num_crates; ++n) {
 			for (unsigned d = 0; d < 2; ++d) {
 				sz[d] = 0.5*width*rgen.rand_uniform(0.45, 0.8); // x,y half width
 				center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
@@ -628,6 +629,22 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			C.expand_by_xy(sz);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			add_crate(C);
+			cubes.push_back(C);
+		} // for n
+		unsigned const num_bottles(rgen.rand() % 9); // 0-8
+		float const bottle_height(0.6f*z_step), bottle_radius(0.15*bottle_height);
+		C.dir = C.dim = 0;
+
+		for (unsigned n = 0; n < num_bottles; ++n) {
+			// same as building_t::place_bottle_on_obj()
+			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 2.0*bottle_radius), (S.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
+			C.set_from_sphere(center, bottle_radius);
+			C.z1() = S.z2();
+			C.z2() = S.z2() + bottle_height;
+			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
+			colorRGBA const bottle_colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
+			C.color = bottle_colors[rgen.rand()%3];
+			add_bottle(C);
 			cubes.push_back(C);
 		} // for n
 	} // for s
