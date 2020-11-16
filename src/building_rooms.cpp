@@ -1219,6 +1219,21 @@ void building_t::place_book_on_obj(rand_gen_t rgen, room_object_t const &place_o
 	objs.back().obj_id = (uint16_t)objs.size();
 }
 
+void building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+	float const window_vspacing(get_window_vspace()), bottle_height(0.102*window_vspacing), bottle_radius(0.015*window_vspacing);
+	point center;
+	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + 2.0*bottle_radius), (place_on.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
+	cube_t bottle; // bottle bcube
+	bottle.set_from_sphere(center, bottle_radius);
+	set_cube_zvals(bottle, place_on.z2(), place_on.z2()+bottle_height);
+	if (!avoid.is_all_zeros() && bottle.intersects(avoid)) return; // only make one attempt
+	colorRGBA const bottle_colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
+	colorRGBA const &color(bottle_colors[rgen.rand()%3]);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
+	objs.back().obj_id = (uint16_t)objs.size();
+}
+
 void building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	if (!room_object_t::enable_rugs()) return; // disabled
 	vector3d const room_sz(room.get_size());
@@ -1371,7 +1386,7 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
-	float const window_vspacing(get_window_vspace()), bottle_height(0.102*window_vspacing), bottle_radius(0.015*window_vspacing);
+	float const window_vspacing(get_window_vspace());
 	float const place_book_prob((is_house ? 1.0 : 0.5)*(room.is_office ? 0.8 : 1.0));
 	float const place_bottle_prob(is_house ? 1.0 : (room.is_office ? 0.75 : 0.0));
 	unsigned const objs_end(objs.size());
@@ -1401,19 +1416,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &roo
 			book = objs.back();
 		}
 		if (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob) {
-			room_object_t const &obj2(objs[i]); // capture a new reference in case it was invalidated by placing the book above
-			point center;
-			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((obj2.d[d][0] + 2.0*bottle_radius), (obj2.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
-			cube_t bottle; // bottle bcube
-			bottle.set_from_sphere(center, bottle_radius);
-			set_cube_zvals(bottle, obj2.z2(), obj2.z2()+bottle_height);
-			
-			if (book.is_all_zeros() || !bottle.intersects(book)) {
-				colorRGBA const bottle_colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
-				colorRGBA const &color(bottle_colors[rgen.rand()%3]);
-				objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
-				objs.back().obj_id = (uint16_t)objs.size();
-			}
+			place_bottle_on_obj(rgen, objs[i], room_id, tot_light_amt, book); // capture a new reference in case it was invalidated by placing the book above
 		}
 	} // for i
 }

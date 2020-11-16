@@ -745,6 +745,7 @@ private:
 	bool add_storage_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_pri_hall_objs   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void place_book_on_obj   (rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir);
+	void place_bottle_on_obj (rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);
 	void add_rug_to_room     (rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_plants_to_room  (rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num);
