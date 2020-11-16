@@ -433,9 +433,8 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 		float const angle(TWO_PI*n/NUM_RAYS), dx(light_radius*sin(angle)), dy(light_radius*cos(angle));
 		point p1(lpos), p2(lpos + point(dx, dy, 0.0));
 		bool const ret(do_line_clip(p1, p2, tight_bcube.d));
-		if ((!ret || p1 != lpos) && is_rotated()) continue; // bad ray - this can fail on rotated buildings if lights aren't rotated properly
-		assert(ret);
-		assert(p1 == lpos);
+		// test for bad rays; this can fail on rotated buildings if lights aren't rotated properly, and in other cases when I'm experimenting, so it's allowed
+		if (!ret || p1 != lpos) continue; // bad ray, skip
 		clip_ray_to_walls(p1, p2);
 		rays_bcube.union_with_pt(p2);
 	} // for n
