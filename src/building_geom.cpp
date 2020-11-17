@@ -1568,7 +1568,8 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	cube_t const &top(parts.back()); // top/last part
 	float const helipad_radius(2.0*window_vspacing);
-	has_helipad = (flat_roof /*&& is_simple_cube()*/ && !is_house && min(top.dx(), top.dy()) > 3.2*helipad_radius && bcube.dz() > 8.0*window_vspacing && !(rgen.rand() & 15));
+	has_helipad = (flat_roof && num_sides >= 4 && flat_side_amt == 0.0 && !is_house && min(top.dx(), top.dy()) > (is_simple_cube() ? 3.2 : 4.0)*helipad_radius &&
+		bcube.dz() > 8.0*window_vspacing && (rgen.rand() % 12) == 0);
 	cube_t helipad_bcube;
 
 	if (has_helipad) { // add helipad
