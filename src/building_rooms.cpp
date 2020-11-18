@@ -267,6 +267,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*0.6*kbd_hwidth;
 			set_wall_width(keyboard, center, kbd_hwidth, !dim);
 			objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // add as white, will be drawn with gray/black texture
+			// TODO: add a computer under the desk
 		}
 		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
 			point chair_pos;
@@ -1007,6 +1008,10 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
 			is_sink = 0; // sink is in first placed counter only
+
+			if (!is_sink) {
+				// TODO: maybe place a microwave on a counter
+			}
 		} // for n
 	}
 	return placed_obj;

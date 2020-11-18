@@ -656,6 +656,15 @@ void building_room_geom_t::add_keyboard(room_object_t const &c) {
 	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(c, apply_light_color(c, BKGRAY), zero_vector, EF_Z12); // sides, no shadows, small
 }
 
+void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1)); // shadows
+	unsigned const front_mask(get_face_mask(c.dim, c.dir));
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, front_mask, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // front face only
+	get_material(tid_nm_pair_t(), 1).add_cube_to_verts(c, apply_light_color(c, sides_color), zero_vector, ~front_mask); // sides, shadows
+}
+void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY);}
+void building_room_geom_t::add_mwave   (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY  );}
+
 void building_room_geom_t::add_mirror(room_object_t const &c) {
 	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
 	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1;}
@@ -1867,8 +1876,9 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this));
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
 	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
-	case TYPE_KEYBOARD: return BLACK;
-	case TYPE_COMPUTER: return BLACK;
+	case TYPE_KEYBOARD: return BKGRAY;
+	case TYPE_COMPUTER: return BKGRAY;
+	case TYPE_MWAVE:    return GRAY;
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, etc.
 	}
@@ -1917,6 +1927,8 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex, 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
+		case TYPE_COMPUTER:add_computer(*i); break;
+		case TYPE_MWAVE:   add_mwave   (*i); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn
@@ -1962,8 +1974,6 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_CRATE: add_crate    (*i); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:  add_shelves(*i, tscale); break; // not small but only added to windowless rooms
 		case TYPE_KEYBOARD: add_keyboard(*i); break;
-		//case TYPE_COMPUTER: add_computer(*i); break; // or are these 3D models?
-		//case TYPE_MWAVE:    add_mwave(*i); break; // or are these 3D models?
 		case TYPE_WINE_RACK:add_wine_rack(*i, 0, 1, tscale); break;
 		case TYPE_BOTTLE:   add_bottle(*i); break;
 		default: break;
