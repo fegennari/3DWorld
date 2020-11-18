@@ -549,7 +549,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	}
 }
 
-int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "crate2.jpg" : "crate.jpg");}
+int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
 
 void building_room_geom_t::add_crate(room_object_t const &c) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
@@ -651,7 +651,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_keyboard(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("keyboard.jpg"), 0.0), 1, 0, 1)); // shadows, small
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/keyboard.jpg"), 0.0), 1, 0, 1)); // shadows, small
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
 	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(c, apply_light_color(c, BKGRAY), zero_vector, EF_Z12); // sides, no shadows, small
 }
