@@ -964,14 +964,14 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		set_cube_zvals(cabinet_area, zval, zval+vspace-get_floor_thickness());
 		static vect_cube_t blockers;
 		int const table_blocker_ix(gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1)); // inc_open_doors=1, ignore_chairs=1
-		bool is_sink(1);
+		bool is_sink(1), placed_mwave(0);
 
 		for (unsigned n = 0; n < 50; ++n) { // 50 attempts
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 			float const center(rgen.rand_uniform(cabinet_area.d[!dim][0]+min_hwidth, cabinet_area.d[!dim][1]-min_hwidth)); // random position
-			float const wall_pos(cabinet_area.d[dim][dir]), front_pos(wall_pos + (dir ? -1.0 : 1.0)*depth);
+			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(cabinet_area.d[dim][dir]), front_pos(wall_pos + dir_sign*depth);
 			c.d[ dim][ dir] = wall_pos;
-			c.d[ dim][!dir] = front_pos + (dir ? -1.0 : 1.0)*front_clearance;
+			c.d[ dim][!dir] = front_pos + dir_sign*front_clearance;
 			c.d[!dim][   0] = center - min_hwidth;
 			c.d[!dim][   1] = center + min_hwidth;
 			cube_t c_min(c); // min runlength - used for collision tests
@@ -998,20 +998,28 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				i->flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
 				if (add_backsplash) {i->flags2 |= (1 << (dir+1));} // flag side as having a backsplash
 			}
+			unsigned const cabinet_id(objs.size());
 			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, 0, tot_light_amt);
 			if (add_backsplash) {objs.back().flags2 |= 1;} // flag back as having a backsplash
-
-			if (1) { // add upper cabinets, always (for now); should we remove cabinets in front of windows?
-				cube_t c2(c);
-				set_cube_zvals(c2, zval+0.66*vspace, cabinet_area.z2()); // up to the ceiling
-				if (!has_bcube_int_no_adj(c2, blockers)) {objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);} // no collision detection
-			}
+			// add upper cabinets, always (for now); should we remove cabinets in front of windows?
+			cube_t c2(c);
+			set_cube_zvals(c2, zval+0.66*vspace, cabinet_area.z2()); // up to the ceiling
+			if (!has_bcube_int_no_adj(c2, blockers)) {objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);} // no collision detection
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
-			is_sink = 0; // sink is in first placed counter only
 
-			if (!is_sink) {
-				// TODO: maybe place a microwave on a counter
+			if (!is_sink && !placed_mwave && c.get_sz_dim(!dim) > 0.5*vspace && rgen.rand_bool()) { // place a microwave on a counter 50% of the time
+				float const mheight(rgen.rand_uniform(1.0, 1.2)*0.14*vspace), mwidth(1.7*mheight), mdepth(1.2*mheight); // fixed AR=1.7 to match the texture
+				float const pos(rgen.rand_uniform((c.d[!dim][0] + 0.6*mwidth), (c.d[!dim][1] - 0.6*mwidth)));
+				cube_t mwave;
+				set_cube_zvals(mwave, c.z2(), c.z2()+mheight);
+				set_wall_width(mwave, pos, 0.5*mwidth, !dim);
+				mwave.d[dim][ dir] = wall_pos + dir_sign*0.05*mdepth;
+				mwave.d[dim][!dir] = mwave.d[dim][dir] + dir_sign*mdepth;
+				objs.emplace_back(mwave, TYPE_MWAVE, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+				objs[cabinet_id].flags |= RO_FLAG_ADJ_TOP; // flag as having a microwave so that we don't add a book or bottle that could overlap it
+				placed_mwave = 1;
 			}
+			is_sink = 0; // sink is in first placed counter only
 		} // for n
 	}
 	return placed_obj;
@@ -1411,7 +1419,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &roo
 			book_prob   = 0.8*place_book_prob;
 			bottle_prob = 0.3*place_bottle_prob;
 		}
-		else if (obj.type == TYPE_COUNTER) {
+		else if (obj.type == TYPE_COUNTER && !(obj.flags & RO_FLAG_ADJ_TOP)) { // counter without a microwave
 			book_prob   = (placed_book_on_counter ? 0.0 : 0.5); // only place one book per counter
 			bottle_prob = 0.2*place_bottle_prob;
 		}

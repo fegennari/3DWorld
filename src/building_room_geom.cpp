@@ -659,7 +659,7 @@ void building_room_geom_t::add_keyboard(room_object_t const &c) {
 void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1)); // shadows
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, front_mask, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // front face only
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
 	get_material(tid_nm_pair_t(), 1).add_cube_to_verts(c, apply_light_color(c, sides_color), zero_vector, ~front_mask); // sides, shadows
 }
 void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY);}
