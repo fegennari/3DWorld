@@ -267,7 +267,16 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*0.6*kbd_hwidth;
 			set_wall_width(keyboard, center, kbd_hwidth, !dim);
 			objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // add as white, will be drawn with gray/black texture
-			// TODO: add a computer under the desk
+			// add a computer under the desk
+			float const cheight(0.75*height), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
+			bool const comp_side(rgen.rand_bool());
+			float const pos(c.d[!dim][comp_side] + (comp_side ? -1.0 : 1.0)*0.8*cwidth);
+			cube_t computer;
+			set_cube_zvals(computer, c.z1(), c.z1()+cheight);
+			set_wall_width(computer, pos, 0.5*cwidth, !dim);
+			computer.d[dim][ dir] = c.d[dim][dir] + dsign*0.5*cdepth;
+			computer.d[dim][!dir] = computer.d[dim][dir] + dsign*cdepth;
+			objs.emplace_back(computer, TYPE_COMPUTER, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
 		}
 		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
 			point chair_pos;
