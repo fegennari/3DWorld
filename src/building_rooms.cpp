@@ -278,6 +278,26 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			computer.d[dim][!dir] = computer.d[dim][dir] + dsign*cdepth;
 			objs.emplace_back(computer, TYPE_COMPUTER, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
 		}
+		else if ((rgen.rand()%3) != 0) { // add sheet(s) of paper 75% of the time
+			float const pheight(0.115*vspace), pwidth(0.77*pheight), thickness(0.001*vspace); // 8.5x11
+
+			if (pheight < 0.5*c.get_sz_dim(dim) && pwidth < 0.5*c.get_sz_dim(!dim)) { // desk is large enough
+				cube_t paper;
+				set_cube_zvals(paper, c.z2(), c.z2()+thickness); // very thin
+				unsigned const num_papers(rgen.rand() % 8); // 0-7
+				colorRGBA const cream(0.9, 0.9, 0.8), vlt_yellow(1.0, 1.0, 0.5);
+				colorRGBA const paper_colors[6] = {WHITE, WHITE, WHITE, cream, cream, vlt_yellow};
+
+				for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
+					float const v1(rgen.rand_uniform(c.d[dim][0]+pheight, c.d[dim][1]-pheight)), v2(rgen.rand_uniform(c.d[!dim][0]+pwidth, c.d[!dim][1]-pwidth));
+					set_wall_width(paper, v1, 0.5*pheight,  dim);
+					set_wall_width(paper, v2, 0.5*pwidth,  !dim);
+					objs.emplace_back(paper, TYPE_PAPER, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%6]);
+					objs.back().obj_id = (uint16_t)objs.size();
+					paper.z2() += thickness; // to avoid Z-fighting if different colors
+				} // for n
+			}
+		}
 		if (rgen.rand_float() > 0.05) { // 5% chance of no chair
 			point chair_pos;
 			chair_pos.z = zval;

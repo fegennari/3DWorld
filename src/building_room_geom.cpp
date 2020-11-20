@@ -548,7 +548,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				trim.z1() = c.z2() - trim_height;
 				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color)); // ceiling trim, missing end caps
 			} // for d
-		}
+		} // for is_side
 	}
 }
 
@@ -805,6 +805,17 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	main_cylin.expand_in_dim(dim2, 0.01*radius); // expand slightly in radius
 	main_cylin.d[dim][c.dir] += dir_sign*2.0*radius; main_cylin.d[dim][!c.dir] -= dir_sign*1.0*radius; // shrink in length
 	get_material(tid_nm_pair_t(), 0, 0, 1).add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0); // label, white for now
+}
+
+void building_room_geom_t::add_paper(room_object_t const &c) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1));
+	unsigned const qv_start(mat.quad_verts.size());
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2); // untextured, unshadowed, top face only
+	
+	if (c.flags & RO_FLAG_RAND_ROT) { // add slight rotation to misalign the paper
+		float const angle((PI/8.0)*(fract(123.456*c.obj_id) - 0.5));
+		rotate_verts(mat.quad_verts, plus_z, angle, c.get_cube_center(), qv_start);
+	}
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
@@ -1980,6 +1991,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_KEYBOARD: add_keyboard(*i); break;
 		case TYPE_WINE_RACK:add_wine_rack(*i, 0, 1, tscale); break;
 		case TYPE_BOTTLE:   add_bottle(*i); break;
+		case TYPE_PAPER:    add_paper(*i); break;
 		default: break;
 		}
 	} // for i
