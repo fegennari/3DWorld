@@ -1280,7 +1280,21 @@ void building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place
 	colorRGBA const &color(colors[rgen.rand()%3]);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
-	objs.back().obj_id = (uint16_t)objs.size();
+	set_obj_id(objs);
+}
+
+void building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.3, 0.45)*window_vspacing);
+	float const radius(min(rgen.rand_uniform(0.04, 0.08)*window_vspacing, min(place_on.dx(), place_on.dy())/3.0f));
+	point center;
+	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + 1.2*radius), (place_on.d[d][1] - 1.2*radius));} // place at least 1.2*radius from edge
+	cube_t plant; // plant bcube
+	plant.set_from_sphere(center, radius);
+	set_cube_zvals(plant, place_on.z2(), place_on.z2()+height);
+	if (!avoid.is_all_zeros() && plant.intersects(avoid)) return; // only make one attempt
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, choose_pot_color(rgen));
+	set_obj_id(objs);
 }
 
 void building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt) {
@@ -1436,26 +1450,30 @@ void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &roo
 	float const window_vspacing(get_window_vspace());
 	float const place_book_prob((is_house ? 1.0 : 0.5)*(room.is_office ? 0.8 : 1.0));
 	float const place_bottle_prob(is_house ? 1.0 : (room.is_office ? 0.75 : 0.0));
+	float const place_plant_prob (is_house ? 1.0 : (room.is_office ? 0.25 : 0.0));
 	unsigned const objs_end(objs.size());
 	bool placed_book_on_counter(0);
 
 	// see if we can place books or bottles on any room object top surfaces
 	for (unsigned i = objs_start; i < objs_end; ++i) { // can't iterate over objs because we modify it
 		room_object_t const &obj(objs[i]);
-		float book_prob(0.0), bottle_prob(0.0);
+		float book_prob(0.0), bottle_prob(0.0), plant_prob(0.0);
 		cube_t book;
 
 		if (obj.type == TYPE_TABLE && i == objs_start) { // only first table (not TV table)
 			book_prob   = 0.4*place_book_prob;
 			bottle_prob = 0.5*place_bottle_prob;
+			plant_prob  = 0.6*place_plant_prob;
 		}
 		else if (obj.type == TYPE_DESK && (i+1 == objs_end || objs[i+1].type != TYPE_TV)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
 			bottle_prob = 0.3*place_bottle_prob;
+			plant_prob  = 0.3*place_plant_prob;
 		}
 		else if (obj.type == TYPE_COUNTER && !(obj.flags & RO_FLAG_ADJ_TOP)) { // counter without a microwave
 			book_prob   = (placed_book_on_counter ? 0.0 : 0.5); // only place one book per counter
 			bottle_prob = 0.2*place_bottle_prob;
+			plant_prob  = 0.1*place_plant_prob;
 		}
 		if (book_prob > 0.0 && rgen.rand_float() < book_prob) {
 			placed_book_on_counter |= (obj.type == TYPE_COUNTER);
@@ -1464,6 +1482,9 @@ void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &roo
 		}
 		if (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob) {
 			place_bottle_on_obj(rgen, objs[i], room_id, tot_light_amt, book); // capture a new reference in case it was invalidated by placing the book above
+		}
+		else if (plant_prob > 0.0 && rgen.rand_float() < plant_prob) { // don't add both a plant and a bottle
+			place_plant_on_obj(rgen, objs[i], room_id, tot_light_amt, book); // capture a new reference
 		}
 	} // for i
 }
