@@ -523,6 +523,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 		for (unsigned is_side = 0; is_side < 2; ++is_side) { // front wall, side wall
 			for (unsigned d = 0; d < 2; ++d) {
+				unsigned skip_faces(~get_face_mask(c.dim, !c.dir) | EF_Z1);
 				cube_t trim;
 				
 				if (is_side) { // sides of closet
@@ -536,11 +537,13 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 					trim = walls[d];
 					trim.d[ c.dim][!c.dir]  = trim.d[c.dim][c.dir];
 					trim.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*trim_thickness;
-					trim.d[!c.dim][d]      += (d     ? 1.0 : -1.0)*trim_thickness; // expand to cover the outside corner gap; doesn't really line up properly for angled ceiling trim though
+					// expand to cover the outside corner gap if not along room wall, otherwise hide the face; doesn't really line up properly for angled ceiling trim though
+					if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {skip_faces |= ~get_face_mask(!c.dim, d);}
+					else {trim.d[!c.dim][d] += (d ? 1.0 : -1.0)*trim_thickness;}
 				}
 				bool const trim_dim(c.dim ^ bool(is_side)), trim_dir(is_side ? d : c.dir);
 				trim.z2() = c.z1() + trim_height;
-				get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(trim, trim_color, tex_origin, (~get_face_mask(c.dim, !c.dir) | EF_Z1)); // is_small, untextured, no shadows
+				get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(trim, trim_color, tex_origin, skip_faces); // is_small, untextured, no shadows
 				trim.z2() = c.z2();
 				trim.z1() = c.z2() - trim_height;
 				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color)); // ceiling trim, missing end caps
