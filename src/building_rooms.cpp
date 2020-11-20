@@ -44,6 +44,7 @@ template<typename T> cube_t get_cube_height_radius(point const &center, T radius
 	return c;
 }
 void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
+void set_obj_id(vector<room_object_t> &objs) {objs.back().obj_id = (uint16_t)objs.size();}
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 	colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model)
@@ -198,7 +199,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_BCASE, room_id, dim, !dir, 0, tot_light_amt); // Note: dir faces into the room, not the wall
-		objs.back().obj_id = (uint16_t)objs.size();
+		set_obj_id(objs);
 		return 1; // done/success
 	} // for n
 	return 0; // not placed
@@ -245,7 +246,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // make short if against an exterior wall or in an office
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
-		objs.back().obj_id = (uint16_t)objs.size();
+		set_obj_id(objs);
 		cube_t bc(c);
 		bool const add_monitor(building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
 
@@ -258,7 +259,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			tv.d[dim][!dir] = tv.d[dim][dir] + dsign*tv_depth;
 			set_wall_width(tv, center, tv_hwidth, !dim);
 			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, 0, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
-			objs.back().obj_id = (uint16_t)objs.size();
+			set_obj_id(objs);
 			// add a keyboard as well
 			float const kbd_hwidth(0.7*tv_hwidth);
 			cube_t keyboard;
@@ -293,7 +294,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 					set_wall_width(paper, v1, 0.5*pheight,  dim);
 					set_wall_width(paper, v2, 0.5*pwidth,  !dim);
 					objs.emplace_back(paper, TYPE_PAPER, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%6]);
-					objs.back().obj_id = (uint16_t)objs.size();
+					set_obj_id(objs);
 					paper.z2() += thickness; // to avoid Z-fighting if different colors
 				} // for n
 			}
@@ -590,7 +591,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 }
 
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
-	cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window)
+	cube_t const &place_area, unsigned objs_start, float front_clearance, unsigned pref_orient, bool pref_centered, colorRGBA const &color, bool not_at_window, room_obj_shape shape)
 {
 	float const hwidth(0.5*height*sz_scale.y/sz_scale.z), depth(height*sz_scale.x/sz_scale.z), min_space(2.8*hwidth);
 	vector3d const place_area_sz(place_area.get_size());
@@ -631,8 +632,8 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		cube_t c3(c); // used for collision tests
 		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
 		if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
-		objs.emplace_back(c, type, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CUBE, color);
-		objs.back().obj_id = (uint16_t)objs.size();
+		objs.emplace_back(c, type, room_id, dim, !dir, 0, tot_light_amt, shape, color);
+		set_obj_id(objs);
 		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
 		return 1; // done
 	} // for n
@@ -1119,7 +1120,7 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 		tc.d[dim][!dir] += (dir ? -1.0 : 1.0)*clearance; // increase space to add clearance
 		if (is_cube_close_to_doorway(tc, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(tc) || overlaps_other_room_obj(tc, objs_start)) continue; // bad placement
 		objs.emplace_back(c, TYPE_WINE_RACK, room_id, dim, !dir, 0, tot_light_amt); // Note: dir faces into the room, not the wall
-		objs.back().obj_id = (uint16_t)objs.size();
+		set_obj_id(objs);
 		break; // done/success
 	} // for n
 }
@@ -1164,7 +1165,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			shelves.expand_in_dim(!dim, -(shelf_width + 1.0f*wall_thickness)); // shorten shelves
 			if (has_bcube_int(shelves, exclude)) continue; // too close to a doorway
 			objs.emplace_back(shelves, TYPE_SHELVES, room_id, dim, dir, 0, tot_light_amt);
-			objs.back().obj_id = (uint16_t)objs.size();
+			set_obj_id(objs);
 		} // for dir
 	} // for dim
 	// add a random office chair if there's space
@@ -1202,7 +1203,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (bad_placement) continue;
 		if (is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
 		objs.emplace_back(crate, TYPE_CRATE, room_id, 0, 0, 0, tot_light_amt);
-		objs.back().obj_id = (uint16_t)objs.size(); // used to select texture
+		set_obj_id(objs); // used to select texture
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
 	return 1; // it's always a storage room, even if it's empty
@@ -1243,6 +1244,12 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 	} // for dir
 }
 
+colorRGBA choose_pot_color(rand_gen_t &rgen) {
+	unsigned const num_colors = 8;
+	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
+	return pot_colors[rgen.rand() % num_colors];
+}
+
 void building_t::place_book_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
@@ -1258,19 +1265,19 @@ void building_t::place_book_on_obj(rand_gen_t rgen, room_object_t const &place_o
 	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color); // Note: invalidates place_on reference
-	objs.back().obj_id = (uint16_t)objs.size();
+	set_obj_id(objs);
 }
 
 void building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
-	float const window_vspacing(get_window_vspace()), bottle_height(0.102*window_vspacing), bottle_radius(0.015*window_vspacing);
+	float const window_vspacing(get_window_vspace()), height(0.102*window_vspacing), radius(0.015*window_vspacing);
 	point center;
-	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + 2.0*bottle_radius), (place_on.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
+	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + 2.0*radius), (place_on.d[d][1] - 2.0*radius));} // place at least 2*radius from edge
 	cube_t bottle; // bottle bcube
-	bottle.set_from_sphere(center, bottle_radius);
-	set_cube_zvals(bottle, place_on.z2(), place_on.z2()+bottle_height);
+	bottle.set_from_sphere(center, radius);
+	set_cube_zvals(bottle, place_on.z2(), place_on.z2()+height);
 	if (!avoid.is_all_zeros() && bottle.intersects(avoid)) return; // only make one attempt
-	colorRGBA const bottle_colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
-	colorRGBA const &color(bottle_colors[rgen.rand()%3]);
+	colorRGBA const colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
+	colorRGBA const &color(colors[rgen.rand()%3]);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
 	objs.back().obj_id = (uint16_t)objs.size();
@@ -1388,14 +1395,12 @@ void building_t::add_plants_to_room(rand_gen_t &rgen, room_t const &room, float 
 	float const window_vspacing(get_window_vspace());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
-	unsigned const num_colors = 8;
-	colorRGBA const pot_colors[num_colors] = {LT_GRAY, GRAY, DK_GRAY, BKGRAY, WHITE, LT_BROWN, RED, colorRGBA(1.0, 0.35, 0.18)};
 	
 	for (unsigned n = 0; n < num; ++n) {
 		float const height(rgen.rand_uniform(0.6, 0.9)*window_vspacing), width(rgen.rand_uniform(0.15, 0.35)*window_vspacing);
 		vector3d const sz_scale(width/height, width/height, 1.0);
 		place_obj_along_wall(TYPE_PLANT, room, height, sz_scale, rgen, zval, room_id, tot_light_amt,
-			place_area, objs_start, 0.0, 4, 0, pot_colors[rgen.rand() % num_colors]); // no clearanc, pref_orient, or color
+			place_area, objs_start, 0.0, 4, 0, choose_pot_color(rgen), 0, SHAPE_CYLIN); // no clearance, pref_orient, or color
 	}
 }
 
