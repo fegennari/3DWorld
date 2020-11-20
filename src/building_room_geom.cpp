@@ -1691,8 +1691,9 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		}
 		add_cabinet(cabinet, tscale); // draw the wood part
 	}
-	if (c.flags2) { // add backsplash
-		rgeom_mat_t &bs_mat(get_material(tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale), 0)); // no shadows
+	if (c.flags2) { // add backsplash, 50% chance of tile vs. matching marble
+		tid_nm_pair_t const bs_tex((c.room_id & 1) ? marble_tex : tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale));
+		rgeom_mat_t &bs_mat(get_material(bs_tex, 0)); // no shadows
 		cube_t bsz(c);
 		bsz.z1()  = c.z2();
 		bsz.z2() += 0.33*c.dz();
