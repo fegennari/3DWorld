@@ -556,7 +556,35 @@ int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id 
 
 void building_room_geom_t::add_crate(room_object_t const &c) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
+	if (c.obj_id & 1) { // make it a box
+		int const tid(get_texture_by_name("../models/interiors/box/box.jpg")), nm_tid(get_texture_by_name("../models/interiors/box/box_normal.jpg"));
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(tid, nm_tid, 0.0, 0.0), 1, 0, 1));
+		unsigned const verts_start(mat.quad_verts.size());
+		mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
+		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (-x +x -y +y +z) / 20 verts (no -z)
+		float const sz(2048), x1(6/sz), x2(576/sz), x3(1458/sz), x4(2032/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz), y4(1-128/sz);
+
+		for (unsigned d = 0; d < 2; ++d) { // for each end
+			unsigned ix(verts_start + 4*d);
+			mat.quad_verts[ix++].set_tc(x2, (c.dim ? y1 : y2)); // x
+			mat.quad_verts[ix++].set_tc(x3, (c.dim ? y1 : y2));
+			mat.quad_verts[ix++].set_tc(x3, (c.dim ? y2 : y3));
+			mat.quad_verts[ix++].set_tc(x2, (c.dim ? y2 : y3));
+			ix += 4; // skip the other face
+			mat.quad_verts[ix++].set_tc(x2, (c.dim ? y2 : y1)); // y
+			mat.quad_verts[ix++].set_tc(x3, (c.dim ? y2 : y1));
+			mat.quad_verts[ix++].set_tc(x3, (c.dim ? y3 : y2));
+			mat.quad_verts[ix++].set_tc(x2, (c.dim ? y3 : y2));
+			ix += 4; // skip the other face
+			mat.quad_verts[ix++].set_tc(x1, y2); // z
+			mat.quad_verts[ix++].set_tc(x2, y2);
+			mat.quad_verts[ix++].set_tc(x2, y3);
+			mat.quad_verts[ix++].set_tc(x1, y3);
+		} // for d
+	}
+	else { // make it a crate
+		get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
+	}
 }
 
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
