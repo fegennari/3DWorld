@@ -1279,8 +1279,7 @@ void building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place
 	bottle.set_from_sphere(center, radius);
 	set_cube_zvals(bottle, place_on.z2(), place_on.z2()+height);
 	if (!avoid.is_all_zeros() && bottle.intersects(avoid)) return; // only make one attempt
-	colorRGBA const colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
-	colorRGBA const &color(colors[rgen.rand()%3]);
+	colorRGBA const &color(bottle_colors[rgen.rand()%NUM_BOTTLE_COLORS]);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
 	set_obj_id(objs);

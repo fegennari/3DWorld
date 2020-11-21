@@ -646,8 +646,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			C.z1() = S.z2();
 			C.z2() = S.z2() + bottle_height;
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-			colorRGBA const bottle_colors[3] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
-			C.color = bottle_colors[rgen.rand()%3];
+			C.color = bottle_colors[rgen.rand()%NUM_BOTTLE_COLORS];
 			add_bottle(C);
 			cubes.push_back(C);
 		} // for n
