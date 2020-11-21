@@ -198,7 +198,7 @@ public:
 	void create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z=0, bool land_plants_only=0);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
-	void create_leaf_points(vector<vert_norm_comp> &points, float plant_scale) const;
+	void create_leaf_points(vector<vert_norm_comp> &points, float plant_scale, float nlevels_scale=1.0, unsigned nrings=3) const;
 	void gen_points(vbo_vnc_block_manager_t &vbo_manager);
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager);
 	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager);

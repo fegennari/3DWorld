@@ -1286,8 +1286,8 @@ void building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place
 }
 
 void building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
-	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.3, 0.45)*window_vspacing);
-	float const radius(min(rgen.rand_uniform(0.04, 0.08)*window_vspacing, min(place_on.dx(), place_on.dy())/3.0f));
+	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.25, 0.4)*window_vspacing);
+	float const radius(min(rgen.rand_uniform(0.06, 0.08)*window_vspacing, min(place_on.dx(), place_on.dy())/3.0f));
 	point center;
 	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + 1.2*radius), (place_on.d[d][1] - 1.2*radius));} // place at least 1.2*radius from edge
 	cube_t plant; // plant bcube
@@ -1493,7 +1493,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		if (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob) {
 			place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, book);
 		}
-		/*else*/ if (plant_prob > 0.0 /*&& rgen.rand_float() < plant_prob*/) { // don't add both a plant and a bottle
+		else if (plant_prob > 0.0 && rgen.rand_float() < plant_prob) { // don't add both a plant and a bottle
 			place_plant_on_obj(rgen, surface, room_id, tot_light_amt, book);
 		}
 	} // for i

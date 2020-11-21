@@ -1803,7 +1803,7 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant) {
-	float const plant_diameter(0.5f*(c.dx() + c.dy())), stem_radius(0.035*plant_diameter);
+	float const plant_diameter(0.5f*(c.dx() + c.dy())), stem_radius(0.04*plant_diameter);
 	float const pot_height(max(0.6*plant_diameter, 0.3*c.dz())), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height);
 	float const cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
 	point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk
@@ -1822,7 +1822,7 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 		plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id, 0, 1); // land_plants_only=1
 		static vector<vert_norm_comp> points;
 		points.clear();
-		plant.create_leaf_points(points, 10.0); // plant_scale=10.0 seems to work well
+		plant.create_leaf_points(points, 10.0, 1.5, 4); // plant_scale=10.0 seems to work well; more levels and rings
 		auto &leaf_verts(mats_plants.get_material(tid_nm_pair_t(plant.get_leaf_tid()), 1).quad_verts);
 		color_wrapper const leaf_cw(apply_light_color(c, plant.get_leaf_color()));
 		float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
