@@ -1202,7 +1202,8 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 		if (bad_placement) continue;
 		if (is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
-		objs.emplace_back(crate, TYPE_CRATE, room_id, 0, 0, 0, tot_light_amt);
+		colorRGBA const crate_color(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
+		objs.emplace_back(crate, TYPE_CRATE, room_id, 0, 0, 0, tot_light_amt, SHAPE_CUBE, crate_color);
 		set_obj_id(objs); // used to select texture
 		if (++num_placed == num_crates) break; // we're done
 	} // for n

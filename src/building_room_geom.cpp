@@ -631,6 +631,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			C.z2() = C.z1() + (z_step - thickness)*rgen.rand_uniform(0.4, 0.95);
 			C.expand_by_xy(sz);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
+			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
 			add_crate(C);
 			cubes.push_back(C);
 		} // for n
@@ -1888,7 +1889,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CLOSET:   return (color*0.5 + WHITE*0.5); // half white door and half wall color
 	case TYPE_DRESSER:  return get_textured_wood_color();
 	case TYPE_FLOORING: return texture_color(MARBLE_TEX).modulate_with(color);
-	case TYPE_CRATE:    return texture_color(get_crate_tid(*this));
+	case TYPE_CRATE:    return texture_color(get_crate_tid(*this)).modulate_with(color);
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
 	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
 	case TYPE_KEYBOARD: return BKGRAY;
@@ -1978,20 +1979,20 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		assert(i->type < NUM_TYPES);
 
 		switch (i->type) {
-		case TYPE_BOOK:  add_book    (*i, 0, 1); break;
-		case TYPE_BCASE: add_bookcase(*i, 0, 1, tscale, 0); break;
-		case TYPE_BED:   add_bed     (*i, 0, 1, tscale); break;
-		case TYPE_SIGN:  add_sign    (*i, 0, 1); break;
+		case TYPE_BOOK:      add_book     (*i, 0, 1); break;
+		case TYPE_BCASE:     add_bookcase (*i, 0, 1, tscale, 0); break;
+		case TYPE_BED:       add_bed      (*i, 0, 1, tscale); break;
+		case TYPE_SIGN:      add_sign     (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
-		case TYPE_CLOSET:add_closet(*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim, don't need wall_tex
-		case TYPE_RAILING:   add_railing(*i); break;
-		case TYPE_PLANT: add_potted_plant(*i, 0, 1); break; // plant only
-		case TYPE_CRATE: add_crate    (*i); break; // not small but only added to windowless rooms
-		case TYPE_SHELVES:  add_shelves(*i, tscale); break; // not small but only added to windowless rooms
-		case TYPE_KEYBOARD: add_keyboard(*i); break;
-		case TYPE_WINE_RACK:add_wine_rack(*i, 0, 1, tscale); break;
-		case TYPE_BOTTLE:   add_bottle(*i); break;
-		case TYPE_PAPER:    add_paper(*i); break;
+		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim, don't need wall_tex
+		case TYPE_RAILING:   add_railing  (*i); break;
+		case TYPE_PLANT:     add_potted_plant(*i, 0, 1); break; // plant only
+		case TYPE_CRATE:     add_crate    (*i); break; // not small but only added to windowless rooms
+		case TYPE_SHELVES:   add_shelves  (*i, tscale); break; // not small but only added to windowless rooms
+		case TYPE_KEYBOARD:  add_keyboard (*i); break;
+		case TYPE_WINE_RACK: add_wine_rack(*i, 0, 1, tscale); break;
+		case TYPE_BOTTLE:    add_bottle   (*i); break;
+		case TYPE_PAPER:     add_paper    (*i); break;
 		default: break;
 		}
 	} // for i
