@@ -1446,7 +1446,7 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 	} // for dim
 }
 
-void building_t::place_objects_onto_surfaces(rand_gen_t &rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
 	float const window_vspacing(get_window_vspace());
