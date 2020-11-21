@@ -1837,8 +1837,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
 	float const door_height(get_door_height()), floor_to_ceil_height(window_vspacing - floor_thickness);
 	unsigned const flags(RO_FLAG_NOCOLL);
-	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly
-	bool const has_outside_corners(!is_house && !pri_hall.is_all_zeros()), has_ceil_trim(!has_outside_corners);
+	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
+	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
+	bool const has_outside_corners(!is_house && !pri_hall.is_all_zeros()), has_ceil_trim(!has_outside_corners && is_house);
 	colorRGBA const &trim_color(is_house ? WHITE : DK_GRAY);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vect_cube_t trim_cubes;
