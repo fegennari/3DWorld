@@ -1270,7 +1270,9 @@ void building_t::place_book_on_obj(rand_gen_t rgen, room_object_t const &place_o
 }
 
 void building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
-	float const window_vspacing(get_window_vspace()), height(0.102*window_vspacing), radius(0.015*window_vspacing);
+	float const window_vspacing(get_window_vspace());
+	float const height(window_vspacing*rgen.rand_uniform(0.075, 0.12)), radius(window_vspacing*rgen.rand_uniform(0.012, 0.018));
+	if (min(place_on.dx(), place_on.dy()) < 6.0*radius) return; // surface is too small to place this bottle
 	point center;
 	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + 2.0*radius), (place_on.d[d][1] - 2.0*radius));} // place at least 2*radius from edge
 	cube_t bottle; // bottle bcube

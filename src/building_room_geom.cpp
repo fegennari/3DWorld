@@ -636,11 +636,11 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			cubes.push_back(C);
 		} // for n
 		unsigned const num_bottles(rgen.rand() % 9); // 0-8
-		float const bottle_height(0.6f*z_step), bottle_radius(0.15*bottle_height);
 		C.dir = C.dim = 0;
 
 		for (unsigned n = 0; n < num_bottles; ++n) {
 			// same as building_t::place_bottle_on_obj()
+			float const bottle_height(z_step*rgen.rand_uniform(0.4, 0.7)), bottle_radius(z_step*rgen.rand_uniform(0.07, 0.11));
 			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 2.0*bottle_radius), (S.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
 			C.set_from_sphere(center, bottle_radius);
 			C.z1() = S.z2();
@@ -785,11 +785,11 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD};
 	vector3d const sz(c.get_size());
 	int const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
-	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square
+	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
 	cube_t sphere(c), main_cylin(c), top_cylin(c);
 	sphere.d[dim][ c.dir] = c.d[dim][c.dir] + dir_sign*0.5*sz[dim];
-	sphere.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*2.0*radius;
-	main_cylin.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*radius;
+	sphere.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.3*sz.z;
+	main_cylin.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.15*sz.z;
 	top_cylin .d[dim][ c.dir] = main_cylin.d[dim][!c.dir]; // there will be some intersection, but that should be okay
 	top_cylin.expand_in_dim(dim1, -0.32*sz[dim1]); // smaller radius
 	top_cylin.expand_in_dim(dim2, -0.32*sz[dim2]); // smaller radius
@@ -804,7 +804,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
 	main_cylin.expand_in_dim(dim1, 0.01*radius); // expand slightly in radius
 	main_cylin.expand_in_dim(dim2, 0.01*radius); // expand slightly in radius
-	main_cylin.d[dim][c.dir] += dir_sign*2.0*radius; main_cylin.d[dim][!c.dir] -= dir_sign*1.0*radius; // shrink in length
+	main_cylin.d[dim][c.dir] += dir_sign*0.3*sz.z; main_cylin.d[dim][!c.dir] -= dir_sign*0.15*sz.z; // shrink in length
 	get_material(tid_nm_pair_t(), 0, 0, 1).add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0); // label, white for now
 }
 
@@ -1208,7 +1208,7 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 		colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
 		cube_t frame(c);
-		frame.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.1*c.get_sz_dim(c.dim); // slightly less depth so that bottles stick out a bit
+		frame.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.09*c.get_sz_dim(c.dim); // slightly less depth so that bottles stick out a bit
 
 		// create rows and columns of cubbies by intersecting horizontal and vertical cubes
 		for (unsigned i = 0; i <= num_rows; ++i) { // rows/horizontal
