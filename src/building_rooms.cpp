@@ -1477,16 +1477,24 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			bottle_prob = 0.2*place_bottle_prob;
 			plant_prob  = 0.1*place_plant_prob;
 		}
+		else {
+			continue;
+		}
+		room_object_t surface(obj); // deep copy to allow modification and avoid using an invalidated reference
+		
+		if (obj.shape == SHAPE_CYLIN) { // find max contained XY rectangle (simpler than testing distance to center vs. radius)
+			for (unsigned d = 0; d < 2; ++d) {surface.expand_in_dim(d, -0.5*(1.0 - SQRTOFTWOINV)*surface.get_sz_dim(d));}
+		}
 		if (book_prob > 0.0 && rgen.rand_float() < book_prob) {
 			placed_book_on_counter |= (obj.type == TYPE_COUNTER);
-			place_book_on_obj(rgen, obj, room_id, tot_light_amt, (obj.type != TYPE_TABLE));
+			place_book_on_obj(rgen, surface, room_id, tot_light_amt, (obj.type != TYPE_TABLE));
 			book = objs.back();
 		}
 		if (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob) {
-			place_bottle_on_obj(rgen, objs[i], room_id, tot_light_amt, book); // capture a new reference in case it was invalidated by placing the book above
+			place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, book);
 		}
-		else if (plant_prob > 0.0 && rgen.rand_float() < plant_prob) { // don't add both a plant and a bottle
-			place_plant_on_obj(rgen, objs[i], room_id, tot_light_amt, book); // capture a new reference
+		/*else*/ if (plant_prob > 0.0 /*&& rgen.rand_float() < plant_prob*/) { // don't add both a plant and a bottle
+			place_plant_on_obj(rgen, surface, room_id, tot_light_amt, book);
 		}
 	} // for i
 }
