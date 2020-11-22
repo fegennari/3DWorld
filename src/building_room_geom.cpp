@@ -556,7 +556,7 @@ int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id 
 
 void building_room_geom_t::add_crate(room_object_t const &c) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	if (c.obj_id & 1) { // make it a box
+	if (c.obj_id & 2) { // make it a box
 		int const tid(get_texture_by_name("interiors/box.jpg")), nm_tid(get_texture_by_name("interiors/box_normal.jpg"));
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(tid, nm_tid, 0.0, 0.0), 1, 0, 1));
 		unsigned const verts_start(mat.quad_verts.size());
@@ -569,16 +569,17 @@ void building_room_geom_t::add_crate(room_object_t const &c) {
 		mat.quad_verts[verts_start+3].set_tc(x1, y3);
 
 		for (unsigned d = 0; d < 2; ++d) { // for each end
+			unsigned const ix_shift((1 + 2*d)*c.dim); // needed to make sure the up icon actually faces up
 			unsigned ix(verts_start + 4*d + 4);
-			mat.quad_verts[ix++].set_tc(x2, (c.dim ? y1 : y2)); // x
-			mat.quad_verts[ix++].set_tc(x3, (c.dim ? y1 : y2));
-			mat.quad_verts[ix++].set_tc(x3, (c.dim ? y2 : y3));
-			mat.quad_verts[ix++].set_tc(x2, (c.dim ? y2 : y3));
-			ix += 4; // skip the other face
-			mat.quad_verts[ix++].set_tc(x2, (c.dim ? y2 : y1)); // y
-			mat.quad_verts[ix++].set_tc(x3, (c.dim ? y2 : y1));
-			mat.quad_verts[ix++].set_tc(x3, (c.dim ? y3 : y2));
-			mat.quad_verts[ix++].set_tc(x2, (c.dim ? y3 : y2));
+
+			for (unsigned e = 0; e < 2; ++e) { // x, y
+				bool const f(c.dim ^ bool(e));
+				mat.quad_verts[ix+((0+ix_shift)&3)].set_tc(x2, (f ? y1 : y2));
+				mat.quad_verts[ix+((1+ix_shift)&3)].set_tc(x3, (f ? y1 : y2));
+				mat.quad_verts[ix+((2+ix_shift)&3)].set_tc(x3, (f ? y2 : y3));
+				mat.quad_verts[ix+((3+ix_shift)&3)].set_tc(x2, (f ? y2 : y3));
+				ix += 8; // skip the other face
+			} // for e
 		} // for d
 	}
 	else { // make it a crate
