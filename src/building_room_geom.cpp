@@ -199,8 +199,7 @@ void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, b
 	static sphere_point_norm spn[2];
 	if (!spn[low_detail].get_points()) {sd[low_detail].gen_points_norms(spn[low_detail]);} // calculate once and reuse
 	sd[low_detail].get_quad_points(verts); // could use indexed triangles, but this only returns indexed quads
-	color_wrapper cw;
-	cw.set_c4(color);
+	color_wrapper const cw(color);
 	point const center(c.get_cube_center()), size(0.5*c.get_size());
 	for (auto i = verts.begin(); i != verts.end(); ++i) {quad_verts.emplace_back(vert_norm_comp_tc((i->v*size + center), i->n, i->t[0], i->t[1]), cw);}
 }
@@ -1339,7 +1338,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vecto
 	color_wrapper cw(color);
 	auto &verts(mat.itri_verts); // Note: could cache verts
 	unsigned const start(verts.size()), stride(ndiv + 1);
-	float dists[ndiv+1];
+	float dists[ndiv+1] = {};
 	norm_comp const nc(plus_z);
 
 	for (unsigned x = 0; x <= ndiv; ++x) {

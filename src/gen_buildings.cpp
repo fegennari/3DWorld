@@ -311,7 +311,7 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 	assert(bg.alt_step_factor >= 0.0 && bg.alt_step_factor < 1.0);
 	if (bg.flat_side_amt > 0.0) {assert(ndiv > 4);} // should be at least 5 sides, 6-8 is better
 	float const ndiv_inv(1.0/ndiv), css(TWO_PI*ndiv_inv*(1.0f - bg.flat_side_amt));
-	float sin_ds[2], cos_ds[2];
+	float sin_ds[2] = {}, cos_ds[2] = {};
 
 	if (bg.alt_step_factor > 0.0) { // alternate between large and small steps (cube with angled corners, etc.)
 		assert(!(ndiv&1));
@@ -1497,7 +1497,7 @@ class building_creator_t {
 	};
 	unsigned get_grid_ix(point pos) const {
 		range.clamp_pt_xy(pos);
-		unsigned gxy[2];
+		unsigned gxy[2] = {};
 		for (unsigned d = 0; d < 2; ++d) {
 			float const v((pos[d] - range.d[d][0])*range_sz_inv[d]);
 			gxy[d] = unsigned(v*(grid_sz-1));
