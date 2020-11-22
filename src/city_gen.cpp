@@ -2233,7 +2233,7 @@ class city_road_gen_t : public road_gen_base_t {
 					road_isec_t const &isec(car_rn.get_car_isec(car)); // Note: either == city_id, or just moved from global to a new city
 					unsigned const orient_in(car.get_orient_in_isec()); // invert dir (incoming, not outgoing)
 					assert(isec.conn & (1<<orient_in)); // car must come from an enabled orient
-					unsigned orients[3]; // {straight, left, right}
+					unsigned orients[3] = {}; // {straight, left, right}
 					orients[TURN_NONE ] = car.get_orient(); // straight
 					orients[TURN_LEFT ] = stoplight_ns::conn_left [orient_in];
 					orients[TURN_RIGHT] = stoplight_ns::conn_right[orient_in];
@@ -2562,7 +2562,7 @@ public:
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
 					//cout << "Double segment cost: " << best_cost << " " << TXT(best_xval) << TXT(best_yval) << TXT(fdim) << ", int_cube: " << best_int_cube.str() << endl;
 					hq.flatten_region_to(best_int_cube, city_params.road_border); // do this first to improve flattening
-					unsigned road_ix[2];
+					unsigned road_ix[2] = {};
 					road_ix[ fdim] = global_rn.num_roads();
 					float const cost1(global_rn.create_connector_road(bcube1, best_int_cube, blockers, &rn1, nullptr, city1,
 						CONN_CITY_IX, city1, city2, hq, road_width, (fdim ? best_xval : best_yval),  fdim, 0, is_4way, 0)); // check_only=0

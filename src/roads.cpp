@@ -798,7 +798,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	int const cable_ndiv(min(24, max(4, int(0.4/dist_val))));
 	unsigned const num_segs(max(16U, min(48U, unsigned(ceil(2.5*len/scale))))); // scale to fit the gap, with reasonable ranges
 	float const step_sz(1.0/num_segs), delta_d(step_sz*delta[d]), delta_z(step_sz*delta.z);
-	float zvals[48+1], cur_zpos(p1.z), cur_dval(p1[d]); // resize zvals based on max num_segs
+	float zvals[48+1] = {}, cur_zpos(p1.z), cur_dval(p1[d]); // resize zvals based on max num_segs
 	vector<float> sm_split_pos;
 	uint64_t prev_tile_id(0);
 	point query_pt(bridge.get_cube_center());
