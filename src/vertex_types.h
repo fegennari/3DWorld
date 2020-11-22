@@ -256,6 +256,9 @@ struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper 
 	template<typename T> void assign(point const &v_, T const &n_, float ts, float tt, unsigned char const *const c_) { // T can be vector3d or norm_comp
 		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
 	}
+	template<typename T> void assign(point const &v_, T const &n_, float ts, float tt, color_wrapper const &cw) { // T can be vector3d or norm_comp
+		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; copy_color(cw);
+	}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 

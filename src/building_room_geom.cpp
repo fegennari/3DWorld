@@ -136,8 +136,8 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 			unsigned const s(i%ndiv);
 			float const ts(side_tscale*(1.0f - i*ndiv_inv));
 			norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
-			itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, ts, 0.0, cw.c);
-			itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw.c);
+			itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, ts, 0.0, cw);
+			itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw);
 		}
 		for (unsigned i = 0; i < ndiv; ++i) { // index data
 			unsigned const ix0(itris_start + 2*i);
@@ -157,12 +157,12 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 		if (!(bt ? draw_top : draw_bot)) continue; // this disk not drawn
 		norm_comp const normal((bool(bt) ^ inv_tb) ? v12 : -v12);
 		unsigned const center_ix(itix);
-		itri_verts[itix++].assign(ce[bt], normal, half_end_tscale, half_end_tscale, cw.c); // center
+		itri_verts[itix++].assign(ce[bt], normal, half_end_tscale, half_end_tscale, cw); // center
 
 		for (unsigned I = 0; I < ndiv; ++I) {
 			unsigned const i(bt ? ndiv-I-1 : I); // invert winding order for top face
 			vector3d const &side_normal(vpn.n[i]);
-			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, half_end_tscale*(side_normal.x + 1.0), half_end_tscale*(side_normal.y + 1.0), cw.c); // assign tcs from side normal
+			itri_verts[itix++].assign(vpn.p[(i<<1) + bt], normal, half_end_tscale*(side_normal.x + 1.0), half_end_tscale*(side_normal.y + 1.0), cw); // assign tcs from side normal
 			indices[iix++] = center_ix; // center
 			indices[iix++] = center_ix + i + 1;
 			indices[iix++] = center_ix + ((i+1)%ndiv) + 1;
