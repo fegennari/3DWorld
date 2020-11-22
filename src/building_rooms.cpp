@@ -43,7 +43,6 @@ template<typename T> cube_t get_cube_height_radius(point const &center, T radius
 	c.z2() += height;
 	return c;
 }
-void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
 void set_obj_id(vector<room_object_t> &objs) {objs.back().obj_id = (uint16_t)objs.size();}
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
@@ -261,11 +260,11 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, 0, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
 			set_obj_id(objs);
 			// add a keyboard as well
-			float const kbd_hwidth(0.7*tv_hwidth);
+			float const kbd_hwidth(0.7*tv_hwidth), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
 			cube_t keyboard;
-			set_cube_zvals(keyboard, c.z2(), c.z2()+0.06*kbd_hwidth);
+			set_cube_zvals(keyboard, c.z2(), c.z2()+kbd_height);
 			keyboard.d[dim][!dir] = c.d[dim][!dir] - dsign*0.06*depth; // close to front edge
-			keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*0.6*kbd_hwidth;
+			keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*kbd_depth;
 			set_wall_width(keyboard, center, kbd_hwidth, !dim);
 			objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // add as white, will be drawn with gray/black texture
 			// add a computer under the desk

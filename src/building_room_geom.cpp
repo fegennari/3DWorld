@@ -592,9 +592,10 @@ void building_room_geom_t::add_crate(room_object_t const &c) {
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)); // skip back fact at wall
-	float const dz(c.dz()), length(c.get_sz_dim(!c.dim)), width(c.get_sz_dim(c.dim)), thickness(0.02*dz), bracket_thickness(0.8*thickness);
+	vector3d const c_sz(c.get_size());
+	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
 	unsigned const num_shelves(2 + (c.room_id % 3)), num_brackets(2 + round_fp(0.5*length/dz)); // 2-4 shelves
-	float const z_step(dz/(num_shelves + 1)); // include a space at the bottom
+	float const z_step(dz/(num_shelves + 1)), shelf_zspace(z_step - thickness), shelf_clearance(shelf_zspace - bracket_thickness); // include a space at the bottom
 	float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness);
 
 	// add wooden shelves
@@ -627,8 +628,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 
 			if (s == 0) { // add vertical brackets on first shelf
 				cube_t vbracket(bracket);
-				vbracket.z1() = c.z1();
-				vbracket.z2() = c.z2();
+				set_cube_zvals(vbracket, c.z1(), c.z2());
 				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir]; // against the wall
 				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
 				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip back and top/bottom faces
@@ -647,7 +647,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		vector3d sz;
 		point center;
 		cubes.clear();
-		// add crates
+		// add crates/boxes
 		unsigned const num_crates(rgen.rand() % 13); // 0-12
 
 		for (unsigned n = 0; n < num_crates; ++n) {
@@ -657,16 +657,47 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			}
 			C.obj_id = uint16_t(rgen.rand()); // used to select texture
 			C.set_from_point(center);
-			C.z1() = S.z2();
-			C.z2() = C.z1() + (z_step - thickness)*rgen.rand_uniform(0.4, 0.95);
+			set_cube_zvals(C, S.z2(), (S.z2() + shelf_zspace*rgen.rand_uniform(0.4, 0.95)));
 			C.expand_by_xy(sz);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
 			add_crate(C);
 			cubes.push_back(C);
 		} // for n
-		if ((rgen.rand()&3) == 0) continue; // no bottles on this shelf
-		unsigned const num_bottles(rgen.rand() % 9); // 0-8
+		// add computers; what about monitors?
+		bool const top_shelf(s+1 == num_shelves);
+		unsigned const num_comps(rgen.rand() % 6); // 0-5
+		float const h_val(0.21*1.1*dz), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
+		sz[ c.dim] = 0.5*cdepth;
+		sz[!c.dim] = 0.5*cwidth;
+		C.dir = !c.dir;
+
+		if (2.0*sz.x < c_sz.x && 2.0*sz.y < c_sz.y && (top_shelf || cheight < shelf_clearance)) { // if it fits in all dims
+			for (unsigned n = 0; n < num_comps; ++n) {
+				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
+				C.set_from_point(center);
+				set_cube_zvals(C, S.z2(), S.z2()+cheight);
+				C.expand_by_xy(sz);
+				if (!has_bcube_int(C, cubes)) {add_computer(C, 1); cubes.push_back(C);}
+			} // for n
+		}
+		// add keyboards
+		unsigned const num_kbds(rgen.rand() % 5); // 0-4
+		float const kbd_hwidth(0.7*0.5*1.1*2.0*h_val), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
+		sz[ c.dim] = 0.5*kbd_depth;
+		sz[!c.dim] = kbd_hwidth;
+
+		if (2.0*sz.x < c_sz.x && 2.0*sz.y < c_sz.y && (top_shelf || kbd_height < shelf_clearance)) { // if it fits in all dims
+			for (unsigned n = 0; n < num_kbds; ++n) {
+				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
+				C.set_from_point(center);
+				set_cube_zvals(C, S.z2(), S.z2()+kbd_height);
+				C.expand_by_xy(sz);
+				if (!has_bcube_int(C, cubes)) {C.dir = rgen.rand_bool(); add_keyboard(C); cubes.push_back(C);}
+			} // for n
+		}
+		// add bottles
+		unsigned const num_bottles(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 9)); // 0-8, 75% chance of the time
 		C.dir = C.dim = 0;
 
 		for (unsigned n = 0; n < num_bottles; ++n) {
@@ -674,8 +705,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			float const bottle_height(z_step*rgen.rand_uniform(0.4, 0.7)), bottle_radius(z_step*rgen.rand_uniform(0.07, 0.11));
 			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 2.0*bottle_radius), (S.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
 			C.set_from_sphere(center, bottle_radius);
-			C.z1() = S.z2();
-			C.z2() = S.z2() + bottle_height;
+			set_cube_zvals(C, S.z2(), S.z2()+bottle_height);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = bottle_colors[rgen.rand()%NUM_BOTTLE_COLORS];
 			add_bottle(C);
@@ -690,14 +720,14 @@ void building_room_geom_t::add_keyboard(room_object_t const &c) {
 	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(c, apply_light_color(c, BKGRAY), zero_vector, EF_Z12); // sides, no shadows, small
 }
 
-void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1)); // shadows
+void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1, 0, is_small)); // shadows
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
-	get_material(tid_nm_pair_t(), 1).add_cube_to_verts(c, apply_light_color(c, sides_color), zero_vector, ~front_mask); // sides, shadows
+	get_material(tid_nm_pair_t(), 1, 0, is_small).add_cube_to_verts(c, apply_light_color(c, sides_color), zero_vector, ~front_mask); // sides, shadows
 }
-void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY);}
-void building_room_geom_t::add_mwave   (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY  );}
+void building_room_geom_t::add_computer(room_object_t const &c, bool is_small) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, is_small);}
+void building_room_geom_t::add_mwave   (room_object_t const &c, bool is_small) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY,   is_small);}
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
 	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
