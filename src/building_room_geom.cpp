@@ -175,15 +175,15 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color) {
 	assert(radius > 0.0);
 	color_wrapper const cw(color);
-	vector3d const n(normal_z_neg ? -plus_z : plus_z);
+	norm_comp const nc(normal_z_neg ? -plus_z : plus_z);
 	unsigned const ndiv(N_CYL_SIDES), itris_start(itri_verts.size());
 	float const css(-1.0*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
 	float sin_s(0.0), cos_s(1.0);
-	itri_verts.emplace_back(vert_norm_comp_tc(pos, n, 0.5, 0.5), cw);
+	itri_verts.emplace_back(pos, nc, 0.5, 0.5, cw);
 
 	for (unsigned i = 0; i < ndiv; ++i) {
 		float const s(sin_s), c(cos_s);
-		itri_verts.emplace_back(vert_norm_comp_tc((pos + point(radius*s, radius*c, 0.0)), n, 0.5*(1.0 + s), 0.5*(1.0 + c)), cw);
+		itri_verts.emplace_back((pos + point(radius*s, radius*c, 0.0)), nc, 0.5*(1.0 + s), 0.5*(1.0 + c), cw);
 		indices.push_back(itris_start); // center
 		indices.push_back(itris_start + i + 1);
 		indices.push_back(itris_start + ((i+1)%ndiv) + 1);
@@ -194,14 +194,14 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_
 
 void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail) {
 	static vector<vert_norm_tc> verts;
-	verts.clear();
-	static sd_sphere_d sd[2] = {sd_sphere_d(all_zeros, 1.0, N_SPHERE_DIV), sd_sphere_d(all_zeros, 1.0, N_SPHERE_DIV/2)}; // high/low detail resed across all calls
+	static sd_sphere_d sd[2] = {sd_sphere_d(all_zeros, 1.0, N_SPHERE_DIV), sd_sphere_d(all_zeros, 1.0, N_SPHERE_DIV/2)}; // high/low detail reused across all calls
 	static sphere_point_norm spn[2];
+	verts.clear();
 	if (!spn[low_detail].get_points()) {sd[low_detail].gen_points_norms(spn[low_detail]);} // calculate once and reuse
 	sd[low_detail].get_quad_points(verts); // could use indexed triangles, but this only returns indexed quads
 	color_wrapper const cw(color);
 	point const center(c.get_cube_center()), size(0.5*c.get_size());
-	for (auto i = verts.begin(); i != verts.end(); ++i) {quad_verts.emplace_back(vert_norm_comp_tc((i->v*size + center), i->n, i->t[0], i->t[1]), cw);}
+	for (auto i = verts.begin(); i != verts.end(); ++i) {quad_verts.emplace_back((i->v*size + center), i->n, i->t[0], i->t[1], cw);}
 }
 
 class rgeom_alloc_t {
@@ -1039,7 +1039,7 @@ void building_room_geom_t::add_book_title(string const &title, cube_t const &tit
 		i->v[wdim] = title_area.d[wdim][!wdir]; // spine pos
 		i->v[hdim] = (i->v[hdim] - text_bcube.d[hdim][cdir])*width_scale  + title_start_hdim;
 		i->v[tdim] = (i->v[tdim] - text_bcube.d[tdim][ldir])*height_scale + title_start_tdim;
-		mat.quad_verts.emplace_back(vert_norm_comp_tc(i->v, nc, i->t[0], i->t[1]), cw);
+		mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], cw);
 	} // for i
 }
 
@@ -1350,7 +1350,7 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vecto
 
 		for (unsigned x = 0; x <= ndiv; ++x) {
 			float const xval(c.x1() + dists[x]*c.dx()), ex(2.0f*max(0.0f, min((xval - c.x1()), (c.x2() - xval)))*dx_inv), zval(c.z1() + c.dz()*pow(ex*ey, 0.2f));
-			verts.emplace_back(vert_norm_comp_tc(point(xval, yval, zval), nc, mat.tex.tscale_x*(xval - tex_origin.x), mat.tex.tscale_y*(yval - tex_origin.y)), cw);
+			verts.emplace_back(point(xval, yval, zval), nc, mat.tex.tscale_x*(xval - tex_origin.x), mat.tex.tscale_y*(yval - tex_origin.y), cw);
 		} // for x
 	} // for y
 	for (unsigned y = 0; y <= ndiv; ++y) {
@@ -1642,7 +1642,7 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	for (auto i = verts.begin(); i != verts.end(); ++i) {
 		i->v[!c.dim] = i->v[!c.dim]*width_scale + ct.d[!c.dim][!ldir]; // line
 		i->v.z       = i->v.z*height_scale + ct.z1(); // column
-		mat.quad_verts.emplace_back(vert_norm_comp_tc(i->v, nc, i->t[0], i->t[1]), cw);
+		mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], cw);
 	}
 }
 
