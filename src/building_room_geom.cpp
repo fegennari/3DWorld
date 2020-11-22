@@ -663,6 +663,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			add_crate(C);
 			cubes.push_back(C);
 		} // for n
+		if ((rgen.rand()&3) == 0) continue; // no bottles on this shelf
 		unsigned const num_bottles(rgen.rand() % 9); // 0-8
 		C.dir = C.dim = 0;
 
@@ -805,6 +806,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 
 void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	// for now, no texture, but could use a bottle label texture for the central cylinder
+	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count
 	tid_nm_pair_t tex;
 	tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
@@ -822,17 +824,17 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	top_cylin.expand_in_dim(dim2, -0.32*sz[dim2]); // smaller radius
 	cube_t cap(top_cylin);
 	top_cylin.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*sz[dim]; // set cap thickness
-	cap.expand_in_dim(dim1, 0.035*sz[dim1]); // slightly larger radius
-	cap.expand_in_dim(dim2, 0.035*sz[dim2]); // slightly larger radius
-	mat.add_sphere_to_verts(sphere, color);
-	mat.add_ortho_cylin_to_verts(main_cylin, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir));
-	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 0, 0); // draw neck of bottle
-	mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[c.obj_id % 2]), dim, c.dir, !c.dir); // draw cap
+	cap.expand_in_dim(dim1, 0.034*sz[dim1]); // slightly larger radius
+	cap.expand_in_dim(dim2, 0.034*sz[dim2]); // slightly larger radius
+	mat.add_sphere_to_verts(sphere, color, 1); // low_detail=1
+	mat.add_ortho_cylin_to_verts(main_cylin, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
+	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // draw neck of bottle
+	mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[c.obj_id % 2]), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // draw cap
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
-	main_cylin.expand_in_dim(dim1, 0.01*radius); // expand slightly in radius
-	main_cylin.expand_in_dim(dim2, 0.01*radius); // expand slightly in radius
+	main_cylin.expand_in_dim(dim1, 0.02*radius); // expand slightly in radius
+	main_cylin.expand_in_dim(dim2, 0.02*radius); // expand slightly in radius
 	main_cylin.d[dim][c.dir] += dir_sign*0.3*sz.z; main_cylin.d[dim][!c.dir] -= dir_sign*0.15*sz.z; // shrink in length
-	get_material(tid_nm_pair_t(), 0, 0, 1).add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0); // label, white for now
+	get_material(tid_nm_pair_t(), 0, 0, 1).add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // white label
 }
 
 void building_room_geom_t::add_paper(room_object_t const &c) {
@@ -1930,7 +1932,7 @@ colorRGBA room_object_t::get_color() const {
 }
 
 void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm_pair_t const &wall_tex) {
-	//highres_timer_t timer("Gen Room Geom"); // 2.1ms
+	//highres_timer_t timer("Gen Room Geom"); // 3.3ms
 	float const tscale(2.0/obj_scale);
 	obj_model_insts.clear();
 
@@ -1997,7 +1999,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 	mats_alpha .create_vbos(building);
 }
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom Small"); // 1.3ms
+	//highres_timer_t timer("Gen Room Geom Small"); // 5.7ms
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
