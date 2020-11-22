@@ -193,12 +193,15 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_
 }
 
 void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail) {
-	static vector<vert_norm_tc> verts;
-	static sd_sphere_d sd[2] = {sd_sphere_d(all_zeros, 1.0, N_SPHERE_DIV), sd_sphere_d(all_zeros, 1.0, N_SPHERE_DIV/2)}; // high/low detail reused across all calls
-	static sphere_point_norm spn[2];
-	verts.clear();
-	if (!spn[low_detail].get_points()) {sd[low_detail].gen_points_norms(spn[low_detail]);} // calculate once and reuse
-	sd[low_detail].get_quad_points(verts); // could use indexed triangles, but this only returns indexed quads
+	static vector<vert_norm_tc> cached_verts[2]; // high/low detail, reused across all calls
+	vector<vert_norm_tc> &verts(cached_verts[low_detail]);
+
+	if (verts.empty()) { // not yet created, create and cache verts
+		sd_sphere_d sd(all_zeros, 1.0, (low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV));
+		sphere_point_norm spn;
+		sd.gen_points_norms(spn);
+		sd.get_quad_points(verts);
+	}
 	color_wrapper const cw(color);
 	point const center(c.get_cube_center()), size(0.5*c.get_size());
 	for (auto i = verts.begin(); i != verts.end(); ++i) {quad_verts.emplace_back((i->v*size + center), i->n, i->t[0], i->t[1], cw);}
@@ -1998,7 +2001,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 	mats_alpha .create_vbos(building);
 }
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom Small"); // 5.7ms
+	//highres_timer_t timer("Gen Room Geom Small"); // 5.6ms
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
