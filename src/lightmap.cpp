@@ -27,7 +27,7 @@ float czmin0(0.0), lm_dz_adj(0.0);
 cube_t dlight_bcube(all_zeros_cube);
 vector<dls_cell> ldynamic;
 vector<unsigned char> ldynamic_enabled;
-vector<light_source> light_sources_a, /* light_sources_d, */ dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
+vector<light_source> light_sources_a, dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
 vector<light_source_trig> light_sources_d;
 lmap_manager_t lmap_manager;
 llv_vect local_light_volumes;
@@ -920,7 +920,7 @@ void upload_dlights_textures(cube_t const &bounds, float &dlight_add_thresh) { /
 		float *bc_data_ptr(dl_bc_data.data());
 
 		for (unsigned i = 0; i < ndl; ++i) {
-			cube_t const bcube(dl_sources[i].calc_bcube());
+			cube_t const bcube(dl_sources[i].calc_bcube(1));
 			float *data(bc_data_ptr + 6*i); // stride is texel RGB, encoded as {x1, y1, z1, x2, y2, z2}
 
 			for (unsigned dir = 0; dir < 2; ++dir) {
