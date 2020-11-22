@@ -192,13 +192,13 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_
 	}
 }
 
-void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color) {
+void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail) {
 	static vector<vert_norm_tc> verts;
 	verts.clear();
-	static sd_sphere_d sd(all_zeros, 1.0, N_SPHERE_DIV); // resed across all calls
-	static sphere_point_norm spn;
-	if (!spn.get_points()) {sd.gen_points_norms(spn);} // calculate once and reuse
-	sd.get_quad_points(verts); // could use indexed triangles, but this only returns indexed quads
+	static sd_sphere_d sd[2] = {sd_sphere_d(all_zeros, 1.0, N_SPHERE_DIV), sd_sphere_d(all_zeros, 1.0, N_SPHERE_DIV/2)}; // high/low detail resed across all calls
+	static sphere_point_norm spn[2];
+	if (!spn[low_detail].get_points()) {sd[low_detail].gen_points_norms(spn[low_detail]);} // calculate once and reuse
+	sd[low_detail].get_quad_points(verts); // could use indexed triangles, but this only returns indexed quads
 	color_wrapper cw;
 	cw.set_c4(color);
 	point const center(c.get_cube_center()), size(0.5*c.get_size());
