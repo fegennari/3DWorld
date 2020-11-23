@@ -444,7 +444,8 @@ struct tree_placer_t {
 		point pos;
 		float size;
 		int type;
-		tree_ref(point const &p, float sz, int t) : pos(p), size(sz), type(t) {}
+		bool allow_bush;
+		tree_ref(point const &p, float sz, int t, bool ab) : pos(p), size(sz), type(t), allow_bush(ab) {}
 	};
 	struct tree_block {
 		vector<tree_ref> trees;
@@ -454,7 +455,7 @@ struct tree_placer_t {
 	vector<tree_block> blocks;
 
 	void begin_block() {blocks.push_back(tree_block());}
-	void add(point const &pos, float size, int type);
+	void add(point const &pos, float size, int type, bool allow_bush);
 	void clear() {blocks.clear();}
 };
 

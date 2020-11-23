@@ -1879,6 +1879,7 @@ public:
 		float const block_xsize(X_SCENE_SIZE);
 		float cur_xval(0.0);
 		unsigned num_blocks(0);
+		bool const allow_bush = 0; // no bushes for now
 
 		for (auto p = placements.begin(); p != placements.end(); ++p) {
 			if (p == placements.begin() || p->x > (cur_xval + block_xsize)) {
@@ -1887,8 +1888,8 @@ public:
 				++num_blocks;
 			}
 			int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
-			tree_placer.add(*p, 0, ttype);
-		}
+			tree_placer.add(*p, 0, ttype, allow_bush);
+		} // for p
 		cout << "Num Placed Trees: " << placements.size() << ", Blocks: " << num_blocks << endl;
 	}
 
