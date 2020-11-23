@@ -1842,7 +1842,9 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
 	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z12); // only enable faces in dim
 	cube_t window(c);
 	swap(window.d[c.dim][0], window.d[c.dim][1]); // denormalized
-	get_material(tid_nm_pair_t(get_bath_wind_tid(), tscale), 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
+	tid_nm_pair_t tex(get_bath_wind_tid(), tscale);
+	if (c.flags & RO_FLAG_LIT) {tex.emissive = 1;}
+	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
