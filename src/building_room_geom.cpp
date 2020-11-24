@@ -292,7 +292,7 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 
 void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
-	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows
+	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows (also applies to bathroom windows, which don't produce shadows)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	assert(vbo.vbo_valid());
 	assert(num_qverts > 0 || num_itverts > 0);
@@ -731,7 +731,7 @@ void building_room_geom_t::add_mwave   (room_object_t const &c, bool is_small) {
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
 	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
-	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1;}
+	if (ENABLE_MIRROR_REFLECTIONS) {tp.emissive = 1.0;}
 	get_material(tp, 0).add_cube_to_verts(c, c.color, zero_vector, get_face_mask(c.dim, c.dir), !c.dim); // draw only the front face
 	get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, apply_light_color(c), zero_vector, get_skip_mask_for_xy(c.dim)); // draw only the sides untextured
 }
@@ -1002,7 +1002,7 @@ void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
 	// Note: need to use a different texture (or -1) for is_on because emissive flag alone does not cause a material change
 	bool const is_on(c.is_lit());
 	tid_nm_pair_t tp(((is_on || c.shape == SHAPE_SPHERE) ? (int)WHITE_TEX : (int)PLASTER_TEX), tscale);
-	tp.emissive = is_on;
+	tp.emissive = (is_on ? 1.0 : 0.0);
 	rgeom_mat_t &mat(mats_lights.get_material(tp, 0)); // no shadows
 	if      (c.shape == SHAPE_CUBE  ) {mat.add_cube_to_verts  (c, c.color, c.get_llc(), EF_Z2);} // untextured, skip top face
 	else if (c.shape == SHAPE_CYLIN ) {mat.add_vcylin_to_verts(c, c.color, 1, 0);} // bottom only
@@ -1667,7 +1667,7 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	float const width_scale(ct.get_sz_dim(!c.dim)/text_bcube.get_sz_dim(!c.dim)), height_scale(ct.dz()/text_bcube.dz());
 	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 	tid_nm_pair_t tex(FONT_TEXTURE_ID);
-	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1;}
+	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1.0;}
 	rgeom_mat_t &mat(get_material(tex, 0, 0, 1));
 	color_wrapper const cw(apply_light_color(c)); // set alpha=1.0
 	norm_comp const nc(normal);
@@ -1843,7 +1843,7 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
 	cube_t window(c);
 	swap(window.d[c.dim][0], window.d[c.dim][1]); // denormalized
 	tid_nm_pair_t tex(get_bath_wind_tid(), tscale);
-	if (c.flags & RO_FLAG_LIT) {tex.emissive = 1;}
+	if (c.flags & RO_FLAG_LIT) {tex.emissive = 0.33;} // one third emissive
 	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 
@@ -1862,7 +1862,7 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	screen.z2() -= 0.04*c.dz();
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 	tid_nm_pair_t tex(((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_picture_tid()), 0.0); // computer monitor vs. TV
-	tex.emissive = 1;
+	tex.emissive = 1.0;
 	get_material(tex).add_cube_to_verts(screen, WHITE, c.get_llc(), skip_faces, !c.dim, !(c.dim ^ c.dir));
 }
 

@@ -76,15 +76,14 @@ typedef vector<cube_with_zval_t> vect_cube_with_zval_t;
 struct tid_nm_pair_t { // size=28
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
-	float tscale_x, tscale_y, txoff, tyoff;
-	unsigned char spec_mag, shininess; // Note:spec_mag is divided by 255.0
-	bool emissive; // for lights
+	float tscale_x, tscale_y, txoff, tyoff, emissive;
+	unsigned char spec_mag, shininess; // Note: spec_mag is divided by 255.0
 
-	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0), spec_mag(0), shininess(0), emissive(0) {}
+	tid_nm_pair_t() : tid(-1), nm_tid(-1), tscale_x(1.0), tscale_y(1.0), txoff(0.0), tyoff(0.0), emissive(0.0), spec_mag(0), shininess(0) {}
 	tid_nm_pair_t(int tid_, float txy=1.0) : tid(tid_), nm_tid(FLAT_NMAP_TEX), tscale_x(txy), tscale_y(txy),
-		txoff(0.0), tyoff(0.0), spec_mag(0), shininess(0), emissive(0) {} // non-normal mapped 1:1 texture AR
+		txoff(0.0), tyoff(0.0), emissive(0.0), spec_mag(0), shininess(0) {} // non-normal mapped 1:1 texture AR
 	tid_nm_pair_t(int tid_, int nm_tid_, float tx, float ty, float xo=0.0, float yo=0.0) :
-		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), spec_mag(0), shininess(0), emissive(0) {}
+		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), emissive(0.0), spec_mag(0), shininess(0) {}
 	void set_specular(float mag, float shine) {spec_mag = (unsigned char)(CLIP_TO_01(mag)*255.0f); shininess = (unsigned char)max(1, min(255, round_fp(shine)));}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
 	
