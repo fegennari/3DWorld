@@ -251,10 +251,13 @@ namespace streetlight_ns {
 		if (dist_val <= 0.12) {draw_fast_cylinder(top, arm_end, 0.5*pradius, 0.4*pradius, min(ndiv, 16), 0, 0);} // untextured, no ends
 		if (shadow_only && is_local_shadow) return; // top part never projects a shadow on a visible object near the ground
 		bool const is_on(is_lit(always_on));
-		if (!is_on && dist_val > 0.15) return; // too far
-		if (is_on) {dstate.s.set_color_e(light_color);} else {dstate.s.set_cur_color(light_color);} // emissive when lit
-		// streetlight bloom: should be elliptical, disable when viewed from above, use tighter alpha mask
-		//if (is_on && dist_val > 0.05) {dstate.add_light_flare((lpos - vector3d(0.0, 0.0, 0.6*lradius)), zero_vector, light_color, min(1.0f, 10.0f*dist_val), 2.5*lradius);} // non-directional
+
+		if (!shadow_only) {
+			if (!is_on && dist_val > 0.15) return; // too far
+			if (is_on) {dstate.s.set_color_e(light_color);} else {dstate.s.set_cur_color(light_color);} // emissive when lit
+			// streetlight bloom: should be elliptical, disable when viewed from above, use tighter alpha mask
+			//if (is_on && dist_val > 0.05) {dstate.add_light_flare((lpos - vector3d(0.0, 0.0, 0.6*lradius)), zero_vector, light_color, min(1.0f, 10.0f*dist_val), 2.5*lradius);} // non-directional
+		}
 		fgPushMatrix();
 		translate_to(lpos);
 		scale_by(lradius*vector3d(1.0+fabs(dir.x), 1.0+fabs(dir.y), 1.0)); // scale 2x in dir
