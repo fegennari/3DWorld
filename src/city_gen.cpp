@@ -2700,7 +2700,8 @@ public:
 			fgPushMatrix();
 			translate_to(xlate);
 			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
-			dstate.pre_draw(xlate, use_dlights, shadow_only);
+			dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
+			assert(dstate.s.is_setup());
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
 			global_rn.draw(dstate, shadow_only, 1); // connector road may have bridges, and therefore needs shadows
 			dstate.post_draw();

@@ -242,7 +242,6 @@ namespace streetlight_ns {
 			dist_val = p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist();
 			if (dist_val > 0.2) return; // too far
 		}
-		if (!dstate.s.is_setup()) {dstate.s.begin_color_only_shader();} // likely only needed for shadow pass, could do better with this
 		float const pradius(get_streetlight_pole_radius()), lradius(light_radius*city_params.road_width);
 		int const ndiv(max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
 		point const top(pos + vector3d(0.0, 0.0, 0.96*height)), lpos(get_lpos()), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
@@ -747,8 +746,8 @@ void road_draw_state_t::draw_road_region_int(quad_batch_draw &cache, unsigned ty
 	} else {qbd_batched[type_ix].add_quads(cache);} // add non-shadow blocks for drawing later
 }
 
-void road_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only) {
-	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, 0); // always_setup_shader=0
+void road_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader) {
+	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only, always_setup_shader);
 	ar = city_params.get_road_ar();
 }
 

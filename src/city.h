@@ -506,7 +506,7 @@ class road_draw_state_t : public draw_state_t {
 	void draw_road_region_int(quad_batch_draw &cache, unsigned type_ix);
 public:
 	road_draw_state_t() : ar(1.0) {}
-	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only);
+	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader=0);
 	virtual void draw_unshadowed();
 	virtual void post_draw();
 	template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix) {add_flat_road_quad(r, qbd, color, ar);} // generic flat road case
