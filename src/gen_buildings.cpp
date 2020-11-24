@@ -2045,11 +2045,11 @@ public:
 			multi_draw_shadow(xlate, bcs);
 			return;
 		}
-		enable_dlight_bcubes = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
-
 		if (!reflection_pass) {
 			interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
+			enable_dlight_bcubes = 1; // needed around this call so that light bcubes are sent to the GPU
 			building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
+			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
 			interior_shadow_maps = 0;
 			create_mirror_reflection_if_needed();
 			draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
@@ -2081,6 +2081,7 @@ public:
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
 		float const min_alpha = 0.0; // 0.0 to avoid alpha test
 		city_dlight_pcf_offset_scale = 0.67; // reduced for building interiors
+		enable_dlight_bcubes = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw, ext_door_draw;
