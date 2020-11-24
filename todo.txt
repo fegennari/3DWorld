@@ -14,3 +14,5 @@ Cities:
 - Interiors for non-rectangular buildings
 - Larger spacing between office building floors
 - Higher ambient lighting in city building bottom floors at night
+- House driveways - remove grass
+- Secondary Building roads
