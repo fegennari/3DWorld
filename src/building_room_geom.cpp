@@ -34,8 +34,9 @@ string const &gen_book_title(unsigned rand_id, string *author, unsigned split_le
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);}
-int get_counter_tid () {return get_texture_by_name("marble2.jpg");}
-int get_paneling_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg");}
+int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
+int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg");}
+int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg");}
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
@@ -554,13 +555,15 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	}
 }
 
-int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
+int get_crate_tid(room_object_t const &c) {
+	if (c.obj_id & 2) return get_texture_by_name("interiors/box.jpg");
+	return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");
+}
 
 void building_room_geom_t::add_crate(room_object_t const &c) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	if (c.obj_id & 2) { // make it a box
-		int const tid(get_texture_by_name("interiors/box.jpg")), nm_tid(get_texture_by_name("interiors/box_normal.jpg"));
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(tid, nm_tid, 0.0, 0.0), 1, 0, 1));
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), get_texture_by_name("interiors/box_normal.jpg"), 0.0, 0.0), 1, 0, 1));
 		unsigned const verts_start(mat.quad_verts.size());
 		mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
 		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
@@ -1334,7 +1337,7 @@ void building_room_geom_t::add_reception_desk(room_object_t const &c, float tsca
 	assert(width > depth && cutlen > 0.0);
 	colorRGBA const color(apply_light_color(c));
 	// wood paneling sides
-	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(PANELING_TEX, get_paneling_tid(), 4.0*tscale, 4.0*tscale), 1)); // with shadows
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(PANELING_TEX, get_paneling_nm_tid(), 4.0*tscale, 4.0*tscale), 1)); // with shadows
 	vector3d const tex_origin(c.get_llc());
 	unsigned const lr_dim_mask(~get_face_mask(c.dim, c.dir));
 	cube_t base(c);
@@ -1942,7 +1945,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BCASE:    return get_textured_wood_color();
 	case TYPE_WINE_RACK:return get_textured_wood_color();
 	case TYPE_DESK:     return get_textured_wood_color();
-	case TYPE_RDESK:    return (texture_color(get_paneling_tid())*0.5 + texture_color(get_counter_tid())*0.5);
+	case TYPE_RDESK:    return (texture_color(PANELING_TEX)*0.5 + texture_color(get_counter_tid())*0.5);
 	case TYPE_BED:      return (color.modulate_with(texture_color(get_sheet_tid())) + get_textured_wood_color())*0.5; // half wood and half cloth
 	case TYPE_COUNTER:  return get_counter_color();
 	case TYPE_KSINK:    return (get_counter_color()*0.9 + GRAY*0.1); // counter, with a bit of gray mixed in from the sink
