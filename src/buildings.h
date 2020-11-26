@@ -775,6 +775,7 @@ private:
 	cube_t get_rotated_bcube(cube_t const &c) const;
 	cube_t get_part_for_room(room_t const &room) const {assert(room.part_id < parts.size()); return parts[room.part_id];}
 	bool are_parts_stacked(cube_t const &p1, cube_t const &p2) const;
+	int get_room_ix_for_window(cube_t const &window, bool dim, bool dir) const;
 };
 
 struct vect_building_t : public vector<building_t> {

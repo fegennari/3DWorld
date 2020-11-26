@@ -2061,6 +2061,20 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	} // for i
 }
 
+int building_t::get_room_ix_for_window(cube_t const &window, bool dim, bool dir) const {
+	assert(interior);
+	float const wall_thickness(get_wall_thickness());
+	point const center(window.get_cube_center());
+
+	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
+		if (center[!dim] < r->d[!dim][0] || center[!dim] >= r->d[!dim][1]) continue; // test center point for windows that straddle two rooms
+		if (center.z < r->z1() || center.z > r->z2()) continue;
+		if (fabs(center[dim] - r->d[dim][dir]) > wall_thickness) continue; // wrong wall
+		return (r - interior->rooms.begin()); // found
+	} // for r
+	return -1; // not found
+}
+
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
