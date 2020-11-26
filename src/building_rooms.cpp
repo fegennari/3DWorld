@@ -2055,8 +2055,24 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					side.d[!dim][!s] = window.d[!dim][s];
 					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				}
+				// TODO: add curtains or blinds to some windows based on the containing room type for this floor
+				int const room_ix(get_room_ix_for_window(window, dim, dir));
+				if (room_ix < 0) continue; // room not found - should this be an error?
+				assert(unsigned(room_ix) < interior->rooms.size());
+				room_t const &room(interior->rooms[room_ix]);
+				room_type const rtype(room.get_room_type(floor));
+				cube_t c;
+
+				switch (rtype) {
+				case RTYPE_BED:
+					c = window;
+					c.translate_dim(dscale*0.4*wall_thickness, dim); // FIXME: swap argument order
+					c.expand_in_dim(dim, 0.2*wall_thickness);
+					c.z1() += 0.5*window.dz();
+					objs.emplace_back(c, TYPE_BLINDS, room_ix, dim, dir, RO_FLAG_NOCOLL, 1.0); // always fully lit
+					break;
+				} // end switch
 			} // for xy
-			// TODO: add curtains or blinds to some windows based on the containing room type for this floor
 		} // for z
 	} // for i
 }
