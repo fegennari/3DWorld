@@ -923,6 +923,14 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_blinds(room_object_t const &c, float tscale) {
+	unsigned const skip_faces(get_skip_mask_for_xy(c.dim));
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_blinds_tid(), get_texture_by_name("interiors/blinds_hn.jpg"), tscale, tscale), 1));
+	mat.add_cube_to_verts(c, color, tex_origin, ~skip_faces, !c.dim); // skip all but front and back faces
+	get_material(untex_shad_mat, 1).add_cube_to_verts(c, texture_color(get_blinds_tid()).modulate_with(color), tex_origin, skip_faces); // skip front and back faces
+}
+
 void building_room_geom_t::add_railing(room_object_t const &c) {
 	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI));
 	float const radius(0.5*c.get_sz_dim(!c.dim)), pole_radius(0.75*radius), length(c.get_sz_dim(c.dim)), center(c.get_center_dim(!c.dim));
@@ -1962,6 +1970,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_COMPUTER: return BKGRAY;
 	case TYPE_MWAVE:    return GRAY;
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
+	case TYPE_BLINDS:   return texture_color(get_blinds_tid()).modulate_with(color);
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, etc.
 	}
 	if (type >= TYPE_TOILET && type < NUM_TYPES) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
@@ -2011,6 +2020,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
 		case TYPE_COMPUTER:add_computer(*i); break;
 		case TYPE_MWAVE:   add_mwave   (*i); break;
+		case TYPE_BLINDS:  add_blinds  (*i, tscale); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn

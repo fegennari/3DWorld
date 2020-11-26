@@ -2025,13 +2025,13 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		assert(c.get_sz_dim(dim) == 0.0); // must be zero size in one dim (X or Y oriented); could also use the vertex normal
 		float const d_tx_inv(1.0f/(tx2 - tx1)), d_tz_inv(1.0f/(tz2 - tz1));
 		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to window_vspacing
-		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border);
+		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border), dscale(dir ? -1.0 : 1.0);
 		cube_t window(c); // copy dim <dim>
-		window.translate_dim((dir ? -1.0 : 1.0)*window_offset, dim);
-		window.d[dim][!dir] += (dir ? -1.0 : 1.0)*window_trim_depth; // add thickness on interior of building
-		unsigned ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
+		window.translate_dim(dscale*window_offset, dim);
+		window.d[dim][!dir] += dscale*window_trim_depth; // add thickness on interior of building
+		unsigned ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)), floor(0);
 
-		for (float z = tz1; z < tz2; z += 1.0) { // each floor
+		for (float z = tz1; z < tz2; z += 1.0, ++floor) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
 			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
 
@@ -2044,7 +2044,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				top.z2() += window_trim_width;
 				bot.z2()  = window.z1();
 				bot.z1() -= window_trim_width;
-				bot.d[dim][!dir] += (dir ? -1.0f : 1.0f)*(windowsill_depth - window_trim_depth); // shift out further for windowsill
+				bot.d[dim][!dir] += dscale*(windowsill_depth - window_trim_depth); // shift out further for windowsill
 				top.expand_in_dim(!dim, window_trim_width);
 				bot.expand_in_dim(!dim, window_trim_width);
 				objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
