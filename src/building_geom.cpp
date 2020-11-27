@@ -4,7 +4,6 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
-#pragma warning(disable : 26812) // prefer enum class over enum
 
 cube_t grass_exclude1, grass_exclude2;
 

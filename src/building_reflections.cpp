@@ -4,7 +4,6 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "shaders.h"
-#pragma warning(disable : 26812) // prefer enum class over enum
 
 bool disable_city_shadow_maps(0);
 unsigned room_mirror_ref_tid(0);

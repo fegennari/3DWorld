@@ -6,7 +6,6 @@
 #include "buildings.h"
 #include "city.h" // for pedestrian_t
 #include <queue>
-#pragma warning(disable : 26812) // prefer enum class over enum
 
 
 bool const STAY_ON_ONE_FLOOR = 0;

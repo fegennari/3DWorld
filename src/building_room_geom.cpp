@@ -8,7 +8,6 @@
 #include "subdiv.h" // for sd_sphere_d
 #include "profiler.h"
 #include "scenery.h" // for s_plant
-#pragma warning(disable : 26812) // prefer enum class over enum
 
 bool const ADD_BOOK_COVERS = 1;
 bool const ADD_BOOK_TITLES = 1;

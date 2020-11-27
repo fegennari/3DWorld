@@ -6,7 +6,6 @@
 #include "buildings.h"
 #include "city.h" // for object_model_loader_t
 #include "profiler.h"
-#pragma warning(disable : 26812) // prefer enum class over enum
 
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;

@@ -5,7 +5,6 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "profiler.h"
-#pragma warning(disable : 26812) // prefer enum class over enum
 
 bool const DRAW_OPEN_DOORS = 1;
 
