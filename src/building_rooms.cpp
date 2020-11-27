@@ -515,7 +515,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			point center(obj.get_cube_center());
 			center.z = obj.z2();
 			cube_t lamp(get_cube_height_radius(center, 0.5*width, height));
-			lamp.translate_dim((obj.dir ? 1.0 : -1.0)*0.1*width, obj.dim); // move slightly toward the front to avoid clipping through the wall
+			lamp.translate_dim(obj.dim, (obj.dir ? 1.0 : -1.0)*0.1*width); // move slightly toward the front to avoid clipping through the wall
 			float const shift_range(0.4f*(obj.get_sz_dim(!obj.dim) - width)), obj_center(obj.get_center_dim(!obj.dim)), targ_pos(pillow_center[!obj.dim]);
 			float shift_val(0.0), dmin(0.0);
 
@@ -523,7 +523,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 				float const cand_shift(rgen.rand_uniform(-1.0, 1.0)*shift_range), dist(fabs((obj_center + cand_shift) - targ_pos));
 				if (dmin == 0.0 || dist < dmin) {shift_val = cand_shift; dmin = dist;}
 			}
-			lamp.translate_dim(shift_val, !obj.dim);
+			lamp.translate_dim(!obj.dim, shift_val);
 			unsigned const NUM_COLORS = 6;
 			colorRGBA const colors[NUM_COLORS] = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
 			unsigned flags(RO_FLAG_NOCOLL); // no collisions, as an optimization since the player and AI can't get onto the dresser/nightstand anyway
@@ -914,9 +914,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	float const door_width(br_door.get_sz_dim(br_dim));
 	cube_t sign(br_door);
 	set_cube_zvals(sign, zval+0.50*floor_spacing, zval+0.55*floor_spacing);
-	sign.translate_dim((shift_dir ? -1.0 : 1.0)*0.8*door_width, br_dim);
-	sign.expand_in_dim(br_dim, -(mens_room ? 0.35 : 0.25)*door_width); // shrink a bit
-	sign.translate_dim(sink_side_sign*0.5*wall_thickness, !br_dim); // move to outside wall
+	sign.translate_dim( br_dim, (shift_dir ? -1.0 : 1.0)*0.8*door_width);
+	sign.expand_in_dim( br_dim, -(mens_room ? 0.35 : 0.25)*door_width); // shrink a bit
+	sign.translate_dim(!br_dim, sink_side_sign*0.5*wall_thickness); // move to outside wall
 	sign.d[!br_dim][sink_side] += sink_side_sign*0.1*wall_thickness; // make nonzero area
 	objs.emplace_back(sign, TYPE_SIGN, room_id, !br_dim, sink_side, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, DK_BLUE); // technically should use hallway room_id
 	string const sign_text(mens_room ? "Men" : "Women");
@@ -1080,7 +1080,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		room_object_t &tv(objs[tv_ix]);
 		float const height(0.4*tv.dz());
 		cube_t table(tv); // same XY bounds as the TV
-		tv.translate_dim(height, 2); // move TV up
+		tv.translate_dim(2, height); // move TV up
 		table.z2() = tv.z1();
 		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, 0, tot_light_amt);
 	}
@@ -1196,7 +1196,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			if (!i->intersects(crate)) continue;
 			// only handle stacking of crates on other crates
-			if (i->type == TYPE_CRATE && i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(i->dz(), 2);}
+			if (i->type == TYPE_CRATE && i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(2, i->dz());}
 			else {bad_placement = 1; break;}
 		}
 		if (bad_placement) continue;
@@ -1390,7 +1390,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				cube_t c(center, center);
 				c.expand_in_dim(2, 0.5*height);
 				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
-				if (room.is_hallway) {c.translate_dim((dir ? -1.0 : 1.0)*0.5*wall_thickness, dim);} // add an additional half wall thickness for hallways
+				if (room.is_hallway) {c.translate_dim(dim, (dir ? -1.0 : 1.0)*0.5*wall_thickness);} // add an additional half wall thickness for hallways
 				c.expand_in_dim(!dim, 0.5*width);
 				int const ret(check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start));
 				if (ret == 0) continue; // invalid, retry
@@ -1650,7 +1650,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					for (unsigned d = 0; d < num_lights; ++d) {
 						float const delta((d == 2) ? 0.0 : (d ? -1.0 : 1.0)*offset); // last light is in the center
 						cube_t hall_light(light);
-						hall_light.translate_dim(delta, light_dim);
+						hall_light.translate_dim(light_dim, delta);
 
 						if (check_stairs && has_bcube_int_exp(hall_light, interior->stairwells, fc_thick)) { // keep moving until not blocked by stairs
 							cube_t const hall_light_start(hall_light);
@@ -1661,7 +1661,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 								for (unsigned n = 0; n < 40; ++n) {
 									if (!has_bcube_int_exp(hall_light, interior->stairwells, fc_thick)) {is_valid = 1; break;}
-									hall_light.translate_dim(0.04*delta*(shift_dir ? -1.0 : 1.0), light_dim);
+									hall_light.translate_dim(light_dim, 0.04*delta*(shift_dir ? -1.0 : 1.0));
 									if (!valid_bounds.contains_cube_xy(hall_light)) break; // translated outside the hall, give up
 								}
 							} // for shift_dir
@@ -2027,7 +2027,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		float const window_width(c.get_sz_dim(!dim)*d_tx_inv), window_height(c.dz()*d_tz_inv); // window_height should be equal to window_vspacing
 		float const border_xy(window_width*window_h_border), border_z(window_height*window_v_border), dscale(dir ? -1.0 : 1.0);
 		cube_t window(c); // copy dim <dim>
-		window.translate_dim(dscale*window_offset, dim);
+		window.translate_dim(dim, dscale*window_offset);
 		window.d[dim][!dir] += dscale*window_trim_depth; // add thickness on interior of building
 		unsigned ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 
@@ -2187,7 +2187,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				railing.z2() = railing_z2;
 
 				if (add_wall || i->roof_access) {
-					railing.translate_dim((d ? -1.0 : 1.0)*2.0*wall_hw, !dim); // shift railing inside of walls
+					railing.translate_dim(!dim, (d ? -1.0 : 1.0)*2.0*wall_hw); // shift railing inside of walls
 					railing.expand_in_dim(dim, -(i->roof_access ? 2.0 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
 				}
 				if (i->shape == SHAPE_U) { // adjust railing height/angle to match stairs
@@ -2232,7 +2232,7 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 		if      (fabs(p->d[dim][0] - door_bcube.d[dim][0]) < 0.1*width) {dir = 0;}
 		else if (fabs(p->d[dim][1] - door_bcube.d[dim][1]) < 0.1*width) {dir = 1;}
 		else {continue;} // wrong part
-		if (!outside) {dir ^= 1; c.translate_dim((dir ? 1.0 : -1.0)*0.1*height, dim);} // move inside the building
+		if (!outside) {dir ^= 1; c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*height);} // move inside the building
 		c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*height;
 
 		if (outside) {

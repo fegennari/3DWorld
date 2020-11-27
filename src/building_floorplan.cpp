@@ -527,7 +527,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						hall_walls.push_back(hwall); // longer sections that form T-junctions with room walls
 						doorway_vals[2*i+d+1] = hwall.d[!min_dim][d];
 					}
-					rwall.translate_dim(room_len, !min_dim);
+					rwall.translate_dim(!min_dim, room_len);
 				} // for i
 				for (unsigned s = 0; s < 2; ++s) { // add half length hall walls at each end of the hallway
 					cube_t hwall(rwall); // copy to get correct zvals
@@ -831,7 +831,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			add_or_extend_elevator(elevator, 1);
 			room.has_elevator = 1;
 			elevator_cut      = elevator;
-			stairs.translate_dim(-center_shift, long_dim); // shift stairs in the opposite direction
+			stairs.translate_dim(long_dim, -center_shift); // shift stairs in the opposite direction
 		}
 		// always add stairs
 		for (unsigned dim = 0; dim < 2; ++dim) { // shrink in XY

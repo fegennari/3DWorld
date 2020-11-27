@@ -610,7 +610,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	colorRGBA const shelf_color(apply_light_color(c));
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
-		shelf.translate_dim(z_step, 2); // move up one step
+		shelf.translate_dim(2, z_step); // move up one step
 		wood_mat.add_cube_to_verts(shelf, shelf_color, c.get_llc(), skip_faces, !c.dim); // make wood grain horizontal
 		shelves[s] = shelf; // record for later use
 	}
@@ -624,7 +624,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		bracket.z1() -= bracket_thickness;
 		bracket.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.1*width; // shorten slightly
 		bracket.d[!c.dim][1] = bracket.d[!c.dim][0] + bracket_width; // set width
-		bracket.translate_dim(b_offset, !c.dim);
+		bracket.translate_dim(!c.dim, b_offset);
 
 		for (unsigned b = 0; b < num_brackets; ++b) {
 			metal_mat.add_cube_to_verts(bracket, bracket_color, zero_vector, (skip_faces | EF_Z2)); // skip back and top faces
@@ -636,7 +636,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
 				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip back and top/bottom faces
 			}
-			bracket.translate_dim(b_step, !c.dim);
+			bracket.translate_dim(!c.dim, b_step);
 		} // for b
 	} // for s
 	// add objects to the shelves
@@ -1316,9 +1316,9 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 					bottle.obj_id = (uint16_t)rgen.rand();
 					add_bottle(bottle, 1);
 				}
-				bottle.translate_dim(row_step, 2); // translate in Z
+				bottle.translate_dim(2, row_step); // translate in Z
 			}
-			bottle.translate_dim(col_step, !c.dim); // translate in !dim
+			bottle.translate_dim(!c.dim, col_step); // translate in !dim
 		} // for i
 	}
 }
@@ -1467,7 +1467,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 			bool const use_cylinders(!add_canopy && (c.obj_id & 4));
 
 			for (unsigned i = 0; i < 4; ++i) {
-				if (!add_canopy && posts[i].d[c.dim][!c.dir] == c.d[c.dim][!c.dir]) {posts[i].translate_dim(-(head.z2() - foot.z2()), 2);} // make footboard posts shorter
+				if (!add_canopy && posts[i].d[c.dim][!c.dir] == c.d[c.dim][!c.dir]) {posts[i].translate_dim(2, -(head.z2() - foot.z2()));} // make footboard posts shorter
 				if (use_cylinders) {wood_mat.add_vcylin_to_verts(posts[i], color, 0, 1);}
 				else {wood_mat.add_cube_to_verts(posts[i], color, tex_origin, EF_Z1);} // skip bottom face
 			}
