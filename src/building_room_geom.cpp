@@ -923,12 +923,13 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_blinds(room_object_t const &c, float tscale) {
-	unsigned const skip_faces(get_skip_mask_for_xy(c.dim));
+void building_room_geom_t::add_blinds(room_object_t const &c) {;
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_blinds_tid(), get_texture_by_name("interiors/blinds_hn.jpg"), tscale, tscale), 1));
-	mat.add_cube_to_verts(c, color, tex_origin, ~skip_faces, !c.dim); // skip all but front and back faces
-	get_material(untex_shad_mat, 1).add_cube_to_verts(c, texture_color(get_blinds_tid()).modulate_with(color), tex_origin, skip_faces); // skip front and back faces
+	// fit the texture to the cube; blinds have a fixed number of slats that compress when they are shortened
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_blinds_tid(), get_texture_by_name("interiors/blinds_hn.jpg"), 0.0, 0.0), 1));
+	mat.add_cube_to_verts(c, color, tex_origin, ~get_skip_mask_for_xy( c.dim), !c.dim); // draw front and back faces
+	mat.add_cube_to_verts(c, color, tex_origin, ~get_skip_mask_for_xy(!c.dim),  c.dim); // draw sides
+	get_material(untex_shad_mat, 1).add_cube_to_verts(c, texture_color(get_blinds_tid()).modulate_with(color), tex_origin, ~EF_Z12); // draw top and bottom untextured
 }
 
 void building_room_geom_t::add_railing(room_object_t const &c) {
@@ -2020,7 +2021,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
 		case TYPE_COMPUTER:add_computer(*i); break;
 		case TYPE_MWAVE:   add_mwave   (*i); break;
-		case TYPE_BLINDS:  add_blinds  (*i, tscale); break;
+		case TYPE_BLINDS:  add_blinds  (*i); break;
 		case TYPE_ELEVATOR: break; // not handled here
 		case TYPE_BLOCKER:  break; // not drawn
 		case TYPE_COLLIDER: break; // not drawn

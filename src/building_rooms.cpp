@@ -2029,9 +2029,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		cube_t window(c); // copy dim <dim>
 		window.translate_dim(dscale*window_offset, dim);
 		window.d[dim][!dir] += dscale*window_trim_depth; // add thickness on interior of building
-		unsigned ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)), floor(0);
+		unsigned ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 
-		for (float z = tz1; z < tz2; z += 1.0, ++floor) { // each floor
+		for (float z = tz1; z < tz2; z += 1.0) { // each floor
 			float const bot_edge(c.z1() + (z - tz1)*window_height);
 			set_cube_zvals(window, bot_edge+border_z, bot_edge+window_height-border_z);
 
@@ -2055,29 +2055,42 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					side.d[!dim][!s] = window.d[!dim][s];
 					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				}
-				// TODO: add curtains or blinds to some windows based on the containing room type for this floor
-				int const room_ix(get_room_ix_for_window(window, dim, dir));
-				if (room_ix < 0) continue; // room not found - should this be an error?
-				assert(unsigned(room_ix) < interior->rooms.size());
-				room_t const &room(interior->rooms[room_ix]);
-				room_type const rtype(room.get_room_type(floor));
-				cube_t c;
-
-				switch (rtype) {
-				case RTYPE_BED:
-					c = window;
-					c.translate_dim(dscale*0.4*wall_thickness, dim); // FIXME: swap argument order
-					c.expand_in_dim(dim, 0.2*wall_thickness);
-					c.z1() += 0.5*window.dz();
-					objs.emplace_back(c, TYPE_BLINDS, room_ix, dim, dir, RO_FLAG_NOCOLL, 1.0); // always fully lit
-					break;
-				} // end switch
+				add_window_coverings(window, dim, dir);
 			} // for xy
 		} // for z
 	} // for i
 }
 
-int building_t::get_room_ix_for_window(cube_t const &window, bool dim, bool dir) const {
+void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) {
+	// add blinds to some windows based on the containing room type for this floor
+	bool is_split(0);
+	int const room_ix(get_room_ix_for_window(window, dim, dir, is_split));
+	if (room_ix < 0) return; // room not found - should this be an error?
+	if (is_split)    return; // window split across multiple rooms - how do we handle this? for now skip it
+	assert(unsigned(room_ix) < interior->rooms.size());
+	room_t const &room(interior->rooms[room_ix]);
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	unsigned const floor(room.get_floor_containing_zval(0.5f*(window.z1() + window.z2()), floor_spacing));
+	unsigned const rix(13*room_ix + 11*floor + 3*(room_ix+floor)); // sort of a hash of the two
+	room_type const rtype(room.get_room_type(floor));
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	cube_t c(window);
+
+	switch (rtype) {
+	case RTYPE_BED: { // bedroom
+		float const raise_amt(0.85*((rix&3) ? 1.0 : fract(356.54*rix))); // 0-85% 25% the time, 85% for the rest
+		c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*wall_thickness; // slight gap for wall trim
+		c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.15*wall_thickness*(raise_amt + 0.025);
+		c.expand_in_dim(!dim, 0.9*wall_thickness); // expand width  to cover trim +15% WT
+		c.expand_in_dim(2,    0.9*wall_thickness); // expand height to cover trim +15% WT
+		c.z1() += raise_amt*window.dz(); // raise amount is random per-room
+		objs.emplace_back(c, TYPE_BLINDS, room_ix, dim, dir, RO_FLAG_NOCOLL, 1.0); // always fully lit
+		break;
+	}
+	} // end switch
+}
+
+int building_t::get_room_ix_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const {
 	assert(interior);
 	float const wall_thickness(get_wall_thickness());
 	point const center(window.get_cube_center());
@@ -2086,6 +2099,7 @@ int building_t::get_room_ix_for_window(cube_t const &window, bool dim, bool dir)
 		if (center[!dim] < r->d[!dim][0] || center[!dim] >= r->d[!dim][1]) continue; // test center point for windows that straddle two rooms
 		if (center.z < r->z1() || center.z > r->z2()) continue;
 		if (fabs(center[dim] - r->d[dim][dir]) > wall_thickness) continue; // wrong wall
+		is_split = (window.d[!dim][0] < r->d[!dim][0] || window.d[!dim][1] > r->d[!dim][1]);
 		return (r - interior->rooms.begin()); // found
 	} // for r
 	return -1; // not found

@@ -426,7 +426,7 @@ struct building_room_geom_t {
 	void add_paper(room_object_t const &c);
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
-	void add_blinds(room_object_t const &c, float tscale);
+	void add_blinds(room_object_t const &c);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void create_static_vbos(building_t const &building, tid_nm_pair_t const &wall_tex);
@@ -776,7 +776,8 @@ private:
 	cube_t get_rotated_bcube(cube_t const &c) const;
 	cube_t get_part_for_room(room_t const &room) const {assert(room.part_id < parts.size()); return parts[room.part_id];}
 	bool are_parts_stacked(cube_t const &p1, cube_t const &p2) const;
-	int get_room_ix_for_window(cube_t const &window, bool dim, bool dir) const;
+	void add_window_coverings(cube_t const &window, bool dim, bool dir);
+	int get_room_ix_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const;
 };
 
 struct vect_building_t : public vector<building_t> {
