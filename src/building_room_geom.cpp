@@ -35,8 +35,8 @@ unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir))
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale);}
 int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
-int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg");}
-int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg");}
+int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
+int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
@@ -563,7 +563,7 @@ int get_crate_tid(room_object_t const &c) {
 void building_room_geom_t::add_crate(room_object_t const &c) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	if (c.obj_id & 2) { // make it a box
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), get_texture_by_name("interiors/box_normal.jpg"), 0.0, 0.0), 1, 0, 1));
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, 1));
 		unsigned const verts_start(mat.quad_verts.size());
 		mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
 		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
@@ -926,7 +926,8 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 void building_room_geom_t::add_blinds(room_object_t const &c) {;
 	colorRGBA const color(apply_light_color(c));
 	// fit the texture to the cube; blinds have a fixed number of slats that compress when they are shortened
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_blinds_tid(), get_texture_by_name("interiors/blinds_hn.jpg"), 0.0, 0.0), 1));
+	int const nm_tid(get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0)); // use high aniso
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_blinds_tid(), nm_tid, 0.0, 0.0), 1));
 	mat.add_cube_to_verts(c, color, tex_origin, ~get_skip_mask_for_xy( c.dim), !c.dim); // draw front and back faces
 	mat.add_cube_to_verts(c, color, tex_origin, ~get_skip_mask_for_xy(!c.dim),  c.dim); // draw sides
 	get_material(untex_shad_mat, 1).add_cube_to_verts(c, texture_color(get_blinds_tid()).modulate_with(color), tex_origin, ~EF_Z12); // draw top and bottom untextured
