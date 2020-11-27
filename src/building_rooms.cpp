@@ -2071,7 +2071,8 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	room_t const &room(interior->rooms[room_ix]);
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	unsigned const floor(room.get_floor_containing_zval(0.5f*(window.z1() + window.z2()), floor_spacing));
-	unsigned const rix(13*room_ix + 11*floor + 3*(room_ix+floor)); // sort of a hash of the two
+	rand_gen_t rgen;
+	rgen.set_state((123*room_ix + 211*interior->rooms.size()), (777*floor + 1));
 	room_type const rtype(room.get_room_type(floor));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c(window);
@@ -2079,7 +2080,7 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	switch (rtype) {
 	case RTYPE_BED: { // bedroom
 		// raise_amt is a mix of 50% room-based and 50% window-based to get somewhat consistent levels per room
-		float const raise_amt(0.9*((rix&3) ? 1.0 : 0.5*(fract(356.54*rix) + fract(1123.7*objs.size())))); // 0-90% 25% the time, 90% for the rest
+		float const raise_amt(0.9*((rgen.rand_float() < 0.75) ? 1.0 : 0.5*(rgen.rand_float() + fract(1123.7*objs.size())))); // 0-90% 25% the time, 90% for the rest
 		c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*wall_thickness; // slight gap for wall trim
 		c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.15*wall_thickness*(raise_amt + 0.025);
 		c.expand_in_dim(!dim, 0.9*wall_thickness); // expand width  to cover trim +15% WT
