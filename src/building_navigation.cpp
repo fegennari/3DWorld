@@ -474,7 +474,7 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 	building_dest_t const &goal(cur_player_building_loc);
 	float const floor_spacing(get_window_vspace());
 
-	if ((display_mode & 0x20) && goal.is_valid() && goal.building_ix == person.dest_bldg && goal.room_ix != loc.room_ix) { // player is in a different room of our building
+	if ((display_mode & 0x20) && goal.is_valid() && goal.building_ix == (int)person.dest_bldg && goal.room_ix != loc.room_ix) { // player is in a different room of our building
 		unsigned const cand_room(goal.room_ix);
 		assert(cand_room < interior->rooms.size());
 		room_t const &room(interior->rooms[cand_room]);
@@ -774,19 +774,18 @@ void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t 
 	set_room_light_state_to(cur_room, person.pos.z, 1); // make sure current room light is on
 	if ((unsigned)room_ix == state.cur_room) return; // same room as last time - done
 	assert(state.cur_room < interior->rooms.size());
-	room_t const &prev_room(interior->rooms[state.cur_room]);
 	bool other_person_in_room(0);
 
 	// check for other people in the room before turning the lights off on them
 	for (unsigned i = person_ix; i-- ;) { // look behind
 		pedestrian_t const &p(people[i]);
 		if (p.dest_bldg != person.dest_bldg) break; // done with this building
-		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
+		if (get_room_containing_pt(p.pos) == (int)state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
 	for (unsigned i = person_ix+1; i < people.size() && !other_person_in_room; ++i) { // look ahead
 		pedestrian_t const &p(people[i]);
 		if (p.dest_bldg != person.dest_bldg) break; // done with this building
-		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
+		if (get_room_containing_pt(p.pos) == (int)state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
 	if (!other_person_in_room) {set_room_light_state_to(interior->rooms[state.cur_room], person.pos.z, 0);} // make sure old room light is off
 	state.cur_room = room_ix;

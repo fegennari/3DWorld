@@ -756,7 +756,7 @@ void s_plant::create2(point const &pos_, float height_, float radius_, int type_
 void s_plant::create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z, bool land_plants_only) {
 
 	vbo_mgr_ix = -1;
-	type   = abs(type_) % (land_plants_only ? NUM_LAND_PLANT_TYPES : NUM_PLANT_TYPES);
+	type   = abs(type_) % (land_plants_only ? (int)NUM_LAND_PLANT_TYPES : (int)NUM_PLANT_TYPES);
 	pos    = pos_;
 	radius = radius_;
 	height = height_;

@@ -567,7 +567,7 @@ void building_room_geom_t::add_crate(room_object_t const &c) {
 		unsigned const verts_start(mat.quad_verts.size());
 		mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
 		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
-		float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), x4(2032/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz), y4(1-128/sz);
+		float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: we don't use all parts of the texture
 		mat.quad_verts[verts_start+0].set_tc(x1, y2); // z (top)
 		mat.quad_verts[verts_start+1].set_tc(x2, y2);
 		mat.quad_verts[verts_start+2].set_tc(x2, y3);

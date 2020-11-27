@@ -552,7 +552,7 @@ struct building_dest_t : public building_loc_t {
 	int building_ix;
 	point pos;
 	building_dest_t() : building_ix(-1) {}
-	building_dest_t(building_loc_t const &b, point const &pos_, int bix=-1) : building_loc_t(b), pos(pos_), building_ix(bix) {}
+	building_dest_t(building_loc_t const &b, point const &pos_, int bix=-1) : building_loc_t(b), building_ix(bix), pos(pos_) {}
 	bool is_valid() const {return (building_ix >= 0 && part_ix >= 0 && room_ix >= 0);}
 };
 

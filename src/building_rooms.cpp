@@ -1449,7 +1449,6 @@ void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned r
 void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
-	float const window_vspacing(get_window_vspace());
 	float const place_book_prob((is_house ? 1.0 : 0.5)*(room.is_office ? 0.8 : 1.0));
 	float const place_bottle_prob(is_house ? 1.0 : (room.is_office ? 0.75 : 0.0));
 	float const place_plant_prob (is_house ? 1.0 : (room.is_office ? 0.25 : 0.0));
@@ -1844,8 +1843,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	//highres_timer_t timer("Add Wall And Door Trim");
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), expand_val(2.0*trim_thickness);
-	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness);
-	float const door_height(get_door_height()), floor_to_ceil_height(window_vspacing - floor_thickness);
+	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness), floor_to_ceil_height(window_vspacing - floor_thickness);
 	unsigned const flags(RO_FLAG_NOCOLL);
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling

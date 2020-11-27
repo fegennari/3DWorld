@@ -971,7 +971,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			}
 			if (has_stairs) { // add landings and stairwells
 				// make sure to enable back wall for the first flight of stairs
-				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing, ((f == 1 && sshape == SHAPE_WALLED_SIDES) ? SHAPE_WALLED : sshape), 0, is_at_top);
+ 				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing, ((f == 1 && sshape == SHAPE_WALLED_SIDES) ? (stairs_shape)SHAPE_WALLED : sshape), 0, is_at_top);
 				landing.z1() = zc; landing.z2() = zf;
 				for (unsigned d = 0; d < 2; ++d) {landing.against_wall[d] = stairs_against_wall[d];}
 				last_landing_ix = interior->landings.size();
