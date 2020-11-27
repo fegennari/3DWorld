@@ -2078,11 +2078,13 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 
 	switch (rtype) {
 	case RTYPE_BED: { // bedroom
-		float const raise_amt(0.85*((rix&3) ? 1.0 : fract(356.54*rix))); // 0-85% 25% the time, 85% for the rest
+		// raise_amt is a mix of 50% room-based and 50% window-based to get somewhat consistent levels per room
+		float const raise_amt(0.9*((rix&3) ? 1.0 : 0.5*(fract(356.54*rix) + fract(1123.7*objs.size())))); // 0-90% 25% the time, 90% for the rest
 		c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*wall_thickness; // slight gap for wall trim
 		c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.15*wall_thickness*(raise_amt + 0.025);
 		c.expand_in_dim(!dim, 0.9*wall_thickness); // expand width  to cover trim +15% WT
-		c.expand_in_dim(2,    0.9*wall_thickness); // expand height to cover trim +15% WT
+		c.z1() -= 0.9*wall_thickness; // extend 15% WT below the windowsill
+		c.z2() += 0.9*wall_thickness + 0.05*floor_spacing; // expand height to allow space for it to bunch up at the top
 		c.z1() += raise_amt*window.dz(); // raise amount is random per-room
 		objs.emplace_back(c, TYPE_BLINDS, room_ix, dim, dir, RO_FLAG_NOCOLL, 1.0); // always fully lit
 		break;
