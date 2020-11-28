@@ -326,7 +326,7 @@ int texture_lookup(string const &name) {
 	return ((it != texture_name_map.end()) ? it->second : -1);
 }
 
-int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, int wrap_mir, float aniso) {
+int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, int wrap_mir, float aniso, bool allow_compress) {
 
 	int const ix(atoi(name.c_str()));
 	if (ix > 0 || ix == -1 || name == "0") return ix; // a number was specified
@@ -336,8 +336,9 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y, i
 	//timer_t timer("Load Texture " + name);
 	// try to load/add the texture directly from a file: assume it's RGB with wrap and mipmaps
 	tid = textures.size();
+	bool const do_compress(allow_compress && def_tex_compress && !is_normal_map);
 	// type format width height wrap_mir ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0 [normal_map=0]]]]]
-	texture_t new_tex(0, 7, 0, 0, wrap_mir, 3, 1, name, invert_y, (def_tex_compress && !is_normal_map), ((aniso > 0.0) ? aniso : def_tex_aniso), 1.0, is_normal_map);
+	texture_t new_tex(0, 7, 0, 0, wrap_mir, 3, 1, name, invert_y, do_compress, ((aniso > 0.0) ? aniso : def_tex_aniso), 1.0, is_normal_map);
 
 	if (textures_inited) {
 		new_tex.load(tid);
