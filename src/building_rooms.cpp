@@ -2048,6 +2048,7 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 }
 
 void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) {
+	bool const vertical = 0; // all horizontal for now
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	rand_gen_t rgen;
@@ -2061,7 +2062,7 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 	c.z1() -= 0.9*wall_thickness; // extend 15% WT below the windowsill
 	c.z2() += 0.9*wall_thickness + 0.05*floor_spacing; // expand height to allow space for it to bunch up at the top
 	c.z1() += raise_amt*window.dz(); // raise amount is random per-room
-	objs.emplace_back(c, TYPE_BLINDS, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // always fully lit
+	objs.emplace_back(c, TYPE_BLINDS, room_id, dim, dir, (RO_FLAG_NOCOLL | (vertical ? 0 : RO_FLAG_HANGING)), 1.0); // always fully lit
 }
 
 void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks
