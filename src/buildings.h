@@ -465,6 +465,7 @@ struct room_t : public cube_t {
 	void assign_to(room_type rt, unsigned floor);
 	room_type get_room_type(unsigned floor) const {return rtype[min(floor, NUM_RTYPE_SLOTS-1U)];}
 	bool has_bathroom() const;
+	bool is_lit_on_floor(unsigned floor) const {return (lit_by_floor & (1ULL << (floor&63)));}
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const;
 };
