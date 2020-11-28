@@ -1418,33 +1418,6 @@ void building_t::add_plants_to_room(rand_gen_t rgen, room_t const &room, float z
 	}
 }
 
-void building_t::add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit) {
-	unsigned num_ext_walls(0);
-
-	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (unsigned dir = 0; dir < 2; ++dir) {num_ext_walls += (classify_room_wall(room, zval, dim, dir, 1) == ROOM_WALL_EXT);}
-	}
-	if (num_ext_walls != 1) return; // it looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
-	float const floor_thickness(get_floor_thickness()), wall_thickness(get_wall_thickness()), window_thickness(0.05*wall_thickness);
-	float const z2(zval + get_window_vspace() - floor_thickness);
-	vector<room_object_t> &objs(interior->room_geom->objs);
-	unsigned const flags(RO_FLAG_NOCOLL | (is_lit ? RO_FLAG_LIT : 0));
-
-	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (unsigned dir = 0; dir < 2; ++dir) {
-			if (classify_room_wall(room, zval, dim, dir, 1) != ROOM_WALL_EXT) continue; // exterior walls only
-			cube_t c(room);
-			set_cube_zvals(c, zval, z2);
-			c.d[dim][!dir]  = c.d[dim][dir] + (dir ? -1.0 : 1.0)*window_thickness;
-			c.d[dim][ dir] -= (dir ? -1.0 : 1.0)*window_thickness;
-			// shrink by wall thickness to avoid problems at the corners of buildings
-			if (c.d[!dim][0] == bcube.d[!dim][0]) {c.d[!dim][0] += wall_thickness;}
-			if (c.d[!dim][1] == bcube.d[!dim][1]) {c.d[!dim][1] -= wall_thickness;}
-			objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, flags, max(tot_light_amt, 1.0f), SHAPE_CUBE, WHITE); // always lit
-		} // for dir
-	} // for dim
-}
-
 void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
@@ -1820,7 +1793,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
-			if (is_bathroom) {add_bathroom_windows(*r, room_center.z, room_id, tot_light_amt, is_lit);} // find all windows and add frosted windows
 			if (r->has_stairs && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);} // default to stairs if not set above
 		} // for f (floor)
 		num_light_stacks += num_lights_added;
@@ -2061,36 +2033,53 @@ void building_t::add_wall_and_door_trim() { // and window trim
 void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) {
 	// add blinds to some windows based on the containing room type for this floor
 	bool is_split(0);
-	int const room_ix(get_room_ix_for_window(window, dim, dir, is_split));
-	if (room_ix < 0) return; // room not found - should this be an error?
+	int const room_id(get_room_id_for_window(window, dim, dir, is_split));
+	if (room_id < 0) return; // room not found - should this be an error?
 	if (is_split)    return; // window split across multiple rooms - how do we handle this? for now skip it
-	assert(unsigned(room_ix) < interior->rooms.size());
-	room_t const &room(interior->rooms[room_ix]);
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
-	unsigned const floor(room.get_floor_containing_zval(0.5f*(window.z1() + window.z2()), floor_spacing));
-	rand_gen_t rgen;
-	rgen.set_state((123*room_ix + 211*interior->rooms.size()), (777*floor + 1));
+	assert(unsigned(room_id) < interior->rooms.size());
+	room_t const &room(interior->rooms[room_id]);
+	unsigned const floor(room.get_floor_containing_zval(0.5f*(window.z1() + window.z2()), get_window_vspace()));
 	room_type const rtype(room.get_room_type(floor));
-	vector<room_object_t> &objs(interior->room_geom->objs);
-	cube_t c(window);
 
 	switch (rtype) {
-	case RTYPE_BED: { // bedroom
-		// raise_amt is a mix of 50% room-based and 50% window-based to get somewhat consistent levels per room
-		float const raise_amt(0.9*((rgen.rand_float() < 0.75) ? 1.0 : 0.5*(rgen.rand_float() + fract(1123.7*objs.size())))); // 0-90% 25% the time, 90% for the rest
-		c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*wall_thickness; // slight gap for wall trim
-		c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.15*wall_thickness*(raise_amt + 0.025);
-		c.expand_in_dim(!dim, 0.9*wall_thickness); // expand width  to cover trim +15% WT
-		c.z1() -= 0.9*wall_thickness; // extend 15% WT below the windowsill
-		c.z2() += 0.9*wall_thickness + 0.05*floor_spacing; // expand height to allow space for it to bunch up at the top
-		c.z1() += raise_amt*window.dz(); // raise amount is random per-room
-		objs.emplace_back(c, TYPE_BLINDS, room_ix, dim, dir, RO_FLAG_NOCOLL, 1.0); // always fully lit
-		break;
-	}
+	case RTYPE_BED:  add_window_blinds  (window, dim, dir, room_id, floor); break; // bedroom
+	case RTYPE_BATH: add_bathroom_window(window, dim, dir, room_id, floor); break; // bathroom
 	} // end switch
 }
 
-int building_t::get_room_ix_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const {
+void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) {
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	rand_gen_t rgen;
+	rgen.set_state((123*room_id + 211*interior->rooms.size()), (777*floor + 1));
+	// raise_amt is a mix of 50% room-based and 50% window-based to get somewhat consistent levels per room
+	float const raise_amt(0.9*((rgen.rand_float() < 0.75) ? 1.0 : 0.5*(rgen.rand_float() + fract(1123.7*objs.size())))); // 0-90% 25% the time, 90% for the rest
+	cube_t c(window);
+	c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*wall_thickness; // slight gap for wall trim
+	c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.15*wall_thickness*(raise_amt + 0.025);
+	c.expand_in_dim(!dim, 0.9*wall_thickness); // expand width  to cover trim +15% WT
+	c.z1() -= 0.9*wall_thickness; // extend 15% WT below the windowsill
+	c.z2() += 0.9*wall_thickness + 0.05*floor_spacing; // expand height to allow space for it to bunch up at the top
+	c.z1() += raise_amt*window.dz(); // raise amount is random per-room
+	objs.emplace_back(c, TYPE_BLINDS, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // always fully lit
+}
+
+void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks
+	room_t const &room(interior->rooms[room_id]);
+	unsigned num_ext_walls(0);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {num_ext_walls += (classify_room_wall(room, window.z1(), dim, dir, 1) == ROOM_WALL_EXT);}
+	}
+	if (num_ext_walls != 1) return; // it looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	cube_t c(window);
+	c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*get_wall_thickness());
+	unsigned const flags(RO_FLAG_NOCOLL | (room.is_lit_on_floor(floor) ? RO_FLAG_LIT : 0));
+	objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE); // always lit
+}
+
+int building_t::get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const {
 	assert(interior);
 	float const wall_thickness(get_wall_thickness());
 	point const center(window.get_cube_center());

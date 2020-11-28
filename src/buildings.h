@@ -758,7 +758,6 @@ private:
 	void add_rug_to_room     (rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_plants_to_room  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num);
-	void add_bathroom_windows(room_t const &room, float zval, unsigned room_id, float tot_light_amt, bool is_lit);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
 	bool can_be_bathroom(room_t const &room) const;
@@ -778,7 +777,9 @@ private:
 	cube_t get_part_for_room(room_t const &room) const {assert(room.part_id < parts.size()); return parts[room.part_id];}
 	bool are_parts_stacked(cube_t const &p1, cube_t const &p2) const;
 	void add_window_coverings(cube_t const &window, bool dim, bool dir);
-	int get_room_ix_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const;
+	void add_window_blinds(cube_t const &window, bool dim, bool dir, unsigned room_ix, unsigned floor);
+	void add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor);
+	int get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const;
 };
 
 struct vect_building_t : public vector<building_t> {

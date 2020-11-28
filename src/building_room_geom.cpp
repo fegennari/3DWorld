@@ -925,6 +925,7 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 void building_room_geom_t::add_blinds(room_object_t const &c) {;
 	colorRGBA const color(apply_light_color(c));
 	// fit the texture to the cube; blinds have a fixed number of slats that compress when they are shortened
+	// should these be partially transparent/backlit like bathroom windows? I guess not, most blinds are plastic or wood rather than material
 	int const nm_tid(get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0)); // use high aniso
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_blinds_tid(), nm_tid, 0.0, 0.0), 1));
 	mat.add_cube_to_verts(c, color, tex_origin, ~get_skip_mask_for_xy( c.dim), !c.dim); // draw front and back faces
@@ -1850,11 +1851,10 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	} // for n
 }
 
-void building_room_geom_t::add_window(room_object_t const &c, float tscale) {
+void building_room_geom_t::add_window(room_object_t const &c, float tscale) { // frosted window blocks
 	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z12); // only enable faces in dim
 	cube_t window(c);
-	swap(window.d[c.dim][0], window.d[c.dim][1]); // denormalized
-	tid_nm_pair_t tex(get_bath_wind_tid(), tscale);
+	tid_nm_pair_t tex(get_bath_wind_tid(), 0.0); // fit texture to the window front/back faces
 	if (c.flags & RO_FLAG_LIT) {tex.emissive = 0.33;} // one third emissive
 	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
