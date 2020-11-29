@@ -210,7 +210,7 @@ struct building_geom_t { // describes the physical shape of a building
 
 struct tquad_with_ix_t : public tquad_t {
 	// roof, roof access cover, wall, chimney cap, house door, building door, garage door, interior door, roof door
-	enum {TYPE_ROOF=0, TYPE_ROOF_ACC, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR, TYPE_GDOOR, TYPE_IDOOR, TYPE_IDOOR2, TYPE_RDOOR, TYPE_HELIPAD};
+	enum {TYPE_ROOF=0, TYPE_ROOF_ACC, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR, TYPE_GDOOR, TYPE_IDOOR, TYPE_IDOOR2, TYPE_RDOOR, TYPE_HELIPAD, TYPE_SOLAR};
 	bool is_exterior_door() const {return (type == TYPE_HDOOR || type == TYPE_BDOOR || type == TYPE_GDOOR || type == TYPE_RDOOR);}
 	bool is_interior_door() const {return (type == TYPE_IDOOR || type == TYPE_IDOOR2);}
 
@@ -638,6 +638,7 @@ struct building_t : public building_geom_t {
 	void gen_geometry(int rseed1, int rseed2);
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen);
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
+	void add_solar_panels(rand_gen_t &rgen);
 	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building, bool roof_access=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);

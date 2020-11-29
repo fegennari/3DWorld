@@ -1235,6 +1235,22 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	// white, white, white, white, pink, peach, lt green, lt blue
 	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
 	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
+	if (rgen.rand_bool()) {add_solar_panels(rgen);} // maybe add solar panels
+}
+
+void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
+	return; // TODO: remove when this is implemented
+	if (roof_tquads.empty()) return; // not a house?
+	unsigned best_tquad(0);
+	float best_area(0.0);
+
+	for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {
+		float const area(polygon_area(r->pts, r->npts));
+		if (best_area == 0.0 || area < best_area) {best_area = area; best_tquad = (r - roof_tquads.begin());}
+	}
+	assert(best_tquad < roof_tquads.size());
+	tquad_with_ix_t const &roof(roof_tquads[best_tquad]); // generally will be a quad rather than a triangle, since those are larger
+	// TODO: add roof_tquads of TYPE_SOLAR
 }
 
 void rotate_xy(point &pt, point const &origin, float angle) {
