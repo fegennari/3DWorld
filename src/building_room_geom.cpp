@@ -928,12 +928,15 @@ void building_room_geom_t::add_blinds(room_object_t const &c) {
 	// fit the texture to the cube; blinds have a fixed number of slats that compress when they are shortened
 	// should these be partially transparent/backlit like bathroom windows? I guess not, most blinds are plastic or wood rather than material
 	int const nm_tid(get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0)); // use high aniso
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_blinds_tid(), nm_tid, 0.0, 0.0), 1));
+	float tx(vertical ? 1.0/c.dz() : 0.0), ty(vertical ? 0.5/c.get_sz_dim(!c.dim) : 0.0);
+	if (c.dim) {swap(tx, ty);}
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_blinds_tid(), nm_tid, tx, ty), 1));
 	unsigned df1(~get_skip_mask_for_xy(!c.dim)), df2(~EF_Z12);
 	if (vertical) {swap(df1, df2);} // swap sides vs. top/bottom
-	mat.add_cube_to_verts(c, color, tex_origin, ~get_skip_mask_for_xy(c.dim), (c.dim ^ vertical ^ 1)); // draw front and back faces
-	mat.add_cube_to_verts(c, color, tex_origin, df1, (c.dim ^ vertical)); // draw sides / top and bottom
-	get_material(untex_shad_mat, 1).add_cube_to_verts(c, texture_color(get_blinds_tid()).modulate_with(color), tex_origin, df2); // draw top and bottom / front and back untextured
+	vector3d const llc(c.get_llc());
+	mat.add_cube_to_verts(c, color, llc, ~get_skip_mask_for_xy(c.dim), (c.dim ^ vertical ^ 1)); // draw front and back faces
+	mat.add_cube_to_verts(c, color, llc, df1, (c.dim ^ vertical)); // draw sides / top and bottom
+	get_material(untex_shad_mat, 1).add_cube_to_verts(c, texture_color(get_blinds_tid()).modulate_with(color), llc, df2); // draw top and bottom / front and back untextured
 }
 
 void building_room_geom_t::add_railing(room_object_t const &c) {

@@ -2048,21 +2048,41 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 }
 
 void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) {
-	bool const vertical = 0; // all horizontal for now
-	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness()), extend(0.9*wall_thickness); // extend is 15% larger than window trim width
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	bool vertical((mat_ix + interior->rooms.size() + parts.size()) & 1); // something that's per-building
+	
+	if (vertical) { // check for horizontal wall clearance
+		room_t const &room(interior->rooms[room_id]);
+		if ((window.d[!dim][0] - 2.0*wall_thickness) < room.d[!dim][0] || (window.d[!dim][1] + 2.0*wall_thickness) > room.d[!dim][1]) {vertical = 0;} // not enough space for vertical blinds
+	}
 	rand_gen_t rgen;
 	rgen.set_state((123*room_id + 211*interior->rooms.size()), (777*floor + 1));
-	// raise_amt is a mix of 50% room-based and 50% window-based to get somewhat consistent levels per room
-	float const raise_amt(0.9*((rgen.rand_float() < 0.75) ? 1.0 : 0.5*(rgen.rand_float() + fract(1123.7*objs.size())))); // 0-90% 25% the time, 90% for the rest
+	// open_amt is a mix of 50% room-based and 50% window-based to get somewhat consistent levels per room
+	bool const full_open(rgen.rand_float() < 0.75);
+	float const open_amt(0.9*(full_open ? 1.0 : 0.5*(rgen.rand_float() + fract(1123.7*objs.size())))); // 0-90% 25% the time, 90% for the rest
 	cube_t c(window);
 	c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*wall_thickness; // slight gap for wall trim
-	c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.15*wall_thickness*(raise_amt + 0.025);
-	c.expand_in_dim(!dim, 0.9*wall_thickness); // expand width  to cover trim +15% WT
-	c.z1() -= 0.9*wall_thickness; // extend 15% WT below the windowsill
-	c.z2() += 0.9*wall_thickness + 0.05*floor_spacing; // expand height to allow space for it to bunch up at the top
-	c.z1() += raise_amt*window.dz(); // raise amount is random per-room
-	objs.emplace_back(c, TYPE_BLINDS, room_id, dim, dir, (RO_FLAG_NOCOLL | (vertical ? 0 : RO_FLAG_HANGING)), 1.0); // always fully lit
+	c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.15*wall_thickness*(vertical ? 0.05 : (open_amt + 0.025)); // vertical blinds have no furniture clearance and can't bunch up
+	c.expand_in_dim(2, extend); // extend in Z to cover window trim
+
+	if (vertical) {
+		c.expand_in_dim(!dim, 1.5*wall_thickness); // larger expand value (beyond the wall trim)
+		float const center(c.get_center_dim(!dim)), half_width(0.5*c.get_sz_dim(!dim));
+		float const shift_val(1.44*max(0.0f, (open_amt - 0.4f))*half_width); // more likely to be fully closed
+
+		for (unsigned d = 0; d < 2; ++d) { // left, right
+			cube_t c2(c);
+			c2.d[!dim][!d] = center - (d ? -1.0 : 1.0)*shift_val;
+			objs.emplace_back(c2, TYPE_BLINDS, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // always fully lit
+		}
+	}
+	else {
+		c.expand_in_dim(!dim, extend); // expand width to cover trim +15% WT
+		c.z2() += extend + 0.05*floor_spacing; // expand height to allow space for it to bunch up at the top
+		c.z1() += open_amt*window.dz(); // raise amount is random per-room
+		objs.emplace_back(c, TYPE_BLINDS, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0); // always fully lit
+	}
 }
 
 void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks
