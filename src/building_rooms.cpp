@@ -2090,7 +2090,7 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 	unsigned num_ext_walls(0);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (unsigned dir = 0; dir < 2; ++dir) {num_ext_walls += (classify_room_wall(room, window.z1(), dim, dir, 1) == ROOM_WALL_EXT);}
+		for (unsigned dir = 0; dir < 2; ++dir) {num_ext_walls += (classify_room_wall(room, window.z1(), dim, dir, 0) == ROOM_WALL_EXT);}
 	}
 	if (num_ext_walls != 1) return; // it looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
 	vector<room_object_t> &objs(interior->room_geom->objs);
