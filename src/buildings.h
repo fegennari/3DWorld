@@ -215,7 +215,7 @@ struct tquad_with_ix_t : public tquad_t {
 	bool is_interior_door() const {return (type == TYPE_IDOOR || type == TYPE_IDOOR2);}
 
 	unsigned type;
-	tquad_with_ix_t(unsigned npts_=0) : tquad_t(npts_), type(TYPE_ROOF) {}
+	tquad_with_ix_t(unsigned npts_=0, unsigned type_=TYPE_ROOF) : tquad_t(npts_), type(type_) {}
 	tquad_with_ix_t(tquad_t const &t, unsigned type_) : tquad_t(t), type(type_) {}
 };
 

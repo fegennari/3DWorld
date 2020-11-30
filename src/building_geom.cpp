@@ -1245,12 +1245,18 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	float best_area(0.0);
 
 	for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) {
+		if (r->npts != 4) continue; // only quads, skip triangles
 		float const area(polygon_area(r->pts, r->npts));
-		if (best_area == 0.0 || area < best_area) {best_area = area; best_tquad = (r - roof_tquads.begin());}
+		if (best_area == 0.0 || area > best_area) {best_area = area; best_tquad = (r - roof_tquads.begin());}
 	}
 	assert(best_tquad < roof_tquads.size());
-	tquad_with_ix_t const &roof(roof_tquads[best_tquad]); // generally will be a quad rather than a triangle, since those are larger
-	// TODO: add roof_tquads of TYPE_SOLAR
+	tquad_with_ix_t const &roof(roof_tquads[best_tquad]);
+	cube_t const bcube(roof.get_bcube());
+	vector3d const normal(roof.get_norm()), bias(0.01*bcube.dz()*normal); // slightly above the roof
+	tquad_with_ix_t panel(4, tquad_with_ix_t::TYPE_SOLAR);
+	// TODO: shrink and make square; maybe add more than one
+	for (unsigned n = 0; n < 4; ++n) {panel.pts[n] = roof.pts[n] + bias;}
+	roof_tquads.push_back(panel);
 }
 
 void rotate_xy(point &pt, point const &origin, float angle) {
