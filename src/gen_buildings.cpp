@@ -121,13 +121,13 @@ class building_texture_mgr_t {
 public:
 	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), gdoor_tid(-1), ac_unit_tid1(-1), ac_unit_tid2(-1), bath_wind_tid(-1), helipad_tex(-1) {}
 	int get_window_tid   () const {return window_tid;}
-	int get_hdoor_tid    () {return ensure_tid(hdoor_tid,     "textures/white_door.jpg");} // house door
-	int get_bdoor_tid    () {return ensure_tid(bdoor_tid,     "textures/buildings/building_door.jpg");} // building door
-	int get_gdoor_tid    () {return ensure_tid(gdoor_tid,     "textures/buildings/garage_door.jpg");} // garage door
-	int get_ac_unit_tid1 () {return ensure_tid(ac_unit_tid1,  "textures/buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
-	int get_ac_unit_tid2 () {return ensure_tid(ac_unit_tid2,  "textures/buildings/AC_unit2.jpg");} // AC unit
-	int get_bath_wind_tid() {return ensure_tid(bath_wind_tid, "textures/buildings/window_blocks.jpg");} // bathroom window
-	int get_helipad_tid  () {return ensure_tid(helipad_tex,   "textures/buildings/helipad.jpg");}
+	int get_hdoor_tid    () {return ensure_tid(hdoor_tid,     "white_door.jpg");} // house door
+	int get_bdoor_tid    () {return ensure_tid(bdoor_tid,     "buildings/building_door.jpg");} // building door
+	int get_gdoor_tid    () {return ensure_tid(gdoor_tid,     "buildings/garage_door.jpg");} // garage door
+	int get_ac_unit_tid1 () {return ensure_tid(ac_unit_tid1,  "buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
+	int get_ac_unit_tid2 () {return ensure_tid(ac_unit_tid2,  "buildings/AC_unit2.jpg");} // AC unit
+	int get_bath_wind_tid() {return ensure_tid(bath_wind_tid, "buildings/window_blocks.jpg");} // bathroom window
+	int get_helipad_tid  () {return ensure_tid(helipad_tex,   "buildings/helipad.jpg");}
 
 	bool check_windows_texture() {
 		if (!global_building_params.windows_enabled()) return 0;
