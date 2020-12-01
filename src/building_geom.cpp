@@ -1244,9 +1244,26 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	float best_zmax(0.0), best_area(0.0);
 
 	for (auto r = roof_tquads.begin(); r != roof_tquads.end(); ++r) { // find highest roof, otherwise largest area if tied
+		if (r->type != tquad_with_ix_t::TYPE_ROOF) continue; // only include roofs
 		if (r->npts != 4) continue; // only quads, skip triangles
 		float const zmax(max(max(r->pts[0].z, r->pts[1].z), max(r->pts[2].z, r->pts[3].z))), area(polygon_area(r->pts, r->npts));
-		if (best_area == 0.0 || zmax > best_zmax || (zmax == best_zmax && area > best_area)) {best_zmax = zmax; best_area = area; best_tquad = (r - roof_tquads.begin());}
+		
+		// determine the best candidate so far; use a random value to break ties
+		if (best_area == 0.0 || zmax > best_zmax || (zmax == best_zmax && area > best_area) || (zmax == best_zmax && area == best_area && rgen.rand_bool())) {
+			cube_t bcube(r->get_bcube());
+			bcube.expand_by(-0.1*bcube.get_size()); // shrink by 10% (upper bound of approx solar panel area)
+			bool valid(1);
+
+			for (auto r2 = roof_tquads.begin(); r2 != roof_tquads.end(); ++r2) { // check other objects, including anything on the roof that's not part of the roof
+				if (r2 == r) continue; // skip self
+				if (r2->type == tquad_with_ix_t::TYPE_ROOF && r2->npts == 3) continue; // skip roof triangles as they won't intersect the adjacent quad
+				if (r2->get_bcube().intersects(bcube)) {valid = 0; break;}
+			}
+			if (!valid) continue; // intersects another roof section, skip
+			best_zmax  = zmax;
+			best_area  = area;
+			best_tquad = (r - roof_tquads.begin());
+		}
 	}
 	assert(best_tquad < roof_tquads.size());
 	tquad_with_ix_t const &roof(roof_tquads[best_tquad]);
@@ -1254,13 +1271,13 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	vector3d const normal(roof.get_norm()), bias(0.01*bcube.dz()*normal); // slightly above the roof
 	tquad_with_ix_t panel(4, tquad_with_ix_t::TYPE_SOLAR);
 	point const *const pts(roof.pts);
-	// shrink and make square
+	// shrink and make rectangular
 	point const center(0.25*(pts[0] + pts[1] + pts[2] + pts[3]) + bias);
 	vector3d const v10(pts[1] - pts[0]), v32(pts[2] - pts[3]), v30(pts[3] - pts[0]), v21(pts[2] - pts[1]); // 4 sides of roof quad
 	float const mu1(v10.mag()), mu2(v32.mag()), mv1(v30.mag()), mv2(v21.mag()); // 4 side lengths
 	// min side lengths shrunk, then halved; include vector sum because we want the orthogonal projection
-	float const mu(0.8*0.5*min(min(mu1, mu2), 0.5f*(v10 + v32).mag())), mv(0.8*0.5*min(min(mv1, mv2), 0.5f*(v30 + v21).mag()));
-	if (4.0f*mu*mv < 0.25f*bcube.dx()*bcube.dy()) return; // skip if less than 25% of rectangularized roof area
+	float const mu(rgen.rand_uniform(0.75, 0.85)*0.5*min(min(mu1, mu2), 0.5f*(v10 + v32).mag())), mv(rgen.rand_uniform(0.75, 0.85)*0.5*min(min(mv1, mv2), 0.5f*(v30 + v21).mag()));
+	if (4.0f*mu*mv < 0.25f*bcube.dx()*bcube.dy()) return; // skip if less than 25% of rectangularized roof area (or try another root quad?)
 	vector3d const u((v10/mu1 + v32/mu2).get_norm()), v((v30/mv1 + v21/mv2).get_norm());
 	panel.pts[0] = center - mu*u - mv*v;
 	panel.pts[1] = center + mu*u - mv*v;

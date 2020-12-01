@@ -1036,7 +1036,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_helipad_tid(), WHITE);
 			}
 			else if (i->type == tquad_with_ix_t::TYPE_SOLAR) {
-				bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_solarp_tid(), WHITE);
+				bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_solarp_tid(), colorRGBA(0.6, 0.6, 0.6)); // panel is too bright compared to the roof, use a darker color
 			}
 			else {
 				bool const is_wall_tex(i->type != tquad_with_ix_t::TYPE_ROOF && i->type != tquad_with_ix_t::TYPE_ROOF_ACC);
