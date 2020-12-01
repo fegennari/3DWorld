@@ -101,9 +101,9 @@ buildings side_tscale 2.0
 buildings side_tid bricks_tan.png
 buildings side_nm_tid normal_maps/bricks_tan_norm.png
 buildings roof_tscale 8.0
-buildings roof_tid stucco.jpg
-buildings roof_nm_tid normal_maps/stucco_NRM.jpg
-buildings roof_color 0.1 0.1 0.1 1.0
+buildings roof_tid buildings/roof_shingles.jpg
+buildings roof_nm_tid buildings/roof_shingles_nrm.jpg
+buildings roof_color 0.2 0.2 0.2 1.0
 buildings roof_color_grayscale_rand 0.4
 buildings floor_tid carpet/carpet1.jpg
 buildings floor_nm_tid none
@@ -114,6 +114,12 @@ buildings side_color 0.4 0.4 0.4 1.0
 buildings add_material
 buildings side_color 0.6 0.3 0.2 1.0
 buildings add_material
+
+buildings roof_tid stucco.jpg
+buildings roof_nm_tid normal_maps/stucco_NRM.jpg
+buildings roof_color 0.05 0.05 0.05 1.0
+buildings roof_color_grayscale_rand 0.3
+
 buildings side_color 0.4 0.2 0.1 1.0
 buildings add_material
 buildings side_color 0.8 0.5 0.2 1.0
@@ -124,6 +130,8 @@ buildings side_tscale 3.0
 buildings side_tid brickwork.jpg
 buildings side_nm_tid normal_maps/brickwork_normal.jpg
 buildings roof_tid tile.png
+buildings roof_color 0.1 0.1 0.1 1.0
+buildings roof_color_grayscale_rand 0.4
 buildings roof_nm_tid normal_maps/tile_NRM.jpg
 buildings house_floor_tscale 64.0
 buildings house_floor_tid paneling.png
