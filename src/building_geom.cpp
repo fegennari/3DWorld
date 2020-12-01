@@ -1750,8 +1750,8 @@ void building_t::gen_grayscale_detail_color(rand_gen_t &rgen, float imin, float 
 
 // *** Interiors ***
 
-void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude) const {
-	float const cube_pad(4.0*grass_width), extent(bcube.get_max_extent());
+void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const {
+	float const cube_pad(4.0*grass_width*(camera_in_building ? 2.0 : 1.0)), extent(bcube.get_max_extent());
 	float dmin_sq(extent*extent); // start with a large value, squared
 
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find closest part, including garages/sheds
@@ -1768,9 +1768,9 @@ void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &
 	if (!exclude.is_all_zeros()) {exclude.expand_by_xy(cube_pad);} // exclude grass blades that partially intersect the building interior
 }
 
-void building_t::update_grass_exclude_at_pos(point const &pos, vector3d const &xlate) const {
-	get_exclude_cube(pos, cube_t(),       grass_exclude1); // first/closest cube
-	get_exclude_cube(pos, grass_exclude1, grass_exclude2); // second closest cube
+void building_t::update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const {
+	get_exclude_cube(pos, cube_t(),       grass_exclude1, camera_in_building); // first/closest cube
+	get_exclude_cube(pos, grass_exclude1, grass_exclude2, camera_in_building); // second closest cube
 	
 	if (!driveway.is_all_zeros()) { // make driveway a grass exclude cube if one is available; this generally fails, but is a good idea if we can extend grass_exclude to more cubes
 		if      (grass_exclude1.is_all_zeros()) {grass_exclude1 = driveway;}

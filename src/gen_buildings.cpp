@@ -2179,9 +2179,10 @@ public:
 						if (!camera_near_building) continue; // camera not near building
 						if (reflection_pass == 2)  continue; // interior room, don't need to draw windows and exterior doors
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, door_type); // and draw opened door
-						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate);} // disable any grass inside the building part(s) containing the player
+						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
+						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
-						if (!b.check_point_or_cylin_contained(camera_xlated, 0.0, points)) continue; // camera not in building
+						if (!camera_in_building) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
 						// neg offset to move windows on the inside of the building's exterior wall
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &camera_xlated);
