@@ -243,6 +243,9 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
 			had_coll |= sphere_cube_int_update_pos(pos2, radius, *i, p_last, 1, xy_only, cnorm_ptr);
 		}
+		if (!driveway.is_all_zeros()) { // include driveways, though this may not be necessary
+			had_coll |= sphere_cube_int_update_pos(pos2, radius, driveway, p_last, 1, xy_only, cnorm_ptr);
+		}
 		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
 			for (auto i = details.begin(); i != details.end(); ++i) {
 				if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
