@@ -2155,11 +2155,11 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 	if (tree_id >= 0) {back().bind_to_td(&shared_tree_data[tree_id]);}
 }
 
-void tree_placer_t::add(point const &pos, float size, int type, bool allow_bush) {
+void tree_placer_t::add(point const &pos, float size, int type, bool allow_bush, bool is_sm_tree) {
 	if (blocks.empty()) {begin_block();} // begin a new block in case user isn't creating the blocks themselves
 	tree_block &block(blocks.back());
 	if (block.trees.empty()) {block.bcube.set_from_point(pos);} else {block.bcube.union_with_pt(pos);}
-	block.trees.emplace_back(pos, size, type, allow_bush);
+	block.trees.emplace_back(pos, size, type, allow_bush, is_sm_tree);
 }
 
 void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square,
@@ -2175,12 +2175,13 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.blocks.empty()) { // now add pre-placed trees within the city (TT mode)
 		shared_tree_data.ensure_init();
 		vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
-		cube_t bounds(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), min_tree_h, max_tree_h); // Note: zvals are unused
+		cube_t const bounds(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), min_tree_h, max_tree_h); // Note: zvals are unused
 
 		for (auto b = tree_placer.blocks.begin(); b != tree_placer.blocks.end(); ++b) {
 			if (!bounds.intersects_xy(b->bcube + xlate)) continue;
 
 			for (auto t = b->trees.begin(); t != b->trees.end(); ++t) {
+				if (t->is_sm_tree) continue; // not adding small trees here
 				point const pos(t->pos + xlate);
 				if (!bounds.contains_pt_xy(pos)) continue; // tree not within this tile
 				int ttype(t->type);

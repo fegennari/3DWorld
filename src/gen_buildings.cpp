@@ -1896,7 +1896,7 @@ public:
 				++num_blocks;
 			}
 			int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
-			tree_placer.add(*p, 0, ttype, allow_bush);
+			tree_placer.add(*p, 0, ttype, allow_bush, 0); // is_sm_tree=0
 		} // for p
 		cout << "Num Placed Trees: " << placements.size() << ", Blocks: " << num_blocks << endl;
 	}

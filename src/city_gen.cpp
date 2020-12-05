@@ -857,8 +857,8 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for t
 			return 0;
 		}
-		static void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> &tree_pos, bool allow_bush) {
-			tree_placer.add(pos, 0, ttype, allow_bush); // use same tree type
+		static void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> &tree_pos, bool allow_bush, bool is_sm_tree) {
+			tree_placer.add(pos, 0, ttype, allow_bush, is_sm_tree); // use same tree type
 			cube_t bcube; bcube.set_from_sphere(pos, 0.1*radius); // use 10% of the placement radius for collision
 			bcube.z2() += radius; // increase cube height
 			colliders.push_back(bcube);
@@ -877,7 +877,8 @@ class city_road_gen_t : public road_gen_base_t {
 				point pos;
 				if (!try_place_obj(plot, blockers, rgen, spacing, radius, 10, pos)) continue; // 10 tries per tree
 				int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
-				place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park); // size is randomly selected by the tree generator using default values; allow bushes in parks
+				bool const is_sm_tree = 0; // TODO
+				place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree); // size is randomly selected by the tree generator using default values; allow bushes in parks
 				if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
 				// now that we're here, try to place more trees at this same distance from the road in a row
 				bool const dim(min((pos.x - plot.x1()), (plot.x2() - pos.x)) < min((pos.y - plot.y1()), (plot.y2() - pos.y)));
@@ -888,7 +889,7 @@ class city_road_gen_t : public road_gen_base_t {
 					pos[dim] += step;
 					if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
 					if (!check_pt_and_place_blocker(pos, blockers, spacing, spacing)) break; // placement failed
-					place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park); // use same tree type
+					place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree); // use same tree type
 				} // for n
 			} // for n
 		}
