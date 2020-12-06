@@ -973,7 +973,7 @@ class city_road_gen_t : public road_gen_base_t {
 			rgen.set_state(city_id, 123);
 			detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
 			clear();
-			if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block();}
+			if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0); tree_placer.begin_block(1);} // both small and large trees
 			bool const add_parking_lots(have_cars && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 			uint64_t prev_tile_id(0);
 

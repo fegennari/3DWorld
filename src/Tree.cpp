@@ -2156,10 +2156,11 @@ void tree_cont_t::add_new_tree(rand_gen_t &rgen, int &ttype) {
 }
 
 void tree_placer_t::add(point const &pos, float size, int type, bool allow_bush, bool is_sm_tree) {
-	if (blocks.empty()) {begin_block();} // begin a new block in case user isn't creating the blocks themselves
-	tree_block &block(blocks.back());
+	if ((is_sm_tree ? sm_blocks : blocks).empty()) {begin_block(is_sm_tree);} // begin a new block in case user isn't creating the blocks themselves
+	tree_block &block((is_sm_tree ? sm_blocks : blocks).back());
 	if (block.trees.empty()) {block.bcube.set_from_point(pos);} else {block.bcube.union_with_pt(pos);}
-	block.trees.emplace_back(pos, size, type, allow_bush, is_sm_tree);
+	(is_sm_tree ? sm_bcube : bcube).assign_or_union_with_pt(pos);
+	block.trees.emplace_back(pos, size, type, allow_bush);
 }
 
 void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, point const &center, float radius, bool is_square,
@@ -2177,19 +2178,20 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 		vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		cube_t const bounds(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), min_tree_h, max_tree_h); // Note: zvals are unused
 
-		for (auto b = tree_placer.blocks.begin(); b != tree_placer.blocks.end(); ++b) {
-			if (!bounds.intersects_xy(b->bcube + xlate)) continue;
+		if (bounds.intersects_xy(tree_placer.bcube + xlate)) { // test full bcube
+			for (auto b = tree_placer.blocks.begin(); b != tree_placer.blocks.end(); ++b) {
+				if (!bounds.intersects_xy(b->bcube + xlate)) continue;
 
-			for (auto t = b->trees.begin(); t != b->trees.end(); ++t) {
-				if (t->is_sm_tree) continue; // not adding small trees here
-				point const pos(t->pos + xlate);
-				if (!bounds.contains_pt_xy(pos)) continue; // tree not within this tile
-				int ttype(t->type);
-				if (ttype >= 0) {ttype %= NUM_TREE_TYPES;} // make sure it maps to a valid tree type if specified
-				add_new_tree(rgen, ttype);
-				back().gen_tree(pos, int(t->size), ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, t->allow_bush); // Note: can't be user placed + instanced
-			} // for t
-		} // for b
+				for (auto t = b->trees.begin(); t != b->trees.end(); ++t) {
+					point const pos(t->pos + xlate);
+					if (!bounds.contains_pt_xy(pos)) continue; // tree not within this tile
+					int ttype(t->type);
+					if (ttype >= 0) {ttype %= NUM_TREE_TYPES;} // make sure it maps to a valid tree type if specified
+					add_new_tree(rgen, ttype);
+					back().gen_tree(pos, int(t->size), ttype, 1, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, t->allow_bush); // Note: can't be user placed + instanced
+				} // for t
+			} // for b
+		}
 	}
 	if (mod_num_trees == 0) return; // no trees
 	float const height_thresh(get_median_height(tree_density_thresh));

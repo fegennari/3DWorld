@@ -1888,15 +1888,16 @@ public:
 		float cur_xval(0.0);
 		unsigned num_blocks(0);
 		bool const allow_bush = 0; // no bushes for now
+		bool const is_sm_tree = 0; // deciduous trees only
 
 		for (auto p = placements.begin(); p != placements.end(); ++p) {
 			if (p == placements.begin() || p->x > (cur_xval + block_xsize)) {
-				tree_placer.begin_block();
+				tree_placer.begin_block(is_sm_tree);
 				cur_xval = p->x;
 				++num_blocks;
 			}
 			int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
-			tree_placer.add(*p, 0, ttype, allow_bush, 0); // is_sm_tree=0
+			tree_placer.add(*p, 0, ttype, allow_bush, is_sm_tree);
 		} // for p
 		cout << "Num Placed Trees: " << placements.size() << ", Blocks: " << num_blocks << endl;
 	}

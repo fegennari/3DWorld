@@ -418,30 +418,31 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 
 	generated = 1; // mark as generated if we got here, even if there are no actual trees generated
 
-	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.blocks.empty()) { // now add pre-placed trees within the city (TT mode)
+	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.sm_blocks.empty()) { // now add pre-placed trees within the city (TT mode)
 		vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		cube_t const bounds(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), 0.0, 0.0); // Note: zvals are unused
 		float const tsize(calc_tree_size());
-		int const allowed_types[3] = {T_PINE, T_PALM, T_SH_PINE};
+		int const allowed_types[3] = {T_PINE, T_SH_PINE, T_PALM};
 
-		for (auto b = tree_placer.blocks.begin(); b != tree_placer.blocks.end(); ++b) {
-			if (!bounds.intersects_xy(b->bcube + xlate)) continue;
+		if (bounds.intersects_xy(tree_placer.sm_bcube + xlate)) { // test full bcube
+			for (auto b = tree_placer.sm_blocks.begin(); b != tree_placer.sm_blocks.end(); ++b) {
+				if (!bounds.intersects_xy(b->bcube + xlate)) continue;
 
-			for (auto t = b->trees.begin(); t != b->trees.end(); ++t) {
-				if (!t->is_sm_tree) continue; // not adding regular trees here
-				point const pos(t->pos + xlate);
-				if (!bounds.contains_pt_xy(pos)) continue; // tree not within this tile
-				int const ttype(allowed_types[t->type%3]);
+				for (auto t = b->trees.begin(); t != b->trees.end(); ++t) {
+					point const pos(t->pos + xlate);
+					if (!bounds.contains_pt_xy(pos)) continue; // tree not within this tile
+					int const ttype(allowed_types[t->type%3]);
 
-				if (instanced) {
-					add_tree(small_tree(pos, num_insts_per_type[ttype].select_inst(rgen)));
-				}
-				else {
-					float const height(tsize*rand_tree_height(rgen));
-					add_tree(small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1)); // allow_rotation=1
-				}
-			} // for t
-		} // for b
+					if (instanced) {
+						add_tree(small_tree(pos, num_insts_per_type[ttype].select_inst(rgen)));
+					}
+					else {
+						float const height(tsize*rand_tree_height(rgen));
+						add_tree(small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1)); // allow_rotation=1
+					}
+				} // for t
+			} // for b
+		}
 	}
 	if (sm_tree_density == 0.0 || vegetation == 0.0) return;
 	if (density[0] == 0.0 && density[1] == 0.0 && density[2] == 0.0 && density[3] == 0.0) return;

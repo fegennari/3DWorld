@@ -444,19 +444,20 @@ struct tree_placer_t {
 		point pos;
 		float size;
 		int type;
-		bool allow_bush, is_sm_tree;
-		tree_ref(point const &p, float sz, int t, bool ab, bool sm) : pos(p), size(sz), type(t), allow_bush(ab), is_sm_tree(sm) {}
+		bool allow_bush;
+		tree_ref(point const &p, float sz, int t, bool ab) : pos(p), size(sz), type(t), allow_bush(ab) {}
 	};
 	struct tree_block {
 		vector<tree_ref> trees;
 		cube_t bcube;
 		tree_block() : bcube(all_zeros) {}
 	};
-	vector<tree_block> blocks;
+	vector<tree_block> blocks, sm_blocks;
+	cube_t bcube, sm_bcube;
 
-	void begin_block() {blocks.push_back(tree_block());}
+	void begin_block(bool is_sm_tree) {(is_sm_tree ? sm_blocks : blocks).push_back(tree_block());}
 	void add(point const &pos, float size, int type, bool allow_bush, bool is_sm_tree);
-	void clear() {blocks.clear();}
+	void clear() {blocks.clear(); sm_blocks.clear(); bcube = sm_bcube = cube_t();}
 };
 
 
