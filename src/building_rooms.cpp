@@ -1504,7 +1504,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0); // per-floor
-	bool added_bedroom(0), added_living(0), added_library(0), added_dining_room(0);
+	bool added_bedroom(0), added_living(0), added_library(0), added_dining(0), added_laundry(0);
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
 		float min_score(0.0);
@@ -1734,7 +1734,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (!added_obj) { // try to place a desk if there's no table, bed, etc.
 				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt);
-				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? RTYPE_STUDY : RTYPE_OFFICE), f);} // or other room type - may be overwritten below
+				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may be overwritten below
 			}
 			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen and have enough rooms
 				if ((!added_living && rooms.size() >= 8 && (added_kitchen_mask || rgen.rand_bool())) || is_room_adjacent_to_ext_door(*r, 1)) { // front_door_only=1
@@ -1764,9 +1764,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 						light.z2() += 0.5f*light.dz();
 						light.z1() -= 0.22f*(light.dx() + light.dy());
 					}
-					if (!added_dining_room) {add_diningroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // only one room is the primary dining room
+					if (!added_dining) {add_diningroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);} // only one room is the primary dining room
 					r->assign_to(RTYPE_DINING, f);
-					is_dining = added_dining_room = 1;
+					is_dining = added_dining = 1;
 				}
 				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) { // add library, at most one
 					r->assign_to(RTYPE_LIBRARY, f);
@@ -1780,6 +1780,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (r->get_room_type(f) == RTYPE_NOTSET) {
 				if (f == 0 && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if on first floor and has exterior door and is unassigned
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
+				else { // house
+					if (!added_obj && f == 0 && !added_laundry) {
+						// TODO: add washer and dryer
+						r->assign_to(RTYPE_LAUNDRY, f);
+						added_laundry = 1;
+					}
+					else if (!added_obj) {r->assign_to(RTYPE_STORAGE, f);} // make it a storage room until we add some other room type that it can be
+					// else ... is this case possible?
+				}
 			}
 			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage) { // add potted plants to some room types
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
