@@ -1266,7 +1266,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					}
 				}
 				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
-				stairs_shape const sshape(wall_clipped ? SHAPE_WALLED : SHAPE_STRAIGHT); // add walls around stairs if room walls were clipped; otherwise, straight with railings
+				stairs_shape const sshape(wall_clipped ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT); // add walls around stairs if room walls were clipped; otherwise, straight with railings
 				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape, 0, 1); // roof_access=0, is_at_top=1
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
