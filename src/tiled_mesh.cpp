@@ -68,6 +68,7 @@ extern float h_dirt[];
 extern tree_data_manager_t tree_data_manager;
 extern pt_line_drawer tree_scenery_pld;
 extern tree_cont_t *cur_tile_trees;
+extern tree_placer_t tree_placer;
 
 bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 void set_water_plane_uniforms(shader_t &s);
@@ -86,8 +87,8 @@ float get_grass_thresh    () {return GRASS_THRESH*tt_grass_scale_factor*get_tile
 float get_grass_blend_dist() {return tt_grass_scale_factor/GRASS_DIST_SLOPE;}
 float get_grass_thresh_pad() {return (get_grass_thresh() + get_grass_blend_dist());}
 bool is_water_enabled     () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
-bool pine_trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
-bool decid_trees_enabled  () {return ((tree_mode & 1) && vegetation > 0.0);}
+bool pine_trees_enabled   () {return (((tree_mode & 2) && vegetation > 0.0) || !tree_placer.sm_blocks.empty());} // and palm trees
+bool decid_trees_enabled  () {return (((tree_mode & 1) && vegetation > 0.0) || !tree_placer.   blocks.empty());}
 bool any_trees_enabled    () {return (pine_trees_enabled() || decid_trees_enabled());}
 bool scenery_enabled      () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
 bool gen_grass_map        () {return (GRASS_THRESH > 0.0 && grass_density > 0 && vegetation > 0.0);}
@@ -1284,7 +1285,7 @@ void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_d
 void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, bool draw_trunks, bool draw_near_leaves,
 	bool draw_far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
-	if (pine_trees.empty() || /*!can_have_pine_palm_trees()*/!can_have_trees() || !(tree_mode&2)) return; // Note: skip water check for palm trees
+	if (pine_trees.empty() || /*!can_have_pine_palm_trees()*/!can_have_trees()) return; // Note: skip water check for palm trees
 	//timer_t timer("Draw Pine Trees");
 	point const camera(get_camera_pos());
 	vector3d const xlate(ptree_off.get_xlate());

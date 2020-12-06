@@ -54,6 +54,8 @@ sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, wscale, hscale, c, ti
 };
 
 bool is_pine_tree_type(int type) {return (type == T_PINE || type == T_SH_PINE);}
+bool small_trees_enabled() {return ((tree_mode & 2) || !tree_placer.sm_blocks.empty());}
+bool are_trees_enabled  () {return ((tree_mode & 1) || !tree_placer.   blocks.empty());}
 
 int get_bark_tex_for_tree_type(int type) {
 	assert(type < NUM_ST_TYPES);
@@ -444,7 +446,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 			} // for b
 		}
 	}
-	if (sm_tree_density == 0.0 || vegetation == 0.0) return;
+	if (sm_tree_density == 0.0 || vegetation == 0.0 || !(tree_mode & 2)) return;
 	if (density[0] == 0.0 && density[1] == 0.0 && density[2] == 0.0 && density[3] == 0.0) return;
 	assert(x1 < x2 && y1 < y2);
 	float const tscale(calc_tree_scale()), tsize(calc_tree_size()), ntrees_mult(vegetation*sm_tree_density*tscale*tscale/8.0f);
@@ -579,8 +581,8 @@ int get_tree_type_from_height(float zpos, rand_gen_t &rgen, bool for_scenery) {
 
 bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max) {
 
-	if (!(tree_mode&2)) return 0;
-	if (z_max < water_plane_z) return 0; // underwater
+	if (!small_trees_enabled()) return 0;
+	if (z_max < water_plane_z)  return 0; // underwater
 	if (force_tree_class >= 0) {return (force_tree_class != TREE_CLASS_NONE);}
 	float relh1(get_rel_height(z_min, -zmax_est, zmax_est)), relh2(get_rel_height(z_max, -zmax_est, zmax_est));
 	if (relh1 - tree_type_rand_zone > 0.9f) return 0; // too high
@@ -591,13 +593,12 @@ bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max) {
 
 bool can_have_decid_trees_in_zrange(float z_min, float z_max) {
 
-	if (!(tree_mode&1)) return 0;
+	if (!are_trees_enabled())  return 0;
 	if (z_max < water_plane_z) return 0; // underwater
 	float relh1(get_rel_height(z_min, -zmax_est, zmax_est));
 	if (relh1 - tree_type_rand_zone > 0.6f) return 0; // must have pine trees, or too high
 	return 1; // not worth checking plam tree case, since the rand zone overlaps with the water plane
 }
-
 
 int add_small_tree(point const &pos, float height, float width, int tree_type, bool calc_z) {
 
@@ -606,7 +607,6 @@ int add_small_tree(point const &pos, float height, float width, int tree_type, b
 	small_trees.back().calc_points(small_trees.vbo_manager[0], 0);
 	return 1; // might return zero in some case
 }
-
 
 colorRGBA colorgen(float r1, float r2, float g1, float g2, float b1, float b2, rand_gen_t &rgen) {
 	return colorRGBA(rgen.rand_uniform(r1, r2), rgen.rand_uniform(g1, g2), rgen.rand_uniform(b1, b2), 1.0);
@@ -652,13 +652,12 @@ bool update_small_tree_zvals(int x1, int y1, int x2, int y2) {
 	return small_trees.update_zvals(x1, y1, x2, y2);
 }
 
-
 void draw_small_trees(bool shadow_only, int reflection_pass) {small_trees.draw(shadow_only, reflection_pass);}
 
 void small_tree_group::draw(bool shadow_only, int reflection_pass) {
 
 	//RESET_TIME;
-	if (empty() || !(tree_mode & 2)) return;
+	if (empty() || !small_trees_enabled()) return;
 	if (!all_bcube.is_zero_area() && !camera_pdu.cube_visible(all_bcube)) return;
 	if (!shadow_only && !reflection_pass && size() < 100) {sort_by_dist_to_camera();} // not in shadow pass, since trees usually don't overlap in z
 	shader_t s;
@@ -1024,7 +1023,7 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 
 bool small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate, vector<vert_norm_tc> *cylin_verts) const {
 
-	if (!(tree_mode & 2) || type == T_BUSH) return 1; // disabled, or no trunk/bark
+	if (!small_trees_enabled() || type == T_BUSH) return 1; // disabled, or no trunk/bark
 	
 	if (all_visible) {}
 	else if (shadow_only) {
@@ -1088,7 +1087,7 @@ void small_tree::draw_palm_leaves(unsigned num_instances) const {
 
 void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate) const {
 
-	if (!(tree_mode & 2)) return; // disabled
+	if (!small_trees_enabled()) return; // disabled
 	assert(!is_pine_tree()); // handled through draw_pine_leaves()
 	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !are_leaves_visible(xlate)) return;
 	if (type == T_PALM) {draw_palm_leaves(); return;}
