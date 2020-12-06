@@ -876,8 +876,10 @@ class city_road_gen_t : public road_gen_base_t {
 			for (unsigned n = 0; n < num_trees; ++n) {
 				point pos;
 				if (!try_place_obj(plot, blockers, rgen, spacing, radius, 10, pos)) continue; // 10 tries per tree
-				int const ttype(rgen.rand()%100); // Note: okay to leave at -1; also, don't have to set to a valid tree type
-				bool const is_sm_tree = 0; // TODO
+				bool const is_sm_tree((rgen.rand()%3) == 0); // 33% of the time is a pine/palm tree
+				int ttype(-1); // Note: okay to leave at -1; also, don't have to set to a valid tree type
+				if (is_sm_tree) {ttype = (plot.is_park ? (rgen.rand()&1) : 2);} // pine/short pine in parks, palm in city blocks
+				else {ttype = rgen.rand()%100;} // random type
 				place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree); // size is randomly selected by the tree generator using default values; allow bushes in parks
 				if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
 				// now that we're here, try to place more trees at this same distance from the road in a row
