@@ -1208,6 +1208,15 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 1; // it's always a storage room, even if it's empty
 }
 
+bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall for appliances
+	bool placed(0);
+	placed |= place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
+	placed |= place_model_along_wall(OBJ_MODEL_DRYER,  TYPE_DRYER,  room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
+	return placed;
+}
+
 void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	float const window_vspacing(get_window_vspace()), desk_width(0.9*window_vspacing);
 	bool const long_dim(room.dx() < room.dy());
@@ -1777,18 +1786,16 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				// office, no cubicles or bathroom - try to make it a library (in rare cases)
 				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {r->assign_to(RTYPE_LIBRARY, f);}
 			}
-			if (r->get_room_type(f) == RTYPE_NOTSET) {
+			if (r->get_room_type(f) == RTYPE_NOTSET) { // room type not yet set, attempt to assign it with an optional room type
 				if (f == 0 && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if on first floor and has exterior door and is unassigned
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
-				else { // house
-					if (!added_obj && f == 0 && !added_laundry) {
-						// TODO: add washer and dryer
-						r->assign_to(RTYPE_LAUNDRY, f);
-						added_laundry = 1;
-					}
-					else if (!added_obj) {r->assign_to(RTYPE_STORAGE, f);} // make it a storage room until we add some other room type that it can be
-					// else ... is this case possible?
+				// else house
+				else if (!added_obj && f == 0 && !added_laundry && add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+					r->assign_to(RTYPE_LAUNDRY, f);
+					added_laundry = 1;
 				}
+				else if (!added_obj) {r->assign_to(RTYPE_STORAGE, f);} // make it a storage room until we add some other room type that it can be
+				// else ... is this case possible?
 			}
 			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage) { // add potted plants to some room types
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
