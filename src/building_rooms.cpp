@@ -1212,8 +1212,8 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall for appliances
 	bool placed(0);
-	placed |= place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
-	placed |= place_model_along_wall(OBJ_MODEL_DRYER,  TYPE_DRYER,  room, 0.40, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);
+	placed |= place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.4);
+	placed |= place_model_along_wall(OBJ_MODEL_DRYER,  TYPE_DRYER,  room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.4);
 	return placed;
 }
 
