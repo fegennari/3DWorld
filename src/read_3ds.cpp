@@ -351,12 +351,12 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 					if (!read_null_term_string(mat_name)) return 0;
 					int const mat_id(model.get_material_ix(mat_name, filename, 1));
 					vector<unsigned short> &faces_mat(face_materials[mat_id]);
-					assert(faces_mat.empty());
+					unsigned const start_sz(faces_mat.size()); // append if nonempty - is this correct?
 					// read and process face materials
 					unsigned short num;
 					if (!read_data(&num, sizeof(unsigned short), 1, "number of faces for material")) return 0;
-					faces_mat.resize(num);
-					if (num > 0 && !read_data(&faces_mat.front(), sizeof(unsigned short), num, "faces for material")) return 0;
+					faces_mat.resize(start_sz + num);
+					if (num > 0 && !read_data((faces_mat.data() + start_sz), sizeof(unsigned short), num, "faces for material")) return 0;
 					if (verbose && num > 0) {cout << "Material " << mat_name << " is used for " << num << " faces" << endl;}
 					break;
 				}
@@ -411,7 +411,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		for (face_mat_map_t::const_iterator i = face_materials.begin(); i != face_materials.end(); ++i) {
 			for (vector<unsigned short>::const_iterator f = i->second.begin(); f != i->second.end(); ++f) {
 				assert(*f < faces.size());
-				assert(faces[*f].mat == -1); // material not yet assigned
+				assert(faces[*f].mat == -1 || faces[*f].mat == i->first); // material not yet assigned
 				faces[*f].mat = i->first;
 			}
 		}
