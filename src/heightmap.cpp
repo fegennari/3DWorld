@@ -357,8 +357,8 @@ float terrain_hmap_manager_t::get_nearest_height(float x, float y) const {
 }
 
 vector3d terrain_hmap_manager_t::get_norm(int x, int y) const {
-	return vector3d(DY_VAL*(get_clamped_height(x, y) - get_clamped_height(x+1, y)),
-			        DX_VAL*(get_clamped_height(x, y) - get_clamped_height(x, y+1)), dxdy).get_norm();
+	float const h0(get_clamped_height(x, y));
+	return vector3d(DY_VAL*(h0 - get_clamped_height(x+1, y)), DX_VAL*(h0 - get_clamped_height(x, y+1)), dxdy).get_norm();
 }
 
 void terrain_hmap_manager_t::modify_height(mod_elem_t const &elem, bool is_delta) {
