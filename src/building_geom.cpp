@@ -1270,8 +1270,8 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	}
 	assert(best_tquad < roof_tquads.size());
 	tquad_with_ix_t const &roof(roof_tquads[best_tquad]);
-	cube_t const bcube(roof.get_bcube());
-	vector3d const normal(roof.get_norm()), bias(0.01*bcube.dz()*normal); // slightly above the roof
+	cube_t const roof_bcube(roof.get_bcube());
+	vector3d const normal(roof.get_norm()), bias(0.04*get_window_vspace()*normal); // slightly above the roof
 	tquad_with_ix_t panel(4, tquad_with_ix_t::TYPE_SOLAR);
 	point const *const pts(roof.pts);
 	// shrink and make rectangular
@@ -1280,7 +1280,7 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	float const mu1(v10.mag()), mu2(v32.mag()), mv1(v30.mag()), mv2(v21.mag()); // 4 side lengths
 	// min side lengths shrunk, then halved; include vector sum because we want the orthogonal projection
 	float const mu(rgen.rand_uniform(0.75, 0.85)*0.5*min(min(mu1, mu2), 0.5f*(v10 + v32).mag())), mv(rgen.rand_uniform(0.75, 0.85)*0.5*min(min(mv1, mv2), 0.5f*(v30 + v21).mag()));
-	if (4.0f*mu*mv < 0.25f*bcube.dx()*bcube.dy()) return; // skip if less than 25% of rectangularized roof area (or try another root quad?)
+	if (4.0f*mu*mv < 0.25f*roof_bcube.dx()*roof_bcube.dy()) return; // skip if less than 25% of rectangularized roof area (or try another root quad?)
 	vector3d const u((v10/mu1 + v32/mu2).get_norm()), v((v30/mv1 + v21/mv2).get_norm());
 	panel.pts[0] = center - mu*u - mv*v;
 	panel.pts[1] = center + mu*u - mv*v;
