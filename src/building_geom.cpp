@@ -132,10 +132,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 	float radius, bool xy_only, vector<point> &points, vector3d *cnorm_ptr, bool check_interior) const
 {
 	if (!is_valid()) return 0; // invalid building
-	point p_int;
-	vector3d cnorm; // unused
-	unsigned cdir(0); // unused
-	if (radius > 0.0 && !sphere_cube_intersect(pos, radius, (bcube + xlate), p_last, p_int, cnorm, cdir, 1, xy_only)) return 0;
+	if (radius > 0.0 && !(xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, bcube) : sphere_cube_intersect((pos - xlate), radius, bcube))) return 0;
 	point pos2(pos), p_last2(p_last), center;
 	bool had_coll(0), is_interior(0);
 	float part_z2(bcube.z2());
