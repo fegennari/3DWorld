@@ -7,6 +7,7 @@
 #include "small_tree.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "profiler.h"
 
 
 float const SM_TREE_SIZE    = 0.05;
@@ -394,25 +395,26 @@ void small_tree_group::maybe_add_tree(int i, int j, float zpos_in, float tsize, 
 	rgen.rand_mix();
 	float const xval(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
 	float const yval(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
-	float const zpos((zpos_in != 0.0) ? zpos_in : interpolate_mesh_zval(xval, yval, 0.0, 1, 1));
-	int const ttype(get_tree_type_from_height(zpos, rgen, 0));
+	float const zpos((zpos_in != 0.0) ? zpos_in : interpolate_mesh_zval(xval, yval, 0.0, 1, 1)); // 1.5ms
+	int const ttype(get_tree_type_from_height(zpos, rgen, 0)); // 0.5ms
 	if (ttype == TREE_NONE) return;
-	if (check_hmap_normal && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) return;
+	if (check_hmap_normal && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) return; // 0.7ms
 	small_tree tree;
+	point pos(xval, yval, zpos);
 
 	if (instanced) { // check voxel terrain? or does this mode only get used for tiled terrain?
 		assert(ttype == T_SH_PINE || ttype == T_PINE || ttype == T_PALM);
 		assert(world_mode == WMODE_INF_TERRAIN); // must be inf terrain mode
-		tree = small_tree(point(xval, yval, zpos), num_insts_per_type[ttype].select_inst(rgen));
+		tree = small_tree(point(xval, yval, zpos), num_insts_per_type[ttype].select_inst(rgen)); // 0.6ms
 	}
 	else {
-		float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1), height(tsize*rand_tree_height(rgen));
-		point const pos(xval, yval, zpos+zval_adj*height);
+		float const height(tsize*rand_tree_height(rgen));
+		if (world_mode != WMODE_INF_TERRAIN) {pos.z -= 0.1*height;} // move down slightly to ensure the trunk starts under the terrain
 		if (point_inside_voxel_terrain(pos)) return; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
 		tree = small_tree(pos, height, height*rand_tree_width(rgen), ttype, 0, rgen, 1); // allow_rotation=1
 	}
-	if (!check_valid_scenery_pos(tree.get_pos(), 2.0*tree.get_radius(), 1)) return; // conservative bsphere; is_tall=1
-	add_tree(tree);
+	if (!check_valid_scenery_pos(tree.get_pos(), 2.0*tree.get_radius(), 1)) return; // conservative bsphere; is_tall=1 1.4ms
+	add_tree(tree); // 0.4ms
 }
 
 // density = x1,y1 x2,y1 x1,y2 x2,y2
@@ -464,6 +466,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 	}
 	float const dxv(skip_val/(x2 - x1 - 1.0f)), dyv(skip_val/(y2 - y1 - 1.0f));
 	float xv(0.0), yv(0.0);
+	//highres_timer_t timer("Gen Trees"); // 7.0ms
 
 	for (int i = y1; i < y2; i += skip_val, yv += dyv) {
 		for (int j = x1; j < x2; j += skip_val, xv += dxv) {
@@ -474,7 +477,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 
 			for (int n = 0; n < trees_this_xy; ++n) {
 				if (hval > get_median_height(tree_density_thresh - TREE_DIST_RAND*rgen.rand_float())) continue; // tree density function test
-				maybe_add_tree(i, j, (approx_zval ? height_gen.eval_index(j-x1, i-y1) : 0.0), tsize, skip_val, use_hmap_tex);
+				maybe_add_tree(i, j, (approx_zval ? height_gen.eval_index(j-x1, i-y1) : 0.0), tsize, skip_val, use_hmap_tex); // 5.2ms in this call
 			} // for n
 		} // for j
 		xv = 0.0; // reset for next y iter
