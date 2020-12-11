@@ -3182,9 +3182,9 @@ bool line_intersect_city(point const &p1, point const &p2, point &p_int) {
 	return 1;
 }
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
-	if (check_buildings_sphere_coll(pos, radius, 1, 1))   return 0; // apply_tt_xlate=1, xy_only=1
-	if (check_city_sphere_coll(pos, radius, !is_tall))    return 0; // exclude bridges if not tall
-	if (check_mesh_disable(pos, (radius + 2.0*HALF_DXY))) return 0; // check tunnels
+	if (check_buildings_sphere_coll(pos, radius, 1, 1, 0, 1)) return 0; // apply_tt_xlate=1, xy_only=1, check_interior=0, exclude_city=1 (since we're checking plots below)
+	if (check_city_sphere_coll(pos, radius, !is_tall))        return 0; // exclude bridges if not tall
+	if (check_mesh_disable(pos, (radius + 2.0*HALF_DXY)))     return 0; // check tunnels
 	return 1;
 }
 bool check_mesh_disable(point const &pos, float radius) {
