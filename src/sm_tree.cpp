@@ -31,7 +31,7 @@ extern bool tree_indir_lighting, only_pine_palm_trees;
 extern int window_width, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class, mesh_gen_mode;
 extern unsigned max_unique_trees;
-extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale, CAMERA_RADIUS, tree_type_rand_zone, pine_tree_radius_scale;
+extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale, sm_tree_scale, CAMERA_RADIUS, tree_type_rand_zone, pine_tree_radius_scale;
 extern tree_placer_t tree_placer;
 
 
@@ -739,7 +739,7 @@ small_tree::small_tree(point const &p, unsigned instance_id) {
 small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen, bool allow_rotation) :
 	type(t), inst_id(-1), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
 {
-	height *= tree_height_scale;
+	height *= tree_height_scale*sm_tree_scale;
 	init();
 	bark_color = stt[type].bc;
 	if (!is_pine_tree()) {UNROLL_3X(bark_color[i_] = min(1.0, bark_color[i_]*(0.85 + 0.3f*rgen.randd()));)} // gen bark color for decid trees
@@ -929,7 +929,7 @@ void small_tree::calc_palm_tree_points() {
 
 
 float small_tree::get_pine_tree_radius() const {
-	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height/tree_height_scale);
+	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height/(tree_height_scale*sm_tree_scale));
 	return 0.35*pine_tree_radius_scale*(height0 + 0.03/tree_scale);
 }
 

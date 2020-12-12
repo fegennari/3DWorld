@@ -31,6 +31,7 @@ sunlight_brightness 2.0
 
 ntrees 1 # set to a small number so that most of the trees are generated city trees
 tree_size 0.2
+sm_tree_scale 0.8 # slightly smaller (palm trees in cities are too tall)
 tree_4th_branches 1
 nleaves_scale 1.0
 tree_lod_scale 0.24 0.2 0.24 0.2
