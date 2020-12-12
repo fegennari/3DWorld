@@ -874,12 +874,14 @@ class city_road_gen_t : public road_gen_base_t {
 			if (plot.is_park) {num_trees += (rgen.rand() % city_params.max_trees_per_plot);} // allow up to twice as many trees in parks
 
 			for (unsigned n = 0; n < num_trees; ++n) {
-				point pos;
-				if (!try_place_obj(plot, blockers, rgen, spacing, radius, 10, pos)) continue; // 10 tries per tree
 				bool const is_sm_tree((rgen.rand()%3) == 0); // 33% of the time is a pine/palm tree
 				int ttype(-1); // Note: okay to leave at -1; also, don't have to set to a valid tree type
 				if (is_sm_tree) {ttype = (plot.is_park ? (rgen.rand()&1) : 2);} // pine/short pine in parks, palm in city blocks
 				else {ttype = rgen.rand()%100;} // random type
+				bool const is_palm(is_sm_tree && ttype == 2);
+				float const bldg_extra_radius(is_palm ? 0.5f*radius : 0.0f); // palm trees are larger and must be kept away from buildings, but can overlap with other trees
+				point pos;
+				if (!try_place_obj(plot, blockers, rgen, (spacing + bldg_extra_radius), (radius - bldg_extra_radius), 10, pos)) continue; // 10 tries per tree, extra spacing for palm trees
 				place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree); // size is randomly selected by the tree generator using default values; allow bushes in parks
 				if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
 				// now that we're here, try to place more trees at this same distance from the road in a row
@@ -890,7 +892,7 @@ class city_road_gen_t : public road_gen_base_t {
 				for (; n < city_params.max_trees_per_plot; ++n) {
 					pos[dim] += step;
 					if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
-					if (!check_pt_and_place_blocker(pos, blockers, spacing, spacing)) break; // placement failed
+					if (!check_pt_and_place_blocker(pos, blockers, (spacing + bldg_extra_radius), (spacing - bldg_extra_radius))) break; // placement failed
 					place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree); // use same tree type
 				} // for n
 			} // for n
