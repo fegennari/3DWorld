@@ -2559,6 +2559,7 @@ public:
 
 		if (radius == 0.0) { // point coll - ignore p_last as well
 			point const p1x(pos - xlate);
+			if (!range.contains_pt_xy(p1x)) return 0; // outside buildings bcube
 			unsigned const gix(get_grid_ix(p1x));
 			grid_elem_t const &ge(grid[gix]);
 			if (ge.bc_ixs.empty()) return 0; // skip empty grid
@@ -2572,6 +2573,7 @@ public:
 			return 0; // no coll
 		}
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
+		if (!range.intersects_xy(bcube)) return 0; // outside buildings bcube
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		float const dist(p2p_dist(pos, p_last));
@@ -2804,6 +2806,8 @@ public:
 		tiles.clear();
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
+		if (empty()) return 0;
+
 		if (radius == 0.0) { // single point, use map lookup optimization (for example for grass)
 			auto it(get_tile_by_pos(pos));
 			if (it == tiles.end()) return 0;
