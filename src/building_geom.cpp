@@ -1841,13 +1841,27 @@ bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const
 }
 
 bool has_bcube_int(cube_t const &bcube, vect_stairwell_t const &stairs, float doorway_width) {
+	cube_t pre_test(bcube);
+	pre_test.expand_by_xy(doorway_width);
+
 	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
+		if (!s->intersects(pre_test)) continue; // early termination test optimization
 		cube_t tc(*s);
 		tc.expand_in_dim(s->dim, doorway_width); // add extra space at both ends of stairs
 		float const wall_hw(0.15*s->get_sz_dim(s->dim)/NUM_STAIRS_PER_FLOOR); // see step_len_pos logic in building_t::add_stairs_and_elevators()
 		tc.expand_in_dim(!s->dim, wall_hw); // add extra space to account for walls and railings on stairs
 		if (tc.intersects(bcube)) return 1;
-	}
+		// extra check for objects blocking the entrance/exit to the side; this is really only needed for open ends, but helps to avoid squeezing objects behind stairs as well
+		if (s->shape == SHAPE_U) continue; // U-shaped stairs are only open on one side and generally placed in hallways, so ignore
+
+		for (unsigned e = 0; e < 2; ++e) { // for each end (entrance/exit)
+			cube_t end(tc);
+			end.d[s->dim][!e] = s->d[s->dim][e]; // shrink to the gap between *s and tc
+			if (!s->against_wall[0]) {end.d[!s->dim][0] -= 0.75*doorway_width;}
+			if (!s->against_wall[1]) {end.d[!s->dim][1] += 0.75*doorway_width;}
+			if (end.intersects(bcube)) return 1;
+		}
+	} // for s
 	return 0;
 }
 bool has_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, float doorway_width) {
