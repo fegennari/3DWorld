@@ -357,7 +357,7 @@ tree_inst_range_t num_insts_per_type[NUM_ST_TYPES];
 void create_pine_tree_instances() {
 
 	unsigned const num_pine_unique(max(1U, max_unique_trees/2)); // don't need as many insts as decid trees
-	unsigned const num_palm_unique(max(1U, max_unique_trees/4)); // don't need as many insts as decid or pine trees
+	unsigned const num_palm_unique(max(1U, max_unique_trees/2)); // don't need as many insts as decid trees
 	if (tree_instances.size() == num_pine_unique+num_palm_unique) return; // already done
 	assert(tree_instances.empty());
 	tree_instances.reserve(num_pine_unique+num_palm_unique);
