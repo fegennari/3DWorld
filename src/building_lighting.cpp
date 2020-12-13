@@ -678,7 +678,9 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			}
 			else { // add a second, smaller unshadowed light for the upper hemisphere
 				point const lpos_up(lpos_rot - vector3d(0.0, 0.0, 2.0*i->dz()));
-				dl_sources.emplace_back((room.is_hallway ? 0.25 : room.is_office ? 0.45 : 0.5)*light_radius, lpos_up, lpos_up, color, 0, plus_z, 0.5);
+				// the upward pointing light is unshadowed and won't pick up shadows from any stairs in the room, so reduce the radius
+				float const rscale((room.is_hallway ? 0.25 : room.is_office ? 0.45 : 0.5)*(room.has_stairs ? 0.67 : 1.0));
+				dl_sources.emplace_back(rscale*light_radius, lpos_up, lpos_up, color, 0, plus_z, 0.5);
 			}
 			if (!light_bc2.is_all_zeros()) {dl_sources.back().set_custom_bcube(light_bc2);}
 			dl_sources.back().disable_shadows();
