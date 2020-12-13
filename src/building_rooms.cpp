@@ -2135,7 +2135,7 @@ int building_t::get_room_id_for_window(cube_t const &window, bool dim, bool dir,
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	interior->room_geom->stairs_start = objs.size();
 	interior->room_geom->has_elevators = (!interior->elevators.empty());
@@ -2195,6 +2195,12 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			cube_t wall_upper(wall);
 			set_wall_width(wall_upper, (i->d[dim][!dir] + (dir ? 1.0 : -1.0)*wall_hw), wall_hw, dim); // move to the other side
 			wall_upper.z1() = railing_z2;
+
+			for (unsigned d = 0; d < 2; ++d) {
+				// if there's no wall, extend to cover the gap where the wall would be; slightly smaller to avoid z-fighting on exterior walls (happens to be the trim thickness);
+				// we can't just skip this face for exterior walls because it may be visible through a window
+				if (i->against_wall[d]) {wall_upper.d[!dim][d] += (d ? 1.0 : -1.0)*0.9*wall_thickness;}
+			}
 			objs.emplace_back(wall_upper, TYPE_STAIR_WALL, 0, dim, dir); // add wall at back/end of stairs
 		}
 		wall.d[dim][!dir] = i->d[dim][!dir];

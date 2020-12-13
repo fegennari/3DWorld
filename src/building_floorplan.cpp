@@ -799,7 +799,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border)
 {
 	// increase floor thickness if !is_house? but then we would probably have to increase the space between floors as well, which involves changing the texture scale
-	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), doorway_width(0.5*window_vspacing);
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
+	float const doorway_width(0.5*window_vspacing), wall_thickness(get_wall_thickness());
 	float ewidth(1.5*doorway_width); // for elevators
 	float z(part.z1());
 	cube_t stairs_cut, elevator_cut;
@@ -916,7 +917,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 								// if the room is on the edge of the part that's not on the building exterior, then this room connects two parts and we need to place a door here later
 								if (classify_room_wall(room, room.z1(), dim, dir, 1) == ROOM_WALL_SEP) continue; // include partial sep walls
 								cube_t cand(cutout);
-								float const shift(0.95f*(cand.d[dim][dir] - room.d[dim][dir])); // negative if dir==1, add small gap to prevent z-fighting and FP accuracy asserts
+								// add small gap to prevent z-fighting and FP accuracy asserts
+								float const shift((cand.d[dim][dir] - room.d[dim][dir]) - (dir ? -1.0 : 1.0)*wall_thickness); // negative if dir==1
 								cand.d[dim][0] -= shift; cand.d[dim][1] -= shift; // close the gap - flush with the wall
 								if (!is_cube_close_to_doorway(cand, room)) {cutout = cand; stairs_against_wall[dir] = 1; break;} // keep if it's good
 							} // for d
