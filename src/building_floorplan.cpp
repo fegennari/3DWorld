@@ -1000,8 +1000,10 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 		if (!is_sloped) {box.expand_by_xy(fc_thick);}
 		box.z1() = z + floor_thickness; box.z2() = z + window_vspacing;
 		box.z2() -= (is_sloped ? 0.15 : 0.2)*window_vspacing; // slightly lower than a normal floor
+		cube_t check_box(box);
+		check_box.d[stairs_dim][stairs_dir] += (stairs_dir ? 1.0 : -1.0)*doorway_width; // expand at stairs exit to ensure clearance
 
-		if (!has_bcube_int_no_adj(box, parts)) { // no overlap with other parts (should we check in front?)
+		if (!has_bcube_int_no_adj(check_box, parts)) { // no overlap with other parts (should we check in front?)
 			float const zc(z - fc_thick);
 			cube_t to_add[4]; // only one cut / 4 cubes (-y, +y, -x, +x)
 			subtract_cube_xy(part, stairs_cut, to_add);
