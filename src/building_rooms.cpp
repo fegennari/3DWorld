@@ -61,8 +61,14 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 		push_out     = rgen.rand_uniform(-0.5, 1.2); // varible amount of pushed in/out
 	}
 	chair_pos[dim] += (dir ? -1.0f : 1.0f)*push_out*chair_hwidth;
-	cube_t const chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
-	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0; // check proximity to doors
+	cube_t chair(get_cube_height_radius(chair_pos, chair_hwidth, chair_height));
+	
+	if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) { // check proximity to doors
+		if (office_chair_model) return 0; // can't push office chair in any more
+		float const max_push_in((dir ? -1.0f : 1.0f)*(-0.5 - push_out)*chair_hwidth);
+		chair.translate_dim(dim, max_push_in*rgen.rand_uniform(0.5, 1.0)); // push the chair mostly in and try again
+		if (!is_valid_placement_for_room(chair, room, blockers, 0, room_pad)) return 0;
+	}
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
 	if (office_chair_model) {
