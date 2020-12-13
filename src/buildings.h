@@ -470,20 +470,35 @@ struct room_t : public cube_t {
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const;
 };
 
-struct landing_t : public cube_t {
-	bool for_elevator, dim, dir, has_railing, roof_access, is_at_top, against_wall[2];
-	uint8_t floor;
+struct stairs_landing_base_t {
+	bool dim, dir, roof_access, against_wall[2];
 	stairs_shape shape;
 
-	landing_t() : for_elevator(0), dim(0), dir(0), has_railing(0), roof_access(0), is_at_top(0), floor(0), shape(SHAPE_STRAIGHT) {against_wall[0] = against_wall[1] = 0;}
-	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0) :
-		cube_t(c), for_elevator(e), dim(dim_), dir(dir_), has_railing(railing), roof_access(roof_access_), is_at_top(at_top), floor(f), shape(shape_)
-	{
-		against_wall[0] = against_wall[1] = 0;
-		assert(is_strictly_normalized());
-	}
+	stairs_landing_base_t() : dim(0), dir(0), roof_access(0), shape(SHAPE_STRAIGHT) {against_wall[0] = against_wall[1] = 0;}
+	stairs_landing_base_t(bool dim_, bool dir_, bool roof_access_, stairs_shape shape_) :
+		dim(dim_), dir(dir_), roof_access(roof_access_), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
+	void set_against_wall(bool val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
 	unsigned get_face_id() const {return (2*dim + dir);}
 };
+
+struct landing_t : public cube_t, public stairs_landing_base_t {
+	bool for_elevator, has_railing, is_at_top;
+	uint8_t floor;
+
+	landing_t() : for_elevator(0), has_railing(0), is_at_top(0), floor(0) {}
+	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0) :
+		cube_t(c), stairs_landing_base_t(dim_, dir_, roof_access_, shape_), for_elevator(e), has_railing(railing), is_at_top(at_top), floor(f)
+	{assert(is_strictly_normalized());}
+};
+
+struct stairwell_t : public cube_t, public stairs_landing_base_t {
+	uint8_t num_floors;
+	bool stack_conn;
+	stairwell_t() : num_floors(0), stack_conn(0) {}
+	stairwell_t(cube_t const &c, unsigned n, bool dim_, bool dir_, stairs_shape s=SHAPE_STRAIGHT, bool r=0, bool sc=0) :
+		cube_t(c), stairs_landing_base_t(dim_, dir_, r, s), num_floors(n), stack_conn(sc) {}
+};
+typedef vector<stairwell_t> vect_stairwell_t;
 
 struct door_t : public cube_t {
 	bool dim, open_dir, open;
@@ -502,15 +517,6 @@ struct roof_obj_t : public cube_t {
 };
 typedef vector<roof_obj_t> vect_roof_obj_t;
 
-struct stairwell_t : public cube_t {
-	stairs_shape shape;
-	uint8_t num_floors;
-	bool dim, dir, roof_access, stack_conn;
-	stairwell_t() : shape(SHAPE_STRAIGHT), num_floors(0), dim(0), dir(0), roof_access(0), stack_conn(0) {}
-	stairwell_t(cube_t const &c, unsigned n, bool dim_, bool dir_, stairs_shape s=SHAPE_STRAIGHT, bool r=0, bool sc=0) :
-		cube_t(c), shape(s), num_floors(n), dim(dim_), dir(dir_), roof_access(r), stack_conn(sc) {}
-};
-typedef vector<stairwell_t> vect_stairwell_t;
 
 // may as well make this its own class, since it could get large and it won't be used for every building
 struct building_interior_t {

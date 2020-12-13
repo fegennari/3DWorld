@@ -974,10 +974,14 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 				// make sure to enable back wall for the first flight of stairs
  				landing_t landing(stairs_cut, 0, f, stairs_dim, stairs_dir, stairs_have_railing, ((f == 1 && sshape == SHAPE_WALLED_SIDES) ? (stairs_shape)SHAPE_WALLED : sshape), 0, is_at_top);
 				landing.z1() = zc; landing.z2() = zf;
-				for (unsigned d = 0; d < 2; ++d) {landing.against_wall[d] = stairs_against_wall[d];}
+				landing.set_against_wall(stairs_against_wall);
 				last_landing_ix = interior->landings.size();
 				interior->landings.push_back(landing);
-				if (f == 1) {interior->stairwells.emplace_back(stairs_cut, num_floors, stairs_dim, stairs_dir, sshape);} // only add for first floor
+
+				if (f == 1) { // only add for first floor
+					interior->stairwells.emplace_back(stairs_cut, num_floors, stairs_dim, stairs_dir, sshape);
+					interior->stairwells.back().set_against_wall(stairs_against_wall);
+				}
 			}
 			if (has_elevator) {
 				assert(!interior->elevators.empty());
@@ -1012,7 +1016,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			interior->landings[last_landing_ix].is_at_top = 0; // previous landing is no longer at the top
 			landing_t landing(stairs_cut, 0, num_floors, stairs_dim, stairs_dir, 1, sshape, 1, 1); // stairs_have_railing=1, roof_access=1, is_at_top=1
 			landing.z1() = zc; landing.z2() = z; // no floor above
-			for (unsigned d = 0; d < 2; ++d) {landing.against_wall[d] = stairs_against_wall[d];}
+			landing.set_against_wall(stairs_against_wall);
 			interior->landings.push_back(landing);
 			interior->stairwells.back().z2() += fc_thick; // extend upward
 			interior->stairwells.back().z1() += fc_thick; // requiured to trick roof clipping into treating this as a stack connector stairwell
