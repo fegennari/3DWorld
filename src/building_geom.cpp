@@ -1268,7 +1268,8 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	assert(best_tquad < roof_tquads.size());
 	tquad_with_ix_t const &roof(roof_tquads[best_tquad]);
 	cube_t const roof_bcube(roof.get_bcube());
-	vector3d const normal(roof.get_norm()), bias(0.04*get_window_vspace()*normal); // slightly above the roof
+	float const thickness(0.075*get_window_vspace());
+	vector3d const normal(roof.get_norm()), bias(thickness*normal); // slightly above the roof
 	tquad_with_ix_t panel(4, tquad_with_ix_t::TYPE_SOLAR);
 	point const *const pts(roof.pts);
 	// shrink and make rectangular
@@ -1284,6 +1285,19 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 	panel.pts[2] = center + mu*u + mv*v;
 	panel.pts[3] = center - mu*u + mv*v;
 	roof_tquads.push_back(panel);
+	// add sides, similar to thick_poly_to_sides()
+	tquad_t bottom(panel);
+	for (unsigned n = 0; n < 4; ++n) {bottom[n] -= bias;}
+	tquad_with_ix_t side(4, tquad_with_ix_t::TYPE_TRIM);
+
+	for (unsigned i = 0; i < 4; ++i) {
+		unsigned const inext((i+1)&3);
+		side[0] = panel [i];
+		side[1] = bottom[i];
+		side[2] = bottom[inext];
+		side[3] = panel [inext];
+		roof_tquads.push_back(side);
+	}
 }
 
 void rotate_xy(point &pt, point const &origin, float angle) {

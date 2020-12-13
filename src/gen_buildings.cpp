@@ -667,6 +667,7 @@ public:
 				vert.t[1] = tex.tscale_y*((i == 2 || i == 3));
 				if (exclude_frame) {vert.t[0] = 0.07 + 0.86*vert.t[0];}
 			}
+			else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
 			else {assert(0);}
 			if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
 			verts.push_back(vert);
@@ -1037,6 +1038,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			}
 			else if (i->type == tquad_with_ix_t::TYPE_SOLAR) {
 				bdraw.add_tquad(*this, *i, bcube, building_texture_mgr.get_solarp_tid(), colorRGBA(0.6, 0.6, 0.6)); // panel is too bright compared to the roof, use a darker color
+			}
+			else if (i->type == tquad_with_ix_t::TYPE_TRIM) {
+				bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(), LT_GRAY); // untextured
 			}
 			else {
 				bool const is_wall_tex(i->type != tquad_with_ix_t::TYPE_ROOF && i->type != tquad_with_ix_t::TYPE_ROOF_ACC);
