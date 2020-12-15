@@ -284,7 +284,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 		if (cnorm_ptr) {do_xy_rotate_normal(*cnorm_ptr);} // rotate normal back
 	}
 	pos = pos2;
-	return had_coll;
+	return 1;
 }
 
 // Note: pos and p_last are already in rotated coordinate space

@@ -2559,7 +2559,8 @@ public:
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
-		vect_cube_t ped_bcubes;
+		vect_cube_t ped_bcubes; // reused across calls
+		vector<point> points; // reused across calls
 
 		if (radius == 0.0) { // point coll - ignore p_last as well
 			point const p1x(pos - xlate);
@@ -2568,7 +2569,6 @@ public:
 			grid_elem_t const &ge(grid[gix]);
 			if (ge.bc_ixs.empty()) return 0; // skip empty grid
 			if (!(xy_only ? ge.bcube.contains_pt_xy(p1x) : ge.bcube.contains_pt(p1x))) return 0; // no intersection - skip this grid
-			vector<point> points; // reused across calls
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 				if (!(xy_only ? b->contains_pt_xy(p1x) : b->contains_pt(p1x))) continue;
@@ -2581,7 +2581,6 @@ public:
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		float const dist(p2p_dist(pos, p_last));
-		vector<point> points; // reused across calls
 
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
@@ -2600,7 +2599,7 @@ public:
 						if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, b->ix, ped_bcubes);}
 					}
 					if (get_building(b->ix).check_sphere_coll(pos, p_last, ped_bcubes, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
-				}
+				} // for b
 			} // for x
 		} // for y
 		return 0;
