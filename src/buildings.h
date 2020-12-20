@@ -334,7 +334,7 @@ public:
 	unsigned get_tot_vert_count() const {return (num_qverts + num_itverts);}
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
-	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
+	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin,
 		unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0, bool inverted=0);
 	void add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top,
 		bool two_sided=0, bool inv_tb=0, float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES);
@@ -369,13 +369,13 @@ struct building_room_geom_t {
 	unsigned char num_pic_tids;
 	float obj_scale;
 	unsigned stairs_start; // index of first object of TYPE_STAIR
-	vector3d tex_origin;
+	point tex_origin;
 	vector<room_object_t> objs; // for drawing and collision detection
 	vector<obj_model_inst_t> obj_model_insts;
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha; // {large static, small static, dynamic, lights, plants, transparent} materials
 	vect_cube_t light_bcubes;
 
-	building_room_geom_t(vector3d const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_) {}
+	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
@@ -399,7 +399,7 @@ struct building_room_geom_t {
 	void add_picture(room_object_t const &c);
 	void add_book_title(std::string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color, unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir);
 	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0);
-	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0);
+	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0, point const *const use_this_tex_origin=0);
 	void add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_desk(room_object_t const &c, float tscale);
 	void add_reception_desk(room_object_t const &c, float tscale);

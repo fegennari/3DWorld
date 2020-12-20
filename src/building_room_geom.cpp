@@ -38,7 +38,7 @@ int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
-void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, vector3d const &tex_origin,
+void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin,
 	unsigned skip_faces, bool swap_tex_st, bool mirror_x, bool mirror_y, bool inverted)
 {
 	//assert(c.is_normalized()); // no, bathroom window is denormalized
@@ -1181,13 +1181,13 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	} // end pages
 }
 
-void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale) {
+void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale, point const *const use_this_tex_origin) {
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
 	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
 	float const side_thickness(0.06*sides_scale*width);
-	vector3d const tex_origin(c.get_llc());
+	point const tex_origin(use_this_tex_origin ? *use_this_tex_origin : c.get_llc());
 	cube_t middle(c);
 
 	for (unsigned d = 0; d < 2; ++d) { // left/right sides
@@ -1334,8 +1334,9 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	cube_t top(c), legs_bcube(c);
 	top.z1() += 0.85*c.dz();
 	legs_bcube.z2() = top.z1();
+	vector3d const tex_origin(c.get_llc());
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	get_wood_material(tscale).add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
+	get_wood_material(tscale).add_cube_to_verts(top, color, tex_origin); // all faces drawn
 	add_tc_legs(legs_bcube, color, 0.06, tscale);
 
 	if (c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
@@ -1343,7 +1344,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 		c_top_back.z1() = top.z2();
 		c_top_back.z2() = top.z2() + 1.8*c.dz();
 		c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim);
-		add_bookcase(c_top_back, 1, 1, tscale, 1, 0.4); // no_shelves=1, side_width=0.4, both large and small
+		add_bookcase(c_top_back, 1, 1, tscale, 1, 0.4, &tex_origin); // no_shelves=1, side_width=0.4, both large and small, use same tex origin
 	}
 }
 
