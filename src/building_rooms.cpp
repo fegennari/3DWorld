@@ -1801,6 +1801,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (f == 0 && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if on first floor and has exterior door and is unassigned
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 				// else house
+				else if (has_stairs) {} // will be marked as RTYPE_STAIRS below
 				else if (!added_obj && f == 0 && !added_laundry && add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
 					r->assign_to(RTYPE_LAUNDRY, f);
 					added_laundry = 1;
