@@ -641,7 +641,7 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
 		objs.emplace_back(c, type, room_id, dim, !dir, 0, tot_light_amt, shape, color);
 		set_obj_id(objs);
-		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
+		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
 		return 1; // done
 	} // for n
 	return 0; // failed
@@ -1220,11 +1220,10 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall for appliances
-	bool placed(0);
-	placed |= place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);
-	unsigned pref_orient(4);
-	if (placed) {pref_orient = (2*interior->room_geom->objs.back().dim + (!interior->room_geom->objs.back().dir));} // if washer was placed, prefer to place dryer along the same wall
-	placed |= place_model_along_wall(OBJ_MODEL_DRYER,  TYPE_DRYER,  room, 0.38, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8, pref_orient);
+	bool placed(place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8));
+	unsigned pref_orient(4); // if washer was placed, prefer to place dryer along the same wall (Note: blocker has same dim/dir as object)
+	if (placed) {pref_orient = (2*interior->room_geom->objs.back().dim + interior->room_geom->objs.back().dir);}
+	placed |= place_model_along_wall(OBJ_MODEL_DRYER, TYPE_DRYER, room, 0.38, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8, pref_orient);
 	return placed;
 }
 
