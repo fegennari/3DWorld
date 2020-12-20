@@ -91,16 +91,16 @@ void swap_cube_z_xy(cube_t &c, bool dim) {
 }
 
 void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided,
-	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv)
+	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add)
 {
 	if (dim == 2) { // Z: this is our standard v_cylinder
-		add_vcylin_to_verts(c, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv);
+		add_vcylin_to_verts(c, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add);
 		return;
 	}
 	cube_t c_rot(c);
 	swap_cube_z_xy(c_rot, dim);
 	unsigned const itri_verts_start_ix(itri_verts.size()), ixs_start_ix(indices.size());
-	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv);
+	add_vcylin_to_verts(c_rot, color, draw_bot, draw_top, two_sided, inv_tb, rs_bot, rs_top, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add);
 	
 	for (auto v = itri_verts.begin()+itri_verts_start_ix; v != itri_verts.end(); ++v) { // swap triangle vertices and normals
 		std::swap(v->v[2], v->v[dim]);
@@ -109,15 +109,15 @@ void rgeom_mat_t::add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &col
 	std::reverse(indices.begin()+ixs_start_ix, indices.end()); // fix winding order
 }
 void rgeom_mat_t::add_vcylin_to_verts(cube_t const &c, colorRGBA const &color, bool draw_bot, bool draw_top, bool two_sided,
-	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv)
+	bool inv_tb, float rs_bot, float rs_top, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add)
 {
 	point const center(c.get_cube_center());
 	float const radius(0.5*min(c.dx(), c.dy())); // cube X/Y size should be equal/square
 	add_cylin_to_verts(point(center.x, center.y, c.z1()), point(center.x, center.y, c.z2()), radius*rs_bot, radius*rs_top,
-		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv);
+		color, draw_bot, draw_top, two_sided, inv_tb, side_tscale, end_tscale, skip_sides, ndiv, side_tscale_add);
 }
 void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color,
-	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv)
+	bool draw_bot, bool draw_top, bool two_sided, bool inv_tb, float side_tscale, float end_tscale, bool skip_sides, unsigned ndiv, float side_tscale_add)
 {
 	assert((!skip_sides) || draw_bot || draw_top); // must draw something
 	point const ce[2] = {bot, top};
@@ -134,7 +134,7 @@ void rgeom_mat_t::add_cylin_to_verts(point const &bot, point const &top, float b
 
 		for (unsigned i = 0; i <= ndiv; ++i) { // vertex data
 			unsigned const s(i%ndiv);
-			float const ts(side_tscale*(1.0f - i*ndiv_inv));
+			float const ts(side_tscale*(1.0f - i*ndiv_inv) + side_tscale_add);
 			norm_comp const normal(0.5*(vpn.n[s] + vpn.n[(i+ndiv-1)%ndiv])); // normalize?
 			itri_verts[itix++].assign(vpn.p[(s<<1)+0], normal, ts, 0.0, cw);
 			itri_verts[itix++].assign(vpn.p[(s<<1)+1], normal, ts, 1.0, cw);
@@ -591,6 +591,15 @@ void building_room_geom_t::add_crate(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_paint_can(room_object_t const &c, float side_tscale_add) {
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/paint_can_label.png")), 1, 0, 1)); // shadows, small
+	// TODO: random rotation
+	side_mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, side_tscale_add); // draw sides only; random texture rotation
+	point top(c.get_cube_center());
+	top.z = c.z2();
+	get_metal_material(1, 0, 1).add_disk_to_verts(top, 0.5*min(c.dx(), c.dy()), 0, apply_light_color(c, LT_GRAY)); // shadowed, specular metal; small=1
+}
+
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)); // skip back fact at wall
@@ -699,7 +708,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			} // for n
 		}
 		// add bottles
-		unsigned const num_bottles(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 9)); // 0-8, 75% chance of the time
+		unsigned const num_bottles(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 9)); // 0-8, 75% chance
 		C.dir = C.dim = 0;
 
 		for (unsigned n = 0; n < num_bottles; ++n) {
@@ -711,6 +720,19 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = bottle_colors[rgen.rand()%NUM_BOTTLE_COLORS];
 			add_bottle(C);
+			cubes.push_back(C);
+		} // for n
+		// add paint cans
+		unsigned const num_pcans(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 7)); // 0-6, 75% chance
+		float const pc_height(0.64*z_step), pc_radius(0.28*z_step);
+		C.color = WHITE;
+
+		for (unsigned n = 0; n < num_pcans; ++n) {
+			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 1.1*pc_radius), (S.d[d][1] - 1.1*pc_radius));} // place at least 1.1*radius from edge
+			C.set_from_sphere(center, pc_radius);
+			set_cube_zvals(C, S.z2(), S.z2()+pc_height);
+			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
+			add_paint_can(C, rgen.rand_float()); // use a random texture rotation
 			cubes.push_back(C);
 		} // for n
 	} // for s
