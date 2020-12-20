@@ -1143,6 +1143,10 @@ bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zva
 	return (num_added > 0);
 }
 
+void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
+	for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.06*window_vspacing*(1.0 + ((d == 2) ? 1.2 : 2.0)*rgen.rand_float());} // slightly more variation in XY
+}
+
 bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_width(0.2*window_vspacing);
@@ -1192,7 +1196,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
 		point pos(0.0, 0.0, zval);
 		vector3d sz; // half size relative to window_vspacing
-		for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.06*window_vspacing*(1.0 + ((d == 2) ? 1.2 : 2.0)*rgen.rand_float());} // slightly more variation in XY
+		gen_crate_sz(sz, rgen, window_vspacing);
 		cube_t place_area(crate_bounds);
 		place_area.expand_by_xy(-sz);
 		if (!place_area.is_strictly_normalized()) continue; // too large for this room
@@ -1435,6 +1439,24 @@ void building_t::add_plants_to_room(rand_gen_t rgen, room_t const &room, float z
 		place_obj_along_wall(TYPE_PLANT, room, height, sz_scale, rgen, zval, room_id, tot_light_amt,
 			place_area, objs_start, 0.0, 4, 0, choose_pot_color(rgen), 0, SHAPE_CYLIN); // no clearance, pref_orient, or color
 	}
+}
+
+void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned max_num) {
+	if (max_num == 0) return;
+	float const window_vspacing(get_window_vspace());
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
+	unsigned const num(rgen.rand() % (max_num+1));
+
+	for (unsigned n = 0; n < num; ++n) {
+		vector3d sz;
+		gen_crate_sz(sz, rgen, window_vspacing);
+		sz *= 1.5; // make larger than storage room boxes
+
+		if (place_obj_along_wall(TYPE_CRATE, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start)) {
+			interior->room_geom->objs.back().obj_id = 2; // make sure it's a box
+		}
+	} // for n
 }
 
 void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start) {
@@ -1819,6 +1841,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
+			}
+			if (is_house && !(is_bathroom || is_kitchen) && (is_storage || rgen.rand_float() < ((f > 0) ? 0.15 : 0.25))) {
+				unsigned const max_num(is_storage ? 8 : (is_bedroom ? 1 : 2));
+				add_boxes_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, max_num); // place boxes in this room
 			}
 			if (r->has_stairs && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);} // default to stairs if not set above
 		} // for f (floor)
