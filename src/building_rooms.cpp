@@ -234,6 +234,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	float const width(0.8*vspace*rgen.rand_uniform(1.0, 1.2)), depth(0.38*vspace*rgen.rand_uniform(1.0, 1.2)), height(0.21*vspace*rgen.rand_uniform(1.0, 1.2));
+	float const clearance(max(0.5f*depth, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned num_placed(0);
 	cube_t c, placed_desk;
@@ -246,8 +247,10 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		c.d[dim][!dir] = c.d[dim][dir] + dsign*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
 		set_wall_width(c, pos, 0.5*width, !dim);
-		if (num_placed > 0 && c.intersects(placed_desk)) continue; // intersects previously placed desk
-		if (!is_valid_placement_for_room(c, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
+		cube_t desk_pad(c);
+		desk_pad.d[dim][!dir] += dsign*clearance; // ensure clearance in front of the desk so that a chair can be placed
+		if (num_placed > 0 && desk_pad.intersects(placed_desk)) continue; // intersects previously placed desk
+		if (!is_valid_placement_for_room(desk_pad, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // make short if against an exterior wall or in an office
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		set_obj_id(objs);
