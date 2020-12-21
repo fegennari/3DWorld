@@ -8,6 +8,7 @@
 #include "file_reader.h"
 
 bool const EXTRA_VERBOSE = 0;
+bool const ALLOW_VERBOSE = 0;
 
 extern bool reverse_3ds_vert_winding_order;
 
@@ -556,13 +557,14 @@ public:
 
 
 bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, int use_vertex_normals, bool verbose) {
+	timer_t timer("Read 3DS Model");
 	file_reader_3ds_model reader(filename, use_vertex_normals, model);
-	return reader.read(xf, verbose);
+	return reader.read(xf, (ALLOW_VERBOSE && verbose));
 }
 
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose) {
 	file_reader_3ds_triangles reader(filename);
-	return reader.read(ppts, xf, def_c, verbose);
+	return reader.read(ppts, xf, def_c, (ALLOW_VERBOSE && verbose));
 }
 
 
