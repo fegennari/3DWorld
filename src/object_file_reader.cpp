@@ -834,6 +834,7 @@ bool load_model_file(string const &filename, model3ds &models, geom_xform_t cons
 
 	if (ext == "3ds") {
 		if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) {models.pop_back(); return 0;} // recalc_normals is always true
+		//if (write_file && !write_model3d_file(filename, cur_model)) return 0; // Note: doesn't work because there's no mtllib file
 	}
 	else { // object/model3d file
 		object_file_reader_model reader(filename, cur_model);

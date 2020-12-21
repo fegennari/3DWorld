@@ -471,9 +471,11 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				break;
 			case 0xA010: // material ambient color
 				if (!read_color(cur_mat.ka)) return 0;
+				//cur_mat.ka = WHITE; // uncomment to force white color (if color was set to black, etc.)
 				break;
 			case 0xA020: // material diffuse color
 				if (!read_color(cur_mat.kd)) return 0;
+				//cur_mat.kd = WHITE; // uncomment to force white color (if color was set to black, etc.)
 				break;
 			case 0xA030: // material specular color
 				if (!read_color(cur_mat.ks)) return 0;
