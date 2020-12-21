@@ -148,6 +148,14 @@ city_model_t &car_model_loader_t::get_model(unsigned id) {
 	assert(id < num_models());
 	return city_params.car_model_files[id];
 }
+city_model_t const &helicopter_model_loader_t::get_model(unsigned id) const {
+	assert(id == 0); // id is otherwise unused
+	return city_params.helicopter_model;
+}
+city_model_t &helicopter_model_loader_t::get_model(unsigned id) {
+	assert(id == 0); // id is otherwise unused
+	return city_params.helicopter_model;
+}
 city_model_t const &object_model_loader_t::get_model(unsigned id) const {
 	assert(id < NUM_OBJ_MODELS);
 	return city_params.building_models[id];

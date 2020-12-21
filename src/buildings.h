@@ -652,6 +652,7 @@ struct building_t : public building_geom_t {
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen);
 	void add_roof_walls(cube_t const &c, float wall_width, bool overlap_corners, cube_t out[4]);
 	void gen_details(rand_gen_t &rgen, bool is_rectangle);
+	cube_t get_helipad_bcube() const;
 	int get_num_windows_on_side(float xy1, float xy2) const;
 	float get_window_h_border() const;
 	float get_window_v_border() const;

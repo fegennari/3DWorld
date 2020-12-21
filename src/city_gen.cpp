@@ -3019,12 +3019,14 @@ public:
 		if (road_gen.empty()) return; // nothing to do - no roads or cars
 		// generate parking lots
 		vector<car_t> parked_cars;
-		vect_cube_t garages;
+		vect_cube_t garages, helipads;
 		bool const have_cars(!car_manager.empty());
 		road_gen.gen_parking_lots_and_place_objects(parked_cars, have_cars);
 		if (have_cars) {get_all_garages(garages);}
+		if (city_params.has_helicopter_model()) {get_all_city_helipads(helipads);}
 		car_manager.add_parked_cars(parked_cars, garages);
 		car_manager.finalize_cars();
+		car_manager.add_helicopters(helipads);
 		ped_manager.init(city_params.num_peds, city_params.num_building_peds); // must be after buildings are placed
 	}
 	void get_city_bcubes(vect_cube_t &bcubes) const {return road_gen.get_city_bcubes(bcubes);}

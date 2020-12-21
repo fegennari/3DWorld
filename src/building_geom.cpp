@@ -1644,7 +1644,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 		helipad.pts[ dir+1   ].assign(x2, y1, z);
 		helipad.pts[ dir+2   ].assign(x2, y2, z);
 		helipad.pts[(dir+3)&3].assign(x1, y2, z);
-		roof_tquads.emplace_back(helipad, tquad_with_ix_t::TYPE_HELIPAD);
+		roof_tquads.emplace_back(helipad, (uint8_t)tquad_with_ix_t::TYPE_HELIPAD);
 		helipad_bcube = helipad.get_bcube();
 	}
 	unsigned const num_blocks(flat_roof ? (rgen.rand() % 9) : 0); // 0-8; 0 if there are roof quads (houses, etc.)
@@ -1689,7 +1689,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	if (add_walls) {
 		cube_t cubes[4];
 		add_roof_walls(top, wall_width, 0, cubes); // overlap_corners=0
-		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], ROOF_OBJ_WALL);}
+		for (unsigned i = 0; i < 4; ++i) {details.emplace_back(cubes[i], (uint8_t)ROOF_OBJ_WALL);}
 	}
 	if (add_antenna) { // add antenna
 		float const radius(0.003f*rgen.rand_uniform(1.0, 2.0)*(top.dx() + top.dy()));
@@ -1703,6 +1703,16 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 	}
 	for (auto i = details.begin(); i != details.end(); ++i) {assert(i->is_strictly_normalized()); max_eq(bcube.z2(), i->z2());} // extend bcube z2 to contain details
 	if (roof_type == ROOF_TYPE_FLAT) {gen_grayscale_detail_color(rgen, 0.2, 0.6);} // for antenna and roof
+}
+
+cube_t building_t::get_helipad_bcube() const {
+	assert(has_helipad);
+
+	for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
+		if (i->type == tquad_with_ix_t::TYPE_HELIPAD) return i->get_bcube();
+	}
+	assert(0); // if has_helipad was set, a helipad must be found
+	return cube_t(); // never gets here
 }
 
 void building_t::maybe_add_special_roof(rand_gen_t &rgen) {

@@ -1914,6 +1914,11 @@ public:
 			garages.back().z1() += 0.5*b->get_floor_thickness(); // place car above the floor
 		}
 	}
+	void get_all_helipads(vect_cube_t &helipads) const {
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+			if (b->has_helipad) {helipads.push_back(b->get_helipad_bcube());}
+		}
+	}
 
 	bool place_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
 		assert(locs.empty());
@@ -3010,4 +3015,5 @@ void get_all_garages(vect_cube_t &garages) {
 	building_creator_city.get_all_garages(garages); // doesn't have houses/garages yet, but leave it in in case they're added in the future
 	building_tiles.get_all_garages(garages); // not sure if this should be included
 }
+void get_all_city_helipads(vect_cube_t &helipads) {building_creator_city.get_all_helipads(helipads);} // city only for now
 
