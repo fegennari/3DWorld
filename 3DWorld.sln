@@ -1,5 +1,7 @@
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "3DWorld", "3DWorld.vcxproj", "{711D1005-3287-42A8-8A3D-9BD58DF298AA}"
 EndProject
 Global
@@ -8,6 +10,8 @@ Global
 		Debug|x64 = Debug|x64
 		Release|Win32 = Release|Win32
 		Release|x64 = Release|x64
+		Tracy|Win32 = Tracy|Win32
+		Tracy|x64 = Tracy|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{711D1005-3287-42A8-8A3D-9BD58DF298AA}.Debug|Win32.ActiveCfg = Debug|Win32
@@ -18,8 +22,15 @@ Global
 		{711D1005-3287-42A8-8A3D-9BD58DF298AA}.Release|Win32.Build.0 = Release|Win32
 		{711D1005-3287-42A8-8A3D-9BD58DF298AA}.Release|x64.ActiveCfg = Release|x64
 		{711D1005-3287-42A8-8A3D-9BD58DF298AA}.Release|x64.Build.0 = Release|x64
+		{711D1005-3287-42A8-8A3D-9BD58DF298AA}.Tracy|Win32.ActiveCfg = Tracy|Win32
+		{711D1005-3287-42A8-8A3D-9BD58DF298AA}.Tracy|Win32.Build.0 = Tracy|Win32
+		{711D1005-3287-42A8-8A3D-9BD58DF298AA}.Tracy|x64.ActiveCfg = Tracy|x64
+		{711D1005-3287-42A8-8A3D-9BD58DF298AA}.Tracy|x64.Build.0 = Tracy|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {38A6EEF0-2952-4E95-9A34-05E8C42FF2FF}
 	EndGlobalSection
 EndGlobal
