@@ -509,15 +509,19 @@ void car_manager_t::finalize_cars() {
 	cout << "Total Cars: " << cars.size() << endl; // 4000 on the road + 4372 parked + 433 garage (out of 594) = 8805
 }
 
-void car_manager_t::add_helicopters(vect_cube_t const &helipads) {
+void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 	rand_gen_t rgen;
 	unsigned const model_id = 0; // always 0 for now
-	if (!helicopter_model_loader.is_model_valid(model_id)) return;
+	if (!helicopter_model_loader.is_model_valid(model_id)) return; // no model to draw
 	vector3d helicopter_sz(city_params.get_nom_car_size()*helicopter_model_loader.get_model(model_id).scale);
 	cube_t bc(all_zeros);
 	bc.expand_by(0.5*helicopter_sz);
+	helipads.resize(hp_locs.size());
 
-	for (auto i = helipads.begin(); i != helipads.end(); ++i) {
+	for (auto i = hp_locs.begin(); i != hp_locs.end(); ++i) {
+		unsigned const hp_ix(i - hp_locs.begin());
+		helipad_t &helipad(helipads[hp_ix]);
+		helipad.bcube = *i;
 		if (rgen.rand_bool()) continue; // add 50% of the time
 		// Note1: It's unclear if this rotated bcube logic is really correct, or if it can result in the helicopter size increasing;
 		//        maybe it's better to only use +/- X or Y directions? I guess you can't really tell the size when it's on top of a building anyway.
@@ -529,7 +533,10 @@ void car_manager_t::add_helicopters(vect_cube_t const &helipads) {
 		cube_t bcube;
 		bcube.set_from_points(corners, 4);
 		bcube.z2() = bc.dz(); // z1 at helipad surface, z2 at helicopter height
-		helicopters.emplace_back((bcube + center), dir);
+		helicopter_t helicopter((bcube + center), dir, hp_ix);
+		helicopter.wait_time = rgen.rand_uniform(5.0, 30.0); // delay 5-30s to prevent all helicopters from lifting off at the same time
+		helicopters.push_back(helicopter);
+		helipad.in_use = 1;
 	} // for i
 }
 
@@ -765,7 +772,9 @@ bool car_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, 
 }
 
 void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed) {
-	if (cars.empty() || !animate2) return;
+	if (!animate2) return;
+	helicopters_next_frame(car_speed);
+	if (cars.empty()) return;
 	// Warning: not really thread safe, but should be okay; the ped state should valid at all points (thought maybe inconsistent) and we don't need it to be exact every frame
 	ped_manager.get_peds_crossing_roads(peds_crossing_roads);
 	//timer_t timer("Update Cars"); // 4K cars = 0.7ms / 2.1ms with destinations + navigation
@@ -859,6 +868,61 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		cars_by_road.emplace_back(cube_t(), cars.size()); // add terminator
 	}
 	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
+}
+
+void car_manager_t::helicopters_next_frame(float car_speed) {
+	if (helicopters.empty()) return;
+	float const elapsed_secs(fticks/TICKS_PER_SECOND);
+	float const speed(4.0*CAR_SPEED_SCALE*car_speed*fticks); // helicopters are 4x faster than cars
+
+	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
+		if (i->velocity == zero_vector) { // stopped, assumed on a helipad
+			if (i->wait_time == 0.0) continue; // idle, don't update
+			i->wait_time -= elapsed_secs;
+			if (i->wait_time > 0.0) continue; // still waiting
+			// choose a new destination
+			int new_dest_hp(-1);
+
+			for (unsigned n = 0; n < 20; ++n) { // make 100 attempts to choose a new dest helipad
+				unsigned hp_ix(rgen.rand() % helipads.size());
+				if (hp_ix != i->dest_hp && !helipads[hp_ix].in_use) {new_dest_hp = hp_ix; break;}
+			}
+			if (new_dest_hp < 0) {i->wait_time = 1.0; continue;} // wait 1s and try again later
+			helipad_t &helipad(helipads[new_dest_hp]);
+			vector3d const dir((helipad.bcube.get_cube_center() - i->get_landing_pt()).get_norm()); // direction to new dest helipad
+			assert(i->dest_hp < helipads.size());
+			helipads[i->dest_hp].in_use = 0;
+			helipad.in_use = 1;
+			i->wait_time   = 0.0; // no longer waiting
+			i->dest_hp     = new_dest_hp;
+			i->velocity    = speed * rgen.rand_uniform(0.9, 1.1) * dir; // move in dir with minor speed variation
+			i->dir         = dir; // TODO: set velocity first and slowly rotate dir to match velocity over time
+			// TODO: vertical takeoff
+		} // end stopped case
+		else { // moving
+			assert(i->wait_time == 0.0); // must not be waiting
+			assert(i->dest_hp < helipads.size()); // must have a valid dest helipad
+			helipad_t &helipad(helipads[i->dest_hp]);
+			assert(helipad.in_use); // sanity check
+			point const cur_pos(i->get_landing_pt()), dest_pos(helipad.bcube.get_cube_center());
+			cube_t dest(dest_pos);
+			vector3d const delta_pos(fticks*i->velocity); // distance of travel this frame
+			dest.expand_by_xy(delta_pos.mag());
+			
+			if (dest.contains_pt_xy(cur_pos)) { // at destination
+				i->bcube    += dest_pos - cur_pos; // move to destination (center of dest helipad)
+				i->velocity  = zero_vector; // stop
+				i->wait_time = rgen.rand_uniform(30, 60); // wait 30-60s to take off again
+				// TODO: vertical landing
+			}
+			else { // moving
+				i->bcube += delta_pos; // move by one timestep
+				// TODO: adjust dir to match velocity (slowly)?
+				//i->dir = i->velocity.get_norm();
+				// TODO: avoid colliding with buildings and terrain
+			}
+		} // end moving case
+	} // for i
 }
 
 void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass) {

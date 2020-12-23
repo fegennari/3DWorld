@@ -197,9 +197,13 @@ struct comp_car_road_then_pos {
 struct helicopter_t {
 	cube_t bcube;
 	vector3d dir;
+	// dynamic state for moving helicopters
+	vector3d velocity;
+	float wait_time; // time to wait before takeoff
+	unsigned dest_hp; // destination (or current) helipad
 
-	helicopter_t() {}
-	helicopter_t(cube_t const &bcube_, vector3d const &dir_) : bcube(bcube_), dir(dir_) {}
+	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned dest_hp_) : bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), dest_hp(dest_hp_) {}
+	point get_landing_pt() const {return point(bcube.xc(), bcube.yc(), bcube.z1());}
 };
 
 
@@ -597,11 +601,18 @@ class car_manager_t { // and trucks and helicopters
 		car_block_t(unsigned s, unsigned c) : start(s), cur_city(c), first_parked(0) {}
 		bool is_in_building() const {return (cur_city == NO_CITY_IX);}
 	};
+
+	struct helipad_t {
+		cube_t bcube;
+		bool in_use;
+		helipad_t() : in_use(0) {}
+	};
 	city_road_gen_t const &road_gen;
 	vector<car_t> cars;
-	vector<helicopter_t> helicopters;
 	vector<car_block_t> car_blocks, car_blocks_by_road;
 	vector<cube_with_ix_t> cars_by_road;
+	vector<helicopter_t> helicopters;
+	vector<helipad_t> helipads;
 	ped_city_vect_t peds_crossing_roads;
 	car_draw_state_t dstate;
 	rand_gen_t rgen;
@@ -628,7 +639,7 @@ public:
 	void init_cars(unsigned num);
 	void add_parked_cars(vector<car_t> const &new_cars, vect_cube_t const &garages);
 	void finalize_cars();
-	void add_helicopters(vect_cube_t const &helipads);
+	void add_helicopters(vect_cube_t const &hp_locs);
 	void extract_car_data(vector<car_city_vect_t> &cars_by_city) const;
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
 	void destroy_cars_in_radius(point const &pos_in, float radius);
@@ -640,6 +651,7 @@ public:
 	bool check_car_for_ped_colls(car_t &car) const;
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center, rand_gen_t &rgen) const;
 	void next_frame(ped_manager_t const &ped_manager, float car_speed);
+	void helicopters_next_frame(float car_speed);
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context(); helicopter_model_loader.free_context();}
