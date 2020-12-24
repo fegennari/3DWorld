@@ -195,14 +195,18 @@ struct comp_car_road_then_pos {
 
 
 struct helicopter_t {
+	enum {STATE_WAIT=0, STATE_TAKEOFF, STATE_FLY, STATE_LAND};
 	cube_t bcube;
 	vector3d dir;
 	// dynamic state for moving helicopters
 	vector3d velocity;
 	float wait_time; // time to wait before takeoff
+	float fly_zval; // zval required for flight to avoid buildings and terrain
 	unsigned dest_hp; // destination (or current) helipad
+	unsigned state;
 
-	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned dest_hp_) : bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), dest_hp(dest_hp_) {}
+	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned dest_hp_) :
+		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), dest_hp(dest_hp_), state(STATE_WAIT) {}
 	point get_landing_pt() const {return point(bcube.xc(), bcube.yc(), bcube.z1());}
 };
 
@@ -604,8 +608,9 @@ class car_manager_t { // and trucks and helicopters
 
 	struct helipad_t {
 		cube_t bcube;
-		bool in_use;
-		helipad_t() : in_use(0) {}
+		bool in_use, reserved;
+		helipad_t() : in_use(0), reserved(0) {}
+		bool is_avail() const {return !(in_use || reserved);}
 	};
 	city_road_gen_t const &road_gen;
 	vector<car_t> cars;
@@ -630,6 +635,7 @@ class car_manager_t { // and trucks and helicopters
 	void remove_destroyed_cars();
 	void update_cars();
 	int find_next_car_after_turn(car_t &car);
+	vector3d get_helicopter_size();
 public:
 	car_manager_t(city_road_gen_t const &road_gen_) :
 		road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader), first_parked_car(0), first_garage_car(0), car_destroyed(0) {}
