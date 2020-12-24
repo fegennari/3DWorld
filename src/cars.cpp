@@ -8,7 +8,8 @@
 #include "lightmap.h" // for light_source
 #include <cfloat> // for FLT_MAX
 
-float const MIN_CAR_STOP_SEP = 0.25; // in units of car lengths
+bool const DYNAMIC_HELICOPTERS = 1;
+float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
 extern bool tt_fire_button_down;
 extern int display_mode, game_mode, map_mode, animate2;
@@ -538,8 +539,8 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 		cube_t bcube;
 		bcube.set_from_points(corners, 4);
 		bcube.z2() = bc.dz(); // z1 at helipad surface, z2 at helicopter height
-		helicopter_t helicopter((bcube + center), dir, hp_ix);
-		helicopter.wait_time = rgen.rand_uniform(5.0, 30.0); // delay 5-30s to prevent all helicopters from lifting off at the same time
+		helicopter_t helicopter((bcube + center), dir, hp_ix, DYNAMIC_HELICOPTERS);
+		if (helicopter.dynamic) {helicopter.wait_time = rgen.rand_uniform(5.0, 30.0);} // delay 5-30s to prevent all helicopters from lifting off at the same time
 		helicopters.push_back(helicopter);
 		helipad.in_use = 1;
 	} // for i
@@ -878,8 +879,9 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 void car_manager_t::helicopters_next_frame(float car_speed) {
 	if (helicopters.empty()) return;
 	float const elapsed_secs(fticks/TICKS_PER_SECOND);
-	float const speed(4.0*CAR_SPEED_SCALE*car_speed*fticks); // helicopters are 4x faster than cars
-	float const hc_height(get_helicopter_size().z), min_vert_clearance(2.0f*hc_height), min_climb_height(max(min_vert_clearance, 4.0f*hc_height));
+	float const speed(2.0*CAR_SPEED_SCALE*car_speed); // helicopters are 2x faster than cars
+	float const takeoff_speed(0.2*speed), land_speed(0.2*speed), rotate_rate(0.02*fticks);
+	float const hc_height(get_helicopter_size().z), min_vert_clearance(2.0f*hc_height), min_climb_height(max(min_vert_clearance, 5.0f*hc_height));
 
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
 		if (i->state == helicopter_t::STATE_WAIT) { // stopped, assumed on a helipad
@@ -901,7 +903,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			helipad.reserved = 1;
 			i->wait_time = 0.0; // no longer waiting
 			i->dest_hp   = new_dest_hp;
-			i->velocity  = zero_vector; // TODO: should be +z
+			i->velocity  = vector3d(0.0, 0.0, takeoff_speed);
 			i->fly_zval  = max(i->bcube.z1(), helipad.bcube.z2()) + min_climb_height;
 			// TODO: increase fly_zval to avoid colliding with buildings and terrain
 			i->state     = helicopter_t::STATE_TAKEOFF;
@@ -915,20 +917,34 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			if (i->state == helicopter_t::STATE_TAKEOFF) {
 				vector3d dir((helipad.bcube.get_cube_center() - i->get_landing_pt()).get_norm()); // direction to new dest helipad
 				dir.z = 0.0; // no tilt for now
-				i->dir      = dir; // TODO: set velocity first and slowly rotate dir to match velocity over time
-				// TODO: vertical takeoff
-				i->bcube   += vector3d(0.0, 0.0, (i->fly_zval - i->bcube.z1()));
-				i->velocity = speed * rgen.rand_uniform(0.9, 1.1) * i->dir; // move in dir with minor speed variation
-				i->state = helicopter_t::STATE_FLY;
+				// vertical takeoff
+				float const takeoff_dz(i->fly_zval - i->bcube.z1()), max_rise_dist(takeoff_speed*fticks), rise_dist(min(takeoff_dz, max_rise_dist));
+				assert(takeoff_dz >= 0.0);
+				i->bcube += vector3d(0.0, 0.0, rise_dist);
+
+				if (rise_dist == takeoff_dz) { // reached the target height and can now fly horizontally
+					i->dir      = dir; // set final dir
+					i->velocity = speed * rgen.rand_uniform(0.9, 1.1) * i->dir; // move in dir with minor speed variation
+					i->state    = helicopter_t::STATE_FLY;
+				}
+				else {
+					i->dir = (rotate_rate*dir + (1.0 - rotate_rate)*i->dir).get_norm(); // gradually rotate to the correct direction
+				}
 			}
 			else if (i->state == helicopter_t::STATE_LAND) {
-				// TODO: vertical landing
-				i->bcube    += vector3d(0.0, 0.0, (helipad.bcube.z2() - i->bcube.z1()));
-				i->velocity  = zero_vector; // full stop
-				//i->wait_time = rgen.rand_uniform(30, 60); // wait 30-60s to take off again
-				i->wait_time = rgen.rand_uniform(3, 6); // TESTING
-				i->state = helicopter_t::STATE_WAIT; // transition back to the waiting state
-				helipad.in_use = 1;
+				float const land_dz(i->bcube.z1() - helipad.bcube.z2()), max_fall_dist(land_speed*fticks), fall_dist(min(land_dz, max_fall_dist));
+				assert(land_dz >= 0.0);
+				// vertical landing, no need to re-orient dir
+				i->bcube -= vector3d(0.0, 0.0, fall_dist);
+
+				if (fall_dist == land_dz) { // landed
+					i->velocity  = zero_vector; // full stop
+					//i->wait_time = rgen.rand_uniform(30, 60); // wait 30-60s to take off again
+					i->wait_time = 5.0; // TESTING
+					i->state = helicopter_t::STATE_WAIT; // transition back to the waiting state
+					helipad.in_use   = 1;
+					helipad.reserved = 0;
+				}
 			}
 			else {
 				assert(i->state == helicopter_t::STATE_FLY);
@@ -937,10 +953,10 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 				vector3d const delta_pos(fticks*i->velocity); // distance of travel this frame
 				dest.expand_by_xy(delta_pos.mag());
 			
-				if (dest.contains_pt_xy(cur_pos)) { // at destination
+				if (dest.contains_pt_xy(cur_pos)) { // reached destination
 					vector3d xy_move((dest_pos.x - cur_pos.x), (dest_pos.y - cur_pos.y), 0.0);
 					i->bcube   += xy_move; // move to destination XY (center of dest helipad)
-					i->velocity = zero_vector; // TODO: set to -z?
+					i->velocity = vector3d(0.0, 0.0, -land_speed);
 					i->state    = helicopter_t::STATE_LAND;
 				}
 				else { // moving to destination
@@ -980,7 +996,9 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 			}
 		} // for cb
 		if (!garages_pass && !is_dlight_shadows && city_params.has_helicopter_model()) { // draw helicopters
-			for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {dstate.draw_helicopter(*i);}
+			for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
+				if (!shadow_only || !i->dynamic) {dstate.draw_helicopter(*i);} // only draw static helicopters in the shadow pass
+			}
 		}
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore
 		dstate.post_draw();

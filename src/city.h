@@ -204,9 +204,10 @@ struct helicopter_t {
 	float fly_zval; // zval required for flight to avoid buildings and terrain
 	unsigned dest_hp; // destination (or current) helipad
 	unsigned state;
+	bool dynamic;
 
-	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned dest_hp_) :
-		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), dest_hp(dest_hp_), state(STATE_WAIT) {}
+	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned dest_hp_, bool dynamic_) :
+		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), dest_hp(dest_hp_), state(STATE_WAIT), dynamic(dynamic_) {}
 	point get_landing_pt() const {return point(bcube.xc(), bcube.yc(), bcube.z1());}
 };
 
