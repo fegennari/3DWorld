@@ -6,6 +6,7 @@
 #include "openal_wrap.h"
 #include "explosion.h" // for add_blastr()
 #include "lightmap.h" // for light_source
+#include "profiler.h"
 #include <cfloat> // for FLT_MAX
 
 bool const DYNAMIC_HELICOPTERS = 1;
@@ -410,6 +411,7 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h) {
 	assert(helicopter_model_loader.is_model_valid(model_id));
 	point const center(h.bcube.get_cube_center());
 	begin_tile(center); // enable shadows
+	if (h.state != helicopter_t::STATE_WAIT) {} // TODO: rotate the blades
 	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, model_id, shadow_only, 0); // low_detail=0
 }
 
@@ -544,6 +546,7 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 		helicopters.push_back(helicopter);
 		helipad.in_use = 1;
 	} // for i
+	cout << TXT(helipads.size()) << TXT(helicopters.size()) << endl; // 55/33
 }
 
 void car_city_vect_t::clear_cars() {
@@ -876,6 +879,33 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
 }
 
+// calculate max zval along line for buildings and terrain; this is not intended to be fast;
+// there are at least three possible approaches:
+// 1. Step in small increments along the path and test terrain and building heights at each point, similar to player collision detection, and record the max zval
+// 2. Similar to 1, but step through each tile and test collision for everything in that tile; probably faster, but requires custom line intersection code
+// 3. Cast a ray through the buildings and terrain and incrementally increase the ray's zval until there are no hits; possibly faster, but less accurate
+// Note: another limitation is that this is a line query, not a cylinder query, so the helicopter may still clip a building
+float get_flight_path_zmax(point const &p1, point const &p2) {
+	//highres_timer_t timer("Get Line Zmax"); // 0.133ms
+	assert(p1.z == p2.z); // for now, only horizontal lines are supported
+	float cur_zmax(p1.z);
+	// test terrain using approach #1
+	float const dist(p2p_dist(p1, p2)), step_sz(min(DX_VAL, DY_VAL)); // step_sz is somewhat arbitrary; smaller is more accurate but slower
+	unsigned const num_steps(dist/step_sz + 1);
+	vector3d const step((p2 - p1)/float(num_steps));
+	point pos(p1 + get_camera_coord_space_xlate()); // convert from building to camera space
+	assert(num_steps < 10000); // let's be reasonable
+
+	for (unsigned n = 0; n < num_steps; ++n) {
+		max_eq(cur_zmax, get_exact_zval(pos.x, pos.y));
+		pos += step;
+	}
+	float const zt(cur_zmax);
+	// test buildings using approach #2
+	update_buildings_zmax_for_line(p1, p2, cur_zmax);
+	return cur_zmax;
+}
+
 void car_manager_t::helicopters_next_frame(float car_speed) {
 	if (helicopters.empty()) return;
 	float const elapsed_secs(fticks/TICKS_PER_SECOND);
@@ -899,13 +929,14 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			if (new_dest_hp < 0) {i->wait_time = 1.0; continue;} // wait 1s and try again later
 			assert(i->dest_hp < helipads.size());
 			helipad_t &helipad(helipads[new_dest_hp]);
+			point p1(i->bcube.get_cube_center()), p2(helipad.bcube.get_cube_center());
 			helipads[i->dest_hp].in_use = 0; // old dest
 			helipad.reserved = 1;
 			i->wait_time = 0.0; // no longer waiting
 			i->dest_hp   = new_dest_hp;
 			i->velocity  = vector3d(0.0, 0.0, takeoff_speed);
-			i->fly_zval  = max(i->bcube.z1(), helipad.bcube.z2()) + min_climb_height;
-			// TODO: increase fly_zval to avoid colliding with buildings and terrain
+			p1.z = p2.z  = max(p1.z, p2.z) + min_climb_height;
+			i->fly_zval  = max(p1.z, (get_flight_path_zmax(p1, p2) + min_vert_clearance));
 			i->state     = helicopter_t::STATE_TAKEOFF;
 		} // end stopped case
 		else { // moving
@@ -965,7 +996,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			}
 		} // end moving case
 	} // for i
-	// TODO: show flight path debug lines?
+	// show flight path debug lines?
 }
 
 void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass) {

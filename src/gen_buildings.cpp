@@ -2610,6 +2610,7 @@ public:
 		return 0;
 	}
 
+	// Note: p1 and p2 are in camera space
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt, bool no_coll_pt) const {
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
@@ -2658,6 +2659,31 @@ public:
 			} // for x
 		} // for y
 		return coll; // 0=none, 1=side, 2=roof, 3=details
+	}
+
+	// Note: unlike check_line_coll(), p1 and p2 are in building space
+	void update_zmax_for_line(point const &p1, point const &p2, float &cur_zmax) const {
+		if (empty()) return;
+		cube_t bcube(p1, p2);
+		unsigned ixr[2][2];
+		get_grid_range(bcube, ixr);
+		vector<point> points; // reused across calls
+		
+		// for now, just do a slow iteration over every grid element within the line's bbox in XY
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (ge.bc_ixs.empty()) continue; // skip empty grid
+				if (ge.bcube.z2() < cur_zmax || !check_line_clip(p1, p2, ge.bcube.d)) continue; // no intersection - skip this grid
+
+				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: okay to check the same building more than once
+					if (b->z2() < cur_zmax || !b->intersects(bcube)) continue;
+					float t(1.0); // result is unused
+					// Note: unclear if we need to do a detailed line collision check, maybe testing the building bbox is good enough?
+					if (get_building(b->ix).check_line_coll(p1, p2, zero_vector, t, points, 0, 1, 1)) {max_eq(cur_zmax, b->z2());}
+				} // for b
+			} // for x
+		} // for y
 	}
 
 	// Note: we can get building_id by calling check_ped_coll() or get_building_bcube_at_pos()
@@ -2826,7 +2852,7 @@ public:
 		}
 		return 0;
 	}
-	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const {
+	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const { // Note p1/p2 are in camera space
 		if (p1.x == p2.x && p1.y == p2.y) { // vertical line, use map lookup optimization (for overhead map mode)
 			auto it(get_tile_by_pos(p1));
 			if (it == tiles.end()) return 0;
@@ -2840,6 +2866,12 @@ public:
 			if (i->second.get_building_hit_color(p1, p2, color)) return 1; // line is generally pointed down and can only intersect one building; return the first hit
 		}
 		return 0;
+	}
+	void update_zmax_for_line(point const &p1, point const &p2, float &cur_zmax) const { // Note p1/p2 are in building space
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
+			if (!check_line_clip(p1, p2, i->second.get_bcube().d)) continue; // optimization
+			i->second.update_zmax_for_line(p1, p2, cur_zmax);
+		}
 	}
 	void add_drawn(vector3d const &xlate, vector<building_creator_t *> &bcs) {
 		float const draw_dist(get_draw_tile_dist());
@@ -2964,6 +2996,11 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	if (coll1 && ret_any_pt) return coll1;
 	unsigned const coll2(building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 1));
 	return (coll2 ? coll2 : coll1); // Note: excludes building_tiles
+}
+void update_buildings_zmax_for_line(point const &p1, point const &p2, float &cur_zmax) {
+	building_creator_city.update_zmax_for_line(p1, p2, cur_zmax);
+	building_creator     .update_zmax_for_line(p1, p2, cur_zmax);
+	building_tiles       .update_zmax_for_line(p1, p2, cur_zmax);
 }
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
 	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.get_building_hit_color(p1, p2, color)) return 1;
