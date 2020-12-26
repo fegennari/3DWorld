@@ -209,6 +209,7 @@ struct helicopter_t {
 	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned dest_hp_, bool dynamic_) :
 		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), dest_hp(dest_hp_), state(STATE_WAIT), dynamic(dynamic_) {}
 	point get_landing_pt() const {return point(bcube.xc(), bcube.yc(), bcube.z1());}
+	void invalidate_tile_shadow_map() const;
 };
 
 
@@ -580,7 +581,7 @@ public:
 	void add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube);
 	void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const;
 	void draw_car(car_t const &car, bool is_dlight_shadows);
-	void draw_helicopter(helicopter_t const &h);
+	void draw_helicopter(helicopter_t const &h, bool shadow_only);
 	void add_car_headlights(car_t const &car, cube_t &lights_bcube);
 }; // car_draw_state_t
 

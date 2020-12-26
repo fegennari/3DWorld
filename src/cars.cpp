@@ -404,14 +404,16 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	}
 }
 
-void car_draw_state_t::draw_helicopter(helicopter_t const &h) {
+void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) {
+	bool const moving(h.state != helicopter_t::STATE_WAIT);
+	if (shadow_only && moving) return; // don't draw moving helicopters in the shadow pass; wait until they land
 	if (!check_cube_visible(h.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
 	if (is_occluded(h.bcube)) return; // yes, this seems to work
 	unsigned const model_id(0); // always one helicopter, model_id=0
 	assert(helicopter_model_loader.is_model_valid(model_id));
 	point const center(h.bcube.get_cube_center());
 	begin_tile(center); // enable shadows
-	if (h.state != helicopter_t::STATE_WAIT) {} // TODO: rotate the blades
+	if (moving) {} // TODO: rotate the blades
 	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, model_id, shadow_only, 0); // low_detail=0
 }
 
@@ -906,6 +908,11 @@ float get_flight_path_zmax(point const &p1, point const &p2) {
 	return cur_zmax;
 }
 
+
+void helicopter_t::invalidate_tile_shadow_map() const {
+	invalidate_tile_smap_at_pt((bcube.get_cube_center() + get_camera_coord_space_xlate()), 0.5*max(bcube.dx(), bcube.dy()));
+}
+
 void car_manager_t::helicopters_next_frame(float car_speed) {
 	if (helicopters.empty()) return;
 	float const elapsed_secs(fticks/TICKS_PER_SECOND);
@@ -938,6 +945,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			p1.z = p2.z  = max(p1.z, p2.z) + min_climb_height;
 			i->fly_zval  = max(p1.z, (get_flight_path_zmax(p1, p2) + min_vert_clearance));
 			i->state     = helicopter_t::STATE_TAKEOFF;
+			i->invalidate_tile_shadow_map(); // update static shadows for this tile to remove the helicopter shadow
 		} // end stopped case
 		else { // moving
 			assert(i->wait_time == 0.0); // must not be waiting
@@ -975,6 +983,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 					i->state = helicopter_t::STATE_WAIT; // transition back to the waiting state
 					helipad.in_use   = 1;
 					helipad.reserved = 0;
+					i->invalidate_tile_shadow_map(); // update static shadows for this tile to add the helicopter shadow?
 				}
 			}
 			else {
@@ -1028,7 +1037,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		} // for cb
 		if (!garages_pass && !is_dlight_shadows && city_params.has_helicopter_model()) { // draw helicopters
 			for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
-				if (!shadow_only || !i->dynamic) {dstate.draw_helicopter(*i);} // only draw static helicopters in the shadow pass
+				dstate.draw_helicopter(*i, shadow_only);
 			}
 		}
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore
