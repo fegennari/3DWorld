@@ -886,7 +886,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 // 2. Similar to 1, but step through each tile and test collision for everything in that tile; probably faster, but requires custom line intersection code
 // 3. Cast a ray through the buildings and terrain and incrementally increase the ray's zval until there are no hits; possibly faster, but less accurate
 // Note: another limitation is that this is a line query, not a cylinder query, so the helicopter may still clip a building
-float get_flight_path_zmax(point const &p1, point const &p2) {
+float get_flight_path_zmax(point const &p1, point const &p2, float radius) {
 	//highres_timer_t timer("Get Line Zmax"); // 0.133ms
 	assert(p1.z == p2.z); // for now, only horizontal lines are supported
 	float cur_zmax(p1.z);
@@ -898,12 +898,12 @@ float get_flight_path_zmax(point const &p1, point const &p2) {
 	assert(num_steps < 10000); // let's be reasonable
 
 	for (unsigned n = 0; n < num_steps; ++n) {
-		max_eq(cur_zmax, get_exact_zval(pos.x, pos.y));
+		max_eq(cur_zmax, get_exact_zval(pos.x, pos.y)); // not using radius here (assumes it's small compared to terrain elevation changes)
 		pos += step;
 	}
 	float const zt(cur_zmax);
 	// test buildings using approach #2
-	update_buildings_zmax_for_line(p1, p2, cur_zmax);
+	update_buildings_zmax_for_line(p1, p2, radius, cur_zmax);
 	return cur_zmax;
 }
 
@@ -932,7 +932,9 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 				if (hp_ix != i->dest_hp && helipads[hp_ix].is_avail()) {new_dest_hp = hp_ix; break;}
 			}
 			if (new_dest_hp < 0) {i->wait_time = 1.0; continue;} // wait 1s and try again later
-			float const hc_height(get_helicopter_size(i->model_id).z), min_vert_clearance(2.0f*hc_height), min_climb_height(max(min_vert_clearance, 5.0f*hc_height));
+			vector3d const model_sz(get_helicopter_size(i->model_id));
+			float const hc_height(model_sz.z), min_vert_clearance(2.0f*hc_height), min_climb_height(max(min_vert_clearance, 5.0f*hc_height));
+			float const avoid_dist(2.0*SQRT2*max(model_sz.x, model_sz.y)); // increase radius factor for added clearance
 			assert(i->dest_hp < helipads.size());
 			helipad_t &helipad(helipads[new_dest_hp]);
 			point p1(i->bcube.get_cube_center()), p2(helipad.bcube.get_cube_center());
@@ -942,7 +944,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			i->dest_hp   = new_dest_hp;
 			i->velocity  = vector3d(0.0, 0.0, takeoff_speed);
 			p1.z = p2.z  = max(p1.z, p2.z) + min_climb_height;
-			i->fly_zval  = max(p1.z, (get_flight_path_zmax(p1, p2) + min_vert_clearance));
+			i->fly_zval  = max(p1.z, (get_flight_path_zmax(p1, p2, avoid_dist) + min_vert_clearance));
 			i->state     = helicopter_t::STATE_TAKEOFF;
 			i->invalidate_tile_shadow_map(); // update static shadows for this tile to remove the helicopter shadow
 		} // end stopped case
@@ -977,8 +979,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 
 				if (fall_dist == land_dz) { // landed
 					i->velocity  = zero_vector; // full stop
-					//i->wait_time = rgen.rand_uniform(30, 60); // wait 30-60s to take off again
-					i->wait_time = 5.0; // TESTING
+					i->wait_time = rgen.rand_uniform(30, 60); // wait 30-60s to take off again
 					i->state = helicopter_t::STATE_WAIT; // transition back to the waiting state
 					helipad.in_use   = 1;
 					helipad.reserved = 0;
