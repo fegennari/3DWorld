@@ -62,8 +62,7 @@ struct city_params_t {
 	unsigned num_cars;
 	float car_speed, traffic_balance_val, new_city_prob, max_car_scale;
 	bool enable_car_path_finding, convert_model_files;
-	vector<city_model_t> car_model_files, ped_model_files;
-	city_model_t helicopter_model;
+	vector<city_model_t> car_model_files, ped_model_files, hc_model_files;
 	// parking lots
 	unsigned min_park_spaces, min_park_rows;
 	float min_park_density, max_park_density;
@@ -93,7 +92,7 @@ struct city_params_t {
 	static bool read_error(string const &str) {cout << "Error reading city config option " << str << "." << endl; return 0;}
 	bool read_option(FILE *fp);
 	bool add_model(unsigned id, FILE *fp);
-	bool has_helicopter_model() const {return helicopter_model.valid;}
+	bool has_helicopter_model() const {return !hc_model_files.empty();}
 	vector3d get_nom_car_size() const {return CAR_SIZE*road_width;}
 	vector3d get_max_car_size() const {return max_car_scale*get_nom_car_size();}
 }; // city_params_t
@@ -203,11 +202,11 @@ struct helicopter_t {
 	float wait_time; // time to wait before takeoff
 	float fly_zval; // zval required for flight to avoid buildings and terrain
 	unsigned dest_hp; // destination (or current) helipad
-	unsigned state;
+	unsigned state, model_id;
 	bool dynamic;
 
-	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned dest_hp_, bool dynamic_) :
-		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), dest_hp(dest_hp_), state(STATE_WAIT), dynamic(dynamic_) {}
+	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned model_id_, unsigned dest_hp_, bool dynamic_) :
+		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), dest_hp(dest_hp_), state(STATE_WAIT), model_id(model_id_), dynamic(dynamic_) {}
 	point get_landing_pt() const {return point(bcube.xc(), bcube.yc(), bcube.z1());}
 	void invalidate_tile_shadow_map() const;
 };
@@ -637,7 +636,7 @@ class car_manager_t { // and trucks and helicopters
 	void remove_destroyed_cars();
 	void update_cars();
 	int find_next_car_after_turn(car_t &car);
-	vector3d get_helicopter_size();
+	vector3d get_helicopter_size(unsigned model_id);
 public:
 	car_manager_t(city_road_gen_t const &road_gen_) :
 		road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader), first_parked_car(0), first_garage_car(0), car_destroyed(0) {}

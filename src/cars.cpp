@@ -409,12 +409,11 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 	if (shadow_only && moving) return; // don't draw moving helicopters in the shadow pass; wait until they land
 	if (!check_cube_visible(h.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
 	if (is_occluded(h.bcube)) return; // yes, this seems to work
-	unsigned const model_id(0); // always one helicopter, model_id=0
-	assert(helicopter_model_loader.is_model_valid(model_id));
+	assert(helicopter_model_loader.is_model_valid(h.model_id));
 	point const center(h.bcube.get_cube_center());
 	begin_tile(center); // enable shadows
 	if (moving) {} // TODO: rotate the blades
-	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, model_id, shadow_only, 0); // low_detail=0
+	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0); // low_detail=0
 }
 
 void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {
@@ -514,18 +513,13 @@ void car_manager_t::finalize_cars() {
 	cout << "Total Cars: " << cars.size() << endl; // 4000 on the road + 4372 parked + 433 garage (out of 594) = 8805
 }
 
-vector3d car_manager_t::get_helicopter_size() { // Note: non-const because this call may load the model
-	unsigned const model_id = 0; // always 0 for now
+vector3d car_manager_t::get_helicopter_size(unsigned model_id) { // Note: non-const because this call may load the model
 	return city_params.get_nom_car_size()*helicopter_model_loader.get_model(model_id).scale;
 }
 
 void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
-	rand_gen_t rgen;
-	unsigned const model_id = 0; // always 0 for now
-	if (!helicopter_model_loader.is_model_valid(model_id)) return; // no model to draw
-	vector3d helicopter_sz(get_helicopter_size());
-	cube_t bc(all_zeros);
-	bc.expand_by(0.5*helicopter_sz);
+	unsigned const num_models(helicopter_model_loader.num_models());
+	if (num_models == 0) return;
 	helipads.resize(hp_locs.size());
 
 	for (auto i = hp_locs.begin(); i != hp_locs.end(); ++i) {
@@ -533,6 +527,11 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 		helipad_t &helipad(helipads[hp_ix]);
 		helipad.bcube = *i;
 		if (rgen.rand_bool()) continue; // add 50% of the time
+		unsigned const model_id((num_models == 0) ? 0 : (rgen.rand()%num_models));
+		if (!helicopter_model_loader.is_model_valid(model_id)) continue; // no model to draw, skip this helicopter
+		vector3d helicopter_sz(get_helicopter_size(model_id));
+		cube_t bc(all_zeros);
+		bc.expand_by(0.5*helicopter_sz);
 		// Note1: It's unclear if this rotated bcube logic is really correct, or if it can result in the helicopter size increasing;
 		//        maybe it's better to only use +/- X or Y directions? I guess you can't really tell the size when it's on top of a building anyway.
 		// Note2: There's currently no collision detection with helicopters; The user shouldn't be up on the roof anyway since buildings with helipads have no roof access
@@ -543,12 +542,12 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 		cube_t bcube;
 		bcube.set_from_points(corners, 4);
 		bcube.z2() = bc.dz(); // z1 at helipad surface, z2 at helicopter height
-		helicopter_t helicopter((bcube + center), dir, hp_ix, DYNAMIC_HELICOPTERS);
+		helicopter_t helicopter((bcube + center), dir, model_id, hp_ix, DYNAMIC_HELICOPTERS);
 		if (helicopter.dynamic) {helicopter.wait_time = rgen.rand_uniform(5.0, 30.0);} // delay 5-30s to prevent all helicopters from lifting off at the same time
 		helicopters.push_back(helicopter);
 		helipad.in_use = 1;
 	} // for i
-	cout << TXT(helipads.size()) << TXT(helicopters.size()) << endl; // 55/33
+	cout << TXT(helipads.size()) << TXT(helicopters.size()) << endl; // 55/30
 }
 
 void car_city_vect_t::clear_cars() {
@@ -918,7 +917,6 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 	float const elapsed_secs(fticks/TICKS_PER_SECOND);
 	float const speed(2.0*CAR_SPEED_SCALE*car_speed); // helicopters are 2x faster than cars
 	float const takeoff_speed(0.2*speed), land_speed(0.2*speed), rotate_rate(0.02*fticks);
-	float const hc_height(get_helicopter_size().z), min_vert_clearance(2.0f*hc_height), min_climb_height(max(min_vert_clearance, 5.0f*hc_height));
 
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
 		if (i->state == helicopter_t::STATE_WAIT) { // stopped, assumed on a helipad
@@ -934,6 +932,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 				if (hp_ix != i->dest_hp && helipads[hp_ix].is_avail()) {new_dest_hp = hp_ix; break;}
 			}
 			if (new_dest_hp < 0) {i->wait_time = 1.0; continue;} // wait 1s and try again later
+			float const hc_height(get_helicopter_size(i->model_id).z), min_vert_clearance(2.0f*hc_height), min_climb_height(max(min_vert_clearance, 5.0f*hc_height));
 			assert(i->dest_hp < helipads.size());
 			helipad_t &helipad(helipads[new_dest_hp]);
 			point p1(i->bcube.get_cube_center()), p2(helipad.bcube.get_cube_center());
@@ -1035,10 +1034,8 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 				dstate.draw_car(cars[c], is_dlight_shadows);
 			}
 		} // for cb
-		if (!garages_pass && !is_dlight_shadows && city_params.has_helicopter_model()) { // draw helicopters
-			for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
-				dstate.draw_helicopter(*i, shadow_only);
-			}
+		if (!garages_pass && !is_dlight_shadows) { // draw helicopters
+			for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {dstate.draw_helicopter(*i, shadow_only);}
 		}
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore
 		dstate.post_draw();

@@ -91,9 +91,11 @@ bool city_params_t::read_option(FILE *fp) {
 		car_model_files.push_back(car_model);
 		max_eq(max_car_scale, car_model.scale);
 	}
-	else if (str == "helicopter_model") { // for now, a single helicopter model
-		if (!helicopter_model.read(fp)) {return read_error(str);}
-		if (!helicopter_model.check_filename()) {cerr << "Error: helicopter_model file '" << helicopter_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
+	else if (str == "helicopter_model") { // multiple helicopter models
+		city_model_t hc_model;
+		if (!hc_model.read(fp)) {return read_error(str);}
+		if (!hc_model.check_filename()) {cerr << "Error: helicopter_model file '" << hc_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
+		hc_model_files.push_back(hc_model);
 	}
 	// pedestrians
 	else if (str == "num_peds") {

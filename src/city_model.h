@@ -53,7 +53,7 @@ public:
 
 class helicopter_model_loader_t : public city_model_loader_t {
 public:
-	unsigned num_models() const {return 1;}
+	unsigned num_models() const;
 	city_model_t const &get_model(unsigned id) const;
 	city_model_t &get_model(unsigned id);
 };

@@ -138,7 +138,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	select_texture(WHITE_TEX); // reset back to default/untextured
 }
 
-unsigned car_model_loader_t::num_models() const {return city_params.car_model_files.size();}
+unsigned car_model_loader_t       ::num_models() const {return city_params.car_model_files.size();}
+unsigned helicopter_model_loader_t::num_models() const {return city_params.hc_model_files .size();}
 
 city_model_t const &car_model_loader_t::get_model(unsigned id) const {
 	assert(id < num_models());
@@ -149,12 +150,12 @@ city_model_t &car_model_loader_t::get_model(unsigned id) {
 	return city_params.car_model_files[id];
 }
 city_model_t const &helicopter_model_loader_t::get_model(unsigned id) const {
-	assert(id == 0); // id is otherwise unused
-	return city_params.helicopter_model;
+	assert(id < num_models());
+	return city_params.hc_model_files[id];
 }
 city_model_t &helicopter_model_loader_t::get_model(unsigned id) {
-	assert(id == 0); // id is otherwise unused
-	return city_params.helicopter_model;
+	assert(id < num_models());
+	return city_params.hc_model_files[id];
 }
 city_model_t const &object_model_loader_t::get_model(unsigned id) const {
 	assert(id < NUM_OBJ_MODELS);
