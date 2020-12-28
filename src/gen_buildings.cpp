@@ -2664,8 +2664,8 @@ public:
 	// Note: unlike check_line_coll(), p1 and p2 are in building space
 	void update_zmax_for_line(point const &p1, point const &p2, float radius, float &cur_zmax) const {
 		if (empty()) return;
-		// TODO: use radius
 		cube_t bcube(p1, p2);
+		bcube.expand_by_xy(radius);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		vector<point> points; // reused across calls
@@ -2674,14 +2674,21 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.bc_ixs.empty()) continue; // skip empty grid
-				if (ge.bcube.z2() < cur_zmax || !check_line_clip(p1, p2, ge.bcube.d)) continue; // no intersection - skip this grid
+				if (ge.bc_ixs.empty() || ge.bcube.z2() < cur_zmax) continue; // skip empty grid or grids below the line
+				cube_t grid_bc(ge.bcube);
+				grid_bc.expand_by_xy(radius);
+				if (!check_line_clip(p1, p2, grid_bc.d)) continue; // no intersection - skip this grid
 
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: okay to check the same building more than once
-					if (b->z2() < cur_zmax || !b->intersects(bcube)) continue;
+					if (b->z2() < cur_zmax) continue;
+					cube_t bbc(*b);
+					bbc.expand_by_xy(radius);
+					if (!b->intersects(bbc) || !check_line_clip(p1, p2, bbc.d)) continue;
+					building_t const &building(get_building(b->ix));
 					float t(1.0); // result is unused
 					// Note: unclear if we need to do a detailed line collision check, maybe testing the building bbox is good enough?
-					if (get_building(b->ix).check_line_coll(p1, p2, zero_vector, t, points, 0, 1, 1)) {max_eq(cur_zmax, b->z2());}
+					// if radius is passed in as nonzero, then simply assume it intersects because check_line_coll() can't easily take a radius value
+					if (radius > 0.0 || building.check_line_coll(p1, p2, zero_vector, t, points, 0, 1, 1)) {max_eq(cur_zmax, b->z2());}
 				} // for b
 			} // for x
 		} // for y

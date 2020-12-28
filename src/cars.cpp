@@ -887,7 +887,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 // 3. Cast a ray through the buildings and terrain and incrementally increase the ray's zval until there are no hits; possibly faster, but less accurate
 // Note: another limitation is that this is a line query, not a cylinder query, so the helicopter may still clip a building
 float get_flight_path_zmax(point const &p1, point const &p2, float radius) {
-	//highres_timer_t timer("Get Line Zmax"); // 0.133ms
+	//highres_timer_t timer("Get Line Zmax"); // ~0.1ms
 	assert(p1.z == p2.z); // for now, only horizontal lines are supported
 	float cur_zmax(p1.z);
 	// test terrain using approach #1
@@ -901,7 +901,6 @@ float get_flight_path_zmax(point const &p1, point const &p2, float radius) {
 		max_eq(cur_zmax, get_exact_zval(pos.x, pos.y)); // not using radius here (assumes it's small compared to terrain elevation changes)
 		pos += step;
 	}
-	float const zt(cur_zmax);
 	// test buildings using approach #2
 	update_buildings_zmax_for_line(p1, p2, radius, cur_zmax);
 	return cur_zmax;
