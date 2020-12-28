@@ -201,12 +201,13 @@ struct helicopter_t {
 	vector3d velocity;
 	float wait_time; // time to wait before takeoff
 	float fly_zval; // zval required for flight to avoid buildings and terrain
+	float blade_rot;
 	unsigned dest_hp; // destination (or current) helipad
 	unsigned state, model_id;
 	bool dynamic;
 
 	helicopter_t(cube_t const &bcube_, vector3d const &dir_, unsigned model_id_, unsigned dest_hp_, bool dynamic_) :
-		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), dest_hp(dest_hp_), state(STATE_WAIT), model_id(model_id_), dynamic(dynamic_) {}
+		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), blade_rot(0.0), dest_hp(dest_hp_), state(STATE_WAIT), model_id(model_id_), dynamic(dynamic_) {}
 	point get_landing_pt() const {return point(bcube.xc(), bcube.yc(), bcube.z1());}
 	void invalidate_tile_shadow_map() const;
 };

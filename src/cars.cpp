@@ -1002,6 +1002,10 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 					i->bcube += delta_pos; // move by one timestep
 				}
 			}
+			if (i->velocity != zero_vector) {
+				i->blade_rot += 1.0*fticks; // rotate the blade; should this scale with velocity?
+				if (i->blade_rot > TWO_PI) {i->blade_rot -= TWO_PI;} // keep rotation value small
+			}
 		} // end moving case
 	} // for i
 	// show flight path debug lines?
