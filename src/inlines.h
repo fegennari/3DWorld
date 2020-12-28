@@ -327,13 +327,13 @@ inline bool circle_test_comp(point const &p2, point const &p1, vector3d const &v
 }
 
 template<typename T> bool sphere_test_comp(pointT<T> const &pl, pointT<T> const &sc, pointT<T> const &v1, T r2sq) {
-	T t;
+	T t(0);
 	return sphere_test_comp(pl, sc, v1, r2sq, t);
 }
 
 template<typename T> bool line_sphere_intersect(pointT<T> const &p1, pointT<T> const &p2, pointT<T> const &sc, T r) {
 	pointT<T> const v1(p1, p2);
-	T t;
+	T t(0);
 	return sphere_test_comp(p1, sc, v1, r*r, t);
 }
 
