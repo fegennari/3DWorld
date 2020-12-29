@@ -405,15 +405,23 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 }
 
 void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) {
-	bool const moving(h.state != helicopter_t::STATE_WAIT);
-	if (shadow_only && moving) return; // don't draw moving helicopters in the shadow pass; wait until they land
+	if (shadow_only && h.state != helicopter_t::STATE_WAIT) return; // don't draw moving helicopters in the shadow pass; wait until they land
 	if (!check_cube_visible(h.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
 	if (is_occluded(h.bcube)) return; // yes, this seems to work
 	assert(helicopter_model_loader.is_model_valid(h.model_id));
 	point const center(h.bcube.get_cube_center());
 	begin_tile(center); // enable shadows
-	if (moving) {} // TODO: rotate the blades
-	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0); // low_detail=0
+	city_model_t const &model(helicopter_model_loader.get_model(h.model_id));
+	unsigned blade_mat_mask(0);
+
+	if (h.blade_rot != 0.0 && model.blade_mat_id >= 0) { // separate blades from the rest of the model for custom rotation
+		blade_mat_mask = (1 << model.blade_mat_id);
+		vector3d dir(h.dir);
+		rotate_vector3d(plus_z, h.blade_rot, dir);
+		helicopter_model_loader.draw_model(s, center, h.bcube, dir, WHITE, xlate, h.model_id, shadow_only, 0, 0, blade_mat_mask); // draw blades only
+		blade_mat_mask = ~blade_mat_mask;
+	}
+	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0, 0, blade_mat_mask); // low_detail=0, enable_animations=0
 }
 
 void car_draw_state_t::add_car_headlights(car_t const &car, cube_t &lights_bcube) {

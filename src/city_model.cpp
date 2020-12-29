@@ -88,7 +88,7 @@ bool city_model_loader_t::load_model_id(unsigned id) {
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations)
+	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations, unsigned skip_mat_mask)
 {
 	bool const is_valid(is_model_valid(model_id));
 	assert(is_valid);
@@ -126,7 +126,13 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		// TODO: combine shadow materials into a single VBO and draw with one call when is_shadow_pass==1; this is complex and may not yield a significant improvement
 		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass, 0, 2, 0);}
 	}
-	else {
+	else if (skip_mat_mask > 0) { // draw select materials
+		for (unsigned i = 0; i < model.num_materials(); ++i) {
+			if (skip_mat_mask & (1<<i)) continue; // skip this material
+			model.render_material(s, i, 0, 0, 2, 0);
+		}
+	}
+	else { // draw all materials
 		float lod_mult(model_file.lod_mult); // should model_file.lod_mult always be multiplied by sz_scale?
 		if (model_file.lod_mult == 0.0) {lod_mult = 400.0*sz_scale;} // auto select lod_mult
 		model.render_materials(s, is_shadow_pass, 0, 0, 2, 3, 3, model.get_unbound_material(), rotation_t(),
