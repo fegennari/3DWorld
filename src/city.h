@@ -638,6 +638,7 @@ class car_manager_t { // and trucks and helicopters
 	void update_cars();
 	int find_next_car_after_turn(car_t &car);
 	vector3d get_helicopter_size(unsigned model_id);
+	void draw_helicopters(bool shadow_only);
 public:
 	car_manager_t(city_road_gen_t const &road_gen_) :
 		road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader), first_parked_car(0), first_garage_car(0), car_destroyed(0) {}
@@ -660,6 +661,7 @@ public:
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center, rand_gen_t &rgen) const;
 	void next_frame(ped_manager_t const &ped_manager, float car_speed);
 	void helicopters_next_frame(float car_speed);
+	bool check_helicopter_coll(cube_t const &bc) const;
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass);
 	void add_car_headlights(vector3d const &xlate, cube_t &lights_bcube) {dstate.add_car_headlights(cars, xlate, lights_bcube);}
 	void free_context() {car_model_loader.free_context(); helicopter_model_loader.free_context();}

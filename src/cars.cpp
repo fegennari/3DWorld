@@ -537,19 +537,15 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 		if (rgen.rand_bool()) continue; // add 50% of the time
 		unsigned const model_id((num_models == 0) ? 0 : (rgen.rand()%num_models));
 		if (!helicopter_model_loader.is_model_valid(model_id)) continue; // no model to draw, skip this helicopter
-		vector3d helicopter_sz(get_helicopter_size(model_id));
-		cube_t bc(all_zeros);
-		bc.expand_by(0.5*helicopter_sz);
-		// Note1: It's unclear if this rotated bcube logic is really correct, or if it can result in the helicopter size increasing;
-		//        maybe it's better to only use +/- X or Y directions? I guess you can't really tell the size when it's on top of a building anyway.
-		// Note2: There's currently no collision detection with helicopters; The user shouldn't be up on the roof anyway since buildings with helipads have no roof access
+		vector3d const helicopter_sz(get_helicopter_size(model_id));
 		vector3d const dir(rgen.signed_rand_vector_xy().get_norm()); // random direction
 		point const center(i->get_cube_center()); // Note: delta_z should be 0
-		point corners[4] = {point(bc.x1(), bc.y1(), 0.0), point(bc.x2(), bc.y1(), 0.0), point(bc.x2(), bc.y2(), 0.0), point(bc.x1(), bc.y2(), 0.0)};
-		rotate_vector3d_by_vr_multi(plus_x, dir, corners, 4); // rotate bc into dir and take bounding cube
 		cube_t bcube;
-		bcube.set_from_points(corners, 4);
-		bcube.z2() = bc.dz(); // z1 at helipad surface, z2 at helicopter height
+		bcube.z2() = helicopter_sz.z; // z1 at helipad surface, z2 at helicopter height (after adding center)
+		// Note: since we're going to be rotating the helicopter, and we can't get the correct AA bcube when it's rotated at an off-axis angle, take the max of the length and width;
+		//       this will be somewhere between the proper length/width and the AA bcube of the model, which is at most sqrt(2) larger at 45 degrees rotated;
+		//       it doesn't have to be perfect because we're not doing collision checks
+		bcube.expand_by_xy(0.5*max(helicopter_sz.x, helicopter_sz.y));
 		helicopter_t helicopter((bcube + center), dir, model_id, hp_ix, DYNAMIC_HELICOPTERS);
 		if (helicopter.dynamic) {helicopter.wait_time = rgen.rand_uniform(5.0, 30.0);} // delay 5-30s to prevent all helicopters from lifting off at the same time
 		helicopters.push_back(helicopter);
@@ -1019,6 +1015,14 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 	// show flight path debug lines?
 }
 
+// Note: not yet used, but may be useful in checking for helicopter mid-air collisions in the future
+bool car_manager_t::check_helicopter_coll(cube_t const &bc) const {
+	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
+		if (i->bcube.intersects(bc)) return 1;
+	}
+	return 0;
+}
+
 void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows, bool garages_pass) {
 	if (cars.empty()  && helicopters.empty()) return; // nothing to draw
 	if ( garages_pass && first_garage_car == cars.size()) return; // no cars in garages
@@ -1046,9 +1050,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 				dstate.draw_car(cars[c], is_dlight_shadows);
 			}
 		} // for cb
-		if (!garages_pass && !is_dlight_shadows) { // draw helicopters
-			for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {dstate.draw_helicopter(*i, shadow_only);}
-		}
+		if (!garages_pass && !is_dlight_shadows) {draw_helicopters(shadow_only);} // draw helicopters in the normal draw pass
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore
 		dstate.post_draw();
 		fgPopMatrix();
@@ -1061,5 +1063,9 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 	}
 	if ((trans_op_mask & 2) && !shadow_only) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	dstate.show_label_text();
+}
+
+void car_manager_t::draw_helicopters(bool shadow_only) {
+	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {dstate.draw_helicopter(*i, shadow_only);}
 }
 
