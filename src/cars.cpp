@@ -415,10 +415,10 @@ void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) 
 	unsigned blade_mat_mask(0);
 
 	if (h.blade_rot != 0.0 && model.blade_mat_id >= 0) { // separate blades from the rest of the model for custom rotation
-		blade_mat_mask = (1 << model.blade_mat_id);
+		blade_mat_mask = ~(1 << model.blade_mat_id); // skip prop blades material
 		vector3d dir(h.dir);
 		rotate_vector3d(plus_z, h.blade_rot, dir);
-		helicopter_model_loader.draw_model(s, center, h.bcube, dir, WHITE, xlate, h.model_id, shadow_only, 0, 0, blade_mat_mask); // draw blades only
+		helicopter_model_loader.draw_model(s, center, h.bcube, dir, WHITE, xlate, h.model_id, shadow_only, 0, 0, blade_mat_mask); // draw prop blades only
 		blade_mat_mask = ~blade_mat_mask;
 	}
 	helicopter_model_loader.draw_model(s, center, h.bcube, h.dir, WHITE, xlate, h.model_id, shadow_only, 0, 0, blade_mat_mask); // low_detail=0, enable_animations=0
@@ -1007,7 +1007,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 				}
 			}
 			if (i->velocity != zero_vector) {
-				i->blade_rot += 1.0*fticks; // rotate the blade; should this scale with velocity?
+				i->blade_rot += 0.75*fticks; // rotate the blade; should this scale with velocity?
 				if (i->blade_rot > TWO_PI) {i->blade_rot -= TWO_PI;} // keep rotation value small
 			}
 		} // end moving case

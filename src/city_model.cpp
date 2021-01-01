@@ -7,19 +7,21 @@
 extern city_params_t city_params;
 
 
-bool city_model_t::read(FILE *fp) { // filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult [shadow_mat_ids]
+bool city_model_t::read(FILE *fp, bool is_helicopter) {
 
+	// filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult <blade_mat_id for helicopter> [shadow_mat_ids]
 	assert(fp);
 	unsigned line_num(0); // unused
 	fn = read_quoted_string(fp, line_num);
 	if (fn.empty()) return 0;
 	if (!read_int(fp, recalc_normals)) return 0; // 0,1,2
-	if (!read_int(fp, body_mat_id)) return 0;
+	if (!read_int(fp, body_mat_id))    return 0;
 	if (!read_int(fp, fixed_color_id)) return 0;
 	if (!read_float(fp, xy_rot)) return 0;
 	if (!read_bool(fp, swap_yz)) return 0;
-	if (!read_float(fp, scale)) return 0;
-	if (!read_float(fp, lod_mult) || lod_mult < 0.0) return 0;
+	if (!read_float(fp, scale))  return 0;
+	if (!read_float(fp, lod_mult) || lod_mult < 0.0)  return 0;
+	if (is_helicopter && !read_int(fp, blade_mat_id)) return 0;
 	unsigned shadow_mat_id(0);
 	while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
 	valid = 1; // success
@@ -121,16 +123,16 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
 	translate_to(-bcube.get_cube_center()); // cancel out model local translate
 
-	if (low_detail || is_shadow_pass) { // low detail pass, normal maps disabled
+	if (skip_mat_mask > 0) { // draw select materials
+		for (unsigned i = 0; i < model.num_materials(); ++i) {
+			if (skip_mat_mask & (1<<i)) continue; // skip this material
+			model.render_material(s, i, is_shadow_pass, 0, 2, 0);
+		}
+	}
+	else if (low_detail || is_shadow_pass) { // low detail pass, normal maps disabled
 		if (!is_shadow_pass && use_model3d_bump_maps()) {model3d::bind_default_flat_normal_map();} // still need to set the default here in case the shader is using it
 		// TODO: combine shadow materials into a single VBO and draw with one call when is_shadow_pass==1; this is complex and may not yield a significant improvement
 		for (auto i = model_file.shadow_mat_ids.begin(); i != model_file.shadow_mat_ids.end(); ++i) {model.render_material(s, *i, is_shadow_pass, 0, 2, 0);}
-	}
-	else if (skip_mat_mask > 0) { // draw select materials
-		for (unsigned i = 0; i < model.num_materials(); ++i) {
-			if (skip_mat_mask & (1<<i)) continue; // skip this material
-			model.render_material(s, i, 0, 0, 2, 0);
-		}
 	}
 	else { // draw all materials
 		float lod_mult(model_file.lod_mult); // should model_file.lod_mult always be multiplied by sz_scale?

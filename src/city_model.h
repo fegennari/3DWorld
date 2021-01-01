@@ -20,7 +20,7 @@ struct city_model_t {
 	city_model_t() : valid(0), swap_yz(1), body_mat_id(-1), fixed_color_id(-1), recalc_normals(1), blade_mat_id(-1), xy_rot(0.0), lod_mult(1.0), scale(1.0) {}
 	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
 		fn(fn_), valid(0), swap_yz(1), body_mat_id(bmid), fixed_color_id(fcid), recalc_normals(1), blade_mat_id(-1), xy_rot(rot), lod_mult(lm), scale(1.0), shadow_mat_ids(smids) {}
-	bool read(FILE *fp);
+	bool read(FILE *fp, bool is_helicopter=0);
 	bool check_filename();
 };
 

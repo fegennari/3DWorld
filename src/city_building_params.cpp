@@ -93,13 +93,8 @@ bool city_params_t::read_option(FILE *fp) {
 	}
 	else if (str == "helicopter_model") { // multiple helicopter models
 		city_model_t hc_model;
-		if (!hc_model.read(fp)) {return read_error(str);}
+		if (!hc_model.read(fp, 1)) {return read_error(str);} // is_helicopter=1
 		if (!hc_model.check_filename()) {cerr << "Error: helicopter_model file '" << hc_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
-		
-		if (!hc_model.shadow_mat_ids.empty()) { // special case helicopters: blade_mat_id is the first index specified for shadow_mat_id
-			hc_model.blade_mat_id = hc_model.shadow_mat_ids.front();
-			hc_model.shadow_mat_ids.erase(hc_model.shadow_mat_ids.begin());
-		}
 		hc_model_files.push_back(hc_model);
 	}
 	// pedestrians
