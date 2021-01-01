@@ -786,7 +786,7 @@ void toggle_camera_mode() {
 // x and y are the location of the mouse, which generally aren't used but are part of the callback function
 void keyboard_proc(unsigned char key, int x, int y) {
 
-    switch (key) { // available: O,. somtimes Zi
+    switch (key) { // available: O,. somtimes Z
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -918,7 +918,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (camera_surf_collide) {camera_last_pos = surface_pos;}
 		break;
 
-	case 'j': // smooth camera collision detection / hold fighters
+	case 'j': // smooth camera collision detection / hold fighters / teleport to screenshot
 		if (world_mode == WMODE_UNIVERSE) {toggle_hold_fighters();}
 		else if (world_mode == WMODE_INF_TERRAIN) {teleport_to_screenshot = 1;}
 		else {camera_coll_smooth = !camera_coll_smooth;} // ground mode
@@ -1107,7 +1107,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		else if (world_mode == WMODE_INF_TERRAIN) {draw_building_interiors ^= 1;}
 		break;
 
-	// screenshots/video (add options for raw and PNG?)
+	// screenshots/video
 	case 'D': // .bmp
 		screenshot(window_width, window_height, "./", 1);
 		break;
@@ -1169,7 +1169,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x04;   break;
 	case '4': // toggle occlusion culling / tiled terrain/voxel/mesh detail normal maps
 		display_mode ^= 0x08;   break;
-	case '5': // walk on snow/ship shadows/reflections
+	case '5': // walk on snow/ship shadows/reflections/debugging
 		display_mode ^= 0x10;   break;
 	case '6': // toggle water reflections, bump maps, bloom, and map view lighting/shadows
 		display_mode ^= 0x20;   break;
