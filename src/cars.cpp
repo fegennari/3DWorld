@@ -12,7 +12,7 @@
 bool const DYNAMIC_HELICOPTERS = 1;
 float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
-extern bool tt_fire_button_down;
+extern bool tt_fire_button_down, enable_hcopter_shadows;
 extern int display_mode, game_mode, map_mode, animate2;
 extern float FAR_CLIP;
 extern point pre_smap_player_pos;
@@ -405,7 +405,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 }
 
 void car_draw_state_t::draw_helicopter(helicopter_t const &h, bool shadow_only) {
-	if (shadow_only && h.state != helicopter_t::STATE_WAIT) return; // don't draw moving helicopters in the shadow pass; wait until they land
+	if (shadow_only && !h.dynamic_shadow && h.state != helicopter_t::STATE_WAIT) return; // don't draw moving helicopters in the shadow pass; wait until they land
 	if (!check_cube_visible(h.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
 	if (is_occluded(h.bcube)) return; // yes, this seems to work
 	assert(helicopter_model_loader.is_model_valid(h.model_id));
@@ -920,6 +920,8 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 	float const elapsed_secs(fticks/TICKS_PER_SECOND);
 	float const speed(2.0*CAR_SPEED_SCALE*car_speed); // helicopters are 2x faster than cars
 	float const takeoff_speed(0.2*speed), land_speed(0.2*speed), rotate_rate(0.02*fticks);
+	float const shadow_thresh(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // ~1 tile
+	point const xlate(get_camera_coord_space_xlate()), camera_bs(camera_pdu.pos - xlate);
 
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
 		if (i->state == helicopter_t::STATE_WAIT) { // stopped, assumed on a helipad
@@ -1006,10 +1008,15 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 					i->bcube += delta_pos; // move by one timestep
 				}
 			}
+			bool const prev_dynamic_shadow(i->dynamic_shadow);
+
 			if (i->velocity != zero_vector) {
 				i->blade_rot += 0.75*fticks; // rotate the blade; should this scale with velocity?
 				if (i->blade_rot > TWO_PI) {i->blade_rot -= TWO_PI;} // keep rotation value small
 			}
+			// helicopter dynamic shadows look really neat, but significantly reduce framerate; enable with backslash key
+			i->dynamic_shadow = (enable_hcopter_shadows && p2p_dist(i->bcube.get_cube_center(), camera_bs) < shadow_thresh /*&& camera_pdu.cube_visible(i->bcube + xlate)*/);
+			if (i->dynamic_shadow || prev_dynamic_shadow) {i->invalidate_tile_shadow_map();} // invalidate if either this frame or the prev frame had dynamic shadows
 		} // end moving case
 	} // for i
 	// show flight path debug lines?
