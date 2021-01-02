@@ -36,7 +36,7 @@ extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, g
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z, snow_cov_amt, CAMERA_RADIUS;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, FAR_CLIP, sun_radius, ocean_depth_opacity_mult;
-extern point light_pos, litning_pos, sun_pos, moon_pos;
+extern point litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
 extern colorRGB mesh_color_scale;
 extern colorRGBA bkg_color, cur_fog_color;
