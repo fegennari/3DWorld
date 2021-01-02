@@ -1690,7 +1690,8 @@ class city_road_gen_t : public road_gen_base_t {
 			unsigned const start(bcubes.size());
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
-				if (!i->is_park) {bcubes.push_back(*i);}
+				bcubes.push_back(*i); // capture all plot bcubes, even parks (needed for pedestrians)
+				bcubes.back().is_park = i->is_park;
 			}
 			vector3d const city_radius(0.5*bcube.get_size());
 			point const city_center(bcube.get_cube_center());

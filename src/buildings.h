@@ -67,8 +67,9 @@ public:
 
 struct cube_with_zval_t : public cube_t {
 	float zval;
-	cube_with_zval_t() : zval(0.0) {}
-	cube_with_zval_t(cube_t const &c, float zval_=0.0) : cube_t(c), zval(zval_) {}
+	bool is_park;
+	cube_with_zval_t() : zval(0.0), is_park(0) {}
+	cube_with_zval_t(cube_t const &c, float zval_=0.0, bool p=0) : cube_t(c), zval(zval_), is_park(p) {}
 };
 
 typedef vector<cube_with_zval_t> vect_cube_with_zval_t;

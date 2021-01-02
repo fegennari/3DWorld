@@ -1693,8 +1693,16 @@ public:
 		vect_cube_with_zval_t city_plot_bcubes;
 		vect_cube_t avoid_bcubes;
 		cube_t avoid_bcubes_bcube;
-		if (city_only) {get_city_plot_bcubes(city_plot_bcubes);} // Note: assumes approx equal area for placement distribution
-		
+		vector<unsigned> valid_city_plot_ixs;
+
+		if (city_only) {
+			get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
+			
+			for (auto i = city_plot_bcubes.begin(); i != city_plot_bcubes.end(); ++i) {
+				if (!i->is_park) {valid_city_plot_ixs.push_back(i - city_plot_bcubes.begin());} // record non-park plots
+			}
+			//assert(!valid_city_plot_ixs.empty()); // too strong? what happens if this is true?
+		}
 		if (non_city_only) {
 			get_city_bcubes(avoid_bcubes);
 			get_city_road_bcubes(avoid_bcubes, 1); // connector roads only
@@ -1702,7 +1710,7 @@ public:
 			expand_cubes_by_xy(avoid_bcubes, get_road_max_width());
 			for (auto i = avoid_bcubes.begin(); i != avoid_bcubes.end(); ++i) {avoid_bcubes_bcube.assign_or_union_with_cube(*i);}
 		}
-		bool const use_city_plots(!city_plot_bcubes.empty()), check_plot_coll(!avoid_bcubes.empty());
+		bool const use_city_plots(!valid_city_plot_ixs.empty()), check_plot_coll(!avoid_bcubes.empty());
 		bix_by_plot.resize(city_plot_bcubes.size());
 		point center(all_zeros);
 		unsigned num_consec_fail(0), max_consec_fail(0);
@@ -1719,7 +1727,8 @@ public:
 				unsigned plot_ix(0);
 				
 				if (use_city_plots) { // select a random plot, if available
-					plot_ix   = rgen.rand()%city_plot_bcubes.size();
+					plot_ix   = valid_city_plot_ixs[rgen.rand() % valid_city_plot_ixs.size()];
+					assert(plot_ix < city_plot_bcubes.size());
 					pos_range = city_plot_bcubes[plot_ix];
 					center.z  = city_plot_bcubes[plot_ix].zval; // optimization: take zval from plot rather than calling get_exact_zval()
 					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
