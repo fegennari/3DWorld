@@ -43,13 +43,18 @@ unsigned const AO_RAY_LEN(NUM_AO_STEPS*(NUM_AO_STEPS+1)/2); // 36
 
 enum {FM_NONE, FM_INC_MESH, FM_DEC_MESH, FM_FLATTEN, FM_REM_TREES, FM_ADD_TREES, FM_REM_GRASS, FM_ADD_GRASS, NUM_FIRE_MODES};
 
+struct clear_area_t : public sphere_t {
+	bool clear_next_frame;
+	clear_area_t(point const &pos_, float radius_, bool cnf) : sphere_t(pos_, radius_), clear_next_frame(cnf) {}
+};
+
 
 bool tt_lightning_enabled(0), check_tt_mesh_occlusion(1);
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
 tile_offset_t model3d_offset;
-vector<sphere_t> tile_smaps_to_clear;
+vector<clear_area_t> tile_smaps_to_clear;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on;
@@ -2475,8 +2480,15 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	//timer_t timer("TT Pre-Draw");
 	vector<tile_t *> to_update, to_gen_trees;
 	assert((vbo == 0) == (ivbo == 0)); // either neither or both are valid
-	for (auto i = tile_smaps_to_clear.begin(); i != tile_smaps_to_clear.end(); ++i) {invalidate_tile_smap_at_pt(i->pos, i->radius);}
-	tile_smaps_to_clear.clear();
+
+	// handle clearing of tile shadow maps
+	vector<clear_area_t> to_clear_next_frame;
+
+	for (auto i = tile_smaps_to_clear.begin(); i != tile_smaps_to_clear.end(); ++i) {
+		invalidate_tile_smap_at_pt(i->pos, i->radius);
+		if (i->clear_next_frame) {to_clear_next_frame.push_back(*i); to_clear_next_frame.back().clear_next_frame = 0;}
+	}
+	tile_smaps_to_clear = to_clear_next_frame;
 	
 	if (vbo == 0) { // build mesh vbo/ivbo
 		unsigned const tile_size(get_tile_size()), stride(tile_size+1);
@@ -3441,7 +3453,8 @@ bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_play
 bool sphere_int_tiled_terrain(point &pos, float radius) {return terrain_tile_draw.check_sphere_collision(pos, radius);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 bool try_bind_tile_smap_at_point(point const &pos, shader_t &s, bool check_only) {return terrain_tile_draw.try_bind_tile_smap_at_point(pos, s, check_only);}
-void invalidate_tile_smap_at_pt(point const &pos, float radius) {tile_smaps_to_clear.emplace_back(pos, radius);} // defer update until tile draw (if called from non-drawing thread)
+// defer update until tile draw (if called from non-drawing thread)
+void invalidate_tile_smap_at_pt(point const &pos, float radius, bool repeat_next_frame) {tile_smaps_to_clear.emplace_back(pos, radius, repeat_next_frame);}
 
 
 // *** tree/grass addition/removal ***

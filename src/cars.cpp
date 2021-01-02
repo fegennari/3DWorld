@@ -911,8 +911,8 @@ float get_flight_path_zmax(point const &p1, point const &p2, float radius) {
 }
 
 
-void helicopter_t::invalidate_tile_shadow_map() const {
-	invalidate_tile_smap_at_pt((bcube.get_cube_center() + get_camera_coord_space_xlate()), 0.5*max(bcube.dx(), bcube.dy()));
+void helicopter_t::invalidate_tile_shadow_map(bool repeat_next_frame) const {
+	invalidate_tile_smap_at_pt((bcube.get_cube_center() + get_camera_coord_space_xlate()), 0.5*max(bcube.dx(), bcube.dy()), repeat_next_frame);
 }
 
 void car_manager_t::helicopters_next_frame(float car_speed) {
@@ -951,7 +951,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			p1.z = p2.z  = max(p1.z, p2.z) + min_climb_height;
 			i->fly_zval  = max(p1.z, (get_flight_path_zmax(p1, p2, avoid_dist) + min_vert_clearance));
 			i->state     = helicopter_t::STATE_TAKEOFF;
-			i->invalidate_tile_shadow_map(); // update static shadows for this tile to remove the helicopter shadow
+			i->invalidate_tile_shadow_map(0); // update static shadows for this tile to remove the helicopter shadow
 		} // end stopped case
 		else { // moving
 			assert(i->wait_time == 0.0); // must not be waiting
@@ -988,7 +988,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 					i->state = helicopter_t::STATE_WAIT; // transition back to the waiting state
 					helipad.in_use   = 1;
 					helipad.reserved = 0;
-					i->invalidate_tile_shadow_map(); // update static shadows for this tile to add the helicopter shadow?
+					i->invalidate_tile_shadow_map(0); // update static shadows for this tile to add the helicopter shadow
 				}
 			}
 			else {
@@ -1008,15 +1008,17 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 					i->bcube += delta_pos; // move by one timestep
 				}
 			}
-			bool const prev_dynamic_shadow(i->dynamic_shadow);
-
 			if (i->velocity != zero_vector) {
 				i->blade_rot += 0.75*fticks; // rotate the blade; should this scale with velocity?
 				if (i->blade_rot > TWO_PI) {i->blade_rot -= TWO_PI;} // keep rotation value small
 			}
 			// helicopter dynamic shadows look really neat, but significantly reduce framerate; enable with backslash key
-			i->dynamic_shadow = (enable_hcopter_shadows && p2p_dist(i->bcube.get_cube_center(), camera_bs) < shadow_thresh /*&& camera_pdu.cube_visible(i->bcube + xlate)*/);
-			if (i->dynamic_shadow || prev_dynamic_shadow) {i->invalidate_tile_shadow_map();} // invalidate if either this frame or the prev frame had dynamic shadows
+			i->dynamic_shadow = 0;
+
+			if (enable_hcopter_shadows && p2p_dist(i->bcube.get_cube_center(), camera_bs) < shadow_thresh) {
+				i->dynamic_shadow = camera_pdu.cube_visible(i->bcube + xlate);
+			}
+			if (i->dynamic_shadow) {i->invalidate_tile_shadow_map(1);} // invalidate shadow maps for this frame and the next one
 		} // end moving case
 	} // for i
 	// show flight path debug lines?
