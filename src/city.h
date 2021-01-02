@@ -210,7 +210,7 @@ struct helicopter_t {
 		bcube(bcube_), dir(dir_), velocity(zero_vector), wait_time(0.0), fly_zval(0.0), blade_rot(0.0),
 		dest_hp(dest_hp_), state(STATE_WAIT), model_id(model_id_), dynamic(dynamic_), dynamic_shadow(0) {}
 	point get_landing_pt() const {return point(bcube.xc(), bcube.yc(), bcube.z1());}
-	void invalidate_tile_shadow_map(bool repeat_next_frame) const;
+	void invalidate_tile_shadow_map(vector3d const &shadow_offset, bool repeat_next_frame) const;
 };
 
 

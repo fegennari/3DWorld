@@ -911,17 +911,19 @@ float get_flight_path_zmax(point const &p1, point const &p2, float radius) {
 }
 
 
-void helicopter_t::invalidate_tile_shadow_map(bool repeat_next_frame) const {
-	invalidate_tile_smap_at_pt((bcube.get_cube_center() + get_camera_coord_space_xlate()), 0.5*max(bcube.dx(), bcube.dy()), repeat_next_frame);
+void helicopter_t::invalidate_tile_shadow_map(vector3d const &shadow_offset, bool repeat_next_frame) const {
+	invalidate_tile_smap_at_pt((bcube.get_cube_center() + shadow_offset), 0.5*max(bcube.dx(), bcube.dy()), repeat_next_frame);
 }
 
 void car_manager_t::helicopters_next_frame(float car_speed) {
 	if (helicopters.empty()) return;
+	//highres_timer_t timer("Helicopters Update");
 	float const elapsed_secs(fticks/TICKS_PER_SECOND);
 	float const speed(2.0*CAR_SPEED_SCALE*car_speed); // helicopters are 2x faster than cars
 	float const takeoff_speed(0.2*speed), land_speed(0.2*speed), rotate_rate(0.02*fticks);
 	float const shadow_thresh(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // ~1 tile
 	point const xlate(get_camera_coord_space_xlate()), camera_bs(camera_pdu.pos - xlate);
+	vector3d const shadow_dir(-get_light_pos().get_norm()); // primary light direction (sun/moon)
 
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
 		if (i->state == helicopter_t::STATE_WAIT) { // stopped, assumed on a helipad
@@ -951,7 +953,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			p1.z = p2.z  = max(p1.z, p2.z) + min_climb_height;
 			i->fly_zval  = max(p1.z, (get_flight_path_zmax(p1, p2, avoid_dist) + min_vert_clearance));
 			i->state     = helicopter_t::STATE_TAKEOFF;
-			i->invalidate_tile_shadow_map(0); // update static shadows for this tile to remove the helicopter shadow
+			i->invalidate_tile_shadow_map(xlate, 0); // update static shadows for this tile to remove the helicopter shadow; resting on roof, no need to compute shadow_offset
 		} // end stopped case
 		else { // moving
 			assert(i->wait_time == 0.0); // must not be waiting
@@ -988,7 +990,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 					i->state = helicopter_t::STATE_WAIT; // transition back to the waiting state
 					helipad.in_use   = 1;
 					helipad.reserved = 0;
-					i->invalidate_tile_shadow_map(0); // update static shadows for this tile to add the helicopter shadow
+					i->invalidate_tile_shadow_map(xlate, 0); // update static shadows for this tile to add the helicopter shadow; resting on roof, no need to compute shadow_offset
 				}
 			}
 			else {
@@ -1015,10 +1017,28 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			// helicopter dynamic shadows look really neat, but significantly reduce framerate; enable with backslash key
 			i->dynamic_shadow = 0;
 
-			if (enable_hcopter_shadows && p2p_dist(i->bcube.get_cube_center(), camera_bs) < shadow_thresh) {
-				i->dynamic_shadow = camera_pdu.cube_visible(i->bcube + xlate);
+			if (enable_hcopter_shadows) {
+				point const center(i->bcube.get_cube_center());
+
+				if (p2p_dist(center, camera_bs) < shadow_thresh) { // the player is nearby (optimization)
+					// since the helicopter can be flying quite far above the terrain, the shadows can be cast far away;
+					// we need to find the correct tile that the shadow lands on so that we can clear and update it;
+					// also, the shadow should be drawn if the location it falls on is visible to the player;
+					// here we check both the terrain and buildings for the shadow location using a ray cast, which is approximate;
+					// this may not work if the shadow falls across multiple objects such as a tall building and the terrain below it
+					float const dmax(4.0*shadow_thresh); // ~4 tile widths
+					point start_pt(center + xlate), end_pt(start_pt + shadow_dir*dmax), p_int; // in camera space
+					float dmin(dmax);
+					if (line_intersect_tiled_mesh(start_pt, end_pt, p_int)) {min_eq(dmin, p2p_dist(start_pt, p_int)); end_pt = p_int;}
+					if (line_intersect_city      (start_pt, end_pt, p_int)) {min_eq(dmin, p2p_dist(start_pt, p_int));}
+
+					if (dmin < dmax) { // enable shadows if the line intersects either the terrain or buildings within dmax; otherwise, the shadow falls too far away
+						vector3d const shadow_offset(shadow_dir*dmin + xlate);
+						i->dynamic_shadow = camera_pdu.cube_visible(i->bcube + shadow_offset);
+						if (i->dynamic_shadow) {i->invalidate_tile_shadow_map(shadow_offset, 1);} // invalidate shadow maps for this frame and the next one
+					}
+				}
 			}
-			if (i->dynamic_shadow) {i->invalidate_tile_shadow_map(1);} // invalidate shadow maps for this frame and the next one
 		} // end moving case
 	} // for i
 	// show flight path debug lines?
