@@ -510,7 +510,7 @@ public:
 	void run(point const &lpos) { // assumes light source directional/at infinity
 		//timer_t timer("Shadow Gen");
 		assert(smask != NULL);
-		dir  = (all_zeros - lpos).get_norm();
+		dir  = -lpos.get_norm();
 		dist = 2.0*XY_SUM_SIZE/sqrt(dir.x*dir.x + dir.y*dir.y);
 		#pragma omp parallel sections num_threads(2)
 		{
