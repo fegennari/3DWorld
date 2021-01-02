@@ -1868,6 +1868,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness), floor_to_ceil_height(window_vspacing - floor_thickness);
+	float const trim_toler(0.1*trim_thickness); // required to handle wall intersections that were calculated with FP math and may misalign due to FP rounding error
 	unsigned const flags(RO_FLAG_NOCOLL);
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
@@ -1948,8 +1949,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				for (auto W = interior->walls[!dim].begin(); W != interior->walls[!dim].end(); ++W) { // check walls in other dim for an outside corner
 					for (unsigned d = 0; d < 2; ++d) {
 						if (W->z1() > w->z2() || W->z2() < w->z1()) continue; // no z overlap, wrong stack
-						if (W->d[!dim][0] > w->d[!dim][d] || W->d[!dim][1] < w->d[!dim][d]) continue; // not adjacent/overlapping
-						if (W->d[ dim][0] < w->d[ dim][0] && W->d[ dim][1] > w->d[ dim][1]) continue; // skip T junctions
+						if (W->d[!dim][0] > w->d[!dim][d]+trim_toler || W->d[!dim][1] < w->d[!dim][d]-trim_toler) continue; // not adjacent/overlapping
+						if (W->d[ dim][0] < w->d[ dim][0]-trim_toler && W->d[ dim][1] > w->d[ dim][1]+trim_toler) continue; // skip T junctions
 						trim.d[!dim][d] = W->d[!dim][d] + (d ? 1.0 : -1.0)*trim_thickness; // expand to cover gap at outside corners of hallway walls
 					}
 				} // for W
