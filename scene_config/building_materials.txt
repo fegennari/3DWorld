@@ -78,10 +78,12 @@ buildings add_paper_texture papers/source_code.jpeg
 buildings add_paper_texture papers/credit_report.jpeg
 buildings add_paper_texture papers/estate_planning.jpeg
 buildings add_paper_texture papers/install_log.jpeg
+buildings add_paper_texture papers/notebook_paper_plain.jpeg # add lined paper again to make it more common (will be uniqued)
 buildings add_paper_texture papers/calendar.jpeg
 buildings add_paper_texture papers/field_day.jpeg
 buildings add_paper_texture papers/report_card.jpeg
 buildings add_paper_texture papers/welcome_letter.jpeg
+buildings add_paper_texture papers/handwritten.jpeg
 
 # house ceilings and floors
 buildings house_ceil_color  1.0 1.0 1.0 1.0 # white
