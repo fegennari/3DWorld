@@ -895,9 +895,9 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 }
 
 void building_room_geom_t::add_paper(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(c.get_paper_tid(), 0.0), 0, 0, 1)); // map texture to quad
 	unsigned const qv_start(mat.quad_verts.size());
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2); // untextured, unshadowed, top face only
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // unshadowed, top face only, with proper orient
 	
 	if (c.flags & RO_FLAG_RAND_ROT) { // add slight rotation to misalign the paper
 		float const angle((PI/8.0)*(fract(123.456*c.obj_id) - 0.5));

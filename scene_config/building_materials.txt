@@ -70,6 +70,19 @@ buildings add_sheet_texture fabrics/medieval.tif
 buildings add_sheet_texture fabrics/flannel.tif
 buildings add_sheet_texture fabrics/flowers.jpg # assigned to multiple colors, not tileable
 
+# sheet of paper textures
+# Note: papers directory is not part of the git repo
+buildings add_paper_texture white.png # blank white paper
+buildings add_paper_texture papers/notebook_paper_plain.jpeg # blank lined paper
+buildings add_paper_texture papers/source_code.jpeg
+buildings add_paper_texture papers/credit_report.jpeg
+buildings add_paper_texture papers/estate_planning.jpeg
+buildings add_paper_texture papers/install_log.jpeg
+buildings add_paper_texture papers/calendar.jpeg
+buildings add_paper_texture papers/field_day.jpeg
+buildings add_paper_texture papers/report_card.jpeg
+buildings add_paper_texture papers/welcome_letter.jpeg
+
 # house ceilings and floors
 buildings house_ceil_color  1.0 1.0 1.0 1.0 # white
 buildings house_floor_color 1.0 1.0 1.0 1.0 # white
