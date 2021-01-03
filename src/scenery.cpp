@@ -867,7 +867,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 	if (!check_visible(shadow_only, (height + radius), pos2)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	colorRGBA color(get_stem_color()*(shadowed ? SHADOW_VAL : 1.0));
-	if (is_water_plant) {water_color_atten_at_pos(color, pos+xlate);}
+	if (is_water_plant && !shadow_only) {water_color_atten_at_pos(color, pos+xlate);}
 	float const dist(distance_to_camera(pos2));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
@@ -875,8 +875,8 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 	}
 	else {
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_def_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
-		color.set_for_cur_shader();
-		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1, 0, 0, nullptr, 6.0);
+		if (!shadow_only) {color.set_for_cur_shader();}
+		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, !shadow_only, 0, 0, nullptr, 6.0);
 	}
 }
 
