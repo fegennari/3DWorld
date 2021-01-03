@@ -116,7 +116,8 @@ bool scenery_obj::update_zvals(int x1, int y1, int x2, int y2) {
 }
 
 bool scenery_obj::check_visible(bool shadow_only, float bradius, point const &p, int level) const {
-	if (world_mode != WMODE_GROUND) {return (shadow_only || camera_pdu.sphere_visible_test(p, ((bradius == 0.0) ? radius : bradius)));}
+	// Note: VFC now seems to improve perf for tiled terrain mode plants
+	if (world_mode == WMODE_INF_TERRAIN) {return camera_pdu.sphere_visible_test(p, ((bradius == 0.0) ? radius : bradius));}
 	return (shadow_only ? is_over_mesh(p) : sphere_in_camera_view(p, ((bradius == 0.0) ? radius : bradius), level));
 }
 bool scenery_obj::is_visible(bool shadow_only, float bradius, vector3d const &xlate) const {
