@@ -7,6 +7,7 @@
 #include "shaders.h"
 #include "openal_wrap.h"
 #include "heightmap.h"
+#include "profiler.h"
 
 
 bool const DEBUG_TILES        = 0;
@@ -2763,7 +2764,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 	fog_enabled      = 0; // optimization?
 	to_draw.clear();
 
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) { // 0.03ms
 		if (decid_trees_only && i->second->num_decid_trees() == 0) continue; // no decid trees to draw, don't bother checking visibility
 		if (!i->second->is_visible()) continue;
 		if (!decid_trees_only) {i->second->update_pine_tree_state(1, 1);} // force high detail trees
@@ -2773,20 +2774,20 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 	if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // enable depth clamping so that shadow casters aren't clipped by the shadow frustum
 
 	if (!decid_trees_only) {
-		draw_tiles_shadow_pass(lpos, tile);
+		draw_tiles_shadow_pass(lpos, tile); // 0.04ms
 
 		if (pine_trees_enabled()) {
 			draw_pine_trees(0, 1);
-			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->second->update_pine_tree_state(1, 0);} // reset detail
+			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->second->update_pine_tree_state(1, 0);} // reset detail; 0.14ms
 		}
-		if (scenery_enabled()) {draw_scenery(0, 1);}
-		render_models(1, 0, 3, get_tiled_terrain_model_xlate()); // both transparent and opaque; VFC should work here (somewhat?) for models
+		if (scenery_enabled()) {draw_scenery(0, 1);} // 0.15ms
+		render_models(1, 0, 3, get_tiled_terrain_model_xlate()); // both transparent and opaque; VFC should work here for models; 1.05ms
 	}
-	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
+	if (decid_trees_enabled()) {draw_decid_trees(0, 1);} // 0.52ms
 	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	fog_enabled      = orig_fog_enabled;
 	camera_pdu.near_ = orig_near_plane;
-	//PRINT_TIME("Draw Shadow Pass");
+	//PRINT_TIME("Draw Shadow Pass"); // 1.85ms for cities with no cars
 }
 
 

@@ -243,7 +243,7 @@ namespace streetlight_ns {
 			if (dist_val > 0.2) return; // too far
 		}
 		float const pradius(get_streetlight_pole_radius()), lradius(light_radius*city_params.road_width);
-		int const ndiv(max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
+		int const ndiv(max(4, min((shadow_only ? 16 : N_SPHERE_DIV), int(0.5/dist_val))));
 		point const top(pos + vector3d(0.0, 0.0, 0.96*height)), lpos(get_lpos()), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
 		if (!shadow_only) {dstate.s.set_cur_color(pole_color);}
 		draw_fast_cylinder(pos, pos+vector3d(0.0, 0.0, height), pradius, 0.7*pradius, min(ndiv, 24), 0, 0); // vertical post, untextured, no ends
@@ -555,7 +555,7 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 			for (unsigned i = 0; i < 2; ++i) { // opposite sides of the road
 				float const ndp(d[!dim][i] - (SLIGHT_DIST_TO_CORNER_SCALE + 0.2)*(i ? sz : -sz));
 				c.d[!dim][0] = ndp - 0.1*sz; c.d[!dim][1] = ndp + 0.1*sz;
-				dstate.draw_cube(qbd, c, cw, 0); // skip_bottom=0
+				dstate.draw_cube(qbd, c, cw, shadow_only); // skip_bottom=shadow_only
 
 				if (!shadow_only && cw_color != BLACK) { // draw light
 					point p[4];
@@ -585,7 +585,7 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? -1.0 : 1.0);
 		if (dot_product(normal, cview_dir) < 0.0) continue; // if back facing, don't draw the lights
-															// draw straight/line turn light
+		// draw straight/line turn light
 		point p[4];
 		p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = dim_pos;
 		p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;

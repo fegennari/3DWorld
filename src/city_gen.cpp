@@ -2703,7 +2703,7 @@ public:
 		if (road_networks.empty() && global_rn.empty()) return;
 
 		if (trans_op_mask & 1) { // opaque pass, should be first
-			//timer_t timer("Draw Roads");
+			//timer_t timer("Draw City"); // 1.0ms
 			fgPushMatrix();
 			translate_to(xlate);
 			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
@@ -3090,7 +3090,7 @@ public:
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0));} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows, 0);
 		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
-		if (trans_op_mask & 1) {road_gen.draw_label();} // after drawing cars so that it's in front
+		if ((trans_op_mask & 1) && !shadow_only) {road_gen.draw_label();} // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {
