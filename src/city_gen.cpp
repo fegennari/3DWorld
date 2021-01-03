@@ -24,7 +24,7 @@ point pre_smap_player_pos(all_zeros);
 
 extern bool enable_dlight_shadows, dl_smap_enabled, draw_building_interiors, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
 extern int rand_gen_index, display_mode, animate2, draw_model;
-extern unsigned shadow_map_sz, cur_display_iter;
+extern unsigned shadow_map_sz, cur_display_iter, max_unique_trees;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
@@ -879,10 +879,11 @@ class city_road_gen_t : public road_gen_base_t {
 				if (is_sm_tree) {ttype = (plot.is_park ? (rgen.rand()&1) : 2);} // pine/short pine in parks, palm in city blocks
 				else {ttype = rgen.rand()%100;} // random type
 				bool const is_palm(is_sm_tree && ttype == 2);
+				bool const allow_bush(plot.is_park && max_unique_trees == 0); // can't place bushes if tree instances are enabled (generally true) because bushes may be instanced in non-parks
 				float const bldg_extra_radius(is_palm ? 0.5f*radius : 0.0f); // palm trees are larger and must be kept away from buildings, but can overlap with other trees
 				point pos;
 				if (!try_place_obj(plot, blockers, rgen, (spacing + bldg_extra_radius), (radius - bldg_extra_radius), 10, pos)) continue; // 10 tries per tree, extra spacing for palm trees
-				place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree); // size is randomly selected by the tree generator using default values; allow bushes in parks
+				place_tree(pos, radius, ttype, colliders, tree_pos, allow_bush, is_sm_tree); // size is randomly selected by the tree generator using default values; allow bushes in parks
 				if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
 				// now that we're here, try to place more trees at this same distance from the road in a row
 				bool const dim(min((pos.x - plot.x1()), (plot.x2() - pos.x)) < min((pos.y - plot.y1()), (plot.y2() - pos.y)));
