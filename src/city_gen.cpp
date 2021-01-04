@@ -1869,12 +1869,8 @@ class city_road_gen_t : public road_gen_base_t {
 
 			if (shadow_only) {
 				if (!is_connector_road) { // connector road has no stoplights to cast shadows
-					// Note: we can store the contents of qbd_sl in a VBO to avoid recreating it every frame for the shadow pass;
-					//       however, this tends to be GPU limited rather than CPU limited, so that likely won't improve the frame rate
-					for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
-						if (!dstate.check_cube_visible(b->bcube, 1.0, shadow_only)) continue; // VFC/too far
-						for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 1);} // intersections with stoplights (3-way, 4-way)
-					}
+					// Note: we can store the contents of qbd_sl in a VBO to avoid recreating it every frame for the shadow pass
+					for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 1);} // intersections with stoplights (3-way, 4-way)
 				}
 			}
 			else {
@@ -1886,13 +1882,12 @@ class city_road_gen_t : public road_gen_base_t {
 					dstate.draw_road_region(plots,      b->ranges[TYPE_PLOT  ], b->quads[TYPE_PARK  ], TYPE_PARK  ); // parks (stored as plots)
 					dstate.draw_road_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
 					dstate.draw_road_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
-					bool const draw_stoplights(dstate.check_cube_visible(b->bcube, 0.16)); // use smaller dist_scale
 				
 					for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
 						dstate.draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
-						if (draw_stoplights && i > 0) {dstate.draw_stoplights(isecs[i], 0);}
 					}
 				} // for b
+				for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 0);}
 			}
 			draw_streetlights(dstate, shadow_only, 0);
 			
