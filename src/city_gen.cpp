@@ -124,6 +124,7 @@ void draw_state_t::draw_and_clear_light_flares() {
 	disable_blend();
 }
 bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale, bool shadow_only) const {
+	if (!camera_pdu.valid) return 1;
 	cube_t const bcx(bc + xlate);
 
 	if (dist_scale > 0.0) {
