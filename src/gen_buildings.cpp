@@ -2028,7 +2028,12 @@ public:
 				} // for g
 			}
 			else { // draw exterior shadow maps
-				(*i)->building_draw_vbo.draw(s, 1);
+				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // draw only visible tiles
+					point const pos(g->bcube.get_cube_center() + xlate);
+					if (!camera_pdu.sphere_and_cube_visible_test(pos, g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+					(*i)->building_draw_vbo.draw_tile(s, (g - (*i)->grid_by_tile.begin()), 1);
+				}
+				//(*i)->building_draw_vbo.draw(s, 1); // less CPU time but more GPU work, in general seems to be slower
 			}
 		} // for i
 		ext_parts_draw.draw(s, 1, 1);
