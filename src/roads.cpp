@@ -763,8 +763,12 @@ void road_draw_state_t::post_draw() {
 	if (qbd_sl.empty()) return; // no stoplights to draw
 	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
 	shader_t s;
-	s.begin_simple_textured_shader(); // Note: no lighting
-	road_mat_mgr.set_stoplight_texture();
+
+	if (shadow_only) {s.begin_color_only_shader();}
+	else {
+		s.begin_simple_textured_shader(); // Note: no lighting
+		road_mat_mgr.set_stoplight_texture();
+	}
 	qbd_sl.draw_and_clear();
 	s.end_shader();
 	glDepthFunc(GL_LESS);

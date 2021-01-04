@@ -1982,7 +1982,7 @@ public:
 		translate_to(xlate);
 		shader_t s, person_shader;
 		s.begin_color_only_shader(); // really don't even need colors
-		if (interior_shadow_maps) {glEnable(GL_CULL_FACE);} // slightly faster
+		glEnable(GL_CULL_FACE); // slightly faster for interior shadow maps
 		vector<point> points; // reused temporary
 		building_draw_t ext_parts_draw; // roof and exterior walls
 
@@ -2037,7 +2037,7 @@ public:
 			}
 		} // for i
 		ext_parts_draw.draw(s, 1, 1);
-		if (interior_shadow_maps) {glDisable(GL_CULL_FACE);}
+		glDisable(GL_CULL_FACE);
 		s.end_shader();
 		fgPopMatrix();
 	}

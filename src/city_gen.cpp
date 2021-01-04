@@ -8,6 +8,7 @@
 #include "lightmap.h"
 #include "buildings.h"
 #include "tree_3dw.h"
+#include "profiler.h"
 #include <cfloat> // for FLT_MAX
 
 using std::string;
@@ -1867,6 +1868,8 @@ class city_road_gen_t : public road_gen_base_t {
 
 			if (shadow_only) {
 				if (!is_connector_road) { // connector road has no stoplights to cast shadows
+					// Note: we can store the contents of qbd_sl in a VBO to avoid recreating it every frame for the shadow pass;
+					//       however, this tends to be GPU limited rather than CPU limited, so that likely won't improve the frame rate
 					for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 						if (!dstate.check_cube_visible(b->bcube, 1.0, shadow_only)) continue; // VFC/too far
 						for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], 1);} // intersections with stoplights (3-way, 4-way)
@@ -2703,7 +2706,7 @@ public:
 		if (road_networks.empty() && global_rn.empty()) return;
 
 		if (trans_op_mask & 1) { // opaque pass, should be first
-			//timer_t timer("Draw City"); // 1.0ms
+			//highres_timer_t timer(shadow_only ? "Draw City Shadows" : "Draw City"); // 1.1ms / 0.42ms shadows
 			fgPushMatrix();
 			translate_to(xlate);
 			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
