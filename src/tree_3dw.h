@@ -241,7 +241,7 @@ public:
 	void draw_leaf_quads_from_vbo(unsigned max_leaves) const;
 	void draw_leaves_shadow_only(float size_scale);
 	void ensure_branch_vbo();
-	void draw_branches(shader_t &s, float size_scale, bool force_low_detail);
+	void draw_branches(shader_t &s, float size_scale, bool force_low_detail, bool shadow_pass=0);
 	void ensure_leaf_vbo();
 	void draw_leaves(float size_scale);
 	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}

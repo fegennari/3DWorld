@@ -927,14 +927,15 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 
 	if (!created || not_visible) return;
 	tree_data_t &td(tdata());
-	if (!camera_pdu.cube_visible_likely(td.branches_bcube + tree_center + xlate)) return;
+	point const tree_xlate(tree_center + xlate);
+	if (!camera_pdu.cube_visible_likely(td.branches_bcube + tree_xlate)) return;
 	bool const ground_mode(world_mode == WMODE_GROUND), wind_enabled(ground_mode && (display_mode & 0x0100) != 0);
 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
 		fgPushMatrix();
-		translate_to(tree_center + xlate);
-		td.draw_branches(s, (ground_mode ? (wind_enabled ? last_size_scale : 0.0) : 1.0), 1); // draw branches (untextured), low_detail=1
+		translate_to(tree_xlate);
+		td.draw_branches(s, (ground_mode ? (wind_enabled ? last_size_scale : 0.0) : 1.0), 1, 1); // draw branches (untextured), low_detail=1, shadow_pass=1
 		fgPopMatrix();
 		return;
 	}
@@ -960,9 +961,9 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	}
 	select_texture(tree_types[type].bark_tex);
 	s.set_cur_color(bcolor);
-	s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate - get_camera_coord_space_xlate()));
+	s.set_uniform_vector3d(wsoff_loc, (tree_xlate - get_camera_coord_space_xlate()));
 	fgPushMatrix();
-	translate_to(tree_center + xlate);
+	translate_to(tree_xlate);
 	td.draw_branches(s, size_scale, reflection_pass);
 	fgPopMatrix();
 }
@@ -975,11 +976,12 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	tree_data_t &td(tdata());
 	td.gen_leaf_color();
 	bool const ground_mode(world_mode == WMODE_GROUND), wind_enabled(ground_mode && (display_mode & 0x0100) != 0);
+	point const tree_xlate(tree_center + xlate);
 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
 		fgPushMatrix();
-		translate_to(tree_center + xlate);
+		translate_to(tree_xlate);
 		td.leaf_draw_setup(1);
 		// Note: since the shadow map is updated every frame when wind is enabled, we can use dynamic LOD without locking in a low-LOD static shadow map
 		td.draw_leaves_shadow_only((ground_mode ? (wind_enabled ? last_size_scale : 0.0) : 0.5));
@@ -996,7 +998,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	not_visible = !is_visible_to_camera(xlate); // first pass only
 	if (not_visible && !leaf_color_changed) return; // if leaf_color_changed=1, we always draw the leaves as that forces the leaf color update
 	if (!has_leaves) return; // only after not_visible is calculated
-	if (!leaf_color_changed && !camera_pdu.cube_visible_likely(td.leaves_bcube + tree_center + xlate)) return;
+	if (!leaf_color_changed && !camera_pdu.cube_visible_likely(td.leaves_bcube + tree_xlate)) return;
 	point const draw_pos(sphere_center() + xlate);
 	float const size_scale(calc_size_scale(draw_pos));
 	last_size_scale = size_scale;
@@ -1020,11 +1022,11 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
 	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && (ground_mode || !get_city_lights_bcube().is_all_zeros())) {
-		s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate - get_camera_coord_space_xlate()));
+		s.set_uniform_vector3d(wsoff_loc, (tree_xlate - get_camera_coord_space_xlate()));
 	}
 	s.set_uniform_int(tex0_off, TLEAF_START_TUID+type); // what about texture color mod?
 	fgPushMatrix();
-	translate_to(tree_center + xlate);
+	translate_to(tree_xlate);
 	td.draw_leaves(size_scale);
 	fgPopMatrix();
 }
@@ -1103,11 +1105,12 @@ void tree_data_t::ensure_branch_vbo() {
 }
 
 
-void tree_data_t::draw_branches(shader_t &s, float size_scale, bool force_low_detail) {
+void tree_data_t::draw_branches(shader_t &s, float size_scale, bool force_low_detail, bool shadow_pass) {
 
 	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale*get_size_scale_mult())))); // branch LOD
 	bool low_detail(force_low_detail || (size_scale > 0.0 && size_scale < 2.0));
-	if (has_4th_branches && num > num_branch_quads/5) {low_detail = 0;} // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
+	// need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width); but this is okay for the shadow pass
+	if (!shadow_pass && has_4th_branches && num > num_branch_quads/5) {low_detail = 0;}
 	ensure_branch_vbo();
 	branch_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0);

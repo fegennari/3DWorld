@@ -2757,7 +2757,7 @@ void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, tile_t const *const 
 void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_trees_only) {
 
 	if (decid_trees_only && !decid_trees_enabled()) return;
-	// frame time when forcing shadow map recreation every frame: 7ms base, +7ms for models, +10ms for decid trees, +4ms for everything else, 28ms total
+	// frame time when forcing shadow map recreation every frame: 7ms base, 7ms for models, 5ms for decid trees, 4ms for everything else, 20ms total
 	//highres_timer_t timer("Draw Shadow Pass"); // 1.95ms for cities with no cars
 	float const orig_near_plane(camera_pdu.near_);
 	bool const orig_fog_enabled(fog_enabled);
@@ -2784,7 +2784,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 		if (scenery_enabled()) {draw_scenery(0, 1);} // 0.15ms
 		render_models(1, 0, 3, get_tiled_terrain_model_xlate()); // both transparent and opaque; VFC should work here for models; 1.15ms
 	}
-	if (decid_trees_enabled()) {draw_decid_trees(0, 1);} // 0.52ms
+	if (decid_trees_enabled()) {draw_decid_trees(0, 1);} // 0.52ms / 5ms frame time
 	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	fog_enabled      = orig_fog_enabled;
 	camera_pdu.near_ = orig_near_plane;
