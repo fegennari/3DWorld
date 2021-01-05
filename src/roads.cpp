@@ -243,7 +243,7 @@ namespace streetlight_ns {
 			if (dist_val > 0.2) return; // too far
 		}
 		float const pradius(get_streetlight_pole_radius()), lradius(light_radius*city_params.road_width);
-		int const ndiv(max(4, min((shadow_only ? 16 : N_SPHERE_DIV), int(0.5/dist_val))));
+		int const ndiv(shadow_only ? (is_local_shadow ? 4 : 8) : max(4, min(N_SPHERE_DIV, int(0.5/dist_val))));
 		point const top(pos + vector3d(0.0, 0.0, 0.96*height)), lpos(get_lpos()), arm_end(lpos + vector3d(0.0, 0.0, 0.025*height) - 0.06*height*dir);
 		if (!shadow_only) {dstate.s.set_cur_color(pole_color);}
 		draw_fast_cylinder(pos, pos+vector3d(0.0, 0.0, height), pradius, 0.7*pradius, min(ndiv, 24), 0, 0); // vertical post, untextured, no ends
@@ -260,14 +260,16 @@ namespace streetlight_ns {
 		fgPushMatrix();
 		translate_to(lpos);
 		scale_by(lradius*vector3d(1.0+fabs(dir.x), 1.0+fabs(dir.y), 1.0)); // scale 2x in dir
-		draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
+		bind_draw_sphere_vbo(0, 1); // untextured
+		draw_sphere_vbo_pre_bound(ndiv, 0); // untextured
 		if (!shadow_only && is_on) {dstate.s.clear_color_e();}
 
 		if (!shadow_only && dist_val < 0.12) {
 			fgTranslate(0.0, 0.0, 0.1); // translate up slightly and draw top cap of light
 			dstate.s.set_cur_color(pole_color);
-			draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // untextured
+			draw_sphere_vbo_pre_bound(ndiv, 0); // untextured
 		}
+		bind_vbo(0);
 		fgPopMatrix();
 	}
 
