@@ -603,13 +603,18 @@ void plot_xy_t::gen_adj_plots(vector<road_plot_t> const &plots) {
 
 class city_road_gen_t : public road_gen_base_t {
 
-	struct bench_t : public sphere_t {
-		bool dim, dir;
+	struct city_obj_t : public sphere_t {
 		cube_t bcube;
+		city_obj_t() {}
+		city_obj_t(point const &pos_, float radius_) : sphere_t(pos_, radius_) {}
+		bool operator<(city_obj_t const &b) const {return (bcube.x1() < b.bcube.x1());} // sort by bcube x1
+		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
+	};
+
+	struct bench_t : public city_obj_t {
+		bool dim, dir;
 
 		bench_t() : dim(0), dir(0) {}
-		bench_t(point const &pos_, float radius_, bool dim_, bool dir_) : sphere_t(pos_, radius_), dim(dim_), dir(dir_) {calc_bcube();}
-		bool operator<(bench_t const &b) const {return (bcube.x1() < b.bcube.x1());} // sort by bcube x1
 
 		void calc_bcube() {
 			bcube.set_from_point(pos);
@@ -619,8 +624,6 @@ class city_road_gen_t : public road_gen_base_t {
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
 			if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
 		}
-		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
-
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 			if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 
@@ -672,39 +675,32 @@ class city_road_gen_t : public road_gen_base_t {
 				qbd.add_quad_pts(s, WHITE, get_poly_norm(s, 1));
 			}
 		}
-		bool proc_sphere_coll(point &pos, point const &p_last, float radius, point const &xlate, vector3d *cnorm) const {
-			return sphere_cube_int_update_pos(pos, radius, (bcube + xlate), p_last, 1, 0, cnorm);
+		bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+			return sphere_cube_int_update_pos(pos_, radius_, (bcube + xlate), p_last, 1, 0, cnorm);
 		}
 	};
 
-	struct tree_planter_t : public cube_t {
-		point pos;
-		float radius;
-
-		tree_planter_t(point const &pos_, float radius_, float height) : pos(pos_), radius(radius_) {
-			set_from_point(pos);
-			expand_by_xy(radius);
-			z2() += height;
+	struct tree_planter_t : public city_obj_t {
+		tree_planter_t(point const &pos_, float radius_, float height) : city_obj_t(pos_, radius_) {
+			bcube.set_from_point(pos);
+			bcube.expand_by_xy(radius);
+			bcube.z2() += height;
 		}
-		bool operator<(tree_planter_t const &p) const {return (x1() < p.x1());} // sort by bcube x1
-
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
 			if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? (int)DIRT_TEX : get_texture_by_name("roads/sidewalk.jpg"));}
 		}
-		static void post_draw(draw_state_t &dstate, bool shadow_only) {}
-
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
-			if (!dstate.check_cube_visible(*this, dist_scale, shadow_only)) return;
+			if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 			color_wrapper const cw(LT_GRAY);
-			cube_t dirt(*this);
+			cube_t dirt(bcube);
 			dirt.expand_by_xy(-0.1*dirt.get_size()); // shrink 10% on all XY sides
 
 			if (dstate.pass_ix == 0) { // draw dirt
-				dirt.z2() -= 0.25*dz(); // move down 25%
+				dirt.z2() -= 0.25*bcube.dz(); // move down 25%
 				dstate.draw_cube(qbd, dirt, cw, 1, 0.0, 3); // top only (skip X, Y, and bottom)
 			}
 			else { // draw stone
-				cube_t walls[4] = {*this, *this, *this, *this}; // -X, +X, -Y, +Y
+				cube_t walls[4] = {bcube, bcube, bcube, bcube}; // -X, +X, -Y, +Y
 				walls[0].x2() = walls[2].x1() = walls[3].x1() = dirt.x1();
 				walls[1].x1() = walls[2].x2() = walls[3].x2() = dirt.x2();
 				walls[2].y2() = dirt.y1();
@@ -935,7 +931,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 				for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {
 					tree_planter_t const planter(*i, planter_radius, planter_height);
-					add_obj_to_group(planter, planter, planters, planter_groups, is_new_tile);
+					add_obj_to_group(planter, planter.bcube, planters, planter_groups, is_new_tile);
 				}
 			}
 		}
@@ -1066,10 +1062,10 @@ class city_road_gen_t : public road_gen_base_t {
 				if (!i->contains_pt_xy_exp(pos, expand)) continue;
 
 				for (auto p = planters.begin()+start_ix; p != planters.begin()+i->ix; ++p) {
-					if (x_test < p->x1()) break; // planters are sorted by x1, no bench after this can match
-					if (!p->contains_pt_xy_exp(pos, expand)) continue;
+					if (x_test < p->bcube.x1()) break; // planters are sorted by x1, no bench after this can match
+					if (!p->bcube.contains_pt_xy_exp(pos, expand)) continue;
 					// treat this as a tree rather than a planter by testing against a circle, since trees aren't otherwise included
-					if (dist_xy_less_than(pos, p->get_cube_center(), (0.5*p->dx() + expand))) {color = DK_GREEN; return 1;}
+					if (dist_xy_less_than(pos, p->pos, (p->radius + expand))) {color = DK_GREEN; return 1;}
 				}
 			} // for i
 			return 0;
