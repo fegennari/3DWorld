@@ -552,7 +552,7 @@ public:
 	void draw_bridge(bridge_t const &bridge, bool shadow_only);
 	void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale);
 	void draw_tunnel(tunnel_t const &tunnel, bool shadow_only);
-	void draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only);
+	void draw_stoplights(vector<road_isec_t> const &isecs, range_pair_t const &rp, bool shadow_only);
 }; // road_draw_state_t
 
 class ao_draw_state_t : public draw_state_t {

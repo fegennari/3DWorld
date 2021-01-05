@@ -1007,7 +1007,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 	} // for n
 }
 
-void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, bool shadow_only) {
-	for (auto i = isecs.begin(); i != isecs.end(); ++i) {i->draw_stoplights(qbd_sl, *this, shadow_only);}
+void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, range_pair_t const &rp, bool shadow_only) {
+	for (unsigned i = rp.s; i < rp.e; ++i) {isecs[i].draw_stoplights(qbd_sl, *this, shadow_only);}
 }
 
