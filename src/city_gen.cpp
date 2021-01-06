@@ -715,12 +715,36 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	};
 
+	struct fire_hydrant_t : public city_obj_t {
+		fire_hydrant_t(point const &pos_, float radius_, float height) : city_obj_t(pos_, radius_) { // pos is bottom center point
+			bcube.set_from_sphere(*this);
+			pos += radius_; // sphere center shifts up by radius
+			bcube.z2() = pos.z + height;
+		}
+		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
+			//if (!shadow_only) {select_texture(FENCE_TEX);}
+		}
+		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+			if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
+			// TODO: more details? use a 3D model?
+			draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), radius, radius, N_CYL_SIDES, 0); // untextured?
+		}
+		bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+			point const pos2(pos + xlate);
+			if (!dist_less_than(pos_, pos2, (radius + radius_))) return 0; // use sphere/vert cylinder instead?
+			// since this is a cylinder, and we're not supposed to stand on top of it, assume collision normal is in the XY plane
+			if (cnorm) {*cnorm = vector3d((pos_.x - pos2.x), (pos_.y - pos2.y), 0.0).get_norm();}
+			return 1;
+		}
+	};
+
 	class city_obj_placer_t {
 	public: // road network needs access to parking lots for drawing
 		vector<parking_lot_t> parking_lots;
 	private:
 		vector<bench_t> benches;
 		vector<tree_planter_t> planters;
+		vector<fire_hydrant_t> fire_hydrants;
 		vector<cube_with_ix_t> parking_lot_groups, bench_groups, planter_groups; // index is last object in group
 		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
