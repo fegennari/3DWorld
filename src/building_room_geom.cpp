@@ -602,7 +602,9 @@ void building_room_geom_t::add_paint_can(room_object_t const &c, float side_tsca
 
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)); // skip back fact at wall
+	// draw back in case it's against a window, even though that shouldn't happen
+	bool const might_be_against_window = 1;
+	unsigned const skip_faces(might_be_against_window ? 0 : ~get_face_mask(c.dim, c.dir)); // skip back face at wall
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
 	unsigned const num_shelves(2 + (c.room_id % 3)), num_brackets(2 + round_fp(0.5*length/dz)); // 2-4 shelves
@@ -635,14 +637,14 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		bracket.translate_dim(!c.dim, b_offset);
 
 		for (unsigned b = 0; b < num_brackets; ++b) {
-			metal_mat.add_cube_to_verts(bracket, bracket_color, zero_vector, (skip_faces | EF_Z2)); // skip back and top faces
+			metal_mat.add_cube_to_verts(bracket, bracket_color, zero_vector, (skip_faces | EF_Z2)); // skip top faces, maybe back
 
 			if (s == 0) { // add vertical brackets on first shelf
 				cube_t vbracket(bracket);
 				set_cube_zvals(vbracket, c.z1(), c.z2());
 				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir]; // against the wall
 				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
-				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip back and top/bottom faces
+				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip top/bottom faces, maybe back
 			}
 			bracket.translate_dim(!c.dim, b_step);
 		} // for b
@@ -1373,6 +1375,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 		c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim);
 		add_bookcase(c_top_back, 1, 1, tscale, 1, 0.4, &tex_origin); // no_shelves=1, side_width=0.4, both large and small, use same tex origin
 	}
+	// TODO: draw drawers
 }
 
 void building_room_geom_t::add_reception_desk(room_object_t const &c, float tscale) {
