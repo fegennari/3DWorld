@@ -684,7 +684,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		sz[!c.dim] = 0.5*cwidth;
 		C.dir = !c.dir;
 
-		if (2.0*sz.x < c_sz.x && 2.0*sz.y < c_sz.y && (top_shelf || cheight < shelf_clearance)) { // if it fits in all dims
+		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || cheight < shelf_clearance)) { // if it fits in all dims
 			for (unsigned n = 0; n < num_comps; ++n) {
 				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
 				C.set_from_point(center);
@@ -699,7 +699,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		sz[ c.dim] = 0.5*kbd_depth;
 		sz[!c.dim] = kbd_hwidth;
 
-		if (2.0*sz.x < c_sz.x && 2.0*sz.y < c_sz.y && (top_shelf || kbd_height < shelf_clearance)) { // if it fits in all dims
+		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || kbd_height < shelf_clearance)) { // if it fits in all dims
 			for (unsigned n = 0; n < num_kbds; ++n) {
 				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
 				C.set_from_point(center);
@@ -715,6 +715,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		for (unsigned n = 0; n < num_bottles; ++n) {
 			// same as building_t::place_bottle_on_obj()
 			float const bottle_height(z_step*rgen.rand_uniform(0.4, 0.7)), bottle_radius(z_step*rgen.rand_uniform(0.07, 0.11));
+			if (min(c_sz.x, c_sz.y) < 5.0*bottle_radius) continue; // shelf not wide/deep enough to add this bottle
 			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 2.0*bottle_radius), (S.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
 			C.set_from_sphere(center, bottle_radius);
 			set_cube_zvals(C, S.z2(), S.z2()+bottle_height);
@@ -724,18 +725,21 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			cubes.push_back(C);
 		} // for n
 		// add paint cans
-		unsigned const num_pcans(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 7)); // 0-6, 75% chance
-		float const pc_height(0.64*z_step), pc_radius(0.28*z_step);
-		C.color = WHITE;
+		float const pc_height(0.64*z_step), pc_radius(0.28*z_step), edge_spacing(1.1*pc_radius);
 
-		for (unsigned n = 0; n < num_pcans; ++n) {
-			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 1.1*pc_radius), (S.d[d][1] - 1.1*pc_radius));} // place at least 1.1*radius from edge
-			C.set_from_sphere(center, pc_radius);
-			set_cube_zvals(C, S.z2(), S.z2()+pc_height);
-			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-			add_paint_can(C, rgen.rand_float()); // use a random texture rotation
-			cubes.push_back(C);
-		} // for n
+		if (2.1*edge_spacing < min(c_sz.x, c_sz.y)) { // shelf is wide/deep enough for paint cans
+			unsigned const num_pcans(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 7)); // 0-6, 75% chance
+			C.color = WHITE;
+
+			for (unsigned n = 0; n < num_pcans; ++n) {
+				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + edge_spacing), (S.d[d][1] - edge_spacing));} // place at least edge_spacing from edge
+				C.set_from_sphere(center, pc_radius);
+				set_cube_zvals(C, S.z2(), S.z2()+pc_height);
+				if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
+				add_paint_can(C, rgen.rand_float()); // use a random texture rotation
+				cubes.push_back(C);
+			} // for n
+		}
 	} // for s
 }
 
