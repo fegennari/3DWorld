@@ -1228,6 +1228,8 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 	unsigned pref_orient(4); // if washer was placed, prefer to place dryer along the same wall (Note: blocker has same dim/dir as object)
 	if (placed) {pref_orient = (2*interior->room_geom->objs.back().dim + interior->room_geom->objs.back().dir);}
 	placed |= place_model_along_wall(OBJ_MODEL_DRYER, TYPE_DRYER, room, 0.38, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8, pref_orient);
+	// if we've placed a washer and dryer and made this into a laundry room, try to place a sink as well; should this use a different sink model from bathrooms?
+	if (placed) {place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);}
 	return placed;
 }
 
