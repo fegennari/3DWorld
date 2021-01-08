@@ -1329,24 +1329,48 @@ void building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_
 	set_obj_id(objs);
 }
 
-void building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt) {
-	if (!room_object_t::enable_rugs()) return; // disabled
+bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	if (!room_object_t::enable_rugs()) return 0; // disabled
 	vector3d const room_sz(room.get_size());
-	vector3d center(room.get_cube_center()); // Note: zvals ignored
 	bool const min_dim(room_sz.y < room_sz.x);
 	float const ar(rgen.rand_uniform(0.65, 0.85)), length(min(0.7f*room_sz[min_dim]/ar, room_sz[!min_dim]*rgen.rand_uniform(0.4, 0.7))), width(length*ar);
 	cube_t rug;
 	set_cube_zvals(rug, zval, zval+0.001*get_window_vspace()); // almost flat
-
-	for (unsigned d = 0; d < 2; ++d) {
-		float const radius(0.5*((bool(d) == min_dim) ? width : length));
-		center[d] += 0.05*room_sz[d]*rgen.rand_uniform(-1.0, 1.0); // slight random misalignment
-		rug.d[d][0] = center[d] - radius;
-		rug.d[d][1] = center[d] + radius;
-	}
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
-	objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
+	float sz_scale(1.0);
+
+	for (unsigned n = 0; n < 10; ++n) { // make 10 attempts at choosing a valid alignment
+		vector3d center(room.get_cube_center()); // Note: zvals ignored
+		bool valid_placement(1);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			float const radius(0.5*((bool(d) == min_dim) ? width : length)), scaled_radius(radius*sz_scale);
+			center[d] += (0.05f*room_sz[d] + (radius - scaled_radius))*rgen.rand_uniform(-1.0, 1.0); // slight random misalignment, increases with decreasing sz_scale
+			rug.d[d][0] = center[d] - radius;
+			rug.d[d][1] = center[d] + radius;
+		}
+		for (auto i = objs.begin() + objs_start; i != objs.end() && valid_placement; ++i) { // check for objects overlapping the rug
+			if (!i->intersects(rug)) continue;
+
+			switch (i->type) {
+			case TYPE_STAIR: case TYPE_STAIR_WALL: case TYPE_BCASE: case TYPE_WINE_RACK: case TYPE_TUB: case TYPE_CUBICLE: case TYPE_STALL: case TYPE_COUNTER:
+			case TYPE_BRSINK: case TYPE_DRESSER: case TYPE_FLOORING: case TYPE_CLOSET: case TYPE_SHOWER: case TYPE_ELEVATOR: case TYPE_WALL_TRIM:
+				valid_placement = 0; // rugs can't overlap these object types
+				break;
+			case TYPE_TABLE: case TYPE_DESK:
+				valid_placement = rug.contains_cube_xy(*i); // rugs can't partially overlap these object types
+				break;
+				// maybe beds should be included as well, but then rugs are unlikely to be placed in bedrooms
+			}
+		} // for i
+		if (valid_placement) {
+			objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
+			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
+			return 1;
+		}
+		sz_scale *= 0.9; // decrease rug size and try again
+	} // for n
+	return 0;
 }
 
 // return value: 0=invalid, 1=valid and good, 2=valid but could be better
@@ -1730,7 +1754,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (r->no_geom) {
 				if (is_house && r->is_hallway) { // allow pictures and rugs in the hallways of houses
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());
-					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt);}
+					if (rgen.rand()&3) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());} // 75% of the time; not all rugs will be placed
 				}
 				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway, make it the lobby
 					add_pri_hall_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
@@ -1802,7 +1826,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
-					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt);
+					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
 			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
