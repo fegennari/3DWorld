@@ -1149,10 +1149,10 @@ void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 
 bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
-	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_width(0.2*window_vspacing);
+	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_width((is_house ? 0.15 : 0.2)*window_vspacing);
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	unsigned const num_crates(4 + (rgen.rand() % 30)); // 4-33
+	unsigned const num_crates((4 + (rgen.rand() % 30))/(is_house ? 4 : 1)); // 4-33 for offices, 1-8 for houses
 	vect_cube_t exclude;
 	cube_t test_cube(room);
 	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
@@ -1170,6 +1170,13 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (rgen.rand_bool()) continue; // only add shelves to 50% of the walls
+			
+			if (is_house && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
+				// don't place shelves against exterior house walls in case there are windows
+				// what about checking for ROOM_WALL_SEP and room facing opposing part?
+				cube_t const part(get_part_for_room(room));
+				if (is_val_inside_window(part, !dim, room_bounds.get_center_dim(!dim), get_hspacing_for_part(part, !dim), get_window_h_border())) continue;
+			}
 			cube_t shelves(room_bounds);
 			set_cube_zvals(shelves, zval, ceil_zval-floor_thickness);
 			crate_bounds.d[dim][dir] = shelves.d[dim][!dir] = shelves.d[dim][dir] + (dir ? -1.0 : 1.0)*shelf_width; // outer edge of shelves, which is also the crate bounds
@@ -1180,7 +1187,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		} // for dir
 	} // for dim
 	// add a random office chair if there's space
-	if (min(crate_bounds.dx(), crate_bounds.dy()) > 1.2*window_vspacing && building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
+	if (!is_house && min(crate_bounds.dx(), crate_bounds.dy()) > 1.2*window_vspacing && building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
 		float const chair_height(0.425*window_vspacing), chair_radius(0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
 		cube_t place_area(crate_bounds);
 		point pos(0.0, 0.0, zval);
@@ -1196,7 +1203,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
 		point pos(0.0, 0.0, zval);
 		vector3d sz; // half size relative to window_vspacing
-		gen_crate_sz(sz, rgen, window_vspacing);
+		gen_crate_sz(sz, rgen, window_vspacing*(is_house ? 0.5 : 1.0)); // smaller for houses
 		cube_t place_area(crate_bounds);
 		place_area.expand_by_xy(-sz);
 		if (!place_area.is_strictly_normalized()) continue; // too large for this room
@@ -1829,8 +1836,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					r->assign_to(RTYPE_LAUNDRY, f);
 					added_laundry = 1;
 				}
-				else if (!added_obj) {r->assign_to(RTYPE_STORAGE, f);} // make it a storage room until we add some other room type that it can be
-				// else ... is this case possible?
+				else if (!added_obj) { // make it a storage room until we add some other room type that it can be
+					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					r->assign_to(RTYPE_STORAGE, f);
+					is_storage = 1; // mark it as a storage room whether or not we've added anything to it
+				}
+				// else ... this case is relatively rare
 			}
 			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage) { // add potted plants to some room types
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
@@ -1838,14 +1849,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
-			bool const can_hang(is_house || !(is_bathroom || is_kitchen || no_whiteboard)); // no whiteboards in office bathrooms or kitchens
+			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start));
 
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
 			}
-			if (is_house && !(is_bathroom || is_kitchen) && (is_storage || rgen.rand_float() < ((f > 0) ? 0.15 : 0.25))) {
-				unsigned const max_num(is_storage ? 8 : (is_bedroom ? 1 : 2));
+			if (is_house && !(is_bathroom || is_kitchen || is_storage) && rgen.rand_float() < ((f > 0) ? 0.15 : 0.25)) {
+				unsigned const max_num(is_bedroom ? 1 : 2);
 				add_boxes_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, max_num); // place boxes in this room
 			}
 			if (r->has_stairs && r->get_room_type(f) == RTYPE_NOTSET) {r->assign_to(RTYPE_STAIRS, f);} // default to stairs if not set above
