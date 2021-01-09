@@ -1353,12 +1353,27 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 			if (!i->intersects(rug)) continue;
 
 			switch (i->type) {
-			case TYPE_STAIR: case TYPE_STAIR_WALL: case TYPE_BCASE: case TYPE_WINE_RACK: case TYPE_TUB: case TYPE_CUBICLE: case TYPE_STALL: case TYPE_COUNTER:
+			case TYPE_STAIR: case TYPE_STAIR_WALL: case TYPE_BCASE: case TYPE_WINE_RACK: case TYPE_CUBICLE: case TYPE_STALL: case TYPE_COUNTER:
 			case TYPE_BRSINK: case TYPE_DRESSER: case TYPE_FLOORING: case TYPE_CLOSET: case TYPE_SHOWER: case TYPE_ELEVATOR: case TYPE_WALL_TRIM:
-				valid_placement = 0; // rugs can't overlap these object types
+			case TYPE_TOILET: case TYPE_SINK: case TYPE_TUB: case TYPE_FRIDGE: case TYPE_STOVE: case TYPE_URINAL: case TYPE_WASHER: case TYPE_DRYER:
+			{ // rugs can't overlap these object types; first, see if we can shrink the rug on one side and get it to fit
+				float max_area(0.0);
+				cube_t best_cand;
+
+				for (unsigned dim = 0; dim < 2; ++dim) {
+					for (unsigned dir = 0; dir < 2; ++dir) {
+						cube_t cand(rug);
+						cand.d[dim][dir] = i->d[dim][!dir] + (dir ? -1.0 : 1.0)*0.025*rug.get_sz_dim(dim); // leave a small gap
+						float const area(cand.dx()*cand.dy());
+						if (area > max_area) {best_cand = cand; max_area = area;}
+					}
+				}
+				if (max_area > 0.8*rug.dx()*rug.dy()) {rug = best_cand;} // good enough
+				else {valid_placement = 0;} // shrink is not enough, try again
 				break;
-			case TYPE_TABLE: case TYPE_DESK:
-				valid_placement = rug.contains_cube_xy(*i); // rugs can't partially overlap these object types
+			}
+			case TYPE_TABLE: case TYPE_DESK: // rugs can't partially overlap these object types; don't expand as that could cause the rug to intersect a previous object
+				valid_placement = rug.contains_cube_xy(*i);
 				break;
 				// maybe beds should be included as well, but then rugs are unlikely to be placed in bedrooms
 			}
@@ -1754,7 +1769,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (r->no_geom) {
 				if (is_house && r->is_hallway) { // allow pictures and rugs in the hallways of houses
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());
-					if (rgen.rand()&3) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());} // 75% of the time; not all rugs will be placed
+					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());} // 50% of the time; not all rugs will be placed
 				}
 				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway, make it the lobby
 					add_pri_hall_objs(rgen, *r, room_center.z, room_id, tot_light_amt);
@@ -1825,7 +1840,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
 					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
-				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2)) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
+				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
