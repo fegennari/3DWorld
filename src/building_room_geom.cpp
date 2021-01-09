@@ -684,7 +684,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		float const h_val(0.21*1.1*dz), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 		sz[ c.dim] = 0.5*cdepth;
 		sz[!c.dim] = 0.5*cwidth;
-		C.dir = !c.dir;
+		C.dim = c.dim; C.dir = !c.dir; // reset dim, flip dir
 
 		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || cheight < shelf_clearance)) { // if it fits in all dims
 			for (unsigned n = 0; n < num_comps; ++n) {
