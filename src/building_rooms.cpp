@@ -2048,8 +2048,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					}
 					if (has_ceil_trim && is_house) { // houses have shorter doors and ceiling trim extends above the door, so draw full range
 						for (auto c = trim_cubes.begin(); c != trim_cubes.end(); ++c) {
-							set_cube_zvals(*c, ceil_trim_z1, ceil_trim_z2);
-							objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
+							cube_t trim(*c); // copy so that we can modify it
+							set_cube_zvals(trim, ceil_trim_z1, ceil_trim_z2);
+							objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
 						}
 					}
 					if (f == 0) { // first floor, cut out areas for exterior doors
@@ -2064,7 +2065,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					for (auto c = trim_cubes.begin(); c != trim_cubes.end(); ++c) {
 						objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, 0, ext_flags, 1.0, SHAPE_CUBE, trim_color); // floor trim
 						if (!has_ceil_trim || is_house) continue;
-						set_cube_zvals(*c, ceil_trim_z1, ceil_trim_z2);
+						set_cube_zvals(*c, ceil_trim_z1, ceil_trim_z2); // okay to edit in-place here
 						objs.emplace_back(*c, TYPE_WALL_TRIM, 0, dim, !dir, flags, 1.0, SHAPE_ANGLED, trim_color); // ceiling trim
 					}
 				} // for f
