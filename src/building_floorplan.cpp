@@ -125,8 +125,8 @@ bool building_t::interior_enabled() const {
 }
 
 int building_t::classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const { // Note: zval is for the floor
-	if (!ret_sep_if_part_int_part_ext && (room.ext_sides & (1 << (2*dim + dir)))) return ROOM_WALL_EXT; // use ext_sides (if these flags have been setup properly) (optimization)
 	if (room.d[dim][dir] == bcube.d[dim][dir]) return ROOM_WALL_EXT; // at bcube border
+	if (!ret_sep_if_part_int_part_ext && (room.ext_sides & (1 << (2*dim + dir)))) return ROOM_WALL_EXT; // use ext_sides (optimization, but may conservatively return ext)
 	cube_t const &part(get_part_for_room(room));
 	float const wall_thickness(get_wall_thickness()), max_gap(1.5*wall_thickness), part_edge(part.d[dim][dir]);
 	if (dir ? (room.d[dim][1] + max_gap < part_edge) : (room.d[dim][0] - max_gap > part_edge)) return ROOM_WALL_INT; // interior to part, allowing for wall_thickness of gap
@@ -134,7 +134,7 @@ int building_t::classify_room_wall(room_t const &room, float zval, bool dim, boo
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 		if (p->d[dim][!dir] != part_edge) continue; // not opposite wall
-		if (p->z1() >= room.z2() || p->z2() <= room.z1()) continue; // no z overlap
+		if (p->z1() >= room.z2() || p->z2() <= room.z1()) continue; // no z overlap (wrong stack)
 
 		if (ret_sep_if_part_int_part_ext) { // return sep if any part of the wall separates parts
 			if (p->d[!dim][0] >= room.d[!dim][1] || p->d[!dim][1] <= room.d[!dim][0]) continue; // wall not overlapping
@@ -144,7 +144,7 @@ int building_t::classify_room_wall(room_t const &room, float zval, bool dim, boo
 			if (p->d[!dim][0] > room.d[!dim][0] || p->d[!dim][1] < room.d[!dim][1]) continue; // wall not contained
 			if (zval + get_floor_thickness() < p->z2()) return ROOM_WALL_SEP; // this part covers the wall in z (assuming no overhangs), so wall is interior split between parts
 		}
-	}
+	} // for p
 	return ROOM_WALL_EXT; // exterior
 }
 
@@ -1382,7 +1382,21 @@ void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lig
 	assert(room.is_strictly_normalized());
 	room_t r(room, part_id, num_lights, is_hallway, is_office, is_sec_bldg);
 	cube_t const &part(parts[part_id]);
-	for (unsigned d = 0; d < 4; ++d) {r.ext_sides |= (unsigned(room.d[d>>1][d&1] == part.d[d>>1][d&1]) << d);} // find exterior sides
+
+	for (unsigned d = 0; d < 4; ++d) { // find exterior sides
+		bool const dim(d>>1), dir(d&1);
+		float const part_edge(part.d[dim][dir]);
+		if (room.d[dim][dir] != part_edge) continue; // interior to this part
+		bool is_exterior(1);
+
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // simplified version of classify_room_wall()
+			if (p->d[dim][!dir] != part_edge) continue; // not opposite wall
+			if (p->z1() >= room.z2() || p->z2() <= room.z1()) continue; // no z overlap (wrong stack)
+			if (p->d[!dim][0] > room.d[!dim][0] || p->d[!dim][1] < room.d[!dim][1]) continue; // wall not contained
+			if (room.z2() <= p->z2()) {is_exterior = 0; break;} // this part covers the wall in z (assuming no overhangs), so wall is interior split between parts (not exterior)
+		} // for p
+		if (is_exterior) {r.ext_sides |= (1 << d);}
+	} // for d
 	interior->rooms.push_back(r);
 }
 

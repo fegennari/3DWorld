@@ -1173,7 +1173,6 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			
 			if (is_house && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 				// don't place shelves against exterior house walls in case there are windows
-				// what about checking for ROOM_WALL_SEP and room facing opposing part?
 				cube_t const part(get_part_for_room(room));
 				if (is_val_inside_window(part, !dim, room_bounds.get_center_dim(!dim), get_hspacing_for_part(part, !dim), get_window_h_border())) continue;
 			}
