@@ -1152,7 +1152,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_width((is_house ? 0.15 : 0.2)*window_vspacing);
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	unsigned const num_crates((4 + (rgen.rand() % 30))/(is_house ? 4 : 1)); // 4-33 for offices, 1-8 for houses
+	unsigned const num_crates(4 + (rgen.rand() % (is_house ? 5 : 30))); // 4-33 for offices, 4-8 for houses
 	vect_cube_t exclude;
 	cube_t test_cube(room);
 	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
