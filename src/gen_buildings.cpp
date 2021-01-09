@@ -2036,8 +2036,9 @@ public:
 				//(*i)->building_draw_vbo.draw(s, 1); // less CPU time but more GPU work, in general seems to be slower
 			}
 		} // for i
+		if ( interior_shadow_maps) {glDisable(GL_CULL_FACE);} // need to draw back faces of exterior parts to handle shadows on blinds
 		ext_parts_draw.draw(s, 1, 1);
-		glDisable(GL_CULL_FACE);
+		if (!interior_shadow_maps) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
 		fgPopMatrix();
 	}
