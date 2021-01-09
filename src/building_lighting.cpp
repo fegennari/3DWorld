@@ -398,9 +398,10 @@ void building_t::clip_ray_to_walls(point const &p1, point &p2) const { // Note: 
 			float const v(c->d[d][dir]);
 			if ((p1[d] < v) == (p2[d] < v)) continue; // no crossing
 			if (p1.z < c->z1() || p1.z > c->z2()) continue; // no z overlap
-			if ((p1[!d] < c->d[!d][0] && p2[!d] < c->d[!d][0]) || (p1[!d] > c->d[!d][1] && p2[!d] > c->d[!d][1])) continue; // both to one side of the cube
+			float const lo(c->d[!d][0]), hi(c->d[!d][1]); // expand by wall_edge_spacing
+			if ((p1[!d] < lo && p2[!d] < lo) || (p1[!d] > hi && p2[!d] > hi)) continue; // both to one side of the cube
 			float const cross_pos(p1[!d] + mult*(v - p1[d]));
-			if (cross_pos < c->d[!d][0] || cross_pos > c->d[!d][1]) continue; // doesn't cross within the cube bounds
+			if (cross_pos < lo || cross_pos > hi) continue; // doesn't cross within the cube bounds
 			p2[ d] = v;
 			p2[!d] = cross_pos;
 			mult   = (p2[!d] - p1[!d])/(p2[d] - p1[d]);
