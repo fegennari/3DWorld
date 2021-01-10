@@ -1444,10 +1444,16 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 }
 
 void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // used for blocking room shadows between parts
+	if (get_real_num_parts() == 1) return; // one part, light can't leak
 	building_mat_t const &mat(get_material());
 
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-		bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, 1, 0); // XY
+		unsigned dim_mask(3); // start with XY only
+
+		for (unsigned d = 0; d < 4; ++d) { // 4 sides of this part
+			if (i->d[d>>1][d&1] == bcube.d[d>>1][d&1]) {dim_mask |= (1<<(d+3));} // disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2
+		}
+		bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, dim_mask, 0, 0, 1, 0);
 	}
 }
 
@@ -2002,7 +2008,7 @@ public:
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						b.draw_room_geom(s, oc, xlate, bi->ix, 1, 0, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1 (draw everything, since shadow may be cached)
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
-						if (b.get_real_num_parts() > 1) {b.get_ext_wall_verts_no_sec(ext_parts_draw);} // add exterior walls to prevent light leaking between adjacent parts
+						b.get_ext_wall_verts_no_sec(ext_parts_draw); // add exterior walls to prevent light leaking between adjacent parts
 						bool const add_player_shadow(camera_surf_collide ? player_close : 0);
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						if (ped_ix < 0 && !add_player_shadow) continue; // nothing else to draw
