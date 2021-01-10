@@ -1447,14 +1447,21 @@ void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // us
 	if (get_real_num_parts() == 1) return; // one part, light can't leak
 	building_mat_t const &mat(get_material());
 
-	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		unsigned const part_ix(p - parts.begin());
 		unsigned dim_mask(3); // start with XY only
 
 		for (unsigned d = 0; d < 4; ++d) { // 4 sides of this part
-			if (i->d[d>>1][d&1] == bcube.d[d>>1][d&1]) {dim_mask |= (1<<(d+3));} // disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2
-		}
-		bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, dim_mask, 0, 0, 1, 0);
-	}
+			bool skip_this_side(p->d[d>>1][d&1] == bcube.d[d>>1][d&1]); // exterior wall is on the edge of the bcube and can't shadow anything
+			// houses and building courtyards can have exterior doors not along the bcube that aren't handled by the above case;
+			// drawing the wall containing this door in the shadow map will cause lighting artifacts, so skip this wall;
+			// it should be okay because we only need one of two walls intersecting an interior->exterior->interior light ray to suppress it,
+			// and buildings generally won't have two doors on adjacent interior sides
+			if (part_ix < 4) {skip_this_side |= bool(door_sides[part_ix] & (1<<d));} // only check base parts
+			if (skip_this_side) {dim_mask |= (1<<(d+3));} // disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2
+		} // for d
+		bdraw.add_section(*this, parts, *p, mat.side_tex, side_color, dim_mask, 0, 0, 1, 0);
+	} // for p
 }
 
 void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
