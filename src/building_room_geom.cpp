@@ -605,7 +605,7 @@ void building_room_geom_t::add_paint_can(room_object_t const &c, float side_tsca
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	// draw back in case it's against a window, even though that shouldn't happen
-	bool const might_be_against_window = 1;
+	bool const might_be_against_window(c.flags & RO_FLAG_IS_HOUSE);
 	unsigned const skip_faces(might_be_against_window ? 0 : ~get_face_mask(c.dim, c.dir)); // skip back face at wall
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);

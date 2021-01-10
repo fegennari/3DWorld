@@ -1188,7 +1188,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			crate_bounds.d[dim][dir] = shelves.d[dim][!dir] = shelves.d[dim][dir] + (dir ? -1.0 : 1.0)*shelf_depth; // outer edge of shelves, which is also the crate bounds
 			shelves.expand_in_dim(!dim, -(shelf_depth + 1.0f*wall_thickness)); // shorten shelves
 			if (has_bcube_int(shelves, exclude)) continue; // too close to a doorway
-			objs.emplace_back(shelves, TYPE_SHELVES, room_id, dim, dir, 0, tot_light_amt);
+			objs.emplace_back(shelves, TYPE_SHELVES, room_id, dim, dir, (is_house ? RO_FLAG_IS_HOUSE : 0), tot_light_amt);
 			set_obj_id(objs);
 		} // for dir
 	} // for dim
