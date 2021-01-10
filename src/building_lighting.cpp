@@ -782,7 +782,7 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 		}
 		else {
 			if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_BLOCKER ||
-				i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING) continue; // not a type that uses light_amt
+				i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING || i->type == TYPE_BLINDS) continue; // not a type that uses light_amt
 			if (lit_state) {i->light_amt += light_intensity;} else {i->light_amt = max((i->light_amt - light_intensity), 0.0f);} // shouldn't be negative, but clamp to 0 just in case
 		}
 		was_updated = 1;
@@ -793,8 +793,9 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 float room_t::get_light_amt() const { // Note: not normalized to 1.0
 	float ext_perim(0.0);
 
+	// add length of each exterior side, assuming it has windows; this is approximate because it treats partially exterior walls and fully exterior
 	for (unsigned d = 0; d < 4; ++d) {
-		if (ext_sides & (1<<d)) {ext_perim += get_sz_dim(d>>1);} // add length of each exterior side, assuming it has windows
+		if (ext_sides & (1<<d)) {ext_perim += get_sz_dim(d>>1);}
 	}
 	return ext_perim/get_area_xy(); // light per square meter = exterior perimeter over area
 }

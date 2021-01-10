@@ -953,7 +953,7 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 
 void building_room_geom_t::add_blinds(room_object_t const &c) {
 	bool const vertical(!(c.flags & RO_FLAG_HANGING));
-	colorRGBA const color(c.color/*apply_light_color(c)*/); // room color not applied as it looks wrong when viewed from outside the building
+	colorRGBA const color(c.color); // room color not applied as it looks wrong when viewed from outside the building
 	// fit the texture to the cube; blinds have a fixed number of slats that compress when they are shortened
 	// should these be partially transparent/backlit like bathroom windows? I guess not, most blinds are plastic or wood rather than material
 	int const nm_tid(get_texture_by_name("interiors/blinds_hn.jpg", 1, 0, 1, 8.0)); // use high aniso
