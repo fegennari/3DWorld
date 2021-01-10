@@ -466,7 +466,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 				for (auto p = other_parts.begin(); p != other_parts.end(); ++p) {
 					if (p == prev_part || !p->contains_pt_xy_exp(cur_pt, tolerance)) continue; // ray does not continue into this new part
 					point new_pt(p2);
-					if (do_line_clip_xy_p2(lpos, new_pt, *p)) {cur_pt = new_pt; prev_part = p; found = 1; break;} // ray continues into this part
+					if (do_line_clip_xy_p2(cur_pt, new_pt, *p)) {cur_pt = new_pt; prev_part = p; found = 1; break;} // ray continues into this part
 				}
 				if (!found || cur_pt == p2) break; // ray has exited the building, or we've reached it's end point; done
 			} // for n
