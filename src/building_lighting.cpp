@@ -409,11 +409,20 @@ void building_t::clip_ray_to_walls(point const &p1, point &p2) const { // Note: 
 	} // for d
 }
 
+bool do_line_clip_xy_p2(point const &p1, point &p2, cube_t const &c) {
+	float tmin(0.0), tmax(1.0);
+	if (!get_line_clip_xy(p1, p2, c.d, tmin, tmax)) return 0;
+	p2 = p1 + tmax*(p2 - p1);
+	return 1;
+}
+
 void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_t const &room, cube_t &light_bcube) const {
 	// base: 173613 / bcube: 163942 / clipped bcube: 161455 / tight: 159005 / rays: 101205 / no ls bcube expand: 74538
 	// starts with building bcube clipped to light bcube
-	//timer_t timer("refine_light_bcube"); // 0.062ms average
-	cube_t tight_bcube;
+	//timer_t timer("refine_light_bcube"); // 0.055ms average
+	cube_t tight_bcube, part;
+	static vect_cube_t other_parts;
+	other_parts.clear();
 
 	// first determine the union of all intersections with parts; ignore zvals here so that we get the same result for every floor
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // secondary buildings aren't handled here
@@ -422,30 +431,49 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 		cube_t c(light_bcube);
 		c.intersect_with_cube_xy(*p);
 		if (tight_bcube.is_all_zeros()) {tight_bcube = c;} else {tight_bcube.union_with_cube_xy(c);}
-	}
+		if (p->contains_pt(lpos)) {part = *p;} else {other_parts.push_back(*p);}
+	} // for p
+	assert(!part.is_all_zeros());
 	tight_bcube.z1() = light_bcube.z1();
 	tight_bcube.z2() = light_bcube.z2();
-	// next cast a number of horizontal rays in a circle around the light to see how far they reach; any walls hit occlude the light and reduce the bcube
+	// next cast a number of horizontal rays in a circle around the light to see how far they reach; any walls hit occlude the light and reduce the bcube;
+	// it's important that we don't use any tests against parts/rooms that depend on the light zval because the result must be valid for all lights in the stack
 	unsigned const NUM_RAYS = 180; // every 2 degrees
 	if (NUM_RAYS == 0) {light_bcube = tight_bcube; return;}
 	cube_t rays_bcube(lpos, lpos), room_exp(room);
-	room_exp.expand_by_xy(get_wall_thickness()); // to include points on the border
+	float const wall_thickness(get_wall_thickness()), tolerance(0.01*wall_thickness);
+	room_exp.expand_by_xy(wall_thickness + tolerance); // to include points on the border + some FP error
 
 	for (unsigned n = 0; n < NUM_RAYS; ++n) {
 		float const angle(TWO_PI*n/NUM_RAYS), dx(light_radius*sin(angle)), dy(light_radius*cos(angle));
-		point p1(lpos), p2(lpos + point(dx, dy, 0.0));
-		bool const ret(do_line_clip(p1, p2, tight_bcube.d));
+		point p2(lpos + point(dx, dy, 0.0));
 		// test for bad rays; this can fail on rotated buildings if lights aren't rotated properly, and in other cases when I'm experimenting, so it's allowed
-		if (!ret || p1 != lpos) continue; // bad ray, skip
-		point room_exit_pt(p2);
-		room_exp.clamp_pt_xy(room_exit_pt);
-		bool inside_building(0);
+		if (!do_line_clip_xy_p2(lpos, p2, tight_bcube)) continue; // bad ray, skip
 
-		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
-			if (p->contains_pt(room_exit_pt)) {inside_building = 1; break;}
+		if (other_parts.empty() || part.contains_pt_xy(p2)) {
+			clip_ray_to_walls(lpos, p2); // the simple case where we don't need to handle part boundaries (optimization)
 		}
-		if (inside_building) {clip_ray_to_walls(p1, p2);} // point remains inside the building, it must have intersected an interior wall
-		else {p2 = room_exit_pt;} // point outside the building, ray intersected an exterior wall, end it at the intersection point
+		else {
+			// find the point where this ray exits the building by following it through all parts; parts should be exactly adjacent to each other horizontally
+			point cur_pt(p2);
+			bool const ret(do_line_clip_xy_p2(lpos, cur_pt, part)); // exit point of the starting part
+			assert(ret);
+			auto prev_part(other_parts.end());
+
+			for (unsigned n = 0; n < other_parts.size(); ++n) { // could be while(1), but this is safer in case we run into an infinite loop due to FP errors
+				bool found(0);
+
+				for (auto p = other_parts.begin(); p != other_parts.end(); ++p) {
+					if (p == prev_part || !p->contains_pt_xy_exp(cur_pt, tolerance)) continue; // ray does not continue into this new part
+					point new_pt(p2);
+					if (do_line_clip_xy_p2(lpos, new_pt, *p)) {cur_pt = new_pt; prev_part = p; found = 1; break;} // ray continues into this part
+				}
+				if (!found || cur_pt == p2) break; // ray has exited the building, or we've reached it's end point; done
+			} // for n
+			p2 = cur_pt;
+			if (room_exp.contains_pt_xy_inclusive(p2)) {} // ray ends in this room; it may have exited the building from this room
+			else {clip_ray_to_walls(lpos, p2);} // ray ends in another room, need to clip it to the building walls
+		}
 		rays_bcube.union_with_pt(p2);
 	} // for n
 	light_bcube = rays_bcube;
