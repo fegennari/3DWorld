@@ -17,8 +17,11 @@ vec3 get_sphere_point_sprite_normal() {
 	return normalize(xv*normal.x + yv*normal.y + zv*normal.z);
 }
 
-void main()
-{
+vec2 get_sphere_uv(in vec3 normal) {
+	return vec2(atan(normal.z, normal.x)/(3.14159*2.0), acos(-normal.y)/3.14159);
+}
+
+void main() {
 	float alpha = min(1.0, (2.0/(1.0 + alpha_scale*length(epos.xyz)) - 0.5)); // attenuate when far from the camera
 	if (alpha <= 0.0) {discard;}
 #ifdef DRAW_AS_SPHERES
@@ -35,7 +38,8 @@ void main()
 	color += atten0*add_pt_light_comp(normal, epos, 0).rgb; // sun_diffuse
 	color += add_pt_light_comp(normal, epos, 1).rgb; // galaxy_ambient
 #ifdef DRAW_AS_SPHERES
-	color *= texture(tex0, gl_PointCoord).rgb;
+	//color *= texture(tex0, gl_PointCoord).rgb;
+	color *= texture(tex0, get_sphere_uv(normal)).rgb;
 #endif
 	fg_FragColor = vec4(color, alpha * gl_Color.a); // use gl_Color alpha directly
 }
