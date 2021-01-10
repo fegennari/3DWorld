@@ -415,18 +415,21 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 
 void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { // or nightstand
 	add_table(c, tscale, 0.06, 0.10);
-	cube_t middle(c);
+	room_object_t middle(c);
 	middle.z1() += 0.12*c.dz();
 	middle.z2() -= 0.06*c.dz(); // at bottom of top surface
 	float const leg_width(get_tc_leg_width(c, 0.10));
 	middle.expand_by_xy(-0.5*leg_width); // shrink by half leg width
 	get_wood_material(tscale).add_cube_to_verts(middle, apply_light_color(c, WOOD_COLOR), c.get_llc()); // all faces drawn
-	// add drawers
 	middle.expand_in_dim(!c.dim, -0.5*leg_width);
+	add_dresser_drawers(middle, tscale);
+}
+
+void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	rgen.rand_mix();
-	float const width(middle.get_sz_dim(!c.dim)), height(middle.dz());
+	float const width(c.get_sz_dim(!c.dim)), height(c.dz());
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
 	float const row_spacing(height/num_rows), door_thick(0.05*height), handle_thick(0.75*door_thick);
@@ -437,19 +440,19 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
-	cube_t door(middle);
+	cube_t door(c);
 	door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
 	door.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
 	cube_t handle(door);
 	handle.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
 	handle.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
 	unsigned num_cols(1); // 1 for nightstand
-	float vpos(middle.z1());
+	float vpos(c.z1());
 
 	for (unsigned n = 0; n < num_rows; ++n) {
 		if (is_lg && (num_cols == 1 || rgen.rand_bool())) {num_cols = 2 + (rgen.rand() % 3);} // 2-4, 50% of the time keep same as prev row
 		float const col_spacing(width/num_cols);
-		float hpos(middle.d[!c.dim][0]);
+		float hpos(c.d[!c.dim][0]);
 		door.z1() = vpos + border;
 		door.z2() = vpos + row_spacing - border;
 		handle.z1() = door.z1()   + 0.8*door.dz();
@@ -593,7 +596,6 @@ void building_room_geom_t::add_crate(room_object_t const &c) {
 
 void building_room_geom_t::add_paint_can(room_object_t const &c, float side_tscale_add) {
 	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/paint_can_label.png")), 1, 0, 1)); // shadows, small
-	// TODO: random rotation
 	side_mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 24, side_tscale_add); // draw sides only; random texture rotation
 	point top(c.get_cube_center());
 	top.z = c.z2();
@@ -1360,22 +1362,35 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	// desk top and legs, similar to add_table()
+	float const height(c.dz());
 	cube_t top(c), legs_bcube(c);
-	top.z1() += 0.85*c.dz();
+	top.z1() += 0.85*height;
 	legs_bcube.z2() = top.z1();
 	vector3d const tex_origin(c.get_llc());
 	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
-	get_wood_material(tscale).add_cube_to_verts(top, color, tex_origin); // all faces drawn
+	rgeom_mat_t &wood_mat(get_wood_material(tscale));
+	wood_mat.add_cube_to_verts(top, color, tex_origin); // all faces drawn
 	add_tc_legs(legs_bcube, color, 0.06, tscale);
 
+	if (c.room_id & 3) { // add drawers 75% of the time
+		bool const side(c.obj_id & 1);
+		float const desk_width(c.get_sz_dim(!c.dim)), leg_width(get_tc_leg_width(c, 0.06));
+		room_object_t drawers(c);
+		drawers.z1() += 0.05*height; // shift up a bit from the floor
+		drawers.z2()  = top.z1();
+		drawers.expand_by_xy(-0.15*leg_width);
+		drawers.d[!c.dim][!side] += (side ? 1.0 : -1.0)*0.75*desk_width; // put the drawers off to one side
+		wood_mat.add_cube_to_verts(drawers, color, tex_origin); // all faces drawn
+		drawers.d[!c.dim][ side] -= (side ? 1.0 : -1.0)*0.85*leg_width; // make sure the drawers can pull out without hitting the desk legs
+		add_dresser_drawers(drawers, tscale);
+	}
 	if (c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
 		room_object_t c_top_back(c);
 		c_top_back.z1() = top.z2();
-		c_top_back.z2() = top.z2() + 1.8*c.dz();
+		c_top_back.z2() = top.z2() + 1.8*height;
 		c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim);
 		add_bookcase(c_top_back, 1, 1, tscale, 1, 0.4, &tex_origin); // no_shelves=1, side_width=0.4, both large and small, use same tex origin
 	}
-	// TODO: draw drawers
 }
 
 void building_room_geom_t::add_reception_desk(room_object_t const &c, float tscale) {

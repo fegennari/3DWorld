@@ -251,13 +251,16 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		desk_pad.d[dim][!dir] += dsign*clearance; // ensure clearance in front of the desk so that a chair can be placed
 		if (num_placed > 0 && desk_pad.intersects(placed_desk)) continue; // intersects previously placed desk
 		if (!is_valid_placement_for_room(desk_pad, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
-		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // make short if against an exterior wall or in an office
+		// make short if against an exterior wall or in an office
+		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT);
+		unsigned const desk_obj_ix(objs.size());
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		set_obj_id(objs);
 		cube_t bc(c);
-		bool const add_monitor(building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
+		bool const add_computer(building_obj_model_loader.is_model_valid(OBJ_MODEL_TV) && rgen.rand_bool());
 
-		if (add_monitor) { // add a computer monitor using the TV model
+		if (add_computer) {
+			// add a computer monitor using the TV model
 			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TV)); // D, W, H
 			float const tv_height(1.1*height), tv_hwidth(0.5*tv_height*sz.y/sz.z), tv_depth(tv_height*sz.x/sz.z), center(c.get_center_dim(!dim));
 			cube_t tv;
@@ -275,7 +278,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			keyboard.d[dim][ dir] = keyboard.d[dim][!dir] - dsign*kbd_depth;
 			set_wall_width(keyboard, center, kbd_hwidth, !dim);
 			objs.emplace_back(keyboard, TYPE_KEYBOARD, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // add as white, will be drawn with gray/black texture
-			// add a computer under the desk
+			// add a computer tower under the desk
 			float const cheight(0.75*height), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 			bool const comp_side(rgen.rand_bool());
 			float const pos(c.d[!dim][comp_side] + (comp_side ? -1.0 : 1.0)*0.8*cwidth);
@@ -285,6 +288,8 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			computer.d[dim][ dir] = c.d[dim][dir] + dsign*0.5*cdepth;
 			computer.d[dim][!dir] = computer.d[dim][dir] + dsign*cdepth;
 			objs.emplace_back(computer, TYPE_COMPUTER, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);
+			// force even/odd-ness of obj_id based on comp_side so that we know what side to put the drawers on so that they don't intersect the computer
+			if (bool(objs[desk_obj_ix].obj_id & 1) == comp_side) {++objs[desk_obj_ix].obj_id;}
 		}
 		else if ((rgen.rand()%3) != 0) { // add sheet(s) of paper 75% of the time
 			float const pheight(0.115*vspace), pwidth(0.77*pheight), thickness(0.001*vspace); // 8.5x11
@@ -312,7 +317,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			chair_pos[dim]  = c.d[dim][!dir];
 			chair_pos[!dim] = pos + rgen.rand_uniform(-0.1, 0.1)*width; // slightly misaligned
 			// there are too many desks in office buildings, and they have office chairs in cubicles anyway, so only use chair models for desks in houses with computer monitors
-			bool const office_chair_model(add_monitor && is_house);
+			bool const office_chair_model(add_computer && is_house);
 			
 			if (add_chair(rgen, room, blockers, room_id, chair_pos, chair_color, dim, dir, tot_light_amt, office_chair_model)) {
 				cube_t const &chair(objs.back());
