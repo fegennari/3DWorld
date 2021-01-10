@@ -1149,7 +1149,7 @@ void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 
 bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
-	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_width((is_house ? 0.15 : 0.2)*window_vspacing);
+	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_depth((is_house ? 0.15 : 0.2)*window_vspacing);
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const num_crates(4 + (rgen.rand() % (is_house ? 5 : 30))); // 4-33 for offices, 4-8 for houses
@@ -1166,7 +1166,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	// add shelves on walls (avoiding the door), and have crates avoid them
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		if (room_bounds.get_sz_dim(dim) < 6.0*shelf_width) continue; // too narrow to add shelves in this dim
+		if (room_bounds.get_sz_dim(dim) < 6.0*shelf_depth) continue; // too narrow to add shelves in this dim
 
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (rgen.rand_bool()) continue; // only add shelves to 50% of the walls
@@ -1174,12 +1174,14 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (is_house && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 				// don't place shelves against exterior house walls in case there are windows
 				cube_t const part(get_part_for_room(room));
-				if (is_val_inside_window(part, !dim, room_bounds.get_center_dim(!dim), get_hspacing_for_part(part, !dim), get_window_h_border())) continue;
+				float const h_spacing(get_hspacing_for_part(part, !dim));
+				if (room_bounds.get_sz_dim(!dim) - 2.0*shelf_depth > h_spacing) continue; // shelf width is larger than spacing - likely to intersect a window, don't test center pt
+				if (is_val_inside_window(part, !dim, room_bounds.get_center_dim(!dim), h_spacing, get_window_h_border())) continue;
 			}
 			cube_t shelves(room_bounds);
 			set_cube_zvals(shelves, zval, ceil_zval-floor_thickness);
-			crate_bounds.d[dim][dir] = shelves.d[dim][!dir] = shelves.d[dim][dir] + (dir ? -1.0 : 1.0)*shelf_width; // outer edge of shelves, which is also the crate bounds
-			shelves.expand_in_dim(!dim, -(shelf_width + 1.0f*wall_thickness)); // shorten shelves
+			crate_bounds.d[dim][dir] = shelves.d[dim][!dir] = shelves.d[dim][dir] + (dir ? -1.0 : 1.0)*shelf_depth; // outer edge of shelves, which is also the crate bounds
+			shelves.expand_in_dim(!dim, -(shelf_depth + 1.0f*wall_thickness)); // shorten shelves
 			if (has_bcube_int(shelves, exclude)) continue; // too close to a doorway
 			objs.emplace_back(shelves, TYPE_SHELVES, room_id, dim, dir, 0, tot_light_amt);
 			set_obj_id(objs);
