@@ -291,23 +291,45 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			// force even/odd-ness of obj_id based on comp_side so that we know what side to put the drawers on so that they don't intersect the computer
 			if (bool(objs[desk_obj_ix].obj_id & 1) == comp_side) {++objs[desk_obj_ix].obj_id;}
 		}
-		else if ((rgen.rand()%3) != 0) { // add sheet(s) of paper 75% of the time
-			float const pheight(0.115*vspace), pwidth(0.77*pheight), thickness(0.001*vspace); // 8.5x11
+		else { // no computer
+			if ((rgen.rand()%3) != 0) { // add sheet(s) of paper 75% of the time
+				float const pheight(0.115*vspace), pwidth(0.77*pheight), thickness(0.00025*vspace); // 8.5x11
 
-			if (pheight < 0.5*c.get_sz_dim(dim) && pwidth < 0.5*c.get_sz_dim(!dim)) { // desk is large enough
-				cube_t paper;
-				set_cube_zvals(paper, c.z2(), c.z2()+thickness); // very thin
-				unsigned const num_papers(rgen.rand() % 8); // 0-7
-				colorRGBA const cream(0.9, 0.9, 0.8), vlt_yellow(1.0, 1.0, 0.5);
-				colorRGBA const paper_colors[6] = {WHITE, WHITE, WHITE, cream, cream, vlt_yellow};
+				if (pheight < 0.5*c.get_sz_dim(dim) && pwidth < 0.5*c.get_sz_dim(!dim)) { // desk is large enough for papers
+					cube_t paper;
+					set_cube_zvals(paper, c.z2(), c.z2()+thickness); // very thin
+					unsigned const num_papers(rgen.rand() % 8); // 0-7
+					colorRGBA const cream(0.9, 0.9, 0.8), vlt_yellow(1.0, 1.0, 0.5);
+					colorRGBA const paper_colors[6] = {WHITE, WHITE, WHITE, cream, cream, vlt_yellow};
 
-				for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
-					float const v1(rgen.rand_uniform(c.d[dim][0]+pheight, c.d[dim][1]-pheight)), v2(rgen.rand_uniform(c.d[!dim][0]+pwidth, c.d[!dim][1]-pwidth));
-					set_wall_width(paper, v1, 0.5*pheight,  dim);
-					set_wall_width(paper, v2, 0.5*pwidth,  !dim);
-					objs.emplace_back(paper, TYPE_PAPER, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%6]);
-					set_obj_id(objs);
-					paper.z2() += thickness; // to avoid Z-fighting if different colors
+					for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
+						set_wall_width(paper, rgen.rand_uniform(c.d[ dim][0]+pheight, c.d[ dim][1]-pheight), 0.5*pheight,  dim);
+						set_wall_width(paper, rgen.rand_uniform(c.d[!dim][0]+pwidth,  c.d[!dim][1]-pwidth),  0.5*pwidth,  !dim);
+						objs.emplace_back(paper, TYPE_PAPER, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%6]);
+						set_obj_id(objs);
+						paper.z2() += thickness; // to avoid Z-fighting if different colors
+					} // for n
+				}
+			}
+			float const pp_len(0.077*vspace), pp_dia(0.0028*vspace), edge_space(0.75*pp_len); // ~7.5 inches long
+
+			if (edge_space < 0.25*min(c.dx(), c.dy())) { // desk is large enough for pens/pencils
+				colorRGBA const pen_colors   [4] = {WHITE, BLACK, colorRGBA(0.2, 0.4, 1.0), RED};
+				colorRGBA const pencil_colors[2] = {colorRGBA(1.0, 0.75, 0.25), colorRGBA(1.0, 0.5, 0.1)};
+				float const pp_z1(c.z2() + 0.3f*pp_dia); // move above papers, and avoid self shadow from the desk
+				cube_t pp_bcube;
+				set_cube_zvals(pp_bcube, pp_z1, pp_z1+pp_dia);
+				unsigned const num_pp(rgen.rand()&3); // 0-3
+
+				for (unsigned n = 0; n < num_pp; ++n) {
+					bool const is_pen(rgen.rand_bool());
+					colorRGBA const color(is_pen ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]);
+					set_wall_width(pp_bcube, rgen.rand_uniform(c.d[ dim][0]+edge_space, c.d[ dim][1]-edge_space), 0.5*pp_len,  dim);
+					set_wall_width(pp_bcube, rgen.rand_uniform(c.d[!dim][0]+edge_space, c.d[!dim][1]-edge_space), 0.5*pp_dia, !dim);
+					// Note: no check for overlap with books and potted plants, but that would be complex to add and this case is rare;
+					//       computer monitors/keyboards aren't added in this case, and pencils should float above papers, so we don't need to check those
+					objs.emplace_back(pp_bcube, TYPE_PEN_PENCIL, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
+					objs.back().obj_id = uint16_t(is_pen);
 				} // for n
 			}
 		}

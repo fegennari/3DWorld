@@ -913,6 +913,36 @@ void building_room_geom_t::add_paper(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_pen_pencil(room_object_t const &c_) {
+	room_object_t c(c_);
+	if (!c.dir) {swap(c.d[c.dim][0], c.d[c.dim][1]); c.dir = 1;} // put in canonical orientation; okay if denormalized
+	colorRGBA const color(apply_light_color(c));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // unshadowed, small
+	bool const is_pen(c.obj_id & 1);
+	float const length(c.get_sz_dim(c.dim));
+	cube_t body(c), point(c);
+	body.d[c.dim][1] = point.d[c.dim][0] = c.d[c.dim][1] - (is_pen ? 0.08 : 0.10)*length;
+	// non-AA rotation/direction?
+
+	if (is_pen) { // point is at the top
+		mat.add_ortho_cylin_to_verts(body,  color, c.dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder
+		mat.add_ortho_cylin_to_verts(point, color, c.dim, 0, 1, 0, 0, 1.0, 0.2, 1.0, 1.0, 0, 16); // 16-sided truncated cone
+	}
+	else { // eraser is at the bottom and point is at the top
+		colorRGBA const lt_wood(1.0, 0.8, 0.6);
+		cube_t end_part(body), lead(point);
+		point.d[c.dim][1] = lead    .d[c.dim][0] = c.d[c.dim][1] - 0.03*length;
+		body .d[c.dim][0] = end_part.d[c.dim][1] = c.d[c.dim][0] + 0.09*length;
+		cube_t eraser(end_part), metal(end_part);
+		metal.d[c.dim][0] = eraser.d[c.dim][1] = c.d[c.dim][0] + 0.04*length;
+		mat.add_ortho_cylin_to_verts(body,   color,                          c.dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 6); // 6-sided cylinder, should really be made flat sided
+		mat.add_ortho_cylin_to_verts(point,  apply_light_color(c, lt_wood),  c.dim, 0, 0, 0, 0, 1.0, 0.3, 1.0, 1.0, 0, 12); // 12-sided truncated cone
+		mat.add_ortho_cylin_to_verts(lead,   apply_light_color(c, DK_GRAY),  c.dim, 0, 0, 0, 0, 0.3, 0.0, 1.0, 1.0, 0, 12); // 12-sided cone
+		mat.add_ortho_cylin_to_verts(metal,  apply_light_color(c, DK_GREEN), c.dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // 12-sided cylinder
+		mat.add_ortho_cylin_to_verts(eraser, apply_light_color(c, PINK),     c.dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // 12-sided cylinder
+	}
+}
+
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
 	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only
 }
@@ -2031,7 +2061,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_MWAVE:    return GRAY;
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	case TYPE_BLINDS:   return texture_color(get_blinds_tid()).modulate_with(color);
-	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, etc.
+	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (type >= TYPE_TOILET && type < NUM_TYPES) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
 	return color; // Note: probably should always set color so that we can return it here
@@ -2129,6 +2159,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_WINE_RACK: add_wine_rack(*i, 0, 1, tscale); break;
 		case TYPE_BOTTLE:    add_bottle   (*i); break;
 		case TYPE_PAPER:     add_paper    (*i); break;
+		case TYPE_PEN_PENCIL:add_pen_pencil(*i); break;
 		default: break;
 		}
 	} // for i
