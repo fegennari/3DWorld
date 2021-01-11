@@ -1940,6 +1940,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	add_exterior_door_signs(rgen);
 	objs.shrink_to_fit();
 	interior->room_geom->light_bcubes.resize(num_light_stacks); // allocate but don't fill un until needed
+	// randomly vary wood color for this building
+	colorRGBA &wood_color(interior->room_geom->wood_color);
+	float const luminance(rgen.rand_uniform(0.4, 1.6));
+	for (unsigned i = 0; i < 3; ++i) {wood_color[i] = luminance*WOOD_COLOR[i]*rgen.rand_uniform(0.9, 1.1);}
+	wood_color.set_valid_color();
+	max_eq(wood_color.R, max(wood_color.G, wood_color.B)); // make sure wood isn't blue or green tinted
 }
 
 void building_t::add_wall_and_door_trim() { // and window trim

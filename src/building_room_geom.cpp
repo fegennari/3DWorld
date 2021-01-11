@@ -12,7 +12,6 @@
 bool const ADD_BOOK_COVERS = 1;
 bool const ADD_BOOK_TITLES = 1;
 unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
-colorRGBA const WOOD_COLOR      (0.9, 0.7, 0.5); // light brown, multiplies wood texture color
 colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
 colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
 
@@ -367,6 +366,7 @@ colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
 	if (display_mode & 0x10) return c; // disable this when using indir lighting
 	return c * (0.5f + 0.5f*min(sqrt(o.light_amt), 1.5f)); // use c.light_amt as an approximation for ambient lighting due to sun/moon
 }
+colorRGBA building_room_geom_t::apply_wood_light_color(room_object_t const &o) const {return apply_light_color(o, wood_color);}
 colorRGBA apply_light_color(room_object_t const &o) {return apply_light_color(o, o.color);} // use object color
 
 tid_nm_pair_t const untex_shad_mat(-1, 2.0); // make sure it's different from default tid_nm_pair_t so that it's not grouped with shadowed materials
@@ -375,7 +375,7 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 	cube_t top(c), legs_bcube(c);
 	top.z1() += (1.0 - top_dz)*c.dz();
 	legs_bcube.z2() = top.z1();
-	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	colorRGBA const color(apply_wood_light_color(c));
 	rgeom_mat_t &mat(get_wood_material(tscale));
 
 	if (c.shape == SHAPE_CYLIN) { // cylindrical table
@@ -408,7 +408,7 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	legs_bcube.z2() = seat.z1();
 	back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
 	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale), 1).add_cube_to_verts(seat, apply_light_color(c), c.get_llc()); // all faces drawn
-	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	colorRGBA const color(apply_wood_light_color(c));
 	get_wood_material(tscale).add_cube_to_verts(back, color, c.get_llc(), EF_Z1); // skip bottom face
 	add_tc_legs(legs_bcube, color, 0.15, tscale);
 }
@@ -420,7 +420,7 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { /
 	middle.z2() -= 0.06*c.dz(); // at bottom of top surface
 	float const leg_width(get_tc_leg_width(c, 0.10));
 	middle.expand_by_xy(-0.5*leg_width); // shrink by half leg width
-	get_wood_material(tscale).add_cube_to_verts(middle, apply_light_color(c, WOOD_COLOR), c.get_llc()); // all faces drawn
+	get_wood_material(tscale).add_cube_to_verts(middle, apply_wood_light_color(c), c.get_llc()); // all faces drawn
 	middle.expand_in_dim(!c.dim, -0.5*leg_width);
 	add_dresser_drawers(middle, tscale);
 }
@@ -1243,7 +1243,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 }
 
 void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale, point const *const use_this_tex_origin) {
-	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	colorRGBA const color(apply_wood_light_color(c));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
 	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
@@ -1346,7 +1346,7 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 	float const row_step((height - shelf_thick)/num_rows), col_step((width - shelf_thick)/num_cols);
 
 	if (inc_lg) { // add wooden frame
-		colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+		colorRGBA const color(apply_wood_light_color(c));
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
 		cube_t frame(c);
 		frame.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.09*c.get_sz_dim(c.dim); // slightly less depth so that bottles stick out a bit
@@ -1397,7 +1397,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	top.z1() += 0.85*height;
 	legs_bcube.z2() = top.z1();
 	vector3d const tex_origin(c.get_llc());
-	colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+	colorRGBA const color(apply_wood_light_color(c));
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
 	wood_mat.add_cube_to_verts(top, color, tex_origin); // all faces drawn
 	add_tc_legs(legs_bcube, color, 0.06, tscale);
@@ -1531,7 +1531,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale);
 
 	if (inc_lg) {
-		colorRGBA const color(apply_light_color(c, WOOD_COLOR));
+		colorRGBA const color(apply_wood_light_color(c));
 		add_tc_legs(legs_bcube, color, max(head_width, foot_width), tscale);
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
 		vector3d const tex_origin(c.get_llc());
@@ -1886,7 +1886,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
 	assert(c.is_strictly_normalized());
 	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
-	get_wood_material(tscale).add_cube_to_verts(c, apply_light_color(c, WOOD_COLOR), tex_origin, skip_faces);
+	get_wood_material(tscale).add_cube_to_verts(c, apply_wood_light_color(c), tex_origin, skip_faces);
 	// add cabinet doors
 	float const cab_depth(c.get_sz_dim(c.dim)), door_height(0.8*c.dz()), door_width(0.75*door_height), door_thick(0.05*door_height);
 	cube_t front(c);
@@ -2028,7 +2028,7 @@ rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dyn
 	tex.set_specular(0.8, 60.0);
 	return get_material(tex, inc_shadows, dynamic, small);
 }
-colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));}
+colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
 
 colorRGBA room_object_t::get_color() const {

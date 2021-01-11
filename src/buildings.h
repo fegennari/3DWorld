@@ -23,6 +23,7 @@ unsigned const NUM_BOTTLE_COLORS = 3;
 // Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
 colorRGBA const bottle_colors[NUM_BOTTLE_COLORS] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
+colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
 
 class light_source;
 class lmap_manager_t;
@@ -372,12 +373,14 @@ struct building_room_geom_t {
 	float obj_scale;
 	unsigned stairs_start; // index of first object of TYPE_STAIR
 	point tex_origin;
+	colorRGBA wood_color;
 	vector<room_object_t> objs; // for drawing and collision detection
 	vector<obj_model_inst_t> obj_model_insts;
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha; // {large static, small static, dynamic, lights, plants, transparent} materials
 	vect_cube_t light_bcubes;
 
-	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_) {}
+	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0),
+		tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
@@ -388,6 +391,7 @@ struct building_room_geom_t {
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0, bool transparent=0);
 	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, bool small=0);
 	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, bool small=0);
+	colorRGBA apply_wood_light_color(room_object_t const &o) const;
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
