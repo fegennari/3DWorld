@@ -605,13 +605,13 @@ void building_room_geom_t::add_paint_can(room_object_t const &c, float side_tsca
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	// draw back in case it's against a window, even though that shouldn't happen
-	bool const might_be_against_window(c.flags & RO_FLAG_IS_HOUSE);
-	unsigned const skip_faces(might_be_against_window ? 0 : ~get_face_mask(c.dim, c.dir)); // skip back face at wall
+	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
+	unsigned const skip_faces(is_house ? 0 : ~get_face_mask(c.dim, c.dir)); // skip back face at wall if it's a house because it could be against a window (though it really shouldn't be)
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
 	unsigned const num_shelves(2 + (c.room_id % 3)), num_brackets(2 + round_fp(0.5*length/dz)); // 2-4 shelves
 	float const z_step(dz/(num_shelves + 1)), shelf_zspace(z_step - thickness), shelf_clearance(shelf_zspace - bracket_thickness); // include a space at the bottom
-	float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness);
+	float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness), sz_scale(is_house ? 0.5 : 1.0);
 
 	// add wooden shelves
 	cube_t shelf(c);
@@ -644,7 +644,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			if (s == 0) { // add vertical brackets on first shelf
 				cube_t vbracket(bracket);
 				set_cube_zvals(vbracket, c.z1(), c.z2());
-				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir]; // against the wall
+				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness; // nearly against the wall
 				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
 				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip top/bottom faces, maybe back
 			}
@@ -663,16 +663,16 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		point center;
 		cubes.clear();
 		// add crates/boxes
-		unsigned const num_crates(rgen.rand() % 13); // 0-12
+		unsigned const num_crates(rgen.rand() % (is_house ? 8 : 13)); // 0-12
 
 		for (unsigned n = 0; n < num_crates; ++n) {
 			for (unsigned d = 0; d < 2; ++d) {
-				sz[d] = 0.5*width*rgen.rand_uniform(0.45, 0.8); // x,y half width
+				sz[d] = 0.5*width*sz_scale*(is_house ? 1.5 : 1.0)*rgen.rand_uniform(0.45, 0.8); // x,y half width
 				center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
 			}
-			C.obj_id = uint16_t(rgen.rand()); // used to select texture
+			C.obj_id = uint16_t(is_house ? 2 : rgen.rand()); // used to select texture; houses all have boxes
 			C.set_from_point(center);
-			set_cube_zvals(C, S.z2(), (S.z2() + shelf_zspace*rgen.rand_uniform(0.4, 0.95)));
+			set_cube_zvals(C, S.z2(), (S.z2() + shelf_zspace*sz_scale*rgen.rand_uniform(0.4, 0.95)));
 			C.expand_by_xy(sz);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
@@ -682,7 +682,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		} // for n
 		// add computers; what about monitors?
 		bool const top_shelf(s+1 == num_shelves);
-		unsigned const num_comps(rgen.rand() % 6); // 0-5
+		unsigned const num_comps(rgen.rand() % (is_house ? 3 : 6)); // 0-5
 		float const h_val(0.21*1.1*dz), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 		sz[ c.dim] = 0.5*cdepth;
 		sz[!c.dim] = 0.5*cwidth;
