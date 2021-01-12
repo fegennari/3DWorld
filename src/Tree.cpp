@@ -925,7 +925,7 @@ float tree_data_t::get_size_scale_mult() const {return (has_4th_branches ? LEAF_
 
 void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc) {
 
-	if (!created || not_visible) return;
+	if (!created || (!shadow_only && not_visible)) return;
 	tree_data_t &td(tdata());
 	point const tree_xlate(tree_center + xlate);
 	if (!camera_pdu.cube_visible_likely(td.branches_bcube + tree_xlate)) return;
