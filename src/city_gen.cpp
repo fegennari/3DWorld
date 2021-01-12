@@ -722,18 +722,26 @@ class city_road_gen_t : public road_gen_base_t {
 			bcube.z2() = pos.z + height;
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
-			//if (!shadow_only) {select_texture(FENCE_TEX);}
+			if (!shadow_only) {select_texture(WHITE_TEX);}
+			dstate.s.set_cur_color(colorRGBA(1.0, 0.75, 0.0));
+		}
+		static void post_draw(draw_state_t &dstate, bool shadow_only) {
+			dstate.s.set_cur_color(WHITE); // restore to default color
 		}
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 			if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 			// TODO: more details? use a 3D model?
-			draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), radius, radius, N_CYL_SIDES, 0); // untextured?
+			// TODO: add verts to qbd rather than drawing them here?
+			draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), radius, radius, N_CYL_SIDES, 0, 4); // untextured, top end only
 		}
 		bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 			point const pos2(pos + xlate);
-			if (!dist_less_than(pos_, pos2, (radius + radius_))) return 0; // use sphere/vert cylinder instead?
+			float const r_sum(radius + radius_);
+			if (!dist_less_than(pos_, pos2, r_sum)) return 0; // use sphere/vert cylinder instead?
 			// since this is a cylinder, and we're not supposed to stand on top of it, assume collision normal is in the XY plane
-			if (cnorm) {*cnorm = vector3d((pos_.x - pos2.x), (pos_.y - pos2.y), 0.0).get_norm();}
+			vector3d const coll_norm(vector3d((pos_.x - pos2.x), (pos_.y - pos2.y), 0.0).get_norm());
+			pos_ += coll_norm*(r_sum - p2p_dist(pos_, pos2)); // move away from pos2
+			if (cnorm) {*cnorm = coll_norm;}
 			return 1;
 		}
 	};
@@ -745,7 +753,7 @@ class city_road_gen_t : public road_gen_base_t {
 		vector<bench_t> benches;
 		vector<tree_planter_t> planters;
 		vector<fire_hydrant_t> fire_hydrants;
-		vector<cube_with_ix_t> parking_lot_groups, bench_groups, planter_groups; // index is last object in group
+		vector<cube_with_ix_t> parking_lot_groups, bench_groups, planter_groups, fire_hydrant_groups; // index is last object in group
 		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
 
@@ -933,8 +941,27 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile) {
 			float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
-			bool is_new_bench_tile(is_new_tile), is_new_planter_tile(is_new_tile);
+			bool is_new_fh_tile(is_new_tile), is_new_bench_tile(is_new_tile), is_new_planter_tile(is_new_tile);
 
+			// place fire_hydrants; don't fire hydrants in parks
+			if (!plot.is_park) {
+				float const radius(0.05*car_length), height(0.15*car_length);
+				point pos;
+				pos.z = plot.z2();
+
+				for (unsigned dim = 0; dim < 2; ++dim) {
+					float const dist_from_road(0.01*plot.get_sz_dim(dim));
+					pos[!dim] = plot.get_center_dim(!dim);
+
+					for (unsigned dir = 0; dir < 2; ++dir) {
+						pos[dim] = plot.d[dim][dir] + (dir ? 1.0 : -1.0)*dist_from_road; // move into the sidewalk along the road
+						if (!check_pt_and_place_blocker(pos, blockers, radius, 2.0*radius)) continue; // bad placement, skip
+						fire_hydrant_t const fire_hydrant(pos, radius, height);
+						add_obj_to_group(fire_hydrant, fire_hydrant.bcube, fire_hydrants, fire_hydrant_groups, is_new_fh_tile);
+						colliders.push_back(fire_hydrant.bcube);
+					} // for dir
+				} // for dim
+			}
 			// place benches
 			bench_t bench;
 			bench.radius = 0.3*car_length;
@@ -989,7 +1016,8 @@ class city_road_gen_t : public road_gen_base_t {
 		city_obj_placer_t() : num_spaces(0), filled_spaces(0) {}
 		
 		void clear() {
-			parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); planters.clear(); bench_groups.clear(); planter_groups.clear();
+			parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); planters.clear(); fire_hydrants.clear();
+			bench_groups.clear(); planter_groups.clear(); fire_hydrant_groups.clear();
 			num_spaces = filled_spaces = 0;
 		}
 		struct cube_by_x1 {
@@ -1024,15 +1052,17 @@ class city_road_gen_t : public road_gen_base_t {
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
 				prev_tile_id = tile_id;
 			} // for i
-			sort_grouped_objects(benches,  bench_groups  );
-			sort_grouped_objects(planters, planter_groups);
+			sort_grouped_objects(benches,       bench_groups  );
+			sort_grouped_objects(planters,      planter_groups);
+			sort_grouped_objects(fire_hydrants, fire_hydrant_groups);
 
 			if (add_parking_lots) {
 				cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 			}
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
-			draw_objects(benches, bench_groups, dstate, 0.16, shadow_only); // dist_scale=0.16
+			draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only); // dist_scale=0.16
+			draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.12, shadow_only); // dist_scale=0.12
 			
 			if (!shadow_only) { // low profile, not drawn in shadow pass
 				draw_objects(planters, planter_groups, dstate, 0.1, shadow_only); // dirt pass, dist_scale=0.1
@@ -1047,12 +1077,21 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = benches.begin(); i != benches.end(); ++i) { // Note: could use bench_groups
 				if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
 			}
+			for (auto i = fire_hydrants.begin(); i != fire_hydrants.end(); ++i) { // Note: could use fire_hydrant_groups
+				if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
+			}
 			// Note: no coll with tree_planters because the tree coll should take care of it
 			return 0;
 		}
 		bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: nothing to do for parking lots or tree_planters
 			bool ret(0);
-			for (auto i = benches.begin(); i != benches.end(); ++i) {ret |= check_line_clip_update_t(p1, p2, t, i->bcube);} // check bounding cube
+
+			for (auto i = benches.begin(); i != benches.end(); ++i) {
+				ret |= check_line_clip_update_t(p1, p2, t, i->bcube); // check bounding cube
+			}
+			for (auto i = fire_hydrants.begin(); i != fire_hydrants.end(); ++i) {
+				ret |= check_line_clip_update_t(p1, p2, t, i->bcube); // check bounding cube; TODO: cylinder intersection?
+			}
 			return ret;
 		}
 		bool pt_in_parking_lot_xy(point const &pos) const {
@@ -1095,6 +1134,16 @@ class city_road_gen_t : public road_gen_base_t {
 					if (!p->bcube.contains_pt_xy_exp(pos, expand)) continue;
 					// treat this as a tree rather than a planter by testing against a circle, since trees aren't otherwise included
 					if (dist_xy_less_than(pos, p->pos, (p->radius + expand))) {color = DK_GREEN; return 1;}
+				}
+			} // for i
+			start_ix = 0;
+
+			for (auto i = fire_hydrant_groups.begin(); i != fire_hydrant_groups.end(); start_ix = i->ix, ++i) {
+				if (!i->contains_pt_xy(pos)) continue;
+
+				for (auto b = fire_hydrants.begin()+start_ix; b != fire_hydrants.begin()+i->ix; ++b) {
+					if (pos.x < b->bcube.x1()) break; // fire_hydrants are sorted by x1, no fire_hydrant after this can match
+					if (dist_xy_less_than(pos, b->pos, b->radius)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;}
 				}
 			} // for i
 			return 0;
