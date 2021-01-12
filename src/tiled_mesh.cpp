@@ -1290,24 +1290,25 @@ void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_d
 
 // Note: xlate has different meanings here: for near leaves, it's a vec3 attribute; for far leaves, it's a vec2 uniform; for branches, it's -1
 void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, bool draw_trunks, bool draw_near_leaves,
-	bool draw_far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc)
+	bool draw_far_leaves, bool shadow_pass, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
 	if (pine_trees.empty() || /*!can_have_pine_palm_trees()*/!can_have_trees()) return; // Note: skip water check for palm trees
 	//timer_t timer("Draw Pine Trees");
 	point const camera(get_camera_pos());
 	vector3d const xlate(ptree_off.get_xlate());
 	vector2d const camera_xlate(xlate.x-camera.x, xlate.y-camera.y);
+	bool const force_high_detail(shadow_pass);
 	fgPushMatrix();
 	translate_to(xlate);
 	
 	if (draw_trunks) {
-		float const dscale(get_tree_dist_scale());
+		float const dscale(shadow_pass ? 0.0 : get_tree_dist_scale()); // force polygons in shadow pass
 
 		if (dscale < 1.0) { // close, draw as polygons
 			if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
-			set_mesh_ambient_color(s);
+			if (!shadow_pass) {set_mesh_ambient_color(s);}
 			bool const all_visible(camera_pdu.sphere_visible_test(get_center(), -0.5*radius));
-			if (!pine_trees.draw_trunks(0, all_visible, 1, xlate)) {to_draw_trunk_pts.push_back(this);} // skip_lines=1; if some lines were skipped, add trunk pts to draw
+			if (!pine_trees.draw_trunks(shadow_pass, all_visible, 1, xlate)) {to_draw_trunk_pts.push_back(this);} // skip_lines=1; if some lines were skipped, add trunk pts to draw
 		}
 		else if (dscale < 2.0 && get_tree_far_weight(force_high_detail) < 0.5) { // far away, use low detail branches
 			to_draw_trunk_pts.push_back(this);
@@ -1340,7 +1341,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, b
 			if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
 			draw_tree_leaves_lod(s, xlate, (weight == 0.0), xlate_loc);
 		}
-		if (draw_near_leaves && has_palm && (weight > 0.0 || (pine_trees.instanced && get_tree_dist_scale(has_palm) < 3.0))) { // draw palm trees
+		if (draw_near_leaves && has_palm && (weight > 0.0 || shadow_pass || (pine_trees.instanced && get_tree_dist_scale(has_palm) < 3.0))) { // draw palm trees
 			if (enable_smap) {bind_and_setup_shadow_map(s); enable_smap = 0;}
 			s.add_uniform_int("use_bent_quad_tcs", 1);
 			if (pine_trees.instanced) {pine_trees.draw_palm_insts(s, camera_pdu.sphere_visible_test(get_center(), -0.5*radius), xlate, xlate_loc);}
@@ -2845,10 +2846,10 @@ colorRGBA get_color_scale(float mag=1.0, float cloud_cover_factor=0.0) {
 }
 
 
-void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc) {
+void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool shadow_pass, bool reflection_pass, bool enable_smap, int xlate_loc) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
-		to_draw[i].second->draw_pine_trees(s, to_draw_trunk_pts, branches, near_leaves, far_leaves, force_high_detail, reflection_pass, enable_smap, xlate_loc);
+		to_draw[i].second->draw_pine_trees(s, to_draw_trunk_pts, branches, near_leaves, far_leaves, shadow_pass, reflection_pass, enable_smap, xlate_loc);
 	}
 }
 
@@ -2900,10 +2901,10 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 		xlate_loc = s.get_attrib_loc("xlate");
 		enable_instancing_for_shader_loc(xlate_loc);
 	}
-	s.set_specular(0.2, 8.0);
+	if (!shadow_pass) {s.set_specular(0.2, 8.0);}
 	draw_pine_tree_bl(s, 0, 1, 0, shadow_pass, reflection_pass, enable_leaf_smap, xlate_loc);
 	assert(to_draw_trunk_pts.empty());
-	s.clear_specular();
+	if (!shadow_pass) {s.clear_specular();}
 	if (xlate_loc >= 0) {disable_instancing_for_shader_loc(xlate_loc);}
 	s.end_shader();
 

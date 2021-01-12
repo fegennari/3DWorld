@@ -357,7 +357,7 @@ public:
 	unsigned num_pine_trees() const {return pine_trees.size();}
 	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail, int xlate_loc);
 	void draw_pine_trees(shader_t &s, vector<tile_t *> &to_draw_trunk_pts, bool draw_trunks, bool draw_near_leaves, bool draw_far_leaves,
-		bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc);
+		bool shadow_pass, bool reflection_pass, bool enable_smap, int xlate_loc);
 	void draw_trunk_pts(shader_t &s);
 	unsigned num_decid_trees() const {return decid_trees.size();}
 	void gen_decid_trees_if_needed();
@@ -466,7 +466,7 @@ private:
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_pine_tree_shader(shader_t &s, string const &vs, bool use_texgen=1);
 	static void set_pine_tree_shader_post(shader_t &s);
-	void draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool force_high_detail, bool reflection_pass, bool enable_smap, int xlate_loc);
+	void draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool shadow_pass, bool reflection_pass, bool enable_smap, int xlate_loc);
 	void draw_pine_trees(bool reflection_pass, bool shadow_pass=0);
 	void draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass, bool shadow_pass, bool enable_smap);
 	static void billboard_tree_shader_setup(shader_t &s);

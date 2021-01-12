@@ -1031,7 +1031,7 @@ bool small_tree::draw_trunk(bool shadow_only, bool all_visible, bool skip_lines,
 	if (!small_trees_enabled() || type == T_BUSH) return 1; // disabled, or no trunk/bark
 	
 	if (all_visible) {}
-	else if (shadow_only) {
+	else if (shadow_only && world_mode == WMODE_GROUND) {
 		if (!is_over_mesh(pos + xlate + height*get_rot_dir())) return 1;
 	}
 	else {
