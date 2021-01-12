@@ -920,18 +920,22 @@ class city_road_gen_t : public road_gen_base_t {
 				} // for n
 			} // for n
 		}
-		template<typename T> void add_obj_to_group(T const &obj, cube_t const &bcube, vector<T> &objs, vector<cube_with_ix_t> &groups, bool is_new_tile) {
+		template<typename T> void add_obj_to_group(T const &obj, cube_t const &bcube, vector<T> &objs, vector<cube_with_ix_t> &groups, bool &is_new_tile) {
 			objs.push_back(obj);
 			if (groups.empty() || is_new_tile) {groups.push_back(cube_with_ix_t(bcube));}
 			else {groups.back().union_with_cube(bcube);}
 			groups.back().ix = objs.size();
+			is_new_tile = 0;
 		}
 		template<typename T> void sort_grouped_objects(vector<T> &objs, vector<cube_with_ix_t> const &groups) {
 			unsigned start_ix(0);
 			for (auto i = groups.begin(); i != groups.end(); start_ix = i->ix, ++i) {sort(objs.begin()+start_ix, objs.begin()+i->ix);}
 		}
 		void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile) {
-			float const car_length(city_params.get_nom_car_size().x);
+			float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
+			bool is_new_bench_tile(is_new_tile), is_new_planter_tile(is_new_tile);
+
+			// place benches
 			bench_t bench;
 			bench.radius = 0.3*car_length;
 			float const bench_spacing(max(bench.radius, get_min_obj_spacing()));
@@ -947,15 +951,16 @@ class city_road_gen_t : public road_gen_base_t {
 					}
 				}
 				bench.calc_bcube();
-				add_obj_to_group(bench, bench.bcube, benches, bench_groups, is_new_tile);
+				add_obj_to_group(bench, bench.bcube, benches, bench_groups, is_new_bench_tile);
 				colliders.push_back(bench.bcube);
 			} // for n
-			if (!plot.is_park) { // don't add planters in parks
+			// place planters; don't add planters in parks
+			if (!plot.is_park) {
 				float const planter_height(0.05*car_length), planter_radius(0.25*car_length);
 
 				for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {
 					tree_planter_t const planter(*i, planter_radius, planter_height);
-					add_obj_to_group(planter, planter.bcube, planters, planter_groups, is_new_tile);
+					add_obj_to_group(planter, planter.bcube, planters, planter_groups, is_new_planter_tile);
 				}
 			}
 		}
@@ -963,6 +968,7 @@ class city_road_gen_t : public road_gen_base_t {
 			if (objs.empty()) return;
 			T::pre_draw(dstate, shadow_only);
 			unsigned start_ix(0);
+			assert(qbd.empty());
 
 			for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
 				if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling gor group
@@ -977,7 +983,6 @@ class city_road_gen_t : public road_gen_base_t {
 					qbd.draw_and_clear(); // draw this group with current smap
 				}
 			} // for g
-			qbd.draw_and_clear();
 			T::post_draw(dstate, shadow_only);
 		}
 	public:
@@ -1086,7 +1091,7 @@ class city_road_gen_t : public road_gen_base_t {
 				if (!i->contains_pt_xy_exp(pos, expand)) continue;
 
 				for (auto p = planters.begin()+start_ix; p != planters.begin()+i->ix; ++p) {
-					if (x_test < p->bcube.x1()) break; // planters are sorted by x1, no bench after this can match
+					if (x_test < p->bcube.x1()) break; // planters are sorted by x1, no planter after this can match
 					if (!p->bcube.contains_pt_xy_exp(pos, expand)) continue;
 					// treat this as a tree rather than a planter by testing against a circle, since trees aren't otherwise included
 					if (dist_xy_less_than(pos, p->pos, (p->radius + expand))) {color = DK_GREEN; return 1;}
