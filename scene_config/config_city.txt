@@ -108,6 +108,8 @@ city lamp_model ../models/interiors/lamp1.model3d  1 2 -1 0  1 1.0 1.0
 city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  0 0 -1 90  1 1.0 1.0
 city dryer_model ../models/interiors/dryer/Dryer.model3d  0 0 -1 0  0 1.0 1.0
 
+city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 -1 0  1 1.0 1.0
+
 city max_lights 1024
 city max_shadow_maps 40
 city smap_size 0 # 0 = default

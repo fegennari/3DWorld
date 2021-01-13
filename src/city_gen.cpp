@@ -29,6 +29,7 @@ extern unsigned shadow_map_sz, cur_display_iter, max_unique_trees;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
+extern object_model_loader_t building_obj_model_loader;
 
 
 void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh);
@@ -716,10 +717,11 @@ class city_road_gen_t : public road_gen_base_t {
 	};
 
 	struct fire_hydrant_t : public city_obj_t {
-		fire_hydrant_t(point const &pos_, float radius_, float height) : city_obj_t(pos_, radius_) { // pos is bottom center point
+		vector3d orient;
+
+		fire_hydrant_t(point const &pos_, float radius_, float height, vector3d const &orient_) : city_obj_t(pos_, radius_), orient(orient_) { // pos is bottom center point
 			bcube.set_from_sphere(*this);
-			pos.z += radius_; // sphere center shifts up by radius
-			bcube.z2() = pos.z + height;
+			set_cube_zvals(bcube, pos.z, pos.z+height);
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
 			if (!shadow_only) {select_texture(WHITE_TEX);}
@@ -728,11 +730,15 @@ class city_road_gen_t : public road_gen_base_t {
 		static void post_draw(draw_state_t &dstate, bool shadow_only) {
 			dstate.s.set_cur_color(WHITE); // restore to default color
 		}
-		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const { // Note: qbd is unused
 			if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
-			// TODO: more details? use a 3D model?
-			// TODO: add verts to qbd rather than drawing them here?
-			draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), radius, radius, N_CYL_SIDES, 0, 4); // untextured, top end only
+
+			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
+				building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_FHYDRANT, shadow_only);
+			}
+			else {
+				draw_fast_cylinder(pos, point(pos.x, pos.y, bcube.z2()), radius, radius, N_CYL_SIDES, 0, 4); // untextured, top end only
+			}
 		}
 		bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 			point const pos2(pos + xlate);
@@ -947,7 +953,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 			// place fire_hydrants; don't fire hydrants in parks
 			if (!plot.is_park) {
-				float const radius(0.05*car_length), height(0.15*car_length), dist_from_road(radius);
+				float const radius(0.036*car_length), height(0.18*car_length), dist_from_road(radius);
 				point pos;
 				pos.z = plot.z2();
 
@@ -957,7 +963,9 @@ class city_road_gen_t : public road_gen_base_t {
 					for (unsigned dir = 0; dir < 2; ++dir) {
 						pos[dim] = plot.d[dim][dir] - (dir ? 1.0 : -1.0)*dist_from_road; // move into the sidewalk along the road
 						if (!check_pt_and_place_blocker(pos, blockers, radius, 2.0*radius)) continue; // bad placement, skip
-						fire_hydrant_t const fire_hydrant(pos, radius, height);
+						vector3d orient(zero_vector);
+						orient[!dim] = (dir ? 1.0 : -1.0); // oriented perpendicular to the road
+						fire_hydrant_t const fire_hydrant(pos, radius, height, orient);
 						add_obj_to_group(fire_hydrant, fire_hydrant.bcube, fire_hydrants, fire_hydrant_groups, is_new_fh_tile);
 						colliders.push_back(fire_hydrant.bcube);
 					} // for dir
@@ -993,7 +1001,9 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 			}
 		}
-		template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups, draw_state_t &dstate, float dist_scale, bool shadow_only) {
+		template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
+			draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0)
+		{
 			if (objs.empty()) return;
 			T::pre_draw(dstate, shadow_only);
 			unsigned start_ix(0);
@@ -1001,7 +1011,11 @@ class city_road_gen_t : public road_gen_base_t {
 
 			for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
 				if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling for group
-					
+				
+				if (not_using_qbd) { // must setup shader and tile shadow map before drawing
+					dstate.ensure_shader_active(); // needed for use_smap=0 case
+					dstate.begin_tile(g->get_cube_center(), 1);
+				}
 				for (unsigned i = start_ix; i < g->ix; ++i) {
 					assert(i < objs.size());
 					T const &obj(objs[i]);
@@ -1064,13 +1078,13 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
-			draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only); // dist_scale=0.16
-			draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.12, shadow_only); // dist_scale=0.12
+			draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
+			draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.12, shadow_only, 1); // dist_scale=0.12, not_using_qbd=1
 			
 			if (!shadow_only) { // low profile, not drawn in shadow pass
-				draw_objects(planters, planter_groups, dstate, 0.1, shadow_only); // dirt pass, dist_scale=0.1
+				draw_objects(planters, planter_groups, dstate, 0.1, shadow_only, 0); // dirt pass, dist_scale=0.1
 				dstate.pass_ix = 1;
-				draw_objects(planters, planter_groups, dstate, 0.1, shadow_only); // stone pass, dist_scale=0.1
+				draw_objects(planters, planter_groups, dstate, 0.1, shadow_only, 0); // stone pass, dist_scale=0.1
 				dstate.pass_ix = 0;
 			}
 		}

@@ -41,7 +41,7 @@ public:
 	void load_models();
 	bool load_model_id(unsigned id);
 	void draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-		vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations=0, unsigned skip_mat_mask=0);
+		vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail=0, bool enable_animations=0, unsigned skip_mat_mask=0);
 };
 
 class car_model_loader_t : public city_model_loader_t {

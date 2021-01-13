@@ -65,6 +65,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "make_4_way_ints") {
 		if (!read_uint(fp, make_4_way_ints) || make_4_way_ints > 3) {return read_error(str);}
 	}
+	else if (str == "fire_hydrant_model") {
+		if (!add_model(OBJ_MODEL_FHYDRANT, fp)) {return read_error(str);}
+	}
 	// cars
 	else if (str == "num_cars") {
 		if (!read_uint(fp, num_cars)) {return read_error(str);}
