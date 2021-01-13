@@ -718,7 +718,7 @@ class city_road_gen_t : public road_gen_base_t {
 	struct fire_hydrant_t : public city_obj_t {
 		fire_hydrant_t(point const &pos_, float radius_, float height) : city_obj_t(pos_, radius_) { // pos is bottom center point
 			bcube.set_from_sphere(*this);
-			pos += radius_; // sphere center shifts up by radius
+			pos.z += radius_; // sphere center shifts up by radius
 			bcube.z2() = pos.z + height;
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -947,16 +947,15 @@ class city_road_gen_t : public road_gen_base_t {
 
 			// place fire_hydrants; don't fire hydrants in parks
 			if (!plot.is_park) {
-				float const radius(0.05*car_length), height(0.15*car_length);
+				float const radius(0.05*car_length), height(0.15*car_length), dist_from_road(radius);
 				point pos;
 				pos.z = plot.z2();
 
 				for (unsigned dim = 0; dim < 2; ++dim) {
-					float const dist_from_road(0.01*plot.get_sz_dim(dim));
 					pos[!dim] = plot.get_center_dim(!dim);
 
 					for (unsigned dir = 0; dir < 2; ++dir) {
-						pos[dim] = plot.d[dim][dir] + (dir ? 1.0 : -1.0)*dist_from_road; // move into the sidewalk along the road
+						pos[dim] = plot.d[dim][dir] - (dir ? 1.0 : -1.0)*dist_from_road; // move into the sidewalk along the road
 						if (!check_pt_and_place_blocker(pos, blockers, radius, 2.0*radius)) continue; // bad placement, skip
 						fire_hydrant_t const fire_hydrant(pos, radius, height);
 						add_obj_to_group(fire_hydrant, fire_hydrant.bcube, fire_hydrants, fire_hydrant_groups, is_new_fh_tile);
@@ -983,6 +982,7 @@ class city_road_gen_t : public road_gen_base_t {
 				add_obj_to_group(bench, bench.bcube, benches, bench_groups, is_new_bench_tile);
 				colliders.push_back(bench.bcube);
 			} // for n
+
 			// place planters; don't add planters in parks
 			if (!plot.is_park) {
 				float const planter_height(0.05*car_length), planter_radius(0.25*car_length);
