@@ -941,7 +941,9 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile) {
 			float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
-			bool is_new_fh_tile(is_new_tile), is_new_bench_tile(is_new_tile), is_new_planter_tile(is_new_tile);
+			// FIXME: due to some problem I can't figure out, bench shadow maps don't work right unless is_new_bench_tile is reset for each plot;
+			//        however, tree planters seem to work just fine without this, even though they use nearly the same code
+			bool is_new_fh_tile(is_new_tile), is_new_bench_tile(1 || is_new_tile), is_new_planter_tile(is_new_tile);
 
 			// place fire_hydrants; don't fire hydrants in parks
 			if (!plot.is_park) {
@@ -998,9 +1000,10 @@ class city_road_gen_t : public road_gen_base_t {
 			assert(qbd.empty());
 
 			for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
-				if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling gor group
+				if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling for group
 					
 				for (unsigned i = start_ix; i < g->ix; ++i) {
+					assert(i < objs.size());
 					T const &obj(objs[i]);
 					if (dstate.check_sphere_visible(obj.pos, obj.radius)) {obj.draw(dstate, qbd, dist_scale, shadow_only);}
 				}
