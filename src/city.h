@@ -389,7 +389,7 @@ public:
  	virtual ~draw_state_t() {}
 	void set_enable_normal_map(bool val) {use_bmap = val;}
 	virtual void draw_unshadowed() {}
-	void begin_tile(point const &pos, bool will_emit_now=0);
+	void begin_tile(point const &pos, bool will_emit_now=0, bool ensure_active=0);
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader);
 	void end_draw();
 	virtual void post_draw();

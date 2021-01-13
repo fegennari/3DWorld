@@ -85,7 +85,8 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 
 void enable_animations_for_shader(shader_t &s) {s.add_property("animation_shader", "pedestrian_animation.part+");}
 
-void draw_state_t::begin_tile(point const &pos, bool will_emit_now) {
+void draw_state_t::begin_tile(point const &pos, bool will_emit_now, bool ensure_active) {
+	if (ensure_active) {ensure_shader_active();} // needed for use_smap=0 case
 	emit_now = (use_smap && try_bind_tile_smap_at_point((pos + xlate), s));
 	if (will_emit_now && !emit_now) {disable_shadow_maps(s);} // not using shadow maps or second (non-shadow map) pass - disable shadow maps
 }
@@ -717,11 +718,14 @@ class city_road_gen_t : public road_gen_base_t {
 	};
 
 	struct fire_hydrant_t : public city_obj_t {
+		float cylin_radius;
 		vector3d orient;
 
-		fire_hydrant_t(point const &pos_, float radius_, float height, vector3d const &orient_) : city_obj_t(pos_, radius_), orient(orient_) { // pos is bottom center point
+		fire_hydrant_t(point const &pos_, float radius_, float height, vector3d const &orient_) : city_obj_t(pos_, radius_), cylin_radius(radius), orient(orient_) {
 			bcube.set_from_sphere(*this);
 			set_cube_zvals(bcube, pos.z, pos.z+height);
+			pos.z += 0.5*height; // pos is bottom center point, make it the center
+			max_eq(radius, 0.5f*height); // use a more accurate bounding sphere; Note: no cube root of (r*r + r*r + h*h)
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
 			if (!shadow_only) {select_texture(WHITE_TEX);}
@@ -733,16 +737,16 @@ class city_road_gen_t : public road_gen_base_t {
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const { // Note: qbd is unused
 			if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 
-			if (building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
+			if (!shadow_only && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
 				building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_FHYDRANT, shadow_only);
 			}
-			else {
-				draw_fast_cylinder(pos, point(pos.x, pos.y, bcube.z2()), radius, radius, N_CYL_SIDES, 0, 4); // untextured, top end only
+			else { // draw as a simple cylinder, untextured, top end only
+				draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), 0.8*cylin_radius, 0.8*cylin_radius, (shadow_only ? 12 : N_CYL_SIDES), 0, 4);
 			}
 		}
 		bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 			point const pos2(pos + xlate);
-			float const r_sum(radius + radius_);
+			float const r_sum(cylin_radius + radius_);
 			if (!dist_less_than(pos_, pos2, r_sum)) return 0; // use sphere/vert cylinder instead?
 			// since this is a cylinder, and we're not supposed to stand on top of it, assume collision normal is in the XY plane
 			vector3d const coll_norm(vector3d((pos_.x - pos2.x), (pos_.y - pos2.y), 0.0).get_norm());
@@ -951,9 +955,9 @@ class city_road_gen_t : public road_gen_base_t {
 			//        however, tree planters seem to work just fine without this, even though they use nearly the same code
 			bool is_new_fh_tile(is_new_tile), is_new_bench_tile(1 || is_new_tile), is_new_planter_tile(is_new_tile);
 
-			// place fire_hydrants; don't fire hydrants in parks
+			// place fire_hydrants; don't add fire hydrants in parks
 			if (!plot.is_park) {
-				float const radius(0.036*car_length), height(0.18*car_length), dist_from_road(radius);
+				float const radius(0.04*car_length), height(0.18*car_length), dist_from_road(radius);
 				point pos;
 				pos.z = plot.z2();
 
@@ -1011,19 +1015,15 @@ class city_road_gen_t : public road_gen_base_t {
 
 			for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
 				if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling for group
-				
-				if (not_using_qbd) { // must setup shader and tile shadow map before drawing
-					dstate.ensure_shader_active(); // needed for use_smap=0 case
-					dstate.begin_tile(g->get_cube_center(), 1);
-				}
+				if (not_using_qbd) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // must setup shader and tile shadow map before drawing
+
 				for (unsigned i = start_ix; i < g->ix; ++i) {
 					assert(i < objs.size());
 					T const &obj(objs[i]);
 					if (dstate.check_sphere_visible(obj.pos, obj.radius)) {obj.draw(dstate, qbd, dist_scale, shadow_only);}
 				}
 				if (!qbd.empty()) { // we have something to draw
-					dstate.ensure_shader_active(); // needed for use_smap=0 case
-					dstate.begin_tile(g->get_cube_center(), 1);
+					dstate.begin_tile(g->get_cube_center(), 1, 1); // will_emit_now=1, ensure_active=1
 					qbd.draw_and_clear(); // draw this group with current smap
 				}
 			} // for g
@@ -1079,7 +1079,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 			draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
-			draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.12, shadow_only, 1); // dist_scale=0.12, not_using_qbd=1
+			draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.12, not_using_qbd=1
 			
 			if (!shadow_only) { // low profile, not drawn in shadow pass
 				draw_objects(planters, planter_groups, dstate, 0.1, shadow_only, 0); // dirt pass, dist_scale=0.1
