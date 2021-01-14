@@ -2760,7 +2760,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 
 	if (decid_trees_only && !decid_trees_enabled()) return;
 	// frame time when forcing shadow map recreation every frame: 7ms base, 5ms for models, 5ms for decid trees, 4ms for everything else, 18ms total
-	//highres_timer_t timer("Draw Shadow Pass"); // 1.5ms for cities with no cars
+	//highres_timer_t timer("Draw Shadow Pass"); // 0.99ms for cities with no cars
 	float const orig_near_plane(camera_pdu.near_);
 	bool const orig_fog_enabled(fog_enabled);
 	camera_pdu.near_ = 0.0; // move the near clipping plane to zero to prevent clipping of tiles that are between the light and the target but not in the shadow frustum
@@ -2777,16 +2777,16 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_t
 	if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // enable depth clamping so that shadow casters aren't clipped by the shadow frustum
 
 	if (!decid_trees_only) {
-		draw_tiles_shadow_pass(lpos, tile); // 0.04ms
+		draw_tiles_shadow_pass(lpos, tile); // 0.03ms
 
 		if (pine_trees_enabled()) {
 			draw_pine_trees(0, 1);
-			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->second->update_pine_tree_state(1, 0);} // reset detail; 0.14ms
+			for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->second->update_pine_tree_state(1, 0);} // reset detail; 0.09ms
 		}
-		if (scenery_enabled()) {draw_scenery(0, 1);} // 0.15ms
-		render_models(1, 0, 3, get_tiled_terrain_model_xlate()); // both transparent and opaque; VFC should work here for models; 0.7ms
+		if (scenery_enabled()) {draw_scenery(0, 1);} // 0.12ms
+		render_models(1, 0, 3, get_tiled_terrain_model_xlate()); // both transparent and opaque; VFC should work here for models; 0.45ms
 	}
-	if (decid_trees_enabled()) {draw_decid_trees(0, 1);} // 0.52ms / 5ms frame time
+	if (decid_trees_enabled()) {draw_decid_trees(0, 1);} // 0.27ms / 5ms frame time
 	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	fog_enabled      = orig_fog_enabled;
 	camera_pdu.near_ = orig_near_plane;

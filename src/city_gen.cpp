@@ -883,10 +883,10 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for c
 			return has_parking;
 		}
-		static bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float extra_spacing) {
+		static bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float blocker_spacing) {
 			cube_t bc(pos);
 			if (has_bcube_int_xy(bc, blockers, radius)) return 0; // intersects a building or parking lot - skip
-			bc.expand_by_xy(extra_spacing);
+			bc.expand_by_xy(blocker_spacing);
 			blockers.push_back(bc); // prevent trees and benches from being too close to each other
 			return 1;
 		}
@@ -949,6 +949,7 @@ class city_road_gen_t : public road_gen_base_t {
 			unsigned start_ix(0);
 			for (auto i = groups.begin(); i != groups.end(); start_ix = i->ix, ++i) {sort(objs.begin()+start_ix, objs.begin()+i->ix);}
 		}
+		// Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 		void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile) {
 			float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 			// FIXME: due to some problem I can't figure out, bench shadow maps don't work right unless is_new_bench_tile is reset for each plot;
@@ -958,14 +959,14 @@ class city_road_gen_t : public road_gen_base_t {
 			// place fire_hydrants; don't add fire hydrants in parks
 			if (!plot.is_park) {
 				float const radius(0.04*car_length), height(0.18*car_length), dist_from_road(radius);
-				point pos;
-				pos.z = plot.z2();
+				point pos(0.0, 0.0, plot.z2()); // XY will be assigned below
 
 				for (unsigned dim = 0; dim < 2; ++dim) {
 					pos[!dim] = plot.get_center_dim(!dim);
 
 					for (unsigned dir = 0; dir < 2; ++dir) {
 						pos[dim] = plot.d[dim][dir] - (dir ? 1.0 : -1.0)*dist_from_road; // move into the sidewalk along the road
+						// Note: will skip placement if too close to a previously placed tree, but that should be okay as it is relatively uncommon
 						if (!check_pt_and_place_blocker(pos, blockers, radius, 2.0*radius)) continue; // bad placement, skip
 						vector3d orient(zero_vector);
 						orient[!dim] = (dir ? 1.0 : -1.0); // oriented perpendicular to the road
@@ -1001,7 +1002,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 				for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {
 					tree_planter_t const planter(*i, planter_radius, planter_height);
-					add_obj_to_group(planter, planter.bcube, planters, planter_groups, is_new_planter_tile);
+					add_obj_to_group(planter, planter.bcube, planters, planter_groups, is_new_planter_tile); // no colliders for planters; pedestrians avoid the trees instead
 				}
 			}
 		}
@@ -1043,7 +1044,7 @@ class city_road_gen_t : public road_gen_base_t {
 		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars) {
 			// Note: fills in plots.has_parking
 			//timer_t timer("Gen Parking Lots and Place Objects");
-			vect_cube_t bcubes; // reused across calls
+			vect_cube_t bcubes; // local blockers for this plot; reused across calls
 			vector<point> tree_pos;
 			rand_gen_t rgen, detail_rgen;
 			parking_lots.clear();
@@ -1107,7 +1108,7 @@ class city_road_gen_t : public road_gen_base_t {
 				ret |= check_line_clip_update_t(p1, p2, t, i->bcube); // check bounding cube
 			}
 			for (auto i = fire_hydrants.begin(); i != fire_hydrants.end(); ++i) {
-				ret |= check_line_clip_update_t(p1, p2, t, i->bcube); // check bounding cube; TODO: cylinder intersection?
+				ret |= check_line_clip_update_t(p1, p2, t, i->bcube); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
 			}
 			return ret;
 		}
@@ -1160,7 +1161,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 				for (auto b = fire_hydrants.begin()+start_ix; b != fire_hydrants.begin()+i->ix; ++b) {
 					if (pos.x < b->bcube.x1()) break; // fire_hydrants are sorted by x1, no fire_hydrant after this can match
-					if (dist_xy_less_than(pos, b->pos, b->radius)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;}
+					if (dist_xy_less_than(pos, b->pos, b->radius)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;} // orange/yellow color
 				}
 			} // for i
 			return 0;
