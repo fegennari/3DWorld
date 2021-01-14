@@ -729,10 +729,10 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		static void pre_draw(draw_state_t &dstate, bool shadow_only) {
 			if (!shadow_only) {select_texture(WHITE_TEX);}
-			dstate.s.set_cur_color(colorRGBA(1.0, 0.75, 0.0));
+			if (!shadow_only) {dstate.s.set_cur_color(colorRGBA(1.0, 0.75, 0.0));}
 		}
 		static void post_draw(draw_state_t &dstate, bool shadow_only) {
-			dstate.s.set_cur_color(WHITE); // restore to default color
+			if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
 		}
 		void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const { // Note: qbd is unused
 			if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
