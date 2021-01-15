@@ -594,6 +594,7 @@ struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
 	uint8_t hallway_dim, real_num_parts, roof_type; // main hallway dim: 0=x, 1=y, 2=none
+	int8_t open_door_ix;
 	bool is_house, has_chimney, has_garage, has_shed, has_courtyard, has_complex_floorplan, has_helipad;
 	colorRGBA side_color, roof_color, detail_color, door_color, wall_color;
 	cube_t bcube, pri_hall, driveway;
@@ -607,12 +608,12 @@ struct building_t : public building_geom_t {
 
 	friend class building_indir_light_mgr_t;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), is_house(0), has_chimney(0), has_garage(0),
-		has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK),
-		door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0) {}
-	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT),
-		is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0), side_color(WHITE),
-		roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0) {}
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), open_door_ix(-1), is_house(0),
+		has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0), side_color(WHITE), roof_color(WHITE),
+		detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0) {}
+	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), open_door_ix(-1),
+		is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0),
+		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0) {}
 	static float get_scaled_player_radius();
 	static float get_min_front_clearance() {return 2.05f*get_scaled_player_radius();} // slightly larger than the player diameter
 	bool is_valid() const {return !bcube.is_all_zeros();}
@@ -684,7 +685,8 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior, bool get_int_ext_walls);
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0, point const *const only_cont_pt=nullptr) const;
 	void get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const;
-	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) const;
+	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type);
+	void player_not_near_building() {register_open_ext_door_state(-1);}
 	int find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
@@ -801,6 +803,7 @@ private:
 	void add_window_blinds(cube_t const &window, bool dim, bool dir, unsigned room_ix, unsigned floor);
 	void add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor);
 	int get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const;
+	void register_open_ext_door_state(int door_ix);
 };
 
 struct vect_building_t : public vector<building_t> {

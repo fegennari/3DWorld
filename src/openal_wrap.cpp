@@ -134,6 +134,8 @@ public:
 		add_new_sound("reload.wav"     ); // SOUND_RELOAD
 		add_new_sound("falling.wav"    ); // SOUND_FALLING
 		add_new_sound("horn.wav"       ); // SOUND_HORN
+		add_new_sound("door_open.wav"  ); // SOUND_DOOR_OPEN
+		add_new_sound("door_close.wav" ); // SOUND_DOOR_CLOSE
 		cout << endl;
 
 		// create sources

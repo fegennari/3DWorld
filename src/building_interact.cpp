@@ -7,6 +7,8 @@
 #include "openal_wrap.h"
 
 
+// lights
+
 bool building_t::toggle_room_light(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
 	if (!has_room_geom()) return 0; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -92,5 +94,17 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 		was_updated = 1;
 	} // for i
 	if (was_updated) {interior->room_geom->clear_materials();} // need to recreate them
+}
+
+// doors
+
+void building_t::register_open_ext_door_state(int door_ix) {
+	bool const is_open(door_ix >= 0), was_open(open_door_ix >= 0);
+	if (is_open == was_open) return; // no state change
+	unsigned const dix(is_open ? (unsigned)door_ix : (unsigned)open_door_ix);
+	assert(dix < doors.size());
+	point const sound_pos(doors[dix].get_bcube().get_cube_center() + get_camera_coord_space_xlate()); // convert to camera space
+	gen_sound((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);																					 //
+	open_door_ix = door_ix;
 }
 
