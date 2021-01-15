@@ -4,6 +4,7 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
+#include "openal_wrap.h"
 
 
 bool building_t::toggle_room_light(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
@@ -34,6 +35,8 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 		}
 	}
 	interior->room_geom->clear_and_recreate_lights(); // recreate light geom with correct emissive properties
+	point const sound_pos(get_camera_pos() + (light.get_cube_center() - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
+	gen_sound(SOUND_CLICK, sound_pos);
 	return 1;
 }
 
