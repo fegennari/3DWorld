@@ -207,7 +207,7 @@ class building_indir_light_mgr_t {
 		vector<room_object_t> const &objs(b.interior->room_geom->objs);
 		assert((unsigned)cur_light < objs.size());
 		room_object_t const &ro(objs[cur_light]);
-		colorRGBA const lcolor(ro.get_color());
+		colorRGBA const lcolor((ro.type == TYPE_LAMP) ? LAMP_COLOR : ro.get_color());
 		cube_t const scene_bounds(get_scene_bounds_bcube()); // expected by lmap update code
 		point const ray_scale(scene_bounds.get_size()/b.bcube.get_size()), llc_shift(scene_bounds.get_llc() - b.bcube.get_llc()*ray_scale);
 		float const tolerance(1.0E-5*b.bcube.get_max_extent()), light_zval(ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
@@ -215,6 +215,7 @@ class building_indir_light_mgr_t {
 		float weight(100.0f*(surface_area/0.0003f)/LOCAL_RAYS); // normalize to the number of rays
 		if (b.has_pri_hall()) {weight *= 0.8;} // floorplan is open and well lit, indir lighting value seems too high
 		if (b.is_house) {weight *= 2.0;} // houses have dimmer lights and seem to work better with more indir
+		if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 		unsigned const NUM_PRI_SPLITS = 16;
 		int const num_rays(LOCAL_RAYS/NUM_PRI_SPLITS);
 
@@ -359,7 +360,7 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if (i->type != TYPE_LIGHT || !i->is_lit()) continue; // not a light, or light not on
+		if ((i->type != TYPE_LIGHT && i->type != TYPE_LAMP) || !i->is_lit()) continue; // not a light, or light not on
 		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
 		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
 
