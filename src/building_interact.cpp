@@ -37,14 +37,17 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	if (closest_dist_sq == 0.0) return 0; // no light found
 	assert(closest_light < objs.size());
 	room_object_t &light(objs[closest_light]);
+	bool updated(0);
 	
 	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
 		if (i->is_light_type() && i->room_id == light.room_id && i->z1() == light.z1()) {
 			i->toggle_lit_state(); // Note: doesn't update indir lighting
+			if (i->type == TYPE_LAMP) continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
 			set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
+			updated = 1;
 		}
-	}
-	interior->room_geom->clear_and_recreate_lights(); // recreate light geom with correct emissive properties
+	} // for i
+	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
 	point const sound_pos(get_camera_pos() + (light.get_cube_center() - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
 	gen_sound(SOUND_CLICK, sound_pos);
 	return 1;
