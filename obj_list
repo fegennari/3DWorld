@@ -108,6 +108,7 @@ building_rooms.o
 building_room_geom.o
 building_reflections.o
 building_pictures.o
+building_interact.o
 simplifier.o
 city_model.o
 city_building_params.o
