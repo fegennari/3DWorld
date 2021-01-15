@@ -2126,7 +2126,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
 			}
 			if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
-			obj_model_insts.emplace_back((i - objs.begin()), i->get_model_id(), i->flags, i->color, dir);
+			obj_model_insts.emplace_back((i - objs.begin()), i->get_model_id(), dir);
 			//get_material(tid_nm_pair_t()).add_cube_to_verts(*i, WHITE, tex_origin); // for debugging of model bcubes
 		}
 	} // for i
@@ -2279,9 +2279,9 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		//++occlusion_stats.nvis;
 		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, player_in_building, shadow_only, reflection_pass)) continue;
 		//++occlusion_stats.ndraw;
-		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && (i->flags & RO_FLAG_LIT));
+		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && (obj.flags & RO_FLAG_LIT));
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
-		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, i->color, xlate, i->model_id, shadow_only, 0, 0);
+		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, i->model_id, shadow_only, 0, 0);
 		if (is_emissive) {s.set_color_e(BLACK);}
 		obj_drawn = 1;
 	} // for i
