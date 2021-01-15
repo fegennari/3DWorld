@@ -16,9 +16,17 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	unsigned closest_light(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type != TYPE_LIGHT) continue; // not a light
+		if (!i->is_light_type()) continue; // not a light
 		assert(i->room_id < interior->rooms.size());
-		if (i->z1() < closest_to.z || (i->z1() > (closest_to.z + window_vspacing) && !interior->rooms[i->room_id].is_sec_bldg)) continue; // light is on the wrong floor
+
+		if (!interior->rooms[i->room_id].is_sec_bldg) { // secondary buildings have only one floor
+			if (i->type == TYPE_LAMP) {
+				if (fabs(i->get_center_dim(2) - closest_to.z) > window_vspacing) continue; // lamp is on the wrong floor
+			}
+			else {
+				if (i->z1() < closest_to.z || (i->z1() > (closest_to.z + window_vspacing))) continue; // light is on the wrong floor
+			}
+		}
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
 		float const dist_sq(p2p_dist_sq(closest_to, center));
@@ -29,7 +37,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	room_object_t &light(objs[closest_light]);
 	
 	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (i->type == TYPE_LIGHT && i->room_id == light.room_id && i->z1() == light.z1()) {
+		if (i->is_light_type() && i->room_id == light.room_id && i->z1() == light.z1()) {
 			i->toggle_lit_state(); // Note: doesn't update indir lighting
 			set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
 		}
@@ -49,7 +57,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 	bool updated(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type != TYPE_LIGHT) continue; // not a light
+		if (i->type != TYPE_LIGHT) continue; // not a light (excludes lamps)
 		if (i->z1() < zval || i->z1() > (zval + window_vspacing) || !room.contains_cube_xy(*i)) continue; // light is on the wrong floor or in the wrong room
 		if (i->is_lit() != make_on) {i->toggle_lit_state(); updated = 1;} // Note: doesn't update indir lighting or room light value
 	} // for i
@@ -68,13 +76,17 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
+		if (i->is_obj_model_type()) continue; // light_amt currently does not apply to 3D models; should it?
 
-		if (i->type == TYPE_WINDOW) {
+		if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_BLOCKER ||
+			i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING || i->type == TYPE_BLINDS)
+		{
+			continue; // not a type that uses light_amt
+		}
+		else if (i->type == TYPE_WINDOW) {
 			if (lit_state) {i->flags |= RO_FLAG_LIT;} else {i->flags &= ~RO_FLAG_LIT;}
 		}
 		else {
-			if (i->type == TYPE_STAIR || i->type == TYPE_STAIR_WALL || i->type == TYPE_ELEVATOR || i->type == TYPE_LIGHT || i->type == TYPE_BLOCKER ||
-				i->type == TYPE_COLLIDER || i->type == TYPE_SIGN || i->type == TYPE_WALL_TRIM || i->type == TYPE_RAILING || i->type == TYPE_BLINDS) continue; // not a type that uses light_amt
 			if (lit_state) {i->light_amt += light_intensity;} else {i->light_amt = max((i->light_amt - light_intensity), 0.0f);} // shouldn't be negative, but clamp to 0 just in case
 		}
 		was_updated = 1;

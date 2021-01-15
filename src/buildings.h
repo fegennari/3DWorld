@@ -297,6 +297,8 @@ struct room_object_t : public cube_t {
 	bool is_visible () const {return !(flags & RO_FLAG_INVIS);}
 	bool no_coll    () const {return  (flags & RO_FLAG_NOCOLL);}
 	bool is_interior() const {return  (flags & RO_FLAG_INTERIOR);}
+	bool is_light_type() const {return (type == TYPE_LIGHT || type == TYPE_LAMP);}
+	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_TYPES);}
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	static bool enable_rugs();
 	static bool enable_pictures();

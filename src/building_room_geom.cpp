@@ -2063,7 +2063,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_BLINDS:   return texture_color(get_blinds_tid()).modulate_with(color);
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
-	if (type >= TYPE_TOILET && type < NUM_TYPES) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
+	if (is_obj_model_type()) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
 	return color; // Note: probably should always set color so that we can return it here
 }
 
@@ -2116,7 +2116,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_COLLIDER: break; // not drawn
 		default: break;
 		} // end switch
-		if (i->type >= TYPE_TOILET && i->type < NUM_TYPES) { // handle drawing of 3D models
+		if (i->is_obj_model_type()) { // handle drawing of 3D models
 			vector3d dir(zero_vector);
 			dir[i->dim] = (i->dir ? 1.0 : -1.0);
 

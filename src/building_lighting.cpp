@@ -360,7 +360,7 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if ((i->type != TYPE_LIGHT && i->type != TYPE_LAMP) || !i->is_lit()) continue; // not a light, or light not on
+		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
 		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
 		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
 
@@ -553,8 +553,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		camera_near_building = bcube_exp.contains_pt(camera_bs);
 	}
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!i->is_lit()) continue; // light not on
-		if (i->type != TYPE_LIGHT && i->type != TYPE_LAMP) continue; // not a light or lamp
+		if (!i->is_lit() || !i->is_light_type()) continue; // light not on, or not a light or lamp
 		point const lpos(i->get_cube_center()); // centered in the light fixture
 		point lpos_rot(lpos);
 		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
