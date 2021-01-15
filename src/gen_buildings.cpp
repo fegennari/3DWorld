@@ -1219,8 +1219,10 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 			}
 			bdraw.add_tquad(*this, door_side, bcube, tp, color, 0, exclude_frame);
 		} // for d
-		for (unsigned e = 0; e < num_edges; ++e) { // add untextured door edges
-			bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), color); // Note: better to pick a single white texel in door tex and set tscale=0.0?
+		if (opened) { // add untextured door edges; only needed for open doors
+			for (unsigned e = 0; e < num_edges; ++e) {
+				bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), color); // Note: better to pick a single white texel in door tex and set tscale=0.0?
+			}
 		}
 	} // for side
 }
@@ -1385,7 +1387,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 		bool const dim2(fabs(normal2.x) < fabs(normal2.y)), dir2(normal2[dim] > 0.0); // dir2 is reversed
 		add_door_to_bdraw(d->get_bcube(), open_door_draw, d->type, dim2, dir2, 0, opens_outward, 1); // opened=0, exterior=1
 	}
-	open_door_draw.draw(s, 0, 0, 1); // direct_draw_no_vbo=1
+	open_door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
 	return 1;
 }
 
