@@ -620,7 +620,9 @@ public:
 	}
 
 	// Note: invert_tc only applies to doors
-	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color, bool invert_tc_x=0, bool exclude_frame=0) {
+	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
+		bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0)
+	{
 		assert(tquad.npts == 3 || tquad.npts == 4); // triangles or quads
 		auto &verts(get_verts(tex, (tquad.npts == 3))); // 0=quads, 1=tris
 		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
@@ -646,7 +648,10 @@ public:
 		for (unsigned i = 0; i < tquad.npts; ++i) {
 			vert.v = tquad.pts[i];
 
-			if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
+			if (no_tc) { // untextured, for door edges
+				vert.t[0] = vert.t[1] = 0.0;
+			}
+			else if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
 				vert.t[0] = (vert.v[dim] + tex_off)*tsx; // use nonzero width dim
 				vert.t[1] = (vert.v.z - bcube.z1())*tsy;
 			}
@@ -1219,7 +1224,7 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 		} // for d
 		if (opened) { // add untextured door edges; only needed for open doors
 			for (unsigned e = 0; e < num_edges; ++e) {
-				bdraw.add_tquad(*this, door_edges[e], bcube, tid_nm_pair_t(WHITE_TEX), color); // Note: better to pick a single white texel in door tex and set tscale=0.0?
+				bdraw.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // no_tc=1, will use a single texel from the corner of the door texture
 			}
 		}
 	} // for side
