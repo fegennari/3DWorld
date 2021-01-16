@@ -315,10 +315,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		}
 		else {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *e, p_last, 1, 1, cnorm);} // skip_z=1
 	}
-	/*for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // doors tend to block the player, don't collide with them
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+		if (i->open) continue; // doors tend to block the player, don't collide with them unless they're closed
 		if (obj_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
 		had_coll |= sphere_cube_int_update_pos(pos, xy_radius, *i, p_last, 1, 0, cnorm); // skip_z=0
-	}*/
+	}
 	if (!xy_only && 2.2f*radius < (floor_spacing - floor_thickness)) { // diameter is smaller than space between floor and ceiling
 		// check Z collision with floors; no need to check ceilings; this will set pos.z correctly so that we can set skip_z=0 in later tests
 		obj_z = max(pos.z, p_last.z);

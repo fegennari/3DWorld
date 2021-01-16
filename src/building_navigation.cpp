@@ -335,6 +335,11 @@ public:
 	bool find_path_points(unsigned room1, unsigned room2, float radius, float height, bool use_stairs,
 		bool is_first_path, bool up_or_down, vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
 	{
+		/*
+		TODO: How to handle closed doors?
+		* What if a door is closed after the AI has chosen a path? Recompute paths when a door is opened or closed? Should that update the navigation graph? Should people open doors?
+		* Are doors handled as part of the room graph, or as obstacles within a room?
+		*/
 		assert(room1 < nodes.size() && room2 < nodes.size());
 		assert(room1 != room2); // or just return an empty path?
 		path.clear();
