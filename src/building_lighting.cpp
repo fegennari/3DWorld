@@ -140,6 +140,11 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 		// for now elevators are treated the same as walls with the same color, even though the inside of open elevators is wood
 		for (unsigned n = 0; n < num_cubes; ++n) {cc.emplace_back(cubes[n], wall_color);} // can only assign the same color to all sides of the cube
 	}
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+		if (i->open) continue; // add only closed doors
+		cc.emplace_back(*i, WHITE);
+		cc.back().expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness
+	}
 	add_colored_cubes(interior->ceilings, mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color()), cc);
 	add_colored_cubes(interior->floors,   mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()), cc);
 	add_colored_cubes(details,            detail_color.   modulate_with(mat.roof_tex. get_avg_color()), cc); // should this be included?
@@ -156,7 +161,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 		cc.emplace_back(*c, c->get_color());
 		if (c->type == TYPE_TABLE) {cc.back().z1() += 0.88*c->dz();} // at least be a bit more accurate for tables by using only the top
 		if (c->type == TYPE_DESK ) {cc.back().z1() += 0.85*c->dz();} // at least be a bit more accurate for desks  by using only the top
-	}
+	} // for c
 }
 
 
