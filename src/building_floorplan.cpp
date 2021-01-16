@@ -6,16 +6,27 @@
 #include "buildings.h"
 #include "profiler.h"
 
-float const door_open_probability = 1.0; // [0.0, 1.0]
+bool const SPLIT_DOOR_PER_FLOOR   = 0; // allows mixed open/closed doors per-floor, and better texture scaling, but slower, and uses 2x more memory
+float const DOOR_OPEN_PROBABILITY = 1.0; // [0.0, 1.0]
 
 extern building_params_t global_building_params;
 
 
-void add_interior_door(door_t &door, vect_door_t &doors) {
-	door.open = (fract(doors.size()*123.456) < door_open_probability);
-	doors.push_back(door);
+void building_t::add_interior_door(door_t &door) {
+	assert(interior);
+	door.open = (fract(interior->doors.size()*123.456) < DOOR_OPEN_PROBABILITY);
+	if (!SPLIT_DOOR_PER_FLOOR) {interior->doors.push_back(door); return;} // add a single door across all floors
+	float const floor_spacing(get_window_vspace()), door_height(floor_spacing - get_floor_thickness());
+
+	// Note: door.dz() should be an exact multiple of floor_spacing except for an extra floor thickness at the bottom
+	for (float zval = door.z1(); zval + 0.5f*floor_spacing < door.z2(); zval += floor_spacing) { // continue until we don't have enough space left to add a door
+		door_t door_seg(door);
+		set_cube_zvals(door_seg, zval, zval+door_height); // clip to ceiling
+		interior->doors.push_back(door_seg);
+	}
 }
-void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, vect_door_t &doors) {
+
+void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir) {
 	// remove a section from this cube; c is input+output cube, c2 is other output cube
 	assert(v1 > c.d[xy][0] && v1 < v2 && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
 	c2 = c; // clone first cube
@@ -24,14 +35,16 @@ void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, floa
 	door_t door(c, !xy, open_dir);
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
 	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
-	add_interior_door(door, doors);
+	add_interior_door(door);
 }
-void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, vect_cube_t &walls, vect_door_t &doors) {
+
+void building_t::insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side) {
 	cube_t wall2;
-	remove_section_from_cube_and_add_door(wall, wall2, v1, v2, dim, open_dir, doors);
+	remove_section_from_cube_and_add_door(wall, wall2, v1, v2, dim, open_dir);
 	if (keep_high_side) {swap(wall, wall2);} // swap left and right
-	walls.push_back(wall2);
+	interior->walls[!dim].push_back(wall2);
 }
+
 float cube_rand_side_pos(cube_t const &c, bool dim, float min_dist_param, float min_dist_abs, rand_gen_t &rgen) {
 	assert(min_dist_param < 0.5f); // aplies to both ends
 	float const lo(c.d[dim][0]), hi(c.d[dim][1]), delta(hi - lo), gap(max(min_dist_abs, min_dist_param*delta)), v1(lo + gap), v2(hi - gap);
@@ -309,7 +322,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 									for (unsigned n = 0; n < 3; ++n) { // add doors for corner room, end room, and side room
 										float const lo_pos(door_pos[n] - doorway_hwidth), hi_pos(door_pos[n] + doorway_hwidth);
-										insert_door_in_wall_and_add_seg(conn_wall, lo_pos, hi_pos, min_dim, e, !d, room_walls, interior->doors);
+										insert_door_in_wall_and_add_seg(conn_wall, lo_pos, hi_pos, min_dim, e, !d);
 									}
 								}
 								room_walls.push_back(conn_wall);
@@ -346,7 +359,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								float const lo_pos(door_pos[n] - doorway_hwidth), hi_pos(door_pos[n] + doorway_hwidth);
 								// omit the door if there isn't enough space in the wall for it (wall was shifted too close to offset_outer)
 								if (n == 1 && !(lo_pos-wall_half_thick > conn_hall_end_room.d[!min_dim][0] && hi_pos+wall_half_thick < conn_hall_end_room.d[!min_dim][1])) continue;
-								insert_door_in_wall_and_add_seg(long_swall, lo_pos, hi_pos, !min_dim, d, !e, hall_walls, interior->doors);
+								insert_door_in_wall_and_add_seg(long_swall, lo_pos, hi_pos, !min_dim, d, !e);
 							}
 						} // for e
 						for (unsigned n = 0; n <= num_cent_rooms; ++n) {
@@ -367,7 +380,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 								cube_t *to_split[3] = {&long_swall, &short_swall, &main_wall};
 
 								for (unsigned n = 0; n < num_doors_inner_rooms; ++n) {
-									insert_door_in_wall_and_add_seg(*to_split[n], lo_pos, hi_pos, !min_dim, (d^(n&1)), 1, hall_walls, interior->doors);
+									insert_door_in_wall_and_add_seg(*to_split[n], lo_pos, hi_pos, !min_dim, (d^(n&1)), 1);
 								}
 							}
 							// add walls separating rooms
@@ -488,7 +501,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 									float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 
 									for (unsigned dir = 0; dir < 2; ++dir) {
-										insert_door_in_wall_and_add_seg(sep_walls[dir], lo_pos, hi_pos, min_dim, dir, !d, room_walls, interior->doors);
+										insert_door_in_wall_and_add_seg(sep_walls[dir], lo_pos, hi_pos, min_dim, dir, !d);
 									}
 								}
 								room_split_pos = next_split_pos;
@@ -561,7 +574,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						clip_wall_to_ceil_floor(door, fc_thick);
 						door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
-						add_interior_door(door, interior->doors);
+						add_interior_door(door);
 					}
 					pos = next_pos;
 				} // for i
@@ -620,7 +633,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				float const doorway_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
 				float const lo_pos(doorway_pos - doorway_hwidth), hi_pos(doorway_pos + doorway_hwidth);
 				bool const open_dir(wall_pos > part_door_open_dir_tp[wall_dim]); // doors open away from the building center
-				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, open_dir, interior->doors);
+				remove_section_from_cube_and_add_door(wall, wall2, lo_pos, hi_pos, !wall_dim, open_dir);
 				interior->walls[wall_dim].push_back(wall);
 				interior->walls[wall_dim].push_back(wall2);
 				float door_lo[2] = {lo_pos, lo_pos}, door_hi[2] = {hi_pos, hi_pos}; // passed to next split step to avoid placing a wall that intersects this doorway
@@ -653,7 +666,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						create_wall(o_wall1, wall_dim, other_wall_pos, fc_thick, wall_half_thick, wall_edge_spacing);
 						float const door_pos(cube_rand_side_pos(c, !wall_dim, 0.25, doorway_width, rgen));
 						float const o_lo_pos(door_pos - doorway_hwidth), o_hi_pos(door_pos + doorway_hwidth);
-						remove_section_from_cube_and_add_door(o_wall1, o_wall2, o_lo_pos, o_hi_pos, !wall_dim, !open_dir, interior->doors); // opens in other dir
+						remove_section_from_cube_and_add_door(o_wall1, o_wall2, o_lo_pos, o_hi_pos, !wall_dim, !open_dir); // opens in other dir
 						interior->walls[wall_dim].push_back(o_wall1);
 						interior->walls[wall_dim].push_back(o_wall2);
 						wall.d[wall_dim][dir] = o_wall1.d[wall_dim][dir]; // make original wall the entire width of the hall so that the room on the other side doesn't overlap the hall
@@ -780,7 +793,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
 					if (interior->is_blocked_by_stairs_or_elevator(cand, doorway_width, elevators_only)) continue; // stairs in the way, skip; should we assert !pref_split?
 					bool const open_dir(wall.get_center_dim(d) > bldg_door_open_dir_tp[d]); // doors open away from the building center
-					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0, walls, interior->doors); // Note: modifies wall
+					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0); // Note: modifies wall
 					was_split = 1;
 					break;
 				} // for ntries

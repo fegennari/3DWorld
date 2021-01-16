@@ -1173,7 +1173,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bdraw.add_section(*this, empty_vc, door, tid_nm_pair_t(WHITE_TEX), GRAY, dim_mask2, 0, 0, 1, 0);
 			}
 		} // for i
-		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; not exactly what we want, these really should be separate tquads per floor (1.1M T)
+		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; these really should be separate tquads per floor (1.1M T), see SPLIT_DOOR_PER_FLOOR in building_floorplan.cpp
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 				add_door_to_bdraw(*i, bdraw, tquad_with_ix_t::TYPE_HDOOR, i->dim, i->open_dir, i->open, 0, 0); // opens_out=0, exterior=0
 			}
