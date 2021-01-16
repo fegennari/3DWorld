@@ -6,25 +6,25 @@
 #include "buildings.h"
 #include "profiler.h"
 
-bool const DRAW_OPEN_DOORS = 1;
+float const door_open_probability = 1.0; // [0.0, 1.0]
 
 extern building_params_t global_building_params;
 
 
-void remove_section_from_cube(cube_t &c, cube_t &c2, float v1, float v2, bool xy) { // c is input+output cube, c2 is other output cube
-	assert(v1 > c.d[xy][0] && v1 < v2 && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
-	c2 = c; // clone first cube
-	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side
-}
-void add_door_to_doorway(cube_t &c, float v1, float v2, bool xy, bool open_dir, vect_door_t &doors) {
-	door_t door(c, !xy, open_dir, DRAW_OPEN_DOORS);
-	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
-	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
+void add_interior_door(door_t &door, vect_door_t &doors) {
+	door.open = (fract(doors.size()*123.456) < door_open_probability);
 	doors.push_back(door);
 }
 void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, vect_door_t &doors) {
-	remove_section_from_cube(c, c2, v1, v2, xy);
-	add_door_to_doorway(c, v1, v2, xy, open_dir, doors);
+	// remove a section from this cube; c is input+output cube, c2 is other output cube
+	assert(v1 > c.d[xy][0] && v1 < v2 && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
+	c2 = c; // clone first cube
+	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side
+	// add a door
+	door_t door(c, !xy, open_dir);
+	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
+	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
+	add_interior_door(door, doors);
 }
 void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, vect_cube_t &walls, vect_door_t &doors) {
 	cube_t wall2;
@@ -557,11 +557,11 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 						c.d[!min_dim][ 1] = next_pos;
 						add_room(c, part_id, 1, 0, 1); // office
 						if (i == num_rooms/2) {interior->rooms.back().assign_all_to(RTYPE_BATH);} // assign the middle room to be a bathroom
-						door_t door(c, min_dim, d, DRAW_OPEN_DOORS); // copy zvals and wall pos
+						door_t door(c, min_dim, d); // copy zvals and wall pos
 						clip_wall_to_ceil_floor(door, fc_thick);
 						door.d[ min_dim][d] = hall_wall_pos[d]; // set to zero area at hallway
 						for (unsigned e = 0; e < 2; ++e) {door.d[!min_dim][e] = doorway_vals[2*i+e];}
-						interior->doors.push_back(door);
+						add_interior_door(door, interior->doors);
 					}
 					pos = next_pos;
 				} // for i
