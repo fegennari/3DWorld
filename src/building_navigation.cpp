@@ -414,6 +414,7 @@ void building_t::build_nav_graph() const {
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
 		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
+			if (!d->open) continue; // door starts off closed, treat it as a barrier for now and don't connect the rooms
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
 			cube_t dc(*d);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
