@@ -10,6 +10,7 @@
 
 bool const USE_BKG_THREAD = 1;
 
+extern bool toggle_door_open_state;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
@@ -671,7 +672,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		bool dynamic_shadows(0);
 
 		if (camera_near_building && !is_lamp) {
-			if (camera_surf_collide && camera_in_building && lpos_rot.z > camera_bs.z && (camera_on_stairs || lpos_rot.z < (camera_bs.z + window_vspacing)) &&
+			if (toggle_door_open_state) {
+				dynamic_shadows = 1; // toggling a door state will generally invalidate shadows in the building for that frame
+			}
+			else if (camera_surf_collide && camera_in_building && lpos_rot.z > camera_bs.z && (camera_on_stairs || lpos_rot.z < (camera_bs.z + window_vspacing)) &&
 				clipped_bc.contains_pt(camera_bs) && dist_less_than(lpos_rot, camera_bs, dshadow_radius))
 			{
 				dynamic_shadows = 1; // camera shadow

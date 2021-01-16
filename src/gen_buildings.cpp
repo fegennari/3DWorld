@@ -1174,9 +1174,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			}
 		} // for i
 		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; these really should be separate tquads per floor (1.1M T), see SPLIT_DOOR_PER_FLOOR in building_floorplan.cpp
-			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-				add_door_to_bdraw(*i, bdraw, tquad_with_ix_t::TYPE_HDOOR, i->dim, i->open_dir, i->open, 0, 0); // opens_out=0, exterior=0
-			}
+			for (unsigned i = 0; i < interior->doors.size(); ++i) {add_interior_door_to_bdraw(bdraw, i);}
 		}
 		bdraw.end_draw_range_capture(interior->draw_range);
 	} // end interior case
@@ -1225,6 +1223,13 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 			}
 		}
 	} // for side
+}
+
+void building_t::add_interior_door_to_bdraw(building_draw_t &bdraw, unsigned door_ix) const {
+	assert(interior);
+	assert(door_ix < interior->doors.size());
+	door_t const &door(interior->doors[door_ix]);
+	add_door_to_bdraw(door, bdraw, tquad_with_ix_t::TYPE_HDOOR, door.dim, door.open_dir, door.open, 0, 0); // opens_out=0, exterior=0
 }
 
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt) const {
@@ -2015,6 +2020,7 @@ public:
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
+						(*i)->door_state_tracker.draw_closed_doors_for_building(b, bi->ix, s);
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						b.draw_room_geom(s, oc, xlate, bi->ix, 1, 0, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1 (draw everything, since shadow may be cached)
 						bool const player_close(dist_less_than(lpos, pre_smap_player_pos, camera_pdu.far_)); // Note: pre_smap_player_pos already in building space
@@ -2084,6 +2090,24 @@ public:
 			} // for bi
 		} // for g
 	}
+
+	struct door_state_tracker_t {
+		set<unsigned> cur_closed_doors;
+		unsigned cur_building_ix;
+		door_state_tracker_t() : cur_building_ix(0) {}
+
+		void update_state_for_building(building_t &b, unsigned building_ix, point const &camera_xlated) {
+			if (building_ix != cur_building_ix) {cur_closed_doors.clear(); cur_building_ix = building_ix;} // handle switch to different building
+			b.toggle_door_state(camera_xlated, cur_closed_doors);
+		}
+		void draw_closed_doors_for_building(building_t const &b, unsigned building_ix, shader_t &s) {
+			if (cur_closed_doors.empty() || building_ix != cur_building_ix) return; // no closed doors, or wrong building
+			building_draw_t bdraw;
+			for (auto i = cur_closed_doors.begin(); i != cur_closed_doors.end(); ++i) {b.add_interior_door_to_bdraw(bdraw, *i);}
+			bdraw.draw(s, 0, 1); // direct_draw_no_vbo=1
+		}
+	};
+	door_state_tracker_t door_state_tracker;
 
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall, 2 = reflection for room with interior wall, 3 = reflection from mirror in a house
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
@@ -2221,6 +2245,7 @@ public:
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
 						if (reflection_pass == 2)  continue; // interior room, don't need to draw windows and exterior doors
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, door_type); // and draw opened door
+						(*i)->door_state_tracker.draw_closed_doors_for_building(b, bi->ix, s);
 						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
@@ -2248,7 +2273,7 @@ public:
 							indir_bcs_ix = bcs_ix; indir_bix = bi->ix;
 						}
 						if (toggle_room_light) {b.toggle_room_light(camera_xlated);}
-						if (toggle_door_open_state) {b.toggle_door_open_state(camera_xlated);}
+						if (toggle_door_open_state) {(*i)->door_state_tracker.update_state_for_building(b, bi->ix, camera_xlated);}
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2 && camera_surf_collide) {b.update_elevators(camera_xlated);} // update elevators if the player is in the building
 					} // for bi

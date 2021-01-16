@@ -107,11 +107,11 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	unsigned const dix(is_open ? (unsigned)door_ix : (unsigned)open_door_ix);
 	assert(dix < doors.size());
 	point const sound_pos(doors[dix].get_bcube().get_cube_center() + get_camera_coord_space_xlate()); // convert to camera space
-	gen_sound((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);																					 //
+	gen_sound((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	open_door_ix = door_ix;
 }
 
-bool building_t::toggle_door_open_state(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
+bool building_t::toggle_door_state(point const &closest_to, set<unsigned> &cur_closed_doors) { // Note: called by the player; closest_to is in building space, not camera space
 	if (!interior) return 0; // error?
 	float const window_vspacing(get_window_vspace());
 	float closest_dist_sq(0.0);
@@ -128,7 +128,10 @@ bool building_t::toggle_door_open_state(point const &closest_to) { // Note: call
 	assert(closest_door < interior->doors.size());
 	door_t &door(interior->doors[closest_door]);
 	door.open ^= 1; // toggle open state
-	// TODO: update vertex data somehow
+	// update our set of currently closed doors
+	if (door.open) {cur_closed_doors.erase(closest_door);}
+	else {cur_closed_doors.insert(closest_door);}
+	// TODO: is there a way to remove open doors for this building without having to track the VBO offset for every door and update a sub-range, or rebuild the entire VBO for the current tile?
 	point const sound_pos(get_camera_pos() + (door.get_cube_center() - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
 	gen_sound((door.open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	return 1;
