@@ -541,6 +541,7 @@ struct building_interior_t {
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	draw_range_t draw_range;
 	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
+	unsigned door_vert_start_ix; // for updating vertex data when door open/close state is changed
 
 	building_interior_t();
 	~building_interior_t();
@@ -692,6 +693,7 @@ struct building_t : public building_geom_t {
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
 	bool toggle_door_state(point const &closest_to, set<unsigned> &cur_closed_doors);
+	bool toggle_door_state(point const &closest_to, unsigned &door_ix);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	void draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
@@ -729,6 +731,7 @@ struct building_t : public building_geom_t {
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const;
 	void add_interior_door_to_bdraw(building_draw_t &bdraw, unsigned door_ix) const;
+	void update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix);
 private:
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;

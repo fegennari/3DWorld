@@ -16,8 +16,8 @@ using std::string;
 bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const ADD_ROOM_SHADOWS      = 1;
 bool const ADD_ROOM_LIGHTS       = 1;
-bool const DRAW_INTERIOR_DOORS   = 1;
 bool const DRAW_EXT_REFLECTIONS  = 1;
+bool const PLAYER_CAN_OPEN_DOORS = 1;
 bool const LINEAR_ROOM_DLIGHT_ATTEN = 1;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
@@ -443,6 +443,17 @@ class building_draw_t {
 			clear_cont(tri_verts); // no longer needed
 			if (!quad_verts.empty()) {vbo.create_and_upload(quad_verts, 0, 1);}
 			clear_cont(quad_verts); // no longer needed
+		}
+		void update_vbo_data(draw_block_t const &src_block, unsigned start_vertex, bool update_tris) {
+			vect_vnctcc_t const &src(update_tris ? src_block.tri_verts : src_block.quad_verts);
+			assert(!src.empty()); // this assert isn't strictly necessary, but may prevent us from accidentally updating the wrong buffers
+			if (src.empty()) return; // no data to update
+			assert(vbo.vbo_valid()); // VBO must have been allocated, otherwise we can't update its contents
+			if (update_tris) {start_vertex += tri_vbo_off;} // move to start of triangle block
+			else {assert(start_vertex + src.size() <= tri_vbo_off);} // check that the range we plan to update fits into the quads data; we can't check this for triangles
+			vbo.pre_render();
+			upload_vbo_sub_data(src.data(), start_vertex*sizeof(vect_vnctcc_t::value_type), src.size()*sizeof(vect_vnctcc_t::value_type));
+			vbo.post_render();
 		}
 		void register_tile_id(unsigned tid) {
 			if (tid+1 == pos_by_tile.size()) return; // already saw this tile
@@ -994,6 +1005,19 @@ public:
 	void draw_quads_for_draw_range(shader_t &s, draw_range_t const &draw_range, bool shadow_only=0) {
 		for (unsigned i = 0; i < MAX_DRAW_BLOCKS; ++i) {draw_quad_geom_range(s, draw_range.vr[i], shadow_only);}
 	}
+	void update_vbo_data(building_draw_t const &src_bdraw, unsigned start_vertex, bool update_tris) {
+		bool found(0);
+
+		for (auto i = src_bdraw.to_draw.begin(); i != src_bdraw.to_draw.end(); ++i) {
+			if (i->empty()) continue; // this is not the slot we want to update
+			assert(!found); // only one slot can be nonempty
+			found = 1;
+			unsigned const slot_ix(get_to_draw_ix(i->tex));
+			assert(slot_ix < to_draw.size()); // must be a valid slot index for this bdraw
+			to_draw[slot_ix].update_vbo_data(*i, start_vertex, update_tris);
+		} // for i
+		assert(found);
+	}
 }; // end building_draw_t
 
 
@@ -1178,11 +1202,18 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bdraw.add_section(*this, empty_vc, door, tid_nm_pair_t(WHITE_TEX), GRAY, dim_mask2, 0, 0, 1, 0);
 			}
 		} // for i
-		if (DRAW_INTERIOR_DOORS) { // interior doors: add as house doors; these really should be separate tquads per floor (1.1M T), see SPLIT_DOOR_PER_FLOOR in building_floorplan.cpp
-			for (unsigned i = 0; i < interior->doors.size(); ++i) {add_interior_door_to_bdraw(bdraw, i);}
-		}
+		// interior doors: add as house doors; these really should be separate tquads per floor (1.1M T), see SPLIT_DOOR_PER_FLOOR in building_floorplan.cpp
+		interior->door_vert_start_ix = bdraw.get_num_verts(tid_nm_pair_t(get_building_ext_door_tid(tquad_with_ix_t::TYPE_HDOOR))); // cache for later use in door open/close update
+		for (unsigned i = 0; i < interior->doors.size(); ++i) {add_interior_door_to_bdraw(bdraw, i);}
 		bdraw.end_draw_range_capture(interior->draw_range);
 	} // end interior case
+}
+
+void building_t::update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) {
+	building_draw_t bdraw;
+	add_interior_door_to_bdraw(bdraw, door_ix);
+	unsigned const start_vertex(interior->door_vert_start_ix + 16*door_ix); // 4 quads/sides per door (front + back + two edges) = 16 verts per door
+	bdraw_interior.update_vbo_data(bdraw, start_vertex, 0); // update_tris=0 (update quads)
 }
 
 void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior) const {
@@ -1203,7 +1234,7 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 		if (num_sides == 2) {dc.d[!dim][bool(side) ^ dim ^ dir ^ 1] = 0.5f*(D.d[!dim][0] + D.d[!dim][1]);} // split door in half
 		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, opened, opens_out, opens_up, (exterior && side == 0))); // swap sides for right half of exterior door
 		vector3d const normal(door.get_norm());
-		tquad_with_ix_t door_edges[4] = {door, door, door, door};
+		tquad_with_ix_t door_edges[4] = {door, door, door, door}; // most doors will only use 2 of these
 
 		for (unsigned d = 0; d < 2; ++d) {
 			tquad_with_ix_t door_side(door);
@@ -1222,7 +1253,8 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 			}
 			bdraw.add_tquad(*this, door_side, bcube, tp, color, 0, exclude_frame);
 		} // for d
-		if (opened) { // add untextured door edges; only needed for open doors
+		if (opened || PLAYER_CAN_OPEN_DOORS) {
+			// add untextured door edges; only needed for open doors, but we need to allocate the vertex data for closed doors if the player can later open them
 			for (unsigned e = 0; e < num_edges; ++e) {
 				bdraw.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // no_tc=1, will use a single texel from the corner of the door texture
 			}
@@ -2278,7 +2310,14 @@ public:
 							indir_bcs_ix = bcs_ix; indir_bix = bi->ix;
 						}
 						if (toggle_room_light) {b.toggle_room_light(camera_xlated);}
+#if 1
+						if (toggle_door_open_state && PLAYER_CAN_OPEN_DOORS) {
+							unsigned door_ix(0);
+							if (b.toggle_door_state(camera_xlated, door_ix)) {(*i)->update_building_door_open_state_verts(bi->ix, door_ix);}
+						}
+#else
 						if (toggle_door_open_state) {(*i)->door_state_tracker.update_state_for_building(b, bi->ix, camera_xlated);}
+#endif
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2 && camera_surf_collide) {b.update_elevators(camera_xlated);} // update elevators if the player is in the building
 					} // for bi
@@ -2559,7 +2598,6 @@ public:
 					vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
 					vert_counter.update_count(mat.wall_tex.tid, nv_wall);
 					vert_counter.update_count(FENCE_TEX, 12*b->interior->elevators.size());
-					if (!DRAW_INTERIOR_DOORS) continue;
 					vert_counter.update_count(building_texture_mgr.get_hdoor_tid(), 8*b->interior->doors.size());
 					vert_counter.update_count(WHITE_TEX, 8*b->interior->doors.size());
 				}
@@ -2622,6 +2660,9 @@ public:
 		building_draw_interior.clear_vbos();
 		building_draw_int_ext_walls.clear_vbos();
 		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom();} // likely required for tiled buildings
+	}
+	void update_building_door_open_state_verts(unsigned building_ix, unsigned door_ix) {
+		get_building(building_ix).update_door_open_state_verts(building_draw_interior, door_ix);
 	}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {

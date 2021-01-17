@@ -136,4 +136,24 @@ bool building_t::toggle_door_state(point const &closest_to, set<unsigned> &cur_c
 	gen_sound((door.open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	return 1;
 }
+bool building_t::toggle_door_state(point const &closest_to, unsigned &door_ix) {
+	if (!interior) return 0; // error?
+	float const window_vspacing(get_window_vspace());
+	float closest_dist_sq(0.0);
+
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+		if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
+		point center(i->get_cube_center());
+		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
+		float const dist_sq(p2p_dist_sq(closest_to, center));
+		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin());}
+	} // for i
+	if (closest_dist_sq == 0.0) return 0; // no door found (shouldn't happen?)
+	assert(door_ix < interior->doors.size());
+	door_t &door(interior->doors[door_ix]);
+	door.open ^= 1; // toggle open state
+	point const sound_pos(get_camera_pos() + (door.get_cube_center() - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
+	gen_sound((door.open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
+	return 1;
+}
 
