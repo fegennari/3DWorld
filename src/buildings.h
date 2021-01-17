@@ -692,7 +692,6 @@ struct building_t : public building_geom_t {
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
-	bool toggle_door_state(point const &closest_to, set<unsigned> &cur_closed_doors);
 	bool toggle_door_state(point const &closest_to, unsigned &door_ix);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
