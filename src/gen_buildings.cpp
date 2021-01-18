@@ -1209,7 +1209,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	} // end interior case
 }
 
-void building_t::update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) {
+void building_t::update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) const {
 	building_draw_t bdraw;
 	add_interior_door_to_bdraw(bdraw, door_ix);
 	unsigned const start_vertex(interior->door_vert_start_ix + 16*door_ix); // 4 quads/sides per door (front + back + two edges) = 16 verts per door
@@ -2252,6 +2252,7 @@ public:
 						if (reflection_pass && !b.bcube.contains_pt_xy(camera_xlated)) continue; // not the correct building
 						if (!b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
+						b.update_door_verts(**i); // this update is required for when AI open doors; this may be a frame too late, and won't show for distant buildings, but that should be close enough
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
@@ -2290,13 +2291,10 @@ public:
 							indir_bcs_ix = bcs_ix; indir_bix = bi->ix;
 						}
 						if (toggle_room_light) {b.toggle_room_light(camera_xlated);}
-
-						if (toggle_door_open_state && PLAYER_CAN_OPEN_DOORS) {
-							unsigned door_ix(0);
-							if (b.toggle_door_state(camera_xlated, cview_dir, door_ix)) {(*i)->update_building_door_open_state_verts(bi->ix, door_ix);}
-						}
+						if (toggle_door_open_state && PLAYER_CAN_OPEN_DOORS) {b.toggle_door_state_closest_to(camera_xlated, cview_dir);}
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2 && camera_surf_collide) {b.update_elevators(camera_xlated);} // update elevators if the player is in the building
+						b.update_door_verts(**i); // update here, before the next shadow pass, if the player changed a door state
 					} // for bi
 				} // for g
 			} // for i
@@ -2638,9 +2636,7 @@ public:
 		building_draw_int_ext_walls.clear_vbos();
 		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom();} // likely required for tiled buildings
 	}
-	void update_building_door_open_state_verts(unsigned building_ix, unsigned door_ix) {
-		get_building(building_ix).update_door_open_state_verts(building_draw_interior, door_ix);
-	}
+	void update_building_door_open_state_verts(building_t const &building, unsigned door_ix) {building.update_door_open_state_verts(building_draw_interior, door_ix);}
 
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
 		if (empty()) return 0;
@@ -2872,6 +2868,13 @@ public:
 		return 0;
 	}
 }; // building_creator_t
+
+// Note: this must be defined after building_creator_t is defined
+void building_t::update_door_verts(building_creator_t &bc) const {
+	if (!interior) return;
+	for (auto i = interior->doors_to_update.begin(); i != interior->doors_to_update.end(); ++i) {bc.update_building_door_open_state_verts(*this, *i);}
+	interior->doors_to_update.clear();
+}
 
 
 class building_tiles_t {

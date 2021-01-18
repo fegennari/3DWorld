@@ -117,10 +117,11 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	open_door_ix = door_ix;
 }
 
-bool building_t::toggle_door_state(point const &closest_to, vector3d const &in_dir, unsigned &door_ix) {
+bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir) { // called for the player
 	if (!interior) return 0; // error?
 	float const window_vspacing(get_window_vspace());
 	float closest_dist_sq(0.0);
+	unsigned door_ix(0);
 	point door_pos;
 
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
@@ -132,14 +133,19 @@ bool building_t::toggle_door_state(point const &closest_to, vector3d const &in_d
 		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin()); door_pos = center;}
 	} // for i
 	if (closest_dist_sq == 0.0) return 0; // no door found (shouldn't happen?)
-	assert(door_ix < interior->doors.size());
+	toggle_door_state(door_ix);
+	return 1;
+}
+
+void building_t::toggle_door_state(unsigned door_ix) {
+	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
 	door.open ^= 1; // toggle open state
 	clear_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
-	point const sound_pos(get_camera_pos() + (door_pos - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
+	point const sound_pos(door.get_cube_center() + get_camera_coord_space_xlate()); // convert to camera space
 	gen_sound((door.open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
-	return 1;
+	interior->doors_to_update.push_back(door_ix);
 }
 
 // elevators

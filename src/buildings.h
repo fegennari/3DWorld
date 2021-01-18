@@ -537,6 +537,7 @@ struct building_interior_t {
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
 	vect_cube_t exclusion;
+	vector<unsigned> doors_to_update;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	draw_range_t draw_range;
@@ -693,7 +694,9 @@ struct building_t : public building_geom_t {
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
-	bool toggle_door_state(point const &closest_to, vector3d const &in_dir, unsigned &door_ix);
+	bool toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir);
+	void toggle_door_state(unsigned door_ix);
+	void update_door_verts(building_creator_t &bc) const;
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	void draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
@@ -731,7 +734,7 @@ struct building_t : public building_geom_t {
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const;
 	void add_interior_door_to_bdraw(building_draw_t &bdraw, unsigned door_ix) const;
-	void update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix);
+	void update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) const;
 private:
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;

@@ -9,6 +9,7 @@
 
 
 bool const STAY_ON_ONE_FLOOR = 0;
+bool const AI_OPENS_DOORS    = 1;
 
 building_dest_t cur_player_building_loc;
 
@@ -780,9 +781,12 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			cube_t door(*i);
 			door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
 			if (!check_line_clip(person.pos, person.target_pos, door.d)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
-			// TODO: open the door?
-			person.wait_for(5.0); // wait for 5s and then choose a new desination
-			return AI_WAITING; // cut the path short at this closed door
+
+			if (AI_OPENS_DOORS) {toggle_door_state((i - interior->doors.begin()));}
+			else {
+				person.wait_for(5.0); // wait for 5s and then choose a new desination
+				return AI_WAITING; // cut the path short at this closed door
+			}
 		} // for i
 	}
 	person.pos        = new_pos;
