@@ -1253,8 +1253,8 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 			}
 			bdraw.add_tquad(*this, door_side, bcube, tp, color, 0, exclude_frame);
 		} // for d
-		if (opened || PLAYER_CAN_OPEN_DOORS) {
-			// add untextured door edges; only needed for open doors, but we need to allocate the vertex data for closed doors if the player can later open them
+		if (opened || (PLAYER_CAN_OPEN_DOORS && !exterior)) {
+			// add untextured door edges; only needed for open doors, but we need to allocate the vertex data for interior closed doors if the player can later open them
 			for (unsigned e = 0; e < num_edges; ++e) {
 				bdraw.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // no_tc=1, will use a single texel from the corner of the door texture
 			}
