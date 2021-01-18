@@ -129,6 +129,8 @@ bool building_t::toggle_door_state(point const &closest_to, unsigned &door_ix) {
 	assert(door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
 	door.open ^= 1; // toggle open state
+	clear_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
+	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	point const sound_pos(get_camera_pos() + (door.get_cube_center() - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
 	gen_sound((door.open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	return 1;

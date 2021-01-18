@@ -46,6 +46,10 @@ void pedestrian_t::go() {
 	vel = dir * speed; // assumes dir is correct
 	is_stopped = 0;
 }
+void pedestrian_t::wait_for(float seconds) {
+	anim_time     = 0.0; // reset animation
+	waiting_start = seconds*TICKS_PER_SECOND; // stop for N seconds
+}
 
 float get_sidewalk_width(cube_t const &plot_bcube) { // Note: technically should depend on road_width rather than plot size?
 	float const plot_sz(max(plot_bcube.dx(), plot_bcube.dy())); // plot is almost square, so this is close enough

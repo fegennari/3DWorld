@@ -542,6 +542,7 @@ struct building_interior_t {
 	draw_range_t draw_range;
 	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
 	unsigned door_vert_start_ix; // for updating vertex data when door open/close state is changed
+	bool door_state_updated;
 
 	building_interior_t();
 	~building_interior_t();
@@ -704,10 +705,10 @@ struct building_t : public building_geom_t {
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
 	void update_stats(building_stats_t &s) const;
 	void build_nav_graph() const;
-	unsigned count_connected_room_components() const;
+	unsigned count_connected_room_components();
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
 	point get_center_of_room(unsigned room_ix) const;
-	bool choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
+	int choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	bool find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, vector<point> &path) const;
 	void find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, bool straight_only, int part_ix=-1) const;
 	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor=1);
@@ -810,6 +811,7 @@ private:
 	void add_interior_door(door_t &door);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side);
+	void clear_nav_graph();
 };
 
 struct vect_building_t : public vector<building_t> {

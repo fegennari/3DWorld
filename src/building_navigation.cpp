@@ -441,11 +441,13 @@ void building_t::build_nav_graph() const {
 	} // for r
 }
 
-unsigned building_t::count_connected_room_components() const {
+void building_t::clear_nav_graph() {interior->nav_graph.reset();}
+
+unsigned building_t::count_connected_room_components() {
 	if (!interior) return 0;
 	build_nav_graph();
 	unsigned const num(interior->nav_graph->count_connected_components());
-	interior->nav_graph.reset(); // no longer needed
+	clear_nav_graph(); // no longer needed
 	return num;
 }
 
@@ -467,7 +469,8 @@ point building_t::get_center_of_room(unsigned room_ix) const {
 	return interior->rooms[room_ix].get_cube_center();
 }
 
-bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const {
+// return value: 0=failed, 1=success, 2=failed but can retry
+int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const {
 
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
@@ -537,7 +540,7 @@ bool building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &pers
 		}
 		return 1;
 	} // for n
-	return 0; // failed
+	return 2; // failed, but can retry
 }
 
 template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vect_cube_t &out, float z1, float z2) {
@@ -709,12 +712,18 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	if (choose_dest) { // no current destination - choose a new one
 		person.anim_time = 0.0; // reset animation
 		if (!interior->nav_graph) {build_nav_graph();}
-		// if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame; movement will be stopped from now on
-		if (!choose_dest_room(state, person, rgen, stay_on_one_floor)) {person.speed = 0.0; return AI_STOP;}
-
+		int const ret(choose_dest_room(state, person, rgen, stay_on_one_floor)); // 0=failed, 1=success, 2=failed but can retry
+		
+		if (ret == 2 && interior->door_state_updated) { // wait rather than stopping in case the player trapped this person in a room by closing the door
+			person.wait_for(5.0); // stop for 5 seconds then try again
+			return AI_WAITING;
+		}
+		else if (ret != 1) { // if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame; movement will be stopped from now on
+			person.speed = 0.0; // stop
+			return AI_STOP;
+		}
 		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.is_first_path, state.path)) {
-			person.anim_time = 0.0;
-			wait_time = 1.0*TICKS_PER_SECOND; // stop for 1 second then try again
+			person.wait_for(1.0); // stop for 1 second then try again
 			return AI_WAITING;
 		}
 		assert(!state.path.empty());
@@ -728,10 +737,10 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		assert(bcube.contains_pt(person.target_pos));
 		person.pos = person.target_pos;
 		if (!state.path.empty()) {state.next_path_pt(person, stay_on_one_floor); return AI_NEXT_PT;} // move to next path point
-		person.anim_time = 0.0; // reset animation
-		wait_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 10.0); // stop for 1-10 seconds
+		person.wait_for(rgen.rand_uniform(1.0, 10.0)); // stop for 1-10 seconds
 		return AI_AT_DEST;
 	}
+	// this person is walking to a destination point
 	vector3d const new_dir(person.target_pos - person.pos);
 	float const new_dir_mag(new_dir.mag());
 	point new_pos;
@@ -762,6 +771,19 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			move_person_to_not_collide(person, *p, new_pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
 			return AI_MOVING; // return here, but don't update animation or dir; only handles a single collision
 		} // for p
+	}
+	if (interior->door_state_updated) { // check for any doors the player has closed; this can be slow, so we only enable it for buildings where the player changed the door state
+		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+			if (i->open) continue; // doors tend to block the player, don't collide with them unless they're closed
+			if (new_pos.z < i->z1() || new_pos.z > i->z2())         continue; // wrong part/floor
+			if (!sphere_cube_intersect(new_pos, person.radius, *i)) continue; // no intersection with door
+			cube_t door(*i);
+			door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
+			if (!check_line_clip(person.pos, person.target_pos, door.d)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
+			// TODO: open the door?
+			person.wait_for(5.0); // wait for 5s and then choose a new desination
+			return AI_WAITING; // cut the path short at this closed door
+		} // for i
 	}
 	person.pos        = new_pos;
 	person.anim_time += max_dist;
@@ -872,5 +894,5 @@ bool building_t::room_containing_pt_has_stairs(point const &pt) const {
 }
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
-building_interior_t::building_interior_t() : top_ceilings_mask(0), door_vert_start_ix(0) {}
+building_interior_t::building_interior_t() : top_ceilings_mask(0), door_vert_start_ix(0), door_state_updated(0) {}
 building_interior_t::~building_interior_t() {}
