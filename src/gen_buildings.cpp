@@ -1409,7 +1409,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 
 bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) {
 	tquad_with_ix_t door;
-	int const door_ix(find_door_close_to_point(door, pos, dist));
+	int const door_ix(find_ext_door_close_to_point(door, pos, dist));
 	register_open_ext_door_state(door_ix);
 	if (door_ix < 0) return 0; // no nearby door
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door

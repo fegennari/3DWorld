@@ -107,7 +107,7 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 
 // doors
 
-int building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
+int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
 	point query_pt(pos);
 	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
 	int const room_id(get_room_containing_pt(query_pt));

@@ -689,7 +689,7 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const;
 	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type);
 	void player_not_near_building() {register_open_ext_door_state(-1);}
-	int find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
+	int find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
