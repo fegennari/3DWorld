@@ -128,7 +128,13 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
-		if (in_dir != zero_vector && dot_product(in_dir, (center - closest_to).get_norm()) < 0.5) continue; // door is not in the correct direction, skip
+		
+		if (in_dir != zero_vector) { // direction filter specified
+			point vis_pt(center.x, center.y, closest_to.z); // use query point zval
+			max_eq(vis_pt.z, i->z1()); // clamp visibility test point to z-range of door to allow the player to open the door even looking at the top or bottom of it
+			min_eq(vis_pt.z, i->z2());
+			if (dot_product(in_dir, (vis_pt - closest_to).get_norm()) < 0.5) continue; // door is not in the correct direction, skip
+		}
 		float const dist_sq(p2p_dist_sq(closest_to, center));
 		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin()); door_pos = center;}
 	} // for i
