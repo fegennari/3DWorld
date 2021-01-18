@@ -371,8 +371,18 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			}
 			else { // assume it's a cube
 				cube_t c_extended(*c);
-				c_extended.z1() -= camera_zh; // handle the player's head
-				had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm); // skip_z=0
+				c_extended.z1() -= camera_zh; // handle the player's head (for stairs)
+
+				if (c->type == TYPE_CLOSET && c->is_open()) { // open closet, check walls on either side
+					float const width(c->get_sz_dim(!c->dim));
+					cube_t left(c_extended), right(c_extended);
+					left .d[!c->dim][1] -= 0.75*width; // assume door is half the width; this is approximate, since we don't really know the door and wall widths here
+					right.d[!c->dim][0] += 0.75*width;
+					had_coll |= (sphere_cube_int_update_pos(pos, xy_radius, left, p_last, 1, 0, cnorm) || sphere_cube_int_update_pos(pos, xy_radius, right, p_last, 1, 0, cnorm)); // skip_z=0
+				}
+				else {
+					had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm); // skip_z=0
+				}
 			}
 		} // for c
 	}
