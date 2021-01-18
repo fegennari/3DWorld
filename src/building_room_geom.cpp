@@ -459,6 +459,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 		handle.z2() = handle.z1() + 0.1*door.dz();
 
 		for (unsigned m = 0; m < num_cols; ++m) {
+			// TODO: make a drawer occasionally open
 			door.d[!c.dim][0] = hpos + border;
 			door.d[!c.dim][1] = hpos + col_spacing - border;
 			door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
@@ -483,7 +484,7 @@ tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
 	bool const use_small_door(width < 1.2*height);
-	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : 0.05*width), wall_shift(width - wall_width);
+	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : 0.05*width), wall_shift(width - wall_width), wall_thick(WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*height);
 	assert(wall_shift > 0.0);
 	cube_t doors(c), walls[2] = {c, c}; // left, right
 	walls[0].d[!c.dim][1] -= wall_shift;
@@ -495,8 +496,22 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	
 		for (unsigned d = 0; d < 2; ++d) {
 			unsigned wall_skip_faces(skip_faces);
-			if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {wall_skip_faces |= ~get_face_mask(!c.dim, d);} // adjacent to room wall, skip that face
-			wall_mat.add_cube_to_verts(walls[d], c.color, tex_origin, wall_skip_faces); // Note: c.color should be wall color
+			bool const adj_room_wall(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
+			if (adj_room_wall) {wall_skip_faces |= ~get_face_mask(!c.dim, d);} // adjacent to room wall, skip that face
+
+			if (c.is_open() && wall_width > wall_thick) { // split walls into front and side parts to open up the closet interior
+				cube_t front(walls[d]), side(walls[d]);
+				front.d[c.dim][!c.dir] = side.d[c.dim][c.dir] = front.d[c.dim][c.dir] - (c.dir ? 1.0 : -1.0)*wall_thick;
+
+				if (!adj_room_wall) { // only need to draw side wall when not adjacent to room wall
+					side.d[!c.dim][!d] += (d ? 1.0f : -1.0f)*(wall_width - wall_thick);
+					wall_mat.add_cube_to_verts(side,  c.color, tex_origin, (wall_skip_faces | ~get_face_mask(c.dim, c.dir))); // skip front face of side wall as well
+				}
+				wall_mat.add_cube_to_verts(front, c.color, tex_origin, EF_Z12); // Note: c.color should be wall color
+			}
+			else { // don't need to worry about interior space; draw simple walls on each side of the door, all the way to the back
+				wall_mat.add_cube_to_verts(walls[d], c.color, tex_origin, wall_skip_faces); // Note: c.color should be wall color
+			}
 			doors.d[!c.dim][d] = walls[d].d[!c.dim][!d]; // clip door to space between walls
 		}
 		doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.04*depth; // shift in slightly
@@ -504,9 +519,17 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		point const llc(doors.get_llc());
 
 		if (use_small_door) { // small house closet door
-			get_material(tid_nm_pair_t(get_int_door_tid(), 0.0), 1).add_cube_to_verts(doors, WHITE, llc, get_face_mask(c.dim, c.dir), !c.dim); // draw only front face
+			tid_nm_pair_t const tp(get_int_door_tid(), 0.0);
+
+			if (c.is_open()) {
+				// TODO
+			}
+			else {
+				get_material(tp, 1).add_cube_to_verts(doors, WHITE, llc, get_face_mask(c.dim, c.dir), !c.dim); // draw only front face
+			}
 		}
 		else { // 4 panel folding door
+			assert(!c.is_open()); // not yet handled
 			float const doors_width(doors.get_sz_dim(!c.dim)), door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
 			int const tid(get_rect_panel_tid());
 			float tx(1.0/doors_width), ty(0.25/doors.dz());

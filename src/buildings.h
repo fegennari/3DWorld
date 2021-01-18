@@ -262,7 +262,7 @@ uint16_t const RO_FLAG_TOS     = 0x02; // at top of stairs
 uint16_t const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 uint16_t const RO_FLAG_INVIS   = 0x08; // invisible
 uint16_t const RO_FLAG_NOCOLL  = 0x10; // no collision detection
-uint16_t const RO_FLAG_OPEN    = 0x20; // open, for elevators and maybe eventually doors
+uint16_t const RO_FLAG_OPEN    = 0x20; // open, for elevators and closet doors
 uint16_t const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 uint16_t const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // second byte
@@ -297,6 +297,7 @@ struct room_object_t : public cube_t {
 	bool is_visible () const {return !(flags & RO_FLAG_INVIS);}
 	bool no_coll    () const {return  (flags & RO_FLAG_NOCOLL);}
 	bool is_interior() const {return  (flags & RO_FLAG_INTERIOR);}
+	bool is_open    () const {return  (flags & RO_FLAG_OPEN);}
 	bool is_light_type() const {return (type == TYPE_LIGHT || type == TYPE_LAMP);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_TYPES);}
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
@@ -814,6 +815,7 @@ private:
 	void add_interior_door(door_t &door);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side);
+	void play_door_open_close_sound(point const &pos, bool open) const;
 	void clear_nav_graph();
 };
 

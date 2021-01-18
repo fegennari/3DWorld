@@ -138,29 +138,53 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	open_door_ix = door_ix;
 }
 
+bool check_door_dir(point const &closest_to, vector3d const &in_dir, cube_t const &door, point const &center) { // Note: only zvals of door are used, no rotate required
+	if (in_dir == zero_vector) return 1; // direction filter specified
+	point vis_pt(center.x, center.y, closest_to.z); // use query point zval
+	max_eq(vis_pt.z, door.z1()); // clamp visibility test point to z-range of door to allow the player to open the door even looking at the top or bottom of it
+	min_eq(vis_pt.z, door.z2());
+	return (dot_product(in_dir, (vis_pt - closest_to).get_norm()) > 0.5); // door is not in the correct direction, skip
+}
+
 bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir) { // called for the player
 	if (!interior) return 0; // error?
 	float const window_vspacing(get_window_vspace());
 	float closest_dist_sq(0.0);
 	unsigned door_ix(0);
-	point door_pos;
+	bool is_closet(0);
 
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
-		
-		if (in_dir != zero_vector) { // direction filter specified
-			point vis_pt(center.x, center.y, closest_to.z); // use query point zval
-			max_eq(vis_pt.z, i->z1()); // clamp visibility test point to z-range of door to allow the player to open the door even looking at the top or bottom of it
-			min_eq(vis_pt.z, i->z2());
-			if (dot_product(in_dir, (vis_pt - closest_to).get_norm()) < 0.5) continue; // door is not in the correct direction, skip
-		}
+		if (!check_door_dir(closest_to, in_dir, *i, center)) continue; // door is not in the correct direction, skip
 		float const dist_sq(p2p_dist_sq(closest_to, center));
-		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin()); door_pos = center;}
+		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin());}
 	} // for i
-	if (closest_dist_sq == 0.0) return 0; // no door found (shouldn't happen?)
-	toggle_door_state(door_ix);
+	if (is_house && interior->room_geom) { // check for closet doors; only houses have closets
+		vector<room_object_t> &objs(interior->room_geom->objs);
+
+		for (auto i = objs.begin(); i != objs.end(); ++i) {
+			if (i->type != TYPE_CLOSET) continue;
+			if (i->get_sz_dim(!i->dim) >= 1.2*i->dz()) continue; // not a closet with a small door
+			point center(i->get_cube_center());
+			center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
+			if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
+			if (!check_door_dir(closest_to, in_dir, *i, center)) continue; // door is not in the correct direction, skip
+			float const dist_sq(p2p_dist_sq(closest_to, center));
+			if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - objs.begin()); is_closet = 1;}
+		} // for i
+	}
+	if (closest_dist_sq == 0.0) return 0; // no door found
+
+	if (is_closet) {
+		auto &obj(interior->room_geom->objs[door_ix]);
+		if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} // close
+		else               {obj.flags |=  RO_FLAG_OPEN;} // open
+		interior->room_geom->clear_static_vbos(); // need to regen object data
+		play_door_open_close_sound(obj.get_cube_center(), obj.is_open());
+	}
+	else {toggle_door_state(door_ix);} // toggle state if interior door
 	return 1;
 }
 
@@ -170,9 +194,15 @@ void building_t::toggle_door_state(unsigned door_ix) {
 	door.open ^= 1; // toggle open state
 	clear_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
-	point const sound_pos(door.get_cube_center() + get_camera_coord_space_xlate()); // convert to camera space
-	gen_sound((door.open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	interior->doors_to_update.push_back(door_ix);
+	play_door_open_close_sound(door.get_cube_center(), door.open);
+}
+
+void building_t::play_door_open_close_sound(point const &pos, bool open) const {
+	point pos_rot(pos);
+	if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), pos_rot);}
+	point const sound_pos(pos_rot + get_camera_coord_space_xlate()); // convert to camera space
+	gen_sound((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 }
 
 // elevators
