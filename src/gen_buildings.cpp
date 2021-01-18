@@ -1434,15 +1434,6 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	return 1;
 }
 
-int building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
-	for (auto d = doors.begin(); d != doors.end(); ++d) {
-		cube_t c(d->get_bcube());
-		c.expand_by_xy(dist);
-		if (c.contains_pt(pos)) {door = *d; return (d - doors.begin());}
-	}
-	return -1; // not found
-}
-
 void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front) const {
 
 	if (!is_valid()) return; // invalid building

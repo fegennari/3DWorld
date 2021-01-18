@@ -107,6 +107,27 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 
 // doors
 
+int building_t::find_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
+	point query_pt(pos);
+	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
+	int const room_id(get_room_containing_pt(query_pt));
+	cube_t room_exp;
+
+	if (room_id >= 0) { // pos is inside a room
+		assert((unsigned)room_id < interior->rooms.size());
+		room_exp = interior->rooms[room_id];
+		room_exp.expand_by(get_wall_thickness()); // make sure it contains the door
+	}
+	// Note: returns the first exterior door found, assuming there can be at most one within dist of pos
+	for (auto d = doors.begin(); d != doors.end(); ++d) {
+		cube_t c(d->get_bcube());
+		if (room_id >= 0 && !room_exp.contains_cube(c)) continue; // door not in the same room as pos - there is likely a wall between them
+		c.expand_by_xy(dist);
+		if (c.contains_pt(query_pt)) {door = *d; return (d - doors.begin());}
+	} // for d
+	return -1; // not found
+}
+
 void building_t::register_open_ext_door_state(int door_ix) {
 	bool const is_open(door_ix >= 0), was_open(open_door_ix >= 0);
 	if (is_open == was_open) return; // no state change
