@@ -16,14 +16,19 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	float const window_vspacing(get_window_vspace());
+	point query_pt(closest_to);
+	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
+	int const room_id(get_room_containing_pt(query_pt));
+	if (room_id < 0) return 0; // closest_to is not contained in a room of this building
+	assert((unsigned)room_id < interior->rooms.size());
+	point light_pos;
 	float closest_dist_sq(0.0);
 	unsigned closest_light(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type()) continue; // not a light
-		assert(i->room_id < interior->rooms.size());
+		if (!i->is_light_type() || i->room_id != room_id) continue; // not a light, or the wrong room
 
-		if (!interior->rooms[i->room_id].is_sec_bldg) { // secondary buildings have only one floor
+		if (!interior->rooms[room_id].is_sec_bldg) { // secondary buildings have only one floor
 			if (i->type == TYPE_LAMP) {
 				if (fabs(i->get_center_dim(2) - closest_to.z) > window_vspacing) continue; // lamp is on the wrong floor
 			}
@@ -34,23 +39,22 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
 		float const dist_sq(p2p_dist_sq(closest_to, center));
-		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; closest_light = (i - objs.begin());}
+		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; closest_light = (i - objs.begin()); light_pos = center;}
 	} // for i
-	if (closest_dist_sq == 0.0) return 0; // no light found
 	assert(closest_light < objs.size());
 	room_object_t &light(objs[closest_light]);
 	bool updated(0);
-	
+
 	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (i->is_light_type() && i->room_id == light.room_id && i->z1() == light.z1()) {
+		if (i->is_light_type() && i->room_id == room_id && i->z1() == light.z1()) {
 			i->toggle_lit_state(); // Note: doesn't update indir lighting
 			if (i->type == TYPE_LAMP) continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
-			set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
+			set_obj_lit_state_to(room_id, light.z2(), i->is_lit()); // update object lighting flags as well
 			updated = 1;
 		}
 	} // for i
 	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
-	point const sound_pos(get_camera_pos() + (light.get_cube_center() - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
+	point const sound_pos(get_camera_pos() + (light_pos - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
 	gen_sound(SOUND_CLICK, sound_pos);
 	return 1;
 }
@@ -113,17 +117,19 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	open_door_ix = door_ix;
 }
 
-bool building_t::toggle_door_state(point const &closest_to, unsigned &door_ix) {
+bool building_t::toggle_door_state(point const &closest_to, vector3d const &in_dir, unsigned &door_ix) {
 	if (!interior) return 0; // error?
 	float const window_vspacing(get_window_vspace());
 	float closest_dist_sq(0.0);
+	point door_pos;
 
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
+		if (in_dir != zero_vector && dot_product(in_dir, (center - closest_to).get_norm()) < 0.5) continue; // door is not in the correct direction, skip
 		float const dist_sq(p2p_dist_sq(closest_to, center));
-		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin());}
+		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin()); door_pos = center;}
 	} // for i
 	if (closest_dist_sq == 0.0) return 0; // no door found (shouldn't happen?)
 	assert(door_ix < interior->doors.size());
@@ -131,7 +137,7 @@ bool building_t::toggle_door_state(point const &closest_to, unsigned &door_ix) {
 	door.open ^= 1; // toggle open state
 	clear_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
-	point const sound_pos(get_camera_pos() + (door.get_cube_center() - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
+	point const sound_pos(get_camera_pos() + (door_pos - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
 	gen_sound((door.open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	return 1;
 }

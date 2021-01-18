@@ -2293,7 +2293,7 @@ public:
 
 						if (toggle_door_open_state && PLAYER_CAN_OPEN_DOORS) {
 							unsigned door_ix(0);
-							if (b.toggle_door_state(camera_xlated, door_ix)) {(*i)->update_building_door_open_state_verts(bi->ix, door_ix);}
+							if (b.toggle_door_state(camera_xlated, cview_dir, door_ix)) {(*i)->update_building_door_open_state_verts(bi->ix, door_ix);}
 						}
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2 && camera_surf_collide) {b.update_elevators(camera_xlated);} // update elevators if the player is in the building
