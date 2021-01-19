@@ -8,6 +8,7 @@
 cube_t grass_exclude1, grass_exclude2;
 
 extern bool draw_building_interiors;
+extern int player_in_closet;
 extern float grass_width, CAMERA_RADIUS;
 extern double camera_zh;
 extern building_params_t global_building_params;
@@ -381,6 +382,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 					for (unsigned n = 0; n < (c->is_open() ? 4U : 5U); ++n) { // only check for door collision if closet door is closed
 						had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 1, 0, cnorm); // skip_z=0
 					}
+					if (c->contains_pt(pos)) {player_in_closet = (c->is_open() ? 1 : 2);}
 				}
 				else {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm);} // skip_z=0
 			}

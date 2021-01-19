@@ -18,7 +18,7 @@ colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
 object_model_loader_t building_obj_model_loader;
 
 extern bool camera_in_building;
-extern int display_mode, frame_counter;
+extern int display_mode, frame_counter, player_in_closet;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
 
@@ -508,9 +508,8 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5]) {
 }
 
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
-	bool const player_may_be_in_closet = 1;
 	float const width(c.get_sz_dim(!c.dim)), height(c.dz());
-	bool const use_small_door(width < 1.2*height), draw_interior(c.is_open() || player_may_be_in_closet);
+	bool const use_small_door(width < 1.2*height), draw_interior(c.is_open() || player_in_closet);
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes);
 
@@ -537,7 +536,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				// TODO
 			}
 			else {
-				unsigned const door_skip_faces(get_face_mask(c.dim, c.dir) & (player_may_be_in_closet ? get_face_mask(c.dim, !c.dir) : 0xFF));
+				unsigned const door_skip_faces(get_face_mask(c.dim, c.dir) & (player_in_closet ? get_face_mask(c.dim, !c.dir) : 0xFF));
 				get_material(tp, 1).add_cube_to_verts(doors, WHITE, llc, door_skip_faces, !c.dim); // draw only front face, back face if player in closet
 			}
 		}
