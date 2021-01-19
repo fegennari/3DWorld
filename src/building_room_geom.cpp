@@ -481,7 +481,7 @@ tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
 	return wall_tex_scaled;
 }
 
-// cubes: front left, front right, left side, right side, door
+// cubes: left side, right side, front left, front right, door
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5]) {
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
 	bool const use_small_door(width < 1.2*height);

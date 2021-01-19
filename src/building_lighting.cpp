@@ -161,7 +161,10 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 		if (c->type == TYPE_CLOSET && c->is_open()) {
 			cube_t cubes[5];
 			get_closet_cubes(*c, cubes);
-			for (unsigned n = 0; n < 4; ++n) {cc.emplace_back(*c, c->get_color());} // skip the door (cubes[4]), which is open
+			
+			for (unsigned n = 0; n < 4; ++n) { // skip the door (cubes[4]), which is open
+				if (!cubes[n].is_all_zeros()) {cc.emplace_back(cubes[n], c->get_color());}
+			}
 			continue;
 		}
 		// to be more accurate, we could use the actual cubes of tables and chairs, but this adds a lot of complexity, increases lighting time, and makes little difference

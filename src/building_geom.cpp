@@ -380,7 +380,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 					get_closet_cubes(*c, cubes); // get cubes for walls and door; required to handle collision with closet interior
 
 					for (unsigned n = 0; n < (c->is_open() ? 4U : 5U); ++n) { // only check for door collision if closet door is closed
-						had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 1, 0, cnorm); // skip_z=0
+						if (!cubes[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
 					}
 					if (c->contains_pt(pos)) {player_in_closet = (c->is_open() ? 1 : 2);}
 				}
