@@ -423,7 +423,7 @@ struct building_room_geom_t {
 	void add_counter(room_object_t const &c, float tscale);
 	void add_cabinet(room_object_t const &c, float tscale);
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm);
-	void add_crate(room_object_t const &c);
+	void add_crate(room_object_t const &c, bool is_small=1);
 	void add_paint_can(room_object_t const &c, float side_tscale_add=0.0);
 	void add_shelves(room_object_t const &c, float tscale);
 	void add_keyboard(room_object_t const &c);

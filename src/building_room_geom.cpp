@@ -607,10 +607,10 @@ int get_crate_tid(room_object_t const &c) {
 	return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");
 }
 
-void building_room_geom_t::add_crate(room_object_t const &c) {
+void building_room_geom_t::add_crate(room_object_t const &c, bool is_small) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	if (c.obj_id & 2) { // make it a box
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, 1));
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, is_small));
 		unsigned const verts_start(mat.quad_verts.size());
 		mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
 		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
@@ -635,7 +635,7 @@ void building_room_geom_t::add_crate(room_object_t const &c) {
 		} // for d
 	}
 	else { // make it a crate
-		get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
+		get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, is_small).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
 	}
 }
 
