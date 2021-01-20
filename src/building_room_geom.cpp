@@ -501,8 +501,8 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5]) {
 		cubes[2*d] = front;
 		doors.d[!c.dim][d] = walls[d].d[!c.dim][!d]; // clip door to space between walls
 	} // for d
-	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.04*depth; // shift in slightly
-	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*0.92*depth; // make it narrow
+	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*wall_thick; // shift in slightly
+	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(depth - 0.8*wall_thick); // make it narrow
 	cubes[4] = doors; // Note: this is for closed door; caller must handle open door
 }
 
@@ -533,7 +533,12 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			tid_nm_pair_t const tp(get_int_door_tid(), 0.0);
 
 			if (c.is_open()) {
-				// TODO
+				float const door_width(doors.get_sz_dim(!c.dim)), door_thickness(doors.get_sz_dim(c.dim));
+				cube_t door(doors);
+				door.d[ c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*door_width;
+				door.d[!c.dim][1    ] -= (door_width - door_thickness);
+				get_material(tp, 1)         .add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy(!c.dim), c.dim, !c.dir); // draw front and back faces
+				get_material(untex_shad_mat).add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy( c.dim)); // draw edges untextured
 			}
 			else {
 				unsigned const door_skip_faces(get_face_mask(c.dim, c.dir) & (player_in_closet ? get_face_mask(c.dim, !c.dir) : 0xFF));
@@ -561,10 +566,11 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		float const trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing);
 		float const wall_thick(WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*height), trim_plus_wall_thick(trim_thickness + wall_thick);
 		colorRGBA const trim_color(WHITE); // assume trim is white
+		bool const draw_interior_trim(1 || draw_interior); // always enable so that we don't have to regenerate small geom when closet doors are opened or closed
 
 		for (unsigned is_side = 0; is_side < 2; ++is_side) { // front wall, side wall
 			for (unsigned d = 0; d < 2; ++d) {
-				unsigned skip_faces((draw_interior ? 0 : ~get_face_mask(c.dim, !c.dir)) | EF_Z1);
+				unsigned skip_faces((draw_interior_trim ? 0 : ~get_face_mask(c.dim, !c.dir)) | EF_Z1);
 				cube_t trim;
 				
 				if (is_side) { // sides of closet
@@ -581,7 +587,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 					trim.d[ c.dim][ c.dir] += (c.dir ? 1.0 : -1.0)*trim_thickness; // expand away from wall
 					// expand to cover the outside corner gap if not along room wall, otherwise hide the face; doesn't really line up properly for angled ceiling trim though
 					if (c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO)) {
-						if (!draw_interior) {skip_faces |= ~get_face_mask(!c.dim, d);} // disable face if not drawing the interior
+						if (!draw_interior_trim) {skip_faces |= ~get_face_mask(!c.dim, d);} // disable face if not drawing the interior
 					}
 					else {trim.d[!c.dim][d] += (d ? 1.0 : -1.0)*trim_thickness;}
 				}
