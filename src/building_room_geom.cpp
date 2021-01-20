@@ -453,8 +453,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 		if (is_lg && (num_cols == 1 || rgen.rand_bool())) {num_cols = 2 + (rgen.rand() % 3);} // 2-4, 50% of the time keep same as prev row
 		float const col_spacing(width/num_cols);
 		float hpos(c.d[!c.dim][0]);
-		door.z1() = vpos + border;
-		door.z2() = vpos + row_spacing - border;
+		set_cube_zvals(door, (vpos + border), (vpos + row_spacing - border));
 		handle.z1() = door.z1()   + 0.8*door.dz();
 		handle.z2() = handle.z1() + 0.1*door.dz();
 
@@ -592,8 +591,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, float tscale, tid_
 				else         {btrim.d[ c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*trim_plus_wall_thick;} // expand on the inside of the closet
 				btrim.z2() = c.z1() + trim_height;
 				get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(btrim, trim_color, tex_origin, skip_faces); // is_small, untextured, no shadows; both interior and exterior
-				trim.z2() = c.z2();
-				trim.z1() = c.z2() - trim_height;
+				set_cube_zvals(trim, c.z2()-trim_height, c.z2());
 				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color)); // ceiling trim, missing end caps; exterior only
 			} // for d
 		} // for is_side
@@ -873,8 +871,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	colorRGBA const metal_color(apply_light_color(c, GRAY));
 	rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal
 	cube_t fc(c); // corner frame
-	fc.z2() = c.z2() - 0.05*sz.z; // slightly shorter than tile
-	fc.z1() = bottom.z2();
+	set_cube_zvals(fc, bottom.z2(), (c.z2() - 0.05*sz.z)); // slightly shorter than tile
 	cube_t fxy[2] = {fc, fc};
 	float const glass_bot(fc.z1() + 0.02*sz.z), glass_top(fc.z2() - 0.02*sz.z);
 
@@ -929,8 +926,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	// add drain
 	cube_t drain;
 	drain.set_from_point(bottom.get_cube_center());
-	drain.z1() = bottom.z2();
-	drain.z2() = bottom.z2() + 0.05*bottom.dz(); // very small height
+	set_cube_zvals(drain, bottom.z2(), (bottom.z2() + 0.05*bottom.dz())); // very small height
 	drain.expand_by_xy(0.06*radius); // set radius
 	get_material(tid_nm_pair_t(MANHOLE_TEX, 0.0), 0).add_vcylin_to_verts(drain, metal_color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // draw top only, not sides, unshadowed
 	// add transparent glass
@@ -1499,8 +1495,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 	}
 	if (c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
 		room_object_t c_top_back(c);
-		c_top_back.z1() = top.z2();
-		c_top_back.z2() = top.z2() + 1.8*height;
+		set_cube_zvals(c_top_back, top.z2(), (top.z2() + 1.8*height));
 		c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim);
 		add_bookcase(c_top_back, 1, 1, tscale, 1, 0.4, &tex_origin); // no_shelves=1, side_width=0.4, both large and small, use same tex origin
 	}
@@ -1782,8 +1777,7 @@ void building_room_geom_t::add_cubicle(room_object_t const &c, float tscale) {
 	rgeom_mat_t &surf_mat(get_material(tid_nm_pair_t(MARBLE_TEX, 4.0*tscale), 1));
 	colorRGBA const surf_color(apply_light_color(c, LT_GRAY));
 	cube_t surface(sides);
-	surface.z1() = c.z1() + 0.45*dz;
-	surface.z2() = c.z1() + 0.50*dz;
+	set_cube_zvals(surface, (c.z1() + 0.45*dz), (c.z1() + 0.50*dz));
 	cube_t surf1(surface), surf2(surface), surf3(surface); // left, right, back
 	surf1.d[!c.dim][0] = side1.d[!c.dim][1];
 	surf1.d[!c.dim][1] = surf3.d[!c.dim][0] = front1.d[!c.dim][1];
@@ -1871,10 +1865,8 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		vector3d faucet_pos(center);
 		faucet_pos[c.dim] -= dir_sign*0.56*sdepth;
 		cube_t sink(center, center), faucet1(faucet_pos, faucet_pos);
-		sink.z2()    = top.z1();
-		sink.z1()    = top.z1() - 0.25*dz;
-		faucet1.z1() = top.z2();
-		faucet1.z2() = top.z2() + 0.30*dz;
+		set_cube_zvals(sink,   (top.z1() - 0.25*dz), top.z1());
+		set_cube_zvals(faucet1, top.z2(), (top.z2() + 0.30*dz));
 		sink.expand_in_dim( c.dim, 0.5*sdepth);
 		sink.expand_in_dim(!c.dim, 0.5*swidth);
 		faucet1.expand_in_dim( c.dim, 0.04*sdepth);
