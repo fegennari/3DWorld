@@ -376,8 +376,8 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "floor_tscale") {read_building_tscale(fp, global_building_params.cur_mat.floor_tex, str, error);} // both X and Y
 	else if (str == "house_ceil_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.house_ceil_tex,  str, error);} // both X and Y
 	else if (str == "house_floor_tscale") {read_building_tscale(fp, global_building_params.cur_mat.house_floor_tex, str, error);} // both X and Y
-																																  // building textures
-																																  // Warning: setting options such as tex_inv_y for textures that have already been loaded will have no effect!
+	// building textures
+	// Warning: setting options such as tex_inv_y for textures that have already been loaded will have no effect!
 	else if (str == "side_tid"    ) {global_building_params.cur_mat.side_tex.tid     = read_building_texture(fp, str, error);}
 	else if (str == "side_nm_tid" ) {global_building_params.cur_mat.side_tex.nm_tid  = read_building_texture(fp, str, error);}
 	else if (str == "roof_tid"    ) {global_building_params.cur_mat.roof_tex.tid     = read_building_texture(fp, str, error);}
@@ -393,6 +393,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "house_floor_nm_tid") {global_building_params.cur_mat.house_floor_tex.nm_tid = read_building_texture(fp, str, error);}
 	else if (str == "house_ceil_tid"    ) {global_building_params.cur_mat.house_ceil_tex.tid     = read_building_texture(fp, str, error);}
 	else if (str == "house_ceil_nm_tid" ) {global_building_params.cur_mat.house_ceil_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "open_door_prob") {
+		if (!read_float(fp, global_building_params.open_door_prob)) {buildings_file_err(str, error);}
+	}
 	// material colors
 	else if (str == "side_color") {
 		if (!read_color(fp, global_building_params.cur_mat.side_color.cmin)) {buildings_file_err(str, error);}

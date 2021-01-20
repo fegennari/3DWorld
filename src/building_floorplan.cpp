@@ -6,15 +6,14 @@
 #include "buildings.h"
 #include "profiler.h"
 
-bool const SPLIT_DOOR_PER_FLOOR   = 0; // allows mixed open/closed doors per-floor, and better texture scaling, but slower, and uses 2x more memory
-float const DOOR_OPEN_PROBABILITY = 1.0; // [0.0, 1.0]
+bool const SPLIT_DOOR_PER_FLOOR = 0; // allows mixed open/closed doors per-floor, and better texture scaling, but slower, and uses 2x more memory
 
 extern building_params_t global_building_params;
 
 
 void building_t::add_interior_door(door_t &door) {
 	assert(interior);
-	door.open = (fract(interior->doors.size()*123.456) < DOOR_OPEN_PROBABILITY);
+	door.open = (fract(interior->doors.size()*123.456) < global_building_params.open_door_prob);
 	if (!SPLIT_DOOR_PER_FLOOR) {interior->doors.push_back(door); return;} // add a single door across all floors
 	float const floor_spacing(get_window_vspace()), door_height(floor_spacing - get_floor_thickness());
 
