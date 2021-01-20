@@ -506,7 +506,7 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5]) {
 	cubes[4] = doors; // Note: this is for closed door; caller must handle open door
 }
 
-void building_room_geom_t::add_closet(room_object_t const &c, float tscale, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
+void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
 	float const width(c.get_sz_dim(!c.dim)), height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
 	bool const use_small_door(width < 1.2*height), draw_interior(c.is_open() || player_in_closet);
 	cube_t cubes[5];
@@ -604,16 +604,16 @@ void building_room_geom_t::add_closet(room_object_t const &c, float tscale, tid_
 		interior.d[ c.dim][c.dir] = cubes[2].d[c.dim][!c.dir]; // set to inside of front wall
 		assert(interior.is_strictly_normalized());
 		// add hanger rod
-		float const depth(interior.get_sz_dim(c.dim)), hr_radius(0.015*window_vspacing);
+		float const depth(interior.get_sz_dim(c.dim)), hr_radius(0.015*window_vspacing), box_sz(0.25*depth);
 		cube_t hanger_rod(interior);
 		hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 		hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
 		set_wall_width(hanger_rod, c.get_center_dim(c.dim), hr_radius, c.dim);
-		get_wood_material(2.0*tscale, 1).add_ortho_cylin_to_verts(hanger_rod, LT_GRAY, !c.dim, 0, 0);
+		get_wood_material(1.0, 1).add_ortho_cylin_to_verts(hanger_rod, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
 		// add boxes
 		rand_gen_t rgen;
 		c.set_rand_gen_state(rgen);
-		unsigned const num_boxes(rgen.rand()%5); // 0-4
+		unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
 		static vect_cube_t cubes;
 		cubes.clear();
 		room_object_t C(c);
@@ -622,17 +622,18 @@ void building_room_geom_t::add_closet(room_object_t const &c, float tscale, tid_
 
 		for (unsigned n = 0; n < num_boxes; ++n) {
 			for (unsigned d = 0; d < 2; ++d) {
-				sz    [d] = 0.35*depth*rgen.rand_uniform(0.45, 0.8); // x,y half width
+				sz    [d] = box_sz*rgen.rand_uniform(0.5, 1.0); // x,y half width
 				center[d] = rgen.rand_uniform(interior.d[d][0]+sz[d], interior.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
 			}
 			C.obj_id = uint16_t(2); // used to select texture; make them all boxes rather than crates
 			C.set_from_point(center);
-			set_cube_zvals(C, interior.z1(), (interior.z1() + 0.35*depth*rgen.rand_uniform(0.4, 0.95)));
+			set_cube_zvals(C, interior.z1(), (interior.z1() + box_sz*rgen.rand_uniform(0.8, 1.5)));
 			C.expand_by_xy(sz);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
-			C.dim   = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
-			add_crate(C, 0); // is_small=0
+			C.dim   = rgen.rand_bool();
+			C.dir   = rgen.rand_bool();
+			add_crate_or_box(C, 0); // is_small=0
 			cubes.push_back(C);
 		} // for n
 	}
@@ -643,7 +644,7 @@ int get_crate_tid(room_object_t const &c) {
 	return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");
 }
 
-void building_room_geom_t::add_crate(room_object_t const &c, bool is_small) {
+void building_room_geom_t::add_crate_or_box(room_object_t const &c, bool is_small) {
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	if (c.obj_id & 2) { // make it a box
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, is_small));
@@ -758,7 +759,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
 			C.dim   = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
-			add_crate(C);
+			add_crate_or_box(C);
 			cubes.push_back(C);
 		} // for n
 		// add computers; what about monitors?
@@ -2180,7 +2181,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
 		case TYPE_DRESSER: add_dresser (*i, tscale); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
-		case TYPE_CLOSET:  add_closet  (*i, tscale, wall_tex, 1, 0); break;
+		case TYPE_CLOSET:  add_closet  (*i, wall_tex, 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
 		case TYPE_COMPUTER:add_computer(*i); break;
@@ -2225,10 +2226,10 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_BED:       add_bed      (*i, 0, 1, tscale); break;
 		case TYPE_SIGN:      add_sign     (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
-		case TYPE_CLOSET:    add_closet   (*i, tscale, tid_nm_pair_t(), 0, 1); break; // add closet wall trim, don't need wall_tex
+		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim, don't need wall_tex
 		case TYPE_RAILING:   add_railing  (*i); break;
 		case TYPE_PLANT:     add_potted_plant(*i, 0, 1); break; // plant only
-		case TYPE_CRATE:     add_crate    (*i); break; // not small but only added to windowless rooms
+		case TYPE_CRATE:     add_crate_or_box(*i); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:   add_shelves  (*i, tscale); break; // not small but only added to windowless rooms
 		case TYPE_KEYBOARD:  add_keyboard (*i); break;
 		case TYPE_WINE_RACK: add_wine_rack(*i, 0, 1, tscale); break;
