@@ -397,6 +397,7 @@ bool line_int_cubes(point const &p1, point const &p2, vect_cube_t const &cubes) 
 	return 0;
 }
 bool building_t::is_light_occluded(point const &lpos, point const &camera_bs) const {
+	assert(interior);
 	// Note: assumes the light is inside the building
 	// exterior walls have windows and don't generally occlude lights; room objects and doors are too small to occlude; elevators are too sparse to occlude
 	for (unsigned d = 0; d < 2; ++d) {

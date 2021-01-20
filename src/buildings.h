@@ -817,6 +817,12 @@ private:
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side);
 	void play_door_open_close_sound(point const &pos, bool open) const;
 	void clear_nav_graph();
+	public:
+	// ray queries
+	bool is_pt_visible(point const &p1, point const &p2) const;
+	bool is_sphere_visible(point const &center, float radius, point const &pt) const;
+	bool is_pt_lit(point const &pt) const;
+	bool is_sphere_lit(point const &center, float radius) const;
 };
 
 struct vect_building_t : public vector<building_t> {

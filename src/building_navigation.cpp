@@ -780,7 +780,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			if (!sphere_cube_intersect(new_pos, person.radius, *i)) continue; // no intersection with door
 			cube_t door(*i);
 			door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
-			if (!check_line_clip(person.pos, person.target_pos, door.d)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
+			if (!door.line_intersects(person.pos, person.target_pos)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
 
 			if (AI_OPENS_DOORS) {toggle_door_state((i - interior->doors.begin()));}
 			else {

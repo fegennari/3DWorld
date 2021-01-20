@@ -239,3 +239,59 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 	return 0;
 }
 
+// ray queries
+
+// center, -x, +x, -y, +y, -z, +z
+void get_sphere_boundary_pts(point const &center, float radius, point pts[7]) {
+	pts[0] = center;
+
+	for (unsigned dim = 0, ix = 1; dim < 3; ++dim) {
+		vector3d dir(zero_vector);
+		dir[dim] = 1.0;
+		pts[ix++] = center - dir;
+		pts[ix++] = center + dir;
+	}
+}
+
+bool building_t::is_pt_visible(point const &p1, point const &p2) const {
+	if (!interior) return 1;
+	if (is_light_occluded(p1, p2)) return 0; // okay to call for non-light point; checks walls, ceilings, and floors
+	float const wall_thickness(get_wall_thickness());
+	
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+		if (i->open) continue; // check only closed doors
+		cube_t door(*i);
+		door.expand_in_dim(i->dim, 0.5*wall_thickness); // increase door thickness
+		if (door.line_intersects(p1, p2)) return 0;
+	}
+	return 1;
+}
+bool building_t::is_sphere_visible(point const &center, float radius, point const &pt) const {
+	if (!interior) return 1;
+	point pts[7];
+	get_sphere_boundary_pts(center, radius, pts);
+	for (unsigned n = 0; n < 7; ++n) {if (is_pt_visible(pts[n], pt)) return 1;}
+	return 0;
+}
+
+bool building_t::is_pt_lit(point const &pt) const {
+	if (!has_room_geom()) return 0; // no lights
+	int const room_id(get_room_containing_pt(pt)); // call this only once on center in is_sphere_lit()?
+	if (room_id < 0) return 0; // outside building?
+
+	for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
+		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
+		if ((int)i->room_id != room_id) continue; // different room; too strong?
+		// TODO: check light radius?
+		if (is_pt_visible(i->get_cube_center(), pt)) return 1; // likely returns true if same room
+	} // for i
+	return 0;
+}
+bool building_t::is_sphere_lit(point const &center, float radius) const {
+	if (!has_room_geom()) return 0; // no lights (optimization)
+	point pts[7];
+	get_sphere_boundary_pts(center, radius, pts);
+	for (unsigned n = 0; n < 7; ++n) {if (is_pt_lit(pts[n])) return 1;}
+	return 0;
+}
+
