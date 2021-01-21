@@ -41,6 +41,9 @@ float const CAR_SPEED_SCALE      = 0.001;
 float const STREETLIGHT_DIST_FROM_PLOT_EDGE = -0.015; // relative to plot width
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 
+float const PED_WIDTH_SCALE  = 0.5; // ratio of collision radius to model radius (x/y)
+float const PED_HEIGHT_SCALE = 2.5; // ratio of collision radius to model height (z)
+
 extern double tfticks;
 extern float fticks;
 
@@ -688,7 +691,9 @@ struct pedestrian_t : public waiting_obj_t {
 	string get_name() const;
 	string str() const;
 	float get_speed_mult() const;
-	cube_t get_bcube() const {cube_t c; c.set_from_sphere(pos, radius); return c;}
+	float get_height () const {return PED_HEIGHT_SCALE*radius;}
+	float get_width  () const {return PED_WIDTH_SCALE *radius;}
+	cube_t get_bcube () const {cube_t c; c.set_from_sphere(pos, radius); return c;}
 	bool target_valid() const {return (target_pos != all_zeros);}
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
 	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);

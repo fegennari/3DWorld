@@ -816,6 +816,9 @@ private:
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side);
 	void play_door_open_close_sound(point const &pos, bool open) const;
+	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
+	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
+	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	void clear_nav_graph();
 	public:
 	// ray queries

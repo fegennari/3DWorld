@@ -4,8 +4,6 @@
 #include "city.h"
 #include "shaders.h"
 
-float const PED_WIDTH_SCALE  = 0.5; // ratio of collision radius to model radius (x/y)
-float const PED_HEIGHT_SCALE = 2.5; // ratio of collision radius to model height (z)
 float const CROSS_SPEED_MULT = 1.8; // extra speed multiplier when crossing the road
 float const CROSS_WAIT_TIME  = 60.0; // in seconds
 bool const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes problems with pedestian collisions
@@ -1143,7 +1141,7 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 	float const dist_sq(p2p_dist_sq(pdu.pos, ped.pos));
 	if (dist_sq > draw_dist_sq) return 0; // too far - skip
 	if (is_dlight_shadows && !dist_less_than(pre_smap_player_pos, ped.pos, 0.4*def_draw_dist)) return 0; // too far from the player
-	if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*PED_HEIGHT_SCALE*ped.radius)) return 0;
+	if (is_dlight_shadows && !sphere_in_light_cone_approx(pdu, ped.pos, 0.5*ped.get_height())) return 0;
 
 	if (ped_model_loader.num_models() == 0 || !ped_model_loader.is_model_valid(ped.model_id)) {
 		if (!pdu.sphere_visible_test(ped.pos, ped.radius)) return 0; // not visible - skip
@@ -1153,12 +1151,11 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 		draw_sphere_vbo(ped.pos, ped.radius, ndiv, 0);
 	}
 	else {
-		float const width(PED_WIDTH_SCALE*ped.radius), height(PED_HEIGHT_SCALE*ped.radius);
 		cube_t bcube;
-		bcube.set_from_sphere(ped.pos, width);
+		bcube.set_from_sphere(ped.pos, ped.get_width());
 		bcube.z1() = ped.pos.z - ped.radius;
-		bcube.z2() = bcube.z1() + height;
-		if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*height)) return 0; // not visible - skip
+		bcube.z2() = bcube.z1() + ped.get_height();
+		if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*ped.get_height())) return 0; // not visible - skip
 		if (dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist

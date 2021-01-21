@@ -15,7 +15,6 @@ extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, an
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
 extern std::string lighting_update_text;
-extern building_dest_t cur_player_building_loc;
 extern vector<light_source> dl_sources;
 
 bool enable_building_people_ai();
@@ -555,7 +554,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			unsigned const room_type(room.get_room_type(cur_floor));
 			assert(room_type < NUM_RTYPES);
 			if (display_mode & 0x20) {lighting_update_text = room_names[room_type];} // debugging, key '6'
-			cur_player_building_loc = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
+			register_player_in_building(camera_bs, building_id); // required for AI following logic
 
 			if (camera_by_stairs) {
 				for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
