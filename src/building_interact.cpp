@@ -21,21 +21,14 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	int const room_id(get_room_containing_pt(query_pt));
 	if (room_id < 0) return 0; // closest_to is not contained in a room of this building
 	assert((unsigned)room_id < interior->rooms.size());
+	room_t const &room(interior->rooms[room_id]);
 	point light_pos;
 	float closest_dist_sq(0.0);
 	unsigned closest_light(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || i->room_id != room_id) continue; // not a light, or the wrong room
-
-		if (!interior->rooms[room_id].is_sec_bldg) { // secondary buildings have only one floor
-			if (i->type == TYPE_LAMP) {
-				if (fabs(i->get_center_dim(2) - closest_to.z) > window_vspacing) continue; // lamp is on the wrong floor
-			}
-			else {
-				if (i->z1() < closest_to.z || (i->z1() > (closest_to.z + window_vspacing))) continue; // light is on the wrong floor
-			}
-		}
+		if (room.get_floor_containing_zval(i->z1(), window_vspacing) != room.get_floor_containing_zval(closest_to.z, window_vspacing)) continue; // wrong floor
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
 		float const dist_sq(p2p_dist_sq(closest_to, center));
