@@ -265,13 +265,28 @@ public:
 	static point closest_room_pt(cube_t const &c, point const &pos) {
 		return point(max(c.x1(), min(c.x2(), pos.x)), max(c.y1(), min(c.y2(), pos.y)), pos.z);
 	}
-	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, point const &cur_pt,
-		float radius, float height, unsigned start_ix, unsigned end_ix, bool is_first_path, bool up_or_down, vector<point> &path) const
+	static cube_t calc_walkable_room_area(node_t const &node, float radius) {
+		cube_t walk_area(node.bcube);
+		if (!node.is_stairs) {walk_area.expand_by_xy(-radius);} // shrink by radius
+
+		if (node.is_hallway) {
+			bool const min_dim(walk_area.dy() < walk_area.dx());
+			float const shrink(min(0.5f*radius, max(0.0f, 0.9f*0.5f*walk_area.get_sz_dim(min_dim)))); // shrink by an extra half radius if hallway is wide enough
+			walk_area.expand_in_dim(min_dim, -shrink);
+		}
+		return walk_area;
+	}
+	static void seed_rgen(rand_gen_t &rgen, unsigned seed1, bool use_new_seed) {
+		static unsigned seed2(1);
+		if (use_new_seed) {++seed2;} // make sure the rgen is seeded differently this time
+		rgen.set_state(seed1+1, seed2);
+	}
+	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, point const &cur_pt, float radius,
+		float height, unsigned start_ix, unsigned end_ix, bool is_first_path, bool up_or_down, bool use_new_seed, vector<point> &path) const
 	{
 		unsigned n(start_ix);
 		rand_gen_t rgen;
-		static unsigned call_ix(1);
-		rgen.set_state(start_ix, call_ix++);
+		seed_rgen(rgen, start_ix, use_new_seed);
 		vect_cube_t keepout;
 
 		while (1) {
@@ -279,14 +294,8 @@ public:
 			point const &next(state[n].path_pt);
 			int const came_from(state[n].came_from_ix);
 			bool const is_first_pt(path.empty());
-			cube_t walk_area(node.bcube);
-			if (!node.is_stairs) {walk_area.expand_by_xy(-radius);} // shrink by radius
+			cube_t const walk_area(calc_walkable_room_area(node, radius));
 			
-			if (node.is_hallway) {
-				bool const min_dim(walk_area.dy() < walk_area.dx());
-				float const shrink(min(0.5f*radius, max(0.0f, 0.9f*0.5f*walk_area.get_sz_dim(min_dim)))); // shrink by an extra half radius if hallway is wide enough
-				walk_area.expand_in_dim(min_dim, -shrink);
-			}
 			if (is_first_pt) { // last point in path (first point in reverse path)
 				assert(came_from >= 0);
 				bool success(0);
@@ -336,21 +345,24 @@ public:
 		} // end while()
 		return 0; // never gets here
 	}
+
+	bool complete_path_within_room(point const &from, point const &to, unsigned room, float radius, bool use_new_seed, vect_cube_t const &avoid, vector<point> &path) const {
+		rand_gen_t rgen;
+		seed_rgen(rgen, room, use_new_seed);
+		vect_cube_t keepout;
+		cube_t const walk_area(calc_walkable_room_area(get_node(room), radius));
+		if (!connect_room_endpoints(avoid, walk_area, from, to, radius, path, keepout, rgen)) return 0;
+		path.push_back(to);
+		return 1;
+	}
 	
 	// A* algorithm; Note: path is stored backwards
-	bool find_path_points(unsigned room1, unsigned room2, float radius, float height, bool use_stairs,
-		bool is_first_path, bool up_or_down, vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
+	bool find_path_points(unsigned room1, unsigned room2, float radius, float height, bool use_stairs, bool is_first_path,
+		bool up_or_down, bool use_new_seed, vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
 	{
-		/*
-		TODO: How to handle closed doors?
-		* What if a door is closed after the AI has chosen a path? Recompute paths when a door is opened or closed? Should that update the navigation graph? Should people open doors?
-		* Are doors handled as part of the room graph, or as obstacles within a room?
-		*/
+		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
 		assert(room1 < nodes.size() && room2 < nodes.size());
-
-		if (room1 == room2) {
-			assert(0); // FIXME: need to call connect_room_endpoints()
-		}
+		assert(room1 != room2);
 		path.clear();
 		vector<a_star_node_state_t> state(nodes.size());
 		vector<uint8_t> open(nodes.size(), 0), closed(nodes.size(), 0); // tentative/already evaluated nodes
@@ -385,7 +397,7 @@ public:
 				else if (new_g_score >= sn.g_score) continue; // not better
 				sn.came_from_ix = cur;
 				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
-				if (i->ix == room2) {return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, is_first_path, up_or_down, path);} // done, reconstruct path (in reverse)
+				if (i->ix == room2) {return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, is_first_path, up_or_down, use_new_seed, path);} // done, reconstruct path (in reverse)
 				sn.g_score = new_g_score;
 				sn.h_score = p2p_dist_xy(conn_center, dest_pos);
 				sn.f_score = sn.g_score + sn.h_score;
@@ -510,8 +522,12 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const {
 	if (!AI_TARGET_PLAYER) return 0; // disabled
 	building_dest_t const &target(cur_player_building_loc);
+	bool const same_room((int)state.cur_room == target.room_ix);
 	// if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room (optimization)
-	if (target.room_ix == prev_player_building_loc.room_ix && (int)state.cur_room != target.room_ix) return 0;
+	if (target.room_ix == prev_player_building_loc.room_ix && !same_room) return 0;
+	if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path to avoid deadlock
+	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
+	if (get_building_loc_for_pt(person.pos).stairs_ix >= 0) return 0; // don't update path while on stairs
 	float const floor_spacing(get_window_vspace());
 
 	if (int(target.pos.z/floor_spacing) != int(prev_player_building_loc.pos.z/floor_spacing)) { // if player did not change floors
@@ -637,21 +653,15 @@ void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<un
 	for (auto s = sorted.begin(); s != sorted.end(); ++s) {nearest_stairs.push_back(s->second);}
 }
 
-bool building_t::find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, vector<point> &path) const {
+bool building_t::find_route_to_point(point const &from, point const &to, float radius, bool is_first_path, bool use_new_seed, vector<point> &path) const {
 
 	assert(interior && interior->nav_graph);
 	path.clear();
-	if (from == to) return 1; // already there???
 	building_loc_t const loc1(get_building_loc_for_pt(from)), loc2(get_building_loc_for_pt(to));
 	if (loc1.part_ix < 0 || loc2.part_ix < 0 || loc1.room_ix < 0 || loc2.room_ix < 0) return 0; // not in a room
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
-	
-	if (loc1 == loc2) { // same part/room/floor
-		// TODO: still need to call interior->nav_graph->connect_room_endpoints()
-		path.push_back(to); // move to <to> and we're done
-		return 1;
-	}
+	//if (loc1 == loc2) {path.push_back(to); return 1;} // same part/room/floor; move to <to> and we're done
 	bool use_stairs(0);
 	if (loc1.floor != loc2.floor) {use_stairs = 1;} // different floors
 	else if (loc1.part_ix != loc2.part_ix) {
@@ -661,6 +671,9 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 	static vect_cube_t avoid; // reuse across frames/people
 	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add));
 
+	if (loc1.part_ix == loc2.part_ix && loc1.room_ix == loc2.room_ix && loc1.floor == loc2.floor) { // same part/room/floor (not checking stairs_ix)
+		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, radius, use_new_seed, avoid, path);
+	}
 	if (use_stairs) { // find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs;
 		find_nearest_stairs(from, to, nearest_stairs, 1); // straight_only=1; pass in loc1.part_ix if both loc part_ix values are equal?
@@ -673,10 +686,10 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 			path.clear();
 			vector<point> from_path;
 			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
-			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path, up_or_down, avoid, from, from_path)) continue; // from => stairs
+			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, radius, height, 0, is_first_path,  up_or_down, use_new_seed, avoid, from, from_path)) continue; // from => stairs
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add)); // new floor, new zval, new avoid cubes
-			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, !up_or_down, avoid, seg2_start, path)) continue; // stairs => to
+			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, radius, height, 0, is_first_path, !up_or_down, use_new_seed, avoid, seg2_start, path)) continue; // stairs => to
 			assert(!path.empty() && !from_path.empty());
 			path.push_back(seg2_start); // other end of the stairs
 			// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
@@ -690,7 +703,8 @@ bool building_t::find_route_to_point(point const &from, point const &to, float r
 		} // for s
 		return 0; // failed
 	}
-	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, 0, avoid, from, path)) return 0; // failed to find a path
+	assert(loc1.room_ix != loc2.room_ix);
+	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, radius, height, use_stairs, is_first_path, 0, use_new_seed, avoid, from, path)) return 0; // failed to find a path
 	assert(!path.empty());
 	return 1;
 }
@@ -783,7 +797,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			person.speed = 0.0; // stop
 			return AI_STOP;
 		}
-		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.is_first_path, state.path)) {
+		if (!find_route_to_point(person.pos, person.target_pos, coll_dist, state.is_first_path, choose_dest, state.path)) { // only set use_new_seed=1 when we're choosing a new dest
 			person.wait_for(1.0); // stop for 1 second then try again
 			return AI_WAITING;
 		}
@@ -947,7 +961,7 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 		if (loc.room_ix >= 0) {loc.floor = interior->rooms[loc.room_ix].get_floor_containing_zval(pt.z, get_window_vspace());}
 
 		for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
-			if (s->contains_pt(pt)) {loc.stairs_ix = (s - interior->stairwells.begin()); break;}
+			if (s->contains_pt(pt)) {loc.stairs_ix = (s - interior->stairwells.begin()); break;} // Note: stairs_ix is not currently used, except for >= 0 test
 		}
 	}
 	return loc;
