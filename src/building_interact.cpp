@@ -148,7 +148,6 @@ bool check_door_dir(point const &closest_to, vector3d const &in_dir, cube_t cons
 
 bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir) { // called for the player
 	if (!interior) return 0; // error?
-	float const window_vspacing(get_window_vspace());
 	float closest_dist_sq(0.0);
 	unsigned door_ix(0);
 	bool is_closet(0);
