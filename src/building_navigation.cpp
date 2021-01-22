@@ -785,6 +785,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 
 	if (choose_dest || need_to_update_ai_path(state, person)) { // no current destination, or need to update based on player movement
 		// choose a new destination
+		float const old_anim_time(person.anim_time);
 		person.anim_time = 0.0; // reset animation
 		if (!interior->nav_graph) {build_nav_graph();}
 		int const ret(choose_dest_room(state, person, rgen, stay_on_one_floor)); // 0=failed, 1=success, 2=failed but can retry
@@ -806,6 +807,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		state.next_path_pt(person, stay_on_one_floor);
 		if (choose_dest) {return AI_BEGIN_PATH;}
 		// otherwise we're in the dynamic path update logic to follow the player, and will continue execution
+		person.anim_time = old_anim_time; // keep the old animation time
 	}
 	float const max_dist(person.speed*fticks);
 
