@@ -1169,7 +1169,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
 		if (i->z1() < bcube.z1()) continue; // skip the basement
 		unsigned const ix(i - parts.begin());
-		bool const main_part(ix < (two_parts ? 2 : 1));
+		bool const main_part(ix < (two_parts ? 2U : 1U));
 		unsigned const fdim(main_part ? force_dim[ix] : 2);
 		cube_t const &other((two_parts && main_part) ? parts[1-ix] : *i); // == self for single part houses
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced

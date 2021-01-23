@@ -2038,7 +2038,7 @@ public:
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
-				occlusion_checker_noncity_t oc(**i); // not actually used
+				occlusion_checker_noncity_t oc(**i);
 				point const lpos(get_camera_pos() - xlate); // Note: camera_pos is actually the light pos
 
 				// draw interior for the building containing the light
