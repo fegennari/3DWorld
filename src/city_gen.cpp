@@ -1472,7 +1472,7 @@ class city_road_gen_t : public road_gen_base_t {
 			return -1; // not found
 		}
 		vector<unsigned> const &get_segs_connecting_to_city(unsigned city) const {
-			assert(city < city_to_seg.size());
+			assert(city < city_to_seg.size());
 			return city_to_seg[city];
 		}
 	public:
