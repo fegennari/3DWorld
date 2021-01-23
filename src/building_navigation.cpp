@@ -735,8 +735,10 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 		if (!is_sphere_visible(target.pos, player_radius, eye_pos) && !is_sphere_visible(pp2, player_radius, eye_pos)) return 0; // check both the bottom and top of player
 	}
 	if (AI_PLAYER_VIS_TEST >= 2) { // check person FOV
-		float const dp(dot_product((pp2 - eye_pos).get_norm(), person.dir));
-		if (dp < 0.5) return 0; // 60 degree FOV => dp < 0.5
+		//if (dot_product((pp2 - eye_pos).get_norm(), person.dir) < 0.5) return 0; // 60 degree FOV => dp < 0.5
+		float const view_dist(10.0*get_window_vspace()); // 10 stories (~100 feet) should be good enough
+		pos_dir_up pdu(person.pos, person.dir, plus_z, 0.0, 0.1*person.radius, view_dist, 0.0, 1); // auto perspective angle, no_zoom=1
+		if (!pdu.sphere_visible_test(target.pos, CAMERA_RADIUS)) return 0;
 	}
 	if (AI_PLAYER_VIS_TEST >= 3) { // check lit state
 		if (!is_sphere_lit(target.pos, player_radius) && !is_sphere_lit(pp2, player_radius)) return 0; // check both the bottom and top of player
