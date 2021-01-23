@@ -885,9 +885,10 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	else if (need_to_update_ai_path(state, person)) { // need to update based on player movement
 		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1) return AI_WAITING; // can't reach the target
-		if (!find_route_to_point(person, coll_dist, 0, 0, 1, state.path)) return AI_WAITING; // is_first_path=0, use_new_seed=0
+		if (!find_route_to_point(person, coll_dist, 0, 0, 1, state.path))  return AI_WAITING; // is_first_path=0, use_new_seed=0
 		state.next_path_pt(person, stay_on_one_floor);
 	}
+	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2*(person.radius + CAMERA_RADIUS))) {register_ai_player_coll(person);}
 	float const max_dist(person.speed*fticks);
 
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest

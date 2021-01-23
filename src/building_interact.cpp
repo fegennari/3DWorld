@@ -7,6 +7,7 @@
 #include "openal_wrap.h"
 
 extern float fticks, CAMERA_RADIUS;
+extern double tfticks;
 
 
 // lights
@@ -285,5 +286,17 @@ bool building_t::is_sphere_lit(point const &center, float radius) const {
 	get_sphere_boundary_pts(center, radius, pts);
 	for (unsigned n = 0; n < 7; ++n) {if (is_pt_lit(pts[n])) return 1;}
 	return 0;
+}
+
+// gameplay logic
+
+void register_ai_player_coll(pedestrian_t const &person) {
+	static double last_coll_time(0.0);
+	
+	if (tfticks - last_coll_time > 2.0*TICKS_PER_SECOND) {
+		gen_sound(SOUND_SCREAM1, get_camera_pos());
+		last_coll_time = tfticks;
+	}
+	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 }
 
