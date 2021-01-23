@@ -402,7 +402,7 @@ public:
 				} // for n
 				if (max_dp == 0.0) continue; // no better corner found
 				target = best_corner;
-				vcylin_cube_coll_xy(target, p1, 1.5*radius, *i); // move it to not intersect again
+				//vcylin_cube_coll_xy(target, p1, radius, *i); // move it to not intersect again
 			} // for i
 		}
 		path.push_back(p2); // final point; must be added in reverse order
@@ -888,7 +888,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		if (!find_route_to_point(person, coll_dist, 0, 0, 1, state.path))  return AI_WAITING; // is_first_path=0, use_new_seed=0
 		state.next_path_pt(person, stay_on_one_floor);
 	}
-	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2*(person.radius + CAMERA_RADIUS))) {register_ai_player_coll(person);}
+	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + CAMERA_RADIUS))) {register_ai_player_coll(person);}
 	float const max_dist(person.speed*fticks);
 
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
