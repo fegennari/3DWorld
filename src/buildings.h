@@ -566,7 +566,8 @@ struct building_loc_t {
 	int part_ix, room_ix, stairs_ix; // -1 is not contained; what about elevator_ix?
 	unsigned floor;
 	building_loc_t() : part_ix(-1), room_ix(-1), stairs_ix(-1), floor(0) {}
-	bool operator==(building_loc_t const &loc) const {return (part_ix == loc.part_ix && room_ix == loc.room_ix && stairs_ix == loc.stairs_ix && floor == loc.floor);}
+	bool operator==(building_loc_t const &loc) const {return (same_part_room_floor(loc) && stairs_ix == loc.stairs_ix);}
+	bool same_part_room_floor(building_loc_t const &loc) const {return (part_ix == loc.part_ix && room_ix == loc.room_ix && floor == loc.floor);}
 };
 
 struct building_dest_t : public building_loc_t {
@@ -713,14 +714,13 @@ struct building_t : public building_geom_t {
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
 	point get_center_of_room(unsigned room_ix) const;
 	int choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
-	bool find_route_to_point(point const &from, point const &to, unsigned ped_ix, float radius, bool is_first_path, bool use_new_seed, vector<point> &path) const;
+	bool find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool use_new_seed, bool is_moving_target, vector<point> &path) const;
 	void find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, bool straight_only, int part_ix=-1) const;
 	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor=1);
 	void ai_room_lights_update(building_ai_state_t &state, pedestrian_t &person, vector<pedestrian_t> const &people, unsigned person_ix);
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
 	int get_room_containing_pt(point const &pt) const;
 	bool room_containing_pt_has_stairs(point const &pt) const;
-	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	bool maybe_teleport_to_screenshot() const;
 	bool place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen,
 		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
@@ -816,6 +816,8 @@ private:
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side);
 	void play_door_open_close_sound(point const &pos, bool open) const;
+	unsigned get_floor_for_room_zval(unsigned room_ix, float zval) const;
+	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
