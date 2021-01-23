@@ -1111,6 +1111,14 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		door_dir  = rgen.rand_bool(); // select a random dir
 		door_part = 0; // only one part
 	}
+	if (0) { // add a basement
+		cube_t basement(parts[0]);
+		if (two_parts && parts[1].get_area_xy() > parts[0].get_area_xy()) {basement = parts[1];} // use the larger part (TODO: expand if possible)
+		set_cube_zvals(basement, (basement.z1() - floor_spacing), basement.z1());
+		parts.push_back(basement);
+		++real_num_parts;
+		// TODO: special case handling; bbox update; disable terrain over basement stairs somehow
+	}
 	gen_interior(rgen, 0); // before adding door
 
 	if (gen_door) {
@@ -1155,12 +1163,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	} // end gen_door
 	// add roof tquads
 	float const peak_height(rgen.rand_uniform(0.15, 0.5)); // same for all parts
-	float roof_dz[3] = {0.0f};
-	bool hipped_roof[3] = {0};
+	float roof_dz[4] = {0.0f};
+	bool hipped_roof[4] = {0};
 
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
+		if (i->z1() < bcube.z1()) continue; // skip the basement
 		unsigned const ix(i - parts.begin());
-		bool const main_part(ix < real_num_parts);
+		bool const main_part(ix < (two_parts ? 2 : 1));
 		unsigned const fdim(main_part ? force_dim[ix] : 2);
 		cube_t const &other((two_parts && main_part) ? parts[1-ix] : *i); // == self for single part houses
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
