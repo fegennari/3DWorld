@@ -345,69 +345,6 @@ public:
 		} // end while()
 		return 0; // never gets here
 	}
-
-	static bool vcylin_cube_coll_xy(point &pos, point const &p1, float radius, cube_t const &c) {
-		if (pos.z + radius <= c.z1() || pos.z - radius >= c.z2()) return 0;
-		return sphere_cube_int_update_pos(pos, radius, c, p1, 1, 1); // check_int=1, skip_z=1
-	}
-	void track_moving_target(point const &p1, point const &p2, unsigned room, float radius, vector3d const &dir, vect_cube_t const &avoid, vector<point> &path) const {
-		// used for reaching a goal such as the player within the same room
-		cube_t const walk_area(calc_walkable_room_area(get_node(room), radius));
-		assert(p1.z == p2.z);
-		cube_t walk_area_exp(walk_area);
-		walk_area_exp.expand_by_xy(radius); // to capture objects that we could intersect when our center is in walk_area
-
-		// check for current point colliding
-		point start(p1);
-		bool start_coll(0);
-		for (auto i = avoid.begin(); i != avoid.end(); ++i) {start_coll |= vcylin_cube_coll_xy(start, p1, radius, *i);}
-		if (start_coll) {path.push_back(start); return;} // move back to a non-colliding pos
-
-		// check if a straight path is valid
-		point target(p2);
-
-		for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-			if (!i->intersects_xy(walk_area_exp)) continue; // wrong room
-			cube_t c(*i);
-			c.expand_by_xy(radius);
-			point p1c(p1), p2c(target);
-			if (do_line_clip(p1c, p2c, c.d)) {target = p1c;} // new target is the entrance point of the line
-		}
-		if (target == p2) {path.push_back(p2); return;} // no intersection - use a straight path
-		
-		if (dist_less_than(p1, target, 1.5*radius)) { // target is too close - check for target collision point and slide to avoid the obstacle
-			vector3d const tdir((p2 - p1).get_norm());
-
-			for (auto i = avoid.begin(); i != avoid.end(); ++i) {
-				if (!vcylin_cube_coll_xy(target, p1, 1.5*radius, *i)) continue;
-				//if (!dist_less_than(p1, target, radius)) continue;
-				if (!check_line_clip_xy(p1, p2, i->d)) continue; // cube not completely in the way
-				// target is still too close, choose the best oriented cube corner; this may not work correctly for multiple ajdacent cubes
-				float max_dp(0.0);
-				point best_corner;
-				cube_t c_test(*i);
-				c_test.expand_by_xy(-0.01*radius); // slight shrink to avoid edge cases
-
-				for (unsigned n = 0; n < 4; ++n) {
-					point const corner(i->d[0][n&1], i->d[1][n>>1], target.z);
-					if (dist_less_than(corner, p1, 0.1*radius))   continue; // don't stop on the corner when it's reached
-					if (check_line_clip_xy(p1, corner, c_test.d)) continue; // skip far cube corners
-					vector3d const cdir((corner - p1).get_norm());
-					if (dot_product(tdir, cdir) < 0.0) continue; // don't move backwards
-					float const dp(dot_product(dir, cdir));
-					if (dp <= max_dp) continue; // not a better corner; negative dp doesn't count
-					max_dp = dp;
-					best_corner = corner;
-					best_corner += 1.2*radius*(corner - point(i->xc(), i->yc(), target.z)).get_norm(); // move away from the cube
-				} // for n
-				if (max_dp == 0.0) continue; // no better corner found
-				target = best_corner;
-				//vcylin_cube_coll_xy(target, p1, radius, *i); // move it to not intersect again
-			} // for i
-		}
-		path.push_back(p2); // final point; must be added in reverse order
-		path.push_back(target); // move to the clipped point and recalculate from there
-	}
 	bool complete_path_within_room(point const &p1, point const &p2, unsigned room, unsigned ped_ix, float radius, bool use_new_seed, vect_cube_t const &avoid, vector<point> &path) const {
 		// used for reaching a goal such as the player within the same room
 		cube_t const walk_area(calc_walkable_room_area(get_node(room), radius));
@@ -684,22 +621,17 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 	if (loc1.part_ix < 0 || loc2.part_ix < 0 || loc1.room_ix < 0 || loc2.room_ix < 0) return 0; // not in a room
 	assert((unsigned)loc1.part_ix < parts.size() && (unsigned)loc2.part_ix < parts.size());
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
-	//if (loc1 == loc2) {path.push_back(to); return 1;} // same part/room/floor; move to <to> and we're done
-	bool use_stairs(0);
-	if (loc1.floor != loc2.floor) {use_stairs = 1;} // different floors
-	else if (loc1.part_ix != loc2.part_ix) {
-		if (parts[loc1.part_ix].z1() != parts[loc2.part_ix].z1()) {use_stairs = 1;} // stacked parts
-	}
 	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing), z2_add(height - radius); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
 	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add));
 
 	if (loc1.same_part_room_floor(loc2)) { // same part/room/floor (not checking stairs_ix)
-		if (0 && is_moving_target) { // Note: player following logic gets here
-			interior->nav_graph->track_moving_target(from, to, loc1.room_ix, radius, person.dir, avoid, path);
-			return 1;
-		}
 		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, use_new_seed, avoid, path);
+	}
+	bool use_stairs(0);
+	if (loc1.floor != loc2.floor) {use_stairs = 1;} // different floors
+	else if (loc1.part_ix != loc2.part_ix) {
+		if (parts[loc1.part_ix].z1() != parts[loc2.part_ix].z1()) {use_stairs = 1;} // stacked parts
 	}
 	if (use_stairs) { // find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs;
@@ -819,7 +751,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	bool const same_room(target.room_ix == (int)state.cur_room && target.floor == get_floor_for_room_zval(target.room_ix, person.pos.z)); // check room and floor
 	// if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room (optimization)
 	if (target.same_part_room_floor(prev_player_building_loc) && !same_room) return 0;
-	//if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path to avoid deadlock
+	//if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
 	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
 	if (get_building_loc_for_pt(person.pos).stairs_ix >= 0) return 0; // don't update path while on stairs
 	float const floor_spacing(get_window_vspace());
@@ -829,7 +761,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	}
 	// TODO: check for player sounds within listening distance p2p_dist(person.pos, target.pos)
 	if (!can_target_player(state, person)) return 0; // no player visibility, continue on the previously chosen path
-	// do we need some logic that only runs the update every few frames?
+	// do we need some logic that only runs the update every few frames as an optimization?
 	return 1;
 }
 
