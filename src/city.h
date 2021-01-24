@@ -693,7 +693,7 @@ struct pedestrian_t : public waiting_obj_t {
 	float get_speed_mult() const;
 	float get_height () const {return PED_HEIGHT_SCALE*radius;}
 	float get_width  () const {return PED_WIDTH_SCALE *radius;}
-	cube_t get_bcube () const {cube_t c; c.set_from_sphere(pos, radius); return c;}
+	cube_t get_bcube () const;
 	bool target_valid() const {return (target_pos != all_zeros);}
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
 	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);

@@ -23,7 +23,6 @@ string pedestrian_t::get_name() const {
 	rgen.set_state(ssn, 123); // use ssn as name rand gen seed
 	return gen_random_name(rgen); // for now, borrow the universe name generator to assign silly names
 }
-
 string pedestrian_t::str() const { // Note: no label_str()
 	std::ostringstream oss;
 	oss << get_name() << ": " << TXTn(ssn) << TXT(speed) << TXTn(radius) << TXT(city) << TXT(plot) << TXT(next_plot) << TXT(dest_plot) << TXTn(dest_bldg)
@@ -47,6 +46,13 @@ void pedestrian_t::go() {
 void pedestrian_t::wait_for(float seconds) {
 	anim_time     = 0.0; // reset animation
 	waiting_start = seconds*TICKS_PER_SECOND; // stop for N seconds
+}
+cube_t pedestrian_t::get_bcube() const {
+	cube_t c;
+	c.set_from_sphere(pos, get_width());
+	c.z1() = pos.z - radius;
+	c.z2() = c.z1() + get_height();
+	return c;
 }
 
 float get_sidewalk_width(cube_t const &plot_bcube) { // Note: technically should depend on road_width rather than plot size?
@@ -1155,10 +1161,7 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 		draw_sphere_vbo(ped.pos, ped.radius, ndiv, 0);
 	}
 	else {
-		cube_t bcube;
-		bcube.set_from_sphere(ped.pos, ped.get_width());
-		bcube.z1() = ped.pos.z - ped.radius;
-		bcube.z2() = bcube.z1() + ped.get_height();
+		cube_t const bcube(ped.get_bcube());
 		if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*ped.get_height())) return 0; // not visible - skip
 		if (dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models
 		end_sphere_draw(in_sphere_draw);
