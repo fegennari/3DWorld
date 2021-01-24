@@ -796,6 +796,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	float const radius_scale = 0.75; // somewhat smaller than radius
 	float const coll_dist(radius_scale*person.radius);
 	float &wait_time(person.waiting_start); // reuse this field
+	person.following_player = 0; // reset for this frame
 
 	if (wait_time > 0) {
 		if (wait_time > fticks) { // waiting
@@ -842,9 +843,11 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1) return AI_WAITING; // can't reach the target
 		if (!find_route_to_point(person, coll_dist, 0, 0, 1, state.path))  return AI_WAITING; // is_first_path=0, use_new_seed=0
 		state.next_path_pt(person, stay_on_one_floor);
+		person.following_player = 1;
 	}
 	float const max_dist(person.speed*fticks);
 	state.on_new_path_seg = 0; // clear flag for this frame
+	//person.following_player = can_target_player(state, person); // for debugging visualization
 
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
 		assert(bcube.contains_pt(person.target_pos));
