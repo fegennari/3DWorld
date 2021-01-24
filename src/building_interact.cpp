@@ -272,11 +272,17 @@ bool building_t::is_pt_lit(point const &pt) const {
 	int const room_id(get_room_containing_pt(pt)); // call this only once on center in is_sphere_lit()?
 	if (room_id < 0) return 0; // outside building?
 	float const floor_spacing(get_window_vspace());
+	assert((unsigned)room_id < interior->rooms.size());
+	room_t const &room(interior->rooms[room_id]);
 
 	for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
 		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
-		if ((int)i->room_id != room_id) continue; // different room; too strong?
-		if (!i->has_stairs() && fabs(i->z1() - pt.z) > floor_spacing) continue; // different floors, and no stairs
+		bool const same_room((int)i->room_id == room_id);
+		//if (!same_room) continue; // different room (optimization); too strong?
+		//bool const same_floor(fabs(i->z1() - pt.z) < floor_spacing); // doesn't work with lamps
+		bool const same_floor(room.get_floor_containing_zval(pt.z, floor_spacing) == room.get_floor_containing_zval(i->z1(), floor_spacing));
+		if (!i->has_stairs() && !same_floor) continue; // different floors, and no stairs (optimization)
+		if (same_floor && same_room) return 1; // same floor of same room, should be visible (optimization)
 		// TODO: check light radius?
 		if (is_pt_visible(i->get_cube_center(), pt)) return 1; // likely returns true if same room
 	} // for i

@@ -14,6 +14,7 @@ extern bool toggle_door_open_state;
 extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
+extern double camera_zh;
 extern std::string lighting_update_text;
 extern vector<light_source> dl_sources;
 
@@ -562,6 +563,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 		}
+		//lighting_update_text = ((is_sphere_lit(camera_bs, get_scaled_player_radius()) || is_sphere_lit((camera_bs - vector3d(0.0, 0.0, camera_zh)), get_scaled_player_radius())) ? "Lit" : "Unlit");
 	}
 	else {
 		cube_t bcube_exp(bcube);
