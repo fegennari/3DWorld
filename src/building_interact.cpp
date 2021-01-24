@@ -240,7 +240,7 @@ void get_sphere_boundary_pts(point const &center, float radius, point pts[7]) {
 
 	for (unsigned dim = 0, ix = 1; dim < 3; ++dim) {
 		vector3d dir(zero_vector);
-		dir[dim] = 1.0;
+		dir[dim]  = radius;
 		pts[ix++] = center - dir;
 		pts[ix++] = center + dir;
 	}
