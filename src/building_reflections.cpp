@@ -88,7 +88,7 @@ bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, u
 	unsigned const steps(21), d1(1-dim);
 	float const delta(c.get_sz_dim(d1)/(steps-1));
 	point cpt;
-	cpt.z    = c.get_center_dim(2); // no need to test all zvals since walls span the entire room height
+	cpt.z    = c.zc(); // no need to test all zvals since walls span the entire room height
 	cpt[dim] = c.d[dim][dir]; // face plane
 
 	for (unsigned i = 0; i < steps; ++i) {
