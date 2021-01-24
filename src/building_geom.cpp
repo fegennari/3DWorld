@@ -1116,6 +1116,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (two_parts && parts[1].get_area_xy() > parts[0].get_area_xy()) {basement = parts[1];} // use the larger part (TODO: expand if possible)
 		set_cube_zvals(basement, (basement.z1() - floor_spacing), basement.z1());
 		parts.push_back(basement);
+		//min_eq(bcube.z1(), basement.z1());
 		++real_num_parts;
 		// TODO: special case handling; bbox update; disable terrain over basement stairs somehow
 	}
