@@ -2408,7 +2408,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlus
 			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->walls[d], d)) return 1;
 		}
 	}
-	if (player_in_this_building) { // check floors of this building (and technically also ceilings)
+	if (player_in_this_building || shadow_only) { // check floors of this building (and technically also ceilings)
 		if (fabs(viewer.z - c.get_center_dim(2)) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
 			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->floors, 2)) return 1;
 		}
