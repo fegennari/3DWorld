@@ -2061,10 +2061,10 @@ public:
 						if (ped_ix >= 0 && (camera_in_this_building || player_close)) { // draw people in this building
 							if (global_building_params.enable_people_ai) { // handle animations
 								select_person_shadow_shader(person_shader);
-								draw_peds_in_building(ped_ix, bi->ix, person_shader, xlate, 1); // draw people in this building
+								draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, person_shader, xlate, bi->ix, 1, 0, 0)); // draw people in this building
 								s.make_current(); // switch back to normal building shader
 							}
-							else {draw_peds_in_building(ped_ix, bi->ix, s, xlate, 1);} // no animations
+							else {draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 1, 0, 0));} // no animations
 						}
 						if (add_player_shadow && camera_in_this_building) {
 							if (global_building_params.enable_people_ai) { // handle animations
@@ -2248,10 +2248,11 @@ public:
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
-						b.gen_and_draw_room_geom(s, oc, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, b.bcube.contains_pt_xy(camera_xlated)); // shadow_only=0
+						bool const player_in_building(b.bcube.contains_pt_xy(camera_xlated));
+						b.gen_and_draw_room_geom(s, oc, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, player_in_building); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
-						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, bi->ix, s, xlate, 0);} // draw people in this building
+						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass, player_in_building));} // draw people in this building
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
 						if (reflection_pass == 2)  continue; // interior room, don't need to draw windows and exterior doors

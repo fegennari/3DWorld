@@ -3187,21 +3187,12 @@ public:
 		if ((trans_op_mask & 1) && !shadow_only) {road_gen.draw_label();} // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
-	void draw_roads(int trans_op_mask, vector3d const &xlate) {
-		road_gen.draw(trans_op_mask, xlate, enable_lights(), 0); // shadow_only=0
-	}
-	void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {
-		car_manager.draw(1, xlate, 1, shadow_only, 0, 1); // opaque + garages pass
-	}
-	void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only) {
-		ped_manager.draw_peds_in_building(first_ped_ix, bix, s, xlate, dlight_shadow_only);
-	}
-	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const {
-		ped_manager.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes);
-	}
-	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {
-		ped_manager.draw_player_model(s, xlate, shadow_only);
-	}
+	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
+	void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {car_manager.draw(1, xlate, 1, shadow_only, 0, 1);} // opaque + garages pass
+	void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {ped_manager.draw_peds_in_building(first_ped_ix, pdv);}
+	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const {ped_manager.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes);}
+	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {ped_manager.draw_player_model(s, xlate, shadow_only);}
+
 	void setup_city_lights(vector3d const &xlate) {
 		if (world_mode != WMODE_INF_TERRAIN) return; // TT only
 		if (prev_city_lights_setup_frame == cur_display_iter) return; // already called this frame
@@ -3249,15 +3240,10 @@ void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector
 void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_roads(trans_op_mask, xlate);}
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
-void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only) {
-	city_gen.draw_peds_in_building(first_ped_ix, bix, s, xlate, dlight_shadow_only);
-}
-void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) {
-	city_gen.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes);
-}
-void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {
-	city_gen.draw_player_model(s, xlate, shadow_only);
-}
+void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {city_gen.draw_peds_in_building(first_ped_ix, pdv);}
+void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) {city_gen.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes);}
+void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_player_model(s, xlate, shadow_only);}
+
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) {
 	if (!have_cities()) return 0;
 	return city_gen.check_city_sphere_coll((pos + get_tt_xlate_val()), radius, 1, exclude_bridges_and_tunnels, ret_first_coll, check_mask); // apply xlate for all static objects

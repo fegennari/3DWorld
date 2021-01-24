@@ -820,7 +820,7 @@ public:
 	unsigned get_first_ped_at_plot(unsigned plot) const {assert(plot < by_plot.size()); return by_plot[plot];}
 	void get_peds_crossing_roads(ped_city_vect_t &pcv) const;
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
-	void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only);
+	void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv);
 	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const;
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 	void free_context() {ped_model_loader.free_context();}

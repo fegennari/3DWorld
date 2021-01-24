@@ -866,6 +866,18 @@ struct building_place_t {
 };
 typedef vector<building_place_t> vect_building_place_t;
 
+struct ped_draw_vars_t {
+	building_t const &building;
+	occlusion_checker_noncity_t &oc;
+	shader_t &s;
+	vector3d const &xlate;
+	unsigned bix;
+	bool shadow_only, reflection_pass, player_in_building;
+
+	ped_draw_vars_t(building_t const &b, occlusion_checker_noncity_t &oc_, shader_t &s_, vector3d const &x, unsigned bix_, bool so, bool rp, bool pib)
+		: building(b), oc(oc_), s(s_), xlate(x), bix(bix_), shadow_only(so), reflection_pass(rp), player_in_building(pib) {}
+};
+
 inline void clip_low_high(float &t0, float &t1) {
 	if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
@@ -909,7 +921,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);
 void enable_animations_for_shader(shader_t &s);
 void setup_city_lights(vector3d const &xlate);
-void draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only); // from city_gen.cpp
+void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv); // from city_gen.cpp
 void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes); // from city_gen.cpp
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 vector3d get_nom_car_size();

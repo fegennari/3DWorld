@@ -1101,26 +1101,33 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	dstate.show_label_text();
 }
 
-void ped_manager_t::draw_peds_in_building(int first_ped_ix, unsigned bix, shader_t &s, vector3d const &xlate, bool dlight_shadow_only) {
+void ped_manager_t::draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {
 	if (first_ped_ix < 0) return; // no peds - error?
 	assert((unsigned)first_ped_ix < peds_b.size());
-	assert(peds_b[first_ped_ix].dest_bldg == bix); // consistency check
+	assert(peds_b[first_ped_ix].dest_bldg == pdv.bix); // consistency check
 	float const def_draw_dist(120.0*get_ped_radius()); // smaller than city peds
-	float const draw_dist(dlight_shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
+	float const draw_dist(pdv.shadow_only ? camera_pdu.far_ : def_draw_dist), draw_dist_sq(draw_dist*draw_dist);
 	pos_dir_up pdu(camera_pdu); // decrease the far clipping plane for pedestrians
-	pdu.pos -= xlate; // adjust for local translate
+	pdu.pos -= pdv.xlate; // adjust for local translate
 	bool const enable_animations(enable_building_people_ai());
 	bool in_sphere_draw(0);
-	if (enable_animations) {s.add_uniform_int("animation_id", animation_id);}
+	if (enable_animations) {pdv.s.add_uniform_int("animation_id", animation_id);}
 
 	// Note: no far clip adjustment or draw dist scale
 	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
-		if (p->dest_bldg != bix) break; // done with this building
-		draw_ped(*p, s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, dlight_shadow_only, dlight_shadow_only, enable_animations);
-	}
+		if (p->dest_bldg != pdv.bix) break; // done with this building
+		
+		if (display_mode & 0x08) { // occlusion culling
+			cube_t bcube(p->pos);
+			bcube.z2() += p->get_height();
+			bcube.expand_by_xy(p->radius);
+			if (pdv.building.check_obj_occluded(bcube, pdu.pos, pdv.oc, pdv.player_in_building, pdv.shadow_only, pdv.reflection_pass)) continue;
+		}
+		draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, enable_animations);
+	} // for p
 	end_sphere_draw(in_sphere_draw);
-	s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
-	if (enable_animations) {s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
+	pdv.s.upload_mvm(); // seems to be needed after applying model transforms, not sure why
+	if (enable_animations) {pdv.s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
 }
 
 void ped_manager_t::get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const {
