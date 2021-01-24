@@ -741,8 +741,9 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 	float const player_radius(get_scaled_player_radius());
 	point const pp2(target.pos - vector3d(0.0, 0.0, camera_zh)); // player's bottom sphere
 	point const eye_pos(person.pos + vector3d(0.0, 0.0, 0.9*person.get_height())); // for person
+	bool const same_room_and_floor(target.room_ix == (int)state.cur_room && target.floor == get_floor_for_room_zval(target.room_ix, person.pos.z));
 
-	if (target.room_ix != (int)state.cur_room || target.floor != get_floor_for_room_zval(target.room_ix, person.pos.z)) { // assume LOS if in the same room
+	if (!same_room_and_floor) { // check visibility; assume LOS if in the same room
 		if (!is_sphere_visible(target.pos, player_radius, eye_pos) && !is_sphere_visible(pp2, player_radius, eye_pos)) return 0; // check both the bottom and top of player
 	}
 	if (vis_test >= 2) { // check person FOV
@@ -751,7 +752,7 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 		pos_dir_up pdu(person.pos, person.dir, plus_z, 0.0, 0.1*person.radius, view_dist, 0.0, 1); // auto perspective angle, no_zoom=1
 		if (!pdu.sphere_visible_test(target.pos, player_radius) && !pdu.sphere_visible_test(pp2, player_radius)) return 0;
 	}
-	if (vis_test >= 3) { // check lit state
+	if (vis_test >= 3 && !same_room_and_floor) { // check lit state if not in the same room and floor
 		if (!is_sphere_lit(target.pos, player_radius) && !is_sphere_lit(pp2, player_radius)) return 0; // check both the bottom and top of player
 	}
 	return 1;
