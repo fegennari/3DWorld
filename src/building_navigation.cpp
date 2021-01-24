@@ -13,6 +13,7 @@ bool const AI_OPENS_DOORS     = 1;
 bool const AI_TARGET_PLAYER   = 1;
 int  const AI_PLAYER_VIS_TEST = 0; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 
+int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 
 extern int frame_counter, display_mode;
@@ -493,9 +494,14 @@ point building_t::get_center_of_room(unsigned room_ix) const {
 	return interior->rooms[room_ix].get_cube_center();
 }
 
+// Warning: this may be called from a different thread from the one that uses it for AI updates
 void building_t::register_player_in_building(point const &camera_bs, unsigned building_id) const {
 	prev_player_building_loc = cur_player_building_loc;
 	cur_player_building_loc  = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
+	cpbl_update_frame = frame_counter;
+}
+void end_register_player_in_building() {
+	if (cpbl_update_frame != frame_counter) {prev_player_building_loc = cur_player_building_loc = building_dest_t();} // player not in build, reset
 }
 
 // return value: 0=failed, 1=success, 2=failed but can retry

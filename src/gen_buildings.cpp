@@ -3109,11 +3109,13 @@ void clear_building_vbos() {
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
+void end_register_player_in_building();
 
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 	building_creator.add_interior_lights(xlate, lights_bcube);
 	building_creator_city.add_interior_lights(xlate, lights_bcube);
 	building_tiles.add_interior_lights(xlate, lights_bcube);
+	end_register_player_in_building(); // required for AI player following
 }
 // cars + peds
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
