@@ -155,6 +155,11 @@ struct building_params_t {
 	float ao_factor, sec_extra_spacing, player_coll_radius_scale;
 	float window_width, window_height, window_xspace, window_yspace; // windows
 	float wall_split_thresh, max_fp_wind_xscale, max_fp_wind_yscale, open_door_prob; // interiors
+
+	// building AI params
+	bool ai_opens_doors, ai_target_player, ai_follow_player;
+	int ai_player_vis_test; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
@@ -162,9 +167,10 @@ struct building_params_t {
 	vector<unsigned> rug_tids, picture_tids, desktop_tids, sheet_tids, paper_tids;
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), dome_roof(0),
-		onion_roof(0), enable_people_ai(0), add_city_interiors(0), enable_rotated_room_geom(0), num_place(num), num_tries(10), cur_prob(1), max_shadow_maps(32),
-		ao_factor(0.0), sec_extra_spacing(0.0), player_coll_radius_scale(1.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0),
-		wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), open_door_prob(1.0), range_translate(zero_vector) {}
+		onion_roof(0), enable_people_ai(0), add_city_interiors(0), enable_rotated_room_geom(0), ai_opens_doors(1), ai_target_player(1), ai_follow_player(0), ai_player_vis_test(0),
+		num_place(num), num_tries(10), cur_prob(1), max_shadow_maps(32), ao_factor(0.0), sec_extra_spacing(0.0), player_coll_radius_scale(1.0), window_width(0.0),
+		window_height(0.0), window_xspace(0.0), window_yspace(0.0), wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), open_door_prob(1.0),
+		range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}

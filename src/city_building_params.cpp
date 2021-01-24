@@ -496,6 +496,19 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "add_desktop_texture") {read_texture_and_add_if_valid(fp, str, error, global_building_params.desktop_tids);}
 	else if (str == "add_sheet_texture"  ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.sheet_tids  );}
 	else if (str == "add_paper_texture"  ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.paper_tids  );}
+	// AI logic
+	else if (str == "ai_opens_doors") {
+		if (!read_bool(fp, global_building_params.ai_opens_doors)) {buildings_file_err(str, error);}
+	}
+	else if (str == "ai_target_player") {
+		if (!read_bool(fp, global_building_params.ai_target_player)) {buildings_file_err(str, error);}
+	}
+	else if (str == "ai_follow_player") {
+		if (!read_bool(fp, global_building_params.ai_follow_player)) {buildings_file_err(str, error);}
+	}
+	else if (str == "ai_player_vis_test") { // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+		if (!read_int(fp, global_building_params.ai_player_vis_test)) {buildings_file_err(str, error);}
+	}
 	// special commands
 	else if (str == "probability") {
 		if (!read_uint(fp, global_building_params.cur_prob)) {buildings_file_err(str, error);}

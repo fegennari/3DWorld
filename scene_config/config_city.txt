@@ -16,6 +16,12 @@ buildings max_rot_angle 0.0 # terrain flatten doesn't work well for rotated buil
 include building_materials.txt
 buildings tt_only 1
 
+# building AI logic
+buildings ai_opens_doors 1 # AI can open closed building doors rather than stopping at them
+buildings ai_target_player 1 # AI follows the player position (rather than just the room) in gameplay mode
+buildings ai_follow_player 0 # enable player following in gameplay mode by default
+buildings ai_player_vis_test 0 # 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+
 # city parameters
 city num_cities 8
 city num_rr_tracks 0

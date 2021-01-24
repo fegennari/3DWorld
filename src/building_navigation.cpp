@@ -8,19 +8,17 @@
 #include <queue>
 
 
-bool const STAY_ON_ONE_FLOOR  = 0;
-bool const AI_OPENS_DOORS     = 1;
-bool const AI_TARGET_PLAYER   = 1;
-int  const AI_PLAYER_VIS_TEST = 0; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+bool const STAY_ON_ONE_FLOOR = 0;
 
 int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 
 extern int frame_counter, display_mode;
-extern float fticks, camera_zh;
+extern float fticks;
+extern double camera_zh;
 extern building_params_t global_building_params;
 
-bool ai_follow_player() {return (display_mode & 0x20);} // for future gameplay mode
+bool ai_follow_player() {return (global_building_params.ai_follow_player ^ bool(display_mode & 0x20));} // for future gameplay mode
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
@@ -516,7 +514,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 	building_dest_t const &goal(cur_player_building_loc);
 	float const floor_spacing(get_window_vspace());
 
-	if ((AI_TARGET_PLAYER || goal.same_part_room_floor(loc)) && can_target_player(state, person)) {
+	if ((global_building_params.ai_target_player || goal.same_part_room_floor(loc)) && can_target_player(state, person)) {
 		// player is in a different room of our building, or we're following the player's position
 		unsigned const cand_room(goal.room_ix);
 		assert(cand_room < interior->rooms.size());
@@ -525,7 +523,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		if (person.pos.z > room.z1() && person.pos.z < room.z2()) { // room contains our zval
 			if (interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) {
 				state.dest_room     = cand_room; // set but not yet used
-				person.target_pos   = (AI_TARGET_PLAYER ? goal.pos: get_center_of_room(cand_room));
+				person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
 				person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
 				if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
@@ -737,8 +735,8 @@ bool can_ai_follow_player(pedestrian_t const &person) {
 
 bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const {
 	if (!can_ai_follow_player(person)) return 0;
-	// AI_PLAYER_VIS_TEST: 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
-	if (AI_PLAYER_VIS_TEST == 0) return 1; // no visibility test
+	int const vis_test(global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+	if (vis_test == 0) return 1; // no visibility test
 	building_dest_t const &target(cur_player_building_loc);
 	float const player_radius(CAMERA_RADIUS*global_building_params.player_coll_radius_scale);
 	point const pp2(target.pos + vector3d(0.0, 0.0, camera_zh)); // player's head
@@ -747,20 +745,20 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 	if (target.room_ix != (int)state.cur_room || target.floor != get_floor_for_room_zval(target.room_ix, person.pos.z)) { // assume LOS if in the same room
 		if (!is_sphere_visible(target.pos, player_radius, eye_pos) && !is_sphere_visible(pp2, player_radius, eye_pos)) return 0; // check both the bottom and top of player
 	}
-	if (AI_PLAYER_VIS_TEST >= 2) { // check person FOV
+	if (vis_test >= 2) { // check person FOV
 		//if (dot_product((pp2 - eye_pos).get_norm(), person.dir) < 0.5) return 0; // 60 degree FOV => dp < 0.5
 		float const view_dist(10.0*get_window_vspace()); // 10 stories (~100 feet) should be good enough
 		pos_dir_up pdu(person.pos, person.dir, plus_z, 0.0, 0.1*person.radius, view_dist, 0.0, 1); // auto perspective angle, no_zoom=1
 		if (!pdu.sphere_visible_test(target.pos, CAMERA_RADIUS)) return 0;
 	}
-	if (AI_PLAYER_VIS_TEST >= 3) { // check lit state
+	if (vis_test >= 3) { // check lit state
 		if (!is_sphere_lit(target.pos, player_radius) && !is_sphere_lit(pp2, player_radius)) return 0; // check both the bottom and top of player
 	}
 	return 1;
 }
 
 bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const {
-	if (!AI_TARGET_PLAYER || !can_ai_follow_player(person) || !interior) return 0; // disabled
+	if (!global_building_params.ai_target_player || !can_ai_follow_player(person) || !interior) return 0; // disabled
 	building_dest_t const &target(cur_player_building_loc);
 	//bool const same_room((int)state.cur_room == target.room_ix);
 	bool const same_room(target.room_ix == (int)state.cur_room && target.floor == get_floor_for_room_zval(target.room_ix, person.pos.z)); // check room and floor
@@ -852,7 +850,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		assert(bcube.contains_pt(person.target_pos));
 		person.pos = person.target_pos;
 		if (!state.path.empty()) {state.next_path_pt(person, stay_on_one_floor); return AI_NEXT_PT;} // move to next path point
-		bool const no_wait(AI_TARGET_PLAYER && can_target_player(state, person)); // don't wait if we can follow the player
+		bool const no_wait(global_building_params.ai_target_player && can_target_player(state, person)); // don't wait if we can follow the player
 		if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, 10.0));} // stop for 1-10 seconds
 		state.on_new_path_seg = 1; // allow player following AI update logic to rerun this frame
 		return AI_AT_DEST;
@@ -898,7 +896,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
 			if (!door.line_intersects(person.pos, person.target_pos)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
 
-			if (AI_OPENS_DOORS) {toggle_door_state((i - interior->doors.begin()));}
+			if (global_building_params.ai_opens_doors) {toggle_door_state((i - interior->doors.begin()));}
 			else {
 				person.wait_for(5.0); // wait for 5s and then choose a new desination
 				return AI_WAITING; // cut the path short at this closed door
