@@ -738,9 +738,9 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 	int const vis_test(global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 	if (vis_test == 0) return 1; // no visibility test
 	building_dest_t const &target(cur_player_building_loc);
-	float const player_radius(CAMERA_RADIUS*global_building_params.player_coll_radius_scale);
-	point const pp2(target.pos + vector3d(0.0, 0.0, camera_zh)); // player's head
-	point const eye_pos(person.pos + vector3d(0.0, 0.0, 0.9*person.get_height()));
+	float const player_radius(get_scaled_player_radius());
+	point const pp2(target.pos - vector3d(0.0, 0.0, camera_zh)); // player's bottom sphere
+	point const eye_pos(person.pos + vector3d(0.0, 0.0, 0.9*person.get_height())); // for person
 
 	if (target.room_ix != (int)state.cur_room || target.floor != get_floor_for_room_zval(target.room_ix, person.pos.z)) { // assume LOS if in the same room
 		if (!is_sphere_visible(target.pos, player_radius, eye_pos) && !is_sphere_visible(pp2, player_radius, eye_pos)) return 0; // check both the bottom and top of player
@@ -749,7 +749,7 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 		//if (dot_product((pp2 - eye_pos).get_norm(), person.dir) < 0.5) return 0; // 60 degree FOV => dp < 0.5
 		float const view_dist(10.0*get_window_vspace()); // 10 stories (~100 feet) should be good enough
 		pos_dir_up pdu(person.pos, person.dir, plus_z, 0.0, 0.1*person.radius, view_dist, 0.0, 1); // auto perspective angle, no_zoom=1
-		if (!pdu.sphere_visible_test(target.pos, CAMERA_RADIUS)) return 0;
+		if (!pdu.sphere_visible_test(target.pos, player_radius) && !pdu.sphere_visible_test(pp2, player_radius)) return 0;
 	}
 	if (vis_test >= 3) { // check lit state
 		if (!is_sphere_lit(target.pos, player_radius) && !is_sphere_lit(pp2, player_radius)) return 0; // check both the bottom and top of player
@@ -817,8 +817,10 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	// TODO: seems like this can fail when multiple AI stack up to try and follow the player out the door
 	assert(bcube.contains_pt(person.pos)); // person must be inside the building
 	if (!interior->nav_graph) {build_nav_graph();}
-	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + CAMERA_RADIUS))) {register_ai_player_coll(person);}
 
+	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
+		register_ai_player_coll(person);
+	}
 	if (choose_dest) { // no current destination, choose a new destination
 		person.anim_time = 0.0; // reset animation
 		int const ret(choose_dest_room(state, person, rgen, stay_on_one_floor)); // 0=failed, 1=success, 2=failed but can retry

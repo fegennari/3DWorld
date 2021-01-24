@@ -372,7 +372,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			}
 			else { // assume it's a cube
 				cube_t c_extended(*c);
-				c_extended.z1() -= camera_zh; // handle the player's head (for stairs)
+				c_extended.z1() -= camera_zh; // handle the player's head (for stairs), or is pos already at this height?
 
 				if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 					if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // not intersection with closet bounding cube (optimization)
