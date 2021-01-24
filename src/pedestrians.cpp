@@ -1117,11 +1117,8 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, ped_draw_vars_t cons
 	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
 		if (p->dest_bldg != pdv.bix) break; // done with this building
 		
-		if (display_mode & 0x08) { // occlusion culling
-			cube_t bcube(p->pos);
-			bcube.z2() += p->get_height();
-			bcube.expand_by_xy(p->radius);
-			if (pdv.building.check_obj_occluded(bcube, pdu.pos, pdv.oc, pdv.player_in_building, pdv.shadow_only, pdv.reflection_pass)) continue;
+		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
+			if (pdv.building.check_obj_occluded(p->get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;
 		}
 		draw_ped(*p, pdv.s, pdu, pdv.xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, pdv.shadow_only, pdv.shadow_only, enable_animations);
 	} // for p

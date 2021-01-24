@@ -739,7 +739,7 @@ struct building_t : public building_geom_t {
 	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
-	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const;
+	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass) const;
 	void add_interior_door_to_bdraw(building_draw_t &bdraw, unsigned door_ix) const;
 	void update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) const;
 private:
@@ -878,10 +878,10 @@ struct ped_draw_vars_t {
 	shader_t &s;
 	vector3d const &xlate;
 	unsigned bix;
-	bool shadow_only, reflection_pass, player_in_building;
+	bool shadow_only, reflection_pass;
 
-	ped_draw_vars_t(building_t const &b, occlusion_checker_noncity_t &oc_, shader_t &s_, vector3d const &x, unsigned bix_, bool so, bool rp, bool pib)
-		: building(b), oc(oc_), s(s_), xlate(x), bix(bix_), shadow_only(so), reflection_pass(rp), player_in_building(pib) {}
+	ped_draw_vars_t(building_t const &b, occlusion_checker_noncity_t &oc_, shader_t &s_, vector3d const &x, unsigned bix_, bool so, bool rp)
+		: building(b), oc(oc_), s(s_), xlate(x), bix(bix_), shadow_only(so), reflection_pass(rp) {}
 };
 
 inline void clip_low_high(float &t0, float &t1) {

@@ -2359,7 +2359,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		//++occlusion_stats.nnear;
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		//++occlusion_stats.nvis;
-		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, player_in_building, shadow_only, reflection_pass)) continue;
+		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 		//++occlusion_stats.ndraw;
 		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && (obj.flags & RO_FLAG_LIT));
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
@@ -2395,11 +2395,10 @@ bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsi
 	return 0;
 }
 
-bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool player_in_this_building, bool shadow_only, bool reflection_pass) const {
+bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass) const {
 	if (!interior) return 0; // could probably make this an assert
 	if (is_rotated()) return 0; // TODO: implement rotated building occlusion culling; cubes are not actually cubes; seems messy
 	//highres_timer_t timer("Check Object Occlusion");
-	if (reflection_pass) {assert(player_in_this_building);}
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	
@@ -2408,13 +2407,11 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlus
 			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->walls[d], d)) return 1;
 		}
 	}
-	if (player_in_this_building || shadow_only) { // check floors of this building (and technically also ceilings)
-		if (fabs(viewer.z - c.get_center_dim(2)) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
+	if (bcube.contains_pt(viewer)) { // viewer inside this building; includes shadow_only case and reflection_pass
+		// check floors of this building (and technically also ceilings)
+		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
 			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->floors, 2)) return 1;
 		}
-	}
-	else if (shadow_only) {
-		return 0; // no additional checks for shadow pass
 	}
 	else if (camera_in_building) { // player in some other building
 		if (player_building != nullptr && player_building->interior) { // check walls of the building the player is in
