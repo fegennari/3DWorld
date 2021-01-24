@@ -1005,6 +1005,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		detail_type = ((type == 1) ? (rgen.rand()%3) : 0); // 0=none, 1=porch, 2=detatched garage/shed
 		door_dir = ((door_dim == dim) ? dir : dir2); // if we have a porch/shed/garage, put the door on that side
 		if (door_dim == dim && detail_type == 0) {door_dir ^= 1;} // put it on the opposite side so that the second part isn't in the way
+		maybe_add_basement(rgen);
 		vect_cube_t cubes; // reused for tree and fence
 
 		if (detail_type != 0) { // add details to L-shaped house
@@ -1105,21 +1106,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				}
 			}
 		}
-		calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	} // end type != 0  (multi-part house)
 	else if (gen_door) { // single cube house
+		maybe_add_basement(rgen);
 		door_dir  = rgen.rand_bool(); // select a random dir
 		door_part = 0; // only one part
 	}
-	if (0) { // add a basement
-		cube_t basement(parts[0]);
-		if (two_parts && parts[1].get_area_xy() > parts[0].get_area_xy()) {basement = parts[1];} // use the larger part (TODO: expand if possible)
-		set_cube_zvals(basement, (basement.z1() - floor_spacing), basement.z1());
-		parts.push_back(basement);
-		//min_eq(bcube.z1(), basement.z1());
-		++real_num_parts;
-		// TODO: special case handling; bbox update; disable terrain over basement stairs somehow
-	}
+	calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	gen_interior(rgen, 0); // before adding door
 
 	if (gen_door) {
@@ -1144,7 +1137,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (tot_area > 25.0f*floor_spacing*floor_spacing) { // if house is large enough, add a back door
 			bool added_door(0);
 
-			for (unsigned p = 0; p < (two_parts ? 2U : 1U) && !added_door; ++p) {
+			for (unsigned p = 0; p < real_num_parts && !added_door; ++p) {
 				unsigned door2_part(two_parts ? 1-door_part : 0); // try the other part first
 				cube_t const &part(parts[door2_part]);
 
@@ -1170,7 +1163,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
 		if (i->z1() < bcube.z1()) continue; // skip the basement
 		unsigned const ix(i - parts.begin());
-		bool const main_part(ix < (two_parts ? 2U : 1U));
+		bool const main_part(ix < real_num_parts);
 		unsigned const fdim(main_part ? force_dim[ix] : 2);
 		cube_t const &other((two_parts && main_part) ? parts[1-ix] : *i); // == self for single part houses
 		bool const dim((fdim < 2) ? fdim : get_largest_xy_dim(*i)); // use longest side if not forced
@@ -1259,6 +1252,19 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
 	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
 	if (rgen.rand_bool()) {add_solar_panels(rgen);} // maybe add solar panels
+}
+
+void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses only
+	return;
+	cube_t basement(parts[0]);
+	if (real_num_parts == 2 && parts[1].get_area_xy() > parts[0].get_area_xy()) {basement = parts[1];} // use the larger part (TODO: expand if possible)
+	set_cube_zvals(basement, (basement.z1() - get_window_vspace()), basement.z1());
+	parts.push_back(basement);
+	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference
+	++real_num_parts;
+	// TODO: special case handling; disable terrain over basement stairs somehow
+	// TODO: no roof
+	// TODO: no windows
 }
 
 void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses

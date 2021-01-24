@@ -2405,7 +2405,7 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 		objs.back().obj_id = register_sign_text(text);
 		return; // done
 	} // for p
-	cout << TXT(bcube.str()) << TXT(door_bcube.str()) << TXT(is_house) << endl; // debug printout
+	cout << "Warning: Failed to find building exterior door: " << TXT(bcube.str()) << TXT(door_bcube.str()) << TXT(is_house) << endl; // debug printout
 	//assert(0); // never gets here (too strong?)
 }
 

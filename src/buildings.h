@@ -743,6 +743,7 @@ struct building_t : public building_geom_t {
 	void add_interior_door_to_bdraw(building_draw_t &bdraw, unsigned door_ix) const;
 	void update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) const;
 private:
+	void maybe_add_basement(rand_gen_t &rgen);
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
