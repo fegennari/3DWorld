@@ -271,10 +271,12 @@ bool building_t::is_pt_lit(point const &pt) const {
 	if (!has_room_geom()) return 0; // no lights
 	int const room_id(get_room_containing_pt(pt)); // call this only once on center in is_sphere_lit()?
 	if (room_id < 0) return 0; // outside building?
+	float const floor_spacing(get_window_vspace());
 
 	for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
 		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
 		if ((int)i->room_id != room_id) continue; // different room; too strong?
+		if (!i->has_stairs() && fabs(i->z1() - pt.z) > floor_spacing) continue; // different floors, and no stairs
 		// TODO: check light radius?
 		if (is_pt_visible(i->get_cube_center(), pt)) return 1; // likely returns true if same room
 	} // for i
