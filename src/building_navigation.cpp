@@ -8,7 +8,8 @@
 #include <queue>
 
 
-bool const STAY_ON_ONE_FLOOR = 0;
+bool const STAY_ON_ONE_FLOOR  = 0;
+float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
 
 int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
@@ -526,6 +527,32 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 				person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
 				person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
+				if (global_building_params.ai_target_player) { // ensure target is a valid location in this building
+					float const z2_add(person.get_height() - person.radius), coll_dist(COLL_RADIUS_SCALE*person.radius);
+					cube_t legal_area(bcube);
+					legal_area.expand_by_xy(-coll_dist);
+					legal_area.z1() += person.radius;
+					legal_area.z2() -= z2_add;
+					assert(legal_area.is_strictly_normalized());
+					legal_area.clamp_pt(person.target_pos); // clamp to building interior
+					float dmin_sq(bcube.get_max_extent()); // start at a large value
+					cube_t closest_part;
+
+					for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // there shouldn't be any people in secondary buildings, but include them anyway
+						if (p->contains_pt(person.target_pos)) {dmin_sq = 0; break;} // done
+						float const dsq(p2p_dist_sq(person.target_pos, p->closest_pt(person.target_pos)));
+						if (dsq < dmin_sq) {closest_part = *p;}
+					}
+					if (dmin_sq > 0.0 && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
+					static vect_cube_t avoid; // reuse across frames/people
+					interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add));
+
+					for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
+						cube_t c(*i);
+						c.expand_by_xy(coll_dist);
+						sphere_cube_int_update_pos(person.target_pos, coll_dist, c, person.pos, 1, 1); // check_int=1, skip_z=1, ignore return value
+					}
+				}
 				if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
 					unsigned const cur_floor(room.get_floor_containing_zval(person.pos.z, floor_spacing));
 					cube_t const &part(get_part_for_room(room));
@@ -794,8 +821,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	pedestrian_t &person(people[person_ix]);
 	if (person.speed == 0.0) {person.anim_time = 0.0; return AI_STOP;} // stopped
 	bool choose_dest(person.target_pos == all_zeros);
-	float const radius_scale = 0.75; // somewhat smaller than radius
-	float const coll_dist(radius_scale*person.radius);
+	float const coll_dist(COLL_RADIUS_SCALE*person.radius);
 	float &wait_time(person.waiting_start); // reuse this field
 	person.following_player = 0; // reset for this frame
 
@@ -804,7 +830,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check for other people colliding with this person and handle it
 				if (p->dest_bldg != person.dest_bldg) break; // done with this building
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
-				float const rsum(coll_dist + radius_scale*p->radius);
+				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
 			} // for p
@@ -815,7 +841,6 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		choose_dest = 1;
 	}
 	assert(interior);
-	// TODO: seems like this can fail when multiple AI stack up to try and follow the player out the door
 	assert(bcube.contains_pt(person.pos)); // person must be inside the building
 	if (!interior->nav_graph) {build_nav_graph();}
 
@@ -888,7 +913,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
 			if (p->dest_bldg != person.dest_bldg) break; // done with this building
 			if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
-			float const rsum(coll_dist + radius_scale*p->radius);
+			float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 			if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
 			if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop
 			person.anim_time = 0.0; // pause animation in case this person is mid-step
