@@ -494,12 +494,6 @@ bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, bool front_doo
 	return 0;
 }
 
-point building_t::get_center_of_room(unsigned room_ix) const {
-	assert(interior);
-	assert(room_ix < interior->rooms.size());
-	return interior->rooms[room_ix].get_cube_center();
-}
-
 // Warning: this may be called from a different thread from the one that uses it for AI updates
 void building_t::register_player_in_building(point const &camera_bs, unsigned building_id) const {
 	prev_player_building_loc = cur_player_building_loc;
@@ -524,8 +518,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 	if ((global_building_params.ai_target_player || goal.same_room_floor(loc)) && can_target_player(state, person)) {
 		// player is in a different room of our building, or we're following the player's position
 		unsigned const cand_room(goal.room_ix);
-		assert(cand_room < interior->rooms.size());
-		room_t const &room(interior->rooms[cand_room]);
+		room_t const &room(get_room(cand_room));
 
 		if (person.pos.z > room.z1() && person.pos.z < room.z2()) { // room contains our zval
 			if (interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) {
@@ -800,7 +793,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	// however, if the path is empty, continue to choose a new path (needed for AI more than one floor away from target to take multiple flights of stairs)
 	if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) {
 		return 0; // TODO: without the check below, people may clip through walls when walking through doorways; but they check below may make them stop at doorways
-		//cube_t room_interior(interior->rooms[state.cur_room]);
+		//cube_t room_interior(get_room(state.cur_room));
 		//room_interior.expand_by_xy(-COLL_RADIUS_SCALE*person.radius);
 		//if (room_interior.contains_pt_xy(person.pos)) return 0; // if person is not in a doorway, etc.
 	}
@@ -960,8 +953,7 @@ void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t 
 	if ((frame_counter + person_ix) & 7) return; // update room info only every 8 frames
 	int const room_ix(get_room_containing_pt(person.pos));
 	if (room_ix < 0) return; // room is not valid (between rooms, etc.)
-	assert((unsigned)room_ix < interior->rooms.size());
-	room_t const &cur_room(interior->rooms[room_ix]);
+	room_t const &cur_room(get_room(room_ix));
 	set_room_light_state_to(cur_room, person.pos.z, 1); // make sure current room light is on
 	if ((unsigned)room_ix == state.cur_room) return; // same room as last time - done
 	assert(state.cur_room < interior->rooms.size());
@@ -978,7 +970,7 @@ void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t 
 		if (p.dest_bldg != person.dest_bldg) break; // done with this building
 		if (get_room_containing_pt(p.pos) == (int)state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
-	if (!other_person_in_room) {set_room_light_state_to(interior->rooms[state.cur_room], person.pos.z, 0);} // make sure old room light is off
+	if (!other_person_in_room) {set_room_light_state_to(get_room(state.cur_room), person.pos.z, 0);} // make sure old room light is off
 	state.cur_room = room_ix;
 }
 
@@ -990,7 +982,7 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 	if (sep_dist > 0.01*coll_dist) {person.pos += (move_dist/sep_dist)*(person.pos - other_pos);}
 	else {person.pos.x += rsum;} // avoid divide-by-zero, choose +X direction arbitrarily
 	int const room_ix(get_building_loc_for_pt(orig_pos).room_ix);
-	cube_t clip_bounds((room_ix >= 0 && (unsigned)room_ix < interior->rooms.size()) ? interior->rooms[room_ix] : bcube);
+	cube_t clip_bounds((room_ix >= 0 && (unsigned)room_ix < interior->rooms.size()) ? get_room(room_ix) : bcube);
 	clip_bounds.expand_by_xy(-coll_dist); // shrink
 	clip_bounds.union_with_pt(orig_pos); // we know this point was valid
 	clip_bounds.union_with_pt(new_pos);  // we know this point is valid
@@ -1035,8 +1027,7 @@ int building_t::get_room_containing_pt(point const &pt) const {
 	return -1; // room not found
 }
 unsigned building_t::get_floor_for_room_zval(unsigned room_ix, float zval) const {
-	assert(interior && room_ix < interior->rooms.size());
-	return interior->rooms[room_ix].get_floor_containing_zval(zval, get_window_vspace());
+	return get_room(room_ix).get_floor_containing_zval(zval, get_window_vspace());
 }
 building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	building_loc_t loc;
@@ -1057,8 +1048,7 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 bool building_t::room_containing_pt_has_stairs(point const &pt) const {
 	int const room_ix(get_room_containing_pt(pt));
 	if (room_ix < 0) return 0; // no room contains this point
-	assert((unsigned)room_ix < interior->rooms.size());
-	return interior->rooms[room_ix].has_stairs;
+	return get_room(room_ix).has_stairs;
 }
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file

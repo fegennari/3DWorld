@@ -21,8 +21,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
 	int const room_id(get_room_containing_pt(query_pt));
 	if (room_id < 0) return 0; // closest_to is not contained in a room of this building
-	assert((unsigned)room_id < interior->rooms.size());
-	room_t const &room(interior->rooms[room_id]);
+	room_t const &room(get_room(room_id));
 	point light_pos;
 	float closest_dist_sq(0.0);
 	unsigned closest_light(0);
@@ -72,8 +71,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 
 void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state) {
 	assert(has_room_geom());
-	assert(room_id < interior->rooms.size());
-	float const light_intensity(interior->rooms[room_id].light_intensity);
+	float const light_intensity(get_room(room_id).light_intensity);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	float const obj_zmin(light_z2 - get_window_vspace()); // get_floor_thickness()?
@@ -108,8 +106,7 @@ int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const 
 	cube_t room_exp;
 
 	if (room_id >= 0) { // pos is inside a room
-		assert((unsigned)room_id < interior->rooms.size());
-		room_exp = interior->rooms[room_id];
+		room_exp = get_room(room_id);
 		room_exp.expand_by(get_wall_thickness()); // make sure it contains the door
 	}
 	// Note: returns the first exterior door found, assuming there can be at most one within dist of pos
@@ -272,8 +269,7 @@ bool building_t::is_pt_lit(point const &pt) const {
 	int const room_id(get_room_containing_pt(pt)); // call this only once on center in is_sphere_lit()?
 	if (room_id < 0) return 0; // outside building?
 	float const floor_spacing(get_window_vspace());
-	assert((unsigned)room_id < interior->rooms.size());
-	room_t const &room(interior->rooms[room_id]);
+	room_t const &room(get_room(room_id));
 
 	for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
 		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on

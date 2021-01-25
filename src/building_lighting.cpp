@@ -547,7 +547,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		int const room_ix(get_room_containing_pt(camera_bs));
 
 		if (room_ix >= 0) { // Note: stairs connecting stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
-			room_t const &room(interior->rooms[room_ix]);
+			room_t const &room(get_room(room_ix));
 			unsigned const cur_floor(max(0.0f, (camera_bs.z - room.z1()))/window_vspacing);
 			camera_room       = room_ix;
 			camera_by_stairs  = room.has_stairs;
@@ -578,8 +578,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
 		//if (is_light_occluded(lpos_rot, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
-		assert(i->room_id < interior->rooms.size());
-		room_t const &room(interior->rooms[i->room_id]);
+		room_t const &room(get_room(i->room_id));
 		bool const is_lamp(i->type == TYPE_LAMP);
 		int const cur_floor((i->z1() - room.z1())/window_vspacing);
 		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(room.is_sec_bldg ? room.z1() : (level_z + fc_thick));

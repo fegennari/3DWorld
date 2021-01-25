@@ -2182,8 +2182,7 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	int const room_id(get_room_id_for_window(window, dim, dir, is_split));
 	if (room_id < 0) return; // room not found - should this be an error?
 	if (is_split)    return; // window split across multiple rooms - how do we handle this? for now skip it
-	assert(unsigned(room_id) < interior->rooms.size());
-	room_t const &room(interior->rooms[room_id]);
+	room_t const &room(get_room(room_id));
 	unsigned const floor(room.get_floor_containing_zval(0.5f*(window.z1() + window.z2()), get_window_vspace()));
 	room_type const rtype(room.get_room_type(floor));
 
@@ -2199,7 +2198,7 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 	bool vertical((mat_ix + interior->rooms.size() + parts.size()) & 1); // something that's per-building
 	
 	if (vertical) { // check for horizontal wall clearance
-		room_t const &room(interior->rooms[room_id]);
+		room_t const &room(get_room(room_id));
 		if ((window.d[!dim][0] - 2.0*wall_thickness) < room.d[!dim][0] || (window.d[!dim][1] + 2.0*wall_thickness) > room.d[!dim][1]) {vertical = 0;} // not enough space for vertical blinds
 	}
 	rand_gen_t rgen;
@@ -2232,7 +2231,7 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 }
 
 void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks
-	room_t const &room(interior->rooms[room_id]);
+	room_t const &room(get_room(room_id));
 	unsigned num_ext_walls(0);
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
