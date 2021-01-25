@@ -352,7 +352,7 @@ public:
 		vect_cube_t keepout;
 		path.push_back(p2); // Note: path is constructed backwards, so p2 is added first and connect_room_endpoints takes swapped arguments
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
-		if (!connect_room_endpoints(avoid, walk_area, p2, p1, radius, path, keepout, rgen, 0, /*1*/0)) {path.clear(); return 0;}
+		if (!connect_room_endpoints(avoid, walk_area, p2, p1, radius, path, keepout, rgen, 0, 0)) {path.clear(); return 0;}
 		return 1;
 	}
 	
@@ -822,6 +822,15 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
 		register_ai_player_coll(person);
 	}
+	if (need_to_update_ai_path(state, person)) { // need to update based on player movement; higher priority than choose_dest
+		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1)     {choose_dest = 1;} // can't reach the target, choose a different destination
+		else if (!find_route_to_point(person, coll_dist, 0, 0, 1, state.path)) {choose_dest = 1;} // is_first_path=0, use_new_seed=0
+		else { // success
+			state.next_path_pt(person, stay_on_one_floor);
+			person.following_player = 1;
+			choose_dest = 0;
+		}
+	}
 	if (choose_dest) { // no current destination, choose a new destination
 		person.anim_time = 0.0; // reset animation
 		int const ret(choose_dest_room(state, person, rgen, stay_on_one_floor)); // 0=failed, 1=success, 2=failed but can retry
@@ -841,12 +850,6 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		state.is_first_path = 0;
 		state.next_path_pt(person, stay_on_one_floor);
 		return AI_BEGIN_PATH;
-	}
-	else if (need_to_update_ai_path(state, person)) { // need to update based on player movement
-		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1) return AI_WAITING; // can't reach the target
-		if (!find_route_to_point(person, coll_dist, 0, 0, 1, state.path))  return AI_WAITING; // is_first_path=0, use_new_seed=0
-		state.next_path_pt(person, stay_on_one_floor);
-		person.following_player = 1;
 	}
 	float const max_dist(person.speed*fticks);
 	state.on_new_path_seg = 0; // clear flag for this frame
@@ -909,7 +912,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			}
 		} // for i
 	}
-	person.pos        = new_pos;
+	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
 	person.anim_time += max_dist;
 	ai_room_lights_update(state, person, people, person_ix); // non-const part
 	return AI_MOVING;
