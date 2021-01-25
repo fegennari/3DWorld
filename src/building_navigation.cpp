@@ -521,7 +521,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 	building_dest_t const &goal(cur_player_building_loc);
 	float const floor_spacing(get_window_vspace());
 
-	if ((global_building_params.ai_target_player || goal.same_part_room_floor(loc)) && can_target_player(state, person)) {
+	if ((global_building_params.ai_target_player || goal.same_room_floor(loc)) && can_target_player(state, person)) {
 		// player is in a different room of our building, or we're following the player's position
 		unsigned const cand_room(goal.room_ix);
 		assert(cand_room < interior->rooms.size());
@@ -669,7 +669,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 	static vect_cube_t avoid; // reuse across frames/people
 	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add));
 
-	if (loc1.same_part_room_floor(loc2)) { // same part/room/floor (not checking stairs_ix)
+	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
 		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, use_new_seed, avoid, path);
 	}
@@ -794,11 +794,16 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const {
 	if (!global_building_params.ai_target_player || !can_ai_follow_player(person) || !interior) return 0; // disabled
 	building_dest_t const &target(cur_player_building_loc);
-	//bool const same_room((int)state.cur_room == target.room_ix);
 	bool const same_room(target.room_ix == (int)state.cur_room && target.floor == get_floor_for_room_zval(target.room_ix, person.pos.z)); // check room and floor
-	// if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room (optimization);
+	
+																																		  // if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room (optimization);
 	// however, if the path is empty, continue to choose a new path (needed for AI more than one floor away from target to take multiple flights of stairs)
-	if (target.same_part_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg) return 0;
+	if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) {
+		return 0; // TODO: without the check below, people may clip through walls when walking through doorways; but they check below may make them stop at doorways
+		//cube_t room_interior(interior->rooms[state.cur_room]);
+		//room_interior.expand_by_xy(-COLL_RADIUS_SCALE*person.radius);
+		//if (room_interior.contains_pt_xy(person.pos)) return 0; // if person is not in a doorway, etc.
+	}
 	//if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
 	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
 

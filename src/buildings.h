@@ -572,8 +572,8 @@ struct building_loc_t {
 	int part_ix, room_ix, stairs_ix; // -1 is not contained; what about elevator_ix?
 	unsigned floor;
 	building_loc_t() : part_ix(-1), room_ix(-1), stairs_ix(-1), floor(0) {}
-	bool operator==(building_loc_t const &loc) const {return (same_part_room_floor(loc) && stairs_ix == loc.stairs_ix);}
-	bool same_part_room_floor(building_loc_t const &loc) const {return (part_ix == loc.part_ix && room_ix == loc.room_ix && floor == loc.floor);}
+	bool operator==(building_loc_t const &loc) const {return (same_room_floor(loc) && part_ix == loc.part_ix && stairs_ix == loc.stairs_ix);}
+	bool same_room_floor(building_loc_t const &loc) const {return (room_ix == loc.room_ix && floor == loc.floor);}
 };
 
 struct building_dest_t : public building_loc_t {
