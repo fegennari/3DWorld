@@ -2385,7 +2385,8 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find part containing this door so that we can get the correct dir
-		if (p->z1() != bcube.z1()) continue; // not ground floor
+		if (is_basement(p)) continue; // skip the basement
+		if (p->z1() != bcube.z1()) continue; // not ground floor FIXME_BASEMENT
 		if (p->d[!dim][1] < door_bcube.d[!dim][1] || p->d[!dim][0] > door_bcube.d[!dim][0]) {continue;} // not contained in this dim
 		bool dir(0);
 		if      (fabs(p->d[dim][0] - door_bcube.d[dim][0]) < 0.1*width) {dir = 0;}

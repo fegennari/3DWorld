@@ -1047,7 +1047,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION);
 		
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
-			bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY
+			bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
+			if (is_basement(i)) continue; // skip the basement
 			bool skip_top(!need_top_roof && (is_house || i+1 == parts.end())); // don't add the flat roof for the top part in this case
 			bool const is_stacked(!is_house && num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
@@ -1302,6 +1303,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		room_with_stairs = room_containing_pt_has_stairs(*only_cont_pt);
 	}
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
+		if (is_basement(i)) continue; // skip the basement
 		cube_t draw_part;
 		cube_t const *clamp_cube(nullptr);
 
@@ -1505,6 +1507,7 @@ void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 	if (!interior || is_house || real_num_parts == 1) return; // no a stacked case
 
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		if (is_basement(i)) continue; // skip the basement
 		if (i->z2() == bcube.z2()) continue; // skip top roof
 
 		if (clip_part_ceiling_for_stairs(*i, bdraw.temp_cubes, bdraw.temp_cubes2)) {
@@ -1512,7 +1515,7 @@ void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 				bdraw.add_section(*this, parts, *c, tid_nm_pair_t(), BLACK, 4, 1, 0, 1, 0); // only Z dim
 			}
 		}
-	}
+	} // for i
 }
 
 

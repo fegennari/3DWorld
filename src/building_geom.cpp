@@ -558,6 +558,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 		door_shift = bcube.dz(); // start with a large value
 
 		for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find the part that this door was added to (inc garages and sheds)
+			if (is_basement(p)) continue; // skip the basement
 			float const dist(door.pts[0][dim] - p->d[dim][dir]); // signed
 			if (fabs(dist) < fabs(door_shift)) {door_shift = dist;}
 		}
@@ -760,7 +761,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		} // for i
 		if (!parts.empty()) { // at least one part was placed; should (almost) always be true?
 			parts.shrink_to_fit(); // optional
-			std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details
+			std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details (remember to update basement_part_ix if needed)
 			calc_bcube_from_parts(); // update bcube
 			gen_details(rgen, 1);
 			end_add_parts();
@@ -1161,7 +1162,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	bool hipped_roof[4] = {0};
 
 	for (auto i = parts.begin(); (i + skip_last_roof) != parts.end(); ++i) {
-		if (i->z1() < bcube.z1()) continue; // skip the basement
+		if (is_basement(i)) continue; // skip the basement
 		unsigned const ix(i - parts.begin());
 		bool const main_part(ix < real_num_parts);
 		unsigned const fdim(main_part ? force_dim[ix] : 2);
@@ -1256,6 +1257,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
 void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses only
 	return;
+	basement_part_ix = (int8_t)parts.size();
 	cube_t basement(parts[0]);
 	if (real_num_parts == 2 && parts[1].get_area_xy() > parts[0].get_area_xy()) {basement = parts[1];} // use the larger part (TODO: expand if possible)
 	set_cube_zvals(basement, (basement.z1() - get_window_vspace()), basement.z1());
@@ -1263,8 +1265,8 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference
 	++real_num_parts;
 	// TODO: special case handling; disable terrain over basement stairs somehow
-	// TODO: no roof
-	// TODO: no windows
+	// TODO: fix grass
+	// TODO: fix flat roof
 }
 
 void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
@@ -1434,6 +1436,7 @@ float building_t::gen_peaked_roof(cube_t const &top_, float peak_height, bool di
 		// exclude tquads contained in/adjacent to other parts, considering only the cube parts;
 		// yes, a triangle side can be occluded by a cube + another opposing triangle side from a higher wall of the house, but it's uncommon, complex, and currently ignored
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			if (is_basement(p)) continue; // skip the basement
 			if (p->d[dim][!n] != top.d[dim][n]) continue; // not the opposing face
 			if (p->z1() <= z1 && p->z2() >= z2 && p->d[!dim][0] <= top.d[!dim][0] && p->d[!dim][1] >= top.d[!dim][1]) {skip = 1; break;}
 		}
@@ -1511,9 +1514,10 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 		bool placed(0);
 
 		for (auto b = parts.begin(); b != get_real_parts_end() && !placed; ++b) { // try all different ground floor parts
+			if (is_basement(b)) continue; // skip the basement
 			unsigned const part_ix(b - parts.begin());
 			if (has_windows && part_ix >= 4) break; // only first 4 parts can have doors - must match first floor window removal logic
-			if (b->z1() > bcube.z1()) break; // moved off the ground floor - done
+			if (b->z1() > bcube.z1()) break; // moved off the ground floor - done FIXME_BASEMENT
 
 			for (unsigned n = 0; n < 4; ++n) {
 				bool const dim(pref_dim ^ bool(n>>1)), dir(pref_dir ^ bool(n&1));
@@ -1808,11 +1812,13 @@ void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &
 	float dmin_sq(extent*extent); // start with a large value, squared
 
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // find closest part, including garages/sheds
+		if (is_basement(p)) continue; // skip the basement
 		if (skip.contains_cube_xy(*p)) continue; // already contained, skip
 		float const dist_sq(p2p_dist_sq(pos, p->closest_pt(pos)));
 		if (dist_sq < dmin_sq) {exclude = *p; dmin_sq = dist_sq;} // keep if closest part to pos
 	}
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // try to expand the cube to cover more parts (pri parts only)
+		if (is_basement(p)) continue; // skip the basement
 		if (skip.contains_cube_xy(*p)) continue; // already contained, skip
 		cube_t cand_ge(exclude);
 		cand_ge.union_with_cube(*p);

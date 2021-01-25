@@ -604,7 +604,7 @@ struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
 	uint8_t hallway_dim, real_num_parts, roof_type; // main hallway dim: 0=x, 1=y, 2=none
-	int8_t open_door_ix;
+	int8_t open_door_ix, basement_part_ix;
 	bool is_house, has_chimney, has_garage, has_shed, has_courtyard, has_complex_floorplan, has_helipad;
 	colorRGBA side_color, roof_color, detail_color, door_color, wall_color;
 	cube_t bcube, pri_hall, driveway;
@@ -618,11 +618,11 @@ struct building_t : public building_geom_t {
 
 	friend class building_indir_light_mgr_t;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), open_door_ix(-1), is_house(0),
-		has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0), side_color(WHITE), roof_color(WHITE),
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), open_door_ix(-1), basement_part_ix(-1),
+		is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0), side_color(WHITE), roof_color(WHITE),
 		detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0) {}
 	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), open_door_ix(-1),
-		is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0),
+		basement_part_ix(-1), is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0),
 		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0) {}
 	static float get_scaled_player_radius();
 	static float get_min_front_clearance() {return 2.05f*get_scaled_player_radius();} // slightly larger than the player diameter
@@ -631,6 +631,8 @@ struct building_t : public building_geom_t {
 	bool has_room_geom() const {return (has_interior() && interior->room_geom);}
 	bool has_sec_bldg () const {return (has_garage || has_shed);}
 	bool has_pri_hall () const {return (hallway_dim <= 1);} // otherswise == 2
+	bool has_basement () const {return (basement_part_ix >= 0);}
+	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}

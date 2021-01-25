@@ -145,6 +145,7 @@ int building_t::classify_room_wall(room_t const &room, float zval, bool dim, boo
 	if (real_num_parts == 1) return ROOM_WALL_EXT; // optimization
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		//if (is_basement(p)) {} // special window-less wall type for basements?
 		if (p->d[dim][!dir] != part_edge) continue; // not opposite wall
 		if (p->z1() >= room.z2() || p->z2() <= room.z1()) continue; // no z overlap (wrong stack)
 
