@@ -204,12 +204,18 @@ public:
 			c.expand_by_xy(radius);
 
 			if (c.contains_pt_xy(p1)) {
-				if (ignore_p1_coll) continue;
-				return 0;
+				if (ignore_p1_coll) {
+					if (i->contains_pt_xy(p1)) continue; // even the unexpanded cube intersects, skip it
+					c = *i; // use unexpanded cube instead
+				}
+				else {return 0;} // fail
 			}
 			if (c.contains_pt_xy(p2)) {
-				if (ignore_p2_coll) continue;
-				return 0;
+				if (ignore_p2_coll) {
+					if (i->contains_pt_xy(p2)) continue; // even the unexpanded cube intersects, skip it
+					c = *i; // use unexpanded cube instead
+				}
+				else {return 0;} // fail
 			}
 			if (check_line_clip_xy(p1, p2, c.d)) {is_path_valid = 0;}
 			keepout.push_back(c);
@@ -353,7 +359,7 @@ public:
 		vect_cube_t keepout;
 		path.push_back(p2); // Note: path is constructed backwards, so p2 is added first and connect_room_endpoints takes swapped arguments
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
-		if (!connect_room_endpoints(avoid, walk_area, p2, p1, radius, path, keepout, rgen, 0, 0)) {path.clear(); return 0;}
+		if (!connect_room_endpoints(avoid, walk_area, p2, p1, radius, path, keepout, rgen, 0, 1)) {path.clear(); return 0;} // ignore initial coll with p1
 		return 1;
 	}
 	
