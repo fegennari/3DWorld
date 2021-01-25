@@ -837,7 +837,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	person.following_player = 0; // reset for this frame
 
 	if (wait_time > 0) {
-		if (wait_time > fticks) { // waiting
+		if (wait_time > fticks && !can_ai_follow_player(person)) { // waiting; don't wait if there's a player to follow
 			for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check for other people colliding with this person and handle it
 				if (p->dest_bldg != person.dest_bldg) break; // done with this building
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
