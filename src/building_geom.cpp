@@ -1266,7 +1266,6 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference; orig bcube.z1() is saved in ground_floor_z1
 	++real_num_parts;
 	// TODO:
-	// Fix flat roof
 	// Disable terrain over basement stairs somehow
 	// Fix exterior door placement
 	// Fix incorrect room light placement (bad has_stairs flag?)
@@ -1652,7 +1651,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 			merge_cubes_xy(to_add); // optimization
 
 			for (auto i = to_add.begin(); i != to_add.end(); ++i) {
-				if (!i->is_all_zeros()) {details.emplace_back(*i, ROOF_OBJ_WALL);}
+				if (!i->is_all_zeros()) {details.emplace_back(*i, (uint8_t)ROOF_OBJ_WALL);}
 			}
 		}
 		if (num_ac_units > 0) {
