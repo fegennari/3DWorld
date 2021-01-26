@@ -269,7 +269,7 @@ public:
 		return 0; // failed
 	}
 	static point closest_room_pt(cube_t const &c, point const &pos) {
-		return point(max(c.x1(), min(c.x2(), pos.x)), max(c.y1(), min(c.y2(), pos.y)), pos.z);
+		return point(max(c.x1(), min(c.x2(), pos.x)), max(c.y1(), min(c.y2(), pos.y)), pos.z); // c.clamp_pt_xy(), but returning a new point
 	}
 	static cube_t calc_walkable_room_area(node_t const &node, float radius) {
 		cube_t walk_area(node.bcube);
@@ -360,6 +360,9 @@ public:
 		path.push_back(p2); // Note: path is constructed backwards, so p2 is added first and connect_room_endpoints takes swapped arguments
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
 		if (!connect_room_endpoints(avoid, walk_area, p2, p1, radius, path, keepout, rgen, 0, 1)) {path.clear(); return 0;} // ignore initial coll with p1
+		// maybe add an extra path point to prevent clipping through walls when walking throug a doorway
+		point const p1_extend_pt(closest_room_pt(walk_area, p1));
+		if (p1_extend_pt != p1) {path.push_back(p1_extend_pt);} // add if p1 was clamped
 		return 1;
 	}
 	
@@ -791,12 +794,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	
 																																		  // if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room (optimization);
 	// however, if the path is empty, continue to choose a new path (needed for AI more than one floor away from target to take multiple flights of stairs)
-	if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) {
-		return 0; // TODO: without the check below, people may clip through walls when walking through doorways; but they check below may make them stop at doorways
-		//cube_t room_interior(get_room(state.cur_room));
-		//room_interior.expand_by_xy(-COLL_RADIUS_SCALE*person.radius);
-		//if (room_interior.contains_pt_xy(person.pos)) return 0; // if person is not in a doorway, etc.
-	}
+	if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0;
 	//if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
 	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
 
