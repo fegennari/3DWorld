@@ -192,7 +192,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 	}
 	else {
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
-			if (xy_only && i->z1() > bcube.z1()) { // only need to check first level in this mode
+			if (xy_only && i->z1() > ground_floor_z1) { // only need to check first level in this mode
 				if (has_complex_floorplan) {continue;} else {break;}
 			}
 			if (!xy_only && ((pos2.z + radius < i->z1() + xlate.z) || (pos2.z - radius > i->z2() + xlate.z))) continue; // test z overlap
@@ -658,8 +658,9 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	building_mat_t const &mat(get_material());
 	rand_gen_t rgen;
 	rgen.set_state(123+rseed1, 345*rseed2);
-	ao_bcz2 = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
-	wall_color = mat.wall_color; // start with default wall color
+	ao_bcz2         = bcube.z2(); // capture z2 before union with roof and detail geometry (which increases building height)
+	ground_floor_z1 = bcube.z1(); // record before adding basement
+	wall_color      = mat.wall_color; // start with default wall color
 	if (is_house) {gen_house(base, rgen); return;}
 
 	// determine building shape (cube, cylinder, other)
@@ -1262,11 +1263,15 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	if (real_num_parts == 2 && parts[1].get_area_xy() > parts[0].get_area_xy()) {basement = parts[1];} // use the larger part (TODO: expand if possible)
 	set_cube_zvals(basement, (basement.z1() - get_window_vspace()), basement.z1());
 	parts.push_back(basement);
-	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference
+	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference; orig bcube.z1() is saved in ground_floor_z1
 	++real_num_parts;
-	// TODO: special case handling; disable terrain over basement stairs somehow
-	// TODO: fix grass
-	// TODO: fix flat roof
+	// TODO:
+	// Fix flat roof
+	// Disable terrain over basement stairs somehow
+	// Fix exterior door placement
+	// Fix incorrect room light placement (bad has_stairs flag?)
+	// Darker lighting
+	// Different room types (no bedroom, kitchen, more storage rooms, etc.)
 }
 
 void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
@@ -1517,7 +1522,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 			if (is_basement(b)) continue; // skip the basement
 			unsigned const part_ix(b - parts.begin());
 			if (has_windows && part_ix >= 4) break; // only first 4 parts can have doors - must match first floor window removal logic
-			if (b->z1() > bcube.z1()) break; // moved off the ground floor - done FIXME_BASEMENT
+			if (b->z1() > ground_floor_z1)   break; // moved off the ground floor
 
 			for (unsigned n = 0; n < 4; ++n) {
 				bool const dim(pref_dim ^ bool(n>>1)), dir(pref_dir ^ bool(n&1));
