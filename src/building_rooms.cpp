@@ -1408,6 +1408,7 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 			}
 		} // for i
 		if (valid_placement) {
+			rug.intersect_with_cube(room); // make sure the rug stays within the room bounds
 			objs.emplace_back(rug, TYPE_RUG, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
 			objs.back().obj_id = uint16_t(objs.size() + 13*room_id + 31*mat_ix); // determines rug texture
 			return 1;
