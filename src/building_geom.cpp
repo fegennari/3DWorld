@@ -148,7 +148,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 		point const pos2_bs(pos2 - xlate);
 		cube_t sc; sc.set_from_sphere(pos2_bs, radius); // sphere bounding cube
 
-		if ((zval + radius) > bcube.z1() && zval < (bcube.z1() + get_door_height())) { // on the ground floor
+		if ((zval + radius) > ground_floor_z1 && zval < (ground_floor_z1 + get_door_height())) { // on the ground floor
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
 				if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // doesn't apply to roof door
 				cube_t bc(d->get_bcube());
@@ -700,7 +700,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 				point const center(bcube.get_cube_center());
 				cube_t place_area(center, center);
 				place_area.expand_by_xy(0.05f*(bcube.dx() + bcube.dy()));
-				if (!has_bcube_int(place_area, parts)) {tree_pos = place_area.get_cube_center(); tree_pos.z = bcube.z1();}
+				if (!has_bcube_int(place_area, parts)) {tree_pos = place_area.get_cube_center(); tree_pos.z = ground_floor_z1;}
 			}
 			gen_details(rgen, 0);
 		}
@@ -1080,13 +1080,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			tree_pos = empty_space.get_cube_center(); // centered on where the garage/shed would have been
 			vector3d const dir(tree_pos - bcube.get_cube_center());
 			tree_pos  += (0.05f*(bcube.dx() + bcube.dy())/dir.mag())*dir; // shift slightly away from house center so that it's less likely to intersect the house
-			tree_pos.z = bcube.z1();
+			tree_pos.z = ground_floor_z1;
 		}
 		if (type == 1 && (rand_num & 6) != 0 && !is_rotated()) { // L-shaped house, add a fence 75% of the time
 			// use the same dim as the shrunk house part for the full fence section; or should we use garage_dim?
 			float const fence_thickness(0.08*door_height);
 			cube_t fence(bcube), fence2(bcube);
-			fence.z2() = fence2.z2() = bcube.z1() + 0.65*door_height; // set fence height
+			fence.z2() = fence2.z2() = ground_floor_z1 + 0.65*door_height; // set fence height
 			fence.d[!dim][!dir2] = fence.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*fence_thickness;
 			// we can calculate the exact location of the fence, but it depends on detail_type, garage/shed position, etc.,
 			// so it's easier to start with the entire edge and clip it by the house parts and optional garage/shed
@@ -1267,8 +1267,7 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	++real_num_parts;
 	// TODO:
 	// Disable terrain over basement stairs somehow
-	// Fix exterior door placement
-	// Fix incorrect room light placement (bad has_stairs flag?)
+	// Grass exclude
 	// Darker lighting
 	// Different room types (no bedroom, kitchen, more storage rooms, etc.)
 }
@@ -1542,7 +1541,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 		for (unsigned p = 0; p < 4 && !placed; ++p) {
 			unsigned const part_ix((p + pref_side) & 3);
 			cube_t const &part(parts[part_ix]);
-			if (part.z1() > bcube.z1()) continue; // not on the ground floor
+			if (part.z1() != ground_floor_z1) continue; // not on the ground floor
 
 			for (unsigned n = 0; n < 4; ++n) {
 				bool const dim(n>>1), dir(n&1);

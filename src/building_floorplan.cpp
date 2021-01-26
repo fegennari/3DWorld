@@ -580,7 +580,7 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 				} // for i
 			} // end single main hallway case
 			add_room(hall, part_id, 3, 1, 0); // add hallway as room with 3 lights
-			if (p->z1() == bcube.z1() || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
+			if (p->z1() == ground_floor_z1 || pri_hall.is_all_zeros()) {pri_hall = hall;} // assign to primary hallway if on first floor of hasn't yet been assigned
 			for (unsigned d = 0; d < 2; ++d) {first_wall_to_split[d] = interior->walls[d].size();} // don't split any walls added up to this point
 		} // end use_hallway
 

@@ -974,7 +974,7 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 	assert(has_room_geom());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
-	bool const first_floor(room.z1() < bcube.z1() + get_floor_thickness());
+	bool const first_floor(room.z1() < ground_floor_z1 + get_floor_thickness());
 	blockers.clear();
 	int table_blocker_ix(-1);
 
@@ -1691,7 +1691,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
 			room_center.z = z + fc_thick; // floor height
-			bool const top_floor(f+1 == num_floors), check_stairs(!is_house && parts.size() > 1 && top_floor); // top floor of building that may have stairs connecting to upper stack
+			bool const top_floor(f+1 == num_floors), check_stairs((!is_house || has_basement()) && parts.size() > 1 && top_floor); // top floor may have stairs connecting to upper stack
 			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs);
 
 			if (!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) { // check for stairwells connecting stacked parts (is this still needed?)
@@ -1846,7 +1846,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 			if (!added_obj && r->is_office && r->interior && f == 0 /*&& r->z1() == bcube.z1()*/ && rgen.rand_bool()) {
-				// if we haven't added any objects yet, and this room is an interior office on the first floor, make it a storage room 50% of the time
+				// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}

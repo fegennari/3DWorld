@@ -1292,7 +1292,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	// only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
 	int const clip_windows(mat.no_city ? (is_house ? 2 : 1) : 0);
 	float const floor_spacing(mat.get_floor_spacing());
-	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (bcube.z1() + floor_spacing) : doors.front().pts[2].z));
+	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (ground_floor_z1 + floor_spacing) : doors.front().pts[2].z));
 	unsigned draw_parts_mask(0);
 	bool room_with_stairs(0);
 	cube_t cont_part; // part containing the point
