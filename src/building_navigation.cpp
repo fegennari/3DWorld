@@ -547,7 +547,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 					}
 					if (dmin_sq > 0.0 && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
 					static vect_cube_t avoid; // reuse across frames/people
-					interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add));
+					interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), get_floor_thickness());
 
 					for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
 						cube_t c(*i);
@@ -613,9 +613,9 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 	}
 }
 
-void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2) const { // for AI
+void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness) const { // for AI
 	avoid.clear();
-	add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2); // clearance not required
+	add_bcube_if_overlaps_zval(stairwells, avoid, z1-floor_thickness, z2); // clearance not required
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	if (!room_geom) return; // no room objects
 
@@ -663,7 +663,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
 	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing), z2_add(height - radius); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
-	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add));
+	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add), get_floor_thickness());
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
@@ -689,7 +689,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 			// from => stairs
 			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,  up_or_down, use_new_seed, avoid, from, from_path)) continue;
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
-			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add)); // new floor, new zval, new avoid cubes
+			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), get_floor_thickness()); // new floor, new zval, new avoid cubes
 			// stairs => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path, !up_or_down, use_new_seed, avoid, seg2_start, path)) continue;
 			assert(!path.empty() && !from_path.empty());
