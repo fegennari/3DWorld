@@ -58,7 +58,7 @@ tile_offset_t model3d_offset;
 vector<clear_area_t> tile_smaps_to_clear;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
-extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on;
+extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, player_in_basement;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt, num_rnd_grass_blocks;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv, draw_model;
@@ -3118,6 +3118,7 @@ void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool 
 void tile_draw_t::draw_grass(bool reflection_pass) {
 
 	if (reflection_pass) return; // no grass reflections (yet)
+	if (player_in_basement) return; // grass can sometimes appear in a building basement, so disable it when the player is in the basement
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
 	unsigned num_grass_drawn(0), num_flowers_drawn(0);

@@ -1267,7 +1267,7 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	++real_num_parts;
 	// TODO:
 	// Draw windows on floor above when viewed through basement stairs opening
-	// Grass exclude
+	// AI avoids walking over basement stairs
 	// Darker lighting
 	// Different room types (no bedroom, kitchen, more storage rooms, etc.)
 }

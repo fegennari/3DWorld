@@ -21,7 +21,7 @@ bool const PLAYER_CAN_OPEN_DOORS = 1;
 bool const LINEAR_ROOM_DLIGHT_ATTEN = 1;
 float const WIND_LIGHT_ON_RAND   = 0.08;
 
-bool camera_in_building(0), interior_shadow_maps(0);
+bool camera_in_building(0), player_in_basement(0), interior_shadow_maps(0);
 int player_in_closet(0); // 0=not in closet, 1=in open closet, 2=in closed closet
 building_params_t global_building_params;
 shader_t reflection_shader;
@@ -2156,6 +2156,7 @@ public:
 			building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
 			interior_shadow_maps = 0;
+			player_in_basement   = 0;
 			create_mirror_reflection_if_needed();
 			draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
 			player_building = nullptr; // reset, may be set below
@@ -2292,6 +2293,7 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
 						this_frame_camera_in_building = 1;
+						if (b.is_pos_in_basement(camera_xlated)) {player_in_basement = 1;}
 						player_building = &b;
 
 						if (display_mode & 0x10) { // compute indirect lighting
