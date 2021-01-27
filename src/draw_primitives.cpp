@@ -1119,8 +1119,9 @@ void pos_dir_up::draw_frustum() const {
 }
 
 
-void draw_simple_cube(cube_t const &c, bool texture) {draw_cube(c.get_cube_center(), c.dx(), c.dy(), c.dz(), texture);}
-
+void draw_simple_cube(cube_t const &c, bool texture, unsigned dim_mask) {
+	draw_cube(c.get_cube_center(), c.dx(), c.dy(), c.dz(), texture, 1.0, 0, nullptr, dim_mask);
+}
 
 // need to do something with tex coords for scale
 // Note: cube extends from pos +/- 0.5*(sx, sy, sz)

@@ -702,6 +702,7 @@ struct building_t : public building_geom_t {
 	int find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	void get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front=0) const;
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
+	void write_basement_entrance_depth_pass(shader_t &s) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
 	bool toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir);

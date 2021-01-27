@@ -1517,6 +1517,25 @@ void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 	} // for i
 }
 
+// writes to the depth buffer only to prevent the terrain from being drawn in the basement
+// to be called when the player is inside this building; when outside the building, the exterior walls/windows will write to the depth buffer instead
+void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
+	if (!interior || !has_basement()) return;
+	float const thickness(0.5*get_floor_thickness());
+	cube_t const &basement(parts[basement_part_ix]);
+	s.set_cur_color(ALPHA0); // fully transparent
+	select_texture(WHITE_TEX);
+	enable_blend();
+
+	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
+		if (i->z1() >= basement.z2()) continue; // not basement stairwell
+		cube_t stairs_top(*i);
+		set_cube_zvals(stairs_top, basement.z2()-thickness, basement.z2()+thickness); // stairs XY clipped to zval of basement ceiling
+		draw_simple_cube(stairs_top, 0, 4); // draw top and bottom only; should only get here once
+	} // for i
+	disable_blend();
+}
+
 
 class building_creator_t {
 
@@ -2173,6 +2192,7 @@ public:
 		building_draw_t interior_wind_draw, ext_door_draw;
 		vector<building_draw_t> int_wall_draw_front, int_wall_draw_back;
 		vector<vertex_range_t> per_bcs_exclude;
+		building_t const *building_cont_player(nullptr);
 
 		// draw building interiors with standard shader and no shadow maps; must be drawn first before windows depth pass
 		if (have_interior) {
@@ -2268,6 +2288,7 @@ public:
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &camera_xlated);
 						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated, 0);
+						building_cont_player = &b; // there can be only one
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
 						this_frame_camera_in_building = 1;
@@ -2424,6 +2445,7 @@ public:
 			disable_blend();
 		}
 		glDisable(GL_CULL_FACE);
+		if (building_cont_player) {building_cont_player->write_basement_entrance_depth_pass(s);} // drawn last
 		s.end_shader();
 
 		// post-pass to render building exteriors in nearby tiles that have shadow maps; shadow maps don't work right when using reflections
