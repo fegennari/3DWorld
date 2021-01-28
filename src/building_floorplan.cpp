@@ -1214,13 +1214,14 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 	}
 }
 
-void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically
+void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically; part is on the bottom
 
 	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
 	float const window_vspacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness()), wall_thickness(get_wall_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
+	bool const is_basement(has_basement() && part == parts[basement_part_ix]);
 
-	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it
+	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it (but roof geom may get us into this case anyway)
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			if (*p == part) continue; // skip self
 			if (p->z1() != part.z2()) continue; // *p not on top of part
@@ -1287,7 +1288,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					}
 				}
 				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
-				stairs_shape const sshape(wall_clipped ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT); // add walls around stairs if room walls were clipped; otherwise, straight with railings
+				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings
+				stairs_shape const sshape((is_basement || wall_clipped) ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT);
 				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape, 0, 1); // roof_access=0, is_at_top=1
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);

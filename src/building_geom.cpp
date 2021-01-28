@@ -1266,7 +1266,7 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference; orig bcube.z1() is saved in ground_floor_z1
 	++real_num_parts;
 	// TODO:
-	// Basement stairs at corner of room, walled, with door
+	// Basement stairs door
 	// Draw windows on floor above when viewed through basement stairs opening
 	// AI uses basement stairs
 	// Darker lighting
