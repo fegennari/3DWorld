@@ -1260,7 +1260,20 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	return;
 	basement_part_ix = (int8_t)parts.size();
 	cube_t basement(parts[0]);
-	if (real_num_parts == 2 && parts[1].get_area_xy() > parts[0].get_area_xy()) {basement = parts[1];} // use the larger part (TODO: expand if possible)
+	
+	if (real_num_parts == 2) {
+		unsigned const ix(parts[1].get_area_xy() > parts[0].get_area_xy());
+		basement = parts[ix]; // start with the larger part
+
+		// attempt to expand into the smaller part as long as it fits within the footprint of the upper floors
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (parts[ix].d[dim][dir] != parts[!ix].d[dim][!dir]) continue; // not adjacent in this dim
+				if (parts[ix].d[!dim][0] < parts[!ix].d[!dim][0] || parts[ix].d[!dim][1] > parts[!ix].d[!dim][1]) continue; // smaller part does not contain larger part in this dim
+				basement.d[dim][dir] = parts[!ix].d[dim][dir]; // extend into the other part
+			}
+		}
+	}
 	set_cube_zvals(basement, (basement.z1() - get_window_vspace()), basement.z1());
 	parts.push_back(basement);
 	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference; orig bcube.z1() is saved in ground_floor_z1
