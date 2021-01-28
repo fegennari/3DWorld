@@ -179,7 +179,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 }
 
 // Note: no blockers for people
-bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-0.1*get_wall_thickness());
 	float const vspace(get_window_vspace());
@@ -194,7 +194,7 @@ bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, floa
 
 	for (unsigned n = 0; n < 20; ++n) { // make 20 attempts to place a bookcase
 		bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
-		if (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // don't place against an exterior wall/window, inc. partial ext walls
+		if (!is_basement && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) continue; // don't place against an exterior wall/window, inc. partial ext walls
 		c.d[dim][ dir] = room_bounds.d[dim][dir]; // against this wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*depth;
 		float const pos(rgen.rand_uniform(room_bounds.d[!dim][0]+0.5*width, room_bounds.d[!dim][1]-0.5*width));
@@ -228,7 +228,7 @@ bool building_t::is_room_office_bathroom(room_t const &room, float zval, unsigne
 
 // Note: must be first placed object
 bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers,
-	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt)
+	colorRGBA const &chair_color, float zval, unsigned room_id, float tot_light_amt, bool is_basement)
 {
 	cube_t const room_bounds(get_walkable_room_bounds(room));
 	float const vspace(get_window_vspace());
@@ -252,7 +252,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 		if (num_placed > 0 && desk_pad.intersects(placed_desk)) continue; // intersects previously placed desk
 		if (!is_valid_placement_for_room(desk_pad, room, blockers, 1)) continue; // check proximity to doors and collision with blockers
 		// make short if against an exterior wall or in an office
-		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT);
+		bool const is_tall(!room.is_office && rgen.rand_float() < 0.5 && (is_basement || classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT));
 		unsigned const desk_obj_ix(objs.size());
 		objs.emplace_back(c, TYPE_DESK, room_id, dim, !dir, 0, tot_light_amt, (is_tall ? SHAPE_TALL : SHAPE_CUBE));
 		set_obj_id(objs);
@@ -473,7 +473,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	bool const first_dim(rgen.rand_bool());
 	cube_t const part(get_part_for_room(room));
 	bool is_ext_wall[2][2] = {0}; // precompute which walls are exterior, {dim}x{dir}
-	for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
+	for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);} // check is_basement?
 	bool placed_closet(0);
 
 	for (unsigned n = 0; n < 4 && !placed_closet; ++n) { // try 4 room corners
@@ -683,7 +683,7 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 		place_area, objs_start, front_clearance, pref_orient, pref_centered, color, not_at_window);
 }
 
-bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor) {
+bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement) {
 	// Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
@@ -737,13 +737,15 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 			placed_obj |= place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, room, 0.35, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);
 		}
 	}
-	if (is_house && (floor > 0 || rgen.rand_bool())) { // try to add a shower; 50% chance if on first floor
+	if (is_house && !is_basement && (floor > 0 || rgen.rand_bool())) { // try to add a shower; 50% chance if on first floor; not in basements (due to drawing artifacts)
 		float const shower_height(0.8*floor_spacing), shower_dx(rgen.rand_uniform(0.4, 0.5)*floor_spacing), shower_dy(rgen.rand_uniform(0.4, 0.5)*floor_spacing);
 		unsigned const first_corner(rgen.rand() & 3);
-		bool is_ext_wall[2][2] = {0}; // precompute which walls are exterior, {dim}x{dir}
-		for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 		//cube_t const part(get_part_for_room(room));
-
+		bool is_ext_wall[2][2] = {0};
+		
+		if (!is_basement) { // precompute which walls are exterior, {dim}x{dir}; basement walls are not considered exterior because there are no windows
+			for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
+		}
 		for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
 			unsigned const corner_ix((first_corner + n)&3);
 			bool const xdir(corner_ix&1), ydir(corner_ix>>1), dirs[2] = {xdir, ydir};
@@ -778,7 +780,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 		placed_obj = 1;
 		room_object_t const &sink((objs.back().type == TYPE_SINK) ? objs.back() : objs[objs.size()-2]); // find sink, skip blocker
 		
-		if (classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
+		if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
 			// add a mirror above the sink; could later make into medicine cabinet
 			cube_t mirror(sink); // start with the sink left and right position
 			mirror.expand_in_dim(!sink.dim, 0.1*mirror.get_sz_dim(!sink.dim)); // make slightly wider
@@ -1054,7 +1056,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (bad_place) continue;
 			assert(c.contains_cube(c_min));
 			c.d[dim][!dir] = front_pos; // remove front clearance
-			bool const add_backsplash(classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // only add to interior walls to avoid windows
+			bool const add_backsplash(classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // only add to interior walls to avoid windows; assuming not in basement
 
 			for (auto i = objs.begin()+counters_start; i != objs.end(); ++i) { // find adjacencies to previously placed counters and flag to avoid placing doors
 				if (i->dim == dim) continue; // not perpendicular
@@ -1160,12 +1162,12 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 	} // for n
 }
 
-bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_library_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	if (room.is_hallway || room.is_sec_bldg) return 0; // these can't be libraries
 	unsigned num_added(0);
 
 	for (unsigned n = 0; n < 8; ++n) { // place up to 8 bookcases
-		bool const added(add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start));
+		bool const added(add_bookcase_to_room(rgen, room, zval, room_id, tot_light_amt, objs_start, is_basement));
 		if (added) {++num_added;} else {break;}
 	}
 	return (num_added > 0);
@@ -1175,12 +1177,12 @@ void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 	for (unsigned d = 0; d < 3; ++d) {sz[d] = 0.06*window_vspacing*(1.0 + ((d == 2) ? 1.2 : 2.0)*rgen.rand_float());} // slightly more variation in XY
 }
 
-bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_depth((is_house ? 0.15 : 0.2)*window_vspacing);
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	unsigned const num_crates(4 + (rgen.rand() % (is_house ? 5 : 30))); // 4-33 for offices, 4-8 for houses
+	unsigned const num_crates(4 + (rgen.rand() % (is_house ? (is_basement ? 12 : 5) : 30))); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
 	vect_cube_t exclude;
 	cube_t test_cube(room);
 	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
@@ -1199,7 +1201,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (rgen.rand_bool()) continue; // only add shelves to 50% of the walls
 			
-			if (is_house && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
+			if (is_house && !is_basement && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 				// don't place shelves against exterior house walls in case there are windows
 				cube_t const part(get_part_for_room(room));
 				float const h_spacing(get_hspacing_for_part(part, !dim));
@@ -1558,7 +1560,7 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	} // for n
 }
 
-void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
 	float const place_book_prob((is_house ? 1.0 : 0.5)*(room.is_office ? 0.8 : 1.0));
@@ -1604,7 +1606,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		if (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob) {
 			place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, book);
 		}
-		else if (plant_prob > 0.0 && rgen.rand_float() < plant_prob) { // don't add both a plant and a bottle
+		else if (!is_basement && plant_prob > 0.0 && rgen.rand_float() < plant_prob) { // don't add both a plant and a bottle; don't add plants in the basement
 			place_plant_on_obj(rgen, surface, room_id, tot_light_amt, book);
 		}
 	} // for i
@@ -1845,7 +1847,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f));
 
 			if (is_office_bathroom) { // bathroom is already assigned
-				added_obj = is_bathroom = added_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f); // add bathroom
+				added_obj = is_bathroom = added_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement); // add bathroom
 			}
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
@@ -1856,7 +1858,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 				if (!added_obj && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < extra_bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings
-					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f); // add bathroom
+					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement); // add bathroom
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
@@ -1876,11 +1878,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (!added_obj && (is_basement || (r->is_office && r->interior && f == 0 /*&& r->z1() == ground_floor_z1*/)) && rgen.rand_bool()) {
 				// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time
-				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}
 			if (!added_obj && (!is_basement || rgen.rand_bool())) { // try to place a desk if there's no table, bed, etc.
-				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt);
+				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_basement);
 				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may be overwritten below
 			}
 			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen and have enough rooms
@@ -1891,12 +1893,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
-				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start);
+				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, is_basement);
 			}
 			if (is_house) { // place house-specific items
 				if (!is_bathroom && !is_kitchen && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) { // place bookcase 80% of the time, but not in bathrooms or kitchens
 					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
-					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
 				}
 				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
@@ -1915,14 +1917,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					r->assign_to(RTYPE_DINING, f);
 					is_dining = added_dining = 1;
 				}
-				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) { // add library, at most one
+				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) { // add library, at most one
 					r->assign_to(RTYPE_LIBRARY, f);
 					added_library = 1;
 				}
 			}
 			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30 : 50)) == 0) {
 				// office, no cubicles or bathroom - try to make it a library (in rare cases)
-				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {r->assign_to(RTYPE_LIBRARY, f);}
+				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {r->assign_to(RTYPE_LIBRARY, f);}
 			}
 			if (r->get_room_type(f) == RTYPE_NOTSET) { // room type not yet set, attempt to assign it with an optional room type
 				if (f == 0 && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if on first floor and has exterior door and is unassigned
@@ -1934,7 +1936,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					added_laundry = 1;
 				}
 				else if (!added_obj) { // make it a storage room until we add some other room type that it can be
-					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
 					r->assign_to(RTYPE_STORAGE, f);
 					is_storage = 1; // mark it as a storage room whether or not we've added anything to it
 				}
