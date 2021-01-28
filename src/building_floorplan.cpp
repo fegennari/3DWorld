@@ -1243,7 +1243,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			cube_t cand;
 			cand.z1() = part.z2() - window_vspacing + fc_thick; // top of top floor for this part
 			cand.z2() = part.z2() + fc_thick; // top of bottom floor of upper part *p
-			//static unsigned success_count(0);
+			bool connected(0);
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
@@ -1304,10 +1304,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
 					if (r->intersects(cand) && r->contains_cube_xy(cand)) {r->has_stairs = 1;} // Note: may be approximate
 				}
-				//++success_count;
+				connected = 1;
 				break; // success
 			} // for n
-			//if ((success_count % 10) == 0) {cout << success_count << " ";} // 1100 / 2340
+			if (connected && is_basement) break; // only need to connect one part for the basement
 		} // for p
 	}
 
