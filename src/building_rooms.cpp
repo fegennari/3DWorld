@@ -1179,7 +1179,7 @@ void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 
 bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
-	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_depth((is_house ? 0.15 : 0.2)*window_vspacing);
+	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_depth((is_house ? (is_basement ? 0.18 : 0.15) : 0.2)*window_vspacing);
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const num_crates(4 + (rgen.rand() % (is_house ? (is_basement ? 12 : 5) : 30))); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
@@ -1234,7 +1234,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
 		point pos(0.0, 0.0, zval);
 		vector3d sz; // half size relative to window_vspacing
-		gen_crate_sz(sz, rgen, window_vspacing*(is_house ? 0.5 : 1.0)); // smaller for houses
+		gen_crate_sz(sz, rgen, window_vspacing*(is_house ? (is_basement ? 0.75 : 0.5) : 1.0)); // smaller for houses
 		cube_t place_area(crate_bounds);
 		place_area.expand_by_xy(-sz);
 		if (!place_area.is_strictly_normalized()) continue; // too large for this room
