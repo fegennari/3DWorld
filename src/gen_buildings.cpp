@@ -1274,7 +1274,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 
 	if (!is_valid()) return; // invalid building
 	building_mat_t const &mat(get_material());
-	
+
 	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !mat.add_windows)) { // no windows for this material
 		if (only_cont_pt != nullptr) {cut_holes_for_ext_doors(bdraw, *only_cont_pt, 0xFFFF);} // still need to draw holes for doors
 		return;
@@ -1443,11 +1443,9 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
-		if (make_all_front || i->contains_pt(only_cont_pt)) { // part containing the point
-			bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
-			continue;
-		}
-		if (are_parts_stacked(*i, cont_part)) { // stacked building parts, contained, draw as front in case player can see through stairs
+		if (make_all_front || i->contains_pt(only_cont_pt) || // part containing the point
+			are_parts_stacked(*i, cont_part)) // stacked building parts, contained, draw as front in case player can see through stairs
+		{
 			bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
 			continue;
 		}
@@ -2285,10 +2283,13 @@ public:
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!camera_in_building) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
-						// neg offset to move windows on the inside of the building's exterior wall
-						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &camera_xlated);
+						// neg offset to move windows on the inside of the building's exterior wall;
+						// since there are no basement windows, we should treat the player as being in the part above so that windows are drawn correctly through the basement stairs
+						point pt_ag(camera_xlated);
+						max_eq(pt_ag.z, (b.ground_floor_z1 + b.get_floor_thickness()));
+						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &pt_ag);
 						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
-						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], camera_xlated, 0);
+						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], pt_ag, 0);
 						building_cont_player = &b; // there can be only one
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below

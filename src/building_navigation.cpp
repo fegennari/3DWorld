@@ -636,6 +636,7 @@ void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<un
 	for (unsigned s = 0; s < interior->stairwells.size(); ++s) {
 		stairwell_t const &stairs(interior->stairwells[s]);
 		if (straight_only && stairs.shape == SHAPE_U) continue; // skip U-shaped stairs
+		// TODO: make this work on stack connector stairs
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
 		if (part_ix >= 0 && !parts[part_ix].contains_cube(stairs)) continue; // stairs don't belong to this part
 		point const center(stairs.get_cube_center());
