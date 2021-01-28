@@ -1828,7 +1828,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
-				if (is_house && !must_be_bathroom && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
+				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
 					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, objs_start, is_lit);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
@@ -1842,23 +1842,23 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (!added_obj && r->is_office) { // add cubicles if this is a large office
 				added_obj = no_whiteboard = create_office_cubicles(rgen, *r, room_center.z, room_id, tot_light_amt);
 			}
-			if (!added_obj && rgen.rand_float() < (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5))) {
+			if (!added_obj && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5)))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
 				unsigned const num_tcs(add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt));
 				if (num_tcs > 0) {added_tc = added_obj = can_place_onto = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
-				if (added_tc && !(added_kitchen_mask & floor_mask) && (!is_house || f == 0)) { // office buildings can also have kitchens, even on non-ground floors
+				if (added_tc && !(added_kitchen_mask & floor_mask) && (!is_house || f == 0) && !is_basement) { // office buildings can also have kitchens, even on non-ground floors
 					is_kitchen = add_kitchen_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_living);
 					if (is_kitchen) {r->assign_to(RTYPE_KITCHEN, f); added_kitchen_mask |= floor_mask;}
 				}
 			}
-			if (!added_obj && r->is_office && r->interior && f == 0 /*&& r->z1() == bcube.z1()*/ && rgen.rand_bool()) {
+			if (!added_obj && (is_basement || (r->is_office && r->interior && f == 0 /*&& r->z1() == ground_floor_z1*/)) && rgen.rand_bool()) {
 				// if we haven't added any objects yet, and this room is an interior office on the first floor or basement, make it a storage room 50% of the time
 				added_obj = no_whiteboard = is_storage = add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}
-			if (!added_obj) { // try to place a desk if there's no table, bed, etc.
+			if (!added_obj && (!is_basement || rgen.rand_bool())) { // try to place a desk if there's no table, bed, etc.
 				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt);
 				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may be overwritten below
 			}
@@ -1873,7 +1873,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start);
 			}
 			if (is_house) { // place house-specific items
-				if (!is_bathroom && !is_kitchen && rgen.rand_float() < 0.8) { // place bookcase 80% of the time, but not in bathrooms or kitchens
+				if (!is_bathroom && !is_kitchen && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) { // place bookcase 80% of the time, but not in bathrooms or kitchens
 					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
 					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
@@ -1882,7 +1882,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
-				if (f == 0) { // dining room, must be on the first floor
+				if (f == 0 && !is_basement) { // dining room, must be on the first floor
 					if (light_obj_ix >= 0) { // handle dining room light: extend downward and make it a sphere
 						assert((unsigned)light_obj_ix < objs.size());
 						room_object_t &light(objs[light_obj_ix]);
@@ -1919,7 +1919,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 				// else ... this case is relatively rare
 			}
-			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage) { // add potted plants to some room types
+			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !is_basement) { // add potted plants to some room types
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
 				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
