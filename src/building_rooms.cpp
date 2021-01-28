@@ -1598,10 +1598,15 @@ void set_light_xy(cube_t &light, point const &center, float light_size, bool lig
 	light.z1() = light.z2() = center.z; // set so that valid pos can be checked
 }
 
-template<typename T> bool has_bcube_int_exp(cube_t const &bcube, vector<T> const &bcubes, float expand) {
+bool has_bcube_int_stairs_exp(cube_t const &bcube, vect_stairwell_t const &stairs, float expand, bool stacked_only) {
 	cube_t bcube_exp(bcube);
 	bcube_exp.expand_by(expand); // expand in all dirs, including z
-	return has_bcube_int(bcube_exp, bcubes);
+	
+	for (auto s = stairs.begin(); s != stairs.end(); ++s) {
+		if (stacked_only && !s->stack_conn) continue; // not stacked stairs
+		if (s->intersects(bcube)) return 1;
+	}
+	return 0;
 }
 
 // Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
@@ -1692,7 +1697,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		// place objects on each floor for this room
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
 			room_center.z = z + fc_thick; // floor height
-			bool const top_floor(f+1 == num_floors), check_stairs((!is_house || has_basement()) && parts.size() > 1 && top_floor); // top floor may have stairs connecting to upper stack
+			// top floor may have stairs connecting to upper stack
+			bool const top_floor(f+1 == num_floors), check_stairs((!is_house || has_basement()) && parts.size() > 1 && top_floor && r->z2() < bcube.z2()); // z2 check may not be effective
 			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs);
 
 			if (!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) { // check for stairwells connecting stacked parts (is this still needed?)
@@ -1742,7 +1748,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 						cube_t hall_light(light);
 						hall_light.translate_dim(light_dim, delta);
 
-						if (check_stairs && has_bcube_int_exp(hall_light, interior->stairwells, fc_thick)) { // keep moving until not blocked by stairs
+						if (check_stairs && has_bcube_int_stairs_exp(hall_light, interior->stairwells, fc_thick, 1)) { // keep moving until not blocked by stairs
 							cube_t const hall_light_start(hall_light);
 							bool is_valid(0);
 
@@ -1750,7 +1756,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 								hall_light = hall_light_start;
 
 								for (unsigned n = 0; n < 40; ++n) {
-									if (!has_bcube_int_exp(hall_light, interior->stairwells, fc_thick)) {is_valid = 1; break;}
+									if (!has_bcube_int_stairs_exp(hall_light, interior->stairwells, fc_thick, 1)) {is_valid = 1; break;}
 									hall_light.translate_dim(light_dim, 0.04*delta*(shift_dir ? -1.0 : 1.0));
 									if (!valid_bounds.contains_cube_xy(hall_light)) break; // translated outside the hall, give up
 								}
@@ -1774,7 +1780,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 							cube_t cur_light(light);
 							cur_light.expand_by_xy(-shrink);
 							cur_light.translate(point((-0.5f*dx + (x + 0.5)*xstep), (-0.5f*dy + (y + 0.5)*ystep), 0.0));
-							if (check_stairs && has_bcube_int_exp(cur_light, interior->stairwells, fc_thick)) continue; // what about blocked_by_stairs flag?
+							if (check_stairs && has_bcube_int_stairs_exp(cur_light, interior->stairwells, fc_thick, 1)) continue; // what about blocked_by_stairs flag?
 							objs.emplace_back(cur_light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
 							objs.back().obj_id = cur_light_ix++;
 						} // for x
@@ -1782,7 +1788,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					num_lights_added = nx*ny;
 				}
 				else { // normal room with a single light
-					if (check_stairs && has_bcube_int_exp(light, interior->stairwells, fc_thick)) {is_lit = 0;} // disable if blocked by stairs
+					if (check_stairs && has_bcube_int_stairs_exp(light, interior->stairwells, fc_thick, 1)) {is_lit = 0;} // disable if blocked by stairs
 					else {
 						light_obj_ix = objs.size();
 						objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
