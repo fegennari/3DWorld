@@ -489,12 +489,12 @@ struct room_t : public cube_t {
 };
 
 struct stairs_landing_base_t {
-	bool dim, dir, roof_access, against_wall[2];
+	bool dim, dir, roof_access, stack_conn, against_wall[2];
 	stairs_shape shape;
 
-	stairs_landing_base_t() : dim(0), dir(0), roof_access(0), shape(SHAPE_STRAIGHT) {against_wall[0] = against_wall[1] = 0;}
-	stairs_landing_base_t(bool dim_, bool dir_, bool roof_access_, stairs_shape shape_) :
-		dim(dim_), dir(dir_), roof_access(roof_access_), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
+	stairs_landing_base_t() : dim(0), dir(0), roof_access(0), stack_conn(0), shape(SHAPE_STRAIGHT) {against_wall[0] = against_wall[1] = 0;}
+	stairs_landing_base_t(bool dim_, bool dir_, bool roof_access_, stairs_shape shape_, bool sc=0) :
+		dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
 	void set_against_wall(bool val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
 	unsigned get_face_id() const {return (2*dim + dir);}
 };
@@ -504,17 +504,16 @@ struct landing_t : public cube_t, public stairs_landing_base_t {
 	uint8_t floor;
 
 	landing_t() : for_elevator(0), has_railing(0), is_at_top(0), floor(0) {}
-	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0) :
-		cube_t(c), stairs_landing_base_t(dim_, dir_, roof_access_, shape_), for_elevator(e), has_railing(railing), is_at_top(at_top), floor(f)
+	landing_t(cube_t const &c, bool e, uint8_t f, bool dim_, bool dir_, bool railing=0, stairs_shape shape_=SHAPE_STRAIGHT, bool roof_access_=0, bool at_top=0, bool sc=0) :
+		cube_t(c), stairs_landing_base_t(dim_, dir_, roof_access_, shape_, sc), for_elevator(e), has_railing(railing), is_at_top(at_top), floor(f)
 	{assert(is_strictly_normalized());}
 };
 
 struct stairwell_t : public cube_t, public stairs_landing_base_t {
 	uint8_t num_floors;
-	bool stack_conn;
-	stairwell_t() : num_floors(0), stack_conn(0) {}
+	stairwell_t() : num_floors(0) {}
 	stairwell_t(cube_t const &c, unsigned n, bool dim_, bool dir_, stairs_shape s=SHAPE_STRAIGHT, bool r=0, bool sc=0) :
-		cube_t(c), stairs_landing_base_t(dim_, dir_, r, s), num_floors(n), stack_conn(sc) {}
+		cube_t(c), stairs_landing_base_t(dim_, dir_, r, s, sc), num_floors(n) {}
 };
 typedef vector<stairwell_t> vect_stairwell_t;
 

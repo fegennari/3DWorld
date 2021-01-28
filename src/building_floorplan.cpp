@@ -1288,9 +1288,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					}
 				}
 				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
-				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings
+				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings;
+				// basement stairs only have walls on the bottom floor, so we set is_at_top=0
 				stairs_shape const sshape((is_basement || wall_clipped) ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT);
-				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape, 0, 1); // roof_access=0, is_at_top=1
+				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape, 0, !is_basement, 1); // roof_access=0, is_at_top=!is_basement, stacked_conn=1
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
 				interior->landings.push_back(landing);
 				interior->stairwells.emplace_back(cand, 1, dim, stairs_dir, sshape, 0, 1); // roof_access=0, stack_conn=1
