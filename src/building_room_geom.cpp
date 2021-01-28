@@ -2407,7 +2407,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlus
 			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->walls[d], d)) return 1;
 		}
 	}
-	if (bcube.contains_pt(viewer)) { // viewer inside this building; includes shadow_only case and reflection_pass
+	if (reflection_pass || bcube.contains_pt(viewer)) { // viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building)
 		// check floors of this building (and technically also ceilings)
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
 			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->floors, 2)) return 1;
