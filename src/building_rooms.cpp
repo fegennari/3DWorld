@@ -1258,15 +1258,36 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	float const front_clearance(get_min_front_clearance());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall for appliances
-	bool placed(place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8));
-	unsigned pref_orient(4); // if washer was placed, prefer to place dryer along the same wall (Note: blocker has same dim/dir as object)
-	if (placed) {pref_orient = (2*interior->room_geom->objs.back().dim + interior->room_geom->objs.back().dir);}
-	placed |= place_model_along_wall(OBJ_MODEL_DRYER, TYPE_DRYER, room, 0.38, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8, pref_orient);
-	// if we've placed a washer and dryer and made this into a laundry room, try to place a sink as well; should this use a different sink model from bathrooms?
-	if (placed) {place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);}
-	return placed;
+	vector3d const place_area_sz(place_area.get_size());
+	vector<room_object_t> &objs(interior->room_geom->objs);
+
+	for (unsigned n = 0; n < 10; ++n) { // 10 attempts to place washer and dryer along the same wall
+		unsigned const washer_ix(objs.size());
+		bool const placed_washer(place_model_along_wall(OBJ_MODEL_WASHER, TYPE_WASHER, room, 0.42, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8));
+		unsigned pref_orient(4); // if washer was placed, prefer to place dryer along the same wall
+		if (placed_washer) {pref_orient = objs[washer_ix].get_orient();}
+		unsigned const dryer_ix(objs.size());
+		bool const placed_dryer(place_model_along_wall(OBJ_MODEL_DRYER, TYPE_DRYER, room, 0.38, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8, pref_orient));
+		bool success(0);
+		if (placed_washer && placed_dryer && objs[dryer_ix].get_orient() == pref_orient) {success = 1;} // placed both washer and dryer along the same wall
+		else if (n+1 == 10) { // last attempt
+			if (!(placed_washer || placed_dryer)) return 0; // placed neither washer nor dryer, failed
+			if (placed_washer != placed_dryer) {success = 1;} // placed only one of the washer or dryer, allow it
+			else if (objs[washer_ix].dim != objs[dryer_ix].dim) {success = 1;} // placed on two adjacent walls, allow it
+			// placed on opposite walls; check that there's space for the player to walk between the washer and dryer
+			else if (objs[washer_ix].get_sz_dim(objs[washer_ix].dim) + objs[dryer_ix].get_sz_dim(objs[dryer_ix].dim) + front_clearance < place_area_sz[objs[washer_ix].dim]) {success = 1;}
+		}
+		if (success) {
+			// if we've placed a washer and/or dryer and made this into a laundry room, try to place a sink as well; should this use a different sink model from bathrooms?
+			place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);
+			return 1; // done
+		}
+		objs.resize(objs_start); // remove washer and dryer and try again
+	} // for n
+	return 0; // failed
 }
 
 void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
