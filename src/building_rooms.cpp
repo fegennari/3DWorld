@@ -1645,7 +1645,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		} // for r
 	}
 	for (auto r = rooms.begin(); r != rooms.end(); ++r) {
-		float const light_amt(window_vspacing*r->get_light_amt()); // multiply perimeter/area by window spacing to make unitless
+		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix);
+		float const light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		float const floor_height(r->is_sec_bldg ? r->dz() : window_vspacing); // secondary buildings are always one floor
 		unsigned const num_floors(calc_num_floors(*r, floor_height, floor_thickness)), room_id(r - rooms.begin());
 		point room_center(r->get_cube_center());
@@ -1688,7 +1689,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 		}
-		r->interior = get_part_for_room(*r).contains_cube_xy_no_adj(*r);
+		r->interior = (is_basement || get_part_for_room(*r).contains_cube_xy_no_adj(*r)); // AKA windowless
 		// make chair colors consistent for each part by using a few variables for a hash
 		colorRGBA chair_colors[12] = {WHITE, WHITE, GRAY, DK_GRAY, LT_GRAY, BLUE, DK_BLUE, LT_BLUE, YELLOW, RED, DK_GREEN, LT_BROWN};
 		colorRGBA chair_color(chair_colors[(13*r->part_id + 123*tot_num_rooms + 617*mat_ix + 1367*num_floors) % 12]);
