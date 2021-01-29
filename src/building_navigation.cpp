@@ -20,6 +20,7 @@ extern double camera_zh;
 extern building_params_t global_building_params;
 
 bool ai_follow_player() {return (global_building_params.ai_follow_player ^ bool(display_mode & 0x20));} // for future gameplay mode
+bool can_ai_follow_player(pedestrian_t const &person);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
@@ -473,6 +474,7 @@ void building_t::build_nav_graph() const {
 		}
 		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are not yet used by AIs so are ignored here
 	} // for r
+	//if (is_house && has_basement()) {cout << TXT(ng.is_fully_connected()) << endl;}
 }
 
 void building_t::clear_nav_graph() {interior->nav_graph.reset();}
@@ -521,56 +523,54 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 	if ((global_building_params.ai_target_player || goal.same_room_floor(loc)) && can_target_player(state, person)) {
 		// player is in a different room of our building, or we're following the player's position
 		unsigned const cand_room(goal.room_ix);
-		room_t const &room(get_room(cand_room));
+		room_t const &room(get_room(cand_room)); // target room
 
-		if (person.pos.z > room.z1() && person.pos.z < room.z2()) { // room contains our zval
-			if (interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) {
-				state.dest_room     = cand_room; // set but not yet used
-				person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
-				person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
+		if (interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) {
+			state.dest_room     = cand_room; // set but not yet used
+			person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
+			person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
-				if (global_building_params.ai_target_player) { // ensure target is a valid location in this building
-					float const z2_add(person.get_height() - person.radius), coll_dist(COLL_RADIUS_SCALE*person.radius);
-					cube_t legal_area(bcube);
-					legal_area.expand_by_xy(-coll_dist);
-					legal_area.z1() += person.radius;
-					legal_area.z2() -= z2_add;
-					assert(legal_area.is_strictly_normalized());
-					legal_area.clamp_pt(person.target_pos); // clamp to building interior
-					float dmin_sq(bcube.get_max_extent()); // start at a large value
-					cube_t closest_part;
+			if (global_building_params.ai_target_player) { // ensure target is a valid location in this building
+				float const z2_add(person.get_height() - person.radius), coll_dist(COLL_RADIUS_SCALE*person.radius);
+				cube_t legal_area(bcube);
+				legal_area.expand_by_xy(-coll_dist);
+				legal_area.z1() += person.radius;
+				legal_area.z2() -= z2_add;
+				assert(legal_area.is_strictly_normalized());
+				legal_area.clamp_pt(person.target_pos); // clamp to building interior
+				float dmin_sq(bcube.get_max_extent()); // start at a large value
+				cube_t closest_part;
 
-					for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // there shouldn't be any people in secondary buildings, but include them anyway
-						if (p->contains_pt(person.target_pos)) {dmin_sq = 0; break;} // done
-						float const dsq(p2p_dist_sq(person.target_pos, p->closest_pt(person.target_pos)));
-						if (dsq < dmin_sq) {closest_part = *p;}
-					}
-					if (dmin_sq > 0.0 && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
-					static vect_cube_t avoid; // reuse across frames/people
-					interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), get_floor_thickness());
-
-					for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
-						cube_t c(*i);
-						c.expand_by_xy(coll_dist);
-						sphere_cube_int_update_pos(person.target_pos, coll_dist, c, person.pos, 1, 1); // check_int=1, skip_z=1, ignore return value
-					}
+				for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) { // there shouldn't be any people in secondary buildings, but include them anyway
+					if (p->contains_pt(person.target_pos)) {dmin_sq = 0; break;} // done
+					float const dsq(p2p_dist_sq(person.target_pos, p->closest_pt(person.target_pos)));
+					if (dsq < dmin_sq) {closest_part = *p;}
 				}
-				if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
-					unsigned const cur_floor(room.get_floor_containing_zval(person.pos.z, floor_spacing));
-					cube_t const &part(get_part_for_room(room));
+				if (dmin_sq > 0.0 && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
+				static vect_cube_t avoid; // reuse across frames/people
+				interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), get_floor_thickness());
 
-					if (goal.floor < cur_floor) { // try one floor below
-						float const new_z(person.target_pos.z - floor_spacing);
-						if (new_z > part.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
-					}
-					else if (goal.floor > cur_floor) { // try one floor above
-						float const new_z(person.target_pos.z + floor_spacing);
-						if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
-					}
-					// else if floors differ by more than 1, we'll end up visiting the room on the wrong floor
+				for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
+					cube_t c(*i);
+					c.expand_by_xy(coll_dist);
+					sphere_cube_int_update_pos(person.target_pos, coll_dist, c, person.pos, 1, 1); // check_int=1, skip_z=1, ignore return value
 				}
-				return 1;
 			}
+			if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
+				room_t const &cur_room(get_room(loc.room_ix));
+				int const cur_floor(loc.floor), dest_floor((int)goal.floor + round_fp((room.z1() - cur_room.z1())/floor_spacing)); // account for stacked parts floor difference
+
+				if (dest_floor < cur_floor) { // try one floor below
+					float const new_z(person.target_pos.z - floor_spacing);
+					if (new_z > room.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
+				}
+				else if (dest_floor > cur_floor) { // try one floor above
+					float const new_z(person.target_pos.z + floor_spacing);
+					if (new_z < room.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
+				}
+				// else if floors differ by more than 1, we'll end up visiting the room on the wrong floor
+			}
+			return 1;
 		}
 	}
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
@@ -590,6 +590,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
 		if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
+			// FIXME: different part logic?
 			cube_t const &part(get_part_for_room(room));
 			unsigned const rand_val(rgen.rand() & 3); // 0-3
 
@@ -636,7 +637,6 @@ void building_t::find_nearest_stairs(point const &p1, point const &p2, vector<un
 	for (unsigned s = 0; s < interior->stairwells.size(); ++s) {
 		stairwell_t const &stairs(interior->stairwells[s]);
 		if (straight_only && stairs.shape == SHAPE_U) continue; // skip U-shaped stairs
-		// TODO: make this work on stack connector stairs
 		if (zmin < stairs.z1() || zmax > stairs.z2()) continue; // stairs don't span the correct floors
 		if (part_ix >= 0 && !parts[part_ix].contains_cube(stairs)) continue; // stairs don't belong to this part
 		point const center(stairs.get_cube_center());
@@ -678,7 +678,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 	if (use_stairs) { // find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs;
 		find_nearest_stairs(from, to, nearest_stairs, 1); // straight_only=1; pass in loc1.part_ix if both loc part_ix values are equal?
-		bool const up_or_down(loc1.floor > loc2.floor); // 0=up, 1=down
+		bool const up_or_down(loc1.floor > loc2.floor); // 0=up, 1=down FIXME: handle part_ix
 
 		for (auto s = nearest_stairs.begin(); s != nearest_stairs.end(); ++s) { // try using stairs, closest to furthest
 			assert(*s < interior->stairwells.size());
@@ -793,7 +793,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	building_dest_t const &target(cur_player_building_loc);
 	bool const same_room(target.room_ix == (int)state.cur_room && target.floor == get_floor_for_room_zval(target.room_ix, person.pos.z)); // check room and floor
 	
-																																		  // if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room (optimization);
+	// if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room (optimization);
 	// however, if the path is empty, continue to choose a new path (needed for AI more than one floor away from target to take multiple flights of stairs)
 	if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0;
 	//if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
