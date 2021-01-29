@@ -615,7 +615,7 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 
 void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness) const { // for AI
 	avoid.clear();
-	add_bcube_if_overlaps_zval(stairwells, avoid, z1-floor_thickness, z2); // clearance not required
+	add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2); // clearance not required
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	if (!room_geom) return; // no room objects
 

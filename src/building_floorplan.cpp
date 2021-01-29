@@ -1294,8 +1294,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				stairs_shape const sshape((is_basement || wall_clipped) ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT);
 				landing_t landing(cand, 0, 0, dim, stairs_dir, !wall_clipped, sshape, 0, !is_basement, 1); // roof_access=0, is_at_top=!is_basement, stacked_conn=1
 				landing.z1() = part.z2() - fc_thick; // only include the ceiling of this part and the floor of *p
+				cube_t stairwell(cand);
+				stairwell.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
 				interior->landings.push_back(landing);
-				interior->stairwells.emplace_back(cand, 1, dim, stairs_dir, sshape, 0, 1); // roof_access=0, stack_conn=1
+				interior->stairwells.emplace_back(stairwell, 1, dim, stairs_dir, sshape, 0, 1); // roof_access=0, stack_conn=1
 				// attempt to cut holes in ceiling of this part and floor of above part
 				cube_t cut_cube(cand);
 				cut_cube.z1() += fc_thick; // shrink to avoid clipping floors exactly at the base of the stairs
@@ -1303,7 +1305,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				subtract_cube_from_floor_ceil(cut_cube, interior->ceilings);
 
 				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-					if (r->intersects(cand) && r->contains_cube_xy(cand)) {r->has_stairs = 1;} // Note: may be approximate
+					if (r->intersects(stairwell) && r->contains_cube_xy(stairwell)) {r->has_stairs = 1;} // Note: may be approximate
 				}
 				connected = 1;
 				break; // success
