@@ -1270,7 +1270,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				cand_test[1].z1() += 1.1*window_vspacing; cand_test[1].z2() += 0.9*window_vspacing; // move to upper part
 				cand_test[ stairs_dir].d[dim][0] += stairs_pad; // subtract off padding on one side
 				cand_test[!stairs_dir].d[dim][1] -= stairs_pad; // subtract off padding on one side
-				bool const allow_clip_walls(n > 180); // doesn't look right in some cases and may block hallways and rooms, use as a last resort
+				// clipped walls don't look right in some cases and may block hallways and rooms, use as a last resort; disable for houses since basement is optional anyway
+				bool const allow_clip_walls(n > 180 && !is_house);
 				bool bad_place(0), wall_clipped(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
