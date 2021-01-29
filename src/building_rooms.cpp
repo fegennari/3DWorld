@@ -1186,13 +1186,17 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	vect_cube_t exclude;
 	cube_t test_cube(room);
 	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
-	unsigned num_placed(0);
+	unsigned num_placed(0), num_doors(0);
 
+	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+		num_doors += is_cube_close_to_door(test_cube, 0.0, 0, *i, 2, 1); // check both dirs, check_zval=1
+	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (!is_cube_close_to_door(test_cube, 0.0, 0, *i, 2, 1)) continue; // check both dirs, check_zval=1
 		exclude.push_back(*i);
 		exclude.back().expand_in_dim( i->dim, 0.6*room.get_sz_dim(i->dim));
-		exclude.back().expand_in_dim(!i->dim, 0.1*i->get_sz_dim(!i->dim));
+		// if there are multiple doors (houses only?), expand the exclude area more in the other dimension to make sure there's a path between doors
+		exclude.back().expand_in_dim(!i->dim, max(0.1*i->get_sz_dim(!i->dim), ((num_doors > 1) ? 0.3*room.get_sz_dim(!i->dim) : 0.0)));
 	}
 	// add shelves on walls (avoiding the door), and have crates avoid them
 	for (unsigned dim = 0; dim < 2; ++dim) {
