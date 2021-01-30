@@ -1130,7 +1130,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		ext_side_qv_range.start   = bdraw.get_num_verts (mat.wall_tex);
 
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO
-			bdraw.add_section(*this, parts, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
+			colorRGBA const &color(is_basement(i) ? WHITE : wall_color); // basement walls are always white
+			bdraw.add_section(*this, parts, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // XY
 		}
 		ext_side_qv_range.end = bdraw.get_num_verts(mat.wall_tex);
 	}
@@ -1162,7 +1163,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // Note: can almost pass in (1U << dim) as dim_filt, if it wasn't for door cutouts (2.2M T)
 			for (auto i = interior->walls[dim].begin(); i != interior->walls[dim].end(); ++i) {
-				bdraw.add_section(*this, empty_vc, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
+				colorRGBA const &color((i->z1() < ground_floor_z1) ? WHITE : wall_color); // basement walls are always white
+				bdraw.add_section(*this, empty_vc, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // no AO; X/Y dims only
 			}
 		}
 		// Note: stair/elevator landings can probably be drawn in room_geom along with stairs, though I don't think there would be much benefit in doing so
@@ -1445,10 +1447,12 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
+		colorRGBA const &color(is_basement(i) ? WHITE : wall_color); // basement walls are always white
+
 		if (make_all_front || i->contains_pt(only_cont_pt) || // part containing the point
 			are_parts_stacked(*i, cont_part)) // stacked building parts, contained, draw as front in case player can see through stairs
 		{
-			bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
+			bdraw_front.add_section(*this, parts, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // XY
 			continue;
 		}
 		unsigned back_dim_mask(3), front_dim_mask(0); // enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
@@ -1470,14 +1474,14 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 				if (i->d[!d][e] != cont_part.d[!d][e] && ((i->d[!d][e] < cont_part.d[!d][e]) ^ e)) {
 					cube_t back_clip_cube(*i);
 					front_clip_cube.d[!d][e] = back_clip_cube.d[!d][!e] = cont_part.d[!d][e]; // split point
-					bdraw_back.add_section(*this, parts, *i, mat.wall_tex, wall_color, back_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
+					bdraw_back.add_section(*this, parts, *i, mat.wall_tex, color, back_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
 				}
 			}
 			back_dim_mask &= ~(1<<d); front_dim_mask |= (1<<d); // draw only the other dim as back and this dim as front
 			break;
 		} // for d
-		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, parts, *i, mat.wall_tex, wall_color, back_dim_mask,  0, 0, 1, 0);}
-		if (front_dim_mask > 0) {bdraw_front.add_section(*this, parts, *i, mat.wall_tex, wall_color, front_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
+		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, parts, *i, mat.wall_tex, color, back_dim_mask,  0, 0, 1, 0);}
+		if (front_dim_mask > 0) {bdraw_front.add_section(*this, parts, *i, mat.wall_tex, color, front_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
 	} // for i
 }
 
