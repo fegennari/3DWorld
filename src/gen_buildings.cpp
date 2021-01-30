@@ -30,7 +30,7 @@ building_t const *player_building(nullptr);
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, toggle_door_open_state, teleport_to_screenshot, enable_dlight_bcubes;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
-extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale;
+extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks;
 extern point sun_pos, pre_smap_player_pos;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
@@ -276,20 +276,20 @@ building_lights_manager_t building_lights_manager;
 
 
 void set_interior_lighting(shader_t &s, bool have_indir) {
-	if (have_indir || player_in_closet == 2) { // using indir lighting, or player in a closet closet
-		s.add_uniform_float("diffuse_scale", 0.0); // no diffuse from sun/moon
-		s.add_uniform_float("ambient_scale", ((player_in_closet == 2) ? 0.1 : 0.0)); // no ambient for indir; slight ambient for closet closet
+	if (have_indir || player_in_closet == 2) { // using indir lighting, or player in a closed closet
+		s.add_uniform_float("diffuse_scale",       0.0); // no diffuse from sun/moon
+		s.add_uniform_float("ambient_scale",       ((player_in_closet == 2) ? 0.1 : 0.0)); // no ambient for indir; slight ambient for closet closet
 		s.add_uniform_float("hemi_lighting_scale", 0.0); // disable hemispherical lighting (should we set hemi_lighting=0 in the shader?)
 	}
-	else if (ADD_ROOM_LIGHTS) {
-		s.add_uniform_float("diffuse_scale", 0.1); // very small diffuse and specular lighting for sun/moon
-		s.add_uniform_float("ambient_scale", 0.6); // dimmer ambient
-		s.add_uniform_float("hemi_lighting_scale", 0.1); // low hemispherical lighting
-	}
 	else {
-		s.add_uniform_float("diffuse_scale", 0.2); // reduce diffuse and specular lighting for sun/moon
-		s.add_uniform_float("ambient_scale", 1.2); // brighter ambient
-		s.add_uniform_float("hemi_lighting_scale", 0.3); // reduced hemispherical lighting
+		float const light_scale(ADD_ROOM_LIGHTS ? 0.5 : 1.0); // lower for basement, lower when using room lights
+		float const light_change_amt(fticks/(2.0f*TICKS_PER_SECOND));
+		static float blscale(1.0); // indir/ambient lighting slowly transitions when entering or leaving the basement
+		if (player_in_basement) {blscale = max(0.0f, (blscale - light_change_amt));} // decrease
+		else                    {blscale = min(1.0f, (blscale + light_change_amt));} // increase
+		s.add_uniform_float("diffuse_scale",       0.2f*blscale*light_scale); // reduce diffuse and specular lighting for sun/moon
+		s.add_uniform_float("ambient_scale",       0.5f*(1.0f + blscale)*light_scale); // brighter ambient
+		s.add_uniform_float("hemi_lighting_scale", 0.2f*blscale*light_scale); // reduced hemispherical lighting
 	}
 }
 void reset_interior_lighting(shader_t &s) {
@@ -2154,7 +2154,6 @@ public:
 			building_lights_manager.setup_building_lights(xlate); // setup lights on first (opaque) non-shadow pass
 			enable_dlight_bcubes = 0; // disable when creating the reflection image (will be set when we re-enter multi_draw())
 			interior_shadow_maps = 0;
-			player_in_basement   = 0;
 			create_mirror_reflection_if_needed();
 			draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
 			player_building = nullptr; // reset, may be set below
@@ -2165,7 +2164,7 @@ public:
 		bool const night(is_night(WIND_LIGHT_ON_RAND));
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
-		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0);
+		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_basement(0);
 		unsigned max_draw_ix(0), door_type(0);
 		shader_t s;
 
@@ -2294,7 +2293,7 @@ public:
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
 						this_frame_camera_in_building = 1;
-						if (b.is_pos_in_basement(camera_xlated)) {player_in_basement = 1;}
+						if (b.is_pos_in_basement(camera_xlated)) {this_frame_player_in_basement = 1;}
 						player_building = &b;
 
 						if (display_mode & 0x10) { // compute indirect lighting
@@ -2319,7 +2318,11 @@ public:
 			} // for i
 			if (ADD_ROOM_LIGHTS) {glDepthFunc(GL_LESS);} // restore
 			glDisable(GL_CULL_FACE);
-			if (!reflection_pass) {camera_in_building = this_frame_camera_in_building;} // update once; non-interior buildings (such as city buildings) won't update this
+
+			if (!reflection_pass) { // update once; non-interior buildings (such as city buildings) won't update this
+				camera_in_building = this_frame_camera_in_building;
+				player_in_basement = this_frame_player_in_basement;
+			}
 			reset_interior_lighting(s);
 			s.end_shader();
 			reflection_shader.clear();
