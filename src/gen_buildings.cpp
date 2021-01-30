@@ -1047,6 +1047,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		bool const need_top_roof(roof_type == ROOF_TYPE_FLAT || roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION);
 		
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
+			if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
 			bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
 			bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
 			bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes (not using ground_floor_z1)
