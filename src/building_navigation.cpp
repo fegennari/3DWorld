@@ -14,7 +14,7 @@ float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but large
 int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 
-extern int frame_counter, display_mode;
+extern int frame_counter, display_mode, player_in_closet;
 extern float fticks;
 extern double camera_zh;
 extern building_params_t global_building_params;
@@ -754,6 +754,7 @@ bool can_ai_follow_player(pedestrian_t const &person) {
 	if (!ai_follow_player()) return 0; // disabled
 	if (!cur_player_building_loc.is_valid()) return 0; // no target
 	if (cur_player_building_loc.building_ix != (int)person.dest_bldg) return 0; // wrong building
+	if (player_in_closet == 2) return 0; // ignore player if in the closet with the door closed
 	return 1;
 }
 
