@@ -518,9 +518,9 @@ struct stairwell_t : public cube_t, public stairs_landing_base_t {
 typedef vector<stairwell_t> vect_stairwell_t;
 
 struct door_t : public cube_t {
-	bool dim, open_dir, open;
-	door_t() : dim(0), open_dir(0), open(0) {}
-	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1) : cube_t(c), dim(dim_), open_dir(dir), open(open_) {assert(is_strictly_normalized());}
+	bool dim, open_dir, open, no_frame;
+	door_t() : dim(0), open_dir(0), open(0), no_frame(0) {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool nf=0) : cube_t(c), dim(dim_), open_dir(dir), open(open_), no_frame(nf) {assert(is_strictly_normalized());}
 };
 typedef vector<door_t> vect_door_t;
 

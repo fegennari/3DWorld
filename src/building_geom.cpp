@@ -1278,7 +1278,6 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	parts.push_back(basement);
 	min_eq(bcube.z1(), basement.z1()); // not really necessary, will be updated later anyway, but good to have here for reference; orig bcube.z1() is saved in ground_floor_z1
 	++real_num_parts;
-	// TODO: Basement stairs door
 }
 
 void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses

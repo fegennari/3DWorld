@@ -1300,6 +1300,17 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				stairwell.z2() = part.z2() + window_vspacing - fc_thick; // bottom of ceiling of upper part; must cover z-range of upper floor for AIs and room object collisions
 				interior->landings.push_back(landing);
 				interior->stairwells.emplace_back(stairwell, 1, dim, stairs_dir, sshape, 0, 1); // roof_access=0, stack_conn=1
+
+				if (is_basement) { // add a basement door at the bottom of the stairs
+					float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
+					door_t door(cand, dim, !stairs_dir, 0, 1); // open=0, no_frame=1
+					door.z2() -= fc_thick; // bottom of basement ceiling, not the floor above
+					door.d[dim][stairs_dir] = door.d[dim][!stairs_dir] + pos_shift;
+					if (!stairs_dir) {door.translate_dim(dim, -pos_shift);} // why the asymmetry?
+					door.expand_in_dim(!dim, -0.15*cand.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
+					interior->doors.push_back(door);
+					// Note: top of door is not drawn and there is a small gap, but it's hard to see and I haven't attempted to fix it
+				}
 				// attempt to cut holes in ceiling of this part and floor of above part
 				cube_t cut_cube(cand);
 				cut_cube.z1() += fc_thick; // shrink to avoid clipping floors exactly at the base of the stairs
