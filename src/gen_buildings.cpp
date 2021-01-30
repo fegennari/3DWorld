@@ -1050,7 +1050,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
 			bdraw.add_section(*this, parts, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
 			bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
-			bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1()); // skip the bottom of stacked cubes (not using ground_floor_z1)
+			// skip the bottom of stacked cubes (not using ground_floor_z1); need to draw the porch roof, so test i->dz()
+			bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1() && i->dz() > 0.5f*get_window_vspace());
 			if (is_stacked && skip_top) continue; // no top/bottom to draw
 
 			if (!is_house && !skip_top && interior) {
