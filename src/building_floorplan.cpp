@@ -1254,6 +1254,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					stairs_width -= 0.025*doorway_width;
 					stairs_pad   -= 0.030*doorway_width;
 					len_with_pad -= 0.230*doorway_width;
+					max_eq(stairs_width, get_min_front_clearance()); // ensure the player can fit
+					max_eq(stairs_pad,   get_min_front_clearance()); // ensure the player can fit
 				}
 				bool dim(0);
 				if (min(place_region.dx(), place_region.dy()) < 1.5*len_with_pad) {dim = (place_region.dx() < place_region.dy());} // use larger dim
