@@ -1280,7 +1280,6 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	++real_num_parts;
 	// TODO:
 	// Basement stairs door
-	// AI uses basement stairs
 	// Darker lighting
 }
 

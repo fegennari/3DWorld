@@ -16,7 +16,6 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	if (!has_room_geom()) return 0; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
-	float const window_vspacing(get_window_vspace());
 	point query_pt(closest_to);
 	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
 	int const room_id(get_room_containing_pt(query_pt));
@@ -28,7 +27,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || i->room_id != room_id) continue; // not a light, or the wrong room
-		if (room.get_floor_containing_zval(i->z1(), window_vspacing) != room.get_floor_containing_zval(closest_to.z, window_vspacing)) continue; // wrong floor
+		if (!room.is_sec_bldg && get_floor_for_zval(i->z1()) != get_floor_for_zval(closest_to.z)) continue; // wrong floor (skip garages and sheds)
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
 		float const dist_sq(p2p_dist_sq(closest_to, center));
@@ -268,7 +267,6 @@ bool building_t::is_pt_lit(point const &pt) const {
 	if (!has_room_geom()) return 0; // no lights
 	int const room_id(get_room_containing_pt(pt)); // call this only once on center in is_sphere_lit()?
 	if (room_id < 0) return 0; // outside building?
-	float const floor_spacing(get_window_vspace());
 	room_t const &room(get_room(room_id));
 
 	for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
@@ -276,7 +274,7 @@ bool building_t::is_pt_lit(point const &pt) const {
 		bool const same_room((int)i->room_id == room_id);
 		//if (!same_room) continue; // different room (optimization); too strong?
 		//bool const same_floor(fabs(i->z1() - pt.z) < floor_spacing); // doesn't work with lamps
-		bool const same_floor(room.get_floor_containing_zval(pt.z, floor_spacing) == room.get_floor_containing_zval(i->z1(), floor_spacing));
+		bool const same_floor(room.is_sec_bldg || get_floor_for_zval(pt.z) == get_floor_for_zval(i->z1()));
 		if (!i->has_stairs() && !same_floor) continue; // different floors, and no stairs (optimization)
 		if (same_floor && same_room) return 1; // same floor of same room, should be visible (optimization)
 		// TODO: check light radius?

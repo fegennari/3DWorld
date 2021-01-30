@@ -558,13 +558,12 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 			}
 			if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
 				room_t const &cur_room(get_room(loc.room_ix));
-				int const cur_floor(loc.floor), dest_floor((int)goal.floor + round_fp((room.z1() - cur_room.z1())/floor_spacing)); // account for stacked parts floor difference
 
-				if (dest_floor < cur_floor) { // try one floor below
+				if (goal.floor_ix < loc.floor_ix) { // try one floor below
 					float const new_z(person.target_pos.z - floor_spacing);
 					if (new_z > room.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
 				}
-				else if (dest_floor > cur_floor) { // try one floor above
+				else if (goal.floor_ix > loc.floor_ix) { // try one floor above
 					float const new_z(person.target_pos.z + floor_spacing);
 					if (new_z < room.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
 				}
@@ -670,15 +669,10 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 		assert(from.z == to.z);
 		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, use_new_seed, avoid, path);
 	}
-	bool use_stairs(0);
-	if (loc1.floor != loc2.floor) {use_stairs = 1;} // different floors
-	else if (loc1.part_ix != loc2.part_ix) {
-		if (parts[loc1.part_ix].z1() != parts[loc2.part_ix].z1()) {use_stairs = 1;} // stacked parts
-	}
-	if (use_stairs) { // find path from <from> to nearest stairs, then find path from stairs to <to>
+	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs;
 		find_nearest_stairs(from, to, nearest_stairs, 1); // straight_only=1; pass in loc1.part_ix if both loc part_ix values are equal?
-		bool const up_or_down(loc1.floor > loc2.floor); // 0=up, 1=down FIXME: handle part_ix
+		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down FIXME: handle part_ix
 
 		for (auto s = nearest_stairs.begin(); s != nearest_stairs.end(); ++s) { // try using stairs, closest to furthest
 			assert(*s < interior->stairwells.size());
@@ -706,7 +700,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 		return 0; // failed
 	}
 	assert(loc1.room_ix != loc2.room_ix);
-	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, height, use_stairs, is_first_path, 0, use_new_seed, avoid, from, path)) return 0;
+	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path, 0, use_new_seed, avoid, from, path)) return 0;
 	assert(!path.empty());
 	return 1;
 }
@@ -771,7 +765,7 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 	float const player_radius(get_scaled_player_radius());
 	point const pp2(target.pos - vector3d(0.0, 0.0, camera_zh)); // player's bottom sphere
 	point const eye_pos(person.pos + vector3d(0.0, 0.0, 0.9*person.get_height())); // for person
-	bool const same_room_and_floor(target.room_ix == (int)state.cur_room && target.floor == get_floor_for_room_zval(target.room_ix, person.pos.z));
+	bool const same_room_and_floor(target.room_ix == (int)state.cur_room && target.floor_ix == get_floor_for_zval(person.pos.z));
 
 	if (!same_room_and_floor) { // check visibility; assume LOS if in the same room
 		if (!is_sphere_visible(target.pos, player_radius, eye_pos) && !is_sphere_visible(pp2, player_radius, eye_pos)) return 0; // check both the bottom and top of player
@@ -791,7 +785,7 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const {
 	if (!global_building_params.ai_target_player || !can_ai_follow_player(person) || !interior) return 0; // disabled
 	building_dest_t const &target(cur_player_building_loc);
-	bool const same_room(target.room_ix == (int)state.cur_room && target.floor == get_floor_for_room_zval(target.room_ix, person.pos.z)); // check room and floor
+	bool const same_room(target.room_ix == (int)state.cur_room && target.floor_ix == get_floor_for_zval(person.pos.z)); // check room and floor
 	
 	// if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room (optimization);
 	// however, if the path is empty, continue to choose a new path (needed for AI more than one floor away from target to take multiple flights of stairs)
@@ -1009,11 +1003,6 @@ void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vect
 	}
 }
 
-unsigned room_t::get_floor_containing_zval(float zval, float floor_spacing) const {
-	if (is_sec_bldg) return 0; // only one floor
-	return unsigned((zval - z1())/floor_spacing);
-}
-
 int building_t::get_room_containing_pt(point const &pt) const {
 	assert(interior);
 	float const wall_thickness(get_wall_thickness());
@@ -1025,9 +1014,6 @@ int building_t::get_room_containing_pt(point const &pt) const {
 	}
 	return -1; // room not found
 }
-unsigned building_t::get_floor_for_room_zval(unsigned room_ix, float zval) const {
-	return get_room(room_ix).get_floor_containing_zval(zval, get_window_vspace());
-}
 building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	building_loc_t loc;
 
@@ -1036,7 +1022,7 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 	}
 	if (interior) { // rooms and stairwells, no elevators yet
 		loc.room_ix = get_room_containing_pt(pt);
-		if (loc.room_ix >= 0) {loc.floor = get_floor_for_room_zval(loc.room_ix, pt.z);}
+		if (loc.room_ix >= 0) {loc.floor_ix = get_floor_for_zval(pt.z);}
 
 		for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 			if (s->contains_pt(pt)) {loc.stairs_ix = (s - interior->stairwells.begin()); break;} // Note: stairs_ix is not currently used, except for >= 0 test

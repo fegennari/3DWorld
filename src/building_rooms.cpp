@@ -2218,7 +2218,7 @@ void building_t::add_window_coverings(cube_t const &window, bool dim, bool dir) 
 	if (room_id < 0) return; // room not found - should this be an error?
 	if (is_split)    return; // window split across multiple rooms - how do we handle this? for now skip it
 	room_t const &room(get_room(room_id));
-	unsigned const floor(room.get_floor_containing_zval(0.5f*(window.z1() + window.z2()), get_window_vspace()));
+	unsigned const floor(room.get_floor_containing_zval(window.zc(), get_window_vspace()));
 	room_type const rtype(room.get_room_type(floor));
 
 	switch (rtype) {

@@ -485,7 +485,7 @@ struct room_t : public cube_t {
 	bool has_bathroom() const;
 	bool is_lit_on_floor(unsigned floor) const {return (lit_by_floor & (1ULL << (floor&63)));}
 	float get_light_amt() const;
-	unsigned get_floor_containing_zval(float zval, float floor_spacing) const;
+	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_sec_bldg ? 0 : unsigned((zval - z1())/floor_spacing));}
 };
 
 struct stairs_landing_base_t {
@@ -570,10 +570,10 @@ struct building_stats_t {
 
 struct building_loc_t {
 	int part_ix, room_ix, stairs_ix; // -1 is not contained; what about elevator_ix?
-	unsigned floor;
-	building_loc_t() : part_ix(-1), room_ix(-1), stairs_ix(-1), floor(0) {}
+	unsigned floor_ix; // global for this building, rather than the current part/room
+	building_loc_t() : part_ix(-1), room_ix(-1), stairs_ix(-1), floor_ix(0) {}
 	bool operator==(building_loc_t const &loc) const {return (same_room_floor(loc) && part_ix == loc.part_ix && stairs_ix == loc.stairs_ix);}
-	bool same_room_floor(building_loc_t const &loc) const {return (room_ix == loc.room_ix && floor == loc.floor);}
+	bool same_room_floor(building_loc_t const &loc) const {return (room_ix == loc.room_ix && floor_ix == loc.floor_ix);}
 };
 
 struct building_dest_t : public building_loc_t {
@@ -829,7 +829,7 @@ private:
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side);
 	void play_door_open_close_sound(point const &pos, bool open) const;
-	unsigned get_floor_for_room_zval(unsigned room_ix, float zval) const;
+	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - bcube.z1())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
