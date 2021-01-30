@@ -1257,7 +1257,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 }
 
 void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses only
-	return;
+	rand_gen_t rgen_copy(rgen); // make a copy so that we don't modify the incoming rgen
+	if (rgen_copy.rand_bool()) return; // add basement 50% of the time
 	basement_part_ix = (int8_t)parts.size();
 	cube_t basement(parts[0]);
 	
