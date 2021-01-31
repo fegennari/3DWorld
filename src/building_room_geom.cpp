@@ -1086,10 +1086,12 @@ void building_room_geom_t::add_blinds(room_object_t const &c) {
 	get_material(untex_shad_mat, 1).add_cube_to_verts(c, texture_color(get_blinds_tid()).modulate_with(color), llc, df2); // draw top and bottom / front and back untextured
 }
 
-void building_room_geom_t::add_railing(room_object_t const &c) {
+float get_railing_height(room_object_t const &c) {
 	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI));
-	float const radius(0.5*c.get_sz_dim(!c.dim)), pole_radius(0.75*radius), length(c.get_sz_dim(c.dim)), center(c.get_center_dim(!c.dim));
-	float const height((is_u_stairs ? 0.70 : 0.35)*c.dz()); // use a larger relative height for lo/hi railings on U-shaped stairs
+	return (is_u_stairs ? 0.70 : 0.35)*c.dz(); // use a larger relative height for lo/hi railings on U-shaped stairs
+}
+cylinder_3dw get_railing_cylinder(room_object_t const &c) {
+	float const radius(0.5*c.get_sz_dim(!c.dim)), center(c.get_center_dim(!c.dim)), height(get_railing_height(c));
 	point p[2];
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -1097,14 +1099,20 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 		p[d][!c.dim] = center;
 		p[d][ c.dim] = c.d[c.dim][c.dir^bool(d)^1];
 	}
+	return cylinder_3dw(p[0], p[1], radius, radius);
+}
+void building_room_geom_t::add_railing(room_object_t const &c) {
+	cylinder_3dw const railing(get_railing_cylinder(c));
+	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI));
+	float const pole_radius(0.75*railing.r1), length(c.get_sz_dim(c.dim)), height(get_railing_height(c));
 	tid_nm_pair_t tex;
 	tex.set_specular(0.7, 70.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	mat.add_cylin_to_verts(p[0], p[1], radius, radius, c.color, 1, 1); // draw sloped railing with both ends
+	mat.add_cylin_to_verts(railing.p1, railing.p2, railing.r1, railing.r2, c.color, 1, 1); // draw sloped railing with both ends
 
 	if (!is_u_stairs) {
 		for (unsigned d = 0; d < 2; ++d) { // add the two vertical poles
-			point pt(p[d]);
+			point pt(d ? railing.p2 : railing.p1);
 			pt[c.dim] += (c.dir^bool(d) ? 1.0 : -1.0)*0.01*length; // shift slightly inward toward the center
 			float const hscale(d ? 1.25 : 1.0); // shorten for lower end, which rests on the step
 			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, 0.02*(d ? 1.0 : -1.0)*height));
@@ -1117,10 +1125,10 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 
 			for (unsigned n = 0; n < num; ++n) {
 				float const t((n+1)*step_sz);
-				point const pt(t*p[0] + (1.0 - t)*p[1]);
+				point const pt(t*railing.p1 + (1.0 - t)*railing.p2);
 				mat.add_cylin_to_verts((pt + delta), pt, radius, radius, c.color, 0, 0, 0, 0, 1.0, 1.0, 0, 16); // only 16 sides, no top or bottom
 			}
-			mat.add_cylin_to_verts((p[0] + delta), (p[1] + delta), bot_radius, bot_radius, c.color, 1, 1); // bottom bar with both ends
+			mat.add_cylin_to_verts((railing.p1 + delta), (railing.p2 + delta), bot_radius, bot_radius, c.color, 1, 1); // bottom bar with both ends
 		}
 	}
 }

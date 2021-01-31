@@ -14,6 +14,9 @@ extern double camera_zh;
 extern building_params_t global_building_params;
 
 
+float get_railing_height(room_object_t const &c);
+cylinder_3dw get_railing_cylinder(room_object_t const &c);
+
 /*static*/ float building_t::get_scaled_player_radius() {return CAMERA_RADIUS*global_building_params.player_coll_radius_scale;}
 
 void building_t::set_z_range(float z1, float z2) {
@@ -364,6 +367,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 
+			if (c->type == TYPE_RAILING) { // only collide with railing at top of stairs, not when walking under stairs
+				if (!sphere_cube_intersect(pos, xy_radius, *c)) continue; // optimization
+				cylinder_3dw const railing(get_railing_cylinder(*c));
+				float const t((pos[c->dim] - railing.p1[c->dim])/(railing.p2[c->dim] - railing.p1[c->dim]));
+				float const railing_zval(railing.p1.z + CLIP_TO_01(t)*(railing.p2.z - railing.p1.z));
+				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_zh) || railing_zval < (pos.z - radius)) continue; // no Z collision
+			}
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 				float const radius(0.25f*(c->dx() + c->dy())); // average of x/y diameter
 				point const center(c->get_cube_center());
