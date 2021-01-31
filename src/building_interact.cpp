@@ -12,6 +12,8 @@ extern double tfticks;
 
 // lights
 
+float get_radius_for_room_light(room_object_t const &obj);
+
 bool building_t::toggle_room_light(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
 	if (!has_room_geom()) return 0; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -277,8 +279,9 @@ bool building_t::is_pt_lit(point const &pt) const {
 		bool const same_floor(room.is_sec_bldg || get_floor_for_zval(pt.z) == get_floor_for_zval(i->z1()));
 		if (!i->has_stairs() && !same_floor) continue; // different floors, and no stairs (optimization)
 		if (same_floor && same_room) return 1; // same floor of same room, should be visible (optimization)
-		// TODO: check light radius?
-		if (is_pt_visible(i->get_cube_center(), pt)) return 1; // likely returns true if same room
+		point const center(i->get_cube_center());
+		if (!dist_less_than(center, pt, 0.95*get_radius_for_room_light(*i))) continue;
+		if (is_pt_visible(center, pt)) return 1; // likely returns true if same room
 	} // for i
 	return 0;
 }

@@ -524,6 +524,8 @@ bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) con
 	return camera_pdu.cube_visible((is_rotated() ? get_rotated_bcube(c) : c) + xlate);
 }
 
+float get_radius_for_room_light(room_object_t const &obj) {return 6.0f*(obj.dx() + obj.dy());}
+
 // Note: non const because this caches light_bcubes
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube) {
 
@@ -634,7 +636,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 		} // end camera on different floor case
-		float const light_radius(6.0f*(i->dx() + i->dy())), cull_radius(0.95*light_radius), dshadow_radius(0.8*light_radius); // what about light_radius for lamps?
+		float const light_radius(get_radius_for_room_light(*i)), cull_radius(0.95*light_radius), dshadow_radius(0.8*light_radius); // what about light_radius for lamps?
 		if (!camera_pdu.sphere_visible_test((lpos_rot + xlate), cull_radius)) continue; // VFC
 		// check visibility of bcube of light sphere clipped to building bcube; this excludes lights behind the camera and improves shadow map assignment quality
 		cube_t sphere_bc; // in building space
