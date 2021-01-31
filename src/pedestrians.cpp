@@ -947,6 +947,16 @@ bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parke
 	return 0;
 }
 
+bool ped_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center) {
+	assert(city_id < cars_by_city.size());
+	car_city_vect_t const &cv(cars_by_city[city_id]);
+	if (cv.parked_car_bcubes.empty()) return 0;
+	car_ix     = rgen.rand() % cv.parked_car_bcubes.size(); // Note: car_ix is stored in ped dest_bldg and doesn't get used after that
+	plot_id    = cv.parked_car_bcubes[car_ix].ix;
+	car_center = cv.parked_car_bcubes[car_ix].get_cube_center();
+	return 1;
+}
+
 // drawing
 void begin_ped_sphere_draw(shader_t &s, colorRGBA const &color, bool &in_sphere_draw, bool textured) {
 	if (in_sphere_draw) return;

@@ -2975,7 +2975,7 @@ bool ped_manager_t::choose_dest_building_or_parked_car(pedestrian_t &ped) { // m
 		if (!ped.has_dest_bldg) return 0;
 	}
 	else { // chose a dest parked car 25% of the time
-		ped.has_dest_car = car_manager.choose_dest_parked_car(ped.city, ped.dest_plot, ped.dest_bldg, ped.dest_car_center, rgen);
+		ped.has_dest_car = choose_dest_parked_car(ped.city, ped.dest_plot, ped.dest_bldg, ped.dest_car_center);
 		if (!ped.has_dest_car) return 0;
 		ped.dest_plot = road_gen.get_city(ped.city).encode_plot_id(ped.dest_plot);
 	}

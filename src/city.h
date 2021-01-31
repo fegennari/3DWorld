@@ -181,7 +181,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 92
 
 struct car_city_vect_t {
 	vector<car_base_t> cars[2][2]; // {dim x dir}
-	vect_cube_t parked_car_bcubes;
+	vector<cube_with_ix_t> parked_car_bcubes; // stores car bcube + plot_ix
 	void clear_cars();
 	void clear() {clear_cars(); parked_car_bcubes.clear();}
 };
@@ -663,7 +663,6 @@ public:
 	cube_t const &get_car_bcube(unsigned car_id) const {assert(car_id < cars.size()); return cars[car_id].bcube;}
 	bool line_intersect_cars(point const &p1, point const &p2, float &t) const;
 	bool check_car_for_ped_colls(car_t &car) const;
-	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center, rand_gen_t &rgen) const;
 	void next_frame(ped_manager_t const &ped_manager, float car_speed);
 	void helicopters_next_frame(float car_speed);
 	bool check_helicopter_coll(cube_t const &bc) const;
@@ -803,6 +802,7 @@ public:
 	bool has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vect_cube_t *dbg_cubes=nullptr) const;
 	bool has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vect_cube_t *dbg_cubes) const;
 	bool has_car_at_pt(point const &pos, unsigned city, bool is_parked) const;
+	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center);
 public:
 	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) :
 		road_gen(road_gen_), car_manager(car_manager_), selected_ped_ssn(-1), animation_id(1), ped_destroyed(0), need_to_sort_peds(0) {}

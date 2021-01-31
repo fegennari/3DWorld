@@ -570,7 +570,7 @@ void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) cons
 		if (i->cur_city >= cars_by_city.size()) {cars_by_city.resize(i->cur_city+1);}
 		auto &dest(cars_by_city[i->cur_city]);
 		if (!i->is_parked()) {dest.cars[i->dim][i->dir].push_back(*i);} // moving on road
-		else if (add_parked_cars) {dest.parked_car_bcubes.push_back(i->bcube);} // parked, not yet updated
+		else if (add_parked_cars) {dest.parked_car_bcubes.emplace_back(i->bcube, i->cur_road);} // parked, not yet updated
 	}
 }
 
@@ -765,23 +765,6 @@ bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
 			return 1;
 		}
 	} // for i
-	return 0;
-}
-
-bool car_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center, rand_gen_t &rgen) const { // for pedestrians
-	if (cars.empty()) return 0; // no cars
-	
-	for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
-		if (cb->cur_city != city_id) continue; // incorrect city - skip
-		unsigned start(cb->first_parked), end((cb+1)->start);
-		if (start == end) continue; // no parked cars
-		assert(start < end && end <= cars.size());
-		car_ix  = rgen.rand_int(start, end-1);
-		assert(cars[car_ix].is_parked());
-		plot_id    = cars[car_ix].cur_road; // plot_id is stored in cur_road for parked cars
-		car_center = cars[car_ix].get_center();
-		return 1;
-	}
 	return 0;
 }
 
