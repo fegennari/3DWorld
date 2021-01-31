@@ -836,6 +836,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
 			} // for p
 			wait_time -= fticks;
+			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
 			return AI_WAITING;
 		}
 		wait_time = 0.0;
@@ -866,7 +867,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			return AI_WAITING;
 		}
 		else if (ret != 1) { // if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame
-			person.speed = 0.0; // movement will be stopped from now on
+			if (!ai_follow_player()) {person.speed = 0.0;} // movement will be stopped from now on, if not following the player
 			return AI_STOP;
 		}
 		if (!find_route_to_point(person, coll_dist, state.is_first_path, 1, 0, state.path)) { // only set use_new_seed=1 when we're choosing a new dest
