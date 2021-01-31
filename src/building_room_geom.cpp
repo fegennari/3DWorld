@@ -2404,9 +2404,10 @@ bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsi
 }
 
 bool building_t::check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass) const {
-	if (!interior) return 0; // could probably make this an assert
+	if (!interior)    return 0; // could probably make this an assert
 	if (is_rotated()) return 0; // TODO: implement rotated building occlusion culling; cubes are not actually cubes; seems messy
 	//highres_timer_t timer("Check Object Occlusion");
+	if (c.z2() < ground_floor_z1 && !bcube.contains_pt(viewer)) return 1; // fully inside basement, and viewer outside building: will be occluded
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	
