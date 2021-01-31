@@ -157,8 +157,9 @@ struct building_params_t {
 	float wall_split_thresh, max_fp_wind_xscale, max_fp_wind_yscale, open_door_prob, basement_prob; // interiors
 
 	// building AI params
-	bool ai_opens_doors, ai_target_player, ai_follow_player;
-	int ai_player_vis_test; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+	bool ai_target_player, ai_follow_player;
+	unsigned ai_opens_doors; // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
+	unsigned ai_player_vis_test; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;

@@ -449,7 +449,7 @@ void building_t::build_nav_graph() const {
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
 		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
-			if (!d->open) continue; // door starts off closed, treat it as a barrier for now and don't connect the rooms
+			if (!d->open && global_building_params.ai_opens_doors < 2) continue; // door starts off closed, treat it as a barrier for now and don't connect the rooms
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
 			cube_t dc(*d);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
@@ -918,7 +918,11 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			return AI_MOVING; // return here, but don't update animation or dir; only handles a single collision
 		} // for p
 	}
-	if (interior->door_state_updated) { // check for any doors the player has closed; this can be slow, so we only enable it for buildings where the player changed the door state
+	bool const player_in_this_building(cur_player_building_loc.building_ix == (int)person.dest_bldg); // basement door only counts if the player is in this building
+	bool const might_have_closed_door(global_building_params.open_door_prob < 1.0 || (player_in_this_building && has_basement()));
+
+	if (interior->door_state_updated || (global_building_params.ai_opens_doors == 2 && might_have_closed_door)) {
+		// check for any doors the player has closed; this can be slow, so we only enable it for buildings where the player changed the door state, or when the AI can open all doors
 		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 			if (i->open) continue; // doors tend to block the player, don't collide with them unless they're closed
 			if (new_pos.z < i->z1() || new_pos.z > i->z2())         continue; // wrong part/floor
