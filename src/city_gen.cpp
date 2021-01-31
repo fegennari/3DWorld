@@ -2970,11 +2970,10 @@ int ped_manager_t::get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool ro
 bool ped_manager_t::choose_dest_building_or_parked_car(pedestrian_t &ped) { // modifies rgen, non-const
 	ped.has_dest_bldg = ped.has_dest_car = ped.at_dest = 0; // will choose a new dest
 
-	if ((rgen.rand() & 3) != 0) { // choose a dest building 75% of the time
+	if (city_params.num_cars == 0 || (rgen.rand() & 3) != 0) { // choose a dest building 75% of the time, 100% of the time if there are no cars
 		ped.has_dest_bldg = road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
-		if (!ped.has_dest_bldg) return 0;
 	}
-	else { // chose a dest parked car 25% of the time
+	if (!ped.has_dest_bldg) { // chose a dest parked car 25% of the time, or if choosing a dest building failed
 		ped.has_dest_car = choose_dest_parked_car(ped.city, ped.dest_plot, ped.dest_bldg, ped.dest_car_center);
 		if (!ped.has_dest_car) return 0;
 		ped.dest_plot = road_gen.get_city(ped.city).encode_plot_id(ped.dest_plot);
