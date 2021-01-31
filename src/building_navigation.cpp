@@ -589,7 +589,6 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
 		if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
-			// FIXME: different part logic?
 			cube_t const &part(get_part_for_room(room));
 			unsigned const rand_val(rgen.rand() & 3); // 0-3
 
