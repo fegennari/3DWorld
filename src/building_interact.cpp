@@ -175,18 +175,18 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		interior->room_geom->clear_static_vbos(); // need to regen object data
 		play_door_open_close_sound(obj.get_cube_center(), obj.is_open());
 	}
-	else {toggle_door_state(door_ix);} // toggle state if interior door
+	else {toggle_door_state(door_ix, 1);} // toggle state if interior door; player_in_this_building=1
 	return 1;
 }
 
-void building_t::toggle_door_state(unsigned door_ix) {
+void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building) {
 	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
 	door.open ^= 1; // toggle open state
 	clear_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	interior->doors_to_update.push_back(door_ix);
-	play_door_open_close_sound(door.get_cube_center(), door.open);
+	if (player_in_this_building) {play_door_open_close_sound(door.get_cube_center(), door.open);}
 }
 
 void building_t::play_door_open_close_sound(point const &pos, bool open) const {
