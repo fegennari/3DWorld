@@ -1291,6 +1291,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					}
 				}
 				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
+				assert(cand.is_strictly_normalized());
 				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings;
 				// basement stairs only have walls on the bottom floor, so we set is_at_top=0
 				stairs_shape const sshape((is_basement || wall_clipped) ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT);
@@ -1303,13 +1304,14 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 				if (is_basement) { // add a basement door at the bottom of the stairs
 					float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
-					door_t door(cand, dim, !stairs_dir, 0, 1); // open=0, no_frame=1
+					door_t door(cand, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
 					door.z2() -= fc_thick; // bottom of basement ceiling, not the floor above
 					door.d[dim][stairs_dir] = door.d[dim][!stairs_dir] + pos_shift;
 					if (!stairs_dir) {door.translate_dim(dim, -pos_shift);} // why the asymmetry?
+					door.translate_dim( dim, -0.2*pos_shift); // shift so that the door doesn't intersect the railing, covers the stairs overhang, and the top edge can't be seen
 					door.expand_in_dim(!dim, -0.15*cand.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
+					assert(door.is_strictly_normalized());
 					interior->doors.push_back(door);
-					// Note: top of door is not drawn and there is a small gap, but it's hard to see and I haven't attempted to fix it
 				}
 				// attempt to cut holes in ceiling of this part and floor of above part
 				cube_t cut_cube(cand);

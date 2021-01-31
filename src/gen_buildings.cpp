@@ -1221,7 +1221,7 @@ void building_t::update_door_open_state_verts(building_draw_t &bdraw_interior, u
 	bdraw_interior.update_vbo_data(bdraw, start_vertex, 0); // update_tris=0 (update quads)
 }
 
-void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior) const {
+void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const {
 
 	float const ty(exterior ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
@@ -1237,6 +1237,8 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 	for (unsigned side = 0; side < num_sides; ++side) { // {right, left}
 		cube_t dc(D);
 		if (num_sides == 2) {dc.d[!dim][bool(side) ^ dim ^ dir ^ 1] = 0.5f*(D.d[!dim][0] + D.d[!dim][1]);} // split door in half
+		// we don't want to draw the open stairs door because it may get in the way, but we need to overwrite the previous verts, so make it zero area
+		if (opened && on_stairs) {dc.z2() = dc.z1();}
 		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, opened, opens_out, opens_up, (exterior && side == 0))); // swap sides for right half of exterior door
 		vector3d const normal(door.get_norm());
 		tquad_with_ix_t door_edges[4] = {door, door, door, door}; // most doors will only use 2 of these
@@ -1271,7 +1273,7 @@ void building_t::add_interior_door_to_bdraw(building_draw_t &bdraw, unsigned doo
 	assert(interior);
 	assert(door_ix < interior->doors.size());
 	door_t const &door(interior->doors[door_ix]);
-	add_door_to_bdraw(door, bdraw, tquad_with_ix_t::TYPE_HDOOR, door.dim, door.open_dir, door.open, 0, 0); // opens_out=0, exterior=0
+	add_door_to_bdraw(door, bdraw, tquad_with_ix_t::TYPE_HDOOR, door.dim, door.open_dir, door.open, 0, 0, door.on_stairs); // opens_out=0, exterior=0
 }
 
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt) const {
@@ -1426,7 +1428,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	building_draw_t open_door_draw;
 	vector3d const normal(door.get_norm());
 	bool const opens_outward(!is_house), dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
-	add_door_to_bdraw(door.get_bcube(), open_door_draw, door.type, dim, dir, 1, opens_outward, 1); // opened=1, exterior=1
+	add_door_to_bdraw(door.get_bcube(), open_door_draw, door.type, dim, dir, 1, opens_outward, 1, 0); // opened=1, exterior=1, on_stairs=0
 
 	// draw other exterior doors as closed in case they're visible through the open door
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
@@ -1434,7 +1436,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 		vector3d const normal2(d->get_norm());
 		if (dot_product_ptv(normal2, pos, d->pts[0]) > 0.0) continue; // facing exterior of door rather than interior, skip
 		bool const dim2(fabs(normal2.x) < fabs(normal2.y)), dir2(normal2[dim] > 0.0); // dir2 is reversed
-		add_door_to_bdraw(d->get_bcube(), open_door_draw, d->type, dim2, dir2, 0, opens_outward, 1); // opened=0, exterior=1
+		add_door_to_bdraw(d->get_bcube(), open_door_draw, d->type, dim2, dir2, 0, opens_outward, 1, 0); // opened=0, exterior=1, on_stairs
 	}
 	open_door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
 	return 1;

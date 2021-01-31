@@ -2000,7 +2000,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	vect_cube_t trim_cubes;
 
 	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) { // vertical strips on each side + strip on top of interior doors
-		if (d->no_frame) continue; // skip this door
+		if (d->on_stairs) continue; // no frame for stairs door, skip
 		cube_t trim(*d);
 		trim.expand_in_dim(d->dim, door_trim_exp);
 

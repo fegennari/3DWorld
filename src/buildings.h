@@ -518,9 +518,9 @@ struct stairwell_t : public cube_t, public stairs_landing_base_t {
 typedef vector<stairwell_t> vect_stairwell_t;
 
 struct door_t : public cube_t {
-	bool dim, open_dir, open, no_frame;
-	door_t() : dim(0), open_dir(0), open(0), no_frame(0) {}
-	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool nf=0) : cube_t(c), dim(dim_), open_dir(dir), open(open_), no_frame(nf) {assert(is_strictly_normalized());}
+	bool dim, open_dir, open, on_stairs;
+	door_t() : dim(0), open_dir(0), open(0), on_stairs(0) {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0) : cube_t(c), dim(dim_), open_dir(dir), open(open_), on_stairs(os) {assert(is_strictly_normalized());}
 };
 typedef vector<door_t> vect_door_t;
 
@@ -752,7 +752,7 @@ private:
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
-	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior) const;
+	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
 		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
