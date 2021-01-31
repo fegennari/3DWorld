@@ -460,7 +460,11 @@ void building_t::build_nav_graph() const {
 		} // for d
 		for (unsigned s = 0; s < num_stairs; ++s) { // stairs
 			stairwell_t const &stairwell(interior->stairwells[s]);
-			//if (!stairwell.stack_conn) continue;
+
+			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors
+				assert((unsigned)stairwell.stairs_door_ix < interior->doors.size());
+				if (!interior->doors[stairwell.stairs_door_ix].open) continue; // stairs blocked by closed door, don't connect
+			}
 			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir);}
 		}
 		if (room.is_hallway) { // check for connected hallways

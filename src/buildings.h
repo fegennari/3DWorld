@@ -512,9 +512,11 @@ struct landing_t : public cube_t, public stairs_landing_base_t {
 
 struct stairwell_t : public cube_t, public stairs_landing_base_t {
 	uint8_t num_floors;
-	stairwell_t() : num_floors(0) {}
+	int16_t stairs_door_ix;
+
+	stairwell_t() : num_floors(0), stairs_door_ix(-1) {}
 	stairwell_t(cube_t const &c, unsigned n, bool dim_, bool dir_, stairs_shape s=SHAPE_STRAIGHT, bool r=0, bool sc=0) :
-		cube_t(c), stairs_landing_base_t(dim_, dir_, r, s, sc), num_floors(n) {}
+		cube_t(c), stairs_landing_base_t(dim_, dir_, r, s, sc), num_floors(n), stairs_door_ix(-1) {}
 };
 typedef vector<stairwell_t> vect_stairwell_t;
 

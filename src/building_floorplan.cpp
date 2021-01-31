@@ -1311,6 +1311,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					door.translate_dim( dim, -0.2*pos_shift); // shift so that the door doesn't intersect the railing, covers the stairs overhang, and the top edge can't be seen
 					door.expand_in_dim(!dim, -0.15*cand.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
 					assert(door.is_strictly_normalized());
+					interior->stairwells.back().stairs_door_ix = (int16_t)interior->doors.size(); // record door index gating stairs for AI navigation
 					interior->doors.push_back(door);
 				}
 				// attempt to cut holes in ceiling of this part and floor of above part
