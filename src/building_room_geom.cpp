@@ -2023,7 +2023,7 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	door_spacing = cab_width/num_doors;
 	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.16*door_width), dir_sign(c.dir ? 1.0 : -1.0);
 	float lo(front.d[!c.dim][0]);
-	get_material(tid_nm_pair_t(), 0); // ensure material exists so that door_mat reference is not invalidated
+	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
 	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
