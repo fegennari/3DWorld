@@ -429,19 +429,19 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	rgen.rand_mix();
-	float const width(c.get_sz_dim(!c.dim)), height(c.dz());
+	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
 	float const row_spacing(height/num_rows), door_thick(0.05*height), handle_thick(0.75*door_thick);
 	float const border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
-	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
+	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1)); // shadowed
 	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed
-	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
+	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
 	cube_t door(c);
-	door.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
+	door.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir];
 	door.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
 	cube_t handle(door);
 	handle.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
@@ -458,15 +458,39 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 		handle.z2() = handle.z1() + 0.1*door.dz();
 
 		for (unsigned m = 0; m < num_cols; ++m) {
-			// TODO: make a drawer occasionally open
-			door.d[!c.dim][0] = hpos + border;
-			door.d[!c.dim][1] = hpos + col_spacing - border;
-			door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
+			cube_t drawer(door), cur_handle(handle); // front part of the drawer
+			drawer.d[!c.dim][0] = hpos + border;
+			drawer.d[!c.dim][1] = hpos + col_spacing - border;
+			float const dwidth(drawer.get_sz_dim(!c.dim));
+			unsigned door_skip_faces_mod(door_skip_faces);
+
+			if (rgen.rand_float() < 0.05) { // make a drawer occasionally open
+				float const dheight(drawer.dz()), open_amt(dir_sign*rgen.rand_uniform(0.05, 0.75)*depth);
+				drawer.    translate_dim(c.dim, open_amt);
+				cur_handle.translate_dim(c.dim, open_amt);
+				cube_t drawer_body(drawer);
+				drawer_body.d[c.dim][!c.dir] = c.     d[c.dim][ c.dir]; // flush with front
+				drawer_body.d[c.dim][ c.dir] = drawer.d[c.dim][!c.dir]; // inside of drawer face
+				drawer_body.expand_in_dim(!c.dim, -0.05*dwidth);
+				drawer_body.expand_in_dim(2,      -0.05*dheight);
+				cube_t bottom(drawer_body), left(drawer_body), right(drawer_body);
+				left.z1() = right.z1() = bottom.z2() = drawer_body.z2() - 0.8*dheight;
+				left .d[!c.dim][1] -= 0.87*dwidth;
+				right.d[!c.dim][0] += 0.87*dwidth;
+				unsigned const skip_mask_front_back(get_skip_mask_for_xy(c.dim));
+				colorRGBA const blr_color(drawer_color*0.4 + apply_wood_light_color(c)*0.4); // halfway between base and drawer colors, but slightly darker
+				drawer_mat.add_cube_to_verts(bottom, blr_color, tex_origin,  skip_mask_front_back);
+				drawer_mat.add_cube_to_verts(left,   blr_color, tex_origin, (skip_mask_front_back | EF_Z1));
+				drawer_mat.add_cube_to_verts(right,  blr_color, tex_origin, (skip_mask_front_back | EF_Z1));
+				door_skip_faces_mod = 0; // need to draw interior face
+				// it would be better to cut a hole into the front of the desk for the drawer to slide into, but that seems to be difficult
+			}
+			drawer_mat.add_cube_to_verts(drawer, drawer_color, tex_origin, door_skip_faces_mod);
 			// add door handle
-			float const dwidth(door.get_sz_dim(!c.dim)), handle_shrink(0.5*dwidth - handle_width);
-			handle.d[!c.dim][0] = door.d[!c.dim][0] + handle_shrink;
-			handle.d[!c.dim][1] = door.d[!c.dim][1] - handle_shrink;
-			handle_mat.add_cube_to_verts(handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
+			float const handle_shrink(0.5*dwidth - handle_width);
+			cur_handle.d[!c.dim][0] = drawer.d[!c.dim][0] + handle_shrink;
+			cur_handle.d[!c.dim][1] = drawer.d[!c.dim][1] - handle_shrink;
+			handle_mat.add_cube_to_verts(cur_handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
 			hpos += col_spacing;
 		} // for m
 		vpos += row_spacing;
