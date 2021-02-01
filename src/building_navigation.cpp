@@ -552,7 +552,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 				}
 				if (dmin_sq > 0.0 && !closest_part.is_all_zeros()) {closest_part.clamp_pt(person.target_pos);} // clamp to closest part
 				static vect_cube_t avoid; // reuse across frames/people
-				interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), get_floor_thickness());
+				interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), get_floor_thickness(), 1); // same_as_player=1
 
 				for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
 					cube_t c(*i);
@@ -616,14 +616,16 @@ template<typename T> void add_bcube_if_overlaps_zval(vector<T> const &cubes, vec
 	}
 }
 
-void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness) const { // for AI
+void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const { // for AI
 	avoid.clear();
 	add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2); // clearance not required
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	if (!room_geom) return; // no room objects
 
 	for (auto c = room_geom->objs.begin(); c != (room_geom->objs.begin() + room_geom->stairs_start); ++c) {
-		if (c->no_coll() || c->type == TYPE_ELEVATOR || c->type == TYPE_STAIR || c->type == TYPE_LIGHT || c->type == TYPE_BLOCKER) continue; // these object types are not collided with by people
+		// these object types are not collided with by people and can be skipped
+		if (c->no_coll() || c->type == TYPE_ELEVATOR || c->type == TYPE_STAIR || c->type == TYPE_RAILING || c->type == TYPE_BLOCKER || c->type == TYPE_CUBICLE) continue;
+		if (same_as_player && c->type == TYPE_CHAIR || c->type == TYPE_TCAN) continue; // if the player doesn't collide with chairs and trashcans, we shouldn't either
 		if (c->z1() < z2 && c->z2() > z1) {avoid.push_back(*c);}
 	}
 }
@@ -655,7 +657,7 @@ cube_t get_stairs_plus_step_up(stairwell_t const &stairs) {
 	return stairs_ext;
 }
 
-bool building_t::find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool use_new_seed, bool is_moving_target, vector<point> &path) const {
+bool building_t::find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool use_new_seed, bool is_moving_target, bool following_player, vector<point> &path) const {
 
 	assert(interior && interior->nav_graph);
 	point const &from(person.pos), &to(person.target_pos);
@@ -666,7 +668,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
 	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing), z2_add(height - radius); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
-	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add), get_floor_thickness());
+	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add), get_floor_thickness(), following_player);
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
@@ -687,7 +689,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 			// from => stairs
 			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,  up_or_down, use_new_seed, avoid, from, from_path)) continue;
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
-			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), get_floor_thickness()); // new floor, new zval, new avoid cubes
+			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), get_floor_thickness(), following_player); // new floor, new zval, new avoid cubes
 			// stairs => to
 			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path, !up_or_down, use_new_seed, avoid, seg2_start, path)) continue;
 			assert(!path.empty() && !from_path.empty());
@@ -851,8 +853,8 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		register_ai_player_coll(person);
 	}
 	if (need_to_update_ai_path(state, person)) { // need to update based on player movement; higher priority than choose_dest
-		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1)     {choose_dest = 1;} // can't reach the target, choose a different destination
-		else if (!find_route_to_point(person, coll_dist, 0, 0, 1, state.path)) {choose_dest = 1;} // is_first_path=0, use_new_seed=0
+		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1)        {choose_dest = 1;} // can't reach the target, choose a different destination
+		else if (!find_route_to_point(person, coll_dist, 0, 0, 1, 1, state.path)) {choose_dest = 1;} // is_first_path=0, use_new_seed=0, following_player=1
 		else { // success
 			state.next_path_pt(person, stay_on_one_floor);
 			person.following_player = 1;
@@ -871,7 +873,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			if (!ai_follow_player()) {person.speed = 0.0;} // movement will be stopped from now on, if not following the player
 			return AI_STOP;
 		}
-		if (!find_route_to_point(person, coll_dist, state.is_first_path, 1, 0, state.path)) { // only set use_new_seed=1 when we're choosing a new dest
+		if (!find_route_to_point(person, coll_dist, state.is_first_path, 1, 0, 0, state.path)) { // only set use_new_seed=1 when choosing a new dest; following_player=0
 			person.wait_for(1.0); // stop for 1 second, then try again
 			return AI_WAITING;
 		}

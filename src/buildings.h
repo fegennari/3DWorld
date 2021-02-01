@@ -563,7 +563,7 @@ struct building_interior_t {
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
 	bool update_elevators(point const &player_pos, float floor_thickness);
-	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness) const;
+	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const;
 };
 
 struct building_stats_t {
@@ -728,7 +728,7 @@ struct building_t : public building_geom_t {
 	room_t const &get_room(unsigned room_ix) const {assert(interior && room_ix < interior->rooms.size()); return interior->rooms[room_ix];}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
 	int choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
-	bool find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool use_new_seed, bool is_moving_target, vector<point> &path) const;
+	bool find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool use_new_seed, bool is_moving_target, bool following_player, vector<point> &path) const;
 	void find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, bool straight_only, int part_ix=-1) const;
 	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor=1);
 	void ai_room_lights_update(building_ai_state_t &state, pedestrian_t &person, vector<pedestrian_t> const &people, unsigned person_ix);
