@@ -845,10 +845,10 @@ public:
 		int const index_type(use_32_bit ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);
 
 		if (num_instances > 1) { // instanced drawing not supported/efficient on some cards, so only enabled it when needed
-			glDrawElementsInstancedBaseVertex(GL_TRIANGLES, num_tri_verts, index_type, nullptr, num_instances, start_quad_vert);
+			glDrawElementsInstancedBaseVertex(GL_TRIANGLES, num_tri_verts, index_type, 0, num_instances, start_quad_vert);
 		}
 		else {
-			glDrawElementsBaseVertex(GL_TRIANGLES, num_tri_verts, index_type, nullptr, start_quad_vert);
+			glDrawElementsBaseVertex(GL_TRIANGLES, num_tri_verts, index_type, 0, start_quad_vert);
 		}
 		bind_vbo(0, 1);
 	}
