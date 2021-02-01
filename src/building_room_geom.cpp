@@ -413,16 +413,19 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	add_tc_legs(legs_bcube, color, 0.15, tscale);
 }
 
-void building_room_geom_t::add_dresser(room_object_t const &c, float tscale) { // or nightstand
-	add_table(c, tscale, 0.06, 0.10);
+void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // or nightstand
+	if (inc_lg) {add_table(c, tscale, 0.06, 0.10);}
 	room_object_t middle(c);
 	middle.z1() += 0.12*c.dz();
 	middle.z2() -= 0.06*c.dz(); // at bottom of top surface
 	float const leg_width(get_tc_leg_width(c, 0.10));
 	middle.expand_by_xy(-0.5*leg_width); // shrink by half leg width
-	get_wood_material(tscale).add_cube_to_verts(middle, apply_wood_light_color(c), c.get_llc()); // all faces drawn
-	middle.expand_in_dim(!c.dim, -0.5*leg_width);
-	add_dresser_drawers(middle, tscale);
+	if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(middle, apply_wood_light_color(c), c.get_llc());} // all faces drawn
+
+	if (inc_sm) { // add drawers
+		middle.expand_in_dim(!c.dim, -0.5*leg_width);
+		add_dresser_drawers(middle, tscale);
+	}
 }
 
 void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
@@ -434,9 +437,9 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
 	float const row_spacing(height/num_rows), door_thick(0.05*height), handle_thick(0.75*door_thick);
 	float const border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
-	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
-	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1)); // shadowed
-	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed
+	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
+	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1, 0, 1)); // shadowed, small=1
+	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
 	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
@@ -1508,18 +1511,20 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 	}
 }
 
-void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
+void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
 	// desk top and legs, similar to add_table()
 	float const height(c.dz());
-	cube_t top(c), legs_bcube(c);
+	cube_t top(c);
 	top.z1() += 0.85*height;
-	legs_bcube.z2() = top.z1();
 	vector3d const tex_origin(c.get_llc());
 	colorRGBA const color(apply_wood_light_color(c));
-	rgeom_mat_t &wood_mat(get_wood_material(tscale));
-	wood_mat.add_cube_to_verts(top, color, tex_origin); // all faces drawn
-	add_tc_legs(legs_bcube, color, 0.06, tscale);
 
+	if (inc_lg) {
+		cube_t legs_bcube(c);
+		legs_bcube.z2() = top.z1();
+		get_wood_material(tscale).add_cube_to_verts(top, color, tex_origin); // all faces drawn
+		add_tc_legs(legs_bcube, color, 0.06, tscale);
+	}
 	if (c.room_id & 3) { // add drawers 75% of the time
 		bool const side(c.obj_id & 1);
 		float const desk_width(c.get_sz_dim(!c.dim)), leg_width(get_tc_leg_width(c, 0.06));
@@ -1528,11 +1533,14 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale) {
 		drawers.z2()  = top.z1();
 		drawers.expand_by_xy(-0.15*leg_width);
 		drawers.d[!c.dim][!side] += (side ? 1.0 : -1.0)*0.75*desk_width; // put the drawers off to one side
-		wood_mat.add_cube_to_verts(drawers, color, tex_origin); // all faces drawn
-		drawers.d[!c.dim][ side] -= (side ? 1.0 : -1.0)*0.85*leg_width; // make sure the drawers can pull out without hitting the desk legs
-		add_dresser_drawers(drawers, tscale);
+		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(drawers, color, tex_origin);} // all faces drawn
+
+		if (inc_sm) {
+			drawers.d[!c.dim][ side] -= (side ? 1.0 : -1.0)*0.85*leg_width; // make sure the drawers can pull out without hitting the desk legs
+			add_dresser_drawers(drawers, tscale);
+		}
 	}
-	if (c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
+	if (inc_lg && c.shape == SHAPE_TALL) { // add top/back section of desk; this part is outside the bcube
 		room_object_t c_top_back(c);
 		set_cube_zvals(c_top_back, top.z2(), (top.z2() + 1.8*height));
 		c_top_back.d[c.dim][c.dir] += 0.75*(c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim);
@@ -2202,7 +2210,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_BOOK:    add_book    (*i, 1, 0); break;
 		case TYPE_BCASE:   add_bookcase(*i, 1, 0, tscale, 0); break;
 		case TYPE_WINE_RACK: add_wine_rack(*i, 1, 0, tscale); break;
-		case TYPE_DESK:    add_desk    (*i, tscale); break;
+		case TYPE_DESK:    add_desk    (*i, tscale, 1, 0); break;
 		case TYPE_RDESK:   add_reception_desk(*i, tscale); break;
 		case TYPE_TCAN:    add_trashcan(*i); break;
 		case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
@@ -2217,7 +2225,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_BRSINK:  add_counter (*i, tscale); break; // counter with bathroom sink
 		case TYPE_CABINET: add_cabinet (*i, tscale); break;
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
-		case TYPE_DRESSER: add_dresser (*i, tscale); break;
+		case TYPE_DRESSER: add_dresser (*i, tscale, 1, 0); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex, 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
@@ -2262,6 +2270,8 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_BOOK:      add_book     (*i, 0, 1); break;
 		case TYPE_BCASE:     add_bookcase (*i, 0, 1, tscale, 0); break;
 		case TYPE_BED:       add_bed      (*i, 0, 1, tscale); break;
+		case TYPE_DESK:      add_desk     (*i, tscale, 0, 1); break;
+		case TYPE_DRESSER:   add_dresser  (*i, tscale, 0, 1); break;
 		case TYPE_SIGN:      add_sign     (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
 		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim, don't need wall_tex

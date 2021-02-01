@@ -406,7 +406,7 @@ struct building_room_geom_t {
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
 	void add_chair(room_object_t const &c, float tscale);
-	void add_dresser(room_object_t const &c, float tscale);
+	void add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_dresser_drawers(room_object_t const &c, float tscale);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
@@ -418,7 +418,7 @@ struct building_room_geom_t {
 	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0);
 	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0, point const *const use_this_tex_origin=0);
 	void add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
-	void add_desk(room_object_t const &c, float tscale);
+	void add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_reception_desk(room_object_t const &c, float tscale);
 	void add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_window(room_object_t const &c, float tscale);
