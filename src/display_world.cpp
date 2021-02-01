@@ -796,6 +796,7 @@ void display() {
 			if (game_mode) {update_blasts(); update_game_frame();}
 		}
 		draw_overhead_map();
+		if (world_mode == WMODE_INF_TERRAIN) {show_crosshair(WHITE, 0);}
 		swap_buffers_and_redraw();
 		return;
 	}

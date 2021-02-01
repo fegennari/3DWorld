@@ -171,6 +171,7 @@ void setup_linear_fog(colorRGBA const &color, float fog_end);
 void write_map_mode_heightmap_image();
 void apply_grass_scale();
 void take_screenshot_texture();
+void teleport_to_map_location();
 
 
 // all OpenGL error handling goes through these functions
@@ -1148,9 +1149,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			toggle_camera_mode();
 			sstates[CAMERA_ID].jump_time = 0.25*TICKS_PER_SECOND; // suppress extra jump if space is held down too long
 		}
-		else { // fire
-			fire_weapon();
-		}
+		else if (world_mode == WMODE_INF_TERRAIN && map_mode) {teleport_to_map_location();}
+		else {fire_weapon();} // fire
 		break;
 	case '<': // decrease weapon velocity
 		ball_velocity = max(0.0, ball_velocity-5.0);
