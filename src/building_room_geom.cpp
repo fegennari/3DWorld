@@ -1031,7 +1031,7 @@ void building_room_geom_t::add_pen_pencil(room_object_t const &c_) {
 	if (!c.dir) {swap(c.d[c.dim][0], c.d[c.dim][1]); c.dir = 1;} // put in canonical orientation; okay if denormalized
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // unshadowed, small
-	bool const is_pen(c.obj_id & 1);
+	bool const is_pen(c.type == TYPE_PEN);
 	float const length(c.get_sz_dim(c.dim));
 	cube_t body(c), point(c);
 	body.d[c.dim][1] = point.d[c.dim][0] = c.d[c.dim][1] - (is_pen ? 0.08 : 0.10)*length;
@@ -2173,7 +2173,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CABINET:  return get_textured_wood_color();
 	case TYPE_PLANT:    return (color*0.75 + blend_color(GREEN, BROWN, 0.5, 0)*0.25); // halfway between green and brown, as a guess; mix in 75% of pot color
 	case TYPE_CLOSET:   return (color*0.5 + WHITE*0.5); // half white door and half wall color
-	case TYPE_DRESSER:  return get_textured_wood_color();
+	case TYPE_DRESSER:  return  get_textured_wood_color();
+	case TYPE_NIGHTSTAND:return get_textured_wood_color();
 	case TYPE_FLOORING: return texture_color(MARBLE_TEX).modulate_with(color);
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this)).modulate_with(color);
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
@@ -2216,7 +2217,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
 		case TYPE_WINDOW:  add_window  (*i, tscale); break;
 		case TYPE_TUB:     add_tub_outer(*i); break;
-		case TYPE_TV:      add_tv_picture(*i); break;
+		case TYPE_TV: case TYPE_MONITOR: add_tv_picture(*i); break;
 		case TYPE_CUBICLE: add_cubicle (*i, tscale); break;
 		case TYPE_STALL:   add_br_stall(*i); break;
 		case TYPE_SIGN:    add_sign    (*i, 1, 0); break;
@@ -2225,7 +2226,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_BRSINK:  add_counter (*i, tscale); break; // counter with bathroom sink
 		case TYPE_CABINET: add_cabinet (*i, tscale); break;
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
-		case TYPE_DRESSER: add_dresser (*i, tscale, 1, 0); break;
+		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
 		case TYPE_CLOSET:  add_closet  (*i, wall_tex, 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
@@ -2271,7 +2272,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_BCASE:     add_bookcase (*i, 0, 1, tscale, 0); break;
 		case TYPE_BED:       add_bed      (*i, 0, 1, tscale); break;
 		case TYPE_DESK:      add_desk     (*i, tscale, 0, 1); break;
-		case TYPE_DRESSER:   add_dresser  (*i, tscale, 0, 1); break;
+		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 0, 1); break;
 		case TYPE_SIGN:      add_sign     (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
 		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim, don't need wall_tex
@@ -2283,7 +2284,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_WINE_RACK: add_wine_rack(*i, 0, 1, tscale); break;
 		case TYPE_BOTTLE:    add_bottle   (*i); break;
 		case TYPE_PAPER:     add_paper    (*i); break;
-		case TYPE_PEN_PENCIL:add_pen_pencil(*i); break;
+		case TYPE_PEN: case TYPE_PENCIL: add_pen_pencil(*i); break;
 		default: break;
 		}
 	} // for i

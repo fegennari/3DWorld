@@ -73,7 +73,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 
 	if (office_chair_model) {
 		float const lum(0.4*chair_color.R + 0.2*chair_color.B + 0.1*chair_color.G); // calculate grayscale luminance
-		objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(lum, lum, lum));
+		objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(lum, lum, lum));
 	}
 	else {
 		objs.emplace_back(chair, TYPE_CHAIR, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, chair_color);
@@ -268,7 +268,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			tv.d[dim][ dir] = c. d[dim][dir] + dsign*0.25*depth; // 25% of the way from the wall
 			tv.d[dim][!dir] = tv.d[dim][dir] + dsign*tv_depth;
 			set_wall_width(tv, center, tv_hwidth, !dim);
-			objs.emplace_back(tv, TYPE_TV, room_id, dim, !dir, 0, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
+			objs.emplace_back(tv, TYPE_MONITOR, room_id, dim, !dir, 0, tot_light_amt, SHAPE_SHORT, BLACK); // monitors are shorter than TVs
 			set_obj_id(objs);
 			// add a keyboard as well
 			float const kbd_hwidth(0.7*tv_hwidth), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
@@ -328,8 +328,7 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 					set_wall_width(pp_bcube, rgen.rand_uniform(c.d[!dim][0]+edge_space, c.d[!dim][1]-edge_space), 0.5*pp_dia, !dim);
 					// Note: no check for overlap with books and potted plants, but that would be complex to add and this case is rare;
 					//       computer monitors/keyboards aren't added in this case, and pencils should float above papers, so we don't need to check those
-					objs.emplace_back(pp_bcube, TYPE_PEN_PENCIL, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
-					objs.back().obj_id = uint16_t(is_pen);
+					objs.emplace_back(pp_bcube, (is_pen ? TYPE_PEN : TYPE_PENCIL), room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
 				} // for n
 			}
 		}
@@ -414,7 +413,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 					for (unsigned d = 0; d < 2; ++d) {center[d] += 0.15*chair_radius*rgen.signed_rand_float();} // slightly random XY position
 					center.z = zval;
 					cube_t const chair(get_cube_height_radius(center, chair_radius, chair_height));
-					objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, !long_dim, dir, RO_FLAG_RAND_ROT, tot_light_amt, SHAPE_CUBE, GRAY_BLACK);
+					objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, !long_dim, dir, RO_FLAG_RAND_ROT, tot_light_amt, SHAPE_CUBE, GRAY_BLACK);
 				}
 			} // for d
 		} // for col
@@ -530,7 +529,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	unsigned const pref_orient(2*bed.dim + (!bed.dir)); // prefer the same orient as the bed so that it's placed on the same wall next to the bed
 	float const ns_height(rgen.rand_uniform(0.24, 0.26)*window_vspacing), ns_depth(rgen.rand_uniform(0.15, 0.2)*window_vspacing), ns_width(rgen.rand_uniform(1.0, 2.0)*ns_depth);
 	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
-	place_obj_along_wall(TYPE_DRESSER, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, pref_orient);
+	place_obj_along_wall(TYPE_NIGHTSTAND, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, pref_orient);
 
 	// try to place a lamp on a dresser or nightstand that was added to this room
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP) && (rgen.rand()&3) != 0) {
@@ -542,7 +541,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 		float dmin_sq(0.0);
 
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) { // choose the dresser or nightstand closest to be bed
-			if (i->type != TYPE_DRESSER) continue; // not a dresser or nightstand
+			if (i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND) continue; // not a dresser or nightstand
 			float const dist_sq(p2p_dist_xy_sq(i->get_cube_center(), pillow_center));
 			if (dmin_sq == 0.0 || dist_sq < dmin_sq) {obj_id = (i - objs.begin()); dmin_sq = dist_sq;}
 		}
@@ -1232,7 +1231,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		
 		// for now, just make one random attempt; if it fails then there's no chair in this room
 		if (!has_bcube_int(chair, exclude) && !is_cube_close_to_doorway(chair, room, 0.0, 1) && !interior->is_blocked_by_stairs_or_elevator(chair)) {
-			objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
+			objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 		}
 	}
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
@@ -1323,7 +1322,7 @@ void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zv
 				pos[ long_dim] = val + dir_sign*(-0.05*desk_depth + chair_radius); // push the chair into the cutout of the desk
 				cube_t const chair(get_cube_height_radius(pos, chair_radius, chair_height));
 				if (interior->is_blocked_by_stairs_or_elevator(chair)) continue; // bad location, try a new one
-				objs.emplace_back(chair, TYPE_OFFICE_CHAIR, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
+				objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 			}
 			objs.emplace_back(desk, TYPE_RDESK, room_id, long_dim, dir, 0, tot_light_amt, SHAPE_CUBE);
 			break; // done
@@ -1584,7 +1583,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			bottle_prob = 0.5*place_bottle_prob;
 			plant_prob  = 0.6*place_plant_prob;
 		}
-		else if (obj.type == TYPE_DESK && (i+1 == objs_end || objs[i+1].type != TYPE_TV)) { // desk with no computer monitor
+		else if (obj.type == TYPE_DESK && (i+1 == objs_end || objs[i+1].type != TYPE_MONITOR)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
 			bottle_prob = 0.3*place_bottle_prob;
 			plant_prob  = 0.3*place_plant_prob;
