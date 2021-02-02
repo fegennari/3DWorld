@@ -18,6 +18,7 @@ extern int frame_counter, display_mode, player_in_closet;
 extern float fticks;
 extern double camera_zh;
 extern building_params_t global_building_params;
+extern bldg_obj_type_t bldg_obj_types[];
 
 bool ai_follow_player() {return (global_building_params.ai_follow_player ^ bool(display_mode & 0x20));} // for future gameplay mode
 bool can_ai_follow_player(pedestrian_t const &person);
@@ -624,8 +625,7 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 
 	for (auto c = room_geom->objs.begin(); c != (room_geom->objs.begin() + room_geom->stairs_start); ++c) {
 		// these object types are not collided with by people and can be skipped
-		if (c->no_coll() || c->type == TYPE_ELEVATOR || c->type == TYPE_STAIR || c->type == TYPE_RAILING || c->type == TYPE_BLOCKER || c->type == TYPE_CUBICLE) continue;
-		if (same_as_player && c->type == TYPE_CHAIR || c->type == TYPE_TCAN) continue; // if the player doesn't collide with chairs and trashcans, we shouldn't either
+		if (c->no_coll() || !(same_as_player ? bldg_obj_types[c->type].player_coll : bldg_obj_types[c->type].ai_coll)) continue;
 		if (c->z1() < z2 && c->z2() > z1) {avoid.push_back(*c);}
 	}
 }

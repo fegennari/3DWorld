@@ -12,6 +12,7 @@ extern int player_in_closet;
 extern float grass_width, CAMERA_RADIUS;
 extern double camera_zh;
 extern building_params_t global_building_params;
+extern bldg_obj_type_t bldg_obj_types[];
 
 
 float get_railing_height(room_object_t const &c);
@@ -354,10 +355,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			had_coll = on_stairs = 1;
 		} // for c
 		for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
-			if (c->no_coll()) continue;
-			if (c->type == TYPE_BLOCKER) continue; // skip blockers because they only block other objects, not the player
-			if (c->type == TYPE_CHAIR || c->type == TYPE_TCAN) continue; // skip chair and trashcan collisions because they can be in the way and block the path in some rooms
-			if (c->type == TYPE_CUBICLE) continue; // skip cubicle collisions because they have their own colliders
+			if (c->no_coll() || !bldg_obj_types[c->type].player_coll) continue;
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
 				if (!c->contains_pt_xy(pos)) continue;

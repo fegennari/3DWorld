@@ -1410,11 +1410,7 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 		for (auto i = objs.begin() + objs_start; i != objs.end() && valid_placement; ++i) { // check for objects overlapping the rug
 			if (!i->intersects(rug)) continue;
 
-			switch (i->type) {
-			case TYPE_STAIR: case TYPE_STAIR_WALL: case TYPE_BCASE: case TYPE_WINE_RACK: case TYPE_CUBICLE: case TYPE_STALL: case TYPE_COUNTER:
-			case TYPE_BRSINK: case TYPE_DRESSER: case TYPE_FLOORING: case TYPE_CLOSET: case TYPE_SHOWER: case TYPE_ELEVATOR: case TYPE_WALL_TRIM:
-			case TYPE_TOILET: case TYPE_SINK: case TYPE_TUB: case TYPE_FRIDGE: case TYPE_STOVE: case TYPE_URINAL: case TYPE_WASHER: case TYPE_DRYER:
-			{ // rugs can't overlap these object types; first, see if we can shrink the rug on one side and get it to fit
+			if (bldg_obj_types[i->type].attached) { // rugs can't overlap these object types; first, see if we can shrink the rug on one side and get it to fit
 				float max_area(0.0);
 				cube_t best_cand;
 
@@ -1430,8 +1426,8 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 				else {valid_placement = 0;} // shrink is not enough, try again
 				break;
 			}
-			case TYPE_TABLE: case TYPE_DESK: // rugs can't partially overlap these object types; don't expand as that could cause the rug to intersect a previous object
-				valid_placement = rug.contains_cube_xy(*i);
+			else if (i->type == TYPE_TABLE || i->type == TYPE_DESK) { // rugs can't partially overlap these object types
+				valid_placement = rug.contains_cube_xy(*i); // don't expand as that could cause the rug to intersect a previous object
 				break;
 				// maybe beds should be included as well, but then rugs are unlikely to be placed in bedrooms
 			}
