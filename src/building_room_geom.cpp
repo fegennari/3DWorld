@@ -2198,7 +2198,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible()) continue;
 		assert(i->is_strictly_normalized());
-		assert(i->type < NUM_TYPES);
+		assert(i->type < NUM_ROBJ_TYPES);
 
 		switch (i->type) {
 		case TYPE_TABLE:   add_table   (*i, tscale, 0.12, 0.08); break; // top_dz=12% of height, leg_width=8% of height
@@ -2265,7 +2265,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible()) continue;
 		assert(i->is_strictly_normalized());
-		assert(i->type < NUM_TYPES);
+		assert(i->type < NUM_ROBJ_TYPES);
 
 		switch (i->type) {
 		case TYPE_BOOK:      add_book     (*i, 0, 1); break;

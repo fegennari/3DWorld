@@ -9,7 +9,7 @@
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
 
-bldg_obj_type_t bldg_obj_types[NUM_TYPES];
+bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 
 
 // lights

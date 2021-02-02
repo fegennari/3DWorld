@@ -248,7 +248,7 @@ enum {
 	TYPE_COMPUTER, TYPE_MWAVE, TYPE_PAPER, TYPE_BLINDS, TYPE_PEN, TYPE_PENCIL,
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
-	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, NUM_TYPES};
+	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
 enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED};
 typedef uint8_t room_obj_shape;
@@ -316,7 +316,7 @@ struct room_object_t : public cube_t {
 	bool is_interior() const {return  (flags & RO_FLAG_INTERIOR);}
 	bool is_open    () const {return  (flags & RO_FLAG_OPEN);}
 	bool is_light_type() const {return (type == TYPE_LIGHT || type == TYPE_LAMP);}
-	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_TYPES);}
+	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	unsigned get_orient() const {return (2*dim + dir);}
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	static bool enable_rugs();
