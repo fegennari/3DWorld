@@ -6,6 +6,8 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
+extern bool toggle_door_open_state;
+extern int window_width, window_height;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
 
@@ -365,6 +367,22 @@ void setup_bldg_obj_types() {
 	//                                                pc ac pu at im value  weight  name
 }
 
+bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
+	assert(obj.type < NUM_ROBJ_TYPES);
+	return bldg_obj_types[obj.type];
+}
+float get_obj_value(room_object_t const &obj) {
+	float value(get_room_obj_type(obj).value);
+	// TODO: random value for some object types
+	return value;
+}
+void show_object_info(room_object_t const &obj) {
+	bldg_obj_type_t const &type(get_room_obj_type(obj));
+	std::ostringstream oss;
+	oss << type.name << ": Value=" << get_obj_value(obj) << " Weight: " << type.weight;
+	draw_text(GREEN, -0.010*(float)window_width/(float)window_height, 0.010, -0.02, oss.str());
+}
+
 // gameplay logic
 
 void register_ai_player_coll(pedestrian_t const &person) {
@@ -375,5 +393,13 @@ void register_ai_player_coll(pedestrian_t const &person) {
 		last_coll_time = tfticks;
 	}
 	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
+}
+
+void building_gameplay_take_object() {
+	// TODO
+}
+void building_gameplay_action_key(bool mode) {
+	if (mode) {building_gameplay_take_object();} // 'e'
+	else {toggle_door_open_state = 1;} // 'q'
 }
 
