@@ -9,6 +9,9 @@
 
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
+extern bldg_obj_type_t bldg_obj_types[];
+
+void setup_bldg_obj_types();
 
 
 bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const {
@@ -1640,6 +1643,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 	assert(interior);
 	if (interior->room_geom) return; // already generated?
+	setup_bldg_obj_types(); // initialize object types if not already done
 	//highres_timer_t timer("Gen Room Details");
 	interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
 	vector<room_object_t> &objs(interior->room_geom->objs);

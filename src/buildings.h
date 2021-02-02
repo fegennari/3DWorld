@@ -282,6 +282,16 @@ uint16_t const RO_FLAG_ADJ_TOP = 0x2000; // for door trim
 uint16_t const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections and shelves
 uint16_t const RO_FLAG_RAND_ROT= 0x8000; // random rotation for 3D models; used for office chair
 
+struct bldg_obj_type_t {
+	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
+	float value=0.0, weight=0.0;
+	std::string name;
+
+	bldg_obj_type_t() {}
+	bldg_obj_type_t(bool pc, bool ac, bool pu, bool at, bool im, float v, float w, std::string const &n) :
+		player_coll(pc), ai_coll(ac), pickup(pu), attached(at), is_model(im), value(v), weight(0.0), name(n) {}
+};
+
 struct room_object_t : public cube_t {
 	bool dim, dir;
 	uint16_t flags;
