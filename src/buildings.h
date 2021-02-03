@@ -459,11 +459,11 @@ struct building_room_geom_t {
 	void add_blinds(room_object_t const &c);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
-	void create_static_vbos(building_t const &building, tid_nm_pair_t const &wall_tex);
+	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
-	void draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate, tid_nm_pair_t const &wall_tex,
+	void draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 };
 

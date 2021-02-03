@@ -2190,7 +2190,7 @@ colorRGBA room_object_t::get_color() const {
 	return color; // Note: probably should always set color so that we can return it here
 }
 
-void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm_pair_t const &wall_tex) {
+void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom"); // 3.3ms
 	float const tscale(2.0/obj_scale);
 	obj_model_insts.clear();
@@ -2204,7 +2204,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_TABLE:   add_table   (*i, tscale, 0.12, 0.08); break; // top_dz=12% of height, leg_width=8% of height
 		case TYPE_CHAIR:   add_chair   (*i, tscale); break;
 		case TYPE_STAIR:   add_stair   (*i, tscale, tex_origin); break;
-		case TYPE_STAIR_WALL: add_stairs_wall(*i, tex_origin, wall_tex); break;
+		case TYPE_STAIR_WALL: add_stairs_wall(*i, tex_origin, building.get_material().wall_tex); break;
 		case TYPE_RUG:     add_rug     (*i); break;
 		case TYPE_PICTURE: add_picture (*i); break;
 		case TYPE_WBOARD:  add_picture (*i); break;
@@ -2228,7 +2228,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building, tid_nm
 		case TYPE_PLANT:   add_potted_plant(*i, 1, 0); break; // pot only
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 1, 0); break;
 		case TYPE_FLOORING:add_flooring(*i, tscale); break;
-		case TYPE_CLOSET:  add_closet  (*i, wall_tex, 1, 0); break;
+		case TYPE_CLOSET:  add_closet  (*i, building.get_material().wall_tex, 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
 		case TYPE_COMPUTER:add_computer(*i); break;
@@ -2327,7 +2327,7 @@ struct occlusion_stats_t {
 occlusion_stats_t occlusion_stats;
 
 // Note: non-const because it creates the VBO
-void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate, tid_nm_pair_t const &wall_tex,
+void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (empty()) return; // no geom
@@ -2346,7 +2346,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		num_pic_tids = num_screenshot_tids;
 	}
 	if (mats_static.empty() && can_update_geom) { // create static materials if needed
-		create_static_vbos(building, wall_tex);
+		create_static_vbos(building);
 		++num_geom_this_frame;
 	}
 	if (inc_small && mats_small.empty() && can_update_geom) { // create small materials if needed
