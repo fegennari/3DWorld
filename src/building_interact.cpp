@@ -188,7 +188,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
 	door.open ^= 1; // toggle open state
-	clear_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
+	invalidate_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	interior->doors_to_update.push_back(door_ix);
 	if (player_in_this_building) {play_door_open_close_sound(door.get_cube_center(), door.open);}
@@ -410,7 +410,7 @@ int building_room_geom_t::find_nearest_pickup_object(point const &at_pos, vector
 	} // for i
 	return closest_obj_id;
 }
-void building_room_geom_t::remove_object(unsigned obj_id, building_t const &building) {
+void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) {
 	assert((unsigned)obj_id < objs.size());
 	room_object_t &obj(objs[obj_id]);
 	assert(obj.type < NUM_ROBJ_TYPES);
@@ -421,6 +421,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t const &buil
 	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
 	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
 	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
+	if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object may affect the AI navigation graph
 }
 
 // gameplay logic

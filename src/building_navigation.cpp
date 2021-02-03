@@ -66,7 +66,8 @@ class building_nav_graph_t {
 		assert(0); // must be found - should not get here
 	}
 public:
-	building_nav_graph_t(float stairs_extend_) : num_rooms(0), num_stairs(0), stairs_extend(stairs_extend_) {}
+	bool invalid;
+	building_nav_graph_t(float stairs_extend_) : num_rooms(0), num_stairs(0), stairs_extend(stairs_extend_), invalid(0) {}
 
 	void set_num_rooms(unsigned num_rooms_, unsigned num_stairs_) {
 		num_rooms  = num_rooms_;
@@ -428,7 +429,7 @@ cube_t building_t::get_walkable_room_bounds(room_t const &room) const {
 void building_t::build_nav_graph() const {
 
 	assert(interior);
-	if (interior->nav_graph) return; // already built
+	if (interior->nav_graph && !interior->nav_graph->invalid) return; // already built
 	interior->nav_graph.reset(new building_nav_graph_t(0.5*get_window_vspace())); // set stairs_extend == doorway width
 	building_nav_graph_t &ng(*interior->nav_graph);
 	float const wall_width(get_wall_thickness());
@@ -477,13 +478,15 @@ void building_t::build_nav_graph() const {
 	//if (is_house && has_basement()) {cout << TXT(ng.is_fully_connected()) << endl;}
 }
 
-void building_t::clear_nav_graph() {interior->nav_graph.reset();}
+void building_t::invalidate_nav_graph() { // Note: this is safe to call in one thread while using in another
+	if (interior && interior->nav_graph) {interior->nav_graph->invalid = 1;}
+}
 
 unsigned building_t::count_connected_room_components() {
 	if (!interior) return 0;
 	build_nav_graph();
 	unsigned const num(interior->nav_graph->count_connected_components());
-	clear_nav_graph(); // no longer needed
+	interior->nav_graph.reset(); // no longer needed
 	return num;
 }
 
@@ -842,7 +845,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	assert(interior);
 	assert(bcube.contains_pt(person.pos)); // person must be inside the building
-	if (!interior->nav_graph) {build_nav_graph();}
+	build_nav_graph();
 
 	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
 		register_ai_player_coll(person);

@@ -460,7 +460,7 @@ struct building_room_geom_t {
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	int find_nearest_pickup_object(point const &at_pos, vector3d const &in_dir, float range) const;
-	void remove_object(unsigned obj_id, building_t const &building);
+	void remove_object(unsigned obj_id, building_t &building);
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void create_obj_model_insts(building_t const &building);
@@ -765,6 +765,7 @@ struct building_t : public building_geom_t {
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass) const;
 	void add_interior_door_to_bdraw(building_draw_t &bdraw, unsigned door_ix) const;
 	void update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) const;
+	void invalidate_nav_graph();
 private:
 	void maybe_add_basement(rand_gen_t &rgen);
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
@@ -852,7 +853,6 @@ private:
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
 	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
-	void clear_nav_graph();
 	public:
 	// ray queries
 	bool is_pt_visible(point const &p1, point const &p2) const;
