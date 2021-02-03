@@ -423,6 +423,19 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
 	if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object may affect the AI navigation graph
 }
+int building_room_geom_t::find_avail_obj_slot() const {
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (i->type == TYPE_BLOCKER) {return int(i - objs.begin());} // blockers are used as temporaries for room object placement and to replace removed objects
+	}
+	return -1; // no slot found
+}
+bool building_room_geom_t::add_room_object(room_object_t const &obj, bool set_obj_id) {
+	int const obj_id(find_avail_obj_slot());
+	if (obj_id < 0) return 0; // no slot found
+	assert((unsigned)obj_id < objs.size());
+	objs[obj_id] = obj; // overwrite with new object
+	if (set_obj_id) {objs[obj_id].obj_id = (uint16_t)obj_id;}
+}
 
 // gameplay logic
 
