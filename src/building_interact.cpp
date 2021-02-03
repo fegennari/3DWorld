@@ -331,7 +331,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BRSINK    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 0.0,   0.0,   "bathroom sink");
 	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 20.0,  25.0,  "potted plant");
 	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 120.0, 120.0, "dresser");
-	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 1, 0, 0, 60.0,  35.0,  "nightstand");
+	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 0, 0, 0, 60.0,  35.0,  "nightstand"); // no pickup, in case a lamp, book, or bottle is on it
 	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0.0,   0.0,   "flooring");
 	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 0.0,   0.0,   "closet");
 	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 1, 0, 0.0,   0.0,   "wall trim");
@@ -354,7 +354,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 120.0, 120.0, "toilet");
 	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 80.0,  80.0,  "sink");
 	bldg_obj_types[TYPE_TUB       ] = bldg_obj_type_t(1, 1, 0, 1, 1, 250.0, 200.0, "bathtub");
-	bldg_obj_types[TYPE_FRIDGE    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 700.0, 300.0, "refrigerator");
+	bldg_obj_types[TYPE_FRIDGE    ] = bldg_obj_type_t(1, 1, 0, 1, 1, 700.0, 300.0, "refrigerator"); // no pickup, too large and may want to keep it for future hunger bar
 	bldg_obj_types[TYPE_STOVE     ] = bldg_obj_type_t(1, 1, 1, 1, 1, 400.0, 200.0, "stove");
 	bldg_obj_types[TYPE_TV        ] = bldg_obj_type_t(1, 1, 1, 0, 1, 400.0, 70.0,  "TV");
 	bldg_obj_types[TYPE_MONITOR   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 250.0, 15.0,  "computer monitor");
