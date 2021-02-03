@@ -284,17 +284,12 @@ public:
 		}
 		return walk_area;
 	}
-	static void seed_rgen(rand_gen_t &rgen, unsigned seed1, bool use_new_seed) {
-		static unsigned seed2(1);
-		if (use_new_seed) {++seed2;} // make sure the rgen is seeded differently this time
-		rgen.set_state(seed1+1, seed2);
-	}
 	bool reconstruct_path(vector<a_star_node_state_t> const &state, vect_cube_t const &avoid, point const &cur_pt, float radius,
-		float height, unsigned start_ix, unsigned end_ix, unsigned ped_ix, bool is_first_path, bool up_or_down, bool use_new_seed, vector<point> &path) const
+		float height, unsigned start_ix, unsigned end_ix, unsigned ped_ix, bool is_first_path, bool up_or_down, unsigned ped_rseed, vector<point> &path) const
 	{
 		unsigned n(start_ix);
 		rand_gen_t rgen;
-		seed_rgen(rgen, (ped_ix + 17*start_ix), use_new_seed);
+		rgen.set_state((ped_ix + 17*start_ix + 1), (ped_rseed + 1));
 		vect_cube_t keepout;
 
 		while (1) {
@@ -353,11 +348,11 @@ public:
 		} // end while()
 		return 0; // never gets here
 	}
-	bool complete_path_within_room(point const &p1, point const &p2, unsigned room, unsigned ped_ix, float radius, bool use_new_seed, vect_cube_t const &avoid, vector<point> &path) const {
+	bool complete_path_within_room(point const &p1, point const &p2, unsigned room, unsigned ped_ix, float radius, unsigned ped_rseed, vect_cube_t const &avoid, vector<point> &path) const {
 		// used for reaching a goal such as the player within the same room
 		cube_t const walk_area(calc_walkable_room_area(get_node(room), radius));
 		rand_gen_t rgen;
-		seed_rgen(rgen, (ped_ix + 13*room), use_new_seed);
+		rgen.set_state((ped_ix + 13*room + 1), (ped_rseed + 1));
 		vect_cube_t keepout;
 		path.push_back(p2); // Note: path is constructed backwards, so p2 is added first and connect_room_endpoints takes swapped arguments
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
@@ -370,7 +365,7 @@ public:
 	
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, float height, bool use_stairs, bool is_first_path,
-		bool up_or_down, bool use_new_seed, vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
+		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
 	{
 		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
 		assert(room1 < nodes.size() && room2 < nodes.size());
@@ -411,7 +406,7 @@ public:
 				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
 				
 				if (i->ix == room2) { // done, reconstruct path (in reverse)
-					return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, ped_ix, is_first_path, up_or_down, use_new_seed, path);
+					return reconstruct_path(state, avoid, cur_pt, radius, height, i->ix, room1, ped_ix, is_first_path, up_or_down, ped_rseed, path);
 				}
 				sn.g_score = new_g_score;
 				sn.h_score = p2p_dist_xy(conn_center, dest_pos);
@@ -657,7 +652,7 @@ cube_t get_stairs_plus_step_up(stairwell_t const &stairs) {
 	return stairs_ext;
 }
 
-bool building_t::find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool use_new_seed, bool is_moving_target, bool following_player, vector<point> &path) const {
+bool building_t::find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool is_moving_target, bool following_player, vector<point> &path) const {
 
 	assert(interior && interior->nav_graph);
 	point const &from(person.pos), &to(person.target_pos);
@@ -672,7 +667,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
-		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, use_new_seed, avoid, path);
+		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, avoid, path);
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		vector<unsigned> nearest_stairs;
@@ -687,11 +682,11 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 			vector<point> from_path;
 			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 			// from => stairs
-			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,  up_or_down, use_new_seed, avoid, from, from_path)) continue;
+			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,  up_or_down, person.cur_rseed, avoid, from, from_path)) continue;
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), get_floor_thickness(), following_player); // new floor, new zval, new avoid cubes
 			// stairs => to
-			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path, !up_or_down, use_new_seed, avoid, seg2_start, path)) continue;
+			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path, !up_or_down, person.cur_rseed, avoid, seg2_start, path)) continue;
 			assert(!path.empty() && !from_path.empty());
 			path.push_back(seg2_start); // other end of the stairs
 			// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
@@ -705,7 +700,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 		return 0; // failed
 	}
 	assert(loc1.room_ix != loc2.room_ix);
-	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path, 0, use_new_seed, avoid, from, path)) return 0;
+	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path, 0, person.cur_rseed, avoid, from, path)) return 0;
 	assert(!path.empty());
 	return 1;
 }
@@ -852,9 +847,11 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
 		register_ai_player_coll(person);
 	}
-	if (need_to_update_ai_path(state, person)) { // need to update based on player movement; higher priority than choose_dest
-		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1)        {choose_dest = 1;} // can't reach the target, choose a different destination
-		else if (!find_route_to_point(person, coll_dist, 0, 0, 1, 1, state.path)) {choose_dest = 1;} // is_first_path=0, use_new_seed=0, following_player=1
+	bool const update_path(need_to_update_ai_path(state, person));
+
+	if (update_path) { // need to update based on player movement; higher priority than choose_dest
+		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1)     {choose_dest = 1;} // can't reach the target, choose a different destination
+		else if (!find_route_to_point(person, coll_dist, 0, 1, 1, state.path)) {choose_dest = 1;} // is_first_path=0, is_moving_target=1, following_player=1
 		else { // success
 			state.next_path_pt(person, stay_on_one_floor);
 			person.following_player = 1;
@@ -862,7 +859,8 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		}
 	}
 	if (choose_dest) { // no current destination, choose a new destination
-		person.anim_time = 0.0; // reset animation
+		++person.cur_rseed; // update rseed so that this person will choose a different path if the previous path finding call failed
+		if (!update_path) {person.anim_time = 0.0;} // reset animation if not a failed update path frame
 		int const ret(choose_dest_room(state, person, rgen, stay_on_one_floor)); // 0=failed, 1=success, 2=failed but can retry
 
 		if (ret == 2 && interior->door_state_updated) { // wait rather than stopping in case the player trapped this person in a room by closing the door
@@ -873,7 +871,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			if (!ai_follow_player()) {person.speed = 0.0;} // movement will be stopped from now on, if not following the player
 			return AI_STOP;
 		}
-		if (!find_route_to_point(person, coll_dist, state.is_first_path, 1, 0, 0, state.path)) { // only set use_new_seed=1 when choosing a new dest; following_player=0
+		if (!find_route_to_point(person, coll_dist, state.is_first_path, 0, 0, state.path)) { // following_player=0, is_moving_target=0
 			person.wait_for(1.0); // stop for 1 second, then try again
 			return AI_WAITING;
 		}
