@@ -290,7 +290,7 @@ struct bldg_obj_type_t {
 
 	bldg_obj_type_t() {}
 	bldg_obj_type_t(bool pc, bool ac, bool pu, bool at, bool im, uint8_t ls, float v, float w, std::string const &n) :
-		player_coll(pc), ai_coll(ac), pickup(pu), attached(at), is_model(im), lg_sm(ls), value(v), weight(0.0), name(n) {}
+		player_coll(pc), ai_coll(ac), pickup(pu), attached(at), is_model(im), lg_sm(ls), value(v), weight(w), name(n) {}
 };
 
 struct room_object_t : public cube_t {
@@ -459,6 +459,8 @@ struct building_room_geom_t {
 	void add_blinds(room_object_t const &c);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
+	int find_nearest_pickup_object(point const &at_pos, vector3d const &in_dir, float range) const;
+	void remove_object(unsigned obj_id, building_t const &building);
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void create_obj_model_insts(building_t const &building);
@@ -726,6 +728,7 @@ struct building_t : public building_geom_t {
 	void update_door_verts(building_creator_t &bc) const;
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
+	bool player_pickup_object(point const &at_pos, vector3d const &in_dir);
 	void draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);

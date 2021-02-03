@@ -6,12 +6,13 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
+bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0);
+bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
+
 extern bool toggle_door_open_state;
 extern int window_width, window_height;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
-
-bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 
 
 // lights
@@ -297,7 +298,7 @@ bool building_t::is_sphere_lit(point const &center, float radius) const {
 	return 0;
 }
 
-// object types
+// object types/pickup
 
 void setup_bldg_obj_types() {
 	static bool was_setup(0);
@@ -356,8 +357,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_TUB       ] = bldg_obj_type_t(1, 1, 0, 1, 1, 1, 250.0, 200.0, "bathtub");
 	bldg_obj_types[TYPE_FRIDGE    ] = bldg_obj_type_t(1, 1, 0, 1, 1, 0, 700.0, 300.0, "refrigerator"); // no pickup, too large and may want to keep it for future hunger bar
 	bldg_obj_types[TYPE_STOVE     ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 400.0, 200.0, "stove");
-	bldg_obj_types[TYPE_TV        ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 400.0, 70.0,  "TV");
-	bldg_obj_types[TYPE_MONITOR   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 250.0, 15.0,  "computer monitor");
+	bldg_obj_types[TYPE_TV        ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 400.0, 70.0,  "TV");
+	bldg_obj_types[TYPE_MONITOR   ] = bldg_obj_type_t(1, 1, 1, 0, 1, 1, 250.0, 15.0,  "computer monitor");
 	bldg_obj_types[TYPE_COUCH     ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 600.0, 300.0, "couch");
 	bldg_obj_types[TYPE_OFF_CHAIR ] = bldg_obj_type_t(1, 1, 1, 0, 1, 0, 150.0, 60.0,  "office chair");
 	bldg_obj_types[TYPE_URINAL    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 100.0, 80.0,  "urinal");
@@ -379,8 +380,47 @@ float get_obj_value(room_object_t const &obj) {
 void show_object_info(room_object_t const &obj) {
 	bldg_obj_type_t const &type(get_room_obj_type(obj));
 	std::ostringstream oss;
-	oss << type.name << ": Value=" << get_obj_value(obj) << " Weight: " << type.weight;
-	draw_text(GREEN, -0.010*(float)window_width/(float)window_height, 0.010, -0.02, oss.str());
+	oss << type.name << ": value $" << get_obj_value(obj) << " weight " << type.weight << "lbs";
+	print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
+}
+
+bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
+	if (!has_room_geom()) return 0;
+	int const obj_id(interior->room_geom->find_nearest_pickup_object(at_pos, in_dir, 4.0*CAMERA_RADIUS));
+	if (obj_id < 0) return 0;
+	assert((unsigned)obj_id < interior->room_geom->objs.size());
+	show_object_info(interior->room_geom->objs[obj_id]);
+	gen_sound(SOUND_ITEM, get_camera_pos(), 0.25);
+	interior->room_geom->remove_object(obj_id, *this);
+	return 1;
+}
+
+int building_room_geom_t::find_nearest_pickup_object(point const &at_pos, vector3d const &in_dir, float range) const {
+	int closest_obj_id(-1);
+	float dmin_sq(0.0);
+	point const p2(at_pos + in_dir*range);
+
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		assert(i->type < NUM_ROBJ_TYPES);
+		if (!bldg_obj_types[i->type].pickup) continue; // this object can't be picked up
+		point p1c(at_pos), p2c(p2);
+		if (!do_line_clip(p1c, p2c, i->d)) continue; // test ray intersection vs. bcube
+		float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
+		if (closest_obj_id < 0 || dsq < dmin_sq) {closest_obj_id = (i - objs.begin()); dmin_sq = dsq;}
+	} // for i
+	return closest_obj_id;
+}
+void building_room_geom_t::remove_object(unsigned obj_id, building_t const &building) {
+	assert((unsigned)obj_id < objs.size());
+	room_object_t const &obj(objs[obj_id]);
+	assert(obj.type < NUM_ROBJ_TYPES);
+	assert(obj.type != TYPE_LIGHT && obj.type != TYPE_ELEVATOR); // these require special updates for drawing logic and cannot be removed at this time
+	bldg_obj_type_t const &type(bldg_obj_types[obj.type]);
+	objs.erase(objs.begin() + obj_id); // remove the object
+	// reuild necessary VBOs
+	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
+	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
+	if (1 || type.is_model) {create_obj_model_insts(building);} // 3D model - since these use obj_id, we always have to update this
 }
 
 // gameplay logic
@@ -395,11 +435,9 @@ void register_ai_player_coll(pedestrian_t const &person) {
 	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 }
 
-void building_gameplay_take_object() {
-	// TODO
-}
 void building_gameplay_action_key(bool mode) {
-	if (mode) {building_gameplay_take_object();} // 'e'
-	else {toggle_door_open_state = 1;} // 'q'
+	// show crosshair on first pickup because it's too difficult to pick up objects without it
+	if (mode) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
+	else      {toggle_door_open_state = 1;} // 'q'
 }
 
