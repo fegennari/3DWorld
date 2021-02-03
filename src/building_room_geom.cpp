@@ -2193,7 +2193,8 @@ colorRGBA room_object_t::get_color() const {
 void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom"); // 3.3ms
 	float const tscale(2.0/obj_scale);
-	obj_model_insts.clear();
+	mats_static.clear();
+	mats_alpha .clear();
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible()) continue;
@@ -2239,19 +2240,6 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_COLLIDER: break; // not drawn
 		default: break;
 		} // end switch
-		if (i->is_obj_model_type()) { // handle drawing of 3D models
-			vector3d dir(zero_vector);
-			dir[i->dim] = (i->dir ? 1.0 : -1.0);
-
-			if (i->flags & RO_FLAG_RAND_ROT) {
-				float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
-				vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
-				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
-			}
-			if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
-			obj_model_insts.emplace_back((i - objs.begin()), i->get_model_id(), dir);
-			//get_material(tid_nm_pair_t()).add_cube_to_verts(*i, WHITE, tex_origin); // for debugging of model bcubes
-		}
 	} // for i
 	// Note: verts are temporary, but cubes are needed for things such as collision detection with the player and ray queries for indir lighting
 	//timer_t timer2("Create VBOs"); // < 2ms
@@ -2261,6 +2249,8 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 5.6ms
 	float const tscale(2.0/obj_scale);
+	mats_small .clear();
+	mats_plants.clear();
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible()) continue;
@@ -2288,8 +2278,26 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		default: break;
 		}
 	} // for i
-	mats_small.create_vbos(building);
+	mats_small .create_vbos(building);
 	mats_plants.create_vbos(building);
+}
+void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
+	obj_model_insts.clear();
+
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (!i->is_visible() || !i->is_obj_model_type()) continue;
+		vector3d dir(zero_vector);
+		dir[i->dim] = (i->dir ? 1.0 : -1.0);
+
+		if (i->flags & RO_FLAG_RAND_ROT) {
+			float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
+			vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
+			dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
+		}
+		if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
+		obj_model_insts.emplace_back((i - objs.begin()), i->get_model_id(), dir);
+		//get_material(tid_nm_pair_t()).add_cube_to_verts(*i, WHITE, tex_origin); // for debugging of model bcubes
+	} // for i
 }
 void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
@@ -2346,6 +2354,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		num_pic_tids = num_screenshot_tids;
 	}
 	if (mats_static.empty() && can_update_geom) { // create static materials if needed
+		create_obj_model_insts(building);
 		create_static_vbos(building);
 		++num_geom_this_frame;
 	}

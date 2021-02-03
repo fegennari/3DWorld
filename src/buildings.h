@@ -461,6 +461,7 @@ struct building_room_geom_t {
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
+	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
 	void draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
