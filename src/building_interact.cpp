@@ -310,8 +310,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CHAIR     ] = bldg_obj_type_t(0, 1, 1, 0, 0, 1, 50.0,  30.0,  "chair"); // skip player collisions because they can be in the way and block the path in some rooms
 	bldg_obj_types[TYPE_STAIR     ] = bldg_obj_type_t(1, 0, 0, 1, 0, 1, 0.0,   0.0,   "stair");
 	bldg_obj_types[TYPE_STAIR_WALL] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "stairs wall");
-	bldg_obj_types[TYPE_ELEVATOR  ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "elevator");
-	bldg_obj_types[TYPE_LIGHT     ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 40.0,  5.0,   "light");
+	bldg_obj_types[TYPE_ELEVATOR  ] = bldg_obj_type_t(1, 1, 0, 1, 0, 0, 0.0,   0.0,   "elevator");
+	bldg_obj_types[TYPE_LIGHT     ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 40.0,  5.0,   "light");
 	bldg_obj_types[TYPE_RUG       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 50.0,  20.0,  "rug");
 	bldg_obj_types[TYPE_PICTURE   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 100.0, 10.0,  "picture"); // should be random value
 	bldg_obj_types[TYPE_WBOARD    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 50.0,  25.0,  "whiteboard");
@@ -321,8 +321,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DESK      ] = bldg_obj_type_t(1, 1, 0, 0, 0, 1, 100.0, 80.0,  "desk");
 	bldg_obj_types[TYPE_BED       ] = bldg_obj_type_t(1, 1, 0, 0, 0, 3, 300.0, 200.0, "bed");
 	bldg_obj_types[TYPE_WINDOW    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "window");
-	bldg_obj_types[TYPE_BLOCKER   ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0.0,   0.0,   "<blocker>"); // not a drawn object; block other objects, but not the player or AI
-	bldg_obj_types[TYPE_COLLIDER  ] = bldg_obj_type_t(1, 1, 0, 0, 0, 1, 0.0,   0.0,   "<collider>"); // not a drawn object; block the player and AI
+	bldg_obj_types[TYPE_BLOCKER   ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 0.0,   0.0,   "<blocker>"); // not a drawn object; block other objects, but not the player or AI
+	bldg_obj_types[TYPE_COLLIDER  ] = bldg_obj_type_t(1, 1, 0, 0, 0, 0, 0.0,   0.0,   "<collider>"); // not a drawn object; block the player and AI
 	bldg_obj_types[TYPE_CUBICLE   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 500.0, 250.0, "cubicle"); // skip collisions because they have their own colliders
 	bldg_obj_types[TYPE_STALL     ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 200.0, 150.0, "bathroom stall");
 	bldg_obj_types[TYPE_SIGN      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 10.0,  1.0,   "sign");
@@ -386,7 +386,7 @@ void show_object_info(room_object_t const &obj) {
 
 bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
 	if (!has_room_geom()) return 0;
-	int const obj_id(interior->room_geom->find_nearest_pickup_object(at_pos, in_dir, 4.0*CAMERA_RADIUS));
+	int const obj_id(interior->room_geom->find_nearest_pickup_object(at_pos, in_dir, 3.0*CAMERA_RADIUS));
 	if (obj_id < 0) return 0;
 	assert((unsigned)obj_id < interior->room_geom->objs.size());
 	show_object_info(interior->room_geom->objs[obj_id]);
@@ -412,15 +412,15 @@ int building_room_geom_t::find_nearest_pickup_object(point const &at_pos, vector
 }
 void building_room_geom_t::remove_object(unsigned obj_id, building_t const &building) {
 	assert((unsigned)obj_id < objs.size());
-	room_object_t const &obj(objs[obj_id]);
+	room_object_t &obj(objs[obj_id]);
 	assert(obj.type < NUM_ROBJ_TYPES);
 	assert(obj.type != TYPE_LIGHT && obj.type != TYPE_ELEVATOR); // these require special updates for drawing logic and cannot be removed at this time
 	bldg_obj_type_t const &type(bldg_obj_types[obj.type]);
-	objs.erase(objs.begin() + obj_id); // remove the object
+	obj.type = TYPE_BLOCKER; // replace it with an invisible blocker that won't collide with anything
 	// reuild necessary VBOs
 	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
 	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
-	if (1 || type.is_model) {create_obj_model_insts(building);} // 3D model - since these use obj_id, we always have to update this
+	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
 }
 
 // gameplay logic
