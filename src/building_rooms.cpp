@@ -1237,7 +1237,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, rgen.rand_bool(), rgen.rand_bool(), RO_FLAG_RAND_ROT, tot_light_amt, SHAPE_CYLIN, GRAY_BLACK);
 		}
 	}
-	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate
+	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate/box
 		point pos(0.0, 0.0, zval);
 		vector3d sz; // half size relative to window_vspacing
 		gen_crate_sz(sz, rgen, window_vspacing*(is_house ? (is_basement ? 0.75 : 0.5) : 1.0)); // smaller for houses
@@ -1252,13 +1252,13 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 			if (!i->intersects(crate)) continue;
 			// only handle stacking of crates on other crates
-			if (i->type == TYPE_CRATE && i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(2, i->dz());}
+			if ((i->type == TYPE_CRATE || i->type == TYPE_BOX) && i->z1() == zval && (i->z2() + crate.dz() < ceil_zval) && i->contains_pt_xy(pos)) {crate.translate_dim(2, i->dz());}
 			else {bad_placement = 1; break;}
 		}
 		if (bad_placement) continue;
 		if (is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
 		colorRGBA const crate_color(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
-		objs.emplace_back(crate, TYPE_CRATE, room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CUBE, crate_color);
+		objs.emplace_back(crate, (rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX), room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CUBE, crate_color); // crate or box
 		set_obj_id(objs); // used to select texture
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
@@ -1555,10 +1555,7 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 		vector3d sz;
 		gen_crate_sz(sz, rgen, window_vspacing);
 		sz *= 1.5; // make larger than storage room boxes
-
-		if (place_obj_along_wall(TYPE_CRATE, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start)) {
-			interior->room_geom->objs.back().obj_id = 2; // make sure it's a box
-		}
+		place_obj_along_wall(TYPE_BOX, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
 	} // for n
 }
 

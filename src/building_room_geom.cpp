@@ -658,7 +658,6 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				sz    [d] = box_sz*rgen.rand_uniform(0.5, 1.0); // x,y half width
 				center[d] = rgen.rand_uniform(interior.d[d][0]+sz[d], interior.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
 			}
-			C.obj_id = uint16_t(2); // used to select texture; make them all boxes rather than crates
 			C.set_from_point(center);
 			set_cube_zvals(C, interior.z1(), (interior.z1() + box_sz*rgen.rand_uniform(0.8, 1.5)));
 			C.expand_by_xy(sz);
@@ -666,47 +665,45 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
 			C.dim   = rgen.rand_bool();
 			C.dir   = rgen.rand_bool();
-			add_crate_or_box(C, 0); // is_small=0
+			add_box(C, 0); // is_small=0
 			cubes.push_back(C);
 		} // for n
 	}
 }
 
-int get_crate_tid(room_object_t const &c) {
-	if (c.obj_id & 2) return get_texture_by_name("interiors/box.jpg");
-	return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");
+int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
+int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
+
+void building_room_geom_t::add_crate(room_object_t const &c, bool is_small) {
+	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
+	get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, is_small).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
 }
 
-void building_room_geom_t::add_crate_or_box(room_object_t const &c, bool is_small) {
-	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	if (c.obj_id & 2) { // make it a box
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crate_tid(c), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, is_small));
-		unsigned const verts_start(mat.quad_verts.size());
-		mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
-		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
-		float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: we don't use all parts of the texture
-		mat.quad_verts[verts_start+0].set_tc(x1, y2); // z (top)
-		mat.quad_verts[verts_start+1].set_tc(x2, y2);
-		mat.quad_verts[verts_start+2].set_tc(x2, y3);
-		mat.quad_verts[verts_start+3].set_tc(x1, y3);
+void building_room_geom_t::add_box(room_object_t const &c, bool is_small) {
+	// Note: draw as "small", not because boxes are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, is_small));
+	unsigned const verts_start(mat.quad_verts.size());
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked box?)
+	assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
+	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: we don't use all parts of the texture
+	mat.quad_verts[verts_start+0].set_tc(x1, y2); // z (top)
+	mat.quad_verts[verts_start+1].set_tc(x2, y2);
+	mat.quad_verts[verts_start+2].set_tc(x2, y3);
+	mat.quad_verts[verts_start+3].set_tc(x1, y3);
 
-		for (unsigned d = 0; d < 2; ++d) { // for each end
-			unsigned const ix_shift((1 + 2*d)*c.dim); // needed to make sure the up icon actually faces up
-			unsigned ix(verts_start + 4*d + 4);
+	for (unsigned d = 0; d < 2; ++d) { // for each end
+		unsigned const ix_shift((1 + 2*d)*c.dim); // needed to make sure the up icon actually faces up
+		unsigned ix(verts_start + 4*d + 4);
 
-			for (unsigned e = 0; e < 2; ++e) { // x, y
-				bool const f(c.dim ^ bool(e));
-				mat.quad_verts[ix+((0+ix_shift)&3)].set_tc(x2, (f ? y1 : y2));
-				mat.quad_verts[ix+((1+ix_shift)&3)].set_tc(x3, (f ? y1 : y2));
-				mat.quad_verts[ix+((2+ix_shift)&3)].set_tc(x3, (f ? y2 : y3));
-				mat.quad_verts[ix+((3+ix_shift)&3)].set_tc(x2, (f ? y2 : y3));
-				ix += 8; // skip the other face
-			} // for e
-		} // for d
-	}
-	else { // make it a crate
-		get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, is_small).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
-	}
+		for (unsigned e = 0; e < 2; ++e) { // x, y
+			bool const f(c.dim ^ bool(e));
+			mat.quad_verts[ix+((0+ix_shift)&3)].set_tc(x2, (f ? y1 : y2));
+			mat.quad_verts[ix+((1+ix_shift)&3)].set_tc(x3, (f ? y1 : y2));
+			mat.quad_verts[ix+((2+ix_shift)&3)].set_tc(x3, (f ? y2 : y3));
+			mat.quad_verts[ix+((3+ix_shift)&3)].set_tc(x2, (f ? y2 : y3));
+			ix += 8; // skip the other face
+		} // for e
+	} // for d
 }
 
 void building_room_geom_t::add_paint_can(room_object_t const &c, float side_tscale_add) {
@@ -778,21 +775,25 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		point center;
 		cubes.clear();
 		// add crates/boxes
-		unsigned const num_crates(rgen.rand() % (is_house ? 8 : 13)); // 0-12
+		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : 13)); // 0-12
 
-		for (unsigned n = 0; n < num_crates; ++n) {
+		for (unsigned n = 0; n < num_boxes; ++n) {
 			for (unsigned d = 0; d < 2; ++d) {
 				sz[d] = 0.5*width*sz_scale*(is_house ? 1.5 : 1.0)*rgen.rand_uniform(0.45, 0.8); // x,y half width
 				center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
 			}
-			C.obj_id = uint16_t(is_house ? 2 : rgen.rand()); // used to select texture; houses all have boxes
 			C.set_from_point(center);
 			set_cube_zvals(C, S.z2(), (S.z2() + shelf_zspace*sz_scale*rgen.rand_uniform(0.4, 0.95)));
 			C.expand_by_xy(sz);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
 			C.dim   = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
-			add_crate_or_box(C);
+
+			if (is_house || rgen.rand_bool()) {add_box(C);}
+			else {
+				C.obj_id = rgen.rand(); // used to select crate texture
+				add_crate(C);
+			}
 			cubes.push_back(C);
 		} // for n
 		// add computers; what about monitors?
@@ -2177,6 +2178,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_NIGHTSTAND:return get_textured_wood_color();
 	case TYPE_FLOORING: return texture_color(MARBLE_TEX).modulate_with(color);
 	case TYPE_CRATE:    return texture_color(get_crate_tid(*this)).modulate_with(color);
+	case TYPE_BOX:      return texture_color(get_box_tid()).modulate_with(color);
 	case TYPE_CUBICLE:  return texture_color(get_cubicle_tid(*this));
 	case TYPE_SHELVES:  return (WHITE*0.75 + get_textured_wood_color()*0.25); // mostly white walls (sparse), with some wood mixed in
 	case TYPE_KEYBOARD: return BKGRAY;
@@ -2268,7 +2270,8 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim, don't need wall_tex
 		case TYPE_RAILING:   add_railing  (*i); break;
 		case TYPE_PLANT:     add_potted_plant(*i, 0, 1); break; // plant only
-		case TYPE_CRATE:     add_crate_or_box(*i); break; // not small but only added to windowless rooms
+		case TYPE_CRATE:     add_crate    (*i); break; // not small but only added to windowless rooms
+		case TYPE_BOX:       add_box      (*i); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:   add_shelves  (*i, tscale); break; // not small but only added to windowless rooms
 		case TYPE_KEYBOARD:  add_keyboard (*i); break;
 		case TYPE_WINE_RACK: add_wine_rack(*i, 0, 1, tscale); break;
