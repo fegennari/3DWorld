@@ -313,13 +313,13 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_ELEVATOR  ] = bldg_obj_type_t(1, 1, 0, 1, 0, 0, 0.0,   0.0,   "elevator");
 	bldg_obj_types[TYPE_LIGHT     ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 40.0,  5.0,   "light");
 	bldg_obj_types[TYPE_RUG       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 50.0,  20.0,  "rug");
-	bldg_obj_types[TYPE_PICTURE   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 100.0, 10.0,  "picture"); // should be random value
+	bldg_obj_types[TYPE_PICTURE   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 100.0, 1.0,   "picture"); // should be random value
 	bldg_obj_types[TYPE_WBOARD    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 50.0,  25.0,  "whiteboard");
 	bldg_obj_types[TYPE_BOOK      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 10.0,  1.0,   "book");
 	bldg_obj_types[TYPE_BCASE     ] = bldg_obj_type_t(1, 1, 0, 1, 0, 3, 150.0, 100.0, "bookcase");
 	bldg_obj_types[TYPE_TCAN      ] = bldg_obj_type_t(0, 1, 1, 0, 0, 1, 12.0,  2.0,   "trashcan"); // skip player collisions because they can be in the way and block the path in some rooms
 	bldg_obj_types[TYPE_DESK      ] = bldg_obj_type_t(1, 1, 0, 0, 0, 1, 100.0, 80.0,  "desk");
-	bldg_obj_types[TYPE_BED       ] = bldg_obj_type_t(1, 1, 0, 0, 0, 3, 300.0, 200.0, "bed");
+	bldg_obj_types[TYPE_BED       ] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 300.0, 200.0, "bed");
 	bldg_obj_types[TYPE_WINDOW    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "window");
 	bldg_obj_types[TYPE_BLOCKER   ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 0.0,   0.0,   "<blocker>"); // not a drawn object; block other objects, but not the player or AI
 	bldg_obj_types[TYPE_COLLIDER  ] = bldg_obj_type_t(1, 1, 0, 0, 0, 0, 0.0,   0.0,   "<collider>"); // not a drawn object; block the player and AI
@@ -373,13 +373,23 @@ bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
 	assert(obj.type < NUM_ROBJ_TYPES);
 	return bldg_obj_types[obj.type];
 }
+bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
+	if (obj.type == TYPE_PICTURE && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
+
+	if (obj.type == TYPE_BED) { // player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name
+		if (obj.flags & RO_FLAG_TAKEN2) {return bldg_obj_type_t(1, 1, 1, 0, 0, 3, 250.0, 80.0, "mattress"  );} // third item to take from bed
+		if (obj.flags & RO_FLAG_TAKEN1) {return bldg_obj_type_t(1, 1, 1, 0, 0, 3, 80.0,  4.0,  "bed sheets");} // second item to take from bed
+		return bldg_obj_type_t(1, 1, 1, 0, 0, 3, 20.0, 1.0, "pillow"); // first item to take from bed
+	}
+	return get_room_obj_type(obj); // default value
+}
 rand_gen_t rgen_from_obj(room_object_t const &obj) {
 	rand_gen_t rgen;
 	rgen.set_state(12345*obj.x1(), 67890*obj.y1());
 	return rgen;
 }
 float get_obj_value(room_object_t const &obj) {
-	float value(get_room_obj_type(obj).value);
+	float value(get_taken_obj_type(obj).value);
 	if (obj.type == TYPE_CRATE || obj.type == TYPE_BOX) {value *= (1 + (rgen_from_obj(obj).rand() % 20));}
 	else if (obj.type == TYPE_PAPER) {
 		rand_gen_t rgen(rgen_from_obj(obj));
@@ -388,13 +398,13 @@ float get_obj_value(room_object_t const &obj) {
 	return value;
 }
 void show_object_info(room_object_t const &obj) {
-	bldg_obj_type_t const &type(get_room_obj_type(obj));
+	bldg_obj_type_t const &type(get_taken_obj_type(obj));
 	float const value(get_obj_value(obj));
 	std::ostringstream oss;
 	oss << type.name << ": value $";
 	if (value < 1.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
 	else {oss << value;}
-	oss << " weight " << type.weight << "lbs";
+	oss << " weight " << type.weight << " lbs";
 	print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
 }
 
@@ -447,6 +457,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 		if (closest_obj_id >= 0 && dsq > dmin_sq) continue; // not the closest
 		if (i->type == TYPE_MIRROR && !(i->flags & RO_FLAG_IS_HOUSE)) continue; // can only pick up mirrors from houses, not office buildings
 		if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
+		if (i->type == TYPE_BED && (i->flags & RO_FLAG_TAKEN3)) continue; // can only take pillow, sheets, and mattress - not the frame
 		if (object_has_something_on_it(*i, objs)) continue; // can't remove a table, etc. that has something on it
 		if (building.check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // skip if it's on the other side of a wall, ceiling, or floor
 		closest_obj_id = (i - objs.begin());
@@ -460,8 +471,15 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	assert(obj.type < NUM_ROBJ_TYPES);
 	assert(obj.type != TYPE_LIGHT && obj.type != TYPE_ELEVATOR); // these require special updates for drawing logic and cannot be removed at this time
 	bldg_obj_type_t const &type(bldg_obj_types[obj.type]);
-	// TODO: picture/frame, pillow/sheets/mattress/bed, plant/pot
-	obj.type = TYPE_BLOCKER; // replace it with an invisible blocker that won't collide with anything
+	// TODO: plant/pot
+	if (obj.type == TYPE_PICTURE && !(obj.flags & RO_FLAG_TAKEN1)) {obj.flags |= RO_FLAG_TAKEN1;} // take picture, leave frame
+
+	else if (obj.type == TYPE_BED) {
+		if      (obj.flags & RO_FLAG_TAKEN2) {obj.flags |= RO_FLAG_TAKEN3;} // take mattress
+		else if (obj.flags & RO_FLAG_TAKEN1) {obj.flags |= RO_FLAG_TAKEN2;} // take sheets
+		else {obj.flags |= RO_FLAG_TAKEN1;} // take pillow(s)
+	}
+	else {obj.type = TYPE_BLOCKER;} // replace it with an invisible blocker that won't collide with anything
 	// reuild necessary VBOs and other data structures
 	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
 	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object

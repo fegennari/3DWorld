@@ -281,6 +281,11 @@ uint16_t const RO_FLAG_ADJ_BOT = 0x1000; // for door trim
 uint16_t const RO_FLAG_ADJ_TOP = 0x2000; // for door trim
 uint16_t const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections and shelves
 uint16_t const RO_FLAG_RAND_ROT= 0x8000; // random rotation for 3D models; used for office chair
+// object flags, second byte, alternate flags for pickup state
+uint16_t const RO_FLAG_TAKEN1  = 0x400;  // no picture / no bed pillows
+uint16_t const RO_FLAG_TAKEN2  = 0x800;  // no bed sheets
+uint16_t const RO_FLAG_TAKEN3  = 0x1000; // no bed mattress
+uint16_t const RO_FLAG_TAKEN4  = 0x2000; // for future use
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;

@@ -1221,7 +1221,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	bool const whiteboard(c.type == TYPE_WBOARD);
 	int picture_tid(WHITE_TEX);
 
-	if (!whiteboard) { // picture
+	if (!whiteboard && !(c.flags & RO_FLAG_TAKEN1)) { // picture, not taken/frame only
 		int const user_tid(get_rand_screenshot_texture(c.obj_id));
 		picture_tid  = ((user_tid >= 0) ? (unsigned)user_tid : c.get_picture_tid()); // if user texture is valid, use that instead
 		num_pic_tids = get_num_screenshot_tids();
@@ -1693,10 +1693,11 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 			}
 		}
 		unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
-		rgeom_mat_t &sheet_mat(get_material(sheet_tex, 1));
-		sheet_mat.add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);
+		if (c.flags & RO_FLAG_TAKEN3) {} // mattress taken, don't draw it
+		else if (c.flags & RO_FLAG_TAKEN2) {get_material(untex_shad_mat, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // sheets taken, bare mattress
+		else {get_material(sheet_tex, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // draw matterss with sheets
 	}
-	if (inc_sm) {
+	if (inc_sm && !(c.flags & RO_FLAG_TAKEN1)) { // draw pillows if not taken
 		rgeom_mat_t &pillow_mat(get_material(sheet_tex, 1, 0, 1)); // small=1
 
 		if (is_wide) { // two pillows
