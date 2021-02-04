@@ -393,8 +393,8 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 			mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1); // skip bottom surface
 		}
 	}
-	else { // cube table
-		assert(c.shape == SHAPE_CUBE);
+	else { // cube or short table
+		assert(c.shape == SHAPE_CUBE || c.shape == SHAPE_SHORT);
 		mat.add_cube_to_verts(top, color, c.get_llc()); // all faces drawn
 		add_tc_legs(legs_bcube, color, leg_width, tscale);
 	}

@@ -1122,7 +1122,7 @@ bool building_t::add_livingroom_objs(rand_gen_t rgen, room_t const &room, float 
 		cube_t table(tv); // same XY bounds as the TV
 		tv.translate_dim(2, height); // move TV up
 		table.z2() = tv.z1();
-		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, 0, tot_light_amt);
+		objs.emplace_back(table, TYPE_TABLE, room_id, 0, 0, 0, tot_light_amt, SHAPE_SHORT); // short table
 	}
 	if (placed_couch && placed_tv) {
 		room_object_t const &couch(objs[couch_ix]), &tv(objs[tv_ix]);
