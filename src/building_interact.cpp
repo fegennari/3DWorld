@@ -306,7 +306,7 @@ void setup_bldg_obj_types() {
 	was_setup = 1;
 	// player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name
 	//                                                pc ac pu at im ls value  weight  name
-	bldg_obj_types[TYPE_TABLE     ] = bldg_obj_type_t(1, 1, 0, 0, 0, 1, 100.0, 100.0, "table");
+	bldg_obj_types[TYPE_TABLE     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 1, 70.0,  40.0,  "table");
 	bldg_obj_types[TYPE_CHAIR     ] = bldg_obj_type_t(0, 1, 1, 0, 0, 1, 50.0,  30.0,  "chair"); // skip player collisions because they can be in the way and block the path in some rooms
 	bldg_obj_types[TYPE_STAIR     ] = bldg_obj_type_t(1, 0, 0, 1, 0, 1, 0.0,   0.0,   "stair");
 	bldg_obj_types[TYPE_STAIR_WALL] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "stairs wall");
@@ -332,7 +332,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BRSINK    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "bathroom sink");
 	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 20.0,  25.0,  "potted plant");
 	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 3, 120.0, 120.0, "dresser");
-	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 0, 0, 0, 3, 60.0,  35.0,  "nightstand"); // no pickup, in case a lamp, book, or bottle is on it
+	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 60.0,  35.0,  "nightstand");
 	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
 	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 3, 0.0,   0.0,   "closet");
 	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "wall trim");
@@ -373,21 +373,34 @@ bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
 	assert(obj.type < NUM_ROBJ_TYPES);
 	return bldg_obj_types[obj.type];
 }
+rand_gen_t rgen_from_obj(room_object_t const &obj) {
+	rand_gen_t rgen;
+	rgen.set_state(12345*obj.x1(), 67890*obj.y1());
+	return rgen;
+}
 float get_obj_value(room_object_t const &obj) {
 	float value(get_room_obj_type(obj).value);
-	// TODO: random value for some object types
+	if (obj.type == TYPE_CRATE || obj.type == TYPE_BOX) {value *= (1 + (rgen_from_obj(obj).rand() % 20));}
+	else if (obj.type == TYPE_PAPER) {
+		rand_gen_t rgen(rgen_from_obj(obj));
+		if ((rgen.rand()&3) == 0) {value = (1 + (rgen.rand()%10))*(1 + (rgen.rand()%10));} // 25% of papers have higher value
+	}
 	return value;
 }
 void show_object_info(room_object_t const &obj) {
 	bldg_obj_type_t const &type(get_room_obj_type(obj));
+	float const value(get_obj_value(obj));
 	std::ostringstream oss;
-	oss << type.name << ": value $" << get_obj_value(obj) << " weight " << type.weight << "lbs";
+	oss << type.name << ": value $";
+	if (value < 1.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
+	else {oss << value;}
+	oss << " weight " << type.weight << "lbs";
 	print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
 }
 
 bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
 	if (!has_room_geom()) return 0;
-	int const obj_id(interior->room_geom->find_nearest_pickup_object(at_pos, in_dir, 3.0*CAMERA_RADIUS));
+	int const obj_id(interior->room_geom->find_nearest_pickup_object(*this, at_pos, in_dir, 3.0*CAMERA_RADIUS));
 	if (obj_id < 0) return 0;
 	assert((unsigned)obj_id < interior->room_geom->objs.size());
 	show_object_info(interior->room_geom->objs[obj_id]);
@@ -396,7 +409,31 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 	return 1;
 }
 
-int building_room_geom_t::find_nearest_pickup_object(point const &at_pos, vector3d const &in_dir, float range) const {
+bool has_cube_line_coll(point const &p1, point const &p2, vect_cube_t const &cubes) {
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+		if (i->line_intersects(p1, p2)) return 1;
+	}
+	return 0;
+}
+bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2) const {
+	if (!interior) return 0;
+	for (unsigned d = 0; d < 2; ++d) {if (has_cube_line_coll(p1, p2, interior->walls[d])) return 1;}
+	return (has_cube_line_coll(p1, p2, interior->ceilings) || has_cube_line_coll(p1, p2, interior->floors)); // or is only checking one good enough?
+}
+
+bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> const &objs) {
+	// only these types can have objects on them (what about TYPE_SHELF?)
+	if (obj.type != TYPE_TABLE && obj.type != TYPE_DESK && obj.type != TYPE_COUNTER && obj.type != TYPE_DRESSER &&
+		obj.type != TYPE_NIGHTSTAND && obj.type != TYPE_BOX && obj.type != TYPE_CRATE) return 0;
+
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (i->type == TYPE_BLOCKER) continue; // ignore blockers (from removed objects)
+		if (i->z1() == obj.z2() && i->intersects_xy(obj)) return 1; // zval has to match exactly
+	}
+	return 0;
+}
+
+int building_room_geom_t::find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const {
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
@@ -407,7 +444,13 @@ int building_room_geom_t::find_nearest_pickup_object(point const &at_pos, vector
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, i->d)) continue; // test ray intersection vs. bcube
 		float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
-		if (closest_obj_id < 0 || dsq < dmin_sq) {closest_obj_id = (i - objs.begin()); dmin_sq = dsq;}
+		if (closest_obj_id >= 0 && dsq > dmin_sq) continue; // not the closest
+		if (i->type == TYPE_MIRROR && !(i->flags & RO_FLAG_IS_HOUSE)) continue; // can only pick up mirrors from houses, not office buildings
+		if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
+		if (object_has_something_on_it(*i, objs)) continue; // can't remove a table, etc. that has something on it
+		if (building.check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // skip if it's on the other side of a wall, ceiling, or floor
+		closest_obj_id = (i - objs.begin());
+		dmin_sq = dsq;
 	} // for i
 	return closest_obj_id;
 }
@@ -417,8 +460,9 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	assert(obj.type < NUM_ROBJ_TYPES);
 	assert(obj.type != TYPE_LIGHT && obj.type != TYPE_ELEVATOR); // these require special updates for drawing logic and cannot be removed at this time
 	bldg_obj_type_t const &type(bldg_obj_types[obj.type]);
+	// TODO: picture/frame, pillow/sheets/mattress/bed, plant/pot
 	obj.type = TYPE_BLOCKER; // replace it with an invisible blocker that won't collide with anything
-	// reuild necessary VBOs
+	// reuild necessary VBOs and other data structures
 	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
 	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
 	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
@@ -436,6 +480,7 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, bool set_ob
 	assert((unsigned)obj_id < objs.size());
 	objs[obj_id] = obj; // overwrite with new object
 	if (set_obj_id) {objs[obj_id].obj_id = (uint16_t)obj_id;}
+	return 1;
 }
 
 // gameplay logic

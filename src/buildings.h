@@ -263,7 +263,7 @@ enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
 enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR, OBJ_MODEL_COUCH, OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL,
 	OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_FHYDRANT, NUM_OBJ_MODELS};
 
-// object flags, currently used for room lights
+// object flags
 uint16_t const RO_FLAG_LIT     = 0x01; // light is on
 uint16_t const RO_FLAG_TOS     = 0x02; // at top of stairs
 uint16_t const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
@@ -272,7 +272,7 @@ uint16_t const RO_FLAG_NOCOLL  = 0x10; // no collision detection
 uint16_t const RO_FLAG_OPEN    = 0x20; // open, for elevators and closet doors
 uint16_t const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 uint16_t const RO_FLAG_INTERIOR= 0x80; // applies to containing room
-// second byte
+// object flags, second byte
 uint16_t const RO_FLAG_EMISSIVE= 0x100; // for signs
 uint16_t const RO_FLAG_HANGING = 0x200; // for signs
 uint16_t const RO_FLAG_ADJ_LO  = 0x400; // for kitchen counters/closets/door trim
@@ -460,7 +460,7 @@ struct building_room_geom_t {
 	void add_blinds(room_object_t const &c);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
-	int find_nearest_pickup_object(point const &at_pos, vector3d const &in_dir, float range) const;
+	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const;
 	void remove_object(unsigned obj_id, building_t &building);
 	int find_avail_obj_slot() const;
 	bool add_room_object(room_object_t const &obj, bool set_obj_id=0);
@@ -732,6 +732,7 @@ struct building_t : public building_geom_t {
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	bool player_pickup_object(point const &at_pos, vector3d const &in_dir);
+	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2) const;
 	void draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
