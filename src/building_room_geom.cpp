@@ -2098,14 +2098,17 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 	point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk
 
 	if (inc_pot) {
-		// draw the pot, tapered with narrower bottom
+		// draw the pot, tapered with narrower bottom; draw the bottom of the pot if there's no dirt
+		bool const no_dirt(c.flags & RO_FLAG_TAKEN2);
 		float const pot_radius(0.4*plant_diameter);
-		get_material(untex_shad_mat, 1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), 0, 0, 1, 0);
-		// draw dirt in the pot as a disk
-		rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
-		dirt_mat.add_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
+		get_material(untex_shad_mat, 1).add_cylin_to_verts(point(cx, cy, c.z1()), point(cx, cy, pot_top), 0.65*pot_radius, pot_radius, apply_light_color(c), no_dirt, 0, 1, 0);
+		
+		if (!no_dirt) { // draw dirt in the pot as a disk if not taken
+			rgeom_mat_t &dirt_mat(get_material(tid_nm_pair_t(get_texture_by_name("rock2.png")), 1)); // use dirt texture
+			dirt_mat.add_disk_to_verts(base_pos, 0.947*pot_radius, 0, apply_light_color(c, WHITE));
+		}
 	}
-	if (inc_plant) {
+	if (inc_plant && !(c.flags & RO_FLAG_TAKEN1)) { // plant not taken
 		// draw plant leaves
 		s_plant plant;
 		plant.create_no_verts(base_pos, (c.z2() - base_pos.z), stem_radius, c.obj_id, 0, 1); // land_plants_only=1

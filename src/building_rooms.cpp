@@ -1383,7 +1383,7 @@ void building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_
 	set_cube_zvals(plant, place_on.z2(), place_on.z2()+height);
 	if (!avoid.is_all_zeros() && plant.intersects(avoid)) return; // only make one attempt
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, choose_pot_color(rgen));
+	objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN, choose_pot_color(rgen));
 	set_obj_id(objs);
 }
 
@@ -1535,6 +1535,7 @@ void building_t::add_plants_to_room(rand_gen_t rgen, room_t const &room, float z
 	float const window_vspacing(get_window_vspace());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
+	zval += 0.01*get_floor_thickness(); // move up slightly to avoid z-fithing of bottom when the dirt is taken
 	
 	for (unsigned n = 0; n < num; ++n) {
 		float const height(rgen.rand_uniform(0.6, 0.9)*window_vspacing), width(rgen.rand_uniform(0.15, 0.35)*window_vspacing);
