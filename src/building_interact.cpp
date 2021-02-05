@@ -402,16 +402,59 @@ float get_obj_value(room_object_t const &obj) {
 	}
 	return value;
 }
+float get_obj_weight(room_object_t const &obj) {
+	return get_taken_obj_type(obj).weight; // constant per object type, for now, but really should depend on object size/volume
+}
 void show_object_info(room_object_t const &obj) {
-	bldg_obj_type_t const &type(get_taken_obj_type(obj));
 	float const value(get_obj_value(obj));
 	std::ostringstream oss;
-	oss << type.name << ": value $";
+	oss << get_taken_obj_type(obj).name << ": value $";
 	if (value < 1.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
 	else {oss << value;}
-	oss << " weight " << type.weight << " lbs";
+	oss << " weight " << get_obj_weight(obj) << " lbs";
 	print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
 }
+
+class player_inventory_t {
+	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
+	float cur_value, cur_weight, tot_value, tot_weight;
+public:
+	player_inventory_t() {clear();}
+
+	void clear() { // called on player death?
+		cur_value = cur_weight = tot_value = tot_weight = 0.0;
+		carried.clear();
+	}
+	void add_item(room_object_t const &obj) {
+		cur_value  += get_obj_value (obj);
+		cur_weight += get_obj_weight(obj);
+		carried.push_back(obj);
+	}
+	bool drop_last_item() {
+		if (carried.empty()) return 0;
+		room_object_t const &obj(carried.back());
+		cur_value  -= get_obj_value (obj);
+		cur_weight -= get_obj_weight(obj);
+		assert(cur_value >= 0.0 && cur_weight >= 0.0); // is this okay if there's FP rounding error?
+		carried.pop_back();
+		return 1;
+	}
+	void collect_items() { // TODO: call when exiting building
+		if (carried.empty()) return; // nothing to add
+		std::ostringstream oss;
+		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
+		tot_value  += cur_value;  cur_value  = 0.0;
+		tot_weight += cur_weight; cur_weight = 0.0;
+		carried.clear(); // or add to collected?
+		oss << "Total value $" << tot_value << " Total weight " << tot_weight << " lbs";
+		print_text_onscreen(oss.str(), GREEN, 1.0, 5*TICKS_PER_SECOND, 0);
+	}
+	void show_stats() const {
+		// TODO
+	}
+};
+
+player_inventory_t player_inventory;
 
 bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
 	if (!has_room_geom()) return 0;
@@ -476,6 +519,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	assert(obj.type < NUM_ROBJ_TYPES);
 	assert(obj.type != TYPE_LIGHT && obj.type != TYPE_ELEVATOR); // these require special updates for drawing logic and cannot be removed at this time
 	bldg_obj_type_t const &type(bldg_obj_types[obj.type]);
+	player_inventory.add_item(obj);
 
 	if (obj.type == TYPE_PICTURE && !(obj.flags & RO_FLAG_TAKEN1)) {obj.flags |= RO_FLAG_TAKEN1;} // take picture, leave frame
 	else if (obj.type == TYPE_BED) {
