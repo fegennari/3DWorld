@@ -2150,6 +2150,7 @@ public:
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall, 2 = reflection for room with interior wall, 3 = reflection from mirror in a house
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
+		building_t const *const prev_player_building(player_building);
 
 		if (shadow_only) {
 			assert(!reflection_pass);
@@ -2524,6 +2525,11 @@ public:
 		glDepthFunc(GL_LESS);
 		fgPopMatrix();
 		enable_dlight_bcubes = 0;
+
+		if (player_building != prev_player_building) { // building transition
+			if (player_building     ) {player_building     ->register_player_enter_building();}
+			if (prev_player_building) {prev_player_building->register_player_exit_building ();}
+		}
 	}
 
 	void draw_building_lights(vector3d const &xlate) { // add night time lights to buildings; non-const because it modifies building_lights

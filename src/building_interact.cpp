@@ -439,7 +439,7 @@ public:
 		carried.pop_back();
 		return 1;
 	}
-	void collect_items() { // TODO: call when exiting building
+	void collect_items() {
 		if (carried.empty()) return; // nothing to add
 		std::ostringstream oss;
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
@@ -465,6 +465,13 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 	gen_sound(SOUND_ITEM, get_camera_pos(), 0.25);
 	interior->room_geom->remove_object(obj_id, *this);
 	return 1;
+}
+
+void building_t::register_player_enter_building() const {
+	// nothing to do yet
+}
+void building_t::register_player_exit_building() const {
+	player_inventory.collect_items();
 }
 
 bool has_cube_line_coll(point const &p1, point const &p2, vect_cube_t const &cubes) {
