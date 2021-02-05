@@ -152,7 +152,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 		point const pos2_bs(pos2 - xlate);
 		cube_t sc; sc.set_from_sphere(pos2_bs, radius); // sphere bounding cube
 
-		if ((zval + radius) > ground_floor_z1 && zval < (ground_floor_z1 + get_door_height())) { // on the ground floor
+		// Note: first check uses min of the two zvals to reject the basement, which is actually under the mesh
+		if ((min(pos2.z, p_last2.z) + radius) > ground_floor_z1 && zval < (ground_floor_z1 + get_door_height())) { // on the ground floor
 			for (auto d = doors.begin(); d != doors.end(); ++d) {
 				if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // doesn't apply to roof door
 				cube_t bc(d->get_bcube());
