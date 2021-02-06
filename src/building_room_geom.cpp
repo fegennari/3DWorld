@@ -763,6 +763,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		} // for b
 	} // for s
 	// add objects to the shelves
+	if (c.flags & RO_FLAG_OPEN) return; // shelves have already been expanded, don't need to create contained objects below
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	static vect_cube_t cubes;
