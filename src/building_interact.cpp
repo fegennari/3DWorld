@@ -450,7 +450,11 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 5*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		// TODO
+		if (cur_weight == 0.0 && tot_weight == 0.0) return; // don't show stats until the player has picked something up
+		std::ostringstream oss;
+		oss << "Current $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs";
+		float const aspect_ratio((float)window_width/(float)window_height);
+		draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
 	}
 };
 
@@ -583,5 +587,9 @@ void building_gameplay_action_key(bool mode) {
 	// show crosshair on first pickup because it's too difficult to pick up objects without it
 	if (mode) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
 	else      {toggle_door_open_state = 1;} // 'q'
+}
+
+void building_gameplay_next_frame() {
+	player_inventory.show_stats();
 }
 

@@ -77,6 +77,7 @@ void toggle_fullscreen();
 
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
+void building_gameplay_next_frame(); // from building_interact.cc
 
 
 void glClearColor_rgba(const colorRGBA &color) {
@@ -1013,6 +1014,7 @@ void display() {
 		}
 		else if (world_mode == WMODE_INF_TERRAIN && show_bldg_pickup_crosshair) {
 			show_crosshair(WHITE, 0);
+			building_gameplay_next_frame();
 		}
 		else if (world_mode == WMODE_GROUND && voxel_editing) {
 			show_crosshair(((voxel_editing == 2) ? RED : GREEN), do_zoom);
