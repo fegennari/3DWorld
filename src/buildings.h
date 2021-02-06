@@ -269,7 +269,7 @@ uint16_t const RO_FLAG_TOS     = 0x02; // at top of stairs
 uint16_t const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 uint16_t const RO_FLAG_INVIS   = 0x08; // invisible
 uint16_t const RO_FLAG_NOCOLL  = 0x10; // no collision detection
-uint16_t const RO_FLAG_OPEN    = 0x20; // open, for elevators and closet doors
+uint16_t const RO_FLAG_OPEN    = 0x20; // open, for elevators, closet doors, and bathroom stalls
 uint16_t const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 uint16_t const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
@@ -449,7 +449,7 @@ struct building_room_geom_t {
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm);
 	void add_crate(room_object_t const &c, bool is_small=1);
 	void add_box(room_object_t const &c, bool is_small=1);
-	void add_paint_can(room_object_t const &c, float side_tscale_add=0.0);
+	void add_paint_can(room_object_t const &c);
 	void add_shelves(room_object_t const &c, float tscale);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
