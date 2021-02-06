@@ -28,7 +28,7 @@ shader_t reflection_shader;
 building_t const *player_building(nullptr);
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, toggle_door_open_state;
-extern bool teleport_to_screenshot, enable_dlight_bcubes, do_room_obj_pickup;
+extern bool teleport_to_screenshot, enable_dlight_bcubes;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks;
@@ -2321,7 +2321,7 @@ public:
 						// run any player interaction logic here
 						if (toggle_room_light) {b.toggle_room_light(camera_xlated);}
 						if (toggle_door_open_state && PLAYER_CAN_OPEN_DOORS) {b.toggle_door_state_closest_to(camera_xlated, cview_dir);}
-						if (do_room_obj_pickup) {b.player_pickup_object(camera_xlated, cview_dir);}
+						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2 && camera_surf_collide) {b.update_elevators(camera_xlated);} // update elevators if the player is in the building
 						b.update_door_verts(**i); // update here, before the next shadow pass, if the player changed a door state
@@ -2353,7 +2353,7 @@ public:
 				end_stencil_write();
 			}
 		} // end have_interior
-		if (!reflection_pass) {toggle_room_light = toggle_door_open_state = do_room_obj_pickup = teleport_to_screenshot = 0;} // reset these even if the player wasn't in a building
+		if (!reflection_pass) {toggle_room_light = toggle_door_open_state = teleport_to_screenshot = 0;} // reset these even if the player wasn't in a building
 
 		if (draw_interior && reflection_pass != 2) { // skip for interior room reflections (but what about looking out through the bathroom door?)
 			// draw back faces of buildings, which will be interior walls

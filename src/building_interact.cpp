@@ -6,11 +6,11 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
-bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0);
+bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0), can_pickup_bldg_obj(0);
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 
 extern bool toggle_door_open_state;
-extern int window_width, window_height;
+extern int window_width, window_height, display_framerate;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
 
@@ -464,6 +464,11 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 	if (!has_room_geom()) return 0;
 	int const obj_id(interior->room_geom->find_nearest_pickup_object(*this, at_pos, in_dir, 3.0*CAMERA_RADIUS));
 	if (obj_id < 0) return 0;
+
+	if (!do_room_obj_pickup) { // player has not used the pickup key, but we can still use this to notify the player that an object can be picked up
+		can_pickup_bldg_obj = 1;
+		return 0;
+	}
 	assert((unsigned)obj_id < interior->room_geom->objs.size());
 	show_object_info(interior->room_geom->objs[obj_id]);
 	gen_sound(SOUND_ITEM, get_camera_pos(), 0.25);
@@ -530,6 +535,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 	} // for i
 	return closest_obj_id;
 }
+
 void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) {
 	assert((unsigned)obj_id < objs.size());
 	room_object_t &obj(objs[obj_id]);
@@ -556,12 +562,14 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
 	if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object may affect the AI navigation graph
 }
+
 int building_room_geom_t::find_avail_obj_slot() const {
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type == TYPE_BLOCKER) {return int(i - objs.begin());} // blockers are used as temporaries for room object placement and to replace removed objects
 	}
 	return -1; // no slot found
 }
+
 bool building_room_geom_t::add_room_object(room_object_t const &obj, bool set_obj_id) {
 	int const obj_id(find_avail_obj_slot());
 	if (obj_id < 0) return 0; // no slot found
@@ -590,6 +598,7 @@ void building_gameplay_action_key(bool mode) {
 }
 
 void building_gameplay_next_frame() {
-	player_inventory.show_stats();
+	if (display_framerate) {player_inventory.show_stats();} // controlled by framerate toggle
+	can_pickup_bldg_obj = do_room_obj_pickup = 0; // reset for next frame
 }
 
