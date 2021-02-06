@@ -453,8 +453,8 @@ struct building_room_geom_t {
 	void add_shelves(room_object_t const &c, float tscale);
 	void add_keyboard(room_object_t const &c);
 	void add_obj_with_front_texture(room_object_t const &c, std::string const &texture_name, colorRGBA const &sides_color, bool is_small=0);
-	void add_computer(room_object_t const &c, bool is_small=0);
-	void add_mwave(room_object_t const &c, bool is_small=0);
+	void add_computer(room_object_t const &c);
+	void add_mwave(room_object_t const &c);
 	void add_mirror(room_object_t const &c);
 	void add_shower(room_object_t const &c, float tscale);
 	void add_bottle(room_object_t const &c, bool add_bottom=0);

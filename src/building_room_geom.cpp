@@ -810,7 +810,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 				C.set_from_point(center);
 				set_cube_zvals(C, S.z2(), S.z2()+cheight);
 				C.expand_by_xy(sz);
-				if (!has_bcube_int(C, cubes)) {add_computer(C, 1); cubes.push_back(C);}
+				if (!has_bcube_int(C, cubes)) {add_computer(C); cubes.push_back(C);}
 			} // for n
 		}
 		// add keyboards
@@ -875,8 +875,8 @@ void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, st
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
 	get_material(tid_nm_pair_t(), 1, 0, is_small).add_cube_to_verts(c, apply_light_color(c, sides_color), zero_vector, ~front_mask); // sides, shadows
 }
-void building_room_geom_t::add_computer(room_object_t const &c, bool is_small) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, is_small);}
-void building_room_geom_t::add_mwave   (room_object_t const &c, bool is_small) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY,   is_small);}
+void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_mwave   (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY,   0);} // is_small=0
 
 void building_room_geom_t::add_mirror(room_object_t const &c) {
 	tid_nm_pair_t tp(REFLECTION_TEXTURE_ID, 0.0);
@@ -2244,7 +2244,6 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_CLOSET:  add_closet  (*i, building.get_material().wall_tex, 1, 0); break;
 		case TYPE_MIRROR:  add_mirror  (*i); break;
 		case TYPE_SHOWER:  add_shower  (*i, tscale); break;
-		case TYPE_COMPUTER:add_computer(*i); break;
 		case TYPE_MWAVE:   add_mwave   (*i); break;
 		case TYPE_BLINDS:  add_blinds  (*i); break;
 		case TYPE_ELEVATOR: break; // not handled here
@@ -2283,6 +2282,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_CRATE:     add_crate    (*i); break; // not small but only added to windowless rooms
 		case TYPE_BOX:       add_box      (*i); break; // not small but only added to windowless rooms
 		case TYPE_SHELVES:   add_shelves  (*i, tscale); break; // not small but only added to windowless rooms
+		case TYPE_COMPUTER:  add_computer (*i); break;
 		case TYPE_KEYBOARD:  add_keyboard (*i); break;
 		case TYPE_WINE_RACK: add_wine_rack(*i, 0, 1, tscale); break;
 		case TYPE_BOTTLE:    add_bottle   (*i); break;
