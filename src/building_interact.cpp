@@ -324,13 +324,13 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BLOCKER   ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 0.0,   0.0,   "<blocker>"); // not a drawn object; block other objects, but not the player or AI
 	bldg_obj_types[TYPE_COLLIDER  ] = bldg_obj_type_t(1, 1, 0, 0, 0, 0, 0.0,   0.0,   "<collider>"); // not a drawn object; block the player and AI
 	bldg_obj_types[TYPE_CUBICLE   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 500.0, 250.0, "cubicle"); // skip collisions because they have their own colliders
-	bldg_obj_types[TYPE_STALL     ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 200.0, 150.0, "bathroom stall");
+	bldg_obj_types[TYPE_STALL     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 40.0,  20.0,  "bathroom divider"); // can pick up short sections of bathroom stalls (urinal dividers)
 	bldg_obj_types[TYPE_SIGN      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 10.0,  1.0,   "sign");
 	bldg_obj_types[TYPE_COUNTER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "kitchen counter");
 	bldg_obj_types[TYPE_CABINET   ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0.0,   0.0,   "kitchen cabinet");
 	bldg_obj_types[TYPE_KSINK     ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "kitchen sink");
 	bldg_obj_types[TYPE_BRSINK    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "bathroom sink");
-	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 18.0,  8.0,  "potted plant");
+	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 18.0,  8.0,   "potted plant");
 	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 3, 120.0, 120.0, "dresser");
 	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 60.0,  35.0,  "nightstand");
 	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
@@ -505,18 +505,24 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		assert(i->type < NUM_ROBJ_TYPES);
-		if (!bldg_obj_types[i->type].pickup) continue; // this object can't be picked up
+		if (!bldg_obj_types[i->type].pickup) continue; // this object type can't be picked up
 		point p1c(at_pos), p2c(p2);
-		if (!do_line_clip(p1c, p2c, i->d)) continue; // test ray intersection vs. bcube
+		if (!do_line_clip(p1c, p2c, i->d))   continue; // test ray intersection vs. bcube
 		float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
-		if (closest_obj_id >= 0 && dsq > dmin_sq) continue; // not the closest
+		if (dmin_sq > 0.0 && dsq > dmin_sq)  continue; // not the closest
+		
+		if (i->type == TYPE_STALL && i->shape != SHAPE_SHORT) { // can only take short stalls (separating urinals)
+			closest_obj_id = -1; // stalls block the player from taking toilets
+			dmin_sq = dsq;
+			continue;
+		}
 		if (i->type == TYPE_MIRROR && !(i->flags & RO_FLAG_IS_HOUSE)) continue; // can only pick up mirrors from houses, not office buildings
-		if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE) continue; // can only pick up short (TV) tables and cylindrical tables
-		if (i->type == TYPE_BED && (i->flags & RO_FLAG_TAKEN3)) continue; // can only take pillow, sheets, and mattress - not the frame
-		if (object_has_something_on_it(*i, objs)) continue; // can't remove a table, etc. that has something on it
-		if (building.check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // skip if it's on the other side of a wall, ceiling, or floor
-		closest_obj_id = (i - objs.begin());
-		dmin_sq = dsq;
+		if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE)          continue; // can only pick up short (TV) tables and cylindrical tables
+		if (i->type == TYPE_BED   && (i->flags & RO_FLAG_TAKEN3))     continue; // can only take pillow, sheets, and mattress - not the frame
+		if (object_has_something_on_it(*i, objs))                     continue; // can't remove a table, etc. that has something on it
+		if (building.check_for_wall_ceil_floor_int(at_pos, p1c))      continue; // skip if it's on the other side of a wall, ceiling, or floor
+		closest_obj_id = (i - objs.begin()); // valid pickup object
+		dmin_sq = dsq; // this object is the closest, even if it can't be picked up
 	} // for i
 	return closest_obj_id;
 }
