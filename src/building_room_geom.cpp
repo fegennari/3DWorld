@@ -1777,13 +1777,19 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	door.expand_in_dim(!c.dim, -frame_thick);
 	front1.d[!c.dim][1] = door.d[!c.dim][0];
 	front2.d[!c.dim][0] = door.d[!c.dim][1];
-	door.expand_in_dim(!c.dim, -door_gap);
 	unsigned const side_skip_mask(get_skip_mask_for_xy(c.dim));
 	mat.add_cube_to_verts(side1,  color, tex_origin, side_skip_mask);
 	mat.add_cube_to_verts(side2,  color, tex_origin, side_skip_mask);
 	mat.add_cube_to_verts(front1, color, tex_origin, EF_Z12);
 	mat.add_cube_to_verts(front2, color, tex_origin, EF_Z12);
-	mat.add_cube_to_verts(door,   color, tex_origin);
+
+	if (c.flags & RO_FLAG_OPEN) {
+		// draw open door?
+	}
+	else {
+		door.expand_in_dim(!c.dim, -door_gap);
+		mat.add_cube_to_verts(door, color, tex_origin);
+	}
 }
 
 int get_cubicle_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg");} // select from one of 2 textures

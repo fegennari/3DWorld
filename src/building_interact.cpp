@@ -146,8 +146,8 @@ bool check_door_dir(point const &closest_to, vector3d const &in_dir, cube_t cons
 bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir) { // called for the player
 	if (!interior) return 0; // error?
 	float closest_dist_sq(0.0);
-	unsigned door_ix(0);
-	bool is_closet(0);
+	unsigned door_ix(0), obj_ix(0);
+	bool is_obj(0);
 
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
@@ -157,34 +157,35 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		float const dist_sq(p2p_dist_sq(closest_to, center));
 		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin());}
 	} // for i
-	if (is_house && interior->room_geom) { // check for closet doors; only houses have closets
+	if (interior->room_geom) { // check for closet doors in houses and bathroom stalls in office buildings
 		vector<room_object_t> &objs(interior->room_geom->objs);
 
 		for (auto i = objs.begin(); i != objs.end(); ++i) {
-			if (i->type != TYPE_CLOSET) continue;
+			if (i->type != TYPE_CLOSET && !(i->type == TYPE_STALL && i->shape == SHAPE_CUBE)) continue;
 			if (i->get_sz_dim(!i->dim) >= 1.2*i->dz()) continue; // not a closet with a small door
 			point center(i->get_cube_center());
 			center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
 			if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
 			if (!check_door_dir(closest_to, in_dir, *i, center)) continue; // door is not in the correct direction, skip
 			float const dist_sq(p2p_dist_sq(closest_to, center));
-			if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - objs.begin()); is_closet = 1;}
+			if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; obj_ix = (i - objs.begin()); is_obj = 1;}
 		} // for i
 	}
 	if (closest_dist_sq == 0.0) return 0; // no door found
 
-	if (is_closet) {
-		auto &obj(interior->room_geom->objs[door_ix]);
+	if (is_obj) { // closet or bathroom stall
+		auto &obj(interior->room_geom->objs[obj_ix]);
 		if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} // close
 		else               {obj.flags |=  RO_FLAG_OPEN;} // open
 		interior->room_geom->clear_static_vbos(); // need to regen object data
-		play_door_open_close_sound(obj.get_cube_center(), obj.is_open());
+		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
+		play_door_open_close_sound(obj.get_cube_center(), obj.is_open(), pitch);
 	}
 	else {toggle_door_state(door_ix, 1);} // toggle state if interior door; player_in_this_building=1
 	return 1;
 }
 
-void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building) {
+void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building) { // called by the player or AI
 	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
 	door.open ^= 1; // toggle open state
@@ -194,11 +195,11 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	if (player_in_this_building) {play_door_open_close_sound(door.get_cube_center(), door.open);}
 }
 
-void building_t::play_door_open_close_sound(point const &pos, bool open) const {
+void building_t::play_door_open_close_sound(point const &pos, bool open, float pitch) const {
 	point pos_rot(pos);
 	if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), pos_rot);}
 	point const sound_pos(pos_rot + get_camera_coord_space_xlate()); // convert to camera space
-	gen_sound((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
+	gen_sound((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos, 1.0, pitch);
 }
 
 // elevators
@@ -521,8 +522,10 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 		if (dmin_sq > 0.0 && dsq > dmin_sq)  continue; // not the closest
 		
 		if (i->type == TYPE_STALL && i->shape != SHAPE_SHORT) { // can only take short stalls (separating urinals)
-			closest_obj_id = -1; // stalls block the player from taking toilets
-			dmin_sq = dsq;
+			if (!(i->flags & RO_FLAG_OPEN)) { // stalls block the player from taking toilets unless open
+				closest_obj_id = -1;
+				dmin_sq = dsq;
+			}
 			continue;
 		}
 		if (i->type == TYPE_MIRROR && !(i->flags & RO_FLAG_IS_HOUSE)) continue; // can only pick up mirrors from houses, not office buildings
