@@ -472,6 +472,7 @@ struct building_room_geom_t {
 	bool add_room_object(room_object_t const &obj, bool set_obj_id=0);
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
+	void add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add);
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);

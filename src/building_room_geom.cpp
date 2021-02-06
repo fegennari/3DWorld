@@ -770,6 +770,8 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	static vect_cube_t cubes;
+	static vector<room_object_t> objects;
+	objects.clear();
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
@@ -792,14 +794,11 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
 			C.dim   = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
 
-			if (is_house || rgen.rand_bool()) {
-				C.type = TYPE_BOX;
-				add_box(C);
-			}
+			if (is_house || rgen.rand_bool()) {C.type = TYPE_BOX; objects.push_back(C);}
 			else {
 				C.obj_id = rgen.rand(); // used to select crate texture
 				C.type   = TYPE_CRATE;
-				add_crate(C);
+				objects.push_back(C);
 			}
 			cubes.push_back(C);
 		} // for n
@@ -818,7 +817,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 				C.set_from_point(center);
 				set_cube_zvals(C, S.z2(), S.z2()+cheight);
 				C.expand_by_xy(sz);
-				if (!has_bcube_int(C, cubes)) {add_computer(C); cubes.push_back(C);}
+				if (!has_bcube_int(C, cubes)) {objects.push_back(C); cubes.push_back(C);}
 			} // for n
 		}
 		// add keyboards
@@ -834,7 +833,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 				C.set_from_point(center);
 				set_cube_zvals(C, S.z2(), S.z2()+kbd_height);
 				C.expand_by_xy(sz);
-				if (!has_bcube_int(C, cubes)) {C.dir = rgen.rand_bool(); add_keyboard(C); cubes.push_back(C);}
+				if (!has_bcube_int(C, cubes)) {C.dir = rgen.rand_bool(); objects.push_back(C); cubes.push_back(C);}
 			} // for n
 		}
 		// add bottles
@@ -851,7 +850,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			set_cube_zvals(C, S.z2(), S.z2()+bottle_height);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = bottle_colors[rgen.rand()%NUM_BOTTLE_COLORS];
-			add_bottle(C);
+			objects.push_back(C);
 			cubes.push_back(C);
 		} // for n
 		// add paint cans
@@ -868,12 +867,13 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 				C.set_from_sphere(center, pc_radius);
 				set_cube_zvals(C, S.z2(), S.z2()+pc_height);
 				if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-				add_paint_can(C); // use a random texture rotation
+				objects.push_back(C);
 				cubes.push_back(C);
 			} // for n
 			C.shape = SHAPE_CUBE; // reset for next object type
 		}
 	} // for s
+	add_small_static_objs_to_verts(objects);
 }
 
 void building_room_geom_t::add_keyboard(room_object_t const &c) {
@@ -2275,11 +2275,16 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 }
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 5.6ms
-	float const tscale(2.0/obj_scale);
 	mats_small .clear();
 	mats_plants.clear();
+	add_small_static_objs_to_verts(objs);
+	mats_small .create_vbos(building);
+	mats_plants.create_vbos(building);
+}
+void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add) {
+	float const tscale(2.0/obj_scale);
 
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
+	for (auto i = objs_to_add.begin(); i != objs_to_add.end(); ++i) {
 		if (!i->is_visible()) continue;
 		assert(i->is_strictly_normalized());
 		assert(i->type < NUM_ROBJ_TYPES);
@@ -2303,12 +2308,11 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_WINE_RACK: add_wine_rack(*i, 0, 1, tscale); break;
 		case TYPE_BOTTLE:    add_bottle   (*i); break;
 		case TYPE_PAPER:     add_paper    (*i); break;
+		case TYPE_PAINTCAN:  add_paint_can(*i); break;
 		case TYPE_PEN: case TYPE_PENCIL: add_pen_pencil(*i); break;
 		default: break;
 		}
 	} // for i
-	mats_small .create_vbos(building);
-	mats_plants.create_vbos(building);
 }
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
 	obj_model_insts.clear();
