@@ -339,7 +339,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 3, 120.0, 120.0, "dresser");
 	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 60.0,  35.0,  "nightstand");
 	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
-	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 3, 0.0,   0.0,   "closet");
+	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 3, 0.0,   0.0,   "closet"); // closets can't be picked up, but they can block a pickup
 	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "wall trim");
 	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing");
 	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
@@ -526,8 +526,8 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 		float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
 		if (dmin_sq > 0.0 && dsq > dmin_sq)  continue; // not the closest
 		
-		if (i->type == TYPE_STALL && i->shape != SHAPE_SHORT) { // can only take short stalls (separating urinals)
-			if (!(i->flags & RO_FLAG_OPEN)) { // stalls block the player from taking toilets unless open
+		if (i->type == TYPE_CLOSET || (i->type == TYPE_STALL && i->shape != SHAPE_SHORT)) { // can only take short stalls (separating urinals)
+			if (!(i->flags & RO_FLAG_OPEN) && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
 				closest_obj_id = -1;
 				dmin_sq = dsq;
 			}
