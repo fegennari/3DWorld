@@ -10,7 +10,7 @@ bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0), can_pickup_bldg_obj(0
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 
 extern bool toggle_door_open_state;
-extern int window_width, window_height, display_framerate;
+extern int window_width, window_height, display_framerate, player_in_closet;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
 
@@ -21,6 +21,7 @@ float get_radius_for_room_light(room_object_t const &obj);
 
 bool building_t::toggle_room_light(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
 	if (!has_room_geom()) return 0; // error?
+	if (player_in_closet) return 0; // can't toggle lights while in the closet
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	point query_pt(closest_to);
@@ -149,14 +150,16 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 	unsigned door_ix(0), obj_ix(0);
 	bool is_obj(0);
 
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-		if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
-		point center(i->get_cube_center());
-		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
-		if (!check_door_dir(closest_to, in_dir, *i, center)) continue; // door is not in the correct direction, skip
-		float const dist_sq(p2p_dist_sq(closest_to, center));
-		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin());}
-	} // for i
+	if (!player_in_closet) { // if the player is in the closet, only the closet door can be opened
+		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+			if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
+			point center(i->get_cube_center());
+			if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
+			if (!check_door_dir(closest_to, in_dir, *i, center)) continue; // door is not in the correct direction, skip
+			float const dist_sq(p2p_dist_sq(closest_to, center));
+			if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin());}
+		} // for i
+	}
 	if (interior->room_geom) { // check for closet doors in houses and bathroom stalls in office buildings
 		vector<room_object_t> &objs(interior->room_geom->objs);
 
