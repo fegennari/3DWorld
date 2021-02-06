@@ -535,7 +535,8 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5]) {
 
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
 	float const width(c.get_sz_dim(!c.dim)), height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
-	bool const use_small_door(width < 1.2*height), draw_interior(c.is_open() || player_in_closet);
+	bool const use_small_door(width < 1.2*height);
+	bool const draw_interior(1/*c.is_open() || player_in_closet*/); // Note: now always drawn to avoid recreating all small objects when the player opens/closes a closet door
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes);
 	get_closet_cubes(c, cubes);
@@ -629,8 +630,8 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			} // for d
 		} // for is_side
 	} // end inc_sm
-	if (inc_lg && draw_interior) {
-		// Note: unclear if this should be large or small, but doesn't much matter because it's only for the closets the player has manually opened
+	if (inc_sm && draw_interior) {
+		// Note: only for the closets the player has manually opened
 		cube_t interior(c);
 		if (!cubes[1].is_all_zeros()) {interior.d[!c.dim][0] = cubes[1].d[!c.dim][1];} // left  side (if wall exists)
 		if (!cubes[3].is_all_zeros()) {interior.d[!c.dim][1] = cubes[3].d[!c.dim][0];} // right side (if wall exists)
@@ -642,7 +643,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 		hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
 		set_wall_width(hanger_rod, c.get_center_dim(c.dim), hr_radius, c.dim);
-		get_wood_material(1.0, 1).add_ortho_cylin_to_verts(hanger_rod, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
+		get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(hanger_rod, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
 		// add boxes
 		rand_gen_t rgen;
 		c.set_rand_gen_state(rgen);
@@ -666,7 +667,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
 			C.dim   = rgen.rand_bool();
 			C.dir   = rgen.rand_bool();
-			add_box(C, 0); // is_small=0
+			add_box(C);
 			cubes.push_back(C);
 		} // for n
 	}
@@ -675,14 +676,14 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
 
-void building_room_geom_t::add_crate(room_object_t const &c, bool is_small) {
+void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, is_small).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
+	get_material(tid_nm_pair_t(get_crate_tid(c), 0.0), 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked crate?)
 }
 
-void building_room_geom_t::add_box(room_object_t const &c, bool is_small) {
+void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because boxes are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, is_small));
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, 1)); // is_small=1
 	unsigned const verts_start(mat.quad_verts.size());
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked box?)
 	assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
@@ -2151,15 +2152,18 @@ void building_room_geom_t::clear() {
 }
 void building_room_geom_t::clear_materials() { // can be called to update textures, lighting state, etc.
 	clear_static_vbos();
-	mats_small.clear();
+	clear_static_small_vbos();
 	mats_dynamic.clear();
 	mats_lights.clear();
-	mats_plants.clear();
 }
 void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 	mats_static.clear();
 	obj_model_insts.clear(); // these are associated with static VBOs
 	mats_alpha.clear();
+}
+void building_room_geom_t::clear_static_small_vbos() {
+	mats_small.clear();
+	mats_plants.clear();
 }
 
 rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, bool small, bool transparent) {
@@ -2288,7 +2292,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 0, 1); break;
 		case TYPE_SIGN:      add_sign     (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
-		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim, don't need wall_tex
+		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
 		case TYPE_RAILING:   add_railing  (*i); break;
 		case TYPE_PLANT:     add_potted_plant(*i, 0, 1); break; // plant only
 		case TYPE_CRATE:     add_crate    (*i); break; // not small but only added to windowless rooms

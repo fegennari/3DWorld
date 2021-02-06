@@ -178,6 +178,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} // close
 		else               {obj.flags |=  RO_FLAG_OPEN;} // open
 		interior->room_geom->clear_static_vbos(); // need to regen object data
+		//if (obj.type == TYPE_CLOSET) {interior->room_geom->clear_static_small_vbos();} // no longer needed since closet interior is always drawn
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
 		play_door_open_close_sound(obj.get_cube_center(), obj.is_open(), pitch);
 	}

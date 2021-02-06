@@ -411,6 +411,7 @@ struct building_room_geom_t {
 	void clear();
 	void clear_materials();
 	void clear_static_vbos();
+	void clear_static_small_vbos();
 	void clear_and_recreate_lights() {lights_changed = 1;} // cache the state and apply the change later in case this is called from a different thread
 	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() +
 		mats_dynamic.count_all_verts() + mats_lights.count_all_verts() + mats_plants.count_all_verts() + mats_alpha.count_all_verts());}
@@ -447,8 +448,8 @@ struct building_room_geom_t {
 	void add_counter(room_object_t const &c, float tscale);
 	void add_cabinet(room_object_t const &c, float tscale);
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm);
-	void add_crate(room_object_t const &c, bool is_small=1);
-	void add_box(room_object_t const &c, bool is_small=1);
+	void add_crate(room_object_t const &c);
+	void add_box(room_object_t const &c);
 	void add_paint_can(room_object_t const &c);
 	void add_shelves(room_object_t const &c, float tscale);
 	void add_keyboard(room_object_t const &c);
