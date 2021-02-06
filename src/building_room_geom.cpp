@@ -650,6 +650,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		static vect_cube_t cubes;
 		cubes.clear();
 		room_object_t C(c);
+		C.type = TYPE_BOX;
 		vector3d sz;
 		point center;
 
@@ -789,9 +790,13 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
 			C.dim   = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
 
-			if (is_house || rgen.rand_bool()) {add_box(C);}
+			if (is_house || rgen.rand_bool()) {
+				C.type = TYPE_BOX;
+				add_box(C);
+			}
 			else {
 				C.obj_id = rgen.rand(); // used to select crate texture
+				C.type   = TYPE_CRATE;
 				add_crate(C);
 			}
 			cubes.push_back(C);
@@ -802,7 +807,8 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		float const h_val(0.21*1.1*dz), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 		sz[ c.dim] = 0.5*cdepth;
 		sz[!c.dim] = 0.5*cwidth;
-		C.dim = c.dim; C.dir = !c.dir; // reset dim, flip dir
+		C.dim  = c.dim; C.dir = !c.dir; // reset dim, flip dir
+		C.type = TYPE_COMPUTER;
 
 		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || cheight < shelf_clearance)) { // if it fits in all dims
 			for (unsigned n = 0; n < num_comps; ++n) {
@@ -818,6 +824,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		float const kbd_hwidth(0.7*0.5*1.1*2.0*h_val), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
 		sz[ c.dim] = 0.5*kbd_depth;
 		sz[!c.dim] = kbd_hwidth;
+		C.type = TYPE_KEYBOARD;
 
 		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || kbd_height < shelf_clearance)) { // if it fits in all dims
 			for (unsigned n = 0; n < num_kbds; ++n) {
@@ -830,7 +837,8 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		}
 		// add bottles
 		unsigned const num_bottles(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 9)); // 0-8, 75% chance
-		C.dir = C.dim = 0;
+		C.dir  = C.dim = 0;
+		C.type = TYPE_BOTTLE;
 
 		for (unsigned n = 0; n < num_bottles; ++n) {
 			// same as building_t::place_bottle_on_obj()
@@ -850,6 +858,8 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		if (2.1*edge_spacing < min(c_sz.x, c_sz.y)) { // shelf is wide/deep enough for paint cans
 			unsigned const num_pcans(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 7)); // 0-6, 75% chance
 			C.color = WHITE;
+			C.type  = TYPE_PAINTCAN;
+			C.shape = SHAPE_CYLIN;
 
 			for (unsigned n = 0; n < num_pcans; ++n) {
 				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + edge_spacing), (S.d[d][1] - edge_spacing));} // place at least edge_spacing from edge
@@ -859,6 +869,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 				add_paint_can(C, rgen.rand_float()); // use a random texture rotation
 				cubes.push_back(C);
 			} // for n
+			C.shape = SHAPE_CUBE; // reset for next object type
 		}
 	} // for s
 }
