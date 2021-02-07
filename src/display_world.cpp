@@ -1013,7 +1013,7 @@ void display() {
 			show_crosshair(get_inf_terrain_mod_color(), do_zoom);
 		}
 		else if (world_mode == WMODE_INF_TERRAIN && show_bldg_pickup_crosshair) {
-			show_crosshair(WHITE, can_pickup_bldg_obj);
+			show_crosshair((can_pickup_bldg_obj ? YELLOW : WHITE), can_pickup_bldg_obj);
 			building_gameplay_next_frame();
 		}
 		else if (world_mode == WMODE_GROUND && voxel_editing) {
