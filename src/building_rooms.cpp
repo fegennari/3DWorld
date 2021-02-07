@@ -1926,7 +1926,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {r->assign_to(RTYPE_LIBRARY, f);}
 			}
 			if (r->get_room_type(f) == RTYPE_NOTSET) { // room type not yet set, attempt to assign it with an optional room type
-				if (f == 0 && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if on first floor and has exterior door and is unassigned
+				if (is_house && !is_basement && f == 0 && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if on first floor, has exterior door, and unassigned
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 				// else house
 				else if (has_stairs) {} // will be marked as RTYPE_STAIRS below
