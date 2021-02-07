@@ -532,6 +532,42 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5]) {
 	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(depth - 0.8*wall_thick); // make it narrow
 	cubes[4] = doors; // Note: this is for closed door; caller must handle open door
 }
+cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) {
+	cube_t interior(c);
+	if (!cubes[1].is_all_zeros()) {interior.d[!c.dim][0] = cubes[1].d[!c.dim][1];} // left  side (if wall exists)
+	if (!cubes[3].is_all_zeros()) {interior.d[!c.dim][1] = cubes[3].d[!c.dim][0];} // right side (if wall exists)
+	interior.d[ c.dim][c.dir] = cubes[2].d[c.dim][!c.dir]; // set to inside of front wall
+	assert(interior.is_strictly_normalized());
+	return interior;
+}
+void add_closet_boxes(room_object_t const &c, cube_t const &interior, vector<room_object_t> &objects) {
+	float const depth(interior.get_sz_dim(c.dim)), box_sz(0.25*depth);
+	rand_gen_t rgen;
+	c.set_rand_gen_state(rgen);
+	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
+	static vect_cube_t cubes;
+	cubes.clear();
+	room_object_t C(c);
+	C.type = TYPE_BOX;
+	vector3d sz;
+	point center;
+
+	for (unsigned n = 0; n < num_boxes; ++n) {
+		for (unsigned d = 0; d < 2; ++d) {
+			sz    [d] = box_sz*rgen.rand_uniform(0.5, 1.0); // x,y half width
+			center[d] = rgen.rand_uniform(interior.d[d][0]+sz[d], interior.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
+		}
+		C.set_from_point(center);
+		set_cube_zvals(C, interior.z1(), (interior.z1() + box_sz*rgen.rand_uniform(0.8, 1.5)));
+		C.expand_by_xy(sz);
+		if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
+		C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
+		C.dim   = rgen.rand_bool();
+		C.dir   = rgen.rand_bool();
+		objects.push_back(C);
+		cubes.push_back(C);
+	} // for n
+}
 
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
 	float const width(c.get_sz_dim(!c.dim)), height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
@@ -627,48 +663,28 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	} // end inc_sm
 	if (inc_sm /*&& draw_interior*/) { // Note: now always drawn to avoid recreating all small objects when the player opens/closes a closet door
 		// Note: only for the closets the player has manually opened
-		cube_t interior(c);
-		if (!cubes[1].is_all_zeros()) {interior.d[!c.dim][0] = cubes[1].d[!c.dim][1];} // left  side (if wall exists)
-		if (!cubes[3].is_all_zeros()) {interior.d[!c.dim][1] = cubes[3].d[!c.dim][0];} // right side (if wall exists)
-		interior.d[ c.dim][c.dir] = cubes[2].d[c.dim][!c.dir]; // set to inside of front wall
-		assert(interior.is_strictly_normalized());
+		cube_t const interior(get_closet_interior_space(c, cubes));
 		// add hanger rod
-		float const depth(interior.get_sz_dim(c.dim)), hr_radius(0.015*window_vspacing), box_sz(0.25*depth);
+		float const hr_radius(0.015*window_vspacing);
 		cube_t hanger_rod(interior);
 		hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 		hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
 		set_wall_width(hanger_rod, c.get_center_dim(c.dim), hr_radius, c.dim);
 		get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(hanger_rod, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
-		// add boxes
-		rand_gen_t rgen;
-		c.set_rand_gen_state(rgen);
-		unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
-		static vect_cube_t cubes;
-		cubes.clear();
-		room_object_t C(c);
-		C.type = TYPE_BOX;
-		vector3d sz;
-		point center;
-
-		for (unsigned n = 0; n < num_boxes; ++n) {
-			for (unsigned d = 0; d < 2; ++d) {
-				sz    [d] = box_sz*rgen.rand_uniform(0.5, 1.0); // x,y half width
-				center[d] = rgen.rand_uniform(interior.d[d][0]+sz[d], interior.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
-			}
-			C.set_from_point(center);
-			set_cube_zvals(C, interior.z1(), (interior.z1() + box_sz*rgen.rand_uniform(0.8, 1.5)));
-			C.expand_by_xy(sz);
-			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
-			C.dim   = rgen.rand_bool();
-			C.dir   = rgen.rand_bool();
-			add_box(C);
-			cubes.push_back(C);
-		} // for n
+		
+		if (!(c.flags & RO_FLAG_EXPANDED)) { // add boxes if not expanded
+			static vector<room_object_t> objects;
+			objects.clear();
+			add_closet_boxes(c, interior, objects);
+			add_small_static_objs_to_verts(objects);
+		}
 	}
 }
 void building_room_geom_t::expand_closet(room_object_t const &c) {
-	// WRITE, if needed
+	cube_t cubes[5];
+	get_closet_cubes(c, cubes);
+	cube_t const interior(get_closet_interior_space(c, cubes));
+	add_closet_boxes(c, interior, expanded_objs);
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -2374,7 +2390,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::expand_object(room_object_t &c) {
-	if (c.flags & RO_FLAG_EXPANDED) {assert(0); return;} // already expanded; should this be an error?
+	if (c.flags & RO_FLAG_EXPANDED) return; // already expanded
 	switch (c.type) {
 	case TYPE_BCASE:   expand_bookcase(c); break;
 	case TYPE_CLOSET:  expand_closet  (c); break;
