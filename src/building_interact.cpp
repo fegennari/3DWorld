@@ -10,6 +10,7 @@ float const PICKUP_WEIGHT_LIMIT = 1000.0; // should be smaller, and defined in t
 
 bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0);
 int can_pickup_bldg_obj(0);
+float office_chair_rot_rate(0.0);
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 
 extern bool toggle_door_open_state;
@@ -138,16 +139,18 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	open_door_ix = door_ix;
 }
 
-bool check_door_dir(point const &closest_to, vector3d const &in_dir, cube_t const &door, point const &center) { // Note: only zvals of door are used, no rotate required
-	if (in_dir == zero_vector) return 1; // direction filter specified
+bool check_obj_dir_dist(point const &closest_to, vector3d const &in_dir, cube_t const &c, point const &center, float dmax) { // Note: only zvals of door are used, no rotate required
+	if (!c.closest_dist_less_than(closest_to, dmax)) return 0; // too far
+	if (in_dir == zero_vector) return 1; // no direction filter specified
 	point vis_pt(center.x, center.y, closest_to.z); // use query point zval
-	max_eq(vis_pt.z, door.z1()); // clamp visibility test point to z-range of door to allow the player to open the door even looking at the top or bottom of it
-	min_eq(vis_pt.z, door.z2());
+	max_eq(vis_pt.z, c.z1()); // clamp visibility test point to z-range of door to allow the player to open the door even looking at the top or bottom of it
+	min_eq(vis_pt.z, c.z2());
 	return (dot_product(in_dir, (vis_pt - closest_to).get_norm()) > 0.5); // door is not in the correct direction, skip
 }
 
 bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir) { // called for the player
 	if (!interior) return 0; // error?
+	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace());
 	float closest_dist_sq(0.0);
 	unsigned door_ix(0), obj_ix(0);
 	bool is_obj(0);
@@ -157,29 +160,42 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 			if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
 			point center(i->get_cube_center());
 			if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
-			if (!check_door_dir(closest_to, in_dir, *i, center)) continue; // door is not in the correct direction, skip
 			float const dist_sq(p2p_dist_sq(closest_to, center));
-			if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; door_ix = (i - interior->doors.begin());}
+			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq) continue; // not the closest
+			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, dmax)) continue; // door is not in the correct direction or too far away, skip
+			closest_dist_sq = dist_sq;
+			door_ix = (i - interior->doors.begin());
 		} // for i
 	}
 	if (interior->room_geom) { // check for closet doors in houses and bathroom stalls in office buildings
 		vector<room_object_t> &objs(interior->room_geom->objs);
 
 		for (auto i = objs.begin(); i != objs.end(); ++i) {
-			if (i->type != TYPE_CLOSET && !(i->type == TYPE_STALL && i->shape == SHAPE_CUBE)) continue;
-			if (i->get_sz_dim(!i->dim) >= 1.2*i->dz()) continue; // not a closet with a small door
+			// this loop only handles closets with small doors, cube bathroom stalls, and rotated office chairs
+			if (i->type != TYPE_CLOSET && !(i->type == TYPE_STALL && i->shape == SHAPE_CUBE) && !(i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT))) continue;
+			if (i->type == TYPE_CLOSET && i->get_sz_dim(!i->dim) >= 1.2*i->dz()) continue; // not a closet with a small door
 			point center(i->get_cube_center());
 			center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
 			if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
-			if (!check_door_dir(closest_to, in_dir, *i, center)) continue; // door is not in the correct direction, skip
+			if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
 			float const dist_sq(p2p_dist_sq(closest_to, center));
-			if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; obj_ix = (i - objs.begin()); is_obj = 1;}
+			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq) continue; // not the closest
+			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, dmax)) continue; // door is not in the correct direction or too far away, skip
+			closest_dist_sq = dist_sq; obj_ix = (i - objs.begin());
+			is_obj = 1;
 		} // for i
 	}
 	if (closest_dist_sq == 0.0) return 0; // no door found
 
 	if (is_obj) { // closet or bathroom stall
 		auto &obj(interior->room_geom->objs[obj_ix]);
+
+		if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
+			office_chair_rot_rate += 0.1;
+			obj.flags |= RO_FLAG_ROTATING;
+			// play a sound?
+			return 0; // done, doesn't count as a door
+		}
 		if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} // close
 		else               {obj.flags |=  RO_FLAG_OPEN;} // open
 		interior->room_geom->clear_static_vbos(); // need to regen object data
@@ -652,6 +668,11 @@ void building_gameplay_action_key(bool mode) {
 
 void building_gameplay_next_frame() {
 	if (display_framerate) {player_inventory.show_stats();} // controlled by framerate toggle
+	
+	if (office_chair_rot_rate != 0.0) { // update office chair rotation
+		office_chair_rot_rate *= exp(-0.05*fticks); // exponential slowdown
+		if (office_chair_rot_rate < 0.001) {office_chair_rot_rate = 0.0;} // stop rotating
+	}
 	can_pickup_bldg_obj = 0; // reset for next frame
 	do_room_obj_pickup  = 0; // reset for next frame
 }

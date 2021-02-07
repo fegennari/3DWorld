@@ -273,7 +273,7 @@ uint16_t const RO_FLAG_OPEN    = 0x20; // open, for elevators, closet doors, and
 uint16_t const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 uint16_t const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
-uint16_t const RO_FLAG_EMISSIVE= 0x100; // for signs
+uint16_t const RO_FLAG_EMISSIVE= 0x100; // for signs and lights
 uint16_t const RO_FLAG_HANGING = 0x200; // for signs
 uint16_t const RO_FLAG_ADJ_LO  = 0x400; // for kitchen counters/closets/door trim
 uint16_t const RO_FLAG_ADJ_HI  = 0x800; // for kitchen counters/closets/door trim
@@ -281,12 +281,13 @@ uint16_t const RO_FLAG_ADJ_BOT = 0x1000; // for door trim
 uint16_t const RO_FLAG_ADJ_TOP = 0x2000; // for door trim
 uint16_t const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections and shelves
 uint16_t const RO_FLAG_RAND_ROT= 0x8000; // random rotation for 3D models; used for office chair
-// object flags, second byte, alternate flags for pickup state
+// object flags, second byte, alternate flags for pickup/interact state
 uint16_t const RO_FLAG_TAKEN1  = 0x400;  // no picture / no bed pillows
 uint16_t const RO_FLAG_TAKEN2  = 0x800;  // no bed sheets
 uint16_t const RO_FLAG_TAKEN3  = 0x1000; // no bed mattress
 uint16_t const RO_FLAG_TAKEN4  = 0x2000; // for future use
 uint16_t const RO_FLAG_EXPANDED= 0x200;  // Note: aliased with RO_FLAG_HANGING
+uint16_t const RO_FLAG_ROTATING= 0x400;  // Note: aliased with RO_FLAG_ADJ_LO
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;

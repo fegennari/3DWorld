@@ -19,6 +19,7 @@ object_model_loader_t building_obj_model_loader;
 
 extern bool camera_in_building;
 extern int display_mode, frame_counter, player_in_closet;
+extern float office_chair_rot_rate;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
 
@@ -2414,6 +2415,19 @@ struct occlusion_stats_t {
 	}
 };
 
+void rotate_dir_about_z(vector3d &dir, float rate) { // Note: assumes dir is normalized
+	if (rate == 0.0) return;
+	assert(dir.z == 0.0); // dir must be in XY plane
+	float const new_angle(atan2(dir.y, dir.x) + rate*fticks);
+	dir.assign(cosf(new_angle), sinf(new_angle), 0.0);
+}
+void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
+	if (!(obj.flags & RO_FLAG_ROTATING)) return;
+	if (office_chair_rot_rate == 0.0) {obj.flags &= ~RO_FLAG_ROTATING; return;} // if no longer rotating, clear rotation bit
+	assert(obj.type == TYPE_OFF_CHAIR); // only office chairs are supported for now
+	rotate_dir_about_z(inst.dir, office_chair_rot_rate);
+}
+
 occlusion_stats_t occlusion_stats;
 
 // Note: non-const because it creates the VBO
@@ -2482,7 +2496,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
-		auto const &obj(get_room_object_by_index(i->obj_id));
+		auto &obj(get_room_object_by_index(i->obj_id));
 		//++occlusion_stats.nobj;
 		if (!player_in_building && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
 		//++occlusion_stats.next;
@@ -2496,6 +2510,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		//++occlusion_stats.ndraw;
 		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && (obj.flags & RO_FLAG_LIT));
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
+		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, i->model_id, shadow_only, 0, 0);
 		if (is_emissive) {s.set_color_e(BLACK);}
 		obj_drawn = 1;
