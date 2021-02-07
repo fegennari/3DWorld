@@ -41,7 +41,6 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 		float const dist_sq(p2p_dist_sq(closest_to, center));
 		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; closest_light = (i - objs.begin()); light_pos = center;}
 	} // for i
-	assert(closest_light < objs.size());
 	room_object_t &light(objs[closest_light]);
 	bool updated(0);
 
@@ -518,39 +517,49 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
 
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		assert(i->type < NUM_ROBJ_TYPES);
-		if (!bldg_obj_types[i->type].pickup) continue; // this object type can't be picked up
-		point p1c(at_pos), p2c(p2);
-		if (!do_line_clip(p1c, p2c, i->d))   continue; // test ray intersection vs. bcube
-		float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
-		if (dmin_sq > 0.0 && dsq > dmin_sq)  continue; // not the closest
+	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
+		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
+		unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0); // treat {objs + expanded_objs} as a single contiguous range
+
+		for (auto i = obj_vect.begin(); i != obj_vect.end(); ++i) {
+			assert(i->type < NUM_ROBJ_TYPES);
+			if (!bldg_obj_types[i->type].pickup) continue; // this object type can't be picked up
+			point p1c(at_pos), p2c(p2);
+			if (!do_line_clip(p1c, p2c, i->d))   continue; // test ray intersection vs. bcube
+			float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
+			if (dmin_sq > 0.0 && dsq > dmin_sq)  continue; // not the closest
 		
-		if (i->type == TYPE_CLOSET || (i->type == TYPE_STALL && i->shape != SHAPE_SHORT)) { // can only take short stalls (separating urinals)
-			if (!(i->flags & RO_FLAG_OPEN) && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
-				closest_obj_id = -1;
-				dmin_sq = dsq;
+			if (i->type == TYPE_CLOSET || (i->type == TYPE_STALL && i->shape != SHAPE_SHORT)) { // can only take short stalls (separating urinals)
+				if (!(i->flags & RO_FLAG_OPEN) && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
+					closest_obj_id = -1;
+					dmin_sq = dsq;
+				}
+				continue;
 			}
-			continue;
-		}
-		if (i->type == TYPE_MIRROR && !(i->flags & RO_FLAG_IS_HOUSE)) continue; // can only pick up mirrors from houses, not office buildings
-		if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE)          continue; // can only pick up short (TV) tables and cylindrical tables
-		if (i->type == TYPE_BED   && (i->flags & RO_FLAG_TAKEN3))     continue; // can only take pillow, sheets, and mattress - not the frame
-		if (object_has_something_on_it(*i, objs))                     continue; // can't remove a table, etc. that has something on it
-		if (building.check_for_wall_ceil_floor_int(at_pos, p1c))      continue; // skip if it's on the other side of a wall, ceiling, or floor
-		closest_obj_id = (i - objs.begin()); // valid pickup object
-		dmin_sq = dsq; // this object is the closest, even if it can't be picked up
-	} // for i
+			if (i->type == TYPE_MIRROR && !(i->flags & RO_FLAG_IS_HOUSE)) continue; // can only pick up mirrors from houses, not office buildings
+			if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE)          continue; // can only pick up short (TV) tables and cylindrical tables
+			if (i->type == TYPE_BED   && (i->flags & RO_FLAG_TAKEN3))     continue; // can only take pillow, sheets, and mattress - not the frame
+			if (object_has_something_on_it(*i, obj_vect))                 continue; // can't remove a table, etc. that has something on it
+			if (building.check_for_wall_ceil_floor_int(at_pos, p1c))      continue; // skip if it's on the other side of a wall, ceiling, or floor
+			closest_obj_id = (i - obj_vect.begin()) + obj_id_offset; // valid pickup object
+			dmin_sq = dsq; // this object is the closest, even if it can't be picked up
+		} // for i
+	} // for vect_id
 	return closest_obj_id;
 }
 
+room_object_t &building_room_geom_t::get_room_object_by_index(unsigned obj_id) {
+	if (obj_id < objs.size()) {return objs[obj_id];}
+	unsigned const exp_obj_id(obj_id - objs.size());
+	assert(exp_obj_id < expanded_objs.size());
+	return expanded_objs[exp_obj_id];
+}
+
 void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) {
-	assert((unsigned)obj_id < objs.size());
-	room_object_t &obj(objs[obj_id]);
-	assert(obj.type < NUM_ROBJ_TYPES);
-	assert(obj.type != TYPE_LIGHT && obj.type != TYPE_ELEVATOR); // these require special updates for drawing logic and cannot be removed at this time
-	bldg_obj_type_t const &type(bldg_obj_types[obj.type]);
+	room_object_t &obj(get_room_object_by_index(obj_id));
+	assert(obj.type != TYPE_ELEVATOR); // elevators require special updates for drawing logic and cannot be removed at this time
 	player_inventory.add_item(obj);
+	room_object const obj_type(obj.type);
 
 	if (obj.type == TYPE_PICTURE && !(obj.flags & RO_FLAG_TAKEN1)) {obj.flags |= RO_FLAG_TAKEN1;} // take picture, leave frame
 	else if (obj.type == TYPE_BED) {
@@ -563,12 +572,18 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		else if (obj.flags & RO_FLAG_TAKEN1) {obj.flags |= RO_FLAG_TAKEN2;} // take dirt
 		else {obj.flags |= RO_FLAG_TAKEN1;} // take plant
 	}
-	else {obj.type = TYPE_BLOCKER;} // replace it with an invisible blocker that won't collide with anything
+	else {obj.type = TYPE_BLOCKER; obj.flags = RO_FLAG_NOCOLL;} // replace it with an invisible blocker that won't collide with anything
+	update_draw_state_for_room_object(obj_type, building);
+}
+void building_room_geom_t::update_draw_state_for_room_object(room_object obj_type, building_t &building) {
 	// reuild necessary VBOs and other data structures
+	assert(obj_type < NUM_ROBJ_TYPES);
+	bldg_obj_type_t const &type(bldg_obj_types[obj_type]);
 	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
 	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
 	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
 	if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object may affect the AI navigation graph
+	if (obj_type == TYPE_LIGHT) {clear_and_recreate_lights();}
 }
 
 int building_room_geom_t::find_avail_obj_slot() const {
@@ -578,12 +593,13 @@ int building_room_geom_t::find_avail_obj_slot() const {
 	return -1; // no slot found
 }
 
-bool building_room_geom_t::add_room_object(room_object_t const &obj, bool set_obj_id) {
+bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id) {
 	int const obj_id(find_avail_obj_slot());
 	if (obj_id < 0) return 0; // no slot found
-	assert((unsigned)obj_id < objs.size());
-	objs[obj_id] = obj; // overwrite with new object
-	if (set_obj_id) {objs[obj_id].obj_id = (uint16_t)obj_id;}
+	room_object_t &obj_slot(get_room_object_by_index(obj_id));
+	obj_slot = obj; // overwrite with new object
+	if (set_obj_id) {obj_slot.obj_id = (uint16_t)obj_id;}
+	update_draw_state_for_room_object(obj.type, building);
 	return 1;
 }
 

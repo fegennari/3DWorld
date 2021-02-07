@@ -286,6 +286,7 @@ uint16_t const RO_FLAG_TAKEN1  = 0x400;  // no picture / no bed pillows
 uint16_t const RO_FLAG_TAKEN2  = 0x800;  // no bed sheets
 uint16_t const RO_FLAG_TAKEN3  = 0x1000; // no bed mattress
 uint16_t const RO_FLAG_TAKEN4  = 0x2000; // for future use
+uint16_t const RO_FLAG_EXPANDED= 0x200;  // Note: aliased with RO_FLAG_HANGING
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
@@ -400,7 +401,7 @@ struct building_room_geom_t {
 	unsigned stairs_start; // index of first object of TYPE_STAIR
 	point tex_origin;
 	colorRGBA wood_color;
-	vector<room_object_t> objs; // for drawing and collision detection
+	vector<room_object_t> objs, expanded_objs; // objects placed in rooms; expanded_objs is for things like shelves that have been expanded for player interaction
 	vector<obj_model_inst_t> obj_model_insts;
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha; // {large static, small static, dynamic, lights, plants, transparent} materials
 	vect_cube_t light_bcubes;
@@ -468,8 +469,10 @@ struct building_room_geom_t {
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const;
 	void remove_object(unsigned obj_id, building_t &building);
+	void update_draw_state_for_room_object(room_object obj_type, building_t &building);
+	room_object_t &get_room_object_by_index(unsigned obj_id);
 	int find_avail_obj_slot() const;
-	bool add_room_object(room_object_t const &obj, bool set_obj_id=0);
+	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0);
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add);

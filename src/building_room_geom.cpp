@@ -2275,6 +2275,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	mats_small .clear();
 	mats_plants.clear();
 	add_small_static_objs_to_verts(objs);
+	add_small_static_objs_to_verts(expanded_objs);
 	mats_small .create_vbos(building);
 	mats_plants.create_vbos(building);
 }
@@ -2430,8 +2431,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
-		assert(i->obj_id < objs.size());
-		auto const &obj(objs[i->obj_id]);
+		auto const &obj(get_room_object_by_index(i->obj_id));
 		//++occlusion_stats.nobj;
 		if (!player_in_building && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
 		//++occlusion_stats.next;

@@ -446,9 +446,7 @@ unsigned building_t::count_num_int_doors(room_t const &room) const {
 
 bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, float min_bed_space) const {
 	if (min_bed_space > 0.0) {
-		vector<room_object_t> &objs(interior->room_geom->objs);
-		assert(objs_start < objs.size());
-		room_object_t const &bed(objs[objs_start]);
+		room_object_t const &bed(interior->room_geom->get_room_object_by_index(objs_start));
 		assert(bed.type == TYPE_BED);
 		cube_t bed_exp(bed);
 		bed_exp.expand_by_xy(min_bed_space);
