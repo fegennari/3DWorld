@@ -34,10 +34,8 @@ protected:
 
 	int get_ndiv(point const &pos_) const;
 	void gen_dir_vel(rand_gen_t &rgen, float speed);
-	float heading() const {return atan2(velocity.x, velocity.y);}
-
 public:
-	animal_t() : enabled(0) {}
+	animal_t() : enabled(0), dir(zero_vector), color(BLACK) {}
 	void apply_force(vector3d const &force) {velocity += force;}
 	void apply_force_xy(vector3d const &force) {velocity.x += force.x; velocity.y += force.y;}
 	bool is_enabled() const {return enabled;}
@@ -49,7 +47,6 @@ class fish_t : public animal_t {
 
 	float get_mesh_zval_at_pos(tile_t const *const tile) const;
 	float get_half_height() const {return 0.4*radius;} // approximate
-
 public:
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
@@ -60,7 +57,6 @@ class bird_t : public animal_t {
 
 	bool flocking;
 	float time;
-
 public:
 	bird_t() : flocking(0), time(0) {}
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
@@ -74,15 +70,14 @@ class animal_group_base_t {
 protected:
 	rand_gen_t rgen;
 	bool generated;
-
 public:
 	animal_group_base_t() : generated(0) {}
 	bool was_generated() const {return generated;}
 };
 
 template<typename A> class animal_group_t : public vector<A>, public animal_group_base_t {
-	cube_t bcube;
 
+	cube_t bcube;
 public:
 	void gen(unsigned num, cube_t const &range, tile_t const *const tile);
 	void update(tile_t const *const tile);
