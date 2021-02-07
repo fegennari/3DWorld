@@ -469,7 +469,8 @@ struct building_room_geom_t {
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const;
 	void remove_object(unsigned obj_id, building_t &building);
-	void update_draw_state_for_room_object(room_object obj_type, building_t &building);
+	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
+	void update_draw_state_for_room_object(bldg_obj_type_t const &type, building_t &building);
 	room_object_t &get_room_object_by_index(unsigned obj_id);
 	int find_avail_obj_slot() const;
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0);

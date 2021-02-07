@@ -467,17 +467,20 @@ player_inventory_t player_inventory;
 
 bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
 	if (!has_room_geom()) return 0;
-	int const obj_id(interior->room_geom->find_nearest_pickup_object(*this, at_pos, in_dir, 3.0*CAMERA_RADIUS));
+	return interior->room_geom->player_pickup_object(*this, at_pos, in_dir);
+}
+bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
+	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS));
 	if (obj_id < 0) return 0;
+	room_object_t &obj(get_room_object_by_index(obj_id));
 
 	if (!do_room_obj_pickup) { // player has not used the pickup key, but we can still use this to notify the player that an object can be picked up
 		can_pickup_bldg_obj = 1;
 		return 0;
 	}
-	assert((unsigned)obj_id < interior->room_geom->objs.size());
-	show_object_info(interior->room_geom->objs[obj_id]);
+	show_object_info(obj);
 	gen_sound(SOUND_ITEM, get_camera_pos(), 0.25);
-	interior->room_geom->remove_object(obj_id, *this);
+	remove_object(obj_id, building);
 	return 1;
 }
 
@@ -559,7 +562,8 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	room_object_t &obj(get_room_object_by_index(obj_id));
 	assert(obj.type != TYPE_ELEVATOR); // elevators require special updates for drawing logic and cannot be removed at this time
 	player_inventory.add_item(obj);
-	room_object const obj_type(obj.type);
+	bldg_obj_type_t const type(get_taken_obj_type(obj)); // capture type before updating obj
+	bool const is_light(obj.type == TYPE_LIGHT);
 
 	if (obj.type == TYPE_PICTURE && !(obj.flags & RO_FLAG_TAKEN1)) {obj.flags |= RO_FLAG_TAKEN1;} // take picture, leave frame
 	else if (obj.type == TYPE_BED) {
@@ -573,17 +577,15 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		else {obj.flags |= RO_FLAG_TAKEN1;} // take plant
 	}
 	else {obj.type = TYPE_BLOCKER; obj.flags = RO_FLAG_NOCOLL;} // replace it with an invisible blocker that won't collide with anything
-	update_draw_state_for_room_object(obj_type, building);
+	if (is_light) {clear_and_recreate_lights();}
+	update_draw_state_for_room_object(type, building);
 }
-void building_room_geom_t::update_draw_state_for_room_object(room_object obj_type, building_t &building) {
+void building_room_geom_t::update_draw_state_for_room_object(bldg_obj_type_t const &type, building_t &building) {
 	// reuild necessary VBOs and other data structures
-	assert(obj_type < NUM_ROBJ_TYPES);
-	bldg_obj_type_t const &type(bldg_obj_types[obj_type]);
 	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
 	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
 	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
 	if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object may affect the AI navigation graph
-	if (obj_type == TYPE_LIGHT) {clear_and_recreate_lights();}
 }
 
 int building_room_geom_t::find_avail_obj_slot() const {
@@ -594,12 +596,13 @@ int building_room_geom_t::find_avail_obj_slot() const {
 }
 
 bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id) {
+	assert(obj.type != TYPE_LIGHT && get_room_obj_type(obj).pickup); // currently must be a pickup object, and not a light
 	int const obj_id(find_avail_obj_slot());
 	if (obj_id < 0) return 0; // no slot found
 	room_object_t &obj_slot(get_room_object_by_index(obj_id));
 	obj_slot = obj; // overwrite with new object
 	if (set_obj_id) {obj_slot.obj_id = (uint16_t)obj_id;}
-	update_draw_state_for_room_object(obj.type, building);
+	update_draw_state_for_room_object(get_taken_obj_type(obj), building);
 	return 1;
 }
 
