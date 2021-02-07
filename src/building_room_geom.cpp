@@ -735,7 +735,6 @@ void get_shelf_objects(room_object_t const &c, cube_t const shelves[4], unsigned
 	float const z_step(dz/(num_shelves + 1)), shelf_zspace(z_step - thickness), shelf_clearance(shelf_zspace - bracket_thickness), sz_scale(is_house ? 0.5 : 1.0);
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
-	objects.clear();
 	static vect_cube_t cubes;
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
@@ -885,6 +884,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// add objects to the shelves
 	if (c.flags & RO_FLAG_EXPANDED) return; // shelves have already been expanded, don't need to create contained objects below
 	static vector<room_object_t> objects;
+	objects.clear();
 	get_shelf_objects(c, shelves, num_shelves, objects);
 	add_small_static_objs_to_verts(objects);
 }
