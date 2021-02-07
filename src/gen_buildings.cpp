@@ -2258,7 +2258,7 @@ public:
 
 					if (!g->bcube.closest_dist_less_than(camera_xlated, ddist_scale*interior_draw_dist)) { // too far
 						if (g->has_room_geom) { // need to clear room geom
-							for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom();}
+							for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {(*i)->get_building(bi->ix).clear_room_geom(0);} // force=0
 							g->has_room_geom = 0;
 						}
 						continue;
@@ -2674,7 +2674,7 @@ public:
 		building_draw_wind_lights.clear_vbos();
 		building_draw_interior.clear_vbos();
 		building_draw_int_ext_walls.clear_vbos();
-		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom();} // likely required for tiled buildings
+		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom(1);} // force=1; likely required for tiled buildings
 	}
 	void update_building_door_open_state_verts(building_t const &building, unsigned door_ix) {building.update_door_open_state_verts(building_draw_interior, door_ix);}
 

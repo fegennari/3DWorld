@@ -396,7 +396,7 @@ struct obj_model_inst_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators, has_pictures, lights_changed;
+	bool has_elevators, has_pictures, lights_changed, modified_by_player;
 	unsigned char num_pic_tids;
 	float obj_scale;
 	unsigned stairs_start; // index of first object of TYPE_STAIR
@@ -407,8 +407,8 @@ struct building_room_geom_t {
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha; // {large static, small static, dynamic, lights, plants, transparent} materials
 	vect_cube_t light_bcubes;
 
-	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), num_pic_tids(0), obj_scale(1.0), stairs_start(0),
-		tex_origin(tex_origin_), wood_color(WHITE) {}
+	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), modified_by_player(0), num_pic_tids(0),
+		obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
@@ -757,7 +757,7 @@ struct building_t : public building_geom_t {
 	void gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
-	void clear_room_geom();
+	void clear_room_geom(bool force);
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
 	void update_stats(building_stats_t &s) const;

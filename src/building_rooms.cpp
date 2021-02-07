@@ -2481,8 +2481,9 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t
 	draw_room_geom(s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 
-void building_t::clear_room_geom() {
+void building_t::clear_room_geom(bool force) {
 	if (!has_room_geom()) return;
+	if (interior->room_geom->modified_by_player) return; // keep the player's modifications and don't delete the room geom
 	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
 	interior->room_geom.reset();
 }

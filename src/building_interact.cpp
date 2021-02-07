@@ -59,6 +59,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
 	point const sound_pos(get_camera_pos() + (light_pos - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
 	gen_sound(SOUND_CLICK, sound_pos);
+	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
 	return 1;
 }
 
@@ -208,6 +209,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		play_door_open_close_sound(obj.get_cube_center(), obj.is_open(), pitch);
 	}
 	else {toggle_door_state(door_ix, 1);} // toggle state if interior door; player_in_this_building=1
+	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	return 1;
 }
 
@@ -622,12 +624,13 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	if (is_light) {clear_and_recreate_lights();}
 	update_draw_state_for_room_object(type, building);
 }
-void building_room_geom_t::update_draw_state_for_room_object(bldg_obj_type_t const &type, building_t &building) {
+void building_room_geom_t::update_draw_state_for_room_object(bldg_obj_type_t const &type, building_t &building) { // Note: called when adding or removing objects
 	// reuild necessary VBOs and other data structures
 	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
 	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
 	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
 	if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object may affect the AI navigation graph
+	modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 }
 
 int building_room_geom_t::find_avail_obj_slot() const {
