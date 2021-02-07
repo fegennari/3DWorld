@@ -1708,11 +1708,40 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale);
 
 	if (inc_lg) {
+		bool const no_mattress(c.flags & RO_FLAG_TAKEN3);
 		colorRGBA const color(apply_wood_light_color(c));
 		add_tc_legs(legs_bcube, color, max(head_width, foot_width), tscale);
+		if (no_mattress) {get_wood_material(4.0*tscale);} // pre-allocate slats material if needed
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
 		vector3d const tex_origin(c.get_llc());
-		wood_mat.add_cube_to_verts(frame, color, tex_origin);
+
+		if (no_mattress) { // mattress is gone, draw the slats on the bottom of the bed
+			unsigned const num_slats = 12;
+			unsigned const slat_skip_faces(get_skip_mask_for_xy(!c.dim));
+			float const side_width(0.08*width), slat_spacing(length/num_slats), slat_width(0.45*slat_spacing), slat_gap(0.5*(slat_spacing - slat_width));
+			cube_t sides[2] = {frame, frame}, slat(frame);
+			sides[0].d[!c.dim][1] -= (width - side_width);
+			sides[1].d[!c.dim][0] += (width - side_width);
+			for (unsigned d = 0; d < 2; ++d) {wood_mat.add_cube_to_verts(sides[d], color, tex_origin);}
+			slat.expand_in_dim(!c.dim, -side_width); // flush with sides
+			cube_t ends[2] = {slat, slat};
+			ends[0].d[c.dim][1] = frame.d[c.dim][0] + slat_gap;
+			ends[1].d[c.dim][0] = frame.d[c.dim][1] - slat_gap;
+			for (unsigned d = 0; d < 2; ++d) {wood_mat.add_cube_to_verts(ends[d], color, tex_origin, slat_skip_faces);}
+			slat.d[c.dim][1] = slat.d[c.dim][0] + slat_spacing;
+			slat.expand_in_dim(c.dim, -slat_gap); // add gap between slats to each side
+			slat.expand_in_dim(2, -0.25*frame.dz()); // make thinner in Z
+			rgeom_mat_t &slat_mat(get_wood_material(4.0*tscale));
+			colorRGBA const slat_color(color*1.5); // make them lighter in color
+
+			for (unsigned n = 0; n < num_slats; ++n) {
+				slat_mat.add_cube_to_verts(slat, slat_color, tex_origin, (slat_skip_faces | EF_Z1));
+				slat.translate_dim(c.dim, slat_spacing);
+			}
+		}
+		else {
+			wood_mat.add_cube_to_verts(frame, color, tex_origin);
+		}
 		wood_mat.add_cube_to_verts(head, color, tex_origin, EF_Z1);
 		wood_mat.add_cube_to_verts(foot, color, tex_origin, EF_Z1);
 		
@@ -1743,10 +1772,11 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 				// TODO: add material to the top?
 			}
 		}
-		unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
-		if (c.flags & RO_FLAG_TAKEN3) {} // mattress taken, don't draw it; TODO: draw slats under the bed?
-		else if (c.flags & RO_FLAG_TAKEN2) {get_material(untex_shad_mat, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // sheets taken, bare mattress
-		else {get_material(sheet_tex, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // draw matterss with sheets
+		if (!no_mattress) {
+			unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
+			if (c.flags & RO_FLAG_TAKEN2) {get_material(untex_shad_mat, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // sheets taken, bare mattress
+			else {get_material(sheet_tex, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // draw matterss with sheets
+		}
 	}
 	if (inc_sm && !(c.flags & RO_FLAG_TAKEN1)) { // draw pillows if not taken
 		rgeom_mat_t &pillow_mat(get_material(sheet_tex, 1, 0, 1)); // small=1
