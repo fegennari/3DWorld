@@ -538,7 +538,6 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	bool const use_small_door(width < 1.2*height), draw_interior(c.is_open() || player_in_closet);
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes);
-	get_closet_cubes(c, cubes);
 
 	if (inc_lg) { // draw closet walls and doors
 		rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
