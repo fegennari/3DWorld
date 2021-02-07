@@ -666,7 +666,7 @@ void ped_manager_t::init(unsigned num_city, unsigned num_building) {
 		assign_ped_model(ped);
 		float const angle(rgen.rand_uniform(0.0, TWO_PI));
 		ped.pos   = i->p + vector3d(0.0, 0.0, ped.radius);
-		ped.dir   = vector3d(sinf(angle), cos(angle), 0.0);
+		ped.dir   = vector3d(cosf(angle), sinf(angle), 0.0);
 		ped.speed = (enable_bp_ai ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
 		ped.ssn   = (unsigned short)(peds.size() + peds_b.size()); // may wrap
 		ped.dest_bldg = i->bix; // store building index in dest_bldg field
