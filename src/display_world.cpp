@@ -249,7 +249,7 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 void log_location(point const &pos) {
 
 	static std::ofstream out;
-	static bool inited;
+	static bool inited(0);
 
 	if (!inited) {
 		out.open("positions.log.txt");
