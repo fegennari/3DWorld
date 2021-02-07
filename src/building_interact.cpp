@@ -6,7 +6,10 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
-bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0), can_pickup_bldg_obj(0);
+float const PICKUP_WEIGHT_LIMIT = 1000.0; // should be smaller, and defined in the config file
+
+bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0);
+int can_pickup_bldg_obj(0);
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 
 extern bool toggle_door_open_state;
@@ -434,6 +437,9 @@ public:
 		cur_value = cur_weight = tot_value = tot_weight = 0.0;
 		carried.clear();
 	}
+	bool can_pick_up_item(room_object_t const &obj) const {
+		return ((cur_weight + get_obj_weight(obj)) <= PICKUP_WEIGHT_LIMIT);
+	}
 	void add_item(room_object_t const &obj) {
 		cur_value  += get_obj_value (obj);
 		cur_weight += get_obj_weight(obj);
@@ -456,7 +462,7 @@ public:
 		tot_weight += cur_weight; cur_weight = 0.0;
 		carried.clear(); // or add to collected?
 		oss << "Total value $" << tot_value << " Total weight " << tot_weight << " lbs";
-		print_text_onscreen(oss.str(), GREEN, 1.0, 5*TICKS_PER_SECOND, 0);
+		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
 		if (cur_weight == 0.0 && tot_weight == 0.0) return; // don't show stats until the player has picked something up
@@ -476,13 +482,13 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
 	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS));
 	if (obj_id < 0) return 0;
+	room_object_t &obj(get_room_object_by_index(obj_id));
+	bool const can_pick_up(player_inventory.can_pick_up_item(obj));
 
 	if (!do_room_obj_pickup) { // player has not used the pickup key, but we can still use this to notify the player that an object can be picked up
-		can_pickup_bldg_obj = 1;
+		can_pickup_bldg_obj = (can_pick_up ? 1 : 2);
 		return 0;
 	}
-	room_object_t &obj(get_room_object_by_index(obj_id));
-
 	if (obj.type == TYPE_SHELVES) {
 		assert(!(obj.flags & RO_FLAG_EXPANDED)); // should not have been expanded
 		expand_object(obj);
@@ -490,6 +496,12 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
 		if (!picked_up) {create_small_static_vbos(building);} // assumes expanded objects are all "small"
 		return picked_up;
+	}
+	if (!can_pick_up) {
+		std::ostringstream oss;
+		oss << "Over weight limit of " << PICKUP_WEIGHT_LIMIT << " lbs";
+		print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
+		return 0;
 	}
 	show_object_info(obj);
 	gen_sound(SOUND_ITEM, get_camera_pos(), 0.25);
@@ -640,6 +652,7 @@ void building_gameplay_action_key(bool mode) {
 
 void building_gameplay_next_frame() {
 	if (display_framerate) {player_inventory.show_stats();} // controlled by framerate toggle
-	can_pickup_bldg_obj = do_room_obj_pickup = 0; // reset for next frame
+	can_pickup_bldg_obj = 0; // reset for next frame
+	do_room_obj_pickup  = 0; // reset for next frame
 }
 
