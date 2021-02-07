@@ -668,6 +668,9 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		} // for n
 	}
 }
+void building_room_geom_t::expand_closet(room_object_t const &c) {
+	// WRITE, if needed
+}
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
@@ -713,62 +716,28 @@ void building_room_geom_t::add_paint_can(room_object_t const &c) {
 	get_metal_material(1, 0, 1).add_disk_to_verts(top, 0.5*min(c.dx(), c.dy()), 0, apply_light_color(c, LT_GRAY)); // shadowed, specular metal; small=1
 }
 
-void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
-	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
-	// draw back in case it's against a window, even though that shouldn't happen
-	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
-	unsigned const skip_faces(is_house ? 0 : ~get_face_mask(c.dim, c.dir)); // skip back face at wall if it's a house because it could be against a window (though it really shouldn't be)
-	vector3d const c_sz(c.get_size());
-	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
-	unsigned const num_shelves(2 + (c.room_id % 3)), num_brackets(2 + round_fp(0.5*length/dz)); // 2-4 shelves
-	float const z_step(dz/(num_shelves + 1)), shelf_zspace(z_step - thickness), shelf_clearance(shelf_zspace - bracket_thickness); // include a space at the bottom
-	float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness), sz_scale(is_house ? 0.5 : 1.0);
-
-	// add wooden shelves
+unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
+	unsigned const num_shelves(2 + (c.room_id % 3)); // 2-4 shelves
+	float const thickness(0.02*c.dz()), bracket_thickness(0.8*thickness), z_step(c.dz()/(num_shelves + 1)); // include a space at the bottom
 	cube_t shelf(c);
 	shelf.z2() = shelf.z1() + thickness; // set shelf thickness
 	shelf.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*bracket_thickness; // leave space behind the shelf for brackets
-	cube_t shelves[4]; // max number
-	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	colorRGBA const shelf_color(apply_light_color(c));
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		shelf.translate_dim(2, z_step); // move up one step
-		wood_mat.add_cube_to_verts(shelf, shelf_color, c.get_llc(), skip_faces, !c.dim); // make wood grain horizontal
 		shelves[s] = shelf; // record for later use
 	}
-	// add support brackets
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
-	colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
-
-	for (unsigned s = 0; s < num_shelves; ++s) {
-		cube_t bracket(shelves[s]);
-		bracket.z2()  = bracket.z1(); // below the shelf
-		bracket.z1() -= bracket_thickness;
-		bracket.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.1*width; // shorten slightly
-		bracket.d[!c.dim][1] = bracket.d[!c.dim][0] + bracket_width; // set width
-		bracket.translate_dim(!c.dim, b_offset);
-
-		for (unsigned b = 0; b < num_brackets; ++b) {
-			metal_mat.add_cube_to_verts(bracket, bracket_color, zero_vector, (skip_faces | EF_Z2)); // skip top faces, maybe back
-
-			if (s == 0) { // add vertical brackets on first shelf
-				cube_t vbracket(bracket);
-				set_cube_zvals(vbracket, c.z1(), c.z2());
-				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness; // nearly against the wall
-				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
-				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip top/bottom faces, maybe back
-			}
-			bracket.translate_dim(!c.dim, b_step);
-		} // for b
-	} // for s
-	// add objects to the shelves
-	if (c.flags & RO_FLAG_OPEN) return; // shelves have already been expanded, don't need to create contained objects below
+	return num_shelves;
+}
+void get_shelf_objects(room_object_t const &c, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects) {
+	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
+	vector3d const c_sz(c.get_size());
+	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
+	float const z_step(dz/(num_shelves + 1)), shelf_zspace(z_step - thickness), shelf_clearance(shelf_zspace - bracket_thickness), sz_scale(is_house ? 0.5 : 1.0);
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
-	static vect_cube_t cubes;
-	static vector<room_object_t> objects;
 	objects.clear();
+	static vect_cube_t cubes;
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
@@ -870,7 +839,60 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 			C.shape = SHAPE_CUBE; // reset for next object type
 		}
 	} // for s
+}
+void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
+	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
+	// draw back in case it's against a window, even though that shouldn't happen
+	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
+	cube_t shelves[4]; // max number of shelves
+	unsigned const num_shelves(get_shelves_for_object(c, shelves));
+	// add wooden shelves
+	unsigned const skip_faces(is_house ? 0 : ~get_face_mask(c.dim, c.dir)); // skip back face at wall if it's a house because it could be against a window (though it really shouldn't be)
+	rgeom_mat_t &wood_mat(get_wood_material(tscale, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	colorRGBA const shelf_color(apply_light_color(c));
+
+	for (unsigned s = 0; s < num_shelves; ++s) {
+		wood_mat.add_cube_to_verts(shelves[s], shelf_color, c.get_llc(), skip_faces, !c.dim); // make wood grain horizontal
+	}
+	// add support brackets
+	vector3d const c_sz(c.get_size());
+	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
+	unsigned const num_brackets(2 + round_fp(0.5*length/dz));
+	float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness);
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
+	colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
+
+	for (unsigned s = 0; s < num_shelves; ++s) {
+		cube_t bracket(shelves[s]);
+		bracket.z2()  = bracket.z1(); // below the shelf
+		bracket.z1() -= bracket_thickness;
+		bracket.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.1*width; // shorten slightly
+		bracket.d[!c.dim][1] = bracket.d[!c.dim][0] + bracket_width; // set width
+		bracket.translate_dim(!c.dim, b_offset);
+
+		for (unsigned b = 0; b < num_brackets; ++b) {
+			metal_mat.add_cube_to_verts(bracket, bracket_color, zero_vector, (skip_faces | EF_Z2)); // skip top faces, maybe back
+
+			if (s == 0) { // add vertical brackets on first shelf
+				cube_t vbracket(bracket);
+				set_cube_zvals(vbracket, c.z1(), c.z2());
+				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness; // nearly against the wall
+				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
+				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip top/bottom faces, maybe back
+			}
+			bracket.translate_dim(!c.dim, b_step);
+		} // for b
+	} // for s
+	// add objects to the shelves
+	if (c.flags & RO_FLAG_EXPANDED) return; // shelves have already been expanded, don't need to create contained objects below
+	static vector<room_object_t> objects;
+	get_shelf_objects(c, shelves, num_shelves, objects);
 	add_small_static_objs_to_verts(objects);
+}
+void building_room_geom_t::expand_shelves(room_object_t const &c) {
+	cube_t shelves[4]; // max number of shelves
+	unsigned const num_shelves(get_shelves_for_object(c, shelves));
+	get_shelf_objects(c, shelves, num_shelves, expanded_objs);
 }
 
 void building_room_geom_t::add_keyboard(room_object_t const &c) {
@@ -1471,6 +1493,9 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		} // for n
 	} // for i
 }
+void building_room_geom_t::expand_bookcase(room_object_t const &c) {
+	// WRITE, if needed
+}
 
 void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
 	float const height(c.dz()), width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), shelf_thick(0.1*depth);
@@ -1703,7 +1728,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 			}
 		}
 		unsigned const mattress_skip_faces(EF_Z1 | get_skip_mask_for_xy(c.dim));
-		if (c.flags & RO_FLAG_TAKEN3) {} // mattress taken, don't draw it
+		if (c.flags & RO_FLAG_TAKEN3) {} // mattress taken, don't draw it; TODO: draw slats under the bed?
 		else if (c.flags & RO_FLAG_TAKEN2) {get_material(untex_shad_mat, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // sheets taken, bare mattress
 		else {get_material(sheet_tex, 1).add_cube_to_verts(mattress, sheet_color, tex_origin, mattress_skip_faces);} // draw matterss with sheets
 	}
@@ -2347,6 +2372,17 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		add_elevator(*i, 2.0/obj_scale);
 	}
 	mats_dynamic.create_vbos(building);
+}
+
+void building_room_geom_t::expand_object(room_object_t &c) {
+	if (c.flags & RO_FLAG_EXPANDED) {assert(0); return;} // already expanded; should this be an error?
+	switch (c.type) {
+	case TYPE_BCASE:   expand_bookcase(c); break;
+	case TYPE_CLOSET:  expand_closet  (c); break;
+	case TYPE_SHELVES: expand_shelves (c); break;
+	default: assert(0); // not a supported expand type
+	}
+	c.flags |= RO_FLAG_EXPANDED; // flag as expanded
 }
 
 struct occlusion_stats_t {

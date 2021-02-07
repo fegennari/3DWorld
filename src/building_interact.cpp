@@ -344,7 +344,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
 	bldg_obj_types[TYPE_BOX       ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 5.0,   8.0,   "box");   // should be random value
 	bldg_obj_types[TYPE_MIRROR    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 40.0,  15.0,  "mirror");
-	bldg_obj_types[TYPE_SHELVES   ] = bldg_obj_type_t(1, 1, 0, 0, 0, 2, 0.0,   0.0,   "shelves");
+	bldg_obj_types[TYPE_SHELVES   ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 0.0,   0.0,   "shelves");
 	bldg_obj_types[TYPE_KEYBOARD  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 15.0,  2.0,   "keyboard");
 	bldg_obj_types[TYPE_SHOWER    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "shower");
 	bldg_obj_types[TYPE_RDESK     ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 800.0, 400.0, "reception desk");
@@ -472,11 +472,19 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
 	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS));
 	if (obj_id < 0) return 0;
-	room_object_t &obj(get_room_object_by_index(obj_id));
 
 	if (!do_room_obj_pickup) { // player has not used the pickup key, but we can still use this to notify the player that an object can be picked up
 		can_pickup_bldg_obj = 1;
 		return 0;
+	}
+	room_object_t &obj(get_room_object_by_index(obj_id));
+
+	if (obj.type == TYPE_SHELVES) {
+		expand_object(obj);
+		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on shelves contents
+		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
+		if (!picked_up) {create_small_static_vbos(building);} // assumes expanded objects are all "small"
+		return picked_up;
 	}
 	show_object_info(obj);
 	gen_sound(SOUND_ITEM, get_camera_pos(), 0.25);
@@ -542,6 +550,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_MIRROR && !(i->flags & RO_FLAG_IS_HOUSE)) continue; // can only pick up mirrors from houses, not office buildings
 			if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE)          continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED   && (i->flags & RO_FLAG_TAKEN3))     continue; // can only take pillow, sheets, and mattress - not the frame
+			if (i->type == TYPE_SHELVES && (i->flags & RO_FLAG_EXPANDED)) continue; // shelves are already expanded, can no longer select this object
 			if (object_has_something_on_it(*i, obj_vect))                 continue; // can't remove a table, etc. that has something on it
 			if (building.check_for_wall_ceil_floor_int(at_pos, p1c))      continue; // skip if it's on the other side of a wall, ceiling, or floor
 			closest_obj_id = (i - obj_vect.begin()) + obj_id_offset; // valid pickup object

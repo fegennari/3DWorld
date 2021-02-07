@@ -467,6 +467,12 @@ struct building_room_geom_t {
 	void add_blinds(room_object_t const &c);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
+	// functions for expanding nested objects
+	void expand_shelves(room_object_t const &c);
+	void expand_bookcase(room_object_t const &c);
+	void expand_closet(room_object_t const &c);
+	void expand_object(room_object_t &c);
+	// other functions
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const;
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
