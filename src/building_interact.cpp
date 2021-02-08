@@ -6,8 +6,6 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
-float const PICKUP_WEIGHT_LIMIT = 1000.0; // should be smaller, and defined in the config file
-
 bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0);
@@ -17,6 +15,7 @@ extern bool toggle_door_open_state;
 extern int window_width, window_height, display_framerate, player_in_closet;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks;
+extern building_params_t global_building_params;
 
 
 // lights
@@ -465,7 +464,7 @@ public:
 		carried.clear();
 	}
 	bool can_pick_up_item(room_object_t const &obj) const {
-		return ((cur_weight + get_obj_weight(obj)) <= PICKUP_WEIGHT_LIMIT);
+		return ((cur_weight + get_obj_weight(obj)) <= global_building_params.player_weight_limit);
 	}
 	void add_item(room_object_t const &obj) {
 		cur_value  += get_obj_value (obj);
@@ -526,7 +525,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	}
 	if (!can_pick_up) {
 		std::ostringstream oss;
-		oss << "Over weight limit of " << PICKUP_WEIGHT_LIMIT << " lbs";
+		oss << "Over weight limit of " << global_building_params.player_weight_limit << " lbs";
 		print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
 		return 0;
 	}

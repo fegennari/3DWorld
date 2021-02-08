@@ -22,6 +22,9 @@ buildings ai_target_player 1 # AI follows the player position (rather than just 
 buildings ai_follow_player 0 # enable player following in gameplay mode by default
 buildings ai_player_vis_test 0 # 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 
+# building gameplay state
+buildings player_weight_limit 1000 # in lbs; set to a large value for testing, will decrease to 100-200 later
+
 # city parameters
 city num_cities 8
 city num_rr_tracks 0
