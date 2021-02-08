@@ -458,6 +458,7 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval,
 	unsigned room_id, float tot_light_amt, unsigned objs_start, bool room_is_lit, unsigned &num_light_stacks)
 {
+	if (room.interior) return 0; // bedrooms should have at least one window; if windowless/interior, it can't be a bedroom
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
 	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt)) return 0; // it's only a bedroom if there's bed
