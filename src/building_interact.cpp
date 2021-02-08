@@ -438,11 +438,12 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		if (obj.flags & RO_FLAG_TAKEN1) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 1.0,  10.0, "dirt"     );} // second item to take
 		return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 25.0, 5.0, "plant"); // first item to take
 	}
+	if (obj.type == TYPE_COMPUTER && (obj.flags & RO_FLAG_WAS_EXP)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
 	return get_room_obj_type(obj); // default value
 }
 rand_gen_t rgen_from_obj(room_object_t const &obj) {
 	rand_gen_t rgen;
-	rgen.set_state(12345*obj.x1(), 67890*obj.y1());
+	rgen.set_state(12345*abs(obj.x1()), 67890*abs(obj.y1()));
 	return rgen;
 }
 float get_obj_value(room_object_t const &obj) {
@@ -450,7 +451,10 @@ float get_obj_value(room_object_t const &obj) {
 	if (obj.type == TYPE_CRATE || obj.type == TYPE_BOX) {value *= (1 + (rgen_from_obj(obj).rand() % 20));}
 	else if (obj.type == TYPE_PAPER) {
 		rand_gen_t rgen(rgen_from_obj(obj));
-		if ((rgen.rand()&3) == 0) {value = (1 + (rgen.rand()%10))*(1 + (rgen.rand()%10));} // 25% of papers have higher value
+		if (rgen.rand_float() < 0.25) { // 25% of papers have some value
+			float const val_mult((rgen.rand_float() < 0.25) ? 10 : 1); // 25% of papers have higher value
+			value = val_mult*(2 + (rgen.rand()%10))*(1 + (rgen.rand()%10));
+		}
 	}
 	return value;
 }
@@ -461,7 +465,7 @@ void show_object_info(room_object_t const &obj) {
 	float const value(get_obj_value(obj));
 	std::ostringstream oss;
 	oss << get_taken_obj_type(obj).name << ": value $";
-	if (value < 1.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
+	if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
 	else {oss << value;}
 	oss << " weight " << get_obj_weight(obj) << " lbs";
 	print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
@@ -594,10 +598,12 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 		for (auto i = obj_vect.begin(); i != obj_vect.end(); ++i) {
 			assert(i->type < NUM_ROBJ_TYPES);
 			if (!bldg_obj_types[i->type].pickup) continue; // this object type can't be picked up
+			cube_t obj_bcube(*i);
+			if (i->type == TYPE_PEN || i->type == TYPE_PENCIL) {obj_bcube.expand_in_dim(!i->dim, i->get_sz_dim(!i->dim));}
 			point p1c(at_pos), p2c(p2);
-			if (!do_line_clip(p1c, p2c, i->d))   continue; // test ray intersection vs. bcube
+			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
 			float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
-			if (dmin_sq > 0.0 && dsq > dmin_sq)  continue; // not the closest
+			if (dmin_sq > 0.0 && dsq > dmin_sq)       continue; // not the closest
 		
 			if (i->type == TYPE_CLOSET || (i->type == TYPE_STALL && i->shape != SHAPE_SHORT)) { // can only take short stalls (separating urinals)
 				if (!i->is_open() && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
