@@ -469,7 +469,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 			unsigned door_skip_faces_mod(door_skip_faces);
 
 			if (rgen.rand_float() < 0.05) { // make a drawer occasionally open
-				float const dheight(drawer.dz()), open_amt(dir_sign*rgen.rand_uniform(0.05, 0.75)*depth);
+				float const dheight(drawer.dz()), open_amt(dir_sign*rgen.rand_uniform(0.05, 0.4)*depth);
 				drawer.    translate_dim(c.dim, open_amt);
 				cur_handle.translate_dim(c.dim, open_amt);
 				cube_t drawer_body(drawer);
