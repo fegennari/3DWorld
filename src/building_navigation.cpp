@@ -15,7 +15,7 @@ int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 
 extern int frame_counter, display_mode, player_in_closet;
-extern float fticks;
+extern float fticks, cur_building_sound_level;
 extern double camera_zh;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -810,7 +810,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	if (int(target.pos.z/floor_spacing) != int(prev_player_building_loc.pos.z/floor_spacing)) { // if player did not change floors
 		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person and player are > 2 floors apart, continue toward stairs (or should it be one floor apart?) (optimization)
 	}
-	// TODO: check for player sounds within listening distance p2p_dist(person.pos, target.pos)
+	// TODO: check for player sounds within listening distance p2p_dist(person.pos, target.pos); use cur_building_sound_level
 	if (!can_target_player(state, person)) return 0; // no player visibility, continue on the previously chosen path
 	// do we need some logic that only runs the update every few frames as an optimization?
 	return 1;

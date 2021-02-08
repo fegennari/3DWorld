@@ -1022,7 +1022,7 @@ void display() {
 		else if (spraypaint_mode) {
 			draw_spraypaint_crosshair();
 		}
-		if (display_framerate && !is_video_recording() && !game_mode && (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && camera_mode == 1))) {
+		if (display_framerate && !is_video_recording() && !game_mode && ((world_mode == WMODE_INF_TERRAIN && !show_bldg_pickup_crosshair) || (world_mode == WMODE_GROUND && camera_mode == 1))) {
 			draw_compass_and_alt();
 		}
 		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide) {show_player_keycards();}

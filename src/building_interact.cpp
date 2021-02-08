@@ -514,6 +514,14 @@ public:
 		oss << "Current $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs";
 		float const aspect_ratio((float)window_width/(float)window_height);
 		draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
+		// display sound meter
+		float const lvl(min(cur_building_sound_level, 1.0f));
+		unsigned const num_bars(round_fp(20.0*lvl));
+
+		if (num_bars > 0) {
+			colorRGBA const color(lvl, (1.0 - lvl), 0.0, 1.0); // green => yellow => orange => red
+			draw_text(color, -0.005*aspect_ratio, -0.01, -0.02, std::string(num_bars, '='));
+		}
 	}
 };
 
@@ -716,7 +724,7 @@ void building_gameplay_next_frame() {
 		if (office_chair_rot_rate < 0.001) {office_chair_rot_rate = 0.0;} // stop rotating
 	}
 	// reset state for next frame
-	cur_building_sound_level = 0.0;
+	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
 	can_pickup_bldg_obj = 0;
 	do_room_obj_pickup  = 0;
 }
