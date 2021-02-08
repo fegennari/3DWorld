@@ -585,13 +585,13 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (dmin_sq > 0.0 && dsq > dmin_sq)  continue; // not the closest
 		
 			if (i->type == TYPE_CLOSET || (i->type == TYPE_STALL && i->shape != SHAPE_SHORT)) { // can only take short stalls (separating urinals)
-				if (!(i->flags & RO_FLAG_OPEN) && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
+				if (!i->is_open() && !i->contains_pt(at_pos)) { // stalls/closets block the player from taking toilets/boxes unless open, or the player is inside
 					closest_obj_id = -1;
 					dmin_sq = dsq;
 				}
 				continue;
 			}
-			if (i->type == TYPE_MIRROR && !(i->flags & RO_FLAG_IS_HOUSE)) continue; // can only pick up mirrors from houses, not office buildings
+			if (i->type == TYPE_MIRROR && !i->is_house())                 continue; // can only pick up mirrors from houses, not office buildings
 			if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE)          continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED   && (i->flags & RO_FLAG_TAKEN3))     continue; // can only take pillow, sheets, and mattress - not the frame
 			if (i->type == TYPE_SHELVES && (i->flags & RO_FLAG_EXPANDED)) continue; // shelves are already expanded, can no longer select this object

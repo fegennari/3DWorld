@@ -27,7 +27,7 @@ void draw_mirror_to_stencil_buffer(vector3d const &xlate) {
 
 void create_mirror_reflection_if_needed() {
 	if (cur_room_mirror.type != TYPE_MIRROR) return; // not enabled
-	bool const dim(cur_room_mirror.dim), interior_room(cur_room_mirror.flags & RO_FLAG_INTERIOR), is_house(cur_room_mirror.flags & RO_FLAG_IS_HOUSE);
+	bool const dim(cur_room_mirror.dim), interior_room(cur_room_mirror.is_interior()), is_house(cur_room_mirror.is_house());
 	int const reflection_pass(is_house ? 3 : (interior_room ? 2 : 1));
 	vector3d const xlate(get_tiled_terrain_model_xlate());
 	float const reflect_plane(cur_room_mirror.d[dim][cur_room_mirror.dir]), reflect_plane_xf(reflect_plane + xlate[dim]);

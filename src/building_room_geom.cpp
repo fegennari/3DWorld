@@ -746,7 +746,7 @@ unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
 	return num_shelves;
 }
 void get_shelf_objects(room_object_t const &c, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects) {
-	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
+	bool const is_house(c.is_house());
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
 	float const z_step(dz/(num_shelves + 1)), shelf_zspace(z_step - thickness), shelf_clearance(shelf_zspace - bracket_thickness), sz_scale(is_house ? 0.5 : 1.0);
@@ -858,7 +858,7 @@ void get_shelf_objects(room_object_t const &c, cube_t const shelves[4], unsigned
 void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	// Note: draw as "small", not because shelves are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	// draw back in case it's against a window, even though that shouldn't happen
-	bool const is_house(c.flags & RO_FLAG_IS_HOUSE);
+	bool const is_house(c.is_house());
 	cube_t shelves[4]; // max number of shelves
 	unsigned const num_shelves(get_shelves_for_object(c, shelves));
 	// add wooden shelves
@@ -1194,7 +1194,7 @@ void building_room_geom_t::add_railing(room_object_t const &c) {
 			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, 0.02*(d ? 1.0 : -1.0)*height));
 			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, 0, 0); // no top or bottom
 		}
-		if (c.flags & RO_FLAG_OPEN) { // add balusters
+		if (c.is_open()) { // add balusters
 			unsigned const num(NUM_STAIRS_PER_FLOOR - 1);
 			float const step_sz(1.0/(num+1)), radius(0.75*pole_radius), bot_radius(0.85*pole_radius);
 			vector3d const delta(0, 0, -height);
@@ -1864,7 +1864,7 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	mat.add_cube_to_verts(front1, color, tex_origin, EF_Z12);
 	mat.add_cube_to_verts(front2, color, tex_origin, EF_Z12);
 
-	if (c.flags & RO_FLAG_OPEN) {
+	if (c.is_open()) {
 		// draw open door?
 	}
 	else {
@@ -2155,7 +2155,7 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	unsigned const skip_faces(get_skip_mask_for_xy(!c.dim) | EF_Z12); // only enable faces in dim
 	cube_t window(c);
 	tid_nm_pair_t tex(get_bath_wind_tid(), 0.0); // fit texture to the window front/back faces
-	if (c.flags & RO_FLAG_LIT) {tex.emissive = 0.33;} // one third emissive
+	if (c.is_lit()) {tex.emissive = 0.33;} // one third emissive
 	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 
@@ -2538,7 +2538,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		//++occlusion_stats.nvis;
 		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 		//++occlusion_stats.ndraw;
-		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && (obj.flags & RO_FLAG_LIT));
+		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && obj.is_lit());
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, i->model_id, shadow_only, 0, 0);

@@ -20,7 +20,7 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) c
 	assert(objs_start <= objs.size());
 
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (!(i->flags & RO_FLAG_NOCOLL) && i->intersects(c)) return 1;
+		if (!i->no_coll() && i->intersects(c)) return 1;
 	}
 	return 0;
 }
@@ -994,7 +994,7 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
 		if (ignore_chairs && i->type == TYPE_CHAIR) continue;
 		
-		if (!(i->flags & RO_FLAG_NOCOLL) && i->intersects(room)) {
+		if (!i->no_coll() && i->intersects(room)) {
 			if (i->type == TYPE_TABLE) {table_blocker_ix = int(blockers.size());} // track which blocker is the table, for use with kitchen counters
 			blockers.push_back(*i);
 		}
