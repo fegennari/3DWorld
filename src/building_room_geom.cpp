@@ -549,7 +549,8 @@ void add_closet_boxes(room_object_t const &c, cube_t const &interior, vector<roo
 	static vect_cube_t cubes;
 	cubes.clear();
 	room_object_t C(c);
-	C.type = TYPE_BOX;
+	C.flags |= RO_FLAG_WAS_EXP;
+	C.type   = TYPE_BOX;
 	vector3d sz;
 	point center;
 
@@ -745,7 +746,9 @@ unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
 	}
 	return num_shelves;
 }
-void get_shelf_objects(room_object_t const &c, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects) {
+void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects) {
+	room_object_t c(c_in);
+	c.flags |= RO_FLAG_WAS_EXP;
 	bool const is_house(c.is_house());
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);

@@ -267,31 +267,32 @@ enum {OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_M
 	OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_FHYDRANT, NUM_OBJ_MODELS};
 
 // object flags
-uint16_t const RO_FLAG_LIT     = 0x01; // light is on
-uint16_t const RO_FLAG_TOS     = 0x02; // at top of stairs
-uint16_t const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
-uint16_t const RO_FLAG_INVIS   = 0x08; // invisible
-uint16_t const RO_FLAG_NOCOLL  = 0x10; // no collision detection
-uint16_t const RO_FLAG_OPEN    = 0x20; // open, for elevators, closet doors, and bathroom stalls
-uint16_t const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
-uint16_t const RO_FLAG_INTERIOR= 0x80; // applies to containing room
+unsigned const RO_FLAG_LIT     = 0x01; // light is on
+unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs
+unsigned const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
+unsigned const RO_FLAG_INVIS   = 0x08; // invisible
+unsigned const RO_FLAG_NOCOLL  = 0x10; // no collision detection
+unsigned const RO_FLAG_OPEN    = 0x20; // open, for elevators, closet doors, and bathroom stalls
+unsigned const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
+unsigned const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
-uint16_t const RO_FLAG_EMISSIVE= 0x100; // for signs and lights
-uint16_t const RO_FLAG_HANGING = 0x200; // for signs
-uint16_t const RO_FLAG_ADJ_LO  = 0x400; // for kitchen counters/closets/door trim
-uint16_t const RO_FLAG_ADJ_HI  = 0x800; // for kitchen counters/closets/door trim
-uint16_t const RO_FLAG_ADJ_BOT = 0x1000; // for door trim
-uint16_t const RO_FLAG_ADJ_TOP = 0x2000; // for door trim
-uint16_t const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections and shelves
-uint16_t const RO_FLAG_RAND_ROT= 0x8000; // random rotation for 3D models; used for office chair
-// object flags, second byte, alternate flags for pickup/interact state
-uint16_t const RO_FLAG_TAKEN1  = 0x400;  // no picture / no bed pillows
-uint16_t const RO_FLAG_TAKEN2  = 0x800;  // no bed sheets
-uint16_t const RO_FLAG_TAKEN3  = 0x1000; // no bed mattress
-uint16_t const RO_FLAG_TAKEN4  = 0x2000; // for future use
-uint16_t const RO_FLAG_EXPANDED= 0x200;  // Note: aliased with RO_FLAG_HANGING
-uint16_t const RO_FLAG_ROTATING= 0x400;  // Note: aliased with RO_FLAG_ADJ_LO
-uint16_t const RO_FLAG_IN_CLOSET=0x800;  // for closet lights; Note: aliased with RO_FLAG_ADJ_HI
+unsigned const RO_FLAG_EMISSIVE= 0x0100; // for signs and lights
+unsigned const RO_FLAG_HANGING = 0x0200; // for signs and blinds
+unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door trim
+unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim
+unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim
+unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim
+unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections and shelves
+unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation for 3D models; used for office chair
+// object flags, third byte, for pickup/interact state
+unsigned const RO_FLAG_TAKEN1  = 0x010000; // no picture / no bed pillows
+unsigned const RO_FLAG_TAKEN2  = 0x020000; // no bed sheets
+unsigned const RO_FLAG_TAKEN3  = 0x040000; // no bed mattress
+unsigned const RO_FLAG_TAKEN4  = 0x080000; // for future use
+unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves and closets
+unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves and closets
+unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs
+unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
@@ -306,19 +307,19 @@ struct bldg_obj_type_t {
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
-	uint16_t flags;
 	uint8_t flags2; // currently only used by cabinets
 	uint8_t room_id; // for at most 256 rooms per floor
 	uint16_t obj_id; // currently only used for lights and random property hashing
-	room_object type;
-	room_obj_shape shape;
+	room_object type; // 8-bit
+	room_obj_shape shape; // 8-bit
+	unsigned flags;
 	float light_amt;
 	colorRGBA color;
 
-	room_object_t() : dim(0), dir(0), flags(0), flags2(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), light_amt(1.0) {}
-	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, uint16_t f=0, float light=1.0,
+	room_object_t() : dim(0), dir(0), flags2(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
+	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, unsigned f=0, float light=1.0,
 		room_obj_shape shape_=SHAPE_CUBE, colorRGBA const color_=WHITE) :
-		cube_t(c), dim(dim_), dir(dir_), flags(f), flags2(0), room_id(rid), obj_id(0), type(type_), shape(shape_), light_amt(light), color(color_)
+		cube_t(c), dim(dim_), dir(dir_), flags2(0), room_id(rid), obj_id(0), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
 	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}

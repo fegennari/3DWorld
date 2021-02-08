@@ -2384,7 +2384,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			if (i->has_railing) { // add railings
 				bool railing_dir(dir);
 				cube_t railing(wall);
-				uint16_t flags(add_wall ? RO_FLAG_NOCOLL : 0);
+				unsigned flags(add_wall ? RO_FLAG_NOCOLL : 0);
 				if (!has_side_walls) {flags |= RO_FLAG_OPEN;} // use this flag to indicate no walls, need balusters
 				railing.z2() = railing_z2;
 
