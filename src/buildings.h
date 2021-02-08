@@ -752,7 +752,7 @@ struct building_t : public building_geom_t {
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
 	bool toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir);
-	void toggle_door_state(unsigned door_ix, bool player_in_this_building);
+	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player);
 	void update_door_verts(building_creator_t &bc) const;
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);

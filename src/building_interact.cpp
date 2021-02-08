@@ -8,7 +8,7 @@
 
 bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0);
 int can_pickup_bldg_obj(0);
-float office_chair_rot_rate(0.0);
+float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 
 extern bool toggle_door_open_state;
@@ -21,6 +21,7 @@ extern building_params_t global_building_params;
 // lights
 
 float get_radius_for_room_light(room_object_t const &obj);
+void register_building_sound(point const &pos, float volume);
 
 bool building_t::toggle_room_light(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
 	if (!has_room_geom()) return 0; // error?
@@ -58,6 +59,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
 	point const sound_pos(get_camera_pos() + (light_pos - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
 	gen_sound(SOUND_CLICK, sound_pos);
+	register_building_sound(light_pos, 0.1);
 	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
 	return 1;
 }
@@ -143,8 +145,9 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	if (is_open == was_open) return; // no state change
 	unsigned const dix(is_open ? (unsigned)door_ix : (unsigned)open_door_ix);
 	assert(dix < doors.size());
-	point const sound_pos(doors[dix].get_bcube().get_cube_center() + get_camera_coord_space_xlate()); // convert to camera space
+	point const door_center(doors[dix].get_bcube().get_cube_center()), sound_pos(door_center + get_camera_coord_space_xlate()); // convert to camera space
 	gen_sound((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
+	register_building_sound(door_center, 0.5);
 	open_door_ix = door_ix;
 }
 
@@ -214,21 +217,28 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 			//interior->room_geom->clear_static_small_vbos(); // no longer needed since closet interior is always drawn
 		}
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
-		play_door_open_close_sound(obj.get_cube_center(), obj.is_open(), pitch);
+		point const door_center(obj.get_cube_center());
+		play_door_open_close_sound(door_center, obj.is_open(), pitch);
+		register_building_sound(door_center, 0.5);
 	}
-	else {toggle_door_state(door_ix, 1);} // toggle state if interior door; player_in_this_building=1
+	else {toggle_door_state(door_ix, 1, 1);} // toggle state if interior door; player_in_this_building=1, by_player=1
 	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	return 1;
 }
 
-void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building) { // called by the player or AI
+void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player) { // called by the player or AI
 	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
 	door.open ^= 1; // toggle open state
 	invalidate_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	interior->doors_to_update.push_back(door_ix);
-	if (player_in_this_building) {play_door_open_close_sound(door.get_cube_center(), door.open);}
+
+	if (player_in_this_building) {
+		point const door_center(door.get_cube_center());
+		play_door_open_close_sound(door_center, door.open);
+		if (by_player) {register_building_sound(door_center, 0.5);}
+	}
 }
 
 void building_t::play_door_open_close_sound(point const &pos, bool open, float pitch) const {
@@ -262,7 +272,11 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 			if (fabs(dist) < 0.0001*z_space) break; // no movement, at top or bottom of elevator shaft (check with a tolerance)
 			i->z1() += dist; i->z2() += dist;
 			room_geom->mats_dynamic.clear(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
-			if ((int)move_dir != prev_move_dir) {gen_sound(SOUND_SLIDING, get_camera_pos(), 0.2);} // play this sound quietly when the elevator starts moving or changes direction
+			
+			if ((int)move_dir != prev_move_dir) {
+				gen_sound(SOUND_SLIDING, get_camera_pos(), 0.2); // play this sound quietly when the elevator starts moving or changes direction
+				register_building_sound(player_pos, 0.4);
+			}
 			prev_move_dir = move_dir;
 			return 1; // done
 		} // for i
@@ -531,6 +545,8 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	}
 	show_object_info(obj);
 	gen_sound(SOUND_ITEM, get_camera_pos(), 0.25);
+	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
+	register_building_sound(at_pos, volume);
 	remove_object(obj_id, building);
 	return 1;
 }
@@ -659,6 +675,15 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	return 1;
 }
 
+// sound/audio tracking
+
+void register_building_sound(point const &pos, float volume) {
+	if (volume == 0.0) return;
+	assert(volume > 0.0); // can't be negative
+	// TODO: alert AT at this position if (volume > ALERT_THRESH)
+	cur_building_sound_level += volume;
+}
+
 // gameplay logic
 
 void register_ai_player_coll(pedestrian_t const &person) {
@@ -684,7 +709,9 @@ void building_gameplay_next_frame() {
 		office_chair_rot_rate *= exp(-0.05*fticks); // exponential slowdown
 		if (office_chair_rot_rate < 0.001) {office_chair_rot_rate = 0.0;} // stop rotating
 	}
-	can_pickup_bldg_obj = 0; // reset for next frame
-	do_room_obj_pickup  = 0; // reset for next frame
+	// reset state for next frame
+	cur_building_sound_level = 0.0;
+	can_pickup_bldg_obj = 0;
+	do_room_obj_pickup  = 0;
 }
 
