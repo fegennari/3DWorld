@@ -455,8 +455,8 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 	return (!overlaps_other_room_obj(c, objs_start) && !is_cube_close_to_doorway(c, room, 0.0, 1));
 }
 
-bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers,
-	float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool room_is_lit)
+bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval,
+	unsigned room_id, float tot_light_amt, unsigned objs_start, bool room_is_lit, unsigned &num_light_stacks)
 {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
@@ -519,6 +519,17 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
 			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color); // closet door is always white; sides should match interior walls
 			set_obj_id(objs);
+			room_object_t const &closet(objs.back());
+
+			if (closet.is_small_closet()) {
+				point const lpos(closet.xc(), closet.yc(), closet.z2());
+				cube_t light(lpos);
+				light.z1() -= 0.02*window_vspacing;
+				light.expand_by_xy(0.04*window_vspacing);
+				colorRGBA const color(1.0, 1.0, 0.9); // yellow-ish
+				objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 0.0, SHAPE_CYLIN, color); // dir=0 (unused)
+				objs.back().obj_id = num_light_stacks++;
+			}
 			placed_closet = 1; // done
 		} // for d
 	} // for n
@@ -1851,7 +1862,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
 				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
-					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, objs_start, is_lit);
+					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, objs_start, is_lit, num_light_stacks);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}

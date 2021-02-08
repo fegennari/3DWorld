@@ -288,6 +288,7 @@ uint16_t const RO_FLAG_TAKEN3  = 0x1000; // no bed mattress
 uint16_t const RO_FLAG_TAKEN4  = 0x2000; // for future use
 uint16_t const RO_FLAG_EXPANDED= 0x200;  // Note: aliased with RO_FLAG_HANGING
 uint16_t const RO_FLAG_ROTATING= 0x400;  // Note: aliased with RO_FLAG_ADJ_LO
+uint16_t const RO_FLAG_IN_CLOSET=0x800;  // for closet lights; Note: aliased with RO_FLAG_ADJ_HI
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
@@ -325,6 +326,7 @@ struct room_object_t : public cube_t {
 	bool is_open    () const {return  (flags & RO_FLAG_OPEN);}
 	bool is_light_type() const {return (type == TYPE_LIGHT || type == TYPE_LAMP);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
+	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	unsigned get_orient() const {return (2*dim + dir);}
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	static bool enable_rugs();
@@ -474,6 +476,7 @@ struct building_room_geom_t {
 	void expand_closet(room_object_t const &c);
 	void expand_object(room_object_t &c);
 	// other functions
+	bool closet_light_is_on(cube_t const &closet) const;
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const;
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
@@ -827,7 +830,8 @@ private:
 		float zval, unsigned room_id, float tot_light_amt, bool is_basement);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, float min_bed_space=0.0) const;
-	bool add_bedroom_objs    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool room_is_lit);
+	bool add_bedroom_objs    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt,
+		unsigned objs_start, bool room_is_lit, unsigned &num_light_stacks);
 	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
 	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor);

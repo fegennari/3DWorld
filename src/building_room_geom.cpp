@@ -511,7 +511,7 @@ tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
 // cubes: front left, left side, front right, right side, door
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5]) {
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
-	bool const use_small_door(width < 1.2*height);
+	bool const use_small_door(c.is_small_closet());
 	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : 0.05*width), wall_shift(width - wall_width), wall_thick(WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*height);
 	assert(wall_shift > 0.0);
 	cube_t doors(c), walls[2] = {c, c}; // left, right
@@ -572,7 +572,7 @@ void add_closet_boxes(room_object_t const &c, cube_t const &interior, vector<roo
 
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
 	float const width(c.get_sz_dim(!c.dim)), height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
-	bool const use_small_door(width < 1.2*height), draw_interior(c.is_open() || player_in_closet);
+	bool const use_small_door(c.is_small_closet()), draw_interior(c.is_open() || player_in_closet);
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes);
 

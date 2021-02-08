@@ -25,7 +25,6 @@ float get_radius_for_room_light(room_object_t const &obj);
 
 bool building_t::toggle_room_light(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
 	if (!has_room_geom()) return 0; // error?
-	if (player_in_closet) return 0; // can't toggle lights while in the closet
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	point query_pt(closest_to);
@@ -39,6 +38,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || i->room_id != room_id) continue; // not a light, or the wrong room
+		if (bool(i->flags & RO_FLAG_IN_CLOSET) != bool(player_in_closet)) continue; // while in the closet, player can only toggle closet lights and not room lights
 		if (!room.is_sec_bldg && get_floor_for_zval(i->z1()) != get_floor_for_zval(closest_to.z)) continue; // wrong floor (skip garages and sheds)
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
@@ -49,7 +49,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	bool updated(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (i->is_light_type() && i->room_id == room_id && i->z1() == light.z1()) {
+		if (i->is_light_type() && i->room_id == room_id && i->z1() == light.z1()) { // Note: closet light should have a different z1 that should not match the room lights
 			i->toggle_lit_state(); // Note: doesn't update indir lighting
 			if (i->type == TYPE_LAMP) continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
 			set_obj_lit_state_to(room_id, light.z2(), i->is_lit()); // update object lighting flags as well
@@ -106,6 +106,15 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 		was_updated = 1;
 	} // for i
 	if (was_updated) {interior->room_geom->clear_materials();} // need to recreate them
+}
+
+bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
+	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
+
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if (i->type == TYPE_LIGHT && closet.contains_cube(*i)) {return i->is_lit();}
+	}
+	return 0;
 }
 
 // doors
@@ -174,7 +183,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		for (auto i = objs.begin(); i != objs.end(); ++i) {
 			// this loop only handles closets with small doors, cube bathroom stalls, and rotated office chairs
 			if (i->type != TYPE_CLOSET && !(i->type == TYPE_STALL && i->shape == SHAPE_CUBE) && !(i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT))) continue;
-			if (i->type == TYPE_CLOSET && i->get_sz_dim(!i->dim) >= 1.2*i->dz()) continue; // not a closet with a small door
+			if (i->type == TYPE_CLOSET && !i->is_small_closet()) continue; // not a closet with a small door
 			point center(i->get_cube_center());
 			center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
 			if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}

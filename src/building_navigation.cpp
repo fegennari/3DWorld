@@ -757,7 +757,7 @@ bool can_ai_follow_player(pedestrian_t const &person) {
 	if (!ai_follow_player()) return 0; // disabled
 	if (!cur_player_building_loc.is_valid()) return 0; // no target
 	if (cur_player_building_loc.building_ix != (int)person.dest_bldg) return 0; // wrong building
-	if (player_in_closet == 2) return 0; // ignore player if in the closet with the door closed
+	if (player_in_closet >= 2) return 0; // ignore player if in the closet with the door closed
 	return 1;
 }
 

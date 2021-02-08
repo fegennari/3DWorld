@@ -391,7 +391,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 					for (unsigned n = 0; n < (c->is_open() ? 4U : 5U); ++n) { // only check for door collision if closet door is closed
 						if (!cubes[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
 					}
-					if (c->contains_pt(pos)) {player_in_closet = (c->is_open() ? 1 : 2);}
+					if (c->contains_pt(pos)) {player_in_closet = (interior->room_geom->closet_light_is_on(*c) ? 3 : (c->is_open() ? 1 : 2));}
 				}
 				else {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm);} // skip_z=0
 			}
