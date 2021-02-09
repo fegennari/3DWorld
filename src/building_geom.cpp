@@ -374,10 +374,18 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_zh) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
-				float const radius(0.25f*(c->dx() + c->dy())); // average of x/y diameter
+				float const cradius(0.25f*(c->dx() + c->dy())); // average of x/y diameter
 				point const center(c->get_cube_center());
-				cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, (c->z2() + radius)), radius, radius); // extend upward by radius
+				cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, (c->z2() + radius)), cradius, cradius); // extend upward by radius
 				had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, cylin, cnorm);
+			}
+			else if (c->shape == SHAPE_SPHERE) { // sphere
+				assert(c->dx() == c->dy() && c->dx() == c->dz());
+				float const r_sum(c->dx() + radius); // xy_radius?
+				point const center(c->get_cube_center());
+				if (!dist_less_than(pos, center, r_sum)) continue;
+				if (cnorm) {*cnorm = (pos - center).get_norm();}
+				had_coll = 1;
 			}
 			else { // assume it's a cube
 				cube_t c_extended(*c);

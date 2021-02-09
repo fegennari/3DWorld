@@ -2215,6 +2215,13 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 	}
 }
 
+int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/basketball.png" : "interiors/soccer_ball_diffuse.png");}
+int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.obj_id & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png"));}
+
+void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
+	get_material(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0), 1, 0, 1).add_sphere_to_verts(c, apply_light_color(c), 0); // low_detail=0
+}
+
 void building_room_geom_t::clear() {
 	clear_materials();
 	objs.clear();
@@ -2283,6 +2290,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_MWAVE:    return GRAY;
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	case TYPE_BLINDS:   return texture_color(get_blinds_tid()).modulate_with(color);
+	case TYPE_LG_BALL:  return texture_color(get_lg_ball_tid(*this));
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
@@ -2382,6 +2390,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_PAPER:     add_paper    (*i); break;
 		case TYPE_PAINTCAN:  add_paint_can(*i); break;
 		case TYPE_PEN: case TYPE_PENCIL: add_pen_pencil(*i); break;
+		case TYPE_LG_BALL:   add_lg_ball  (*i); break;
 		default: break;
 		}
 	} // for i

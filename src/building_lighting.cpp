@@ -153,7 +153,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	cc.reserve(cc.size() + objs.size());
 		
 	for (auto c = objs.begin(); c != objs.end(); ++c) {
-		if (c->shape == SHAPE_CYLIN  ) continue; // cylinders (lights) are not cubes
+		if (c->shape == SHAPE_CYLIN || c->shape == SHAPE_SPHERE)  continue; // cylinders (lights, etc.) and spheres (balls, etc.) are not cubes
 		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
 		if (c->type  == TYPE_BLOCKER || c->type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
 		if (c->type  == TYPE_WALL_TRIM || c->type == TYPE_BOOK)   continue; // too small to count (optimization)
