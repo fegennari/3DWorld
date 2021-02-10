@@ -579,7 +579,26 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			objs.emplace_back(lamp, TYPE_LAMP, room_id, obj.dim, obj.dir, flags, tot_light_amt, SHAPE_CYLIN, colors[rgen.rand()%NUM_COLORS]); // Note: invalidates obj ref
 		}
 	}
-	// TODO: add TYPE_LG_BALL
+	if (rgen.rand_float() < 0.3) { // maybe add a ball to the room
+		float const radius(0.048*window_vspacing); // 4.7 inches
+		cube_t ball_area(place_area);
+		ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 2.0));
+
+		if (ball_area.is_strictly_normalized()) {
+			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object
+				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+				point center(0.0, 0.0, (zval + radius));
+				center[ dim] = ball_area.d[dim][dir];
+				center[!dim] = rgen.rand_uniform(ball_area.d[!dim][0], ball_area.d[!dim][1]); // random position along the wall
+				cube_t c(center);
+				c.expand_by(radius);
+				if (overlaps_other_room_obj(c, objs_start) || interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue; // bad placement
+				objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE);
+				objs.back().obj_id = rgen.rand_bool(); // 50% chance of each ball type
+				break; // done
+			} // for n
+		}
+	}
 	return 1; // success
 }
 
