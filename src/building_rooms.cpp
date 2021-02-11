@@ -593,7 +593,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 				cube_t c(center);
 				c.expand_by(radius);
 				if (overlaps_other_room_obj(c, objs_start) || interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue; // bad placement
-				objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_SPHERE, WHITE);
+				// Note: we can either set RO_FLAG_DYNAMIC here, or wait until a collision happens; it's probably more efficient to wait
+				objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, (RO_FLAG_NOCOLL /*| RO_FLAG_DYNAMIC*/), tot_light_amt, SHAPE_SPHERE, WHITE);
 				objs.back().obj_id = rgen.rand_bool(); // 50% chance of each ball type
 				break; // done
 			} // for n
@@ -2426,7 +2427,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		cube_t elevator_car(*i);
 		elevator_car.z1() += 0.05*get_floor_thickness(); // to prevent z-fighting when looking at the building from the bottom
 		elevator_car.z2() = elevator_car.z1() + window_vspacing; // currently at the bottom floor
-		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, (i->open ? RO_FLAG_OPEN : 0));
+		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, ((i->open ? RO_FLAG_OPEN : 0) | RO_FLAG_DYNAMIC));
 	}
 }
 

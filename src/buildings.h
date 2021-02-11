@@ -293,6 +293,8 @@ unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves and closets
 unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves and closets
 unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs
 unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
+// object flags, fourth byte
+unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
@@ -329,6 +331,7 @@ struct room_object_t : public cube_t {
 	bool is_interior() const {return  (flags & RO_FLAG_INTERIOR);}
 	bool is_open    () const {return  (flags & RO_FLAG_OPEN);}
 	bool is_house   () const {return  (flags & RO_FLAG_IS_HOUSE);}
+	bool is_dynamic () const {return  (flags & RO_FLAG_DYNAMIC);}
 	bool is_light_type() const {return (type == TYPE_LIGHT || type == TYPE_LAMP);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
@@ -607,6 +610,7 @@ struct building_interior_t {
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
 	bool update_elevators(point const &player_pos, float floor_thickness);
+	void update_dynamic_draw_data() {assert(room_geom); room_geom->mats_dynamic.clear();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const;
 };
 

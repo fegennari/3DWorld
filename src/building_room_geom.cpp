@@ -2219,7 +2219,9 @@ int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name((c.ob
 int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.obj_id & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png"));}
 
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
-	get_material(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0), 1, 0, 1).add_sphere_to_verts(c, apply_light_color(c), 0); // low_detail=0
+	// TODO: rotate the texture coords when the ball is rolling?
+	bool const dynamic(c.is_dynamic()); // either small or dynamic
+	get_material(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0), 1, dynamic, !dynamic).add_sphere_to_verts(c, apply_light_color(c), 0); // low_detail=0
 }
 
 void building_room_geom_t::clear() {
@@ -2304,7 +2306,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	mats_alpha .clear();
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if (!i->is_visible()) continue;
+		if (!i->is_visible() || i->is_dynamic()) continue; // skip invisible and dynamic objects
 		assert(i->is_strictly_normalized());
 		assert(i->type < NUM_ROBJ_TYPES);
 
@@ -2365,7 +2367,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 	float const tscale(2.0/obj_scale);
 
 	for (auto i = objs_to_add.begin(); i != objs_to_add.end(); ++i) {
-		if (!i->is_visible()) continue;
+		if (!i->is_visible() || i->is_dynamic()) continue; // skip invisible and dynamic objects
 		assert(i->is_strictly_normalized());
 		assert(i->type < NUM_ROBJ_TYPES);
 
@@ -2426,8 +2428,12 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 	if (!has_elevators) return; // currently only elevators are dynamic, can skip this step if there are no elevators
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if (!i->is_visible() || i->type != TYPE_ELEVATOR) continue; // only elevators for now
-		add_elevator(*i, 2.0/obj_scale);
+		if (!i->is_visible() || !i->is_dynamic()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
+		switch (i->type) {
+		case TYPE_ELEVATOR: add_elevator(*i, 2.0/obj_scale); break;
+		case TYPE_LG_BALL:  add_lg_ball (*i); break;
+		default: assert(0); // not a supported dynamic object type
+		}
 	}
 	mats_dynamic.create_vbos(building);
 }

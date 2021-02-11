@@ -271,7 +271,7 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 			else          {max_eq(dist, (e->z1() - i->z1() + z_space));} // going down
 			if (fabs(dist) < 0.0001*z_space) break; // no movement, at top or bottom of elevator shaft (check with a tolerance)
 			i->z1() += dist; i->z2() += dist;
-			room_geom->mats_dynamic.clear(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
+			update_dynamic_draw_data(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
 			
 			if ((int)move_dir != prev_move_dir) {
 				gen_sound(SOUND_SLIDING, get_camera_pos(), 0.2); // play this sound quietly when the elevator starts moving or changes direction
