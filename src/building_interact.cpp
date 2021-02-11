@@ -181,8 +181,9 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 	}
 	if (interior->room_geom) { // check for closet doors in houses and bathroom stalls in office buildings
 		vector<room_object_t> &objs(interior->room_geom->objs);
+		auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 
-		for (auto i = objs.begin(); i != objs.end(); ++i) {
+		for (auto i = objs.begin(); i != objs_end; ++i) {
 			// this loop only handles closets with small doors, cube bathroom stalls, and rotated office chairs
 			if (i->type != TYPE_CLOSET && !(i->type == TYPE_STALL && i->shape == SHAPE_CUBE) && !(i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT))) continue;
 			if (i->type == TYPE_CLOSET && !i->is_small_closet()) continue; // not a closet with a small door
@@ -262,8 +263,9 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
 		if (!e->contains_pt(player_pos)) continue; // player not in this elevator
 		unsigned const elevator_id(e - elevators.begin());
+		auto objs_start(room_geom->objs.begin() + room_geom->stairs_start); // start with stairs and elevators
 
-		for (auto i = room_geom->objs.begin(); i != room_geom->objs.end(); ++i) { // find elevator car and see if player is in it
+		for (auto i = objs_start; i != room_geom->objs.end(); ++i) { // find elevator car and see if player is in it
 			if (i->type != TYPE_ELEVATOR || i->room_id != elevator_id || !i->contains_pt(player_pos)) continue;
 			bool const move_dir(player_pos[!i->dim] < i->get_center_dim(!i->dim)); // player controls up/down direction based on which side of the elevator they stand on
 			float dist(min(0.5f*CAMERA_RADIUS, 0.04f*i->dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
@@ -326,8 +328,9 @@ bool building_t::is_pt_lit(point const &pt) const {
 	int const room_id(get_room_containing_pt(pt)); // call this only once on center in is_sphere_lit()?
 	if (room_id < 0) return 0; // outside building?
 	room_t const &room(get_room(room_id));
+	auto objs_end(interior->room_geom->objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 
-	for (auto i = interior->room_geom->objs.begin(); i != interior->room_geom->objs.end(); ++i) {
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
 		bool const same_room((int)i->room_id == room_id);
 		//if (!same_room) continue; // different room (optimization); too strong?
@@ -678,7 +681,9 @@ void building_room_geom_t::update_draw_state_for_room_object(bldg_obj_type_t con
 }
 
 int building_room_geom_t::find_avail_obj_slot() const {
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
+	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
+
+	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type == TYPE_BLOCKER) {return int(i - objs.begin());} // blockers are used as temporaries for room object placement and to replace removed objects
 	}
 	return -1; // no slot found

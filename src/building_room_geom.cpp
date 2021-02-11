@@ -2399,8 +2399,9 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 }
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
 	obj_model_insts.clear();
+	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
 
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
+	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_visible() || !i->is_obj_model_type()) continue;
 		vector3d dir(zero_vector);
 		dir[i->dim] = (i->dir ? 1.0 : -1.0);
@@ -2418,14 +2419,15 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
 	float const tscale(2.0/obj_scale);
+	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
 
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
+	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->is_visible() && i->type == TYPE_LIGHT) {add_light(*i, tscale);}
 	}
 	mats_lights.create_vbos(building);
 }
 void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
-	if (!has_elevators) return; // currently only elevators are dynamic, can skip this step if there are no elevators
+	//if (!has_elevators) return; // currently only elevators are dynamic, can skip this step if there are no elevators - but balls will be dynamic soon
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible() || !i->is_dynamic()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame

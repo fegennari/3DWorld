@@ -620,8 +620,9 @@ void building_interior_t::get_avoid_cubes(vect_cube_t &avoid, float z1, float z2
 	add_bcube_if_overlaps_zval(stairwells, avoid, z1, z2); // clearance not required
 	add_bcube_if_overlaps_zval(elevators,  avoid, z1, z2); // clearance not required
 	if (!room_geom) return; // no room objects
+	auto objs_end(room_geom->objs.begin() + room_geom->stairs_start); // skip stairs and elevators
 
-	for (auto c = room_geom->objs.begin(); c != (room_geom->objs.begin() + room_geom->stairs_start); ++c) {
+	for (auto c = room_geom->objs.begin(); c != objs_end; ++c) {
 		// these object types are not collided with by people and can be skipped
 		if (c->no_coll() || !(same_as_player ? bldg_obj_types[c->type].player_coll : bldg_obj_types[c->type].ai_coll)) continue;
 		if (c->z1() < z2 && c->z2() > z1) {avoid.push_back(*c);}

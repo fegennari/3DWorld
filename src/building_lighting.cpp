@@ -374,8 +374,9 @@ void building_t::order_lights_by_priority(point const &target, vector<unsigned> 
 	vector<pair<float, unsigned>> to_sort;
 	float const window_vspacing(get_window_vspace());
 	float const diag_dist_sq(bcube.dx()*bcube.dx() + bcube.dy()*bcube.dy()), other_floor_penalty(0.25*diag_dist_sq);
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
+	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
 		float dist_sq(p2p_dist_sq(i->get_cube_center(), target));
 		dist_sq *= 0.005f*window_vspacing/(i->dx()*i->dy()); // account for the size of the light, larger lights smaller/higher priority
