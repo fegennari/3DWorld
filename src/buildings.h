@@ -600,7 +600,7 @@ struct building_interior_t {
 	draw_range_t draw_range;
 	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
 	unsigned door_vert_start_ix; // for updating vertex data when door open/close state is changed
-	bool door_state_updated;
+	bool door_state_updated, is_unconnected;
 
 	building_interior_t();
 	~building_interior_t();
@@ -804,6 +804,7 @@ struct building_t : public building_geom_t {
 	void update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) const;
 	void invalidate_nav_graph();
 private:
+	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t &rgen);
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;

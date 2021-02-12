@@ -162,8 +162,19 @@ int building_t::classify_room_wall(room_t const &room, float zval, bool dim, boo
 }
 
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
-
 	if (!interior_enabled()) return;
+
+	// make three attempts to generate a connected interior; the first attempt almost always succeeds; currently it only fails if a house basement is unconnected
+	// 64 houses are unconnected, this loop fixes all but 6 of them
+	for (unsigned n = 0; n < 3; ++n) {
+		gen_interior_int(rgen, has_overlapping_cubes);
+		if (!interior->is_unconnected) break; // done
+	}
+	interior->finalize();
+}
+
+void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
+
 	// defer this until the building is close to the player?
 	interior.reset(new building_interior_t);
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness);
@@ -805,7 +816,6 @@ void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { //
 
 	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
 	for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
-	interior->finalize();
 }
 
 void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
@@ -1222,6 +1232,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	bool const is_basement(has_basement() && part == parts[basement_part_ix]);
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it (but roof geom may get us into this case anyway)
+		bool connected(0);
+
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			if (*p == part) continue; // skip self
 			if (p->z1() != part.z2()) continue; // *p not on top of part
@@ -1239,21 +1251,20 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				pref_shared.intersect_with_cube(pri_hall);
 				if (max(pref_shared.dx(), pref_shared.dy()) < 1.2*len_with_pad || min(pref_shared.dx(), pref_shared.dy()) < 1.5*stairs_width) {pref_shared = shared;} // too small
 			}
-			// place stairs in shared area if there's space and no walls are in the way for either the room or above
+			// place stairs in shared area if there's space and no walls are in the way for either the room above or below
 			cube_t cand;
 			cand.z1() = part.z2() - window_vspacing + fc_thick; // top of top floor for this part
 			cand.z2() = part.z2() + fc_thick; // top of bottom floor of upper part *p
-			bool connected(0);
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
 			for (unsigned n = 0; n < 200; ++n) { // make 200 tries to add stairs
 				cube_t place_region((n < 20) ? pref_shared : shared); // use preferred shared area from primary hallway for first 20 iterations
 
-				if (n >= 40 && n < 160 && (n%10) == 0) { // decrease stairs size slightly every 10 iterations
-					stairs_width -= 0.025*doorway_width;
-					stairs_pad   -= 0.030*doorway_width;
-					len_with_pad -= 0.230*doorway_width;
+				if (n >= 40 && n < 160 && (n%10) == 0) { // decrease stairs size slightly every 10 iterations, 12 times
+					stairs_width -= 0.025*doorway_width; // 1.2*DW => 0.9*DW
+					stairs_pad   -= 0.030*doorway_width; // 1.0*WD => 0.64*DW
+					len_with_pad -= 0.230*doorway_width*(is_basement ? 1.2 : 0.0); // 6.0*DW => 3.24*DW / 2.689*DW ; basement can have steeper stairs
 					max_eq(stairs_width, get_min_front_clearance()); // ensure the player can fit
 					max_eq(stairs_pad,   get_min_front_clearance()); // ensure the player can fit
 				}
@@ -1328,6 +1339,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 			} // for n
 			if (connected && is_basement) break; // only need to connect one part for the basement
 		} // for p
+		if (!connected && is_basement) {interior->is_unconnected = 1;} // failed to connect basement with stairs - flag as unconnected
 	}
 
 	// now attempt to extend elevators into floors above/below
