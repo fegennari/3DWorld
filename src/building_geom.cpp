@@ -381,13 +381,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere
 				assert(c->dx() == c->dy() && c->dx() == c->dz());
-				float const r_sum(c->dx() + radius); // xy_radius?
 				point const center(c->get_cube_center());
-				if (!dist_less_than(pos, center, r_sum)) continue;
-
-				if (c->type == TYPE_LG_BALL/*c->is_dynamic()*/) {
-					// TODO: move object rather than player/pos, set c->flags |= RO_FLAG_DYNAMIC; this function can't be const
-				}
+				if (!dist_less_than(pos, center, (c->dx() + radius))) continue; // xy_radius?
 				if (cnorm) {*cnorm = (pos - center).get_norm();}
 				had_coll = 1;
 			}

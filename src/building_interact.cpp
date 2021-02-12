@@ -249,12 +249,14 @@ void building_t::play_door_open_close_sound(point const &pos, bool open, float p
 	gen_sound((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos, 1.0, pitch);
 }
 
-// elevators
+// dynamic objects: elevators and balls
 
-void building_t::update_elevators(point const &player_pos) {
+void building_t::update_player_interact_objects(point const &player_pos) {
 	assert(interior);
 	interior->update_elevators(player_pos, get_floor_thickness());
+	if (has_room_geom()) {interior->update_moving_objects(player_pos);}
 }
+
 bool building_interior_t::update_elevators(point const &player_pos, float floor_thickness) { // Note: player_pos is in building space
 	float const z_space(0.05*floor_thickness); // to prevent z-fighting
 	static int prev_move_dir(2); // starts at not-moving
@@ -286,6 +288,26 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 	} // for e
 	prev_move_dir = 2;
 	return 0;
+}
+
+void building_interior_t::update_moving_objects(point const &player_pos) {
+	float const player_radius(CAMERA_RADIUS); // *global_building_params.player_coll_radius_scale?
+
+	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
+		if (c->no_coll() || !bldg_obj_types[c->type].player_coll) continue;
+		
+		if (c->type == TYPE_LG_BALL) {
+			assert(c->dx() == c->dy() && c->dx() == c->dz());
+			point const center(c->get_cube_center());
+			float const r_sum(c->dx() + player_radius);
+			if (!dist_less_than(player_pos, center, r_sum)) continue;
+			vector3d normal(player_pos - center);
+			normal.z = 0.0; // should move in XY plane
+			c->translate((r_sum - p2p_dist(player_pos, center))*normal.get_norm());
+			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
+			// TODO: add momentum, unset RO_FLAG_DYNAMIC when stopped
+		}
+	} // for c
 }
 
 // ray queries
