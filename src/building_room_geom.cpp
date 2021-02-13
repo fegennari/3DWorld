@@ -2182,7 +2182,7 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant) {
-	float const plant_diameter(0.5f*(c.dx() + c.dy())), stem_radius(0.04*plant_diameter);
+	float const plant_diameter(2.0*c.get_radius()), stem_radius(0.04*plant_diameter);
 	float const pot_height(max(0.6*plant_diameter, 0.3*c.dz())), pot_top(c.z1() + pot_height), dirt_level(pot_top - 0.15*pot_height);
 	float const cx(c.get_center_dim(0)), cy(c.get_center_dim(1));
 	point const base_pos(cx, cy, dirt_level); // base of plant trunk, center of dirt disk

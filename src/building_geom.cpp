@@ -293,6 +293,13 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 	return 1;
 }
 
+float room_object_t::get_radius() const {
+	if (shape == SHAPE_CYLIN ) {return 0.25f*(dx() + dy());} // vertical cylinder: return average of x/y diameter
+	if (shape == SHAPE_SPHERE) {return 0.5*dx();} // sphere, should be the same dx()/dy()/dz() value (but can't assert due to FP precision errors)
+	assert(0); // cubes don't have a radius
+	return 0.0; // never gets here
+}
+
 // Note: pos and p_last are already in rotated coordinate space
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm) const {
@@ -374,15 +381,14 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_zh) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
-				float const cradius(0.25f*(c->dx() + c->dy())); // average of x/y diameter
+				float const cradius(c->get_radius());
 				point const center(c->get_cube_center());
 				cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, (c->z2() + radius)), cradius, cradius); // extend upward by radius
 				had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, cylin, cnorm);
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere
-				assert(c->dx() == c->dy() && c->dx() == c->dz());
 				point const center(c->get_cube_center());
-				if (!dist_less_than(pos, center, (c->dx() + radius))) continue; // xy_radius?
+				if (!dist_less_than(pos, center, (c->get_radius() + radius))) continue; // xy_radius?
 				if (cnorm) {*cnorm = (pos - center).get_norm();}
 				had_coll = 1;
 			}

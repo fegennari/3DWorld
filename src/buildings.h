@@ -336,6 +336,7 @@ struct room_object_t : public cube_t {
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	unsigned get_orient() const {return (2*dim + dir);}
+	float get_radius() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	static bool enable_rugs();
 	static bool enable_pictures();
