@@ -582,7 +582,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	if (rgen.rand_float() < 0.3) { // maybe add a ball to the room
 		float const radius(0.048*window_vspacing); // 4.7 inches
 		cube_t ball_area(place_area);
-		ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 2.0));
+		ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 10.0));
 
 		if (ball_area.is_strictly_normalized()) {
 			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to place the object

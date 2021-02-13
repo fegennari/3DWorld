@@ -2427,8 +2427,6 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	mats_lights.create_vbos(building);
 }
 void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
-	//if (!has_elevators) return; // currently only elevators are dynamic, can skip this step if there are no elevators - but balls will be dynamic soon
-
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible() || !i->is_dynamic()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
 		switch (i->type) {
@@ -2436,7 +2434,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		case TYPE_LG_BALL:  add_lg_ball (*i); break;
 		default: assert(0); // not a supported dynamic object type
 		}
-	}
+	} // for i
 	mats_dynamic.create_vbos(building);
 }
 

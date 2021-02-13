@@ -14,7 +14,7 @@ bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 extern bool toggle_door_open_state;
 extern int window_width, window_height, display_framerate, player_in_closet;
 extern float fticks, CAMERA_RADIUS;
-extern double tfticks;
+extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
 
 
@@ -254,7 +254,29 @@ void building_t::play_door_open_close_sound(point const &pos, bool open, float p
 void building_t::update_player_interact_objects(point const &player_pos) {
 	assert(interior);
 	interior->update_elevators(player_pos, get_floor_thickness());
-	if (has_room_geom()) {interior->update_moving_objects(player_pos);}
+	if (!has_room_geom()) return; // nothing else to do
+	float const player_radius(CAMERA_RADIUS); // *global_building_params.player_coll_radius_scale?
+	float const player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
+
+	for (auto c = interior->room_geom->objs.begin(); c != interior->room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
+		if (c->no_coll()) continue; // Note: no test of player_coll flag
+		if (c->z2() < player_z1 || c->z1() > player_z2) continue; // no overlap with player in Z
+
+		if (c->type == TYPE_LG_BALL) {
+			point const center(c->get_cube_center()), ppos(player_pos.x, player_pos.y, center.z); // use zval of object (Z range was checked above)
+			float const radius(c->get_radius()), r_sum(radius + player_radius);
+			if (!dist_xy_less_than(ppos, center, r_sum)) continue;
+			point new_center(center + (r_sum - p2p_dist_xy(ppos, center))*(center - ppos).get_norm()); // move so that it no longer collides
+			vector3d *cnorm(nullptr); // not yet used
+			interior->check_sphere_coll(new_center, center, radius, c, cnorm); // Note: return value ignored
+			move_sphere_to_valid_part(new_center, center, radius); // would it be better to use building_t::parts()?
+			if (!c->is_dynamic()) {interior->room_geom->clear_static_small_vbos();} // static => dynamic transition, need to remove from static object vertex data
+			interior->update_dynamic_draw_data();
+			c->translate(new_center - center);
+			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
+			// TODO: add momentum, unset RO_FLAG_DYNAMIC when stopped
+		}
+	} // for c
 }
 
 bool building_interior_t::update_elevators(point const &player_pos, float floor_thickness) { // Note: player_pos is in building space
@@ -290,24 +312,27 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 	return 0;
 }
 
-void building_interior_t::update_moving_objects(point const &player_pos) {
-	float const player_radius(CAMERA_RADIUS); // *global_building_params.player_coll_radius_scale?
+void building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
+	float xy_area_contained(0.0);
+	cube_t bcube; bcube.set_from_sphere(pos, radius);
 
-	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
-		if (c->no_coll() || !bldg_obj_types[c->type].player_coll) continue;
-		
-		if (c->type == TYPE_LG_BALL) {
-			assert(c->dx() == c->dy() && c->dx() == c->dz());
-			point const center(c->get_cube_center());
-			float const r_sum(c->dx() + player_radius);
-			if (!dist_less_than(player_pos, center, r_sum)) continue;
-			vector3d normal(player_pos - center);
-			normal.z = 0.0; // should move in XY plane
-			c->translate((r_sum - p2p_dist(player_pos, center))*normal.get_norm());
-			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
-			// TODO: add momentum, unset RO_FLAG_DYNAMIC when stopped
-		}
-	} // for c
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		if (!i->intersects(bcube)) continue;
+		cube_t overlap(bcube);
+		overlap.intersect_with_cube(*i);
+		xy_area_contained += overlap.dx()*overlap.dy();
+	}
+	if (xy_area_contained > 0.99*bcube.dx()*bcube.dy()) return; // sphere contained in union of parts (not outside the building)
+
+	// find part containing p_last and clamp to that part
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		if (!i->contains_pt(p_last)) continue; // not the part containing the previous pos
+		cube_t bounds(*i);
+		bounds.expand_by_xy(-radius);
+		bounds.clamp_pt_xy(pos);
+		return;
+	}
+	assert(0); // should never get here (except for FP error?)
 }
 
 // ray queries

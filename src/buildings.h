@@ -611,7 +611,8 @@ struct building_interior_t {
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
 	bool update_elevators(point const &player_pos, float floor_thickness);
-	void update_moving_objects(point const &player_pos);
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector<room_object_t>::const_iterator self, vector3d *cnorm) const;
+	bool check_sphere_coll_walls_elevators_doors(point &pos, point const &p_last, float radius, float wall_test_extra_z, vector3d *cnorm) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->mats_dynamic.clear();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const;
 };
@@ -809,6 +810,7 @@ private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t &rgen);
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
+	void move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
 	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;
