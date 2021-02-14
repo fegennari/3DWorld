@@ -295,6 +295,7 @@ unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs
 unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
 // object flags, fourth byte
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
+unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
@@ -348,6 +349,10 @@ struct room_object_t : public cube_t {
 	int get_model_id () const {return ((type == TYPE_MONITOR) ? OBJ_MODEL_TV : (type + OBJ_MODEL_TOILET - TYPE_TOILET));} // monitor has same model as TV
 	colorRGBA get_color() const;
 	void set_rand_gen_state(rand_gen_t &rgen) const {rgen.set_state(obj_id+1, room_id+1);}
+};
+
+struct room_obj_dstate_t { // state used for dynamic room objects
+	vector3d velocity;
 };
 
 struct rgeom_storage_t {
@@ -414,6 +419,7 @@ struct building_room_geom_t {
 	point tex_origin;
 	colorRGBA wood_color;
 	vector<room_object_t> objs, expanded_objs; // objects placed in rooms; expanded_objs is for things like shelves that have been expanded for player interaction
+	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha; // {large static, small static, dynamic, lights, plants, transparent} materials
 	vect_cube_t light_bcubes;
@@ -502,6 +508,7 @@ struct building_room_geom_t {
 	void create_dynamic_vbos(building_t const &building);
 	void draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+	unsigned allocate_dynamic_state() {unsigned const ix(obj_dstate.size()); obj_dstate.push_back(room_obj_dstate_t()); return ix;}
 };
 
 struct elevator_t : public cube_t {

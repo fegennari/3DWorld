@@ -12,7 +12,7 @@ float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 
 extern bool toggle_door_open_state;
-extern int window_width, window_height, display_framerate, player_in_closet;
+extern int window_width, window_height, display_framerate, player_in_closet, frame_counter;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
@@ -257,24 +257,41 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(CAMERA_RADIUS); // *global_building_params.player_coll_radius_scale?
 	float const player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
+	static int last_sound_frame(0);
 
 	for (auto c = interior->room_geom->objs.begin(); c != interior->room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
-		if (c->no_coll()) continue; // Note: no test of player_coll flag
-		if (c->z2() < player_z1 || c->z1() > player_z2) continue; // no overlap with player in Z
-
-		if (c->type == TYPE_LG_BALL) {
-			point const center(c->get_cube_center()), ppos(player_pos.x, player_pos.y, center.z); // use zval of object (Z range was checked above)
-			float const radius(c->get_radius()), r_sum(radius + player_radius);
-			if (!dist_xy_less_than(ppos, center, r_sum)) continue;
+		if (c->no_coll() || !(c->flags & RO_FLAG_DSTATE)) continue; // Note: no test of player_coll flag
+		assert(c->type == TYPE_LG_BALL); // currently, only large balls have RO_FLAG_DSTATE set
+		assert(c->obj_id < interior->room_geom->obj_dstate.size());
+		room_obj_dstate_t &dstate(interior->room_geom->obj_dstate[c->obj_id]);
+		point const center(c->get_cube_center()), ppos(player_pos.x, player_pos.y, center.z); // use zval of object (Z range was checked above)
+		float const radius(c->get_radius()), r_sum(radius + player_radius);
+			
+		if (c->z2() > player_z1 && c->z1() < player_z2 && dist_xy_less_than(ppos, center, r_sum)) { // collides with the player
 			point new_center(center + (r_sum - p2p_dist_xy(ppos, center))*(center - ppos).get_norm()); // move so that it no longer collides
 			vector3d *cnorm(nullptr); // not yet used
 			interior->check_sphere_coll(new_center, center, radius, c, cnorm); // Note: return value ignored
-			move_sphere_to_valid_part(new_center, center, radius); // would it be better to use building_t::parts()?
+			move_sphere_to_valid_part(new_center, center, radius); // Note: if it wasn't for this call, we could make this function a building_interior_t member
 			if (!c->is_dynamic()) {interior->room_geom->clear_static_small_vbos();} // static => dynamic transition, need to remove from static object vertex data
 			interior->update_dynamic_draw_data();
 			c->translate(new_center - center);
 			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
-			// TODO: add momentum, unset RO_FLAG_DYNAMIC when stopped
+
+			if ((frame_counter - last_sound_frame) > 1.0f*TICKS_PER_SECOND) { // play at most once per second
+				gen_sound(SOUND_OBJ_FALL, (get_camera_pos() + (new_center - player_pos)), 0.5);
+				last_sound_frame = frame_counter;
+			}
+			// TODO: add dstate.velocity
+		}
+		else if (c->is_dynamic()) { // not colliding, but is moving
+			if (dstate.velocity != zero_vector) {
+				// TODO: update velocity
+			}
+			if (dstate.velocity == zero_vector) { // stopped: dynamic => static transition
+				c->flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
+				interior->update_dynamic_draw_data(); // remove from dynamic objects
+				interior->room_geom->clear_static_small_vbos(); // add to static objects
+			}
 		}
 	} // for c
 }

@@ -593,9 +593,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 				cube_t c(center);
 				c.expand_by(radius);
 				if (overlaps_other_room_obj(c, objs_start) || interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue; // bad placement
-				// Note: we can either set RO_FLAG_DYNAMIC here, or wait until a collision happens; it's probably more efficient to wait
-				objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, 0/*| RO_FLAG_DYNAMIC*/, tot_light_amt, SHAPE_SPHERE, WHITE);
-				objs.back().obj_id = rgen.rand_bool(); // 50% chance of each ball type
+				objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE);
+				objs.back().obj_id = interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
 				break; // done
 			} // for n
 		}
