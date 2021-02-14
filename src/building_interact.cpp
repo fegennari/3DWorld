@@ -6,7 +6,7 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
-bool do_room_obj_pickup(0), show_bldg_pickup_crosshair(0);
+bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
@@ -255,13 +255,12 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	assert(interior);
 	interior->update_elevators(player_pos, get_floor_thickness());
 	if (!has_room_geom()) return; // nothing else to do
-	float const player_radius(CAMERA_RADIUS); // *global_building_params.player_coll_radius_scale?
-	float const player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
+	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
 	static int last_sound_frame(0);
 
 	for (auto c = interior->room_geom->objs.begin(); c != interior->room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
-		if (c->no_coll() || !(c->flags & RO_FLAG_DSTATE)) continue; // Note: no test of player_coll flag
-		assert(c->type == TYPE_LG_BALL); // currently, only large balls have RO_FLAG_DSTATE set
+		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
+		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
 		assert(c->obj_id < interior->room_geom->obj_dstate.size());
 		room_obj_dstate_t &dstate(interior->room_geom->obj_dstate[c->obj_id]);
 		point const center(c->get_cube_center()), ppos(player_pos.x, player_pos.y, center.z); // use zval of object (Z range was checked above)
@@ -294,6 +293,10 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			}
 		}
 	} // for c
+	if (drop_last_pickup_object) {
+		maybe_add_last_pickup_room_object(player_pos);
+		drop_last_pickup_object = 0;
+	}
 }
 
 bool building_interior_t::update_elevators(point const &player_pos, float floor_thickness) { // Note: player_pos is in building space
@@ -509,7 +512,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_COMPUTER && (obj.flags & RO_FLAG_WAS_EXP)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
 	if (obj.type == TYPE_LG_BALL) {
 		bldg_obj_type_t type(get_room_obj_type(obj));
-		type.name = ((obj.obj_id & 1) ? "basketball" : "soccer ball"); // use a more specific type name; all other fields are shared across balls
+		type.name = ((obj.flags2 & 1) ? "basketball" : "soccer ball"); // use a more specific type name; all other fields are shared across balls
 		return type;
 	}
 	return get_room_obj_type(obj); // default value
@@ -562,9 +565,10 @@ public:
 		cur_weight += get_obj_weight(obj);
 		carried.push_back(obj);
 	}
-	bool drop_last_item() {
+	bool drop_last_item(room_object_t &obj, bool dynamic_only) {
 		if (carried.empty()) return 0;
-		room_object_t const &obj(carried.back());
+		obj = carried.back(); // deep copy
+		if (dynamic_only && !obj.has_dstate()) return 0;
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
 		assert(cur_value >= 0.0 && cur_weight >= 0.0); // is this okay if there's FP rounding error?
@@ -600,6 +604,11 @@ public:
 
 player_inventory_t player_inventory;
 
+void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
+	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
+	register_building_sound(pos, volume);
+}
+
 bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
 	if (!has_room_geom()) return 0;
 	return interior->room_geom->player_pickup_object(*this, at_pos, in_dir);
@@ -630,8 +639,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	}
 	show_object_info(obj);
 	gen_sound(SOUND_ITEM, get_camera_pos(), 0.25);
-	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
-	register_building_sound(at_pos, volume);
+	register_building_sound_for_obj(obj, at_pos);
 	remove_object(obj_id, building);
 	return 1;
 }
@@ -715,6 +723,7 @@ room_object_t &building_room_geom_t::get_room_object_by_index(unsigned obj_id) {
 
 void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) {
 	room_object_t &obj(get_room_object_by_index(obj_id));
+	room_object_t const old_obj(obj); // deep copy
 	assert(obj.type != TYPE_ELEVATOR); // elevators require special updates for drawing logic and cannot be removed at this time
 	player_inventory.add_item(obj);
 	bldg_obj_type_t const type(get_taken_obj_type(obj)); // capture type before updating obj
@@ -733,14 +742,18 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	}
 	else {obj.type = TYPE_BLOCKER; obj.flags = RO_FLAG_NOCOLL;} // replace it with an invisible blocker that won't collide with anything
 	if (is_light) {clear_and_recreate_lights();}
-	update_draw_state_for_room_object(type, building);
+	update_draw_state_for_room_object(old_obj, building);
 }
-void building_room_geom_t::update_draw_state_for_room_object(bldg_obj_type_t const &type, building_t &building) { // Note: called when adding or removing objects
+void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building) { // Note: called when adding or removing objects
 	// reuild necessary VBOs and other data structures
-	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
-	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
-	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
-	if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object may affect the AI navigation graph
+	if (obj.is_dynamic()) {mats_dynamic.clear();} // dynamic object
+	else { // static object
+		bldg_obj_type_t const type(get_taken_obj_type(obj));
+		if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
+		if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
+		if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
+		if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object may affect the AI navigation graph
+	}
 	modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 }
 
@@ -759,15 +772,29 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	if (obj_id < 0) return 0; // no slot found
 	room_object_t &obj_slot(get_room_object_by_index(obj_id));
 	obj_slot = obj; // overwrite with new object
-	if (set_obj_id) {obj_slot.obj_id = (uint16_t)obj_id;}
-	update_draw_state_for_room_object(get_taken_obj_type(obj), building);
+	if (set_obj_id) {obj_slot.obj_id = (uint16_t)(obj.has_dstate() ? allocate_dynamic_state() : obj_id);}
+	update_draw_state_for_room_object(obj, building);
+	return 1;
+}
+bool building_t::maybe_add_last_pickup_room_object(point const &player_pos) {
+	assert(has_room_geom());
+	bool const dynamic_only = 1;
+	room_object_t obj;
+	if (!player_inventory.drop_last_item(obj, dynamic_only)) return 0;
+	float const cradius(get_scaled_player_radius());
+	point const obj_bot_center(obj.xc(), obj.yc(), obj.z1());
+	point const drop_pos(player_pos + cradius*cview_dir), dest(drop_pos.x, drop_pos.y, (player_pos.z - 1.1*cradius - camera_zh)); // Note: not sure why 1.1x is needed
+	obj.translate(dest - obj_bot_center);
+	if (!interior->room_geom->add_room_object(obj, *this, 1)) return 0;
+	gen_sound(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
+	register_building_sound_for_obj(obj, player_pos);
 	return 1;
 }
 
 // sound/audio tracking
 
 void register_building_sound(point const &pos, float volume) {
-	if (volume == 0.0) return;
+	if (volume == 0.0 || !show_bldg_pickup_crosshair) return; // only when in gameplay/item pickup mode
 	assert(volume > 0.0); // can't be negative
 	// TODO: alert AT at this position if (volume > ALERT_THRESH)
 	cur_building_sound_level += volume;
@@ -785,10 +812,11 @@ void register_ai_player_coll(pedestrian_t const &person) {
 	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 }
 
-void building_gameplay_action_key(bool mode) {
+void building_gameplay_action_key(int mode) {
 	// show crosshair on first pickup because it's too difficult to pick up objects without it
-	if (mode) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
-	else      {toggle_door_open_state = 1;} // 'q'
+	if      (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
+	else if (mode == 2) {drop_last_pickup_object = 1;} // 'E'
+	else                {toggle_door_open_state  = 1;} // 'q'
 }
 
 void building_gameplay_next_frame() {

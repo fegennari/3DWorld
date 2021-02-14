@@ -333,6 +333,7 @@ struct room_object_t : public cube_t {
 	bool is_open    () const {return  (flags & RO_FLAG_OPEN);}
 	bool is_house   () const {return  (flags & RO_FLAG_IS_HOUSE);}
 	bool is_dynamic () const {return  (flags & RO_FLAG_DYNAMIC);}
+	bool has_dstate () const {return  (flags & RO_FLAG_DSTATE);}
 	bool is_light_type() const {return (type == TYPE_LIGHT || type == TYPE_LAMP);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
@@ -496,7 +497,7 @@ struct building_room_geom_t {
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const;
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
-	void update_draw_state_for_room_object(bldg_obj_type_t const &type, building_t &building);
+	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building);
 	room_object_t &get_room_object_by_index(unsigned obj_id);
 	int find_avail_obj_slot() const;
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0);
@@ -776,6 +777,7 @@ struct building_t : public building_geom_t {
 	void register_player_enter_building() const;
 	void register_player_exit_building () const;
 	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2) const;
+	bool maybe_add_last_pickup_room_object(point const &player_pos);
 	void draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);

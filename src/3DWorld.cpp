@@ -172,6 +172,7 @@ void write_map_mode_heightmap_image();
 void apply_grass_scale();
 void take_screenshot_texture();
 void teleport_to_map_location();
+void building_gameplay_action_key(int mode);
 
 
 // all OpenGL error handling goes through these functions
@@ -1042,6 +1043,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'E': // reset leaf colors
+		if (world_mode == WMODE_INF_TERRAIN && have_buildings()) {building_gameplay_action_key(2); break;} // throw/drop building object
 		leaf_color_coherence = 0.5;
 		tree_color_coherence = 0.2;
 		leaf_base_color.R    = 0.2;
