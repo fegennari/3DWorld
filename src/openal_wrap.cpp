@@ -136,6 +136,7 @@ public:
 		add_new_sound("horn.wav"       ); // SOUND_HORN
 		add_new_sound("door_open.wav"  ); // SOUND_DOOR_OPEN
 		add_new_sound("door_close.wav" ); // SOUND_DOOR_CLOSE
+		add_new_sound("kickball.wav"   ); // SOUND_KICK_BALL
 		cout << endl;
 
 		// create sources

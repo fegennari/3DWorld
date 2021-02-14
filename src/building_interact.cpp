@@ -278,7 +278,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
 
 			if ((frame_counter - last_sound_frame) > 1.0f*TICKS_PER_SECOND) { // play at most once per second
-				gen_sound(SOUND_OBJ_FALL, (get_camera_pos() + (new_center - player_pos)), 0.5);
+				gen_sound(SOUND_KICK_BALL, (get_camera_pos() + (new_center - player_pos)), 0.5);
 				last_sound_frame = frame_counter;
 			}
 			// TODO: add dstate.velocity
