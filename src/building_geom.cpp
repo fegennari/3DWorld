@@ -1145,6 +1145,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			// use the same dim as the shrunk house part for the full fence section; or should we use garage_dim?
 			float const fence_thickness(0.08*door_height);
 			cube_t fence(bcube), fence2(bcube);
+			fence.z1() = fence2.z1() = ground_floor_z1;
 			fence.z2() = fence2.z2() = ground_floor_z1 + 0.65*door_height; // set fence height
 			fence.d[!dim][!dir2] = fence.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*fence_thickness;
 			// we can calculate the exact location of the fence, but it depends on detail_type, garage/shed position, etc.,
