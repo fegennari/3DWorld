@@ -2215,8 +2215,8 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 	}
 }
 
-int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/basketball.png" : "interiors/soccer_ball_diffuse.png");}
-int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.obj_id & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png"));}
+int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name((c.flags2 & 1) ? "interiors/basketball.png" : "interiors/soccer_ball_diffuse.png");}
+int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.flags2 & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png"));}
 
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	// TODO: rotate the texture coords when the ball is rolling?
