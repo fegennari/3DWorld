@@ -257,6 +257,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
 	static int last_sound_frame(0);
+	static point last_sound_pt(all_zeros);
 
 	for (auto c = interior->room_geom->objs.begin(); c != interior->room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
@@ -276,9 +277,10 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			c->translate(new_center - center);
 			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
 
-			if ((frame_counter - last_sound_frame) > 1.0f*TICKS_PER_SECOND) { // play at most once per second
+			if ((frame_counter - last_sound_frame) > 1.0f*TICKS_PER_SECOND && p2p_dist(new_center, last_sound_pt) > radius) { // play at most once per second
 				gen_sound(SOUND_KICK_BALL, (get_camera_pos() + (new_center - player_pos)), 0.5);
 				last_sound_frame = frame_counter;
+				last_sound_pt    = new_center;
 			}
 			// TODO: add dstate.velocity
 		}
@@ -586,18 +588,20 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		if (cur_weight == 0.0 && tot_weight == 0.0) return; // don't show stats until the player has picked something up
-		std::ostringstream oss;
-		oss << "Current $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs";
 		float const aspect_ratio((float)window_width/(float)window_height);
-		draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
+
+		if (cur_weight > 0.0 || tot_weight > 0.0) { // don't show stats until the player has picked something up
+			std::ostringstream oss;
+			oss << "Current $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs";
+			draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
+		}
 		// display sound meter
 		float const lvl(min(cur_building_sound_level, 1.0f));
 		unsigned const num_bars(round_fp(20.0*lvl));
 
 		if (num_bars > 0) {
 			colorRGBA const color(lvl, (1.0 - lvl), 0.0, 1.0); // green => yellow => orange => red
-			draw_text(color, -0.005*aspect_ratio, -0.01, -0.02, std::string(num_bars, '='));
+			draw_text(color, -0.005*aspect_ratio, -0.01, -0.02, std::string(num_bars, '#'));
 		}
 	}
 };
