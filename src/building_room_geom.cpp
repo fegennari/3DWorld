@@ -746,6 +746,9 @@ unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
 	}
 	return num_shelves;
 }
+void add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &objects, vect_cube_t &cubes) {
+	if (!has_bcube_int(obj, cubes)) {objects.push_back(obj); cubes.push_back(obj);}
+}
 void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects) {
 	room_object_t c(c_in);
 	c.flags |= RO_FLAG_WAS_EXP;
@@ -801,7 +804,7 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 				C.set_from_point(center);
 				set_cube_zvals(C, S.z2(), S.z2()+cheight);
 				C.expand_by_xy(sz);
-				if (!has_bcube_int(C, cubes)) {objects.push_back(C); cubes.push_back(C);}
+				add_if_not_intersecting(C, objects, cubes);
 			} // for n
 		}
 		// add keyboards
@@ -817,7 +820,8 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 				C.set_from_point(center);
 				set_cube_zvals(C, S.z2(), S.z2()+kbd_height);
 				C.expand_by_xy(sz);
-				if (!has_bcube_int(C, cubes)) {C.dir = rgen.rand_bool(); objects.push_back(C); cubes.push_back(C);}
+				C.dir = rgen.rand_bool();
+				add_if_not_intersecting(C, objects, cubes);
 			} // for n
 		}
 		// add bottles
@@ -832,29 +836,44 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 2.0*bottle_radius), (S.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
 			C.set_from_sphere(center, bottle_radius);
 			set_cube_zvals(C, S.z2(), S.z2()+bottle_height);
-			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = bottle_colors[rgen.rand()%NUM_BOTTLE_COLORS];
-			objects.push_back(C);
-			cubes.push_back(C);
+			add_if_not_intersecting(C, objects, cubes);
 		} // for n
 		// add paint cans
-		float const pc_height(0.64*z_step), pc_radius(0.28*z_step), edge_spacing(1.1*pc_radius);
+		float const pc_height(0.64*z_step), pc_radius(0.28*z_step), pc_edge_spacing(1.1*pc_radius);
 
-		if (2.1*edge_spacing < min(c_sz.x, c_sz.y)) { // shelf is wide/deep enough for paint cans
+		if (2.1*pc_edge_spacing < min(c_sz.x, c_sz.y)) { // shelf is wide/deep enough for paint cans
 			unsigned const num_pcans(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 7)); // 0-6, 75% chance
 			C.color = WHITE;
 			C.type  = TYPE_PAINTCAN;
 			C.shape = SHAPE_CYLIN;
 
 			for (unsigned n = 0; n < num_pcans; ++n) {
-				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + edge_spacing), (S.d[d][1] - edge_spacing));} // place at least edge_spacing from edge
+				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + pc_edge_spacing), (S.d[d][1] - pc_edge_spacing));} // place at least pc_edge_spacing from edge
 				C.set_from_sphere(center, pc_radius);
 				set_cube_zvals(C, S.z2(), S.z2()+pc_height);
-				if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-				objects.push_back(C);
-				cubes.push_back(C);
+				add_if_not_intersecting(C, objects, cubes);
 			} // for n
 			C.shape = SHAPE_CUBE; // reset for next object type
+		}
+		// add large balls to houses
+		float const ball_radius(0.048*1.1*dz); // 4.7 inches
+
+		if (is_house && 2.1*ball_radius < min(c_sz.x, c_sz.y)) { // shelf is wide/deep enough for paint cans
+			unsigned const num_balls(rgen.rand() % 3); // 0-2
+			C.color = WHITE;
+			C.type  = TYPE_LG_BALL;
+			C.shape = SHAPE_SPHERE;
+			center.z = S.z2() + ball_radius;
+
+			for (unsigned n = 0; n < num_balls; ++n) {
+				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + ball_radius), (S.d[d][1] - ball_radius));} // place at least ball_radius from edge
+				C.set_from_sphere(center, ball_radius);
+				C.flags2 = rgen.rand_bool(); // random type
+				add_if_not_intersecting(C, objects, cubes);
+			} // for n
+			C.shape  = SHAPE_CUBE; // reset for next object type
+			C.flags2 = 0;          // reset for next object type
 		}
 	} // for s
 }
