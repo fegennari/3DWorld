@@ -402,6 +402,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "basement_prob") {
 		if (!read_float(fp, global_building_params.basement_prob)) {buildings_file_err(str, error);}
 	}
+	else if (str == "ball_prob") {
+		if (!read_float(fp, global_building_params.ball_prob)) {buildings_file_err(str, error);}
+	}
 	// material colors
 	else if (str == "side_color") {
 		if (!read_color(fp, global_building_params.cur_mat.side_color.cmin)) {buildings_file_err(str, error);}

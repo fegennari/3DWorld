@@ -579,7 +579,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			objs.emplace_back(lamp, TYPE_LAMP, room_id, obj.dim, obj.dir, flags, tot_light_amt, SHAPE_CYLIN, colors[rgen.rand()%NUM_COLORS]); // Note: invalidates obj ref
 		}
 	}
-	if (rgen.rand_float() < 0.3) { // maybe add a ball to the room
+	if (rgen.rand_float() < global_building_params.ball_prob) { // maybe add a ball to the room
 		float const radius(0.048*window_vspacing); // 4.7 inches
 		cube_t ball_area(place_area);
 		ball_area.expand_by_xy(-radius*rgen.rand_uniform(1.0, 10.0));
