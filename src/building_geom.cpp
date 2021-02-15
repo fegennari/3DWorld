@@ -434,7 +434,7 @@ bool building_interior_t::check_sphere_coll(point &pos, point const &p_last, flo
 	if (!room_geom) {return had_coll;} // no room geometry
 
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
-		if (c == self || c->no_coll() || c->type == TYPE_BLOCKER) continue; // ignore blockers
+		if (c == self || c->no_coll() || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING) continue; // ignore blockers and railings
 		// Note: add special handling for things like elevators, cubicles, and bathroom stalls? right now these are only in office buildings, where there are no dynamic objects
 
 		if (c->shape == SHAPE_CYLIN) { // vertical cylinder
