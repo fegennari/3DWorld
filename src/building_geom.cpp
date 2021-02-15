@@ -417,9 +417,8 @@ bool building_interior_t::check_sphere_coll(point &pos, point const &p_last, flo
 	if (!room_geom) {return had_coll;} // no room geometry
 
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
-		if (c == self || c->no_coll()) continue;
+		if (c == self || c->no_coll() || c->type == TYPE_BLOCKER) continue; // ignore blockers
 		//if (c->type == TYPE_ELEVATOR) {} // special handling for elevators
-		//if (c->type == TYPE_STAIR && (obj_z + radius) > c->z2()) continue; // above the stair
 
 		if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 			float const cradius(c->get_radius());

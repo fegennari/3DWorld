@@ -801,7 +801,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		else if (obj.flags & RO_FLAG_TAKEN1) {obj.flags |= RO_FLAG_TAKEN2;} // take dirt
 		else {obj.flags |= RO_FLAG_TAKEN1;} // take plant
 	}
-	else {obj.type = TYPE_BLOCKER; obj.flags = RO_FLAG_NOCOLL;} // replace it with an invisible blocker that won't collide with anything
+	else {obj.type = TYPE_BLOCKER; obj.flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything
 	if (is_light) {clear_and_recreate_lights();}
 	update_draw_state_for_room_object(old_obj, building);
 }
