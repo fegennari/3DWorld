@@ -605,6 +605,9 @@ void show_object_info(room_object_t const &obj) {
 	oss << " weight " << get_obj_weight(obj) << " lbs";
 	print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
 }
+void draw_obj_held_by_player(room_object_t const &obj) {
+	// TODO
+}
 
 class player_inventory_t {
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
@@ -645,11 +648,14 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
+		bool const has_throwable(!carried.empty() && carried.back().has_dstate());
+		if (has_throwable) {draw_obj_held_by_player(carried.back());}
 		float const aspect_ratio((float)window_width/(float)window_height);
 
 		if (cur_weight > 0.0 || tot_weight > 0.0) { // don't show stats until the player has picked something up
 			std::ostringstream oss;
 			oss << "Current $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs";
+			if (has_throwable) {oss << "  [" << get_taken_obj_type(carried.back()).name << "]";} // print the name of the throwable object
 			draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
 		}
 		// display sound meter
