@@ -986,6 +986,7 @@ void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 cube_t get_building_lights_bcube();
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5]);
+void get_bed_cubes(room_object_t const &c, cube_t cubes[6]);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_t const &door, cube_t const &room);
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs, bool check_zval);

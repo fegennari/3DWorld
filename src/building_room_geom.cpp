@@ -1711,9 +1711,9 @@ void add_pillow(cube_t const &c, rgeom_mat_t &mat, colorRGBA const &color, vecto
 	} // for y
 }
 
-void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
+void get_bed_cubes(room_object_t const &c, cube_t cubes[6]) {
 	float const height(c.dz()), length(c.get_sz_dim(c.dim)), width(c.get_sz_dim(!c.dim));
-	bool const is_wide(width > 0.7*length), add_posts(is_wide && (c.obj_id & 1)), add_canopy(add_posts && (c.obj_id & 2)); // no posts for twin beds
+	bool const is_wide(width > 0.7*length), add_posts(is_wide && (c.obj_id & 1)); // no posts for twin beds
 	float const head_width(0.04), foot_width(add_posts ? head_width : 0.03f); // relative to length
 	cube_t frame(c), head(c), foot(c), mattress(c), legs_bcube(c), pillow(c);
 	head.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(1.0 - head_width)*length;
@@ -1727,11 +1727,20 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	mattress.z2()   = pillow.z1() = mattress.z1() + 0.2*height;
 	pillow.z2()     = pillow.z1() + 0.13*height;
 	legs_bcube.z2() = frame.z1();
+	mattress.expand_in_dim(!c.dim, -0.02*width); // shrink slightly
 	float const pillow_space((is_wide ? 0.08 : 0.23)*width);
 	pillow.expand_in_dim(!c.dim, -pillow_space);
 	pillow.d[c.dim][ c.dir] = mattress.d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*0.02*length; // head
 	pillow.d[c.dim][!c.dir] = pillow  .d[c.dim][ c.dir] + (c.dir ? -1.0 : 1.0)*(is_wide ? 0.25 : 0.6)*pillow.get_sz_dim(!c.dim);
-	mattress.expand_in_dim(!c.dim, -0.02*width);
+	cubes[0] = frame; cubes[1] = head; cubes[2] = foot; cubes[3] = mattress; cubes[4] = pillow; cubes[5] = legs_bcube;
+}
+void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
+	float const height(c.dz()), length(c.get_sz_dim(c.dim)), width(c.get_sz_dim(!c.dim));
+	bool const is_wide(width > 0.7*length), add_posts(is_wide && (c.obj_id & 1)), add_canopy(add_posts && (c.obj_id & 2)); // no posts for twin beds
+	float const head_width(0.04), foot_width(add_posts ? head_width : 0.03f); // relative to length
+	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+	get_bed_cubes(c, cubes);
+	cube_t const &frame(cubes[0]), &head(cubes[1]), &foot(cubes[2]), &mattress(cubes[3]), &pillow(cubes[4]), &legs_bcube(cubes[5]);
 	colorRGBA const sheet_color(apply_light_color(c));
 	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale);
 

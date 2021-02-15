@@ -300,16 +300,28 @@ float room_object_t::get_radius() const {
 	return 0.0; // never gets here
 }
 
+bool check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	bool had_coll(0);
+
+	for (unsigned n = 0; n < num_cubes; ++n) {
+		if (!cubes[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
+	}
+	return had_coll;
+}
 bool check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	if (!sphere_cube_intersect(pos, radius, c)) return 0; // not intersection with closet bounding cube (optimization)
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes); // get cubes for walls and door; required to handle collision with closet interior
-	bool had_coll(0);
-
-	for (unsigned n = 0; n < (c.is_open() ? 4U : 5U); ++n) { // only check for door collision if closet door is closed
-		if (!cubes[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
-	}
-	return had_coll;
+	return check_cubes_collision(cubes, (c.is_open() ? 4U : 5U), pos, p_last, radius, cnorm); // only check for door collision if closet door is closed
+}
+bool check_bed_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	if (!sphere_cube_intersect(pos, radius, c)) return 0; // not intersection with closet bounding cube (optimization)
+	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+	get_bed_cubes(c, cubes);
+	unsigned num_to_check(5); // skip legs_bcube
+	if (c.flags & RO_FLAG_TAKEN1) {--num_to_check;} // skip pillows
+	if (c.flags & RO_FLAG_TAKEN3) {--num_to_check;} // skip mattress
+	return check_cubes_collision(cubes, num_to_check, pos, p_last, radius, cnorm);
 }
 
 // Note: pos and p_last are already in rotated coordinate space
@@ -439,6 +451,9 @@ bool building_interior_t::check_sphere_coll(point &pos, point const &p_last, flo
 		}
 		else if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 			had_coll |= check_closet_collision(*c, pos, p_last, radius, cnorm);
+		}
+		else if (c->type == TYPE_BED) { // beds are special because they're common collision objects and they're not filled cubes
+			had_coll |= check_bed_collision(*c, pos, p_last, radius, cnorm);
 		}
 		else { // assume it's a cube
 			had_coll |= sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, cnorm); // skip_z=0
