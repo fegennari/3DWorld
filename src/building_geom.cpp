@@ -300,6 +300,18 @@ float room_object_t::get_radius() const {
 	return 0.0; // never gets here
 }
 
+bool check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	if (!sphere_cube_intersect(pos, radius, c)) return 0; // not intersection with closet bounding cube (optimization)
+	cube_t cubes[5];
+	get_closet_cubes(c, cubes); // get cubes for walls and door; required to handle collision with closet interior
+	bool had_coll(0);
+
+	for (unsigned n = 0; n < (c.is_open() ? 4U : 5U); ++n) { // only check for door collision if closet door is closed
+		if (!cubes[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
+	}
+	return had_coll;
+}
+
 // Note: pos and p_last are already in rotated coordinate space
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm) const {
@@ -369,21 +381,14 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				if (cnorm) {*cnorm = (pos - center).get_norm();}
 				had_coll = 1;
 			}
+			else if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
+				had_coll |= check_closet_collision(*c, pos, p_last, xy_radius, cnorm);
+				if (c->contains_pt(pos)) {player_in_closet = (interior->room_geom->closet_light_is_on(*c) ? 3 : (c->is_open() ? 1 : 2));}
+			}
 			else { // assume it's a cube
 				cube_t c_extended(*c);
 				c_extended.z1() -= camera_zh; // handle the player's head (for stairs), or is pos already at this height?
-
-				if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
-					if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // not intersection with closet bounding cube (optimization)
-					cube_t cubes[5];
-					get_closet_cubes(*c, cubes); // get cubes for walls and door; required to handle collision with closet interior
-
-					for (unsigned n = 0; n < (c->is_open() ? 4U : 5U); ++n) { // only check for door collision if closet door is closed
-						if (!cubes[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
-					}
-					if (c->contains_pt(pos)) {player_in_closet = (interior->room_geom->closet_light_is_on(*c) ? 3 : (c->is_open() ? 1 : 2));}
-				}
-				else {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm);} // skip_z=0
+				had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm); // skip_z=0
 			}
 		} // for c
 	}
@@ -418,7 +423,7 @@ bool building_interior_t::check_sphere_coll(point &pos, point const &p_last, flo
 
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
 		if (c == self || c->no_coll() || c->type == TYPE_BLOCKER) continue; // ignore blockers
-		//if (c->type == TYPE_ELEVATOR) {} // special handling for elevators
+		// Note: add special handling for things like elevators, cubicles, and bathroom stalls? right now these are only in office buildings, where there are no dynamic objects
 
 		if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 			float const cradius(c->get_radius());
@@ -432,8 +437,10 @@ bool building_interior_t::check_sphere_coll(point &pos, point const &p_last, flo
 			if (cnorm) {*cnorm = (pos - center).get_norm();}
 			had_coll = 1;
 		}
+		else if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
+			had_coll |= check_closet_collision(*c, pos, p_last, radius, cnorm);
+		}
 		else { // assume it's a cube
-			//if (c->type == TYPE_CLOSET) {} // special case to handle closet interiors
 			had_coll |= sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, cnorm); // skip_z=0
 		}
 	} // for c
