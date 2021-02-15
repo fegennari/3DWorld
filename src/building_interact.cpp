@@ -765,6 +765,11 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (!bldg_obj_types[i->type].pickup) continue; // this object type can't be picked up
 			cube_t obj_bcube(*i);
 			if (i->type == TYPE_PEN || i->type == TYPE_PENCIL) {obj_bcube.expand_in_dim(!i->dim, i->get_sz_dim(!i->dim));}
+			else if (i->type == TYPE_BED) { // do more accurate check with various parts of the bed
+				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+				get_bed_cubes(*i, cubes);
+				obj_bcube = cubes[3]; // check mattress only, since we can only take the mattress, sheets, and pillows
+			}
 			point p1c(at_pos), p2c(p2);
 			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
 			float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
