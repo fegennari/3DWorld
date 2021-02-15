@@ -706,6 +706,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (lpos_rot.z > c->z2() && c->intersects(clipped_bc) && dist_less_than(lpos_rot, c->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
 				}
 			}
+			if (!dynamic_shadows) { // check moving objects
+				auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+
+				for (auto i = objs.begin(); i != objs_end; ++i) {
+					if (i->is_visible() && i->is_moving() && lpos_rot.z > i->z2() && i->intersects(clipped_bc) &&
+						dist_less_than(lpos_rot, i->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
+				}
+			}
 		}
 		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc) : clipped_bc);
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, dynamic_shadows);
