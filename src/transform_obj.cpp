@@ -228,6 +228,18 @@ void transform_data::reset_perturb_if_set(unsigned i) {
 // *** deformation code ***
 
 
+void apply_roll_to_matrix(xform_matrix &matrix, point const &pos, point const &lpos, vector3d const &ground_normal, float radius, float a_add, float a_mult) {
+	vector3d const delta(pos, lpos);
+	float const dmag(delta.mag());
+	if (dmag < TOLERANCE) return; // same position, no rolling
+	float const angle(a_mult*(dmag/radius) + a_add);
+	vector3d const vrot(cross_product(ground_normal, delta/dmag));
+
+	if (vrot.mag() > TOLERANCE) {
+		matrix.normalize();
+		matrix = glm::rotate(glm::mat4(1.0), angle, vec3_from_vector3d(vrot)) * matrix;
+	}
+}
 void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add, float a_mult) {
 
 	if (!dist_less_than(pos, lpos, 0.01*radius)) {
@@ -240,16 +252,7 @@ void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lp
 			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 			if (!point_outside_mesh(xpos, ypos)) {normal = surface_normals[ypos][xpos];}
 		}
-		if (normal != zero_vector) {
-			vector3d const delta(pos, lpos);
-			float const dmag(delta.mag()), angle(a_mult*(dmag/radius) + a_add);
-			vector3d const vrot(cross_product(normal, delta/dmag));
-
-			if (vrot.mag() > TOLERANCE) {
-				matrix.normalize();
-				matrix = glm::rotate(glm::mat4(1.0), angle, vec3_from_vector3d(vrot)) * matrix;
-			}
-		}
+		if (normal != zero_vector) {apply_roll_to_matrix(matrix, pos, lpos, normal, radius, a_add, a_mult);}
 	}
 	fgMultMatrix(matrix);
 }

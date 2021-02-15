@@ -5,6 +5,7 @@
 
 #include "3DWorld.h"
 #include "gl_ext_arb.h" // for vbo_wrap_t
+#include "transform_obj.h" // for xform_matrix
 
 bool const ADD_BUILDING_INTERIORS  = 1;
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
@@ -355,6 +356,7 @@ struct room_object_t : public cube_t {
 
 struct room_obj_dstate_t { // state used for dynamic room objects
 	vector3d velocity;
+	xform_matrix rot_matrix;
 };
 
 struct rgeom_storage_t {
@@ -393,7 +395,7 @@ public:
 	void add_cylin_to_verts(point const &bot, point const &top, float bot_radius, float top_radius, colorRGBA const &color, bool draw_bot, bool draw_top,
 		bool two_sided=0, bool inv_tb=0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES, float side_tscale_add=0.0, bool swap_txy=0);
 	void add_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color);
-	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0);
+	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, xform_matrix const *const matrix=nullptr);
 	void create_vbo(building_t const &building);
 	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
 };

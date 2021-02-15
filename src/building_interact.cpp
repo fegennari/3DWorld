@@ -287,6 +287,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		float const radius(c->get_radius()), r_sum(radius + player_radius);
 		point new_center(center);
 		bool const was_dynamic(c->is_dynamic());
+		bool on_floor(0);
 			
 		if (c->z2() > player_z1 && c->z1() < player_z2 && dist_xy_less_than(ppos, center, r_sum)) { // collides with the player
 			vector3d const dir((center - ppos).get_norm());
@@ -302,7 +303,6 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		}
 		else if (was_dynamic) { // not colliding, but is moving
 			point const test_pt(center.x, center.y, (center.z - radius - 0.1*fc_thick));
-			bool on_floor(0);
 
 			for (auto f = interior->floors.begin(); f != interior->floors.end(); ++f) {
 				if (f->contains_pt(test_pt)) {on_floor = 1; break;}
@@ -324,7 +324,6 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			}
 			else { // move based on velocity
 				new_center += velocity*fticks;
-				// TODO: roll/rotate
 			}
 		}
 		if (new_center != center) { // check for collisions and move to new location
@@ -341,6 +340,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			if (move_sphere_to_valid_part(new_center, center, radius) && new_center != prev_new_center) { // collision with exterior wall
 				apply_object_bounce(velocity, (new_center - prev_new_center).get_norm());
 			}
+			if (new_center != center) {apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));}
 			if (!was_dynamic) {interior->room_geom->clear_static_small_vbos();} // static => dynamic transition, need to remove from static object vertex data
 			interior->update_dynamic_draw_data();
 			c->translate(new_center - center);

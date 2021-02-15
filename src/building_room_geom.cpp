@@ -192,7 +192,7 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_
 	}
 }
 
-void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail) {
+void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail, xform_matrix const *const matrix) {
 	static vector<vert_norm_tc> cached_verts[2]; // high/low detail, reused across all calls
 	vector<vert_norm_tc> &verts(cached_verts[low_detail]);
 
@@ -204,7 +204,13 @@ void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, b
 	}
 	color_wrapper const cw(color);
 	point const center(c.get_cube_center()), size(0.5*c.get_size());
-	for (auto i = verts.begin(); i != verts.end(); ++i) {quad_verts.emplace_back((i->v*size + center), i->n, i->t[0], i->t[1], cw);}
+
+	for (auto i = verts.begin(); i != verts.end(); ++i) {
+		point pt(i->v*size);
+		vector3d normal(i->n);
+		if (matrix) {matrix->apply_to_vector3d(pt); matrix->apply_to_vector3d(normal);}
+		quad_verts.emplace_back((pt + center), normal, i->t[0], i->t[1], cw);
+	}
 }
 
 class rgeom_alloc_t {
@@ -2238,9 +2244,10 @@ int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name((c.fl
 int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.flags2 & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png"));}
 
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
-	// TODO: rotate the texture coords when the ball is rolling?
 	bool const dynamic(c.is_dynamic()); // either small or dynamic
-	get_material(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0), 1, dynamic, !dynamic).add_sphere_to_verts(c, apply_light_color(c), 0); // low_detail=0
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0), 1, dynamic, !dynamic));
+	// rotate the texture coords when the ball is rolling
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
 }
 
 void building_room_geom_t::clear() {
