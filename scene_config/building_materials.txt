@@ -92,6 +92,8 @@ buildings house_ceil_tscale  32.0
 buildings house_floor_tscale 32.0
 buildings house_floor_tid fence.jpg
 buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
+buildings basement_floor_tscale 16.0
+buildings basement_floor_tid roads/asphalt.jpg
 buildings house_ceil_tid stucco.jpg
 buildings house_ceil_nm_tid normal_maps/stucco_NRM.jpg
 buildings house_ceil_specular  0.15 60.0
@@ -151,6 +153,7 @@ buildings roof_nm_tid normal_maps/tile_NRM.jpg
 buildings house_floor_tscale 64.0
 buildings house_floor_tid paneling.png
 buildings house_floor_nm_tid normal_maps/paneling_NRM.jpg
+buildings basement_floor_tid carpet/carpet1.jpg
 buildings floor_tid carpet/carpet2.jpg
 buildings floor_nm_tid none
 buildings house_floor_specular 0.60 50.0
@@ -176,6 +179,7 @@ buildings house_ceil_nm_tid none # not created yet
 buildings house_floor_tscale 32.0
 buildings house_floor_tid fence.jpg
 buildings house_floor_nm_tid normal_maps/fence_NRM.jpg
+buildings basement_floor_tid carpet/carpet2.jpg
 buildings floor_tid carpet/office_carpet2.jpg # nice, but low contrast with walls
 buildings floor_nm_tid none
 buildings house_ceil_specular  0.00 30.0 # enable this when we have a normal map for this ceiling texture
