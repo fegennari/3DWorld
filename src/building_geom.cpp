@@ -402,8 +402,19 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 
 bool building_interior_t::check_sphere_coll(point &pos, point const &p_last, float radius, vector<room_object_t>::const_iterator self, vector3d *cnorm) const {
 	bool had_coll(check_sphere_coll_walls_elevators_doors(pos, p_last, radius, 0.0, cnorm));
+
+	if (pos.z < p_last.z) { // check floor collision if falling
+		cube_t scube; scube.set_from_sphere(pos, radius);
+		max_eq(scube.z2(), (p_last.z - radius)); // extend up to touch the bottom of the last position to prevent it from going through the floor in one frame
+
+		for (auto f = floors.begin(); f != floors.end(); ++f) {
+			if (!f->intersects(scube)) continue; // overlap
+			pos.z = f->z2() + radius; // move to just touch the top of the floor
+			if (cnorm) {*cnorm = plus_z;} // collision with top surface of floor
+			had_coll = 1;
+		}
+	}
 	if (!room_geom) {return had_coll;} // no room geometry
-	float const obj_z(max(pos.z, p_last.z));
 
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
 		if (c == self || c->no_coll()) continue;

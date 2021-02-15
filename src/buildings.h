@@ -501,7 +501,7 @@ struct building_room_geom_t {
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building);
 	room_object_t &get_room_object_by_index(unsigned obj_id);
 	int find_avail_obj_slot() const;
-	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0);
+	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add);

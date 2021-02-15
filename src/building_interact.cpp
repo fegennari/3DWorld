@@ -8,9 +8,12 @@
 
 // physics constants, currently applied to balls
 float const KICK_VELOCITY  = 0.0025;
-float const THROW_VELOCITY = 0.0010;
+float const THROW_VELOCITY = 0.0035;
+float const MIN_VELOCITY   = 0.0001;
 float const OBJ_DECELERATE = 0.008;
-float const OBJ_ELASTICITY = 0.95;
+float const OBJ_GRAVITY    = 0.0003;
+float const TERM_VELOCITY  = 1.0;
+float const OBJ_ELASTICITY = 0.8;
 
 bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0);
 int can_pickup_bldg_obj(0);
@@ -270,6 +273,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	interior->update_elevators(player_pos, get_floor_thickness());
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
+	float const fc_thick(0.5*get_floor_thickness());
 	static int last_sound_frame(0);
 	static point last_sound_pt(all_zeros);
 
@@ -297,27 +301,46 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			velocity = KICK_VELOCITY*dir;
 		}
 		else if (was_dynamic) { // not colliding, but is moving
-			if (velocity != zero_vector) {
-				velocity *= (1.0f - OBJ_DECELERATE*fticks);
-				if (velocity.mag() < 0.001) {velocity = zero_vector;} // stop
+			point const test_pt(center.x, center.y, (center.z - radius - 0.1*fc_thick));
+			bool on_floor(0);
+
+			for (auto f = interior->floors.begin(); f != interior->floors.end(); ++f) {
+				if (f->contains_pt(test_pt)) {on_floor = 1; break;}
 			}
-			if (velocity == zero_vector) { // stopped: dynamic => static transition
+			//cout << TXT(velocity.str()) << TXT(on_floor) << TXT(center.z) << TXT(test_pt.z) << TXT(ground_floor_z1+fc_thick) << endl; // TESTING
+
+			if (on_floor) { // moving on the floor, apply surface friction
+				velocity *= (1.0f - OBJ_DECELERATE*fticks);
+				if (velocity.mag() < MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
+			}
+			else { // in the air - apply gravity
+				velocity.z -= OBJ_GRAVITY*fticks; // apply gravitational acceleration
+				max_eq(velocity.z, -TERM_VELOCITY);
+			}
+			if (velocity == zero_vector) { // stopped
 				c->flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
 				interior->update_dynamic_draw_data(); // remove from dynamic objects
 				interior->room_geom->clear_static_small_vbos(); // add to static objects
 			}
-			else { // move
+			else { // move based on velocity
 				new_center += velocity*fticks;
 				// TODO: roll/rotate
-				// TODO: fall down stairs
 			}
 		}
 		if (new_center != center) { // check for collisions and move to new location
 			vector3d cnorm;
-			if (interior->check_sphere_coll(new_center, center, radius, c, &cnorm)) {apply_object_bounce(velocity, cnorm);}
+
+			if (interior->check_sphere_coll(new_center, center, radius, c, &cnorm)) {
+				if (cnorm == plus_z) { // collision with the floor
+					if (fabs(velocity.z) < 0.25*OBJ_GRAVITY*fticks) {velocity.z = 0.0;} // zero velocity z component if near zero to reduce instability
+				}
+				apply_object_bounce(velocity, cnorm);
+			}
 			point const prev_new_center(new_center);
-			// Note: if it wasn't for this call, we could make this function a building_interior_t member
-			if (move_sphere_to_valid_part(new_center, center, radius)) {apply_object_bounce(velocity, (new_center - prev_new_center).get_norm());}
+			
+			if (move_sphere_to_valid_part(new_center, center, radius) && new_center != prev_new_center) { // collision with exterior wall
+				apply_object_bounce(velocity, (new_center - prev_new_center).get_norm());
+			}
 			if (!was_dynamic) {interior->room_geom->clear_static_small_vbos();} // static => dynamic transition, need to remove from static object vertex data
 			interior->update_dynamic_draw_data();
 			c->translate(new_center - center);
@@ -363,16 +386,20 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 }
 
 bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
+	point const init_pos(pos);
 	float xy_area_contained(0.0);
-	cube_t bcube; bcube.set_from_sphere(pos, radius);
+	cube_t sphere_bcube; sphere_bcube.set_from_sphere(pos, radius);
+	cube_t valid_region(bcube);
+	valid_region.expand_by(-radius);
+	valid_region.clamp_pt(pos); // keep pos within the valid building bcube
 
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-		if (!i->intersects(bcube)) continue;
-		cube_t overlap(bcube);
+		if (!i->intersects(sphere_bcube)) continue;
+		cube_t overlap(sphere_bcube);
 		overlap.intersect_with_cube(*i);
 		xy_area_contained += overlap.dx()*overlap.dy();
 	}
-	if (xy_area_contained > 0.99*bcube.dx()*bcube.dy()) return 0; // sphere contained in union of parts (not outside the building)
+	if (xy_area_contained > 0.99*sphere_bcube.dx()*sphere_bcube.dy()) return (pos != init_pos); // sphere contained in union of parts (not outside the building)
 
 	// find part containing p_last and clamp to that part
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
@@ -382,8 +409,9 @@ bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 		bounds.clamp_pt_xy(pos);
 		return 1;
 	}
-	assert(0); // should never get here (except for FP error?)
-	return 0;
+	//assert(0); // should never get here (except for FP error?)
+	pos = p_last; // restore original position
+	return 1;
 }
 
 // ray queries
@@ -598,8 +626,8 @@ public:
 	}
 	bool drop_last_item(room_object_t &obj, bool dynamic_only) {
 		if (carried.empty()) return 0;
+		if (dynamic_only && !carried.back().has_dstate()) return 0;
 		obj = carried.back(); // deep copy
-		if (dynamic_only && !obj.has_dstate()) return 0;
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
 		assert(cur_value >= 0.0 && cur_weight >= 0.0); // is this okay if there's FP rounding error?
@@ -799,13 +827,14 @@ int building_room_geom_t::find_avail_obj_slot() const {
 	return -1; // no slot found
 }
 
-bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id) {
+bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id, vector3d const &velocity) {
 	assert(obj.type != TYPE_LIGHT && get_room_obj_type(obj).pickup); // currently must be a pickup object, and not a light
 	int const obj_id(find_avail_obj_slot());
 	if (obj_id < 0) return 0; // no slot found
-	room_object_t &obj_slot(get_room_object_by_index(obj_id));
-	obj_slot = obj; // overwrite with new object
-	if (set_obj_id) {obj_slot.obj_id = (uint16_t)(obj.has_dstate() ? allocate_dynamic_state() : obj_id);}
+	room_object_t &added_obj(get_room_object_by_index(obj_id));
+	added_obj = obj; // overwrite with new object
+	if (set_obj_id) {added_obj.obj_id = (uint16_t)(obj.has_dstate() ? allocate_dynamic_state() : obj_id);}
+	if (velocity != zero_vector) {get_dstate(added_obj).velocity = velocity;}
 	update_draw_state_for_room_object(obj, building);
 	return 1;
 }
@@ -816,10 +845,11 @@ bool building_t::maybe_add_last_pickup_room_object(point const &player_pos) {
 	if (!player_inventory.drop_last_item(obj, dynamic_only)) return 0;
 	float const cradius(get_scaled_player_radius());
 	point const obj_bot_center(obj.xc(), obj.yc(), obj.z1());
-	point const drop_pos(player_pos + cradius*cview_dir), dest(drop_pos.x, drop_pos.y, (player_pos.z - 1.1*cradius - camera_zh)); // Note: not sure why 1.1x is needed
+	point dest(player_pos + (1.2f*(cradius + obj.get_radius()))*cview_dir);
+	dest.z -= 0.5*cradius; // slightly below the player's face
 	obj.translate(dest - obj_bot_center);
-	if (!interior->room_geom->add_room_object(obj, *this, 1)) return 0;
-	if (obj.has_dstate()) {interior->room_geom->get_dstate(obj).velocity = THROW_VELOCITY*cview_dir;} // throw the object TODO: drop once gravity is implemented
+	if (obj.has_dstate()) {obj.flags |= RO_FLAG_DYNAMIC;} // make it dynamic, assuming it will be dropped/thrown
+	if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
 	gen_sound(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
 	register_building_sound_for_obj(obj, player_pos);
 	return 1;
