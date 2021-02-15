@@ -260,18 +260,19 @@ void building_t::play_door_open_close_sound(point const &pos, bool open, float p
 
 // dynamic objects: elevators and balls
 
-void apply_object_bounce(vector3d &velocity, vector3d const &cnorm, point const &pos) {
+void apply_object_bounce(vector3d &velocity, vector3d const &cnorm, point const &pos, bool on_floor) {
+	bool const vert_coll(cnorm == plus_z);
 	float const vmag(velocity.mag());
 	if (vmag < TOLERANCE) return;
 	vector3d v_ref;
 	calc_reflection_angle(velocity/vmag, v_ref, cnorm);
 	velocity = vmag*v_ref;
-	if (cnorm == plus_z) {velocity.z *= OBJ_ELASTICITY;} else {velocity *= OBJ_ELASTICITY;} // only attenuate velocity in Z for a floor collision
-	float const bounce_volume(min(1.0f, vmag/KICK_VELOCITY)); // relative to kick velocity
+	if (on_floor && vert_coll) {velocity.z *= OBJ_ELASTICITY;} else {velocity *= OBJ_ELASTICITY;} // only attenuate velocity in Z for a floor collision
+	float const bounce_volume(min(1.0f, (vert_coll ? 0.5f : 1.0f)*vmag/KICK_VELOCITY)); // relative to kick velocity
 
-	if (bounce_volume > 0.5) { // apply bounce sound
-		gen_sound(SOUND_KICK_BALL, (pos + get_camera_coord_space_xlate()), 0.5*bounce_volume*bounce_volume);
-		register_building_sound(pos, 0.75*bounce_volume);
+	if (bounce_volume > 0.25) { // apply bounce sound
+		if (bounce_volume > 0.5) {gen_sound(SOUND_KICK_BALL, (pos + get_camera_coord_space_xlate()), 0.75*bounce_volume*bounce_volume);}
+		register_building_sound(pos, 0.7*bounce_volume);
 	}
 }
 
@@ -341,12 +342,12 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 				if (cnorm == plus_z) { // collision with the floor
 					if (fabs(velocity.z) < 0.25*OBJ_GRAVITY*fticks) {velocity.z = 0.0;} // zero velocity z component if near zero to reduce instability
 				}
-				apply_object_bounce(velocity, cnorm, new_center);
+				apply_object_bounce(velocity, cnorm, new_center, on_floor);
 			}
 			point const prev_new_center(new_center);
 			
 			if (move_sphere_to_valid_part(new_center, center, radius) && new_center != prev_new_center) { // collision with exterior wall
-				apply_object_bounce(velocity, (new_center - prev_new_center).get_norm(), new_center);
+				apply_object_bounce(velocity, (new_center - prev_new_center).get_norm(), new_center, on_floor);
 			}
 			if (new_center != center) {apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));}
 			if (!was_dynamic) {interior->room_geom->clear_static_small_vbos();} // static => dynamic transition, need to remove from static object vertex data
