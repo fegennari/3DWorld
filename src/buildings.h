@@ -334,6 +334,7 @@ struct room_object_t : public cube_t {
 	bool is_house   () const {return  (flags & RO_FLAG_IS_HOUSE);}
 	bool is_dynamic () const {return  (flags & RO_FLAG_DYNAMIC);}
 	bool has_dstate () const {return  (flags & RO_FLAG_DSTATE);}
+	bool is_moving  () const {return (is_dynamic() && has_dstate());}
 	bool is_light_type() const {return (type == TYPE_LIGHT || type == TYPE_LAMP);}
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
@@ -509,7 +510,8 @@ struct building_room_geom_t {
 	void create_dynamic_vbos(building_t const &building);
 	void draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
-	unsigned allocate_dynamic_state() {unsigned const ix(obj_dstate.size()); obj_dstate.push_back(room_obj_dstate_t()); return ix;}
+	unsigned allocate_dynamic_state();
+	room_obj_dstate_t &get_dstate(room_object_t const &obj);
 };
 
 struct elevator_t : public cube_t {
@@ -819,7 +821,7 @@ private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t &rgen);
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
-	void move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
+	bool move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
 	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;

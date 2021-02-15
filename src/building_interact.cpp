@@ -6,6 +6,12 @@
 #include "buildings.h"
 #include "openal_wrap.h"
 
+// physics constants, currently applied to balls
+float const KICK_VELOCITY  = 0.0025;
+float const THROW_VELOCITY = 0.0010;
+float const OBJ_DECELERATE = 0.008;
+float const OBJ_ELASTICITY = 0.95;
+
 bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
@@ -251,6 +257,14 @@ void building_t::play_door_open_close_sound(point const &pos, bool open, float p
 
 // dynamic objects: elevators and balls
 
+void apply_object_bounce(vector3d &velocity, vector3d const &cnorm) {
+	float const vmag(velocity.mag());
+	if (vmag < TOLERANCE) return;
+	vector3d v_ref;
+	calc_reflection_angle(velocity/vmag, v_ref, cnorm);
+	velocity = (OBJ_ELASTICITY*vmag)*v_ref;
+}
+
 void building_t::update_player_interact_objects(point const &player_pos) {
 	assert(interior);
 	interior->update_elevators(player_pos, get_floor_thickness());
@@ -263,7 +277,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
 		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
 		assert(c->obj_id < interior->room_geom->obj_dstate.size());
-		room_obj_dstate_t &dstate(interior->room_geom->obj_dstate[c->obj_id]);
+		room_obj_dstate_t &dstate(interior->room_geom->get_dstate(*c));
 		vector3d &velocity(dstate.velocity);
 		point const center(c->get_cube_center()), ppos(player_pos.x, player_pos.y, center.z); // use zval of object (Z range was checked above)
 		float const radius(c->get_radius()), r_sum(radius + player_radius);
@@ -280,11 +294,11 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 				last_sound_frame = frame_counter;
 				last_sound_pt    = new_center;
 			}
-			velocity = 0.0025*dir;
+			velocity = KICK_VELOCITY*dir;
 		}
 		else if (was_dynamic) { // not colliding, but is moving
 			if (velocity != zero_vector) {
-				velocity *= (1.0 - 0.01*fticks);
+				velocity *= (1.0f - OBJ_DECELERATE*fticks);
 				if (velocity.mag() < 0.001) {velocity = zero_vector;} // stop
 			}
 			if (velocity == zero_vector) { // stopped: dynamic => static transition
@@ -300,11 +314,10 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		}
 		if (new_center != center) { // check for collisions and move to new location
 			vector3d cnorm;
-			
-			if (interior->check_sphere_coll(new_center, center, radius, c, &cnorm)) {
-				// TODO: use cnorm to bounce
-			}
-			move_sphere_to_valid_part(new_center, center, radius); // Note: if it wasn't for this call, we could make this function a building_interior_t member
+			if (interior->check_sphere_coll(new_center, center, radius, c, &cnorm)) {apply_object_bounce(velocity, cnorm);}
+			point const prev_new_center(new_center);
+			// Note: if it wasn't for this call, we could make this function a building_interior_t member
+			if (move_sphere_to_valid_part(new_center, center, radius)) {apply_object_bounce(velocity, (new_center - prev_new_center).get_norm());}
 			if (!was_dynamic) {interior->room_geom->clear_static_small_vbos();} // static => dynamic transition, need to remove from static object vertex data
 			interior->update_dynamic_draw_data();
 			c->translate(new_center - center);
@@ -349,7 +362,7 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 	return 0;
 }
 
-void building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
+bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
 	float xy_area_contained(0.0);
 	cube_t bcube; bcube.set_from_sphere(pos, radius);
 
@@ -359,7 +372,7 @@ void building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 		overlap.intersect_with_cube(*i);
 		xy_area_contained += overlap.dx()*overlap.dy();
 	}
-	if (xy_area_contained > 0.99*bcube.dx()*bcube.dy()) return; // sphere contained in union of parts (not outside the building)
+	if (xy_area_contained > 0.99*bcube.dx()*bcube.dy()) return 0; // sphere contained in union of parts (not outside the building)
 
 	// find part containing p_last and clamp to that part
 	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
@@ -367,9 +380,10 @@ void building_t::move_sphere_to_valid_part(point &pos, point const &p_last, floa
 		cube_t bounds(*i);
 		bounds.expand_by_xy(-radius);
 		bounds.clamp_pt_xy(pos);
-		return;
+		return 1;
 	}
 	assert(0); // should never get here (except for FP error?)
+	return 0;
 }
 
 // ray queries
@@ -805,10 +819,21 @@ bool building_t::maybe_add_last_pickup_room_object(point const &player_pos) {
 	point const drop_pos(player_pos + cradius*cview_dir), dest(drop_pos.x, drop_pos.y, (player_pos.z - 1.1*cradius - camera_zh)); // Note: not sure why 1.1x is needed
 	obj.translate(dest - obj_bot_center);
 	if (!interior->room_geom->add_room_object(obj, *this, 1)) return 0;
-	if (obj.has_dstate()) {} // TODO: throw with velocity
+	if (obj.has_dstate()) {interior->room_geom->get_dstate(obj).velocity = THROW_VELOCITY*cview_dir;} // throw the object TODO: drop once gravity is implemented
 	gen_sound(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
 	register_building_sound_for_obj(obj, player_pos);
 	return 1;
+}
+
+unsigned building_room_geom_t::allocate_dynamic_state() {
+	unsigned const ix(obj_dstate.size());
+	obj_dstate.push_back(room_obj_dstate_t());
+	return ix;
+}
+room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
+	assert(obj.has_dstate());
+	assert(obj.obj_id < obj_dstate.size());
+	return obj_dstate[obj.obj_id];
 }
 
 // sound/audio tracking
