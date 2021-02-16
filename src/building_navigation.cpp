@@ -15,13 +15,14 @@ int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 
 extern int frame_counter, display_mode, player_in_closet;
-extern float fticks, cur_building_sound_level;
+extern float fticks;
 extern double camera_zh;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
 
 bool ai_follow_player() {return (global_building_params.ai_follow_player ^ bool(display_mode & 0x20));} // for future gameplay mode
 bool can_ai_follow_player(pedestrian_t const &person);
+bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
@@ -516,15 +517,21 @@ void end_register_player_in_building() {
 int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const {
 
 	assert(interior && interior->nav_graph);
+	float const floor_spacing(get_window_vspace());
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
 	if (loc.room_ix < 0) return 0; // not in a room
 	state.dest_room   = state.cur_room = loc.room_ix; // set to the same room and pos just in case
 	person.target_pos = person.pos; // set but not yet used
-	building_dest_t const &goal(cur_player_building_loc);
-	float const floor_spacing(get_window_vspace());
+	building_dest_t goal;
+	point sound_pos;
 
-	if ((global_building_params.ai_target_player || goal.same_room_floor(loc)) && can_target_player(state, person)) {
-		// player is in a different room of our building, or we're following the player's position
+	if ((global_building_params.ai_target_player || cur_player_building_loc.same_room_floor(loc)) && can_target_player(state, person)) {
+		goal = cur_player_building_loc; // player is in a different room of our building, or we're following the player's position
+	}
+	else if (can_ai_follow_player(person) && get_closest_building_sound(person.pos, sound_pos, floor_spacing)) { // target the loudest sound
+		goal = building_dest_t(get_building_loc_for_pt(sound_pos), sound_pos, cur_player_building_loc.building_ix); // same building as player (current building)
+	}
+	if (goal.is_valid()) { // player or sound
 		unsigned const cand_room(goal.room_ix);
 		room_t const &room(get_room(cand_room)); // target room
 
@@ -761,6 +768,11 @@ bool can_ai_follow_player(pedestrian_t const &person) {
 	if (player_in_closet >= 2) return 0; // ignore player if in the closet with the door closed
 	return 1;
 }
+bool has_nearby_sound(pedestrian_t const &person, float floor_spacing) {
+	if (!can_ai_follow_player(person)) return 0; // no need to track sounds
+	point sound_pos; // unused
+	return get_closest_building_sound(person.pos, sound_pos, floor_spacing);
+}
 
 bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const {
 	if (!can_ai_follow_player(person)) return 0;
@@ -791,10 +803,12 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	if (!global_building_params.ai_target_player || !can_ai_follow_player(person) || !interior) return 0; // disabled
 	building_dest_t const &target(cur_player_building_loc);
 	bool const same_room(target.room_ix == (int)state.cur_room && target.floor_ix == get_floor_for_zval(person.pos.z)); // check room and floor
-	
-	// if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room (optimization);
-	// however, if the path is empty, continue to choose a new path (needed for AI more than one floor away from target to take multiple flights of stairs)
-	if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0;
+
+	if (global_building_params.ai_player_vis_test == 0) { // the below logic only applies if there's no line of sight test and is an optimization
+		// if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room;
+		// however, if the path is empty, continue to choose a new path (needed for AI more than one floor away from target to take multiple flights of stairs)
+		if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0;
+	}
 	//if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
 	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
 
@@ -805,16 +819,17 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 			if (stairs_exp.contains_pt(person.pos)) return 0;
 		}
 	}
-	//if (person.pos.z != person.target_pos.z) return 0; // check if person is walking on a slope (stairs) - doesn't work
 	float const floor_spacing(get_window_vspace());
 
 	if (int(target.pos.z/floor_spacing) != int(prev_player_building_loc.pos.z/floor_spacing)) { // if player did not change floors
 		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person and player are > 2 floors apart, continue toward stairs (or should it be one floor apart?) (optimization)
 	}
-	// TODO: check for player sounds within listening distance p2p_dist(person.pos, target.pos); use cur_building_sound_level
-	if (!can_target_player(state, person)) return 0; // no player visibility, continue on the previously chosen path
-	// do we need some logic that only runs the update every few frames as an optimization?
-	return 1;
+	if (can_target_player(state, person)) { // have player visibility
+		if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0; // optimization
+		return 1;
+	}
+	if (has_nearby_sound(person, floor_spacing)) return 1; // new sound source
+	return 0; // continue on the previously chosen path
 }
 
 // Note: non-const because this updates room light and door state
@@ -892,7 +907,8 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		assert(bcube.contains_pt(person.target_pos));
 		person.pos = person.target_pos;
 		if (!state.path.empty()) {state.next_path_pt(person, stay_on_one_floor); return AI_NEXT_PT;} // move to next path point
-		bool const no_wait(global_building_params.ai_target_player && can_target_player(state, person)); // don't wait if we can follow the player
+		// don't wait if we can follow the player
+		bool const no_wait(global_building_params.ai_target_player && (can_target_player(state, person) || has_nearby_sound(person, get_window_vspace())));
 		if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, 10.0));} // stop for 1-10 seconds
 		state.on_new_path_seg = 1; // allow player following AI update logic to rerun this frame
 		return AI_AT_DEST;

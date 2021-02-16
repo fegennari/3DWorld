@@ -14,11 +14,13 @@ float const OBJ_DECELERATE = 0.008;
 float const OBJ_GRAVITY    = 0.0003;
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
+float const ALERT_THRESH   = 0.1; // min sound alert level for AIs
 
 bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
+vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool toggle_door_open_state;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter;
@@ -891,8 +893,21 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 void register_building_sound(point const &pos, float volume) {
 	if (volume == 0.0 || !show_bldg_pickup_crosshair) return; // only when in gameplay/item pickup mode
 	assert(volume > 0.0); // can't be negative
-	// TODO: alert AT at this position if (volume > ALERT_THRESH)
+	if (volume > ALERT_THRESH && cur_sounds.size() < 100) {cur_sounds.emplace_back(pos, volume);} // cap at 100 sounds in case they're not being cleared
 	cur_building_sound_level += volume;
+}
+
+bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing) {
+	if (cur_sounds.empty()) return 0;
+	float max_vol(0.0); // 1.0 at a sound=1.0 volume at a distance of floor_spacing
+
+	for (auto i = cur_sounds.begin(); i != cur_sounds.end(); ++i) {
+		float vol(i->radius/max(0.01f*floor_spacing, p2p_dist(i->pos, at_pos)));
+		if (fabs(i->pos.z - at_pos.z) > 0.75f*floor_spacing) {vol *= 0.5;} // half the volume when the sound comes from another floor
+		if (vol > max_vol) {max_vol = vol; sound_pos = i->pos;}
+	} // for i
+	//cout << TXT(cur_sounds.size()) << TXT(max_vol) << endl;
+	return (max_vol*floor_spacing > 0.1f);
 }
 
 // gameplay logic
@@ -921,6 +936,14 @@ void building_gameplay_next_frame() {
 		office_chair_rot_rate *= exp(-0.05*fticks); // exponential slowdown
 		if (office_chair_rot_rate < 0.001) {office_chair_rot_rate = 0.0;} // stop rotating
 	}
+	// update sounds
+	auto i(cur_sounds.begin()), o(i);
+
+	for (; i != cur_sounds.end(); ++i) {
+		i->radius *= exp(-0.04*fticks);
+		if (i->radius > ALERT_THRESH) {*(o++) = *i;} // keep if above thresh
+	}
+	cur_sounds.erase(o, cur_sounds.end());
 	// reset state for next frame
 	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
 	can_pickup_bldg_obj = 0;
