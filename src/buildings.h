@@ -651,13 +651,15 @@ struct building_dest_t : public building_loc_t {
 };
 
 enum {AI_STOP=0, AI_WAITING, AI_NEXT_PT, AI_BEGIN_PATH, AI_AT_DEST, AI_MOVING};
+enum {GOAL_TYPE_NONE=0, GOAL_TYPE_ROOM, GOAL_TYPE_PLAYER, GOAL_TYPE_SOUND};
 
 struct building_ai_state_t {
 	bool is_first_path, on_new_path_seg;
+	uint8_t goal_type;
 	unsigned cur_room, dest_room; // Note: cur_room and dest_room may not be needed
 	vector<point> path; // stored backwards, next point on path is path.back()
 
-	building_ai_state_t() : is_first_path(1), on_new_path_seg(0), cur_room(0), dest_room(0) {}
+	building_ai_state_t() : is_first_path(1), on_new_path_seg(0), goal_type(GOAL_TYPE_NONE), cur_room(0), dest_room(0) {}
 	void next_path_pt(pedestrian_t &person, bool same_floor);
 };
 

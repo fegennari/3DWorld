@@ -527,9 +527,11 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 
 	if ((global_building_params.ai_target_player || cur_player_building_loc.same_room_floor(loc)) && can_target_player(state, person)) {
 		goal = cur_player_building_loc; // player is in a different room of our building, or we're following the player's position
+		state.goal_type = GOAL_TYPE_PLAYER;
 	}
 	else if (can_ai_follow_player(person) && get_closest_building_sound(person.pos, sound_pos, floor_spacing)) { // target the loudest sound
 		goal = building_dest_t(get_building_loc_for_pt(sound_pos), sound_pos, cur_player_building_loc.building_ix); // same building as player (current building)
+		state.goal_type = GOAL_TYPE_SOUND;
 	}
 	if (goal.is_valid()) { // player or sound
 		unsigned const cand_room(goal.room_ix);
@@ -611,6 +613,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 				if (new_z < part.z2()) {person.target_pos.z = new_z;} // change if there is a floor above
 			}
 		}
+		state.goal_type = GOAL_TYPE_ROOM;
 		return 1;
 	} // for n
 	return 2; // failed, but can retry
@@ -825,8 +828,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person and player are > 2 floors apart, continue toward stairs (or should it be one floor apart?) (optimization)
 	}
 	if (can_target_player(state, person)) { // have player visibility
-		// TODO: skip this test when last goal was a sound
-		if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0; // optimization
+		if (state.goal_type == GOAL_TYPE_PLAYER && target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0;
 		return 1;
 	}
 	if (has_nearby_sound(person, floor_spacing)) return 1; // new sound source
@@ -856,6 +858,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			} // for p
 			wait_time -= fticks;
 			person.anim_time = 0.0; // reset just in case (though should already be at 0.0)
+			state.goal_type  = GOAL_TYPE_NONE;
 			return AI_WAITING;
 		}
 		wait_time = 0.0;
