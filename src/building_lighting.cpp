@@ -685,7 +685,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		clipped_bc.expand_by_xy(room_xy_expand); // expand so that offset exterior doors are properly handled
 		clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
-		assert(clipped_bc.contains_cube(lpos));
+		
+		if (!clipped_bc.contains_cube(lpos)) {
+			cout << TXT(clipped_bc.str()) << TXT(lpos.str()) << TXT(room.str()) << TXT(bcube.str()) << TXT(is_lamp) << endl;
+			assert(0);
+		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, -plus_z, bwidth); // points down
 		bool dynamic_shadows(0);
