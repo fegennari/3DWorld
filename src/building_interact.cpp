@@ -88,7 +88,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 		if (i->z1() < zval || i->z1() > (zval + window_vspacing) || !room.contains_cube_xy(*i)) continue; // light is on the wrong floor or in the wrong room
 		if (i->is_lit() != make_on) {i->toggle_lit_state(); updated = 1;} // Note: doesn't update indir lighting or room light value
 	} // for i
-	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
+	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties; will flag for update next frame
 	return updated;
 }
 
@@ -229,16 +229,16 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 			//interior->room_geom->clear_static_small_vbos(); // no longer needed since closet interior is always drawn
 		}
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
-		point const door_center(obj.get_cube_center());
+		point const door_center(obj.xc(), obj.yc(), closest_to.z); // generate sound from the player height
 		play_door_open_close_sound(door_center, obj.is_open(), pitch);
 		register_building_sound(door_center, 0.5);
 	}
-	else {toggle_door_state(door_ix, 1, 1);} // toggle state if interior door; player_in_this_building=1, by_player=1
+	else {toggle_door_state(door_ix, 1, 1, closest_to.z);} // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
 	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	return 1;
 }
 
-void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player) { // called by the player or AI
+void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval) { // called by the player or AI
 	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
 	door.open ^= 1; // toggle open state
@@ -247,7 +247,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	interior->doors_to_update.push_back(door_ix);
 
 	if (player_in_this_building) {
-		point const door_center(door.get_cube_center());
+		point const door_center(door.xc(), door.yc(), zval);
 		play_door_open_close_sound(door_center, door.open);
 		if (by_player) {register_building_sound(door_center, 0.5);}
 	}
