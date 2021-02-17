@@ -907,7 +907,7 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 		if (vol > max_vol) {max_vol = vol; sound_pos = i->pos;}
 	} // for i
 	//cout << TXT(cur_sounds.size()) << TXT(max_vol) << endl;
-	return (max_vol*floor_spacing > 0.1f);
+	return (max_vol*floor_spacing > 0.08f);
 }
 
 // gameplay logic

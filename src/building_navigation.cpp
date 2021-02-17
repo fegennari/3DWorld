@@ -825,6 +825,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 		if (fabs(person.pos.z - target.pos.z) > 2.0f*floor_spacing) return 0; // person and player are > 2 floors apart, continue toward stairs (or should it be one floor apart?) (optimization)
 	}
 	if (can_target_player(state, person)) { // have player visibility
+		// TODO: skip this test when last goal was a sound
 		if (target.same_room_floor(prev_player_building_loc) && !same_room && !state.on_new_path_seg && !state.path.empty()) return 0; // optimization
 		return 1;
 	}
