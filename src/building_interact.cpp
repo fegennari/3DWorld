@@ -29,6 +29,11 @@ extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
 
 
+void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0) {
+#pragma omp critical(gen_sound)
+	gen_sound(id, pos, gain, pitch);
+}
+
 // lights
 
 float get_radius_for_room_light(room_object_t const &obj);
@@ -69,7 +74,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	} // for i
 	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
 	point const sound_pos(get_camera_pos() + (light_pos - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
-	gen_sound(SOUND_CLICK, sound_pos);
+	gen_sound_thread_safe(SOUND_CLICK, sound_pos);
 	register_building_sound(light_pos, 0.1);
 	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
 	return 1;
@@ -157,7 +162,7 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	unsigned const dix(is_open ? (unsigned)door_ix : (unsigned)open_door_ix);
 	assert(dix < doors.size());
 	point const door_center(doors[dix].get_bcube().get_cube_center()), sound_pos(door_center + get_camera_coord_space_xlate()); // convert to camera space
-	gen_sound((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
+	gen_sound_thread_safe((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	register_building_sound(door_center, 0.5);
 	open_door_ix = door_ix;
 }
@@ -246,7 +251,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	interior->doors_to_update.push_back(door_ix);
 
-	if (player_in_this_building) {
+	if (player_in_this_building) { // is it really safe to call this from the AI thread?
 		point const door_center(door.xc(), door.yc(), zval);
 		play_door_open_close_sound(door_center, door.open);
 		if (by_player) {register_building_sound(door_center, 0.5);}
@@ -257,7 +262,7 @@ void building_t::play_door_open_close_sound(point const &pos, bool open, float p
 	point pos_rot(pos);
 	if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), pos_rot);}
 	point const sound_pos(pos_rot + get_camera_coord_space_xlate()); // convert to camera space
-	gen_sound((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos, 1.0, pitch);
+	gen_sound_thread_safe((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos, 1.0, pitch);
 }
 
 // dynamic objects: elevators and balls
@@ -273,7 +278,7 @@ void apply_object_bounce(vector3d &velocity, vector3d const &cnorm, point const 
 	float const bounce_volume(min(1.0f, (vert_coll ? 0.5f : 1.0f)*vmag/KICK_VELOCITY)); // relative to kick velocity
 
 	if (bounce_volume > 0.25) { // apply bounce sound
-		if (bounce_volume > 0.5) {gen_sound(SOUND_KICK_BALL, (pos + get_camera_coord_space_xlate()), 0.75*bounce_volume*bounce_volume);}
+		if (bounce_volume > 0.5) {gen_sound_thread_safe(SOUND_KICK_BALL, (pos + get_camera_coord_space_xlate()), 0.75*bounce_volume*bounce_volume);}
 		register_building_sound(pos, 0.7*bounce_volume);
 	}
 }
@@ -305,7 +310,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			c->flags  |= RO_FLAG_DYNAMIC; // make it dynamic
 
 			if ((frame_counter - last_sound_frame) > 1.0f*TICKS_PER_SECOND && p2p_dist(new_center, last_sound_pt) > radius) { // play at most once per second
-				gen_sound(SOUND_KICK_BALL, (get_camera_pos() + (new_center - player_pos)), 0.5);
+				gen_sound_thread_safe(SOUND_KICK_BALL, (get_camera_pos() + (new_center - player_pos)), 0.5);
 				register_building_sound(new_center, 0.75);
 				last_sound_frame = frame_counter;
 				last_sound_pt    = new_center;
@@ -384,7 +389,7 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 			update_dynamic_draw_data(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
 			
 			if ((int)move_dir != prev_move_dir) {
-				gen_sound(SOUND_SLIDING, get_camera_pos(), 0.2); // play this sound quietly when the elevator starts moving or changes direction
+				gen_sound_thread_safe(SOUND_SLIDING, get_camera_pos(), 0.2); // play this sound quietly when the elevator starts moving or changes direction
 				register_building_sound(player_pos, 0.4);
 			}
 			prev_move_dir = move_dir;
@@ -716,7 +721,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		return 0;
 	}
 	show_object_info(obj);
-	gen_sound(SOUND_ITEM, get_camera_pos(), 0.25);
+	gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.25);
 	register_building_sound_for_obj(obj, at_pos);
 	remove_object(obj_id, building);
 	return 1;
@@ -872,7 +877,7 @@ bool building_t::maybe_add_last_pickup_room_object(point const &player_pos) {
 	obj.translate(dest - obj_bot_center);
 	if (obj.has_dstate()) {obj.flags |= RO_FLAG_DYNAMIC;} // make it dynamic, assuming it will be dropped/thrown
 	if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
-	gen_sound(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
+	gen_sound_thread_safe(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
 	register_building_sound_for_obj(obj, player_pos);
 	return 1;
 }
@@ -893,8 +898,11 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 void register_building_sound(point const &pos, float volume) {
 	if (volume == 0.0 || !show_bldg_pickup_crosshair) return; // only when in gameplay/item pickup mode
 	assert(volume > 0.0); // can't be negative
-	if (volume > ALERT_THRESH && cur_sounds.size() < 100) {cur_sounds.emplace_back(pos, volume);} // cap at 100 sounds in case they're not being cleared
-	cur_building_sound_level += volume;
+#pragma omp critical(building_sounds_update)
+	{ // since this can be called by both the draw thread and the AI update thread, it should be in a critical section
+		if (volume > ALERT_THRESH && cur_sounds.size() < 100) {cur_sounds.emplace_back(pos, volume);} // cap at 100 sounds in case they're not being cleared
+		cur_building_sound_level += volume;
+	}
 }
 
 bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing) {
@@ -916,7 +924,7 @@ void register_ai_player_coll(pedestrian_t const &person) {
 	static double last_coll_time(0.0);
 	
 	if (tfticks - last_coll_time > 2.0*TICKS_PER_SECOND) {
-		gen_sound(SOUND_SCREAM1, get_camera_pos());
+		gen_sound_thread_safe(SOUND_SCREAM1, get_camera_pos());
 		last_coll_time = tfticks;
 	}
 	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
