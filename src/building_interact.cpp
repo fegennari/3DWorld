@@ -122,7 +122,7 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 		}
 		was_updated = 1;
 	} // for i
-	if (was_updated) {interior->room_geom->clear_materials();} // need to recreate them
+	if (was_updated) {interior->room_geom->materials_invalid = 1;} // need to recreate them; can't clear here if called from building AI (not in the draw thread)
 }
 
 bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {

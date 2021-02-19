@@ -416,7 +416,7 @@ struct obj_model_inst_t {
 
 struct building_room_geom_t {
 
-	bool has_elevators, has_pictures, lights_changed, modified_by_player;
+	bool has_elevators, has_pictures, lights_changed, materials_invalid, modified_by_player;
 	unsigned char num_pic_tids;
 	float obj_scale;
 	unsigned stairs_start; // index of first object of TYPE_STAIR
@@ -428,8 +428,8 @@ struct building_room_geom_t {
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha; // {large static, small static, dynamic, lights, plants, transparent} materials
 	vect_cube_t light_bcubes;
 
-	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), modified_by_player(0), num_pic_tids(0),
-		obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
+	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), materials_invalid(0), modified_by_player(0),
+		num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();

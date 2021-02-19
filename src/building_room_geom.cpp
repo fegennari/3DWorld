@@ -2524,6 +2524,10 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	if (frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;}
 	bool const can_update_geom(shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME); // must be consistent for static and small geom
 
+	if (materials_invalid) { // set in set_obj_lit_state_to()
+		clear_materials();
+		materials_invalid = 0;
+	}
 	if (lights_changed) {
 		mats_lights.clear();
 		lights_changed = 0;
