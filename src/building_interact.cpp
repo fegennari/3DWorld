@@ -94,6 +94,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_LIGHT) continue; // not a light (excludes lamps)
+		if (i->flags & RO_FLAG_IN_CLOSET) continue; // skip lights in closets, these can only be toggled by the player
 		if (i->z1() < zval || i->z1() > (zval + window_vspacing) || !room.contains_cube_xy(*i)) continue; // light is on the wrong floor or in the wrong room
 		if (i->is_lit() != make_on) {i->toggle_lit_state(); updated = 1;} // Note: doesn't update indir lighting or room light value
 	} // for i
