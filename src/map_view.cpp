@@ -343,12 +343,15 @@ void draw_overhead_map() {
 }
 
 
+void place_player_at_xy(float xval, float yval) {
+	surface_pos.assign(xval, yval, interpolate_mesh_zval(xval, yval, CAMERA_RADIUS, 0, 0));
+}
 void teleport_to_map_location() {
 	static int last_update_frame(0);
 	if ((frame_counter - last_update_frame) < 1.0f*TICKS_PER_SECOND) return; // teleport at most once per second if player holds down the key
 	last_update_frame = frame_counter;
 	float const xval(surface_pos.x + map_x), yval(surface_pos.y + map_y);
-	surface_pos.assign(xval, yval, interpolate_mesh_zval(xval, yval, CAMERA_RADIUS, 0, 0));
+	place_player_at_xy(xval, yval);
 	map_x = map_y = 0.0; // recenter on the new location
 }
 

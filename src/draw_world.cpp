@@ -1980,11 +1980,12 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 		s.set_cur_color(ORANGE);
 		draw_one_tquad(-0.7*x, 0.92*y, (-0.7 + 0.002*(health - 100.0))*x, 0.94*y, zval); // extra health bar
 	}
-	s.set_cur_color(colorRGBA(YELLOW, 0.2)); // translucent yellow
-	draw_one_tquad(-0.9*x, 0.88*y, ((world_mode == WMODE_UNIVERSE) ? -0.7 : -0.6)*x, 0.90*y, zval); // full shields background
-	s.set_cur_color(YELLOW);
-	draw_one_tquad(-0.9*x, 0.88*y, (-0.9 + 0.002*shields)*x, 0.90*y, zval); // shields bar up to 150
-	
+	if (shields >= 0.0) { // negative shields disables the shields bar
+		s.set_cur_color(colorRGBA(YELLOW, 0.2)); // translucent yellow
+		draw_one_tquad(-0.9*x, 0.88*y, ((world_mode == WMODE_UNIVERSE) ? -0.7 : -0.6)*x, 0.90*y, zval); // full shields background
+		s.set_cur_color(YELLOW);
+		draw_one_tquad(-0.9*x, 0.88*y, (-0.9 + 0.002*shields)*x, 0.90*y, zval); // shields bar up to 150
+	}
 	if (pu_time > 0.0) {
 		s.set_cur_color(colorRGBA(pu_color, 0.2));
 		draw_one_tquad(-0.9*x, 0.84*y, -0.7*x, 0.86*y, zval); // full PU time background

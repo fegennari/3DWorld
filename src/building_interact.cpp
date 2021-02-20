@@ -16,18 +16,22 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 float const ALERT_THRESH   = 0.1; // min sound alert level for AIs
 
-bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0);
+bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0), in_pickup_mode(0);
 int can_pickup_bldg_obj(0);
-float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
+float office_chair_rot_rate(0.0), cur_building_sound_level(0.0), player_health(1.0);
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool toggle_door_open_state;
-extern int window_width, window_height, display_framerate, player_in_closet, frame_counter;
+extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
 
+
+void place_player_at_xy(float xval, float yval);
+
+bool in_building_gameplay_mode() {return (global_building_params.ai_follow_player ^ bool(display_mode & 0x20));} // for future gameplay mode
 
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0) {
 #pragma omp critical(gen_sound)
@@ -682,6 +686,7 @@ public:
 			colorRGBA const color(lvl, (1.0 - lvl), 0.0, 1.0); // green => yellow => orange => red
 			draw_text(color, -0.005*aspect_ratio, -0.01, -0.02, std::string(num_bars, '#'));
 		}
+		if (in_building_gameplay_mode()) {draw_health_bar(100.0*player_health, -1.0, 0.0, WHITE);} // negative shields to disable shields bar
 	}
 };
 
@@ -896,7 +901,7 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 // sound/audio tracking
 
 void register_building_sound(point const &pos, float volume) {
-	if (volume == 0.0 || !show_bldg_pickup_crosshair) return; // only when in gameplay/item pickup mode
+	if (volume == 0.0 || !in_pickup_mode) return; // only when in gameplay/item pickup mode
 	assert(volume > 0.0); // can't be negative
 #pragma omp critical(building_sounds_update)
 	{ // since this can be called by both the draw thread and the AI update thread, it should be in a critical section
@@ -920,6 +925,12 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 
 // gameplay logic
 
+void register_player_death() {
+	print_text_onscreen("You Have Died", RED, 2.0, 2*TICKS_PER_SECOND, 10);
+	place_player_at_xy(0.0, 0.0); // move back to the origin/spawn location
+	player_health = 1.0; // respawn
+}
+
 void register_ai_player_coll(pedestrian_t const &person) {
 	static double last_coll_time(0.0);
 	
@@ -927,17 +938,20 @@ void register_ai_player_coll(pedestrian_t const &person) {
 		gen_sound_thread_safe(SOUND_SCREAM1, get_camera_pos());
 		last_coll_time = tfticks;
 	}
-	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
+	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
+	player_health -= 0.02*fticks; // take damage over time
+	if (player_health < 0.0) {register_player_death();} // dead
 }
 
 void building_gameplay_action_key(int mode) {
 	// show crosshair on first pickup because it's too difficult to pick up objects without it
-	if      (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
+	if      (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = in_pickup_mode = 1;} // 'e'
 	else if (mode == 2) {drop_last_pickup_object = 1;} // 'E'
 	else                {toggle_door_open_state  = 1;} // 'q'
 }
 
 void building_gameplay_next_frame() {
+	if (in_building_gameplay_mode()) {show_bldg_pickup_crosshair = in_pickup_mode = 1;}
 	if (display_framerate) {player_inventory.show_stats();} // controlled by framerate toggle
 	
 	if (office_chair_rot_rate != 0.0) { // update office chair rotation
