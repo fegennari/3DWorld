@@ -784,7 +784,7 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 	building_dest_t const &target(cur_player_building_loc);
 	float const player_radius(get_scaled_player_radius());
 	point const pp2(target.pos - vector3d(0.0, 0.0, camera_zh)); // player's bottom sphere
-	point const eye_pos(person.pos + vector3d(0.0, 0.0, 0.9*person.get_height())); // for person
+	point const eye_pos(person.pos - person.radius + vector3d(0.0, 0.0, 0.9*person.get_height())); // for person
 	bool const same_room_and_floor(target.room_ix == (int)state.cur_room && target.floor_ix == get_floor_for_zval(person.pos.z));
 
 	if (!same_room_and_floor) { // check visibility; assume LOS if in the same room
