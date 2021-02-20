@@ -32,6 +32,7 @@ class building_nav_graph_t;
 struct pedestrian_t;
 struct building_t;
 class building_creator_t;
+class light_ix_assign_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 
 struct building_occlusion_state_t {
@@ -861,7 +862,7 @@ private:
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, float min_bed_space=0.0) const;
 	bool add_bedroom_objs    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt,
-		unsigned objs_start, bool room_is_lit, unsigned &num_light_stacks);
+		unsigned objs_start, bool room_is_lit, light_ix_assign_t &light_ix_assign);
 	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
 	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor);
