@@ -31,7 +31,7 @@ extern building_params_t global_building_params;
 
 void place_player_at_xy(float xval, float yval);
 
-bool in_building_gameplay_mode() {return (global_building_params.ai_follow_player ^ bool(display_mode & 0x20));} // for future gameplay mode
+bool in_building_gameplay_mode() {return (display_mode & 0x20);} // for future gameplay mode
 
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0) {
 #pragma omp critical(gen_sound)
@@ -920,14 +920,15 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 		if (vol > max_vol) {max_vol = vol; sound_pos = i->pos;}
 	} // for i
 	//cout << TXT(cur_sounds.size()) << TXT(max_vol) << endl;
-	return (max_vol*floor_spacing > 0.08f);
+	return (max_vol*floor_spacing > 0.06f);
 }
 
 // gameplay logic
 
 void register_player_death() {
 	print_text_onscreen("You Have Died", RED, 2.0, 2*TICKS_PER_SECOND, 10);
-	place_player_at_xy(0.0, 0.0); // move back to the origin/spawn location
+	point const xlate(get_camera_coord_space_xlate());
+	place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
 	player_health = 1.0; // respawn
 }
 
