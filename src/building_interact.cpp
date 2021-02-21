@@ -595,6 +595,22 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		type.name = ((obj.flags2 & 1) ? "basketball" : "soccer ball"); // use a more specific type name; all other fields are shared across balls
 		return type;
 	}
+	if (obj.type == TYPE_BOTTLE) {
+		bldg_obj_type_t type;
+		switch (obj.obj_id % NUM_BOTTLE_COLORS) { // water, Coke, beer, wine
+		case 0: type = bldg_obj_type_t(0, 0, 1, 0, 0, 2,  1.0, 1.0, "bottle of water"); break;
+		case 1: type = bldg_obj_type_t(0, 0, 1, 0, 0, 2,  1.0, 1.0, "bottle of Coke" ); break;
+		case 2: type = bldg_obj_type_t(0, 0, 1, 0, 0, 2,  3.0, 1.0, "bottle of beer" ); break;
+		case 3: type = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 10.0, 1.0, "bottle of wine" ); break;
+		default: assert(0);
+		}
+		if ((obj.obj_id & 192) == 192) { // empty if both bits 6 and 7 are set
+			type.name    = "empty " + type.name;
+			type.weight *= 0.25;
+			type.value   = 0.0;
+		}
+		return type;
+	}
 	return get_room_obj_type(obj); // default value
 }
 rand_gen_t rgen_from_obj(room_object_t const &obj) {

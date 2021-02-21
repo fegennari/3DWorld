@@ -842,7 +842,7 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 2.0*bottle_radius), (S.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
 			C.set_from_sphere(center, bottle_radius);
 			set_cube_zvals(C, S.z2(), S.z2()+bottle_height);
-			C.color = bottle_colors[rgen.rand()%NUM_BOTTLE_COLORS];
+			C.set_as_bottle(rgen.rand()); // allow empty bottles?
 			add_if_not_intersecting(C, objects, cubes);
 		} // for n
 		// add paint cans
@@ -1060,15 +1060,16 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
+	// obj_id: bits 1-2 for type, bits 6-7 for emptiness, bit 7 for cap color
 	// for now, no texture, but could use a bottle label texture for the central cylinder
 	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count
 	tid_nm_pair_t tex;
 	tex.set_specular(0.5, 80.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	colorRGBA const color(apply_light_color(c));
-	colorRGBA const cap_colors[2] = {LT_GRAY, GOLD};
+	colorRGBA const color(apply_light_color(c)), cap_colors[2] = {LT_GRAY, GOLD};
 	vector3d const sz(c.get_size());
-	int const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
+	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3), cap_val((c.obj_id & 192) >> 6);
+	bool is_empty(cap_val == 3);
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
 	cube_t sphere(c), main_cylin(c), top_cylin(c);
 	sphere.d[dim][ c.dir] = c.d[dim][c.dir] + dir_sign*0.5*sz[dim];
@@ -1083,8 +1084,11 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	cap.expand_in_dim(dim2, 0.034*sz[dim2]); // slightly larger radius
 	mat.add_sphere_to_verts(sphere, color, 1); // low_detail=1
 	mat.add_ortho_cylin_to_verts(main_cylin, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
-	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // draw neck of bottle
-	mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[c.obj_id % 2]), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // draw cap
+	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 0, is_empty, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // draw neck of bottle; draw top if empty
+
+	if (!is_empty) { // draw cap if nonempty
+		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[cap_val & 1]), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
+	}
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
 	main_cylin.expand_in_dim(dim1, 0.02*radius); // expand slightly in radius
 	main_cylin.expand_in_dim(dim2, 0.02*radius); // expand slightly in radius
@@ -1571,8 +1575,7 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 		rand_gen_t rgen;
 		c.set_rand_gen_state(rgen);
 		room_object_t bottle(c);
-		bottle.dir  ^= 1;
-		bottle.color = BLACK; // black wine bottle
+		bottle.dir ^= 1;
 		set_wall_width(bottle, (c.d[!c.dim][0] + 0.5f*(col_step + shelf_thick)), 0.5*diameter, !c.dim); // center in this dim
 
 		for (unsigned i = 0; i < num_cols; ++i) { // columns/vertical
@@ -1581,7 +1584,7 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 		
 			for (unsigned j = 0; j < num_rows; ++j) { // rows/horizontal
 				if (rgen.rand()%3) { // add a bottle 67% of the time; add_bottom=1
-					bottle.obj_id = (uint16_t)rgen.rand();
+					bottle.set_as_bottle(3 + 128*rgen.rand_bool()); // always wine, but mixed cap color
 					add_bottle(bottle, 1);
 				}
 				bottle.translate_dim(2, row_step); // translate in Z
@@ -2294,6 +2297,14 @@ rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dyn
 }
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
+
+// Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
+colorRGBA const bottle_colors[NUM_BOTTLE_COLORS] = {colorRGBA(0.4, 0.7, 1.0), colorRGBA(0.2, 0.1, 0.05), colorRGBA(0.1, 0.4, 0.1), BLACK}; // water, Coke, green beer bottle, wine
+
+void room_object_t::set_as_bottle(unsigned rand_id) {
+	obj_id = rand_id;
+	color  = bottle_colors[obj_id%NUM_BOTTLE_COLORS];
+}
 
 colorRGBA room_object_t::get_color() const {
 	switch (type) {

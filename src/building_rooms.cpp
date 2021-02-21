@@ -1417,10 +1417,9 @@ void building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place
 	bottle.set_from_sphere(center, radius);
 	set_cube_zvals(bottle, place_on.z2(), place_on.z2()+height);
 	if (!avoid.is_all_zeros() && bottle.intersects(avoid)) return; // only make one attempt
-	colorRGBA const &color(bottle_colors[rgen.rand()%NUM_BOTTLE_COLORS]);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, color);
-	set_obj_id(objs);
+	objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
+	objs.back().set_as_bottle(rgen.rand());
 }
 
 void building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {

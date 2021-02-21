@@ -18,11 +18,9 @@ float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 
-unsigned const NUM_BOOK_COLORS = 16;
+unsigned const NUM_BOTTLE_COLORS = 4;
+unsigned const NUM_BOOK_COLORS   = 16;
 colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
-unsigned const NUM_BOTTLE_COLORS = 3;
-// Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
-colorRGBA const bottle_colors[NUM_BOTTLE_COLORS] = {colorRGBA(0.1, 0.4, 0.1), colorRGBA(0.2, 0.1, 0.05), BLACK}; // green beer bottle, Coke, wine
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
 
@@ -351,6 +349,7 @@ struct room_object_t : public cube_t {
 	int get_sheet_tid() const;
 	int get_paper_tid() const;
 	int get_model_id () const {return ((type == TYPE_MONITOR) ? OBJ_MODEL_TV : (type + OBJ_MODEL_TOILET - TYPE_TOILET));} // monitor has same model as TV
+	void set_as_bottle(unsigned rand_id);
 	colorRGBA get_color() const;
 	void set_rand_gen_state(rand_gen_t &rgen) const {rgen.set_state(obj_id+1, room_id+1);}
 };
