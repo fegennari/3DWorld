@@ -1059,8 +1059,8 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	}
 }
 
-void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
-	// obj_id: bits 1-2 for type, bits 6-7 for emptiness, bit 7 for cap color
+void building_room_geom_t::add_bottle(room_object_t const &c) {
+	// obj_id: bits 1-2 for type, bits 6-7 for emptiness, bit 6 for cap color
 	// for now, no texture, but could use a bottle label texture for the central cylinder
 	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count
 	tid_nm_pair_t tex;
@@ -1069,7 +1069,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c, bool add_bottom) {
 	colorRGBA const color(apply_light_color(c)), cap_colors[2] = {LT_GRAY, GOLD};
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3), cap_val((c.obj_id & 192) >> 6);
-	bool is_empty(cap_val == 3);
+	bool is_empty(cap_val == 3), add_bottom(max(sz.x, sz.y) > sz.z); // add bottom if bottle is on its side
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
 	cube_t sphere(c), main_cylin(c), top_cylin(c);
 	sphere.d[dim][ c.dir] = c.d[dim][c.dir] + dir_sign*0.5*sz[dim];
@@ -1545,12 +1545,38 @@ void building_room_geom_t::expand_bookcase(room_object_t const &c) {
 	// WRITE, if needed
 }
 
-void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
+void add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &objects) {
 	float const height(c.dz()), width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), shelf_thick(0.1*depth);
 	unsigned const num_rows(max(1, round_fp(2.0*height/depth))), num_cols(max(1, round_fp(2.0*width/depth)));
 	float const row_step((height - shelf_thick)/num_rows), col_step((width - shelf_thick)/num_cols);
+	float const space_w(col_step - shelf_thick), space_h(row_step - shelf_thick), diameter(min(space_w, space_h) - shelf_thick);
+	rand_gen_t rgen;
+	c.set_rand_gen_state(rgen);
+	room_object_t bottle(c);
+	bottle.type   = TYPE_BOTTLE;
+	bottle.dir   ^= 1;
+	bottle.flags |= RO_FLAG_WAS_EXP;
+	set_wall_width(bottle, (c.d[!c.dim][0] + 0.5f*(col_step + shelf_thick)), 0.5*diameter, !c.dim); // center in this dim
 
+	for (unsigned i = 0; i < num_cols; ++i) { // columns/vertical
+		bottle.z1() = c.z1() + shelf_thick; // rest on the top of the shelf
+		bottle.z2() = bottle.z1() + diameter;
+
+		for (unsigned j = 0; j < num_rows; ++j) { // rows/horizontal
+			if (rgen.rand()%3) { // add a bottle 67% of the time; add_bottom=1
+				bottle.set_as_bottle(3 + 64*rgen.rand_bool()); // always wine, but mixed cap color
+				objects.push_back(bottle);
+			}
+			bottle.translate_dim(2, row_step); // translate in Z
+		}
+		bottle.translate_dim(!c.dim, col_step); // translate in !dim
+	} // for i
+}
+void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale) {
 	if (inc_lg) { // add wooden frame
+		float const height(c.dz()), width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), shelf_thick(0.1*depth);
+		unsigned const num_rows(max(1, round_fp(2.0*height/depth))), num_cols(max(1, round_fp(2.0*width/depth)));
+		float const row_step((height - shelf_thick)/num_rows), col_step((width - shelf_thick)/num_cols);
 		colorRGBA const color(apply_wood_light_color(c));
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
 		cube_t frame(c);
@@ -1570,28 +1596,15 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 			wood_mat.add_cube_to_verts(vc, color, tex_origin, 0); // draw all faces, even the back, in case it's visible through the window
 		}
 	}
-	if (inc_sm) { // add wine bottles
-		float const space_w(col_step - shelf_thick), space_h(row_step - shelf_thick), diameter(min(space_w, space_h) - shelf_thick);
-		rand_gen_t rgen;
-		c.set_rand_gen_state(rgen);
-		room_object_t bottle(c);
-		bottle.dir ^= 1;
-		set_wall_width(bottle, (c.d[!c.dim][0] + 0.5f*(col_step + shelf_thick)), 0.5*diameter, !c.dim); // center in this dim
-
-		for (unsigned i = 0; i < num_cols; ++i) { // columns/vertical
-			bottle.z1() = c.z1() + shelf_thick; // rest on the top of the shelf
-			bottle.z2() = bottle.z1() + diameter;
-		
-			for (unsigned j = 0; j < num_rows; ++j) { // rows/horizontal
-				if (rgen.rand()%3) { // add a bottle 67% of the time; add_bottom=1
-					bottle.set_as_bottle(3 + 128*rgen.rand_bool()); // always wine, but mixed cap color
-					add_bottle(bottle, 1);
-				}
-				bottle.translate_dim(2, row_step); // translate in Z
-			}
-			bottle.translate_dim(!c.dim, col_step); // translate in !dim
-		} // for i
+	if (inc_sm && !(c.flags & RO_FLAG_EXPANDED)) { // add wine bottles if not expanded
+		static vector<room_object_t> objects;
+		objects.clear();
+		add_wine_rack_bottles(c, objects);
+		add_small_static_objs_to_verts(objects);
 	}
+}
+void building_room_geom_t::expand_wine_rack(room_object_t const &c) {
+	add_wine_rack_bottles(c, expanded_objs);
 }
 
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
@@ -2487,9 +2500,10 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 void building_room_geom_t::expand_object(room_object_t &c) {
 	if (c.flags & RO_FLAG_EXPANDED) return; // already expanded
 	switch (c.type) {
-	case TYPE_BCASE:   expand_bookcase(c); break;
-	case TYPE_CLOSET:  expand_closet  (c); break;
-	case TYPE_SHELVES: expand_shelves (c); break;
+	case TYPE_BCASE:     expand_bookcase (c); break;
+	case TYPE_CLOSET:    expand_closet   (c); break;
+	case TYPE_SHELVES:   expand_shelves  (c); break;
+	case TYPE_WINE_RACK: expand_wine_rack(c); break;
 	default: assert(0); // not a supported expand type
 	}
 	c.flags |= RO_FLAG_EXPANDED; // flag as expanded

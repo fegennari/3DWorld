@@ -738,10 +738,10 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		can_pickup_bldg_obj = (can_pick_up ? 1 : 2);
 		return 0;
 	}
-	if (obj.type == TYPE_SHELVES) {
+	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !(obj.flags & RO_FLAG_EXPANDED))) { // shelves or unexpanded wine rack
 		assert(!(obj.flags & RO_FLAG_EXPANDED)); // should not have been expanded
 		expand_object(obj);
-		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on shelves contents
+		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents
 		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
 		if (!picked_up) {create_small_static_vbos(building);} // assumes expanded objects are all "small"
 		return picked_up;
@@ -780,11 +780,13 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2)
 bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> const &objs) {
 	// only these types can have objects on them (what about TYPE_SHELF?)
 	if (obj.type != TYPE_TABLE && obj.type != TYPE_DESK && obj.type != TYPE_COUNTER && obj.type != TYPE_DRESSER &&
-		obj.type != TYPE_NIGHTSTAND && obj.type != TYPE_BOX && obj.type != TYPE_CRATE) return 0;
+		obj.type != TYPE_NIGHTSTAND && obj.type != TYPE_BOX && obj.type != TYPE_CRATE && obj.type != TYPE_WINE_RACK) return 0;
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type == TYPE_BLOCKER) continue; // ignore blockers (from removed objects)
-		if (i->z1() == obj.z2() && i->intersects_xy(obj)) return 1; // zval has to match exactly
+		if (*i == obj)               continue; // skip self (bcube check)
+		if (obj.type == TYPE_WINE_RACK && obj.contains_pt(i->get_cube_center())) return 1; // check for wine bottles left in wine rack
+		if (i->z1() == obj.z2() && i->intersects_xy(obj))                        return 1; // zval has to match exactly
 	}
 	return 0;
 }
@@ -796,6 +798,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
 		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
+		auto const &other_obj_vect((vect_id == 1) ? objs : expanded_objs);
 		unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0); // treat {objs + expanded_objs} as a single contiguous range
 
 		for (auto i = obj_vect.begin(); i != obj_vect.end(); ++i) {
@@ -824,7 +827,8 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE)          continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED   && (i->flags & RO_FLAG_TAKEN3))     continue; // can only take pillow, sheets, and mattress - not the frame
 			if (i->type == TYPE_SHELVES && (i->flags & RO_FLAG_EXPANDED)) continue; // shelves are already expanded, can no longer select this object
-			if (object_has_something_on_it(*i, obj_vect))                 continue; // can't remove a table, etc. that has something on it
+			if (object_has_something_on_it(*i,       obj_vect))           continue; // can't remove a table, etc. that has something on it
+			if (object_has_something_on_it(*i, other_obj_vect))           continue; // check the other one as well
 			if (building.check_for_wall_ceil_floor_int(at_pos, p1c))      continue; // skip if it's on the other side of a wall, ceiling, or floor
 			closest_obj_id = (i - obj_vect.begin()) + obj_id_offset; // valid pickup object
 			dmin_sq = dsq; // this object is the closest, even if it can't be picked up

@@ -481,7 +481,7 @@ struct building_room_geom_t {
 	void add_mwave(room_object_t const &c);
 	void add_mirror(room_object_t const &c);
 	void add_shower(room_object_t const &c, float tscale);
-	void add_bottle(room_object_t const &c, bool add_bottom=0);
+	void add_bottle(room_object_t const &c);
 	void add_paper(room_object_t const &c);
 	void add_pen_pencil(room_object_t const &c);
 	void add_flooring(room_object_t const &c, float tscale);
@@ -494,6 +494,7 @@ struct building_room_geom_t {
 	void expand_shelves(room_object_t const &c);
 	void expand_bookcase(room_object_t const &c);
 	void expand_closet(room_object_t const &c);
+	void expand_wine_rack(room_object_t const &c);
 	void expand_object(room_object_t &c);
 	// other functions
 	bool closet_light_is_on(cube_t const &closet) const;
