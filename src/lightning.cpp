@@ -30,7 +30,7 @@ point litning_pos;
 lightning_t l_strike;
 cube_map_shadow_manager lightning_smgr; // should this be inside lightning_t?
 
-extern int is_cloudy, game_mode, world_mode, iticks, DISABLE_WATER, animate2;
+extern int is_cloudy, world_mode, iticks, DISABLE_WATER, animate2;
 extern float zmin, temperature, lt_green_int, water_plane_z, ztop, fticks, XY_SCENE_SIZE;
 extern vector<valley> valleys;
 

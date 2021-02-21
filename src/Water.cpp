@@ -92,7 +92,7 @@ vector<water_section> wsections;
 spillover spill;
 
 extern bool using_lightmap, has_snow, fast_water_reflect, enable_clip_plane_z, begin_motion;
-extern int display_mode, frame_counter, game_mode, TIMESCALE2, I_TIMESCALE2, world_mode, rand_gen_index, animate, animate2, blood_spilled;
+extern int display_mode, frame_counter, TIMESCALE2, I_TIMESCALE2, world_mode, rand_gen_index, animate, animate2, blood_spilled;
 extern int landscape_changed, xoff2, yoff2, scrolling, dx_scroll, dy_scroll, INIT_DISABLE_WATER;
 extern float temperature, zmax, zmin, zbottom, ztop, light_factor, water_plane_z, fticks, mesh_scale, water_h_off_rel, clip_plane_z;
 extern float TIMESTEP, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;

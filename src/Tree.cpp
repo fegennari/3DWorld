@@ -64,7 +64,7 @@ tree_placer_t tree_placer;
 
 extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting, begin_motion, enable_grass_fire;
 extern int num_trees, do_zoom, display_mode, animate2, iticks, draw_model, frame_counter;
-extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
+extern int xoff2, yoff2, rand_gen_index, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
 extern float zmin, zmax, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh, tree_slope_thresh;
 extern double sim_ticks;

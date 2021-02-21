@@ -20,7 +20,7 @@ double map_x(0.0), map_y(0.0);
 
 extern bool water_is_lava, begin_motion, show_map_view_mandelbrot;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, read_landscape, read_heightmap, do_read_mesh;
-extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, default_ground_tex, frame_counter;
+extern int world_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter, default_ground_tex, frame_counter;
 extern float zmax_est, zmin, zmax, water_plane_z, water_h_off, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature, mesh_height_scale, mesh_scale;
 extern int coll_id[];
 extern point surface_pos;
@@ -312,7 +312,7 @@ void draw_overhead_map() {
 				}
 			} // for j
 		} // for i
-		if (begin_motion && obj_groups[coll_id[SMILEY]].enabled) { // game_mode?
+		if (begin_motion && obj_groups[coll_id[SMILEY]].enabled) {
 			float const camx((world_mode == WMODE_GROUND) ? camera.x : 0.0), camy((world_mode == WMODE_GROUND) ? camera.y : 0.0);
 
 			for (int s = 0; s < num_smileys; ++s) { // add in smiley markers
