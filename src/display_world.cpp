@@ -1002,7 +1002,7 @@ void display() {
 		purge_coll_freed(0); // optional
 		camera_flight = 0;
 
-		if (game_mode) {
+		if (game_mode && world_mode == WMODE_GROUND) {
 			update_game_frame();
 			show_user_stats();
 			show_blood_on_camera();

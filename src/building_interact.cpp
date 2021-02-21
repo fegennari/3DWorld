@@ -23,7 +23,7 @@ bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool toggle_door_open_state;
-extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode;
+extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
@@ -31,7 +31,7 @@ extern building_params_t global_building_params;
 
 void place_player_at_xy(float xval, float yval);
 
-bool in_building_gameplay_mode() {return (display_mode & 0x20);} // for future gameplay mode
+bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0) {
 #pragma omp critical(gen_sound)

@@ -1565,7 +1565,7 @@ bool try_use_translocator(int player_id) {
 
 void switch_player_weapon(int val) {
 
-	if (game_mode) {
+	if (game_mode && (game_mode == 1 || world_mode == WMODE_GROUND)) {
 		if (sstates != NULL) {
 			sstates[CAMERA_ID].switch_weapon(val, 1);
 			last_inventory_frame = frame_counter;
@@ -1618,7 +1618,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 	if (frame_counter == fire_frame) return; // to prevent two fires in the same frame
 	fire_frame = frame_counter;
 
-	if (!game_mode) { // flashlight/candlelight/spraypaint mode only
+	if (!game_mode || (game_mode == 2 && world_mode == WMODE_INF_TERRAIN)) { // flashlight/candlelight/spraypaint mode only
 		if (voxel_editing) {modify_voxels();}
 		else if (spraypaint_mode) {spray_paint ((wmode & 1) != 0);}
 		else if (spheres_mode   ) {throw_sphere((wmode & 1) != 0);}
@@ -2713,16 +2713,21 @@ void update_camera_velocity(vector3d const &v) {
 
 void init_game_mode() {
 
-	string const str(string("Playing ") + ((game_mode == 1) ? "Deathmatch" : "Dodgeball") + " as " + player_name);
-	print_text_onscreen(str, WHITE, 2.0, MESSAGE_TIME, 4);
-	if (!free_for_all) {teams = 0;}
-	free_dodgeballs(1, 1);
-	init_sstate(CAMERA_ID, (game_mode == 1));
-	if (game_mode == 2) {init_smileys();}
+	if (world_mode == WMODE_INF_TERRAIN && game_mode == 2) {
+		print_text_onscreen("Building Gameplay Mode", WHITE, 2.0, MESSAGE_TIME, 4);
+	}
+	else {
+		string const str(string("Playing ") + ((game_mode == 1) ? "Deathmatch" : "Dodgeball") + " as " + player_name);
+		print_text_onscreen(str, WHITE, 2.0, MESSAGE_TIME, 4);
+		if (!free_for_all) {teams = 0;}
+		free_dodgeballs(1, 1);
+		init_sstate(CAMERA_ID, (game_mode == 1));
+		if (game_mode == 2) {init_smileys();}
 	
-	for (int i = CAMERA_ID; i < num_smileys; ++i) {
-		sstates[i].killer = NO_SOURCE; // no one
-		if (game_mode == 1) {init_sstate(i, 1);} // ???
+		for (int i = CAMERA_ID; i < num_smileys; ++i) {
+			sstates[i].killer = NO_SOURCE; // no one
+			if (game_mode == 1) {init_sstate(i, 1);} // ???
+		}
 	}
 	if (frame_counter > 0) {gen_sound(SOUND_ALERT, get_camera_pos(), 0.5);} // not on first frame
 }

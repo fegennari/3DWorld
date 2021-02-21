@@ -531,7 +531,7 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 			c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
 			dstate.draw_cube(qbd, c, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is black so it's all black anyway
 
-			if (!shadow_only && tt_fire_button_down && !game_mode) {
+			if (!shadow_only && tt_fire_button_down && game_mode != 1) {
 				point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
 				if (c.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (c.get_cube_center() + dstate.xlate));}
 			}

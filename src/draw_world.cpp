@@ -177,7 +177,7 @@ void set_brass_material(shader_t &shader, float alpha, float brightness) {
 
 void draw_camera_weapon(bool want_has_trans, int reflection_pass) {
 
-	if (!game_mode || (weap_has_transparent(CAMERA_ID) != want_has_trans)) return;
+	if (!game_mode || (weap_has_transparent(CAMERA_ID) != want_has_trans) || (game_mode == 2 && world_mode != WMODE_GROUND)) return;
 	if (reflection_pass && !camera_pdu.sphere_visible_test(pre_ref_camera_pos, 2.0*CAMERA_RADIUS)) return; // player + weapon not visible in reflection
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 0, 0); // no rain/snow

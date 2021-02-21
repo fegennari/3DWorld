@@ -1099,7 +1099,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore
 	pedestrian_t const *selected_ped(nullptr);
 
-	if (tt_fire_button_down && !game_mode) {
+	if (tt_fire_button_down && game_mode != 1) {
 		point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
 		pedestrian_t const *ped(get_ped_at(p1, p2));
 		selected_ped_ssn = (ped ? ped->ssn : -1); // update and cache for use in later frames
