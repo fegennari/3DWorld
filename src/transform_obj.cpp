@@ -228,6 +228,9 @@ void transform_data::reset_perturb_if_set(unsigned i) {
 // *** deformation code ***
 
 
+glm::mat4 get_rotation_matrix(vector3d const &vrot, float angle) {
+	return glm::rotate(glm::mat4(1.0), angle, vec3_from_vector3d(vrot));
+}
 void apply_roll_to_matrix(xform_matrix &matrix, point const &pos, point const &lpos, vector3d const &ground_normal, float radius, float a_add, float a_mult) {
 	vector3d const delta(pos, lpos);
 	float const dmag(delta.mag());
@@ -237,7 +240,7 @@ void apply_roll_to_matrix(xform_matrix &matrix, point const &pos, point const &l
 
 	if (vrot.mag() > TOLERANCE) {
 		matrix.normalize();
-		matrix = glm::rotate(glm::mat4(1.0), angle, vec3_from_vector3d(vrot)) * matrix;
+		matrix = get_rotation_matrix(vrot, angle) * matrix;
 	}
 }
 void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add, float a_mult) {

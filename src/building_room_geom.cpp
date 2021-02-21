@@ -2276,8 +2276,10 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
 }
 /*static*/ void building_room_geom_t::draw_lg_ball_in_building(room_object_t const &c, shader_t &s) {
+	float const angle(atan2(cview_dir.y, cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
+	xform_matrix rot_matrix(get_rotation_matrix(plus_z, angle));
 	rgeom_mat_t mat(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0));
-	mat.add_sphere_to_verts(c, apply_light_color(c), 0, nullptr); // TODO: pass in a rotation matrix to cancel out the player's rotation
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, &rot_matrix); // low_detail=0
 	mat.tex.set_gl(s);
 	draw_quad_verts_as_tris(mat.quad_verts);
 }

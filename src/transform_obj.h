@@ -16,6 +16,7 @@ inline glm::vec3 vec3_from_vector3d (vector3d const &v) {return glm::vec3(v.x, v
 inline vector3d  vector3d_from_vec3(glm::vec3 const &v) {return vector3d (v.x, v.y, v.z);}
 
 void print_matrix(float const *const m, std::string const &prefix=std::string());
+glm::mat4 get_rotation_matrix(vector3d const &vrot, float angle);
 
 
 struct xform_matrix : public glm::mat4 { // Note: maybe better to use glm::gtx::simd_mat4?
