@@ -846,6 +846,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	bool choose_dest(person.target_pos == all_zeros);
 	float const coll_dist(COLL_RADIUS_SCALE*person.radius);
 	float &wait_time(person.waiting_start); // reuse this field
+	float speed_mult(1.0);
 	person.following_player = 0; // reset for this frame
 
 	if (wait_time > 0) {
@@ -881,6 +882,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			state.next_path_pt(person, stay_on_one_floor);
 			person.following_player = 1;
 			choose_dest = 0;
+			speed_mult  = 1.5; // faster when the player is in the same room
 		}
 	}
 	if (choose_dest) { // no current destination, choose a new destination
@@ -904,7 +906,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		state.next_path_pt(person, stay_on_one_floor);
 		return AI_BEGIN_PATH;
 	}
-	float const max_dist(person.speed*fticks);
+	float const max_dist(person.speed*speed_mult*fticks);
 	state.on_new_path_seg = 0; // clear flag for this frame
 	//person.following_player = can_target_player(state, person); // for debugging visualization
 
