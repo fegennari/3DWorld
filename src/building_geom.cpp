@@ -7,7 +7,7 @@
 
 cube_t grass_exclude1, grass_exclude2;
 
-extern bool draw_building_interiors;
+extern bool draw_building_interiors, player_near_toilet;
 extern int player_in_closet;
 extern float grass_width, CAMERA_RADIUS;
 extern double camera_zh;
@@ -400,7 +400,11 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			else { // assume it's a cube
 				cube_t c_extended(*c);
 				c_extended.z1() -= camera_zh; // handle the player's head (for stairs), or is pos already at this height?
-				had_coll |= sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm); // skip_z=0
+				
+				if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm)) { // skip_z=0
+					if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
+					had_coll = 1;
+				}
 			}
 		} // for c
 	}
