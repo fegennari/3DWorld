@@ -173,6 +173,7 @@ void apply_grass_scale();
 void take_screenshot_texture();
 void teleport_to_map_location();
 void building_gameplay_action_key(int mode);
+float get_player_building_speed_mult();
 
 
 // all OpenGL error handling goes through these functions
@@ -432,6 +433,7 @@ void set_camera_pos_dir(point const &pos, vector3d const &dir) {
 void move_camera_pos_xy(vector3d const &v, float dist) {
 
 	// normal ground movement - should speed depend on orientation or not?
+	if (world_mode == WMODE_INF_TERRAIN) {dist *= get_player_building_speed_mult();}
 	static float prev_camera_zval(surface_pos.z); // required for walking on bridges to determine if camera is on or below the bridge
 	point const prev(surface_pos);
 	float const xy_scale(dist*(v.mag()/v.xy_mag()));
@@ -445,7 +447,6 @@ void move_camera_pos_xy(vector3d const &v, float dist) {
 
 
 void move_camera_pos(vector3d const &v, float dist) { // remember that dist is negative
-
 	if (dist == 0.0) return;
 	if (!camera_surf_collide || camera_flight) {surface_pos += v*dist;}
 	else {move_camera_pos_xy(v, dist);}

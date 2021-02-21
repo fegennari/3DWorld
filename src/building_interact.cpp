@@ -660,7 +660,7 @@ public:
 	}
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
 	bool can_pick_up_item(room_object_t const &obj) const {return ((cur_weight + get_obj_weight(obj)) <= global_building_params.player_weight_limit);}
-	float get_carry_weight_ratio() const {return cur_weight/global_building_params.player_weight_limit;} // TODO: make player slower when carrying more weight
+	float get_carry_weight_ratio() const {return min(1.0f, cur_weight/global_building_params.player_weight_limit);}
 	float get_drunkenness() const {return drunkenness;}
 
 	void add_item(room_object_t const &obj) {
@@ -696,7 +696,7 @@ public:
 			oss << " weight " << get_obj_weight(obj) << " lbs";
 		}
 		else {
-			// TODO: reduce bladder when near a toilet; can't run with a full bladder
+			// TODO: can't run with a full bladder
 			bladder += 0.25; // add one drink to the bladder
 		}
 		print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
@@ -745,8 +745,9 @@ public:
 			}
 		}
 		if (in_building_gameplay_mode()) {
-			// TODO: make drunkenness bar color change when level is too high
+			// TODO: make drunkenness bar color change when (drunkenness > 1.5)
 			// TODO: bladder/urine bar?
+			// TODO: weight capacity bar?
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, 0.0, WHITE); // Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100
 		}
 	}
@@ -774,6 +775,7 @@ public:
 player_inventory_t player_inventory;
 
 float get_player_drunkenness() {return player_inventory.get_drunkenness();}
+float get_player_building_speed_mult() {return (1.0f - 0.5f*player_inventory.get_carry_weight_ratio());}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
