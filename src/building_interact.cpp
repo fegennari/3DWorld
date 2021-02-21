@@ -704,13 +704,14 @@ public:
 				if (has_throwable) {oss << "  [" << get_taken_obj_type(carried.back()).name << "]";} // print the name of the throwable object
 				draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
 			}
-			// display sound meter
-			float const lvl(min(cur_building_sound_level, 1.0f));
-			unsigned const num_bars(round_fp(20.0*lvl));
+			if (in_building_gameplay_mode()) { // display sound meter
+				float const lvl(min(cur_building_sound_level, 1.0f));
+				unsigned const num_bars(round_fp(20.0*lvl));
 
-			if (num_bars > 0) {
-				colorRGBA const color(lvl, (1.0 - lvl), 0.0, 1.0); // green => yellow => orange => red
-				draw_text(color, -0.005*aspect_ratio, -0.01, -0.02, std::string(num_bars, '#'));
+				if (num_bars > 0) {
+					colorRGBA const color(lvl, (1.0 - lvl), 0.0, 1.0); // green => yellow => orange => red
+					draw_text(color, -0.005*aspect_ratio, -0.01, -0.02, std::string(num_bars, '#'));
+				}
 			}
 		}
 		if (in_building_gameplay_mode()) {draw_health_bar(100.0*player_health, -1.0, 0.0, WHITE);} // negative shields to disable shields bar
@@ -989,7 +990,6 @@ void building_gameplay_next_frame() {
 	}
 	if (in_building_gameplay_mode()) { // run gameplay update logic
 		show_bldg_pickup_crosshair = 1;
-		player_inventory.show_stats();
 		// update sounds used by AI
 		auto i(cur_sounds.begin()), o(i);
 
@@ -999,6 +999,7 @@ void building_gameplay_next_frame() {
 		}
 		cur_sounds.erase(o, cur_sounds.end());
 	}
+	player_inventory.show_stats();
 	// reset state for next frame
 	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
 	can_pickup_bldg_obj = 0;

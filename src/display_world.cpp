@@ -1001,7 +1001,6 @@ void display() {
 		final_draw(framerate);
 		purge_coll_freed(0); // optional
 		camera_flight = 0;
-		if (world_mode == WMODE_INF_TERRAIN) {building_gameplay_next_frame();}
 
 		if (game_mode && world_mode == WMODE_GROUND) {
 			update_game_frame();
@@ -1026,6 +1025,7 @@ void display() {
 			draw_compass_and_alt();
 		}
 		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide) {show_player_keycards();}
+		if (world_mode == WMODE_INF_TERRAIN) {building_gameplay_next_frame();} // Note: must be after crosshair drawing
 		
 		if (display_framerate) { // notify the user of lighting progress
 			if (indir_lighting_updated()) {draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");}
