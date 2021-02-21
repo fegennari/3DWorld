@@ -563,10 +563,12 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 				static vect_cube_t avoid; // reuse across frames/people
 				interior->get_avoid_cubes(avoid, (person.target_pos.z - person.radius), (person.target_pos.z + z2_add), get_floor_thickness(), 1); // same_as_player=1
 
-				for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
-					cube_t c(*i);
-					c.expand_by_xy(coll_dist);
-					sphere_cube_int_update_pos(person.target_pos, coll_dist, c, person.pos, 1, 1); // check_int=1, skip_z=1, ignore return value
+				for (unsigned n = 0; n < 4; ++n) { // iterate a few times in case a collision moves pos into another object
+					for (auto i = avoid.begin(); i != avoid.end(); ++i) { // move target_pos to avoid room objects
+						cube_t c(*i);
+						c.expand_by_xy(coll_dist);
+						sphere_cube_int_update_pos(person.target_pos, 1.01*coll_dist, c, person.pos, 1, 1); // check_int=1, skip_z=1, ignore return value
+					}
 				}
 			}
 			if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
