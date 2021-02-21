@@ -1069,8 +1069,8 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	colorRGBA const color(apply_light_color(c)), cap_colors[2] = {LT_GRAY, GOLD};
 	vector3d const sz(c.get_size());
-	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3), cap_val((c.obj_id & 192) >> 6);
-	bool is_empty(cap_val == 3), add_bottom(max(sz.x, sz.y) > sz.z); // add bottom if bottle is on its side
+	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
+	bool const is_empty(c.is_bottle_empty()), add_bottom(max(sz.x, sz.y) > sz.z); // add bottom if bottle is on its side
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
 	cube_t sphere(c), main_cylin(c), top_cylin(c);
 	sphere.d[dim][ c.dir] = c.d[dim][c.dir] + dir_sign*0.5*sz[dim];
@@ -1088,7 +1088,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 0, is_empty, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // draw neck of bottle; draw top if empty
 
 	if (!is_empty) { // draw cap if nonempty
-		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[cap_val & 1]), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
+		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[bool(c.obj_id & 64)]), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	}
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
 	main_cylin.expand_in_dim(dim1, 0.02*radius); // expand slightly in radius

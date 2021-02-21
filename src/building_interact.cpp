@@ -31,6 +31,7 @@ extern building_params_t global_building_params;
 
 
 void place_player_at_xy(float xval, float yval);
+void register_player_death(std::string const &why="");
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -605,7 +606,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		case 3: type = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 10.0, 1.0, "bottle of wine" ); break;
 		default: assert(0);
 		}
-		if ((obj.obj_id & 192) == 192) { // empty if both bits 6 and 7 are set
+		if (obj.is_bottle_empty()) {
 			type.name    = "empty " + type.name;
 			type.weight *= 0.25;
 			type.value   = 0.0;
@@ -637,7 +638,7 @@ float get_obj_weight(room_object_t const &obj) {
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
-	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness; // TODO: add drunken level
+	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness;
 public:
 	player_inventory_t() : best_value(0.0) {clear();}
 
@@ -648,27 +649,46 @@ public:
 		drunkenness   = 0.0;
 		carried.clear();
 	}
-	void take_damage(float amt) {player_health -= amt;}
+	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
 	bool is_dead() const {return (player_health < 0.0);}
 	bool can_pick_up_item(room_object_t const &obj) const {return ((cur_weight + get_obj_weight(obj)) <= global_building_params.player_weight_limit);}
-	float get_carry_weight_ratio() {return cur_weight/global_building_params.player_weight_limit;} // TODO: make player slower when carrying more weight
+	float get_carry_weight_ratio() const {return cur_weight/global_building_params.player_weight_limit;} // TODO: make player slower when carrying more weight
+	float get_drunkenness() const {return drunkenness;}
 
 	void add_item(room_object_t const &obj) {
-		if (obj.type == TYPE_BOTTLE) {
-			unsigned const btype(obj.obj_id % NUM_BOTTLE_COLORS); // water, Coke, beer, wine
-			// TODO: restore health, etc.
-			// TODO: add to drunkenness if (btype > 1)
-		}
-		float const value(get_obj_value(obj)), weight(get_obj_weight(obj));
+		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
 		std::ostringstream oss;
-		oss << get_taken_obj_type(obj).name << ": value $";
-		if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
-		else {oss << value;}
-		oss << " weight " << get_obj_weight(obj) << " lbs";
+		oss << get_taken_obj_type(obj).name;
+
+		if (obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_WAS_EXP)) { // nonempty bottle, not taken off a shelf or wine rack
+			switch (obj.obj_id % NUM_BOTTLE_COLORS) {
+			case 0: health = 0.25; break; // water
+			case 1: health = 0.50; break; // Coke
+			case 2: drunk  = 0.25; break; // beer
+			case 3: drunk  = 0.50; break; // wine (entire bottle)
+			default: assert(0);
+			}
+		}
+		if (health > 0.0) {
+			player_health = min(1.0f, (player_health + health));
+			oss << ": +" << round_fp(100.0*health) << "% Health";
+		}
+		if (drunk > 0.0) {
+			drunkenness += drunk;
+			if (drunkenness > 2.0) {register_player_death(" of alcohol poisoning"); return;}
+			oss << ": +" << round_fp(100.0*drunk) << "% Drunkenness";
+		}
+		if (health == 0.0 && drunk == 0.0) { // print value and weight if item is not consumed
+			float const value(get_obj_value(obj)), weight(get_obj_weight(obj));
+			cur_value  += value;
+			cur_weight += weight;
+			carried.push_back(obj);
+			oss << ": value $";
+			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
+			else {oss << value;}
+			oss << " weight " << get_obj_weight(obj) << " lbs";
+		}
 		print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
-		cur_value  += value;
-		cur_weight += weight;
-		carried.push_back(obj);
 	}
 	bool drop_last_item(room_object_t &obj, bool dynamic_only) {
 		if (carried.empty()) return 0;
@@ -713,11 +733,20 @@ public:
 				}
 			}
 		}
-		if (in_building_gameplay_mode()) {draw_health_bar(100.0*player_health, -1.0, 0.0, WHITE);} // negative shields to disable shields bar
+		if (in_building_gameplay_mode()) {
+			// TODO: make drunkenness bar color change when level is too high
+			draw_health_bar(100.0*player_health, 150.0*drunkenness, 0.0, WHITE); // Note: shields is used for drunkenness
+		}
+	}
+	void next_frame() {
+		show_stats();
+		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks)); // slowly decrease over time
 	}
 };
 
 player_inventory_t player_inventory;
+
+float get_player_drunkenness() {return player_inventory.get_drunkenness();}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
@@ -955,9 +984,9 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 
 // gameplay logic
 
-void register_player_death(std::string const &why="") {
+void register_player_death(std::string const &why) {
 	gen_sound_thread_safe(SOUND_SCREAM3, get_camera_pos());
-	print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10); // TODO: falling death, etc.
+	print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10); // TODO: falling death
 	player_inventory.clear(); // respawn
 	point const xlate(get_camera_coord_space_xlate());
 	place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
@@ -971,7 +1000,7 @@ void register_ai_player_coll(pedestrian_t const &person) {
 		last_coll_time = tfticks;
 	}
 	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
-	player_inventory.take_damage(0.02*fticks); // take damage over time
+	player_inventory.take_damage(0.04*fticks); // take damage over time
 	if (player_inventory.is_dead()) {register_player_death();} // dead
 }
 
@@ -999,7 +1028,7 @@ void building_gameplay_next_frame() {
 		cur_sounds.erase(o, cur_sounds.end());
 	}
 	player_held_object = room_object_t();
-	player_inventory.show_stats();
+	player_inventory.next_frame();
 	// reset state for next frame
 	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
 	can_pickup_bldg_obj = 0;

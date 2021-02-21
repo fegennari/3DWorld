@@ -19,6 +19,7 @@ float cur_explosion_weight(0.0);
 sphere_t cur_explosion_sphere;
 
 bool player_is_drowning();
+float get_player_drunkenness();
 
 
 void bind_depth_buffer() {
@@ -221,6 +222,7 @@ void run_postproc_effects() {
 	bool const enable_ssao = 0;
 	point const camera(get_camera_pos());
 	bool const camera_underwater(world_mode != WMODE_UNIVERSE && is_underwater(camera));
+	float const drunkenness(get_player_drunkenness());
 	int index(-1);
 	static xform_matrix prev_mvm, prev_pjm; // previous frame's matrices, for use with motion blur, etc.
 	static bool prev_mat_valid(0);
@@ -233,7 +235,10 @@ void run_postproc_effects() {
 			}
 		}
 	}
-	if (camera_underwater) {
+	if (drunkenness > 0.5) {
+		add_color_only_effect("drunken_wave", 1.0f*(drunkenness - 0.5f));
+	}
+	else if (camera_underwater) {
 		//add_color_only_effect("screen_space_blur");
 		add_2d_blur();
 		if (player_is_drowning())                 {add_color_only_effect("drunken_wave", 1.0);}
