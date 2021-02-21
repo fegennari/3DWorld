@@ -19,6 +19,7 @@ float const ALERT_THRESH   = 0.1; // min sound alert level for AIs
 bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
+room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
@@ -633,9 +634,6 @@ float get_obj_value(room_object_t const &obj) {
 float get_obj_weight(room_object_t const &obj) {
 	return get_taken_obj_type(obj).weight; // constant per object type, for now, but really should depend on object size/volume
 }
-void draw_obj_held_by_player(room_object_t const &obj) {
-	// TODO
-}
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
@@ -693,9 +691,10 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
+		bool const has_throwable(!carried.empty() && carried.back().has_dstate());
+		if (has_throwable) {player_held_object = carried.back();} // deep copy last pickup object if throwable
+
 		if (display_framerate) { // controlled by framerate toggle
-			bool const has_throwable(!carried.empty() && carried.back().has_dstate());
-			if (has_throwable) {draw_obj_held_by_player(carried.back());}
 			float const aspect_ratio((float)window_width/(float)window_height);
 
 			if (cur_weight > 0.0 || tot_weight > 0.0 || best_value > 0.0) { // don't show stats until the player has picked something up
@@ -999,6 +998,7 @@ void building_gameplay_next_frame() {
 		}
 		cur_sounds.erase(o, cur_sounds.end());
 	}
+	player_held_object = room_object_t();
 	player_inventory.show_stats();
 	// reset state for next frame
 	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease

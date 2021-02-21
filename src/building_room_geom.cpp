@@ -22,6 +22,7 @@ extern int display_mode, frame_counter, player_in_closet;
 extern float office_chair_rot_rate;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
+extern room_object_t player_held_object;
 
 int get_rand_screenshot_texture(unsigned rand_ix);
 unsigned get_num_screenshot_tids();
@@ -2274,6 +2275,12 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	// rotate the texture coords when the ball is rolling
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
 }
+/*static*/ void building_room_geom_t::draw_lg_ball_in_building(room_object_t const &c, shader_t &s) {
+	rgeom_mat_t mat(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0));
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, nullptr); // TODO: pass in a rotation matrix to cancel out the player's rotation
+	mat.tex.set_gl(s);
+	draw_quad_verts_as_tris(mat.quad_verts);
+}
 
 void building_room_geom_t::clear() {
 	clear_materials();
@@ -2576,7 +2583,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	mats_static .draw(s, shadow_only, reflection_pass);
 	mats_lights .draw(s, shadow_only, reflection_pass);
 	mats_dynamic.draw(s, shadow_only, reflection_pass);
-	
+
 	if (inc_small) {
 		mats_small.draw(s, shadow_only, reflection_pass);
 
@@ -2631,6 +2638,12 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	//if (!obj_model_insts.empty()) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
+	if (player_in_building && !shadow_only && player_held_object.is_valid()) { // draw the item the player is holding
+		assert(player_held_object.type == TYPE_LG_BALL); // this is currently the only supported object type
+		player_held_object.translate((camera_bs + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS)) - player_held_object.get_cube_center());
+		bind_vbo(0); // not using a VBO here
+		draw_lg_ball_in_building(player_held_object, s);
+	}
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters
 		enable_blend();
 		mats_alpha.draw(s, shadow_only, reflection_pass);

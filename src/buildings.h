@@ -325,6 +325,7 @@ struct room_object_t : public cube_t {
 		cube_t(c), dim(dim_), dir(dir_), flags2(0), room_id(rid), obj_id(0), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
+	bool is_valid   () const {return  (type != TYPE_NONE);}
 	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}
 	bool has_stairs () const {return  (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
 	bool is_visible () const {return !(flags & RO_FLAG_INVIS);}
@@ -490,6 +491,7 @@ struct building_room_geom_t {
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void add_lg_ball(room_object_t const &c);
+	static void draw_lg_ball_in_building(room_object_t const &c, shader_t &s);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
 	void expand_bookcase(room_object_t const &c);
