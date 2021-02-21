@@ -16,9 +16,9 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 float const ALERT_THRESH   = 0.1; // min sound alert level for AIs
 
-bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0), in_pickup_mode(0);
+bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0);
 int can_pickup_bldg_obj(0);
-float office_chair_rot_rate(0.0), cur_building_sound_level(0.0), player_health(1.0);
+float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
@@ -633,35 +633,43 @@ float get_obj_value(room_object_t const &obj) {
 float get_obj_weight(room_object_t const &obj) {
 	return get_taken_obj_type(obj).weight; // constant per object type, for now, but really should depend on object size/volume
 }
-void show_object_info(room_object_t const &obj) {
-	float const value(get_obj_value(obj));
-	std::ostringstream oss;
-	oss << get_taken_obj_type(obj).name << ": value $";
-	if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
-	else {oss << value;}
-	oss << " weight " << get_obj_weight(obj) << " lbs";
-	print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
-}
 void draw_obj_held_by_player(room_object_t const &obj) {
 	// TODO
 }
 
-class player_inventory_t {
+class player_inventory_t { // manages player inventory, health, and other stats
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
-	float cur_value, cur_weight, tot_value, tot_weight;
+	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness; // TODO: add drunken level
 public:
-	player_inventory_t() {clear();}
+	player_inventory_t() : best_value(0.0) {clear();}
 
-	void clear() { // called on player death?
-		cur_value = cur_weight = tot_value = tot_weight = 0.0;
+	void clear() { // called on player death
+		max_eq(best_value, tot_value);
+		cur_value  = cur_weight = tot_value = tot_weight = 0.0;
+		player_health = 1.0; // full health
+		drunkenness   = 0.0;
 		carried.clear();
 	}
-	bool can_pick_up_item(room_object_t const &obj) const {
-		return ((cur_weight + get_obj_weight(obj)) <= global_building_params.player_weight_limit);
-	}
+	void take_damage(float amt) {player_health -= amt;}
+	bool is_dead() const {return (player_health < 0.0);}
+	bool can_pick_up_item(room_object_t const &obj) const {return ((cur_weight + get_obj_weight(obj)) <= global_building_params.player_weight_limit);}
+	float get_carry_weight_ratio() {return cur_weight/global_building_params.player_weight_limit;} // TODO: make player slower when carrying more weight
+
 	void add_item(room_object_t const &obj) {
-		cur_value  += get_obj_value (obj);
-		cur_weight += get_obj_weight(obj);
+		if (obj.type == TYPE_BOTTLE) {
+			unsigned const btype(obj.obj_id % NUM_BOTTLE_COLORS); // water, Coke, beer, wine
+			// TODO: restore health, etc.
+			// TODO: add to drunkenness if (btype > 1)
+		}
+		float const value(get_obj_value(obj)), weight(get_obj_weight(obj));
+		std::ostringstream oss;
+		oss << get_taken_obj_type(obj).name << ": value $";
+		if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
+		else {oss << value;}
+		oss << " weight " << get_obj_weight(obj) << " lbs";
+		print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
+		cur_value  += value;
+		cur_weight += weight;
 		carried.push_back(obj);
 	}
 	bool drop_last_item(room_object_t &obj, bool dynamic_only) {
@@ -685,23 +693,25 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		bool const has_throwable(!carried.empty() && carried.back().has_dstate());
-		if (has_throwable) {draw_obj_held_by_player(carried.back());}
-		float const aspect_ratio((float)window_width/(float)window_height);
+		if (display_framerate) { // controlled by framerate toggle
+			bool const has_throwable(!carried.empty() && carried.back().has_dstate());
+			if (has_throwable) {draw_obj_held_by_player(carried.back());}
+			float const aspect_ratio((float)window_width/(float)window_height);
 
-		if (cur_weight > 0.0 || tot_weight > 0.0) { // don't show stats until the player has picked something up
-			std::ostringstream oss;
-			oss << "Current $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs";
-			if (has_throwable) {oss << "  [" << get_taken_obj_type(carried.back()).name << "]";} // print the name of the throwable object
-			draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
-		}
-		// display sound meter
-		float const lvl(min(cur_building_sound_level, 1.0f));
-		unsigned const num_bars(round_fp(20.0*lvl));
+			if (cur_weight > 0.0 || tot_weight > 0.0 || best_value > 0.0) { // don't show stats until the player has picked something up
+				std::ostringstream oss;
+				oss << "Cur $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs  Best $" << best_value;
+				if (has_throwable) {oss << "  [" << get_taken_obj_type(carried.back()).name << "]";} // print the name of the throwable object
+				draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
+			}
+			// display sound meter
+			float const lvl(min(cur_building_sound_level, 1.0f));
+			unsigned const num_bars(round_fp(20.0*lvl));
 
-		if (num_bars > 0) {
-			colorRGBA const color(lvl, (1.0 - lvl), 0.0, 1.0); // green => yellow => orange => red
-			draw_text(color, -0.005*aspect_ratio, -0.01, -0.02, std::string(num_bars, '#'));
+			if (num_bars > 0) {
+				colorRGBA const color(lvl, (1.0 - lvl), 0.0, 1.0); // green => yellow => orange => red
+				draw_text(color, -0.005*aspect_ratio, -0.01, -0.02, std::string(num_bars, '#'));
+			}
 		}
 		if (in_building_gameplay_mode()) {draw_health_bar(100.0*player_health, -1.0, 0.0, WHITE);} // negative shields to disable shields bar
 	}
@@ -742,7 +752,6 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
 		return 0;
 	}
-	show_object_info(obj);
 	gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.25);
 	register_building_sound_for_obj(obj, at_pos);
 	remove_object(obj_id, building);
@@ -918,7 +927,7 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 // sound/audio tracking
 
 void register_building_sound(point const &pos, float volume) {
-	if (volume == 0.0 || !in_pickup_mode) return; // only when in gameplay/item pickup mode
+	if (volume == 0.0 || !(show_bldg_pickup_crosshair || in_building_gameplay_mode())) return; // only when in gameplay/item pickup mode
 	assert(volume > 0.0); // can't be negative
 #pragma omp critical(building_sounds_update)
 	{ // since this can be called by both the draw thread and the AI update thread, it should be in a critical section
@@ -937,16 +946,17 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 		if (vol > max_vol) {max_vol = vol; sound_pos = i->pos;}
 	} // for i
 	//cout << TXT(cur_sounds.size()) << TXT(max_vol) << endl;
-	return (max_vol*floor_spacing > 0.06f);
+	return (max_vol*floor_spacing > 0.05f);
 }
 
 // gameplay logic
 
-void register_player_death() {
-	print_text_onscreen("You Have Died", RED, 2.0, 2*TICKS_PER_SECOND, 10);
+void register_player_death(std::string const &why="") {
+	gen_sound_thread_safe(SOUND_SCREAM3, get_camera_pos());
+	print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10); // TODO: falling death, etc.
+	player_inventory.clear(); // respawn
 	point const xlate(get_camera_coord_space_xlate());
 	place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
-	player_health = 1.0; // respawn
 }
 
 void register_ai_player_coll(pedestrian_t const &person) {
@@ -957,33 +967,34 @@ void register_ai_player_coll(pedestrian_t const &person) {
 		last_coll_time = tfticks;
 	}
 	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
-	player_health -= 0.02*fticks; // take damage over time
-	if (player_health < 0.0) {register_player_death();} // dead
+	player_inventory.take_damage(0.02*fticks); // take damage over time
+	if (player_inventory.is_dead()) {register_player_death();} // dead
 }
 
 void building_gameplay_action_key(int mode) {
 	// show crosshair on first pickup because it's too difficult to pick up objects without it
-	if      (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = in_pickup_mode = 1;} // 'e'
+	if      (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
 	else if (mode == 2) {drop_last_pickup_object = 1;} // 'E'
 	else                {toggle_door_open_state  = 1;} // 'q'
 }
 
 void building_gameplay_next_frame() {
-	if (in_building_gameplay_mode()) {show_bldg_pickup_crosshair = in_pickup_mode = 1;}
-	if (display_framerate) {player_inventory.show_stats();} // controlled by framerate toggle
-	
 	if (office_chair_rot_rate != 0.0) { // update office chair rotation
 		office_chair_rot_rate *= exp(-0.05*fticks); // exponential slowdown
 		if (office_chair_rot_rate < 0.001) {office_chair_rot_rate = 0.0;} // stop rotating
 	}
-	// update sounds
-	auto i(cur_sounds.begin()), o(i);
+	if (in_building_gameplay_mode()) { // run gameplay update logic
+		show_bldg_pickup_crosshair = 1;
+		player_inventory.show_stats();
+		// update sounds used by AI
+		auto i(cur_sounds.begin()), o(i);
 
-	for (; i != cur_sounds.end(); ++i) {
-		i->radius *= exp(-0.04*fticks);
-		if (i->radius > ALERT_THRESH) {*(o++) = *i;} // keep if above thresh
+		for (; i != cur_sounds.end(); ++i) {
+			i->radius *= exp(-0.04*fticks);
+			if (i->radius > ALERT_THRESH) {*(o++) = *i;} // keep if above thresh
+		}
+		cur_sounds.erase(o, cur_sounds.end());
 	}
-	cur_sounds.erase(o, cur_sounds.end());
 	// reset state for next frame
 	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
 	can_pickup_bldg_obj = 0;

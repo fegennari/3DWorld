@@ -1001,6 +1001,7 @@ void display() {
 		final_draw(framerate);
 		purge_coll_freed(0); // optional
 		camera_flight = 0;
+		if (world_mode == WMODE_INF_TERRAIN) {building_gameplay_next_frame();}
 
 		if (game_mode && world_mode == WMODE_GROUND) {
 			update_game_frame();
@@ -1014,7 +1015,6 @@ void display() {
 		}
 		else if (world_mode == WMODE_INF_TERRAIN && show_bldg_pickup_crosshair) {
 			show_crosshair((can_pickup_bldg_obj ? ((can_pickup_bldg_obj == 2) ? RED : GREEN) : WHITE), can_pickup_bldg_obj);
-			building_gameplay_next_frame();
 		}
 		else if (world_mode == WMODE_GROUND && voxel_editing) {
 			show_crosshair(((voxel_editing == 2) ? RED : GREEN), do_zoom);
