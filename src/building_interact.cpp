@@ -23,7 +23,7 @@ room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
-extern bool toggle_door_open_state;
+extern bool toggle_door_open_state, camera_in_building;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
@@ -31,7 +31,6 @@ extern building_params_t global_building_params;
 
 
 void place_player_at_xy(float xval, float yval);
-void register_player_death(std::string const &why="");
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -638,19 +637,28 @@ float get_obj_weight(room_object_t const &obj) {
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
-	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness;
+	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, prev_player_zval;
+	bool prev_in_building;
+
+	void register_player_death(unsigned sound_id, std::string const &why) {
+		point const xlate(get_camera_coord_space_xlate());
+		place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
+		gen_sound_thread_safe(sound_id, get_camera_pos());
+		print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10);
+		clear(); // respawn
+	}
 public:
 	player_inventory_t() : best_value(0.0) {clear();}
 
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
-		cur_value  = cur_weight = tot_value = tot_weight = 0.0;
+		cur_value     = cur_weight = tot_value = tot_weight = 0.0;
+		drunkenness   = bladder = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
-		drunkenness   = 0.0;
+		prev_in_building = 0;
 		carried.clear();
 	}
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
-	bool is_dead() const {return (player_health < 0.0);}
 	bool can_pick_up_item(room_object_t const &obj) const {return ((cur_weight + get_obj_weight(obj)) <= global_building_params.player_weight_limit);}
 	float get_carry_weight_ratio() const {return cur_weight/global_building_params.player_weight_limit;} // TODO: make player slower when carrying more weight
 	float get_drunkenness() const {return drunkenness;}
@@ -675,7 +683,6 @@ public:
 		}
 		if (drunk > 0.0) {
 			drunkenness += drunk;
-			if (drunkenness > 2.0) {register_player_death(" of alcohol poisoning"); return;}
 			oss << ": +" << round_fp(100.0*drunk) << "% Drunkenness";
 		}
 		if (health == 0.0 && drunk == 0.0) { // print value and weight if item is not consumed
@@ -687,6 +694,10 @@ public:
 			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
 			else {oss << value;}
 			oss << " weight " << get_obj_weight(obj) << " lbs";
+		}
+		else {
+			// TODO: reduce bladder when near a toilet; can't run with a full bladder
+			bladder += 0.25; // add one drink to the bladder
 		}
 		print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
 	}
@@ -735,12 +746,28 @@ public:
 		}
 		if (in_building_gameplay_mode()) {
 			// TODO: make drunkenness bar color change when level is too high
-			draw_health_bar(100.0*player_health, 150.0*drunkenness, 0.0, WHITE); // Note: shields is used for drunkenness
+			// TODO: bladder/urine bar?
+			draw_health_bar(100.0*player_health, 100.0*drunkenness, 0.0, WHITE); // Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100
 		}
 	}
 	void next_frame() {
 		show_stats();
+		// handle player fall damage logic
+		float const fall_damage_start(5.0*CAMERA_RADIUS); // should be a function of building floor spacing?
+		float const player_zval(get_camera_pos().z), delta_z(prev_player_zval - player_zval);
+		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
+		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start) {
+			player_health -= 0.5f*(delta_z - fall_damage_start)/fall_damage_start;
+			if (player_health < 0.0) {register_player_death(SOUND_SQUISH, " of a fall"); return;} // dead
+		}
+		prev_player_zval = player_zval;
+		// handle death events
+		if (player_health < 0.0) {register_player_death(SOUND_SCREAM3, ""); return;} // dead
+		if (drunkenness   > 2.0) {register_player_death(SOUND_DROWN,   " of alcohol poisoning"); return;}
+		// update state for next frame
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks)); // slowly decrease over time
+		if (player_near_toilet) {bladder = 0.0;} // empty bladder
+		player_near_toilet = 0;
 	}
 };
 
@@ -984,14 +1011,6 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 
 // gameplay logic
 
-void register_player_death(std::string const &why) {
-	gen_sound_thread_safe(SOUND_SCREAM3, get_camera_pos());
-	print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10); // TODO: falling death
-	player_inventory.clear(); // respawn
-	point const xlate(get_camera_coord_space_xlate());
-	place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
-}
-
 void register_ai_player_coll(pedestrian_t const &person) {
 	static double last_coll_time(0.0);
 	
@@ -1001,7 +1020,6 @@ void register_ai_player_coll(pedestrian_t const &person) {
 	}
 	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
 	player_inventory.take_damage(0.04*fticks); // take damage over time
-	if (player_inventory.is_dead()) {register_player_death();} // dead
 }
 
 void building_gameplay_action_key(int mode) {
