@@ -761,8 +761,10 @@ public:
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
 		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start && camera_in_building) {
 			// only take fall damage when inside the building (no falling off the roof for now)
-			player_health -= 0.5f*(delta_z - fall_damage_start)/fall_damage_start;
+			player_health -= 1.0f*(delta_z - fall_damage_start)/fall_damage_start;
 			if (player_health < 0.0) {register_player_death(SOUND_SQUISH, " of a fall"); return;} // dead
+			gen_sound_thread_safe(SOUND_SQUISH, get_camera_pos(), 0.5);
+			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 		}
 		prev_player_zval = player_zval;
 		// handle death events
