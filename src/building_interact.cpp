@@ -669,7 +669,7 @@ public:
 		std::ostringstream oss;
 		oss << get_taken_obj_type(obj).name;
 
-		if (obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_NO_CONS)) { // nonempty bottle, consumable
+		if (in_building_gameplay_mode() && obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_NO_CONS)) { // nonempty bottle, consumable
 			switch (obj.obj_id % NUM_BOTTLE_COLORS) {
 			case 0: health = 0.25; break; // water
 			case 1: health = 0.50; break; // Coke
