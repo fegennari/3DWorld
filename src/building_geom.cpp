@@ -1728,7 +1728,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
-	float const window_vspacing(get_material().get_floor_spacing()), wall_width(0.05*window_vspacing);
+	float const window_vspacing(get_material().get_floor_spacing()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
 
 	if (!is_rectangle) { // polygon roof, can only add AC units
