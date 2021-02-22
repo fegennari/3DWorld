@@ -1971,6 +1971,7 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 	draw_one_tquad(-0.9*x, 0.92*y, -0.7*x, 0.94*y, zval); // full health background
 	s.set_cur_color(RED);
 	draw_one_tquad(-0.9*x, 0.92*y, (-0.9 + 0.002*min(health, 100.0f))*x, 0.94*y, zval); // health bar up to 100
+	bool const building_gameplay_mode(world_mode == WMODE_INF_TERRAIN && game_mode == 2);
 
 	if (health < 25.0 && ((int(tfticks)/12)&1)) { // low on health, add flashing red strip
 		s.set_cur_color(colorRGBA(RED, 0.5)); // translucent red
@@ -1981,16 +1982,29 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 		draw_one_tquad(-0.7*x, 0.92*y, (-0.7 + 0.002*(health - 100.0))*x, 0.94*y, zval); // extra health bar
 	}
 	if (shields >= 0.0) { // negative shields disables the shields bar
-		s.set_cur_color(colorRGBA(YELLOW, 0.2)); // translucent yellow
-		draw_one_tquad(-0.9*x, 0.88*y, ((world_mode == WMODE_UNIVERSE) ? -0.7 : -0.6)*x, 0.90*y, zval); // full shields background
-		s.set_cur_color(YELLOW);
+		// universe mode: 100%, TT building gameplay mode: 200% (drunkenness), normal: 150%
+		float const max_val((world_mode == WMODE_UNIVERSE) ? 100.0 : (building_gameplay_mode ? 200.0 : 150.0));
+		colorRGBA const &color(building_gameplay_mode ? GREEN : YELLOW);
+		s.set_cur_color(colorRGBA(color, 0.2)); // translucent yellow
+		draw_one_tquad(-0.9*x, 0.88*y, (-0.9 + 0.002*max_val)*x, 0.90*y, zval); // full shields background
+		s.set_cur_color(color);
 		draw_one_tquad(-0.9*x, 0.88*y, (-0.9 + 0.002*shields)*x, 0.90*y, zval); // shields bar up to 150
+
+		if (building_gameplay_mode && shields > 150.0 && ((int(tfticks)/12)&1)) { // flash when drunkenness is too high
+			s.set_cur_color(colorRGBA(RED, 0.5)); // translucent red
+			draw_one_tquad(-0.6*x, 0.875*y, -0.495*x, 0.905*y, zval);
+		}
 	}
-	if (pu_time > 0.0) {
+	if (building_gameplay_mode || pu_time > 0.0) { // 0.0-1.0 range; used for building_gameplay_mode bladder fullness
 		s.set_cur_color(colorRGBA(pu_color, 0.2));
 		draw_one_tquad(-0.9*x, 0.84*y, -0.7*x, 0.86*y, zval); // full PU time background
 		s.set_cur_color(pu_color);
 		draw_one_tquad(-0.9*x, 0.84*y, (-0.9 + 0.2*pu_time)*x, 0.86*y, zval);
+
+		if (building_gameplay_mode && pu_time > 0.9 && ((int(tfticks)/12)&1)) { // flash when bladder fullness is too high
+			s.set_cur_color(colorRGBA(ORANGE, 0.5)); // translucent orange
+			draw_one_tquad(-0.905*x, 0.835*y, -0.695*x, 0.865*y, zval);
+		}
 	}
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);

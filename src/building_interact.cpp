@@ -638,7 +638,7 @@ float get_obj_weight(room_object_t const &obj) {
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
-	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, prev_player_zval;
+	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
 	bool prev_in_building;
 
 	void register_player_death(unsigned sound_id, std::string const &why) {
@@ -654,7 +654,7 @@ public:
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
 		cur_value     = cur_weight = tot_value = tot_weight = 0.0;
-		drunkenness   = bladder = prev_player_zval = 0.0;
+		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
 		prev_in_building = 0;
 		carried.clear();
@@ -662,6 +662,7 @@ public:
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
 	bool can_pick_up_item(room_object_t const &obj) const {return ((cur_weight + get_obj_weight(obj)) <= global_building_params.player_weight_limit);}
 	float get_carry_weight_ratio() const {return min(1.0f, cur_weight/global_building_params.player_weight_limit);}
+	float get_speed_mult () const {return (1.0f - 0.4f*get_carry_weight_ratio())*((bladder > 0.9) ? 0.6 : 1.0);} // 40% reduction for heavy load, 40% reduction for full bladder
 	float get_drunkenness() const {return drunkenness;}
 
 	void add_item(room_object_t const &obj) {
@@ -696,9 +697,8 @@ public:
 			else {oss << value;}
 			oss << " weight " << get_obj_weight(obj) << " lbs";
 		}
-		else {
-			// TODO: can't run with a full bladder
-			bladder += 0.25; // add one drink to the bladder
+		else { // add one drink to the bladder, 25% of capacity
+			bladder = min(1.0f, (bladder + 0.25f));
 		}
 		print_text_onscreen(oss.str(), GREEN, 1.0, 3*TICKS_PER_SECOND, 0);
 	}
@@ -746,10 +746,9 @@ public:
 			}
 		}
 		if (in_building_gameplay_mode()) {
-			// TODO: make drunkenness bar color change when (drunkenness > 1.5)
-			// TODO: bladder/urine bar?
 			// TODO: weight capacity bar?
-			draw_health_bar(100.0*player_health, 100.0*drunkenness, 0.0, WHITE); // Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100
+			// Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100; powerup values are for bladder fullness
+			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW);
 		}
 	}
 	void next_frame() {
@@ -772,7 +771,19 @@ public:
 		if (drunkenness   > 2.0) {register_player_death(SOUND_DROWN,   " of alcohol poisoning"); return;}
 		// update state for next frame
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks)); // slowly decrease over time
-		if (player_near_toilet) {bladder = 0.0;} // empty bladder
+		
+		if (player_near_toilet) { // empty bladder
+			if (bladder > 0.9) {gen_sound_thread_safe(SOUND_GASP, get_camera_pos());}
+			bladder = 0.0;
+		}
+		else if (bladder > 0.9) {
+			bladder_time += fticks;
+
+			if (bladder_time > 5.0*TICKS_PER_SECOND) { // play the "I have to go" sound
+				gen_sound_thread_safe(SOUND_HURT, get_camera_pos());
+				bladder_time = 0.0;
+			}
+		}
 		player_near_toilet = 0;
 	}
 };
@@ -780,7 +791,7 @@ public:
 player_inventory_t player_inventory;
 
 float get_player_drunkenness() {return player_inventory.get_drunkenness();}
-float get_player_building_speed_mult() {return (1.0f - 0.5f*player_inventory.get_carry_weight_ratio());}
+float get_player_building_speed_mult() {return player_inventory.get_speed_mult();}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
