@@ -818,7 +818,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	//if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
 	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
 
-	if (!state.path.empty() && person.pos.z != target.pos.z) { // don't update path while on stairs: check for person within stairs bcube
+	if (!state.path.empty() || person.pos.z != person.target_pos.z) { // don't update path while on stairs: check for person within stairs bcube
 		for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 			cube_t stairs_exp(get_stairs_plus_step_up(*s)); // extend by one step to handle final step down
 			stairs_exp.expand_in_dim(s->dim, 1.1*person.radius); // make sure we don't intersect stairs
