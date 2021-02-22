@@ -843,7 +843,7 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 2.0*bottle_radius), (S.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
 			C.set_from_sphere(center, bottle_radius);
 			set_cube_zvals(C, S.z2(), S.z2()+bottle_height);
-			C.set_as_bottle(rgen.rand()); // allow empty bottles?
+			C.set_as_bottle(rgen.rand() & 127); // no empty bottles - don't set 7th bit
 			add_if_not_intersecting(C, objects, cubes);
 		} // for n
 		// add paint cans
@@ -1556,7 +1556,7 @@ void add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &object
 	room_object_t bottle(c);
 	bottle.type   = TYPE_BOTTLE;
 	bottle.dir   ^= 1;
-	bottle.flags |= RO_FLAG_WAS_EXP;
+	bottle.flags |= (RO_FLAG_WAS_EXP | RO_FLAG_NO_CONS); // wine bottles on wine racks are not consumable
 	set_wall_width(bottle, (c.d[!c.dim][0] + 0.5f*(col_step + shelf_thick)), 0.5*diameter, !c.dim); // center in this dim
 
 	for (unsigned i = 0; i < num_cols; ++i) { // columns/vertical
