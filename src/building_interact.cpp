@@ -753,11 +753,13 @@ public:
 	}
 	void next_frame() {
 		show_stats();
+		if (!in_building_gameplay_mode()) return;
 		// handle player fall damage logic
 		float const fall_damage_start(5.0*CAMERA_RADIUS); // should be a function of building floor spacing?
 		float const player_zval(get_camera_pos().z), delta_z(prev_player_zval - player_zval);
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
-		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start) {
+		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start && camera_in_building) {
+			// only take fall damage when inside the building (no falling off the roof for now)
 			player_health -= 0.5f*(delta_z - fall_damage_start)/fall_damage_start;
 			if (player_health < 0.0) {register_player_death(SOUND_SQUISH, " of a fall"); return;} // dead
 		}
