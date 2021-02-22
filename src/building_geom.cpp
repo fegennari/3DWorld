@@ -1226,7 +1226,11 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				door_pos    = door_cube.d[door_dim][!door_dir];
 				door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
 			}
-			door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, rgen); // keep door_height
+			for (unsigned n = 0; n < 4; ++n) { // make 4 attempts at generating a valid interior where this door can be placed; this still fails 32 times
+				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, rgen); // keep door_height
+				if (!interior->is_blocked_by_stairs_or_elevator(door, 0.5*door_height)) break; // done
+				if (n+1 < 4) {gen_interior(rgen, 0);} // still invalid, regenerate interior
+			}
 		}
 		add_door(door, door_part, door_dim, door_dir, 0);
 		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
@@ -1980,7 +1984,7 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 	float const width(door.get_sz_dim(!dim)), keepout(inc_open ? width : 0.0f);
 	float const lo_edge(door.d[!dim][0] - ((check_dirs == 1) ? 0 : keepout)), hi_edge(door.d[!dim][1] + ((check_dirs == 0) ? 0 : keepout));
 	if (c.d[!dim][0] > hi_edge || c.d[!dim][1] < lo_edge) return 0; // no overlap in !dim
-	float const min_dist((dmin == 0.0f) ? width : max(width, dmin)); // if dmin==0, use door width (so that door has space to open)
+	float const min_dist(max(width, dmin)); // if dmin==0, use door width (so that door has space to open)
 	return (c.d[dim][0] < door.d[dim][1]+min_dist && c.d[dim][1] > door.d[dim][0]-min_dist); // within min_dist
 }
 bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // Note: inc_open only applies to interior doors
