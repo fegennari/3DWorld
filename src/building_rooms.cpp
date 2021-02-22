@@ -1612,8 +1612,8 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
-	float const place_book_prob((is_house ? 1.0 : 0.5)*(room.is_office ? 0.8 : 1.0));
-	float const place_bottle_prob(is_house ? 1.0 : (room.is_office ? 0.75 : 0.0));
+	float const place_book_prob(( is_house ? 1.0 : 0.5)*(room.is_office ? 0.8 : 1.0));
+	float const place_bottle_prob(is_house ? 1.0 : (room.is_office ? 0.80 : 0.0));
 	float const place_plant_prob (is_house ? 1.0 : (room.is_office ? 0.25 : 0.0));
 	unsigned const objs_end(objs.size());
 	bool placed_book_on_counter(0);
@@ -1626,18 +1626,18 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 
 		if (obj.type == TYPE_TABLE && i == objs_start) { // only first table (not TV table)
 			book_prob   = 0.4*place_book_prob;
-			bottle_prob = 0.5*place_bottle_prob;
+			bottle_prob = 0.6*place_bottle_prob;
 			plant_prob  = 0.6*place_plant_prob;
 		}
 		else if (obj.type == TYPE_DESK && (i+1 == objs_end || objs[i+1].type != TYPE_MONITOR)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
-			bottle_prob = 0.3*place_bottle_prob;
+			bottle_prob = 0.4*place_bottle_prob;
 			plant_prob  = 0.3*place_plant_prob;
 		}
 		else if (obj.type == TYPE_COUNTER && !(obj.flags & RO_FLAG_ADJ_TOP)) { // counter without a microwave
 			book_prob   = (placed_book_on_counter ? 0.0 : 0.5); // only place one book per counter
-			bottle_prob = 0.2*place_bottle_prob;
-			plant_prob  = 0.1*place_plant_prob;
+			bottle_prob = 0.25*place_bottle_prob;
+			plant_prob  = 0.10*place_plant_prob;
 		}
 		else {
 			continue;
