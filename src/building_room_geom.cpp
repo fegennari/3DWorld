@@ -548,8 +548,11 @@ cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) 
 	assert(interior.is_strictly_normalized());
 	return interior;
 }
-void add_closet_boxes(room_object_t const &c, cube_t const &interior, vector<room_object_t> &objects) {
-	float const depth(interior.get_sz_dim(c.dim)), box_sz(0.25*depth);
+void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) {
+	cube_t ccubes[5]; // unused
+	get_closet_cubes(c, ccubes);
+	cube_t const interior(get_closet_interior_space(c, ccubes));
+	float const depth(interior.get_sz_dim(c.dim)), box_sz(0.25*depth), window_vspacing(c.dz()*(1.0 + FLOOR_THICK_VAL_HOUSE));
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
@@ -576,10 +579,16 @@ void add_closet_boxes(room_object_t const &c, cube_t const &interior, vector<roo
 		objects.push_back(C);
 		cubes.push_back(C);
 	} // for n
+	// add hanger rod
+	float const hr_radius(0.015*window_vspacing);
+	room_object_t hanger_rod(interior, TYPE_HANGER_ROD, c.room_id, c.dim, c.dir, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR));
+	hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
+	hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
+	set_wall_width(hanger_rod, c.get_center_dim(c.dim), hr_radius, c.dim);
+	objects.push_back(hanger_rod);
 }
 
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
-	float const width(c.get_sz_dim(!c.dim)), height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
 	bool const use_small_door(c.is_small_closet()), draw_interior(c.is_open() || player_in_closet);
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes);
@@ -633,6 +642,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		}
 	} // end inc_lg
 	if (inc_sm) { // add wall trim for each side of the closet door
+		float const height(c.dz()), window_vspacing(height*(1.0 + FLOOR_THICK_VAL_HOUSE));
 		float const trim_height(0.04*window_vspacing), trim_thickness(0.1*WALL_THICK_VAL*window_vspacing);
 		float const wall_thick(WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*height), trim_plus_wall_thick(trim_thickness + wall_thick);
 		colorRGBA const trim_color(WHITE); // assume trim is white
@@ -672,28 +682,18 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	} // end inc_sm
 	if (inc_sm /*&& draw_interior*/) { // Note: now always drawn to avoid recreating all small objects when the player opens/closes a closet door
 		// Note: only for the closets the player has manually opened
-		cube_t const interior(get_closet_interior_space(c, cubes));
-		// add hanger rod
-		float const hr_radius(0.015*window_vspacing);
-		cube_t hanger_rod(interior);
-		hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
-		hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
-		set_wall_width(hanger_rod, c.get_center_dim(c.dim), hr_radius, c.dim);
-		get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(hanger_rod, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
-		
 		if (!(c.flags & RO_FLAG_EXPANDED)) { // add boxes if not expanded
 			static vector<room_object_t> objects;
 			objects.clear();
-			add_closet_boxes(c, interior, objects);
+			add_closet_objects(c, objects);
 			add_small_static_objs_to_verts(objects);
 		}
 	}
 }
-void building_room_geom_t::expand_closet(room_object_t const &c) {
-	cube_t cubes[5];
-	get_closet_cubes(c, cubes);
-	cube_t const interior(get_closet_interior_space(c, cubes));
-	add_closet_boxes(c, interior, expanded_objs);
+void building_room_geom_t::expand_closet(room_object_t const &c) {add_closet_objects(c, expanded_objs);}
+
+void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=1
+	get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(c, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -2361,6 +2361,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_SHOWER:   return colorRGBA(WHITE, 0.25); // partially transparent - does this actually work?
 	case TYPE_BLINDS:   return texture_color(get_blinds_tid()).modulate_with(color);
 	case TYPE_LG_BALL:  return texture_color(get_lg_ball_tid(*this));
+	case TYPE_HANGER_ROD:return get_textured_wood_color();
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
@@ -2461,6 +2462,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_PAINTCAN:  add_paint_can(*i); break;
 		case TYPE_PEN: case TYPE_PENCIL: add_pen_pencil(*i); break;
 		case TYPE_LG_BALL:   add_lg_ball  (*i); break;
+		case TYPE_HANGER_ROD:add_hanger_rod(*i); break;
 		default: break;
 		}
 	} // for i
