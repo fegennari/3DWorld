@@ -397,6 +397,15 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				had_coll |= check_closet_collision(*c, pos, p_last, xy_radius, cnorm);
 				if (c->contains_pt(pos)) {player_in_closet = (interior->room_geom->closet_light_is_on(*c) ? 3 : (c->is_open() ? 1 : 2));}
 			}
+			else if (c->type == TYPE_STALL && c->is_open()) { // collision test with sides only
+				if (sphere_cube_intersect(pos, xy_radius, *c)) {
+					float const width(c->get_sz_dim(!c->dir));
+					cube_t sides[2] = {*c, *c};
+					sides[0].d[!c->dir][1] -= 0.95*width;
+					sides[1].d[!c->dir][0] += 0.95*width;
+					for (unsigned d = 0; d < 2; ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
+				}
+			}
 			else { // assume it's a cube
 				cube_t c_extended(*c);
 				c_extended.z1() -= camera_zh; // handle the player's head (for stairs), or is pos already at this height?
