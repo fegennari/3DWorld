@@ -408,17 +408,22 @@ void building_room_geom_t::add_table(room_object_t const &c, float tscale, float
 	}
 }
 
-void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
+void get_chair_cubes(room_object_t const &c, cube_t cubes[3]) {
 	float const height(c.dz()*((c.shape == SHAPE_SHORT) ? 1.333 : 1.0)); // effective height if the chair wasn't short
 	cube_t seat(c), back(c), legs_bcube(c);
 	seat.z1() += 0.32*height;
 	seat.z2()  = back.z1() = seat.z1() + 0.07*height;
 	legs_bcube.z2() = seat.z1();
 	back.d[c.dim][c.dir] += 0.88f*(c.dir ? -1.0f : 1.0f)*c.get_sz_dim(c.dim);
-	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale), 1).add_cube_to_verts(seat, apply_light_color(c), c.get_llc()); // all faces drawn
+	cubes[0] = seat; cubes[1] = back; cubes[2] = legs_bcube;
+}
+void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 6 quads for seat + 5 quads for back + 4 quads per leg = 27 quads = 108 verts
+	cube_t cubes[3]; // seat, back, legs_bcube
+	get_chair_cubes(c, cubes);
+	get_material(tid_nm_pair_t(MARBLE_TEX, 1.2*tscale), 1).add_cube_to_verts(cubes[0], apply_light_color(c), c.get_llc()); // seat; all faces drawn
 	colorRGBA const color(apply_wood_light_color(c));
-	get_wood_material(tscale).add_cube_to_verts(back, color, c.get_llc(), EF_Z1); // skip bottom face
-	add_tc_legs(legs_bcube, color, 0.15, tscale);
+	get_wood_material(tscale).add_cube_to_verts(cubes[1], color, c.get_llc(), EF_Z1); // back; skip bottom face
+	add_tc_legs(cubes[2], color, 0.15, tscale); // legs
 }
 
 void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // or nightstand

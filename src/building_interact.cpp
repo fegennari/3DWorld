@@ -31,6 +31,7 @@ extern building_params_t global_building_params;
 
 
 void place_player_at_xy(float xval, float yval);
+void get_chair_cubes(room_object_t const &c, cube_t cubes[3]);
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -899,6 +900,13 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 					dmin_sq = dsq;
 				}
 				continue;
+			}
+			if (i->type == TYPE_CHAIR) { // separate back vs. seat vs. legs check for improved accuracy
+				cube_t cubes[3]; // seat, back, legs_bcube
+				get_chair_cubes(*i, cubes);
+				bool intersects(0);
+				for (unsigned n = 0; n < 3 && !intersects; ++n) {intersects |= cubes[n].line_intersects(p1c, p2c);}
+				if (!intersects) continue;
 			}
 			if (i->type == TYPE_MIRROR && !i->is_house())                 continue; // can only pick up mirrors from houses, not office buildings
 			if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE)          continue; // can only pick up short (TV) tables and cylindrical tables
