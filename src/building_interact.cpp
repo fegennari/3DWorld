@@ -168,12 +168,13 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	if (is_open == was_open) return; // no state change
 	unsigned const dix(is_open ? (unsigned)door_ix : (unsigned)open_door_ix);
 	assert(dix < doors.size());
-	point const door_center(doors[dix].get_bcube().get_cube_center()), sound_pos(door_center + get_camera_coord_space_xlate()); // convert to camera space
+	auto const &door(doors[dix]);
+	vector3d const normal(door.get_norm());
+	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
+	point const door_center(door.get_bcube().get_cube_center()), sound_pos(door_center + get_camera_coord_space_xlate()); // convert to camera space
 	gen_sound_thread_safe((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	point pos_interior(door_center);
-	cube_t bcube_center(bcube);
-	bcube_center.expand_by(-CAMERA_RADIUS);
-	bcube_center.clamp_pt(pos_interior); // move point to the building interior so that it's a valid AI position (should this use the actual part the door is on?)
+	pos_interior[dim] += (dir ? 1.0 : -1.0)*CAMERA_RADIUS; // move point to the building interior so that it's a valid AI position
 	register_building_sound(pos_interior, 0.5);
 	open_door_ix = door_ix;
 }
