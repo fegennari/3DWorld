@@ -299,7 +299,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 	interior->update_elevators(player_pos, get_floor_thickness());
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
-	float const fc_thick(0.5*get_floor_thickness());
+	float const fc_thick(0.5*get_floor_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	static int last_sound_frame(0);
 	static point last_sound_pt(all_zeros);
 
@@ -337,11 +337,11 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 			//cout << TXT(velocity.str()) << TXT(on_floor) << TXT(center.z) << TXT(test_pt.z) << TXT(ground_floor_z1+fc_thick) << endl; // TESTING
 
 			if (on_floor) { // moving on the floor, apply surface friction
-				velocity *= (1.0f - OBJ_DECELERATE*fticks);
+				velocity *= (1.0f - min(1.0f, OBJ_DECELERATE*fticks));
 				if (velocity.mag() < MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
 			}
 			else { // in the air - apply gravity
-				velocity.z -= OBJ_GRAVITY*fticks; // apply gravitational acceleration
+				velocity.z -= OBJ_GRAVITY*fticks_stable; // apply gravitational acceleration
 				max_eq(velocity.z, -TERM_VELOCITY);
 			}
 			if (velocity == zero_vector) { // stopped
@@ -350,7 +350,7 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 				interior->room_geom->clear_static_small_vbos(); // add to static objects
 			}
 			else { // move based on velocity
-				new_center += velocity*fticks;
+				new_center += velocity*fticks_stable;
 			}
 		}
 		if (new_center != center) { // check for collisions and move to new location
