@@ -755,8 +755,9 @@ public:
 		show_stats();
 		if (!in_building_gameplay_mode()) return;
 		// handle player fall damage logic
+		point const camera_pos(get_camera_pos());
 		float const fall_damage_start(5.0*CAMERA_RADIUS); // should be a function of building floor spacing?
-		float const player_zval(get_camera_pos().z), delta_z(prev_player_zval - player_zval);
+		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
 		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start && camera_in_building) {
 			// only take fall damage when inside the building (no falling off the roof for now)
@@ -764,6 +765,7 @@ public:
 			if (player_health < 0.0) {register_player_death(SOUND_SQUISH, " of a fall"); return;} // dead
 			gen_sound_thread_safe(SOUND_SQUISH, get_camera_pos(), 0.5);
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
+			register_building_sound((camera_pos - get_camera_coord_space_xlate()), 1.0);
 		}
 		prev_player_zval = player_zval;
 		// handle death events
@@ -774,6 +776,7 @@ public:
 		
 		if (player_near_toilet) { // empty bladder
 			if (bladder > 0.9) {gen_sound_thread_safe(SOUND_GASP, get_camera_pos());}
+			if (bladder > 0.0) {register_building_sound((camera_pos - get_camera_coord_space_xlate()), 0.5);}
 			bladder = 0.0;
 		}
 		else if (bladder > 0.9) {
