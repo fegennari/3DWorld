@@ -159,6 +159,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 				cube_t bc(d->get_bcube());
 				bool const door_dim(bc.dy() < bc.dx());
 				bc.expand_in_dim(door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
+				bc.z1() -= max(radius, (float)camera_zh); // account for player on steep slope up to door - require player head above doorframe bottom
 				if (bc.contains_pt(pos2_bs)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
 			}
 		}
