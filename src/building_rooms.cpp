@@ -2366,14 +2366,15 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			}
 		}
 		else { // U-shaped stairs
-			stair.d[!dim][side] = i->get_center_dim(!dim);
+			float const mid(i->get_center_dim(!dim));
+			stair.d[!dim][side] = mid;
 			step_len *= 2.0;
 
 			for (unsigned n = 0; n < num_stairs; ++n, z += stair_dz, pos += step_len) {
 				if (n == num_stairs/2) { // reverse direction and switch to other side
 					step_len *= -1.0;
 					stair.d[!dim][ side] = i->d[!dim][side];
-					stair.d[!dim][!side] = i->get_center_dim(!dim);
+					stair.d[!dim][!side] = mid;
 				}
 				assert(!(num_stairs & 1)); // require num_stairs to be an even number
 				bool const is_rev(n >= num_stairs/2), stairs_dir(dir^is_rev);

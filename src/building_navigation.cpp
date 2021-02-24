@@ -82,14 +82,24 @@ public:
 	void mark_hallway(unsigned room) {get_node(room).is_hallway = 1;}
 	void mark_exit   (unsigned room) {get_node(room).has_exit   = 1;}
 
-	void connect_stairs(unsigned room, unsigned stairs, bool dim, bool dir) {
+	void connect_stairs(unsigned room, unsigned stairs, bool dim, bool dir, bool is_u) {
 		assert(room < num_rooms && stairs < num_stairs);
 		unsigned const node_ix2(num_rooms + stairs);
 		node_t &n2(get_node(node_ix2));
 		cube_t entry_u(n2.bcube), entry_d(n2.bcube);
 		float const extend((dir ? -1.0 : 1.0)*stairs_extend); // extend away from stairs for entrance/exit area; will be denormalized in this dim
-		entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to zero area at the entrance to the stairs when going up
-		entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to zero area at the entrance to the stairs when going down
+
+		if (is_u) { // U-shaped stairs: entrances are on the same side
+			bool const side(dir); // Note: see code in add_stairs_and_elevators()
+			entry_u.d[dim][dir] = entry_d.d[dim][dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs
+			float const mid(n2.bcube.get_center_dim(!dim));
+			entry_u.d[!dim][ side] = mid; // bottom
+			entry_d.d[!dim][!side] = mid; // top
+		}
+		else { // straight stairs: entrances are on opposite ends
+			entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs when going up
+			entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to extend length at the entrance to the stairs when going down
+		}
 		get_node(room).add_conn_room(node_ix2, entry_u, entry_d);
 		n2.add_conn_room(room, entry_u, entry_d);
 	}
@@ -464,7 +474,7 @@ void building_t::build_nav_graph() const {
 				assert((unsigned)stairwell.stairs_door_ix < interior->doors.size());
 				if (!interior->doors[stairwell.stairs_door_ix].open) continue; // stairs blocked by closed door, don't connect
 			}
-			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir);}
+			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, (stairwell.shape == SHAPE_U));}
 		}
 		if (room.is_hallway) { // check for connected hallways
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
@@ -687,8 +697,9 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, avoid, path);
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
+		bool const straight_only = 0;
 		vector<unsigned> nearest_stairs;
-		find_nearest_stairs(from, to, nearest_stairs, 1); // straight_only=1; pass in loc1.part_ix if both loc part_ix values are equal?
+		find_nearest_stairs(from, to, nearest_stairs, straight_only); // pass in loc1.part_ix if both loc part_ix values are equal?
 		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down FIXME: handle part_ix
 
 		for (auto s = nearest_stairs.begin(); s != nearest_stairs.end(); ++s) { // try using stairs, closest to furthest
@@ -708,8 +719,20 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 			path.push_back(seg2_start); // other end of the stairs
 			// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
 			cube_t const stairs_ext(get_stairs_plus_step_up(stairs));
-			path.push_back(stairs_ext.closest_pt(path.back()));
-			path.push_back(stairs_ext.closest_pt(from_path.front()));
+			point const stairs_enter(stairs_ext.closest_pt(from_path.front())), stairs_exit(stairs_ext.closest_pt(path.back()));
+			path.push_back(stairs_exit);
+
+			if (stairs.shape == SHAPE_U) { // add 2 extra points on mid-level landing; entrance and exit will be on the same side
+				bool const dim(stairs.dim), dir(stairs.dir), side(dir); // Note: see code in add_stairs_and_elevators()
+				float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_sz_dim(dim)), seg_delta_z(0.45f*(to.z - from.z));
+				point exit_turn(stairs_exit.x, stairs_exit.y, (to.z - seg_delta_z));
+				exit_turn[dim] = turn_pt;
+				path.push_back(exit_turn); // turning point for exit side of stairs
+				point enter_turn(stairs_enter.x, stairs_enter.y, (from.z + seg_delta_z));
+				enter_turn[dim] = turn_pt;
+				path.push_back(enter_turn); // turning point for entrance side of stairs
+			}
+			path.push_back(stairs_enter);
 			vector_add_to(from_path, path); // concatenate the two path segments in reverse order
 			assert(!path.empty());
 			return 1; // done/success
