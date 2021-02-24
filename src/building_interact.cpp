@@ -295,14 +295,26 @@ void apply_object_bounce(vector3d &velocity, vector3d const &cnorm, point const 
 	}
 }
 
-void building_t::update_player_interact_objects(point const &player_pos) {
+bool check_ball_kick(room_object_t &ball, vector3d &velocity, point &new_center, point const &p_pos, float pz1, float pz2, float pradius) {
+	point const center(ball.get_cube_center()), ppos(p_pos.x, p_pos.y, center.z); // use zval of object (Z range was checked above)
+	float const radius(ball.get_radius()), r_sum(radius + pradius);
+	if (ball.z2() < pz1 || ball.z1() > pz2 || !dist_xy_less_than(ppos, center, r_sum)) return 0; // no collision
+	vector3d const dir((center - ppos).get_norm());
+	new_center = (center + (r_sum - p2p_dist_xy(ppos, center))*dir); // move so that it no longer collides
+	velocity.x = KICK_VELOCITY*dir.x; velocity.y = KICK_VELOCITY*dir.y; // keep existing velocity.z
+	return 1;
+}
+
+void building_t::update_player_interact_objects(point const &player_pos, unsigned building_ix, int first_ped_ix) {
 	assert(interior);
 	interior->update_elevators(player_pos, get_floor_thickness());
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
 	float const fc_thick(0.5*get_floor_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
-	static int last_sound_frame(0);
+	static float last_sound_tfticks(0);
 	static point last_sound_pt(all_zeros);
+	vect_cube_t ped_bcubes;
+	if (first_ped_ix >= 0) {get_ped_bcubes_for_building(first_ped_ix, building_ix, ped_bcubes);}
 
 	for (auto c = interior->room_geom->objs.begin(); c != interior->room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
@@ -310,24 +322,25 @@ void building_t::update_player_interact_objects(point const &player_pos) {
 		assert(c->obj_id < interior->room_geom->obj_dstate.size());
 		room_obj_dstate_t &dstate(interior->room_geom->get_dstate(*c));
 		vector3d &velocity(dstate.velocity);
-		point const center(c->get_cube_center()), ppos(player_pos.x, player_pos.y, center.z); // use zval of object (Z range was checked above)
-		float const radius(c->get_radius()), r_sum(radius + player_radius);
-		point new_center(center);
+		point const center(c->get_cube_center());
+		float const radius(c->get_radius());
 		bool const was_dynamic(c->is_dynamic());
 		bool on_floor(0);
-			
-		if (c->z2() > player_z1 && c->z1() < player_z2 && dist_xy_less_than(ppos, center, r_sum)) { // collides with the player
-			vector3d const dir((center - ppos).get_norm());
-			new_center = (center + (r_sum - p2p_dist_xy(ppos, center))*dir); // move so that it no longer collides
-			c->flags  |= RO_FLAG_DYNAMIC; // make it dynamic
+		point new_center(center);
+		bool kicked(check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius)); // check the player
 
-			if ((frame_counter - last_sound_frame) > 1.0f*TICKS_PER_SECOND && p2p_dist(new_center, last_sound_pt) > radius) { // play at most once per second
-				gen_sound_thread_safe(SOUND_KICK_BALL, (get_camera_pos() + (new_center - player_pos)), 0.5);
+		for (auto p = ped_bcubes.begin(); p != ped_bcubes.end(); ++p) { // check building AI people
+			kicked |= check_ball_kick(*c, velocity, new_center, p->get_cube_center(), p->z1(), p->z2(), 0.6*p->dx()); // assume dx == dy == radius
+		}
+		if (kicked) {
+			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
+
+			if ((tfticks - last_sound_tfticks) > 1.0*TICKS_PER_SECOND && !dist_less_than(new_center, last_sound_pt, radius)) { // play at most once per second
+				gen_sound_thread_safe(SOUND_KICK_BALL, (new_center + get_camera_coord_space_xlate()), 0.5);
 				register_building_sound(new_center, 0.75);
-				last_sound_frame = frame_counter;
-				last_sound_pt    = new_center;
+				last_sound_tfticks = tfticks;
+				last_sound_pt      = new_center;
 			}
-			velocity = KICK_VELOCITY*dir;
 		}
 		else if (was_dynamic) { // not colliding, but is moving
 			point const test_pt(center.x, center.y, (center.z - radius - 0.1*fc_thick));

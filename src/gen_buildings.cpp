@@ -2325,7 +2325,7 @@ public:
 						if (toggle_door_open_state && PLAYER_CAN_OPEN_DOORS) {b.toggle_door_state_closest_to(camera_xlated, cview_dir);}
 						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
-						if (animate2 && camera_surf_collide) {b.update_player_interact_objects(camera_xlated);} // update dynamic objects if the player is in the building
+						if (animate2 && camera_surf_collide) {b.update_player_interact_objects(camera_xlated, bi->ix, ped_ix);} // update dynamic objects if the player is in the building
 						b.update_door_verts(**i); // update here, before the next shadow pass, if the player changed a door state
 					} // for bi
 				} // for g

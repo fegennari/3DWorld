@@ -819,7 +819,7 @@ struct building_t : public building_geom_t {
 		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
 		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
-	void update_player_interact_objects(point const &player_pos);
+	void update_player_interact_objects(point const &player_pos, unsigned building_ix, int first_ped_ix);
 	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
