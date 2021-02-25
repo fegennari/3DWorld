@@ -456,25 +456,25 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
-	cube_t door(c);
-	door.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir];
-	door.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
-	cube_t handle(door);
-	handle.d[ c.dim][!c.dir]  = door.d[c.dim][c.dir];
+	cube_t d_row(c);
+	d_row.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir];
+	d_row.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
+	cube_t handle(d_row);
+	handle.d[ c.dim][!c.dir]  = d_row.d[c.dim][c.dir];
 	handle.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
 	unsigned num_cols(1); // 1 for nightstand
 	float vpos(c.z1());
 
-	for (unsigned n = 0; n < num_rows; ++n) {
+	for (unsigned n = 0; n < num_rows; ++n) { // at most 12 drawers
 		if (is_lg && (num_cols == 1 || rgen.rand_bool())) {num_cols = 2 + (rgen.rand() % 3);} // 2-4, 50% of the time keep same as prev row
 		float const col_spacing(width/num_cols);
 		float hpos(c.d[!c.dim][0]);
-		set_cube_zvals(door, (vpos + border), (vpos + row_spacing - border));
-		handle.z1() = door.z1()   + 0.8*door.dz();
-		handle.z2() = handle.z1() + 0.1*door.dz();
+		set_cube_zvals(d_row, (vpos + border), (vpos + row_spacing - border));
+		handle.z1() = d_row.z1()  + 0.8*d_row.dz();
+		handle.z2() = handle.z1() + 0.1*d_row.dz();
 
 		for (unsigned m = 0; m < num_cols; ++m) {
-			cube_t drawer(door), cur_handle(handle); // front part of the drawer
+			cube_t drawer(d_row), cur_handle(handle); // front part of the drawer
 			drawer.d[!c.dim][0] = hpos + border;
 			drawer.d[!c.dim][1] = hpos + col_spacing - border;
 			float const dwidth(drawer.get_sz_dim(!c.dim));
