@@ -1959,19 +1959,22 @@ void draw_compass_and_alt() { // and temperature
 }
 
 
-void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color) {
+void draw_stats_bar(shader_t &s, colorRGBA const &color, float max_val, float cur_val, float x, float y1, float y2, float zval) {
+	s.set_cur_color(colorRGBA(color, 0.2));
+	draw_one_tquad(-0.9*x, y1, (-0.9 + 0.2*max_val)*x, y2, zval); // full background
+	s.set_cur_color(color);
+	draw_one_tquad(-0.9*x, y1, (-0.9 + 0.2*cur_val)*x, y2, zval);
+}
+void draw_health_bar(float health, float shields, float pu_time, colorRGBA const &pu_color, float extra_bar, colorRGBA const &extra_bar_color) {
 
 	shader_t s;
 	s.begin_color_only_shader();
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
+	bool const building_gameplay_mode(world_mode == WMODE_INF_TERRAIN && game_mode == 2);
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(-0.7*0.5*zval*tan_val), x((y*window_width)/window_height);
-	s.set_cur_color(colorRGBA(RED, 0.2)); // translucent red
-	draw_one_tquad(-0.9*x, 0.92*y, -0.7*x, 0.94*y, zval); // full health background
-	s.set_cur_color(RED);
-	draw_one_tquad(-0.9*x, 0.92*y, (-0.9 + 0.002*min(health, 100.0f))*x, 0.94*y, zval); // health bar up to 100
-	bool const building_gameplay_mode(world_mode == WMODE_INF_TERRAIN && game_mode == 2);
+	draw_stats_bar(s, RED, 1.0, min(0.01f*health, 1.0f), x, 0.92*y, 0.94*y, zval); // health bar up to 100
 
 	if (health < 25.0 && ((int(tfticks)/12)&1)) { // low on health, add flashing red strip
 		s.set_cur_color(colorRGBA(RED, 0.5)); // translucent red
@@ -1984,11 +1987,7 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 	if (shields >= 0.0) { // negative shields disables the shields bar
 		// universe mode: 100%, TT building gameplay mode: 200% (drunkenness), normal: 150%
 		float const max_val((world_mode == WMODE_UNIVERSE) ? 100.0 : (building_gameplay_mode ? 200.0 : 150.0));
-		colorRGBA const &color(building_gameplay_mode ? GREEN : YELLOW);
-		s.set_cur_color(colorRGBA(color, 0.2)); // translucent yellow
-		draw_one_tquad(-0.9*x, 0.88*y, (-0.9 + 0.002*max_val)*x, 0.90*y, zval); // full shields background
-		s.set_cur_color(color);
-		draw_one_tquad(-0.9*x, 0.88*y, (-0.9 + 0.002*shields)*x, 0.90*y, zval); // shields bar up to 150
+		draw_stats_bar(s, (building_gameplay_mode ? GREEN : YELLOW), 0.01*max_val, 0.01*shields, x, 0.88*y, 0.90*y, zval); // shields bar up to 150
 
 		if (building_gameplay_mode && shields > 150.0 && ((int(tfticks)/12)&1)) { // flash when drunkenness is too high
 			s.set_cur_color(colorRGBA(RED, 0.5)); // translucent red
@@ -1996,16 +1995,14 @@ void draw_health_bar(float health, float shields, float pu_time, colorRGBA const
 		}
 	}
 	if (building_gameplay_mode || pu_time > 0.0) { // 0.0-1.0 range; used for building_gameplay_mode bladder fullness
-		s.set_cur_color(colorRGBA(pu_color, 0.2));
-		draw_one_tquad(-0.9*x, 0.84*y, -0.7*x, 0.86*y, zval); // full PU time background
-		s.set_cur_color(pu_color);
-		draw_one_tquad(-0.9*x, 0.84*y, (-0.9 + 0.2*pu_time)*x, 0.86*y, zval);
+		draw_stats_bar(s, pu_color, 1.0, pu_time, x, 0.84*y, 0.86*y, zval); // full PU time background
 
 		if (building_gameplay_mode && pu_time > 0.9 && ((int(tfticks)/12)&1)) { // flash when bladder fullness is too high
 			s.set_cur_color(colorRGBA(ORANGE, 0.5)); // translucent orange
 			draw_one_tquad(-0.905*x, 0.835*y, -0.695*x, 0.865*y, zval);
 		}
 	}
+	if (building_gameplay_mode) {draw_stats_bar(s, extra_bar_color, 1.0, extra_bar, x, 0.80*y, 0.82*y, zval);} // carry capacity bar
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
 }

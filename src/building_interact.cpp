@@ -765,9 +765,8 @@ public:
 			}
 		}
 		if (in_building_gameplay_mode()) {
-			// TODO: weight capacity bar?
 			// Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100; powerup values are for bladder fullness
-			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW);
+			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, get_carry_weight_ratio(), WHITE);
 		}
 	}
 	void next_frame() {
