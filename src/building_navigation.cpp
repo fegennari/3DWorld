@@ -810,7 +810,7 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 	building_dest_t const &target(cur_player_building_loc);
 	float const player_radius(get_scaled_player_radius());
 	point const pp2(target.pos - vector3d(0.0, 0.0, camera_zh)); // player's bottom sphere
-	point const eye_pos(person.pos - person.radius + vector3d(0.0, 0.0, 0.9*person.get_height())); // for person
+	point const eye_pos(person.pos + vector3d(0.0, 0.0, (0.9*person.get_height() - person.radius))); // for person
 	bool const same_room_and_floor(target.room_ix == (int)state.cur_room && target.floor_ix == get_floor_for_zval(person.pos.z));
 
 	if (!same_room_and_floor) { // check visibility; assume LOS if in the same room
@@ -997,6 +997,12 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			}
 		} // for i
 	}
+	float const min_valid_zval(bcube.z1() + 0.5f*get_floor_thickness() + person.radius), floor_spacing(get_window_vspace());
+
+	if (new_pos.z == person.pos.z) { // movement in XY, not on stairs, snap to nearest floor
+		new_pos.z = round_fp((new_pos.z - min_valid_zval)/floor_spacing)*floor_spacing + min_valid_zval;
+	}
+	max_eq(new_pos.z, min_valid_zval); // don't let the person go below the ground floor
 	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
 	person.anim_time += max_dist;
 	ai_room_lights_update(state, person, people, person_ix); // non-const part
@@ -1031,7 +1037,7 @@ void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t 
 }
 
 void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const {
-	point other_pos(other.pos.x, other.pos.y, person.pos.z); // use same zval to ignore height differences
+	point const other_pos(other.pos.x, other.pos.y, person.pos.z); // use same zval to ignore height differences
 	float const sep_dist(p2p_dist_xy(person.pos, other_pos)), move_dist(rsum - sep_dist); // distance we have to move
 	// move away from the other person, hopefully not through a wall
 	point const orig_pos(person.pos);

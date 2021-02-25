@@ -50,8 +50,7 @@ void pedestrian_t::wait_for(float seconds) {
 cube_t pedestrian_t::get_bcube() const {
 	cube_t c;
 	c.set_from_sphere(pos, get_width());
-	c.z1() = pos.z - radius;
-	c.z2() = c.z1() + get_height();
+	set_cube_zvals(c, get_z1(), get_z2());
 	return c;
 }
 
