@@ -311,7 +311,7 @@ struct bldg_obj_type_t {
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
-	uint8_t flags2; // currently only used by cabinets
+	uint8_t flags2; // currently only used by cabinets and drawers
 	uint8_t room_id; // for at most 256 rooms per floor
 	uint16_t obj_id; // currently only used for lights and random property hashing
 	room_object type; // 8-bit
@@ -342,6 +342,8 @@ struct room_object_t : public cube_t {
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
 	unsigned get_orient () const {return (2*dim + dir);}
+	void set_drawer_flags(unsigned v);
+	unsigned get_drawer_flags() const;
 	float get_radius() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	static bool enable_rugs();
@@ -504,6 +506,7 @@ struct building_room_geom_t {
 	// other functions
 	bool closet_light_is_on(cube_t const &closet) const;
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const;
+	int open_nearest_drawer(building_t const &building, point const &at_pos, vector3d const &in_dir, float range);
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building);

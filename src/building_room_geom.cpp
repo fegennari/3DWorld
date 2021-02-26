@@ -441,27 +441,23 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, boo
 	}
 }
 
-void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
+// we need 12 bits for the drawer flags of up to 12 drawers; reuse lower 3rd byte of flags (TAKEN1-TAKEN3)
+void room_object_t::set_drawer_flags(unsigned v) {assert(v < (1<<12)); flags2 = (v & 0xFF); flags &= ~0x0F0000; flags |= ((v & 0xF00) << 8);}
+unsigned room_object_t::get_drawer_flags() const {return (flags2 | ((flags & 0x0F0000) >> 8));}
+
+void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers) {
+	drawers.clear();
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	rgen.rand_mix();
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
-	float const row_spacing(height/num_rows), door_thick(0.05*height), handle_thick(0.75*door_thick);
-	float const border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
-	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
-	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1, 0, 1)); // shadowed, small=1
-	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
-	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
-	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
-	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
+	unsigned const drawer_flags(c.get_drawer_flags());
+	float const row_spacing(height/num_rows), door_thick(0.05*height), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0);
 	cube_t d_row(c);
 	d_row.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir];
 	d_row.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
-	cube_t handle(d_row);
-	handle.d[ c.dim][!c.dir]  = d_row.d[c.dim][c.dir];
-	handle.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
 	unsigned num_cols(1); // 1 for nightstand
 	float vpos(c.z1());
 
@@ -470,47 +466,65 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 		float const col_spacing(width/num_cols);
 		float hpos(c.d[!c.dim][0]);
 		set_cube_zvals(d_row, (vpos + border), (vpos + row_spacing - border));
-		handle.z1() = d_row.z1()  + 0.8*d_row.dz();
-		handle.z2() = handle.z1() + 0.1*d_row.dz();
 
 		for (unsigned m = 0; m < num_cols; ++m) {
-			cube_t drawer(d_row), cur_handle(handle); // front part of the drawer
+			cube_t drawer(d_row); // front part of the drawer
 			drawer.d[!c.dim][0] = hpos + border;
 			drawer.d[!c.dim][1] = hpos + col_spacing - border;
-			float const dwidth(drawer.get_sz_dim(!c.dim));
-			unsigned door_skip_faces_mod(door_skip_faces);
-
-			if (rgen.rand_float() < 0.05) { // make a drawer occasionally open
-				float const dheight(drawer.dz()), open_amt(dir_sign*rgen.rand_uniform(0.05, 0.4)*depth);
-				drawer.    translate_dim(c.dim, open_amt);
-				cur_handle.translate_dim(c.dim, open_amt);
-				cube_t drawer_body(drawer);
-				drawer_body.d[c.dim][!c.dir] = c.     d[c.dim][ c.dir]; // flush with front
-				drawer_body.d[c.dim][ c.dir] = drawer.d[c.dim][!c.dir]; // inside of drawer face
-				drawer_body.expand_in_dim(!c.dim, -0.05*dwidth);
-				drawer_body.expand_in_dim(2,      -0.05*dheight);
-				cube_t bottom(drawer_body), left(drawer_body), right(drawer_body);
-				left.z1() = right.z1() = bottom.z2() = drawer_body.z2() - 0.8*dheight;
-				left .d[!c.dim][1] -= 0.87*dwidth;
-				right.d[!c.dim][0] += 0.87*dwidth;
-				unsigned const skip_mask_front_back(get_skip_mask_for_xy(c.dim));
-				colorRGBA const blr_color(drawer_color*0.4 + apply_wood_light_color(c)*0.4); // halfway between base and drawer colors, but slightly darker
-				drawer_mat.add_cube_to_verts(bottom, blr_color, tex_origin,  skip_mask_front_back);
-				drawer_mat.add_cube_to_verts(left,   blr_color, tex_origin, (skip_mask_front_back | EF_Z1));
-				drawer_mat.add_cube_to_verts(right,  blr_color, tex_origin, (skip_mask_front_back | EF_Z1));
-				door_skip_faces_mod = 0; // need to draw interior face
-				// it would be better to cut a hole into the front of the desk for the drawer to slide into, but that seems to be difficult
-			}
-			drawer_mat.add_cube_to_verts(drawer, drawer_color, tex_origin, door_skip_faces_mod);
-			// add door handle
-			float const handle_shrink(0.5*dwidth - handle_width);
-			cur_handle.d[!c.dim][0] = drawer.d[!c.dim][0] + handle_shrink;
-			cur_handle.d[!c.dim][1] = drawer.d[!c.dim][1] - handle_shrink;
-			handle_mat.add_cube_to_verts(cur_handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
+			//if (rgen.rand_float() < 0.05) {drawer.translate_dim(c.dim, dir_sign*rgen.rand_uniform(0.05, 0.4)*depth);} // make a drawer occasionally open
+			if (drawer_flags & (1 << drawers.size())) {drawer.translate_dim(c.dim, dir_sign*0.75*depth);} // make a drawer open
+			drawers.push_back(drawer);
 			hpos += col_spacing;
 		} // for m
 		vpos += row_spacing;
 	} // for n
+}
+
+void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
+	static vect_cube_t drawers; // reused across calls
+	get_drawer_cubes(c, drawers);
+	float const depth(c.get_sz_dim(c.dim)), height(c.dz()), door_thick(0.05*height), handle_thick(0.75*door_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
+	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
+	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1, 0, 1)); // shadowed, small=1
+	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
+	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
+	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
+	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
+
+	for (auto i = drawers.begin(); i != drawers.end(); ++i) {
+		float const dwidth(i->get_sz_dim(!c.dim)), handle_shrink(0.5*dwidth - handle_width);
+		unsigned door_skip_faces_mod(door_skip_faces);
+
+		if (i->d[c.dim][!c.dir] != c.d[c.dim][c.dir]) { // drawer is not flush with front face, so it's open
+			float const dheight(i->dz());
+			cube_t drawer_body(*i);
+			drawer_body.d[c.dim][!c.dir] = c. d[c.dim][ c.dir]; // flush with front
+			drawer_body.d[c.dim][ c.dir] = i->d[c.dim][!c.dir]; // inside of drawer face
+			drawer_body.expand_in_dim(!c.dim, -0.05*dwidth);
+			drawer_body.expand_in_dim(2,      -0.05*dheight);
+			cube_t bottom(drawer_body), left(drawer_body), right(drawer_body);
+			left.z1() = right.z1() = bottom.z2() = drawer_body.z2() - 0.8*dheight;
+			left .d[!c.dim][1] -= 0.87*dwidth;
+			right.d[!c.dim][0] += 0.87*dwidth;
+			unsigned const skip_mask_front_back(get_skip_mask_for_xy(c.dim));
+			colorRGBA const blr_color(drawer_color*0.4 + apply_wood_light_color(c)*0.4); // halfway between base and drawer colors, but slightly darker
+			drawer_mat.add_cube_to_verts(bottom, blr_color, tex_origin,  skip_mask_front_back);
+			drawer_mat.add_cube_to_verts(left,   blr_color, tex_origin, (skip_mask_front_back | EF_Z1));
+			drawer_mat.add_cube_to_verts(right,  blr_color, tex_origin, (skip_mask_front_back | EF_Z1));
+			door_skip_faces_mod = 0; // need to draw interior face
+			// it would be better to cut a hole into the front of the desk for the drawer to slide into, but that seems to be difficult
+		}
+		drawer_mat.add_cube_to_verts(*i, drawer_color, tex_origin, door_skip_faces_mod);
+		// add door handle
+		cube_t handle(*i);
+		handle.d[c.dim][!c.dir]  = i->d[c.dim][c.dir];
+		handle.d[c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
+		handle.d[!c.dim][0] = i->d[!c.dim][0] + handle_shrink;
+		handle.d[!c.dim][1] = i->d[!c.dim][1] - handle_shrink;
+		handle.z1() = i->z1() + 0.8*i->dz();
+		handle.z2() = handle.z1() + 0.1*i->dz();
+		handle_mat.add_cube_to_verts(handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
+	} // for i
 }
 
 tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {

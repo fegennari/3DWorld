@@ -32,6 +32,7 @@ extern building_params_t global_building_params;
 
 void place_player_at_xy(float xval, float yval);
 void get_chair_cubes(room_object_t const &c, cube_t cubes[3]);
+void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers);
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -825,7 +826,11 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 }
 bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
 	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS));
-	if (obj_id < 0) return 0;
+	
+	if (obj_id < 0) { // no object can be picked up
+		if (do_room_obj_pickup) {open_nearest_drawer(building, at_pos, in_dir, 2.0*CAMERA_RADIUS);}
+		return 0;
+	}
 	room_object_t &obj(get_room_object_by_index(obj_id));
 	bool const can_pick_up(player_inventory.can_pick_up_item(obj));
 
@@ -936,6 +941,45 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			dmin_sq = dsq; // this object is the closest, even if it can't be picked up
 		} // for i
 	} // for vect_id
+	return closest_obj_id;
+}
+
+int building_room_geom_t::open_nearest_drawer(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) {
+	int closest_obj_id(-1);
+	float dmin_sq(0.0);
+	point const p2(at_pos + in_dir*range);
+
+	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		if (i->type != TYPE_DRESSER) continue; // only dressers for now; could add support for desks and nightstands (if not stealing them) later
+		cube_t dresser(*i);
+		dresser.d[i->dim][i->dir] += 0.75*(i->dir ? 1.0 : -1.0)*i->get_sz_dim(i->dim); // expand outward to include open drawers
+		point p1c(at_pos), p2c(p2);
+		if (!do_line_clip(p1c, p2c, dresser.d))  continue; // test ray intersection vs. bcube
+		float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
+		if (dmin_sq > 0.0 && dsq > dmin_sq) continue; // not the closest
+		if (building.check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // skip if it's on the other side of a wall, ceiling, or floor
+		closest_obj_id = (i - objs.begin());
+		dmin_sq = dsq; // this object is the closest, even if it can't be picked up
+	} // for i
+	if (closest_obj_id >= 0) {
+		room_object_t &obj(objs[closest_obj_id]);
+		vect_cube_t drawers;
+		get_drawer_cubes(obj, drawers);
+		dmin_sq = 0.0;
+		closest_obj_id = -1;
+
+		for (auto i = drawers.begin(); i != drawers.end(); ++i) {
+			point p1c(at_pos), p2c(p2);
+			if (!do_line_clip(p1c, p2c, i->d))  continue; // test ray intersection vs. drawer
+			float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
+			if (dmin_sq == 0.0 || dsq < dmin_sq) {closest_obj_id = (i - drawers.begin()); dmin_sq = dsq;} // update if closest
+		}
+		if (closest_obj_id >= 0) {
+			obj.set_drawer_flags(obj.get_drawer_flags() ^ (1 << (unsigned)closest_obj_id)); // toggle flag bit for selected drawer
+			create_small_static_vbos(building);
+			// TODO: play a sound
+		}
+	}
 	return closest_obj_id;
 }
 
