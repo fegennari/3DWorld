@@ -791,8 +791,8 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 	c.flags |= RO_FLAG_WAS_EXP;
 	bool const is_house(c.is_house());
 	vector3d const c_sz(c.get_size());
-	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
-	float const z_step(dz/(num_shelves + 1)), shelf_zspace(z_step - thickness), shelf_clearance(shelf_zspace - bracket_thickness), sz_scale(is_house ? 0.5 : 1.0);
+	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness);
+	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.5 : 1.0);
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	static vect_cube_t cubes;
@@ -812,7 +812,7 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 				center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
 			}
 			C.set_from_point(center);
-			set_cube_zvals(C, S.z2(), (S.z2() + shelf_zspace*sz_scale*rgen.rand_uniform(0.4, 0.95)));
+			set_cube_zvals(C, S.z2(), (S.z2() + shelf_clearance*sz_scale*rgen.rand_uniform(0.4, 0.98)));
 			C.expand_by_xy(sz);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
 			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
