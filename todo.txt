@@ -13,3 +13,7 @@ Cities:
 - Larger spacing between office building floors
 - House driveways - remove grass
 - Secondary Building roads
+
+Buildings:
+* Player opens drawers
+* Gameplay mode for TT buildings
