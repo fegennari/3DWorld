@@ -15,5 +15,5 @@ Cities:
 - Secondary Building roads
 
 Buildings:
-* Drawer dresser drawer holes
+* Add objects to dresser drawers
 * Gameplay mode for TT buildings

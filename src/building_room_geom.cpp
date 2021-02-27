@@ -488,7 +488,7 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
 	static vect_cube_t drawers; // reused across calls
 	get_drawer_cubes(c, drawers, 1); // front_only=1
-	float const depth(c.get_sz_dim(c.dim)), height(c.dz()), door_thick(0.05*height), handle_thick(0.75*door_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
+	float const depth(c.get_sz_dim(c.dim)), height(c.dz()), drawer_thick(0.05*height), handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1, 0, 1)); // shadowed, small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
@@ -507,19 +507,25 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 			drawer_body.d[c.dim][ c.dir] = i->d[c.dim][!c.dir]; // inside of drawer face
 			drawer_body.expand_in_dim(!c.dim, -0.05*dwidth);
 			drawer_body.expand_in_dim(2,      -0.05*dheight);
-			cube_t bottom(drawer_body), left(drawer_body), right(drawer_body);
+			cube_t bottom(drawer_body), left(drawer_body), right(drawer_body), back(drawer_body);
 			left.z1() = right.z1() = bottom.z2() = drawer_body.z2() - 0.8*dheight;
+			left.z2() = right.z2() = drawer_body.z2() - 0.1*dheight; // sides slightly shorter than the front and back
 			left .d[!c.dim][1] -= 0.87*dwidth;
 			right.d[!c.dim][0] += 0.87*dwidth;
+			back.d[c.dim][ c.dir] = c.d[c.dim][c.dir] + 0.25f*dir_sign*drawer_thick; // flush with front face and narrow
 			unsigned const skip_mask_front_back(get_skip_mask_for_xy(c.dim));
 			colorRGBA const blr_color(drawer_color*0.4 + apply_wood_light_color(c)*0.4); // halfway between base and drawer colors, but slightly darker
-			drawer_mat.add_cube_to_verts(bottom, blr_color, tex_origin,  skip_mask_front_back);
-			drawer_mat.add_cube_to_verts(left,   blr_color, tex_origin, (skip_mask_front_back | EF_Z1));
-			drawer_mat.add_cube_to_verts(right,  blr_color, tex_origin, (skip_mask_front_back | EF_Z1));
-			door_skip_faces_mod = 0; // need to draw interior face
+			// swap the texture orientation of drawers to make them stand out more
+			drawer_mat.add_cube_to_verts(bottom, blr_color, tex_origin,  skip_mask_front_back, 1);
+			drawer_mat.add_cube_to_verts(left,   blr_color, tex_origin, (skip_mask_front_back | EF_Z1), 1);
+			drawer_mat.add_cube_to_verts(right,  blr_color, tex_origin, (skip_mask_front_back | EF_Z1), 1);
+			// draw inside face of back of drawer;
+			// normally this wouldn't be visible here, but it's easier to drawn than holes for the drawers and it doesn't look as bad as doing nothing;
 			// it would be better to cut a hole into the front of the desk for the drawer to slide into, but that seems to be difficult
+			drawer_mat.add_cube_to_verts(back, drawer_color, tex_origin, get_face_mask(c.dim,c.dir), 1);
+			door_skip_faces_mod = 0; // need to draw interior face
 		}
-		drawer_mat.add_cube_to_verts(*i, drawer_color, tex_origin, door_skip_faces_mod);
+		drawer_mat.add_cube_to_verts(*i, drawer_color, tex_origin, door_skip_faces_mod, 1); // swap the texture orientation of drawers to make them stand out more
 		// add door handle
 		cube_t handle(*i);
 		handle.d[c.dim][!c.dir]  = i->d[c.dim][c.dir];
