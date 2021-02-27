@@ -32,7 +32,9 @@ extern building_params_t global_building_params;
 
 void place_player_at_xy(float xval, float yval);
 void get_chair_cubes(room_object_t const &c, cube_t cubes[3]);
-void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers);
+void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only);
+room_object_t get_dresser_middle(room_object_t const &c);
+room_object_t get_desk_drawers_part(room_object_t const &c);
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -226,9 +228,12 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 			closest_dist_sq = dist_sq; obj_ix = (i - objs.begin());
 			is_obj = 1;
 		} // for i
+		if (!player_in_closet) {
+			float const drawer_dist((closest_dist_sq == 0.0) ? 2.5*CAMERA_RADIUS : sqrt(closest_dist_sq));
+			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist)) return 0; // drawer is closer - open or close it
+		}
+		if (closest_dist_sq == 0.0) return 0; // no door found
 	}
-	if (closest_dist_sq == 0.0) return 0; // no door found
-
 	if (is_obj) { // closet or bathroom stall
 		auto &obj(interior->room_geom->objs[obj_ix]);
 
@@ -826,11 +831,7 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 }
 bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
 	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS));
-	
-	if (obj_id < 0) { // no object can be picked up
-		if (do_room_obj_pickup) {open_nearest_drawer(building, at_pos, in_dir, 2.0*CAMERA_RADIUS);}
-		return 0;
-	}
+	if (obj_id < 0) return 0; // no object can be picked up
 	room_object_t &obj(get_room_object_by_index(obj_id));
 	bool const can_pick_up(player_inventory.can_pick_up_item(obj));
 
@@ -944,43 +945,58 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 	return closest_obj_id;
 }
 
-int building_room_geom_t::open_nearest_drawer(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) {
+bool building_room_geom_t::open_nearest_drawer(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) {
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if (i->type != TYPE_DRESSER) continue; // only dressers for now; could add support for desks and nightstands (if not stealing them) later
-		cube_t dresser(*i);
-		dresser.d[i->dim][i->dir] += 0.75*(i->dir ? 1.0 : -1.0)*i->get_sz_dim(i->dim); // expand outward to include open drawers
+		if (i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND && i->type != TYPE_DESK) continue; // what about kitchen cabinets?
+		cube_t bcube(*i);
+		bcube.d[i->dim][i->dir] += 0.75*(i->dir ? 1.0 : -1.0)*i->get_sz_dim(i->dim); // expand outward to include open drawers
 		point p1c(at_pos), p2c(p2);
-		if (!do_line_clip(p1c, p2c, dresser.d))  continue; // test ray intersection vs. bcube
-		float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
+		if (!do_line_clip(p1c, p2c, bcube.d)) continue; // test ray intersection vs. bcube
+		float const dsq(p2p_dist_sq(at_pos, p1c)); // use closest intersection point
 		if (dmin_sq > 0.0 && dsq > dmin_sq) continue; // not the closest
 		if (building.check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // skip if it's on the other side of a wall, ceiling, or floor
 		closest_obj_id = (i - objs.begin());
 		dmin_sq = dsq; // this object is the closest, even if it can't be picked up
 	} // for i
-	if (closest_obj_id >= 0) {
-		room_object_t &obj(objs[closest_obj_id]);
-		vect_cube_t drawers;
-		get_drawer_cubes(obj, drawers);
-		dmin_sq = 0.0;
-		closest_obj_id = -1;
+	if (closest_obj_id < 0) return 0; // no object
+	room_object_t &obj(objs[closest_obj_id]);
+	room_object_t drawers_part;
 
-		for (auto i = drawers.begin(); i != drawers.end(); ++i) {
-			point p1c(at_pos), p2c(p2);
-			if (!do_line_clip(p1c, p2c, i->d))  continue; // test ray intersection vs. drawer
-			float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
-			if (dmin_sq == 0.0 || dsq < dmin_sq) {closest_obj_id = (i - drawers.begin()); dmin_sq = dsq;} // update if closest
-		}
-		if (closest_obj_id >= 0) {
-			obj.set_drawer_flags(obj.get_drawer_flags() ^ (1 << (unsigned)closest_obj_id)); // toggle flag bit for selected drawer
-			create_small_static_vbos(building);
-			// TODO: play a sound
-		}
+	// Note: this is a messy solution and must match the drawing code, but it's unclear how else we can get the location of the drawers
+	if (obj.type == TYPE_DESK) {
+		if (!(obj.room_id & 3)) return 0; // no drawers for this desk
+		drawers_part = get_desk_drawers_part(obj);
+		bool const side(obj.obj_id & 1);
+		drawers_part.d[!obj.dim][side] -= (side ? 1.0 : -1.0)*0.85*get_tc_leg_width(obj, 0.06);
 	}
-	return closest_obj_id;
+	else {
+		drawers_part = get_dresser_middle(obj);
+		drawers_part.expand_in_dim(!obj.dim, -0.5*get_tc_leg_width(obj, 0.10));
+	}
+	vect_cube_t drawers;
+	get_drawer_cubes(drawers_part, drawers, 0); // front_only=0
+	dmin_sq        = 0.0;
+	closest_obj_id = -1;
+
+	for (auto i = drawers.begin(); i != drawers.end(); ++i) {
+		point p1c(at_pos), p2c(p2);
+		if (!do_line_clip(p1c, p2c, i->d)) continue; // test ray intersection vs. drawer
+		float const dsq(p2p_dist_sq(at_pos, p1c)); // use closest intersection point
+		if (dmin_sq == 0.0 || dsq < dmin_sq) {closest_obj_id = (i - drawers.begin()); dmin_sq = dsq;} // update if closest
+	}
+	if (closest_obj_id < 0) return 0; // no drawer
+	unsigned const prev_flags(obj.get_drawer_flags());
+	obj.set_drawer_flags(prev_flags ^ (1 << (unsigned)closest_obj_id)); // toggle flag bit for selected drawer
+	//if (!prev_flags) {create_static_vbos(building);} // first open drawer - regenerate front face
+	create_small_static_vbos(building);
+	point const drawer_center(drawers[closest_obj_id].get_cube_center());
+	gen_sound_thread_safe(SOUND_SLIDING, (drawer_center + get_camera_coord_space_xlate()), 0.5);
+	register_building_sound(drawer_center, 0.4);
+	return 1;
 }
 
 room_object_t &building_room_geom_t::get_room_object_by_index(unsigned obj_id) {

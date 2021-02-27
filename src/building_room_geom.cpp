@@ -347,9 +347,6 @@ void building_materials_t::draw(shader_t &s, bool shadow_only, bool reflection_p
 	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only, reflection_pass);}
 }
 
-float get_tc_leg_width(cube_t const &c, float width) {
-	return 0.5f*width*(c.dx() + c.dy()); // make legs square
-}
 void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, cube_t cubes[4]) {
 	for (unsigned y = 0; y < 2; ++y) {
 		for (unsigned x = 0; x < 2; ++x) {
@@ -426,17 +423,21 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 	add_tc_legs(cubes[2], color, 0.15, tscale); // legs
 }
 
-void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // or nightstand
-	if (inc_lg) {add_table(c, tscale, 0.06, 0.10);}
+room_object_t get_dresser_middle(room_object_t const &c) {
 	room_object_t middle(c);
 	middle.z1() += 0.12*c.dz();
 	middle.z2() -= 0.06*c.dz(); // at bottom of top surface
-	float const leg_width(get_tc_leg_width(c, 0.10));
-	middle.expand_by_xy(-0.5*leg_width); // shrink by half leg width
-	if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(middle, apply_wood_light_color(c), c.get_llc());} // all faces drawn
-
+	middle.expand_by_xy(-0.5*get_tc_leg_width(c, 0.10)); // shrink by half leg width
+	return middle;
+}
+void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // or nightstand
+	if (inc_lg) {
+		add_table(c, tscale, 0.06, 0.10);
+		get_wood_material(tscale).add_cube_to_verts(get_dresser_middle(c), apply_wood_light_color(c), c.get_llc()); // all faces drawn
+	}
 	if (inc_sm) { // add drawers
-		middle.expand_in_dim(!c.dim, -0.5*leg_width);
+		room_object_t middle(get_dresser_middle(c));
+		middle.expand_in_dim(!c.dim, -0.5*get_tc_leg_width(c, 0.10));
 		add_dresser_drawers(middle, tscale);
 	}
 }
@@ -445,7 +446,7 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, boo
 void room_object_t::set_drawer_flags(unsigned v) {assert(v < (1<<12)); flags2 = (v & 0xFF); flags &= ~0x0F0000; flags |= ((v & 0xF00) << 8);}
 unsigned room_object_t::get_drawer_flags() const {return (flags2 | ((flags & 0x0F0000) >> 8));}
 
-void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers) {
+void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only) {
 	drawers.clear();
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
@@ -455,6 +456,7 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers) {
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
 	unsigned const drawer_flags(c.get_drawer_flags());
 	float const row_spacing(height/num_rows), door_thick(0.05*height), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0);
+	float const drawer_extend(((c.type == TYPE_DESK) ? 0.4 : 0.7)*dir_sign*depth);
 	cube_t d_row(c);
 	d_row.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir];
 	d_row.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
@@ -471,8 +473,11 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers) {
 			cube_t drawer(d_row); // front part of the drawer
 			drawer.d[!c.dim][0] = hpos + border;
 			drawer.d[!c.dim][1] = hpos + col_spacing - border;
-			//if (rgen.rand_float() < 0.05) {drawer.translate_dim(c.dim, dir_sign*rgen.rand_uniform(0.05, 0.4)*depth);} // make a drawer occasionally open
-			if (drawer_flags & (1 << drawers.size())) {drawer.translate_dim(c.dim, dir_sign*0.75*depth);} // make a drawer open
+
+			if (drawer_flags & (1 << drawers.size())) { // make a drawer open
+				drawer.d[c.dim][c.dir] += drawer_extend;
+				if (front_only) {drawer.d[c.dim][!c.dir] += drawer_extend;} // translate the other side as well
+			}
 			drawers.push_back(drawer);
 			hpos += col_spacing;
 		} // for m
@@ -482,7 +487,7 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers) {
 
 void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
 	static vect_cube_t drawers; // reused across calls
-	get_drawer_cubes(c, drawers);
+	get_drawer_cubes(c, drawers, 1); // front_only=1
 	float const depth(c.get_sz_dim(c.dim)), height(c.dz()), door_thick(0.05*height), handle_thick(0.75*door_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1, 0, 1)); // shadowed, small=1
@@ -1627,6 +1632,16 @@ void building_room_geom_t::expand_wine_rack(room_object_t const &c) {
 	add_wine_rack_bottles(c, expanded_objs);
 }
 
+room_object_t get_desk_drawers_part(room_object_t const &c) {
+	bool const side(c.obj_id & 1);
+	float const desk_width(c.get_sz_dim(!c.dim)), height(c.dz());
+	room_object_t drawers(c);
+	drawers.z1() += 0.05*height; // shift up a bit from the floor
+	drawers.z2()  = c.z1() + 0.85*height;
+	drawers.expand_by_xy(-0.15*get_tc_leg_width(c, 0.06));
+	drawers.d[!c.dim][!side] += (side ? 1.0 : -1.0)*0.75*desk_width; // put the drawers off to one side
+	return drawers;
+}
 void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) {
 	// desk top and legs, similar to add_table()
 	float const height(c.dz());
@@ -1642,17 +1657,12 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 		add_tc_legs(legs_bcube, color, 0.06, tscale);
 	}
 	if (c.room_id & 3) { // add drawers 75% of the time
-		bool const side(c.obj_id & 1);
-		float const desk_width(c.get_sz_dim(!c.dim)), leg_width(get_tc_leg_width(c, 0.06));
-		room_object_t drawers(c);
-		drawers.z1() += 0.05*height; // shift up a bit from the floor
-		drawers.z2()  = top.z1();
-		drawers.expand_by_xy(-0.15*leg_width);
-		drawers.d[!c.dim][!side] += (side ? 1.0 : -1.0)*0.75*desk_width; // put the drawers off to one side
+		room_object_t drawers(get_desk_drawers_part(c));
 		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(drawers, color, tex_origin);} // all faces drawn
 
 		if (inc_sm) {
-			drawers.d[!c.dim][ side] -= (side ? 1.0 : -1.0)*0.85*leg_width; // make sure the drawers can pull out without hitting the desk legs
+			bool const side(c.obj_id & 1);
+			drawers.d[!c.dim][side] -= (side ? 1.0 : -1.0)*0.85*get_tc_leg_width(c, 0.06); // make sure the drawers can pull out without hitting the desk legs
 			add_dresser_drawers(drawers, tscale);
 		}
 	}
