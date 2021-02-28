@@ -613,8 +613,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 				c.expand_by(radius);
 				if (overlaps_other_room_obj(c, objs_start) || interior->is_blocked_by_stairs_or_elevator(c) || is_cube_close_to_doorway(c, room, 0.0, 1)) continue; // bad placement
 				objs.emplace_back(c, TYPE_LG_BALL, room_id, 0, 0, RO_FLAG_DSTATE, tot_light_amt, SHAPE_SPHERE, WHITE);
-				objs.back().obj_id = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
-				objs.back().flags2 = rgen.rand_bool(); // selects ball type
+				objs.back().obj_id     = (uint16_t)interior->room_geom->allocate_dynamic_state(); // allocate a new dynamic state object
+				objs.back().item_flags = rgen.rand_bool(); // selects ball type
 				break; // done
 			} // for n
 		}
@@ -1115,11 +1115,11 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				if (i->d[!i->dim][dir] != wall_pos) continue; // not against the wall on this side
 				if (i->d[i->dim][i->dir] != c.d[!dim][0] && i->d[i->dim][i->dir] != c.d[!dim][1]) continue; // not adjacent
 				i->flags |= (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
-				if (add_backsplash) {i->flags2 |= (1 << (dir+1));} // flag side as having a backsplash
+				if (add_backsplash) {i->item_flags |= (1 << (dir+1));} // flag side as having a backsplash
 			}
 			unsigned const cabinet_id(objs.size());
 			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, 0, tot_light_amt);
-			if (add_backsplash) {objs.back().flags2 |= 1;} // flag back as having a backsplash
+			if (add_backsplash) {objs.back().item_flags |= 1;} // flag back as having a backsplash
 			// add upper cabinets, always (for now); should we remove cabinets in front of windows?
 			cube_t c2(c);
 			set_cube_zvals(c2, zval+0.66*vspace, cabinet_area.z2()); // up to the ceiling

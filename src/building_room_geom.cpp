@@ -447,10 +447,6 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, boo
 	}
 }
 
-// we need 12 bits for the drawer flags of up to 12 drawers; reuse lower 3rd byte of flags (TAKEN1-TAKEN3)
-void room_object_t::set_drawer_flags(unsigned v) {assert(v < (1<<12)); flags2 = (v & 0xFF); flags &= ~0x0F0000; flags |= ((v & 0xF00) << 8);}
-unsigned room_object_t::get_drawer_flags() const {return (flags2 | ((flags & 0x0F0000) >> 8));}
-
 void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only) {
 	drawers.clear();
 	rand_gen_t rgen;
@@ -459,7 +455,6 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
-	unsigned const drawer_flags(c.get_drawer_flags());
 	float const row_spacing(height/num_rows), door_thick(0.05*height), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0);
 	float const drawer_extend(((c.type == TYPE_DESK) ? 0.4 : 0.7)*dir_sign*depth);
 	cube_t d_row(c);
@@ -479,7 +474,7 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 			drawer.d[!c.dim][0] = hpos + border;
 			drawer.d[!c.dim][1] = hpos + col_spacing - border;
 
-			if (drawer_flags & (1 << drawers.size())) { // make a drawer open
+			if (c.drawer_flags & (1 << drawers.size())) { // make a drawer open
 				drawer.d[c.dim][c.dir] += drawer_extend;
 				if (front_only) {drawer.d[c.dim][!c.dir] += drawer_extend;} // translate the other side as well
 			}
@@ -491,6 +486,9 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 }
 
 /*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix) {
+	assert(drawer_ix < 16);
+	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
+
 	if (drawer_ix&1) {
 		room_object_t box(drawer, TYPE_BOX, c.room_id, c.dim, c.dir);
 		//box.z2() -= 0.2*drawer.dz();
@@ -504,6 +502,7 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
 	vect_cube_t &drawers(get_temp_cubes());
 	get_drawer_cubes(c, drawers, 1); // front_only=1
+	assert(drawers.size() <= 16); // we only have 16 bits to store drawer flags
 	float const depth(c.get_sz_dim(c.dim)), height(c.dz()), drawer_thick(0.05*height), handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1, 0, 1)); // shadowed, small=1
@@ -924,11 +923,11 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 			for (unsigned n = 0; n < num_balls; ++n) {
 				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + ball_radius), (S.d[d][1] - ball_radius));} // place at least ball_radius from edge
 				C.set_from_sphere(center, ball_radius);
-				C.flags2 = rgen.rand_bool(); // random type
+				C.item_flags = rgen.rand_bool(); // random type
 				add_if_not_intersecting(C, objects, cubes);
 			} // for n
-			C.shape  = SHAPE_CUBE; // reset for next object type
-			C.flags2 = 0;          // reset for next object type
+			C.shape      = SHAPE_CUBE; // reset for next object type
+			C.item_flags = 0;          // reset for next object type
 		}
 	} // for s
 }
@@ -2177,20 +2176,20 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		}
 		add_cabinet(cabinet, tscale); // draw the wood part
 	}
-	if (c.flags2) { // add backsplash, 50% chance of tile vs. matching marble
+	if (c.item_flags) { // add backsplash, 50% chance of tile vs. matching marble
 		tid_nm_pair_t const bs_tex((c.room_id & 1) ? marble_tex : tid_nm_pair_t(get_texture_by_name("bathroom_tile.jpg"), 2.5*tscale));
 		rgeom_mat_t &bs_mat(get_material(bs_tex, 0)); // no shadows
 		cube_t bsz(c);
 		bsz.z1()  = c.z2();
 		bsz.z2() += 0.33*c.dz();
 
-		if (c.flags2 & 1) { // back
+		if (c.item_flags & 1) { // back
 			cube_t bs(bsz);
 			bs.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.99*depth;
 			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(c.dim, !c.dir)));
 		}
 		for (unsigned d = 0; d < 2; ++d) { // handle the other dim
-			if (!(c.flags2 & (1<<(d+1)))) continue; // not adjacent in this dir
+			if (!(c.item_flags & (1<<(d+1)))) continue; // not adjacent in this dir
 			cube_t bs(bsz);
 			bs.d[!c.dim][!d] -= (d ? -1.0 : 1.0)*(c.get_sz_dim(!c.dim) - 0.01*depth);
 			bs_mat.add_cube_to_verts(bs, top_color, zero_vector, (EF_Z1 | ~get_face_mask(!c.dim, d)));
@@ -2316,8 +2315,8 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 	}
 }
 
-int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name((c.flags2 & 1) ? "interiors/basketball.png" : "interiors/soccer_ball_diffuse.png");}
-int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.flags2 & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png"));}
+int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name((c.item_flags & 1) ? "interiors/basketball.png" : "interiors/soccer_ball_diffuse.png");}
+int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.item_flags & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png"));}
 
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	bool const dynamic(c.is_dynamic()); // either small or dynamic

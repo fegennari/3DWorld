@@ -656,7 +656,7 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_COMPUTER && (obj.flags & RO_FLAG_WAS_EXP)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
 	if (obj.type == TYPE_LG_BALL) {
 		bldg_obj_type_t type(get_room_obj_type(obj));
-		type.name = ((obj.flags2 & 1) ? "basketball" : "soccer ball"); // use a more specific type name; all other fields are shared across balls
+		type.name = ((obj.item_flags & 1) ? "basketball" : "soccer ball"); // use a more specific type name; all other fields are shared across balls
 		return type;
 	}
 	if (obj.type == TYPE_BOTTLE) {
@@ -885,8 +885,7 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 	if (is_consumable(obj)) {gen_sound_thread_safe(SOUND_GULP, get_camera_pos(), 1.0 );}
 	else                    {gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.25);}
 	register_building_sound_for_obj(obj, at_pos);
-	player_inventory.add_item(obj);
-	// TODO: remove item from drawer somehow
+	return 1;
 }
 
 bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
@@ -1044,19 +1043,21 @@ bool building_room_geom_t::open_nearest_drawer(building_t const &building, point
 		if (dmin_sq == 0.0 || dsq < dmin_sq) {closest_obj_id = (i - drawers.begin()); dmin_sq = dsq;} // update if closest
 	}
 	if (closest_obj_id < 0) return 0; // no drawer
-	unsigned const prev_flags(obj.get_drawer_flags());
 
 	if (pickup_item) { // pick up item in drawer rather than opening drawer
-		room_object_t const obj(get_item_in_drawer(obj, drawers[closest_obj_id], closest_obj_id));
-		if (obj.type == TYPE_NONE) return 0; // no item
-		return register_player_object_pickup(obj, at_pos);
+		room_object_t const item(get_item_in_drawer(obj, drawers[closest_obj_id], closest_obj_id));
+		if (item.type == TYPE_NONE) return 0; // no item
+		if (!register_player_object_pickup(item, at_pos)) return 0;
+		obj.item_flags |= (1U << closest_obj_id); // flag item as taken
+		player_inventory.add_item(item);
 	}
-	obj.set_drawer_flags(prev_flags ^ (1 << (unsigned)closest_obj_id)); // toggle flag bit for selected drawer
-	//if (!prev_flags) {create_static_vbos(building);} // first open drawer - regenerate front face
+	else { // open or close the drawer
+		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
+		point const drawer_center(drawers[closest_obj_id].get_cube_center());
+		gen_sound_thread_safe(SOUND_SLIDING, (drawer_center + get_camera_coord_space_xlate()), 0.5);
+		register_building_sound(drawer_center, 0.4);
+	}
 	create_small_static_vbos(building);
-	point const drawer_center(drawers[closest_obj_id].get_cube_center());
-	gen_sound_thread_safe(SOUND_SLIDING, (drawer_center + get_camera_coord_space_xlate()), 0.5);
-	register_building_sound(drawer_center, 0.4);
 	return 1;
 }
 

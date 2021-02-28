@@ -311,19 +311,18 @@ struct bldg_obj_type_t {
 
 struct room_object_t : public cube_t {
 	bool dim, dir;
-	uint8_t flags2; // currently only used by cabinets and drawers
 	uint8_t room_id; // for at most 256 rooms per floor
-	uint16_t obj_id; // currently only used for lights and random property hashing
+	uint16_t obj_id, drawer_flags, item_flags;
 	room_object type; // 8-bit
 	room_obj_shape shape; // 8-bit
 	unsigned flags;
 	float light_amt;
 	colorRGBA color;
 
-	room_object_t() : dim(0), dir(0), flags2(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
+	room_object_t() : dim(0), dir(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, unsigned f=0, float light=1.0,
 		room_obj_shape shape_=SHAPE_CUBE, colorRGBA const color_=WHITE) :
-		cube_t(c), dim(dim_), dir(dir_), flags2(0), room_id(rid), obj_id(0), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
+		cube_t(c), dim(dim_), dir(dir_), room_id(rid), obj_id(0), drawer_flags(0), item_flags(0), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
 	bool is_valid   () const {return  (type != TYPE_NONE);}
@@ -342,8 +341,6 @@ struct room_object_t : public cube_t {
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
 	unsigned get_orient () const {return (2*dim + dir);}
-	void set_drawer_flags(unsigned v);
-	unsigned get_drawer_flags() const;
 	float get_radius() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	static bool enable_rugs();
