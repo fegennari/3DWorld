@@ -478,8 +478,8 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 	point const listener(get_camera_pos());
 	float const dist(distance_to_camera(pos));
 	bool const close(dist < CAMERA_RADIUS);
-	if (!close && id != SOUND_DROWN && id != SOUND_SPLASH1 && id != SOUND_SPLASH2 && id != SOUND_WATER &&
-		world_mode == WMODE_GROUND && (is_underwater(pos) || is_underwater(listener))) return;
+	if (!close && world_mode == WMODE_GROUND && id != SOUND_DROWN && id != SOUND_SPLASH1 && id != SOUND_SPLASH2 && id != SOUND_WATER &&
+		(is_underwater(pos) || is_underwater(listener))) return;
 #if 0
 	openal_source &source(sources.get_inactive_source());
 	if (!close && source.is_playing()) return; // already playing - don't stop it
@@ -490,10 +490,10 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 #endif
 	if (sound_manager.check_for_duplicate(id)) return; // duplicate sound this frame
 
-	if (!close) {
+	if (!close && world_mode == WMODE_GROUND) {
 		int cindex;
 		bool const line_of_sight(!check_coll_line(pos, listener, cindex, -1, 1, 0));
-		if (!line_of_sight) gain *= 0.25; // attenuate by 4x if there is no line of sight between source and listener
+		if (!line_of_sight) {gain *= 0.25;} // attenuate by 4x if there is no line of sight between source and listener
 	}
 	if (source.is_active()) {source.stop();} // stop if already playing
 	set_openal_listener_as_player();
