@@ -39,6 +39,9 @@ room_object_t get_desk_drawers_part(room_object_t const &c);
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0) {
+	float const dist(p2p_dist(get_camera_pos(), (pos + get_camera_coord_space_xlate())));
+	float const dscale(10.0*CAMERA_RADIUS); // distance at which volume is halved
+	gain *= dscale/(dist + dscale);
 #pragma omp critical(gen_sound)
 	gen_sound(id, pos, gain, pitch);
 }
@@ -178,7 +181,7 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	gen_sound_thread_safe((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	point pos_interior(door_center);
 	pos_interior[dim] += (dir ? 1.0 : -1.0)*CAMERA_RADIUS; // move point to the building interior so that it's a valid AI position
-	register_building_sound(pos_interior, 0.5);
+	register_building_sound(pos_interior, 0.4); // slightly quieter than interior doors because the user has no control over this
 	open_door_ix = door_ix;
 }
 
@@ -254,7 +257,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
 		point const door_center(obj.xc(), obj.yc(), closest_to.z); // generate sound from the player height
 		play_door_open_close_sound(door_center, obj.is_open(), pitch);
-		register_building_sound(door_center, 0.5);
+		register_building_sound(door_center, ((obj.type == TYPE_CLOSET) ? 0.25 : 0.5)); // closets are quieter, to allow players to more easily hide
 	}
 	else {toggle_door_state(door_ix, 1, 1, closest_to.z);} // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
 	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
@@ -354,8 +357,6 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 			for (auto f = interior->floors.begin(); f != interior->floors.end(); ++f) {
 				if (f->contains_pt(test_pt)) {on_floor = 1; break;}
 			}
-			//cout << TXT(velocity.str()) << TXT(on_floor) << TXT(center.z) << TXT(test_pt.z) << TXT(ground_floor_z1+fc_thick) << endl; // TESTING
-
 			if (on_floor) { // moving on the floor, apply surface friction
 				velocity *= (1.0f - min(1.0f, OBJ_DECELERATE*fticks));
 				if (velocity.mag() < MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
