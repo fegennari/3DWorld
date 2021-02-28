@@ -476,10 +476,31 @@ void get_sphere_boundary_pts(point const &center, float radius, point pts[7]) {
 	}
 }
 
+// returns true if ray ends inside cubes; similar to code in building_t::refine_light_bcube(), but also clips in Z
+bool trace_ray_through_cubes(vect_cube_t const &cubes, point const &p1, point const &p2, float tolerance) {
+	point cur_pt(p1);
+	auto prev_part(cubes.end());
+
+	for (unsigned n = 0; n < cubes.size(); ++n) { // could be while(1), but this is safer in case we run into an infinite loop due to FP errors
+		bool found(0);
+
+		for (auto p = cubes.begin(); p != cubes.end(); ++p) {
+			cube_t tc(*p);
+			tc.expand_by(tolerance);
+			if (p == prev_part || !tc.contains_pt(cur_pt)) continue; // ray does not continue into this new part
+			point tmp_pt(cur_pt), new_pt(p2);
+			if (do_line_clip(tmp_pt, new_pt, p->d)) {cur_pt = new_pt; prev_part = p; found = 1; break;} // ray continues into this part
+		}
+		if (!found)       return 0; // ray has exited the cubes, done
+		if (cur_pt == p2) return 1; // we've reached the end point, done
+	} // for n
+	return 0; // ray has exited the cubes
+}
 bool building_t::is_pt_visible(point const &p1, point const &p2) const {
 	if (!interior) return 1;
 	if (is_light_occluded(p1, p2)) return 0; // okay to call for non-light point; checks walls, ceilings, and floors
 	float const wall_thickness(get_wall_thickness());
+	if (parts.size() > 1 && !trace_ray_through_cubes(parts, p1, p2, 0.01*wall_thickness)) return 0; // view blocked by exterior wall (ignores windows)
 	
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->open) continue; // check only closed doors
