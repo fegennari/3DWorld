@@ -1146,12 +1146,18 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 }
 
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix) {
-	static double last_sound_tfticks(0.0);
-	if ((tfticks - last_sound_tfticks) < 4.0*TICKS_PER_SECOND) return; // don't play too frequently
-	unsigned const sound_id(SOUND_ZOMBIE1 + (zombie_ix%5)); // choose one of 5 zombie sounds, determined by the current zombie
-	gen_sound_thread_safe(sound_id, (sound_pos_bs + get_camera_coord_space_xlate()));
-	register_building_sound(sound_pos_bs, 0.25); // alert other nearby zombies
-	last_sound_tfticks = tfticks;
+	unsigned const NUM_ZSOUNDS = 5;
+	static rand_gen_t rgen;
+	static double next_time_all(0.0), next_times[NUM_ZSOUNDS] = {};
+	if (tfticks < next_time_all) return; // don't play any sound too frequently
+	if ((rgen.rand()&3) != 0)    return; // only generate a sound 25% of the time (each frame), to allow more than one zombie to get a chance
+	unsigned const sound_id(zombie_ix%NUM_ZSOUNDS); // choose one of the zombie sounds, determined by the current zombie
+	double &next_time(next_times[sound_id]);
+	if (tfticks < next_time_all) return; // don't play this particular sound too frequently
+	next_time_all = tfticks + double(rgen.rand_uniform(0.8, 2.0))*TICKS_PER_SECOND; // next sound of any  type can play between 0.8 and 2.0s in the future
+	next_time     = tfticks + double(rgen.rand_uniform(2.5, 5.0))*TICKS_PER_SECOND; // next sound of this type can play between 2.5 and 5.0s in the future
+	gen_sound_thread_safe((SOUND_ZOMBIE1 + sound_id), (sound_pos_bs + get_camera_coord_space_xlate()));
+	//register_building_sound(sound_pos_bs, 0.2); // alert other nearby zombies?
 }
 
 // gameplay logic

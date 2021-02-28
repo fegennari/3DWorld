@@ -473,7 +473,7 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 			clip_ray_to_walls(lpos, p2); // the simple case where we don't need to handle part boundaries (optimization)
 		}
 		else {
-			// find the point where this ray exits the building by following it through all parts; parts should be exactly adjacent to each other horizontally
+			// find the point where this ray exits the building by following it through all parts; parts should be exactly adjacent to each other in X or Y
 			point cur_pt(p2);
 			bool const ret(do_line_clip_xy_p2(lpos, cur_pt, part)); // exit point of the starting part
 			assert(ret);
@@ -579,7 +579,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		point lpos_rot(lpos);
 		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
-		//if (is_light_occluded(lpos_rot, camera_bs)) continue; // too strong a test in general, but may be useful for selecting high importance lights
+		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		room_t const &room(get_room(i->room_id));
 		bool const is_lamp(i->type == TYPE_LAMP);
