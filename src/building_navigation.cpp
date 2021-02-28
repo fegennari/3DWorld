@@ -24,6 +24,7 @@ bool in_building_gameplay_mode();
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
 bool can_ai_follow_player(pedestrian_t const &person);
 bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
+void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
@@ -901,13 +902,14 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	bool const update_path(need_to_update_ai_path(state, person));
 
 	if (update_path) { // need to update based on player movement; higher priority than choose_dest
-		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1)     {choose_dest = 1;} // can't reach the target, choose a different destination
+		if (choose_dest_room(state, person, rgen, stay_on_one_floor) != 1)     {choose_dest = 1;} // if can't reach the target, choose a different destination
 		else if (!find_route_to_point(person, coll_dist, 0, 1, 1, state.path)) {choose_dest = 1;} // is_first_path=0, is_moving_target=1, following_player=1
 		else { // success
 			state.next_path_pt(person, stay_on_one_floor);
 			person.following_player = 1;
 			choose_dest = 0;
 			speed_mult  = 1.5; // faster when the player is in the same room
+			maybe_play_zombie_sound(person.pos, person_ix);
 		}
 	}
 	if (choose_dest) { // no current destination, choose a new destination

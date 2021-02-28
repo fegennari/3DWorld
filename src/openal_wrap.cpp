@@ -137,6 +137,13 @@ public:
 		add_new_sound("door_open.wav"  ); // SOUND_DOOR_OPEN
 		add_new_sound("door_close.wav" ); // SOUND_DOOR_CLOSE
 		add_new_sound("kickball.wav"   ); // SOUND_KICK_BALL
+		add_new_sound("toilet_flush.wav");// SOUND_FLUSH
+		add_new_sound("gulp.wav"       ); // SOUND_GULP
+		add_new_sound("zombie1.wav"    ); // SOUND_ZOMBIE1
+		add_new_sound("zombie2.wav"    ); // SOUND_ZOMBIE2
+		add_new_sound("zombie3.wav"    ); // SOUND_ZOMBIE3
+		add_new_sound("zombie4.wav"    ); // SOUND_ZOMBIE4
+		add_new_sound("zombie5.wav"    ); // SOUND_ZOMBIE5
 		cout << endl;
 
 		// create sources

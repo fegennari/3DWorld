@@ -660,6 +660,9 @@ float get_obj_value(room_object_t const &obj) {
 float get_obj_weight(room_object_t const &obj) {
 	return get_taken_obj_type(obj).weight; // constant per object type, for now, but really should depend on object size/volume
 }
+bool is_consumable(room_object_t const &obj) {
+	return (in_building_gameplay_mode() && obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_NO_CONS));
+}
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
@@ -695,7 +698,7 @@ public:
 		std::ostringstream oss;
 		oss << get_taken_obj_type(obj).name;
 
-		if (in_building_gameplay_mode() && obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_NO_CONS)) { // nonempty bottle, consumable
+		if (is_consumable(obj)) { // nonempty bottle, consumable
 			switch (obj.obj_id % NUM_BOTTLE_COLORS) {
 			case 0: health = 0.25; break; // water
 			case 1: health = 0.50; break; // Coke
@@ -799,8 +802,12 @@ public:
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks)); // slowly decrease over time
 		
 		if (player_near_toilet) { // empty bladder
-			if (bladder > 0.9) {gen_sound_thread_safe(SOUND_GASP, get_camera_pos());}
-			if (bladder > 0.0) {register_building_sound((camera_pos - get_camera_coord_space_xlate()), 0.5);}
+			if (bladder > 0.9) {gen_sound_thread_safe(SOUND_GASP, get_camera_pos());} // urinate
+			if (bladder > 0.0) { // toilet flush
+#pragma omp critical(gen_sound)
+				gen_delayed_sound(1.0, SOUND_FLUSH, get_camera_pos()); // delay by 1s
+				register_building_sound((camera_pos - get_camera_coord_space_xlate()), 0.5);
+			}
 			bladder = 0.0;
 		}
 		else if (bladder > 0.9) {
@@ -853,7 +860,8 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
 		return 0;
 	}
-	gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.25);
+	if (is_consumable(obj)) {gen_sound_thread_safe(SOUND_GULP, get_camera_pos(), 1.0 );}
+	else                    {gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.25);}
 	register_building_sound_for_obj(obj, at_pos);
 	remove_object(obj_id, building);
 	return 1;
@@ -1112,7 +1120,16 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 		if (vol > max_vol) {max_vol = vol; sound_pos = i->pos;}
 	} // for i
 	//cout << TXT(cur_sounds.size()) << TXT(max_vol) << endl;
-	return (max_vol*floor_spacing > 0.05f);
+	return (max_vol*floor_spacing > 0.06f);
+}
+
+void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix) {
+	static double last_sound_tfticks(0.0);
+	if ((tfticks - last_sound_tfticks) < 4.0*TICKS_PER_SECOND) return; // don't play too frequently
+	unsigned const sound_id(SOUND_ZOMBIE1 + (zombie_ix%5)); // choose one of 5 zombie sounds, determined by the current zombie
+	gen_sound_thread_safe(sound_id, (sound_pos_bs + get_camera_coord_space_xlate()));
+	register_building_sound(sound_pos_bs, 0.25); // alert other nearby zombies
+	last_sound_tfticks = tfticks;
 }
 
 // gameplay logic
