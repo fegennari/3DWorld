@@ -15,6 +15,8 @@ unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
 colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
 colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
 
+vect_cube_t temp_cubes;
+vector<room_object_t> temp_objects;
 object_model_loader_t building_obj_model_loader;
 
 extern bool camera_in_building;
@@ -37,6 +39,9 @@ tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0) {return tid_nm_pair_t(t
 int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
 int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
+
+vect_cube_t get_temp_cubes() {temp_cubes.clear(); return temp_cubes;}
+vector<room_object_t> &get_temp_objects() {temp_objects.clear(); return temp_objects;}
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
 void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin,
@@ -485,8 +490,19 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 	} // for n
 }
 
+/*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix) {
+	if (drawer_ix&1) {
+		room_object_t box(drawer, TYPE_BOX, c.room_id, c.dim, c.dir);
+		//box.z2() -= 0.2*drawer.dz();
+		box.expand_by(-0.2*drawer.dx(), -0.2*drawer.dy(), -0.1*drawer.dz());
+		//box.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
+		return box;
+	}
+	return room_object_t(); // no item
+}
+
 void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
-	static vect_cube_t drawers; // reused across calls
+	vect_cube_t &drawers(get_temp_cubes());
 	get_drawer_cubes(c, drawers, 1); // front_only=1
 	float const depth(c.get_sz_dim(c.dim)), height(c.dz()), drawer_thick(0.05*height), handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
@@ -495,6 +511,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
+	vector<room_object_t> &objects(get_temp_objects());
 
 	for (auto i = drawers.begin(); i != drawers.end(); ++i) {
 		float const dwidth(i->get_sz_dim(!c.dim)), handle_shrink(0.5*dwidth - handle_width);
@@ -524,6 +541,8 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 			// it would be better to cut a hole into the front of the desk for the drawer to slide into, but that seems to be difficult
 			drawer_mat.add_cube_to_verts(back, drawer_color, tex_origin, get_face_mask(c.dim,c.dir), 1);
 			door_skip_faces_mod = 0; // need to draw interior face
+			room_object_t const obj(get_item_in_drawer(c, drawer_body, (i - drawers.begin())));
+			if (obj.type != TYPE_NONE) {objects.push_back(obj);}
 		}
 		drawer_mat.add_cube_to_verts(*i, drawer_color, tex_origin, door_skip_faces_mod, 1); // swap the texture orientation of drawers to make them stand out more
 		// add door handle
@@ -536,6 +555,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 		handle.z2() = handle.z1() + 0.1*i->dz();
 		handle_mat.add_cube_to_verts(handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
 	} // for i
+	add_small_static_objs_to_verts(objects); // add any objects that were found in open drawers; must be small static objects
 }
 
 tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
@@ -586,8 +606,7 @@ void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) 
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
-	static vect_cube_t cubes;
-	cubes.clear();
+	vect_cube_t &cubes(get_temp_cubes());
 	room_object_t C(c);
 	C.flags |= RO_FLAG_WAS_EXP;
 	C.type   = TYPE_BOX;
@@ -713,8 +732,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 	if (inc_sm /*&& draw_interior*/) { // Note: now always drawn to avoid recreating all small objects when the player opens/closes a closet door
 		// Note: only for the closets the player has manually opened
 		if (!(c.flags & RO_FLAG_EXPANDED)) { // add boxes if not expanded
-			static vector<room_object_t> objects;
-			objects.clear();
+			vector<room_object_t> &objects(get_temp_objects());
 			add_closet_objects(c, objects);
 			add_small_static_objs_to_verts(objects);
 		}
@@ -795,7 +813,7 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.5 : 1.0);
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
-	static vect_cube_t cubes;
+	vect_cube_t &cubes(get_temp_cubes());
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
@@ -959,8 +977,7 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	} // for s
 	// add objects to the shelves
 	if (c.flags & RO_FLAG_EXPANDED) return; // shelves have already been expanded, don't need to create contained objects below
-	static vector<room_object_t> objects;
-	objects.clear();
+	vector<room_object_t> &objects(get_temp_objects());
 	get_shelf_objects(c, shelves, num_shelves, objects);
 	add_small_static_objs_to_verts(objects);
 }
@@ -1628,8 +1645,7 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 		}
 	}
 	if (inc_sm && !(c.flags & RO_FLAG_EXPANDED)) { // add wine bottles if not expanded
-		static vector<room_object_t> objects;
-		objects.clear();
+		vector<room_object_t> &objects(get_temp_objects());
 		add_wine_rack_bottles(c, objects);
 		add_small_static_objs_to_verts(objects);
 	}
@@ -2100,8 +2116,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		faucet2.z1()  = faucet1.z2();
 		faucet2.z2() += 0.035*dz;
 		faucet2.d[c.dim][c.dir] += dir_sign*0.28*sdepth;
-		static vect_cube_t cubes;
-		cubes.clear();
+		vect_cube_t &cubes(get_temp_cubes());
 		subtract_cube_from_cube(top, sink, cubes);
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {top_mat.add_cube_to_verts(*i, top_color, tex_origin);} // should always be 4 cubes
 		colorRGBA const sink_color(apply_light_color(c, GRAY));

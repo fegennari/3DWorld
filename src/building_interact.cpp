@@ -243,7 +243,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		} // for i
 		if (!player_in_closet) {
 			float const drawer_dist((closest_dist_sq == 0.0) ? 2.5*CAMERA_RADIUS : sqrt(closest_dist_sq));
-			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist)) return 0; // drawer is closer - open or close it
+			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist, 0)) return 0; // drawer is closer - open or close it
 		}
 		if (closest_dist_sq == 0.0) return 0; // no door or object found
 	}
@@ -869,27 +869,12 @@ void register_building_sound_for_obj(room_object_t const &obj, point const &pos)
 	register_building_sound(pos, volume);
 }
 
-bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
-	if (!has_room_geom()) return 0;
-	return interior->room_geom->player_pickup_object(*this, at_pos, in_dir);
-}
-bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
-	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS));
-	if (obj_id < 0) return 0; // no object can be picked up
-	room_object_t &obj(get_room_object_by_index(obj_id));
+bool register_player_object_pickup(room_object_t const &obj, point const &at_pos) {
 	bool const can_pick_up(player_inventory.can_pick_up_item(obj));
 
 	if (!do_room_obj_pickup) { // player has not used the pickup key, but we can still use this to notify the player that an object can be picked up
 		can_pickup_bldg_obj = (can_pick_up ? 1 : 2);
 		return 0;
-	}
-	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !(obj.flags & RO_FLAG_EXPANDED))) { // shelves or unexpanded wine rack
-		assert(!(obj.flags & RO_FLAG_EXPANDED)); // should not have been expanded
-		expand_object(obj);
-		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents
-		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
-		if (!picked_up) {create_small_static_vbos(building);} // assumes expanded objects are all "small"
-		return picked_up;
 	}
 	if (!can_pick_up) {
 		std::ostringstream oss;
@@ -900,6 +885,31 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	if (is_consumable(obj)) {gen_sound_thread_safe(SOUND_GULP, get_camera_pos(), 1.0 );}
 	else                    {gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.25);}
 	register_building_sound_for_obj(obj, at_pos);
+	player_inventory.add_item(obj);
+	// TODO: remove item from drawer somehow
+}
+
+bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_dir) {
+	if (!has_room_geom()) return 0;
+	return interior->room_geom->player_pickup_object(*this, at_pos, in_dir);
+}
+bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
+	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS));
+	
+	if (obj_id < 0) { // no object can be picked up
+		return open_nearest_drawer(building, at_pos, in_dir, 2.5*CAMERA_RADIUS, 1); // try objects in drawers; pickup_item=1
+	}
+	room_object_t &obj(get_room_object_by_index(obj_id));
+
+	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !(obj.flags & RO_FLAG_EXPANDED))) { // shelves or unexpanded wine rack
+		assert(!(obj.flags & RO_FLAG_EXPANDED)); // should not have been expanded
+		expand_object(obj);
+		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents
+																			  // if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
+		if (!picked_up) {create_small_static_vbos(building);} // assumes expanded objects are all "small"
+		return picked_up;
+	}
+	if (!register_player_object_pickup(obj, at_pos)) return 0;
 	remove_object(obj_id, building);
 	return 1;
 }
@@ -990,7 +1000,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 	return closest_obj_id;
 }
 
-bool building_room_geom_t::open_nearest_drawer(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) {
+bool building_room_geom_t::open_nearest_drawer(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item) {
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
@@ -1035,6 +1045,12 @@ bool building_room_geom_t::open_nearest_drawer(building_t const &building, point
 	}
 	if (closest_obj_id < 0) return 0; // no drawer
 	unsigned const prev_flags(obj.get_drawer_flags());
+
+	if (pickup_item) { // pick up item in drawer rather than opening drawer
+		room_object_t const obj(get_item_in_drawer(obj, drawers[closest_obj_id], closest_obj_id));
+		if (obj.type == TYPE_NONE) return 0; // no item
+		return register_player_object_pickup(obj, at_pos);
+	}
 	obj.set_drawer_flags(prev_flags ^ (1 << (unsigned)closest_obj_id)); // toggle flag bit for selected drawer
 	//if (!prev_flags) {create_static_vbos(building);} // first open drawer - regenerate front face
 	create_small_static_vbos(building);

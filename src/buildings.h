@@ -503,10 +503,11 @@ struct building_room_geom_t {
 	void expand_closet(room_object_t const &c);
 	void expand_wine_rack(room_object_t const &c);
 	void expand_object(room_object_t &c);
+	static room_object_t get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix);
 	// other functions
 	bool closet_light_is_on(cube_t const &closet) const;
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const;
-	bool open_nearest_drawer(building_t const &building, point const &at_pos, vector3d const &in_dir, float range);
+	bool open_nearest_drawer(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item);
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building);
