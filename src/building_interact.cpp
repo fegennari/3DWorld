@@ -218,15 +218,25 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			// this loop only handles closets with small doors, cube bathroom stalls, and rotated office chairs
-			if (i->type != TYPE_CLOSET && !(i->type == TYPE_STALL && i->shape == SHAPE_CUBE) && !(i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT))) continue;
-			if (i->type == TYPE_CLOSET && !i->is_small_closet()) continue; // not a closet with a small door
-			point center(i->get_cube_center());
-			center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
+			bool keep(0);
+			if (i->type == TYPE_CLOSET && i->is_small_closet()) {keep = 1;} // closet with small door, door can be opened
+			else if (!player_in_closet) {
+				if (i->type == TYPE_TOILET) {keep = 1;} // toilet can be flushed
+				else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE) {keep = 1;} // cube bathroom stall can be opened
+				else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
+			}
+			if (!keep) continue;
+			point center;
+
+			if (i->type == TYPE_CLOSET) {
+				center = i->get_cube_center();
+				center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
+			}
+			else {center = i->closest_pt(closest_to);}
 			if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
 			if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
 			float const dist_sq(p2p_dist_sq(closest_to, center));
-			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq) continue; // not the closest
+			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq)      continue; // not the closest
 			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, dmax)) continue; // door is not in the correct direction or too far away, skip
 			closest_dist_sq = dist_sq; obj_ix = (i - objs.begin());
 			is_obj = 1;
@@ -235,29 +245,34 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 			float const drawer_dist((closest_dist_sq == 0.0) ? 2.5*CAMERA_RADIUS : sqrt(closest_dist_sq));
 			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist)) return 0; // drawer is closer - open or close it
 		}
-		if (closest_dist_sq == 0.0) return 0; // no door found
+		if (closest_dist_sq == 0.0) return 0; // no door or object found
 	}
-	if (is_obj) { // closet or bathroom stall
+	if (is_obj) { // closet, toilet, bathroom stall, or office chair
 		auto &obj(interior->room_geom->objs[obj_ix]);
-
-		if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
-			office_chair_rot_rate += 0.1;
-			obj.flags |= RO_FLAG_ROTATING;
-			// play a sound?
-			return 0; // done, doesn't count as a door
-		}
-		if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} // close
-		else               {obj.flags |=  RO_FLAG_OPEN;} // open
-		interior->room_geom->clear_static_vbos(); // need to regen object data
-		
-		if (obj.type == TYPE_CLOSET) {
-			interior->room_geom->expand_object(obj); // expand any boxes so that the player can pick them up
-			//interior->room_geom->clear_static_small_vbos(); // no longer needed since closet interior is always drawn
-		}
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
-		point const door_center(obj.xc(), obj.yc(), closest_to.z); // generate sound from the player height
-		play_door_open_close_sound(door_center, obj.is_open(), pitch);
-		register_building_sound(door_center, ((obj.type == TYPE_CLOSET) ? 0.25 : 0.5)); // closets are quieter, to allow players to more easily hide
+		point const center(obj.xc(), obj.yc(), closest_to.z); // generate sound from the player height
+
+		if (obj.type == TYPE_TOILET) { // toilet can be flushed, but otherwise is not modified
+			gen_sound_thread_safe(SOUND_FLUSH, (center + get_camera_coord_space_xlate()));
+		}
+		else {
+			if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
+				office_chair_rot_rate += 0.1;
+				obj.flags |= RO_FLAG_ROTATING;
+				// play a sound?
+				return 0; // done, doesn't count as a door
+			}
+			if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} // close
+			else               {obj.flags |=  RO_FLAG_OPEN;} // open
+			interior->room_geom->clear_static_vbos(); // need to regen object data
+		
+			if (obj.type == TYPE_CLOSET) {
+				interior->room_geom->expand_object(obj); // expand any boxes so that the player can pick them up
+				//interior->room_geom->clear_static_small_vbos(); // no longer needed since closet interior is always drawn
+			}
+			play_door_open_close_sound(center, obj.is_open(), pitch);
+		}
+		register_building_sound(center, ((obj.type == TYPE_CLOSET) ? 0.25 : 0.5)); // closets are quieter, to allow players to more easily hide
 	}
 	else {toggle_door_state(door_ix, 1, 1, closest_to.z);} // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
 	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
