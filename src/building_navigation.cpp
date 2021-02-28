@@ -804,17 +804,18 @@ bool has_nearby_sound(pedestrian_t const &person, float floor_spacing) {
 	return get_closest_building_sound(person.pos, sound_pos, floor_spacing);
 }
 
-bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const {
-	if (!can_ai_follow_player(person)) return 0;
-	int const vis_test(global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+bool building_t::same_room_and_floor_as_player(building_ai_state_t const &state, pedestrian_t const &person) const {
+	return (cur_player_building_loc.room_ix == (int)state.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z));
+}
+bool building_t::is_player_visible(building_ai_state_t const &state, pedestrian_t const &person, unsigned vis_test) const {
 	if (vis_test == 0) return 1; // no visibility test
 	building_dest_t const &target(cur_player_building_loc);
 	float const player_radius(get_scaled_player_radius());
 	point const pp2(target.pos - vector3d(0.0, 0.0, camera_zh)); // player's bottom sphere
-	point const eye_pos(person.pos + vector3d(0.0, 0.0, (0.9*person.get_height() - person.radius))); // for person
-	bool const same_room_and_floor(target.room_ix == (int)state.cur_room && target.floor_ix == get_floor_for_zval(person.pos.z));
+	bool const same_room_and_floor(same_room_and_floor_as_player(state, person));
 
 	if (!same_room_and_floor) { // check visibility; assume LOS if in the same room
+		point const eye_pos(person.pos + vector3d(0.0, 0.0, (0.9*person.get_height() - person.radius))); // for person
 		if (!is_sphere_visible(target.pos, player_radius, eye_pos) && !is_sphere_visible(pp2, player_radius, eye_pos)) return 0; // check both the bottom and top of player
 	}
 	if (vis_test >= 2) { // check person FOV
@@ -828,11 +829,15 @@ bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_
 	}
 	return 1;
 }
+bool building_t::can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const {
+	if (!can_ai_follow_player(person)) return 0;
+	return is_player_visible(state, person, global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+}
 
 bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const {
 	if (!global_building_params.ai_target_player || !can_ai_follow_player(person) || !interior) return 0; // disabled
 	building_dest_t const &target(cur_player_building_loc);
-	bool const same_room(target.room_ix == (int)state.cur_room && target.floor_ix == get_floor_for_zval(person.pos.z)); // check room and floor
+	bool const same_room(same_room_and_floor_as_player(state, person)); // check room and floor
 
 	if (global_building_params.ai_player_vis_test == 0) { // the below logic only applies if there's no line of sight test and is an optimization
 		// if the player's room has not changed, and the person is not yet in this room, continue on the same path to the dest room;
@@ -909,7 +914,11 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			person.following_player = 1;
 			choose_dest = 0;
 			speed_mult  = 1.5; // faster when the player is in the same room
-			maybe_play_zombie_sound(person.pos, person_ix);
+			// run logic to play zombie sounds
+			bool play_sound(same_room_and_floor_as_player(state, person)); // always play sound if in the same room and floor
+			if (!play_sound && (person_ix & 1)) {play_sound |= is_player_visible(state, person, 1);} // 50% of zombies use line of sight test
+			if (!play_sound && (person_ix & 2)) {play_sound |= has_nearby_sound(person, get_window_vspace());} // 50% of zombies use sound test
+			if (play_sound) {maybe_play_zombie_sound(person.pos, person_ix);}
 		}
 	}
 	if (choose_dest) { // no current destination, choose a new destination

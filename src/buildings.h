@@ -918,6 +918,8 @@ private:
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - bcube.z1())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
+	bool same_room_and_floor_as_player(building_ai_state_t const &state, pedestrian_t const &person) const;
+	bool is_player_visible(building_ai_state_t const &state, pedestrian_t const &person, unsigned vis_test) const;
 	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	public:
