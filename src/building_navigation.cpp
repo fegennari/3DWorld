@@ -1011,12 +1011,22 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			}
 		} // for i
 	}
-	float const min_valid_zval(bcube.z1() + 0.5f*get_floor_thickness() + person.radius), floor_spacing(get_window_vspace());
+	// logic to clip this person to correct room Z-bounds in case something went wrong; remove if/when this is fixed
+	// Note: we probably can't use the room Z bounds here becase the person may be on the stairs connecting two stacked parts
+	float const min_valid_zval(bcube.z1() + 0.5f*get_floor_thickness() + person.radius), max_valid_zval(bcube.z2() - person.radius), floor_spacing(get_window_vspace());
 
-	if (new_pos.z == person.pos.z) { // movement in XY, not on stairs, snap to nearest floor
-		new_pos.z = round_fp((new_pos.z - min_valid_zval)/floor_spacing)*floor_spacing + min_valid_zval;
+	if (player_in_this_building && !person.on_stairs()) { // movement in XY, not on stairs, snap to nearest floor; this is optional and is done just in case something went wrong
+		assert(state.cur_room < interior->rooms.size());
+		room_t const &room(interior->rooms[state.cur_room]);
+		int cur_floor(max(0, round_fp((new_pos.z - min_valid_zval)/floor_spacing)));
+		min_eq(cur_floor, (round_fp(room.dz()/floor_spacing) - 1)); // clip to the valid floors for this room
+		float const adj_zval(cur_floor*floor_spacing + min_valid_zval);
+		if (fabs(adj_zval - new_pos.z) > 0.1*person.radius) {person.target_pos = all_zeros; state.path.clear();} // if we snap to the floor, reset the target and path
+		new_pos.z = adj_zval;
 	}
 	max_eq(new_pos.z, min_valid_zval); // don't let the person go below the ground floor
+	min_eq(new_pos.z, max_valid_zval); // don't let the person go above the room ceiling
+	// update state
 	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
 	person.anim_time += max_dist;
 	ai_room_lights_update(state, person, people, person_ix); // non-const part
