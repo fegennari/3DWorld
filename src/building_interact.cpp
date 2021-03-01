@@ -28,6 +28,7 @@ extern int window_width, window_height, display_framerate, player_in_closet, fra
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
+extern building_dest_t cur_player_building_loc;
 
 
 void place_player_at_xy(float xval, float yval);
@@ -218,6 +219,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
+			if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix) continue; // object not in the same room as the player
 			bool keep(0);
 			if (i->type == TYPE_CLOSET && i->is_small_closet()) {keep = 1;} // closet with small door, door can be opened
 			else if (!player_in_closet) {
