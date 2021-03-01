@@ -806,7 +806,8 @@ struct building_t : public building_geom_t {
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
 	room_t const &get_room(unsigned room_ix) const {assert(interior && room_ix < interior->rooms.size()); return interior->rooms[room_ix];}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
-	int choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
+	bool choose_dest_goal(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
+	int  choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	bool find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool is_moving_target, bool following_player, vector<point> &path) const;
 	void find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, bool straight_only, int part_ix=-1) const;
 	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor=1);
