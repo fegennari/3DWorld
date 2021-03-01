@@ -851,14 +851,7 @@ bool building_t::need_to_update_ai_path(building_ai_state_t const &state, pedest
 	}
 	//if (same_room && state.path.size() > 1) return 0; // same room but path has a jog, continue on existing path (faster, but slower to adapt to player position change)
 	if (dist_less_than(person.pos, target.pos, person.radius)) return 0; // already close enough
-
-	if (!state.path.empty() || person.pos.z != person.target_pos.z) { // don't update path while on stairs: check for person within stairs bcube
-		for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
-			cube_t stairs_exp(get_stairs_plus_step_up(*s)); // extend by one step to handle final step down
-			stairs_exp.expand_in_dim(s->dim, 1.1*person.radius); // make sure we don't intersect stairs
-			if (stairs_exp.contains_pt(person.pos)) return 0;
-		}
-	}
+	if (person.on_stairs()) return 0; // don't change paths when on the stairs
 	float const floor_spacing(get_window_vspace());
 
 	if (int(target.pos.z/floor_spacing) != int(prev_player_building_loc.pos.z/floor_spacing)) { // if player did not change floors
@@ -969,7 +962,8 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	vector3d const new_dir(person.target_pos - person.pos);
 	float const new_dir_mag(new_dir.mag());
 	point new_pos;
-	
+	if (person.on_stairs()) {person.dir = new_dir.get_norm();} // dir tracks exactly
+
 	if (dot_product(new_dir, person.dir) < 0.999*new_dir_mag) { // dir not perfectly aligned
 		//if (person.is_close_to_player()) {cout << TXT(new_dir.str()) << TXT(person.dir.str()) << TXT(new_dir_mag) << TXT(delta_dir) << TXT(max_dist) << TXT(person.radius) << endl;}
 		assert(new_dir_mag > TOLERANCE); // should be guaranteed by dist_less_than() test, assuming zvals are equal (which they should be)
@@ -985,7 +979,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		new_pos = person.pos + max_dist*person.dir;
 	}
 	// don't do collision detection while on stairs because it doesn't work properly; just let people walk through each other
-	if (fabs(person.pos.z - person.target_pos.z) < 0.01*person.radius) {
+	if (!person.on_stairs()) {
 		for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
 			if (p->dest_bldg != person.dest_bldg) break; // done with this building
 			if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors

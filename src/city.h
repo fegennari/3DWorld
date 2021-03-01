@@ -696,6 +696,7 @@ struct pedestrian_t : public waiting_obj_t {
 	float get_z2     () const {return (get_z1() + get_height());}
 	cube_t get_bcube () const;
 	bool target_valid() const {return (target_pos != all_zeros);}
+	bool on_stairs   () const {return (fabs(pos.z - target_pos.z) > 0.01*radius);} // walking on a slope; allow for some floating-point error
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
 	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);
 	void stop();
