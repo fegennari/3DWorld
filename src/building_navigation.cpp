@@ -546,13 +546,13 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, pedestrian_t &pers
 	unsigned const cand_room(goal.room_ix);
 	room_t const &room(get_room(cand_room)); // target room
 	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) return 0; // unreachable
+	state.cur_room      = loc.room_ix;
 	state.dest_room     = cand_room; // set but not yet used
 	person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
 	person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
 
 	if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
-		room_t const &cur_room(get_room(loc.room_ix));
-
+		//room_t const &room(get_room(loc.room_ix));
 		if (goal.floor_ix < loc.floor_ix) { // try one floor below
 			float const new_z(person.target_pos.z - floor_spacing);
 			if (new_z > room.z1()) {person.target_pos.z = new_z;} // change if there is a floor below
@@ -1029,11 +1029,12 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	// update state
 	person.pos        = new_pos; // Note: new_pos.z should equal person.poz.z unless on stairs, which is difficult to accurately check for in this function
 	person.anim_time += max_dist;
+	if (player_in_this_building) {state.cur_room = get_room_containing_pt(person.pos);} // update cur_room after moving
 	ai_room_lights_update(state, person, people, person_ix); // non-const part
 	return AI_MOVING;
 }
 
-void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t &person, vector<pedestrian_t> const &people, unsigned person_ix) {
+void building_t::ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person, vector<pedestrian_t> const &people, unsigned person_ix) {
 	if (!(display_mode & 0x20)) return; // disabled by default, enable with key '6'
 	if (ai_follow_player() && global_building_params.ai_player_vis_test >= 3) return; // if AI tests that the player is lit, then we shouldn't be turning on and off the lights
 	if ((frame_counter + person_ix) & 7) return; // update room info only every 8 frames
@@ -1057,7 +1058,6 @@ void building_t::ai_room_lights_update(building_ai_state_t &state, pedestrian_t 
 		if (get_room_containing_pt(p.pos) == (int)state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
 	if (!other_person_in_room) {set_room_light_state_to(get_room(state.cur_room), person.pos.z, 0);} // make sure old room light is off
-	state.cur_room = room_ix;
 }
 
 void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const {
