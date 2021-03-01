@@ -962,13 +962,13 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	vector3d const new_dir(person.target_pos - person.pos);
 	float const new_dir_mag(new_dir.mag());
 	point new_pos;
-	if (person.on_stairs()) {person.dir = new_dir.get_norm();} // dir tracks exactly
 
 	if (dot_product(new_dir, person.dir) < 0.999*new_dir_mag) { // dir not perfectly aligned
 		//if (person.is_close_to_player()) {cout << TXT(new_dir.str()) << TXT(person.dir.str()) << TXT(new_dir_mag) << TXT(delta_dir) << TXT(max_dist) << TXT(person.radius) << endl;}
 		assert(new_dir_mag > TOLERANCE); // should be guaranteed by dist_less_than() test, assuming zvals are equal (which they should be)
 		float const step_scale(max(0.1f, dot_product(person.dir, new_dir)/new_dir_mag)); // move more slowly when direction misaligns to avoid overshooting target_pos
 		person.dir = (delta_dir/new_dir_mag)*new_dir + (1.0 - delta_dir)*person.dir; // merge new_dir into dir gradually for smooth turning
+		if (person.on_stairs()) {person.dir.z = new_dir.z/new_dir_mag;} // dir.z tracks exactly
 		person.dir.normalize();
 		new_pos = person.pos + (max_dist*step_scale)*person.dir;
 		cube_t clip_cube(bcube);
