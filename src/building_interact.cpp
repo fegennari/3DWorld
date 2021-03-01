@@ -1189,7 +1189,7 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 	return (max_vol*floor_spacing > 0.06f);
 }
 
-void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix) {
+void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies) {
 	unsigned const NUM_ZSOUNDS = 5;
 	static rand_gen_t rgen;
 	static double next_time_all(0.0), next_times[NUM_ZSOUNDS] = {};
@@ -1201,7 +1201,7 @@ void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix) {
 	next_time_all = tfticks + double(rgen.rand_uniform(0.8, 2.0))*TICKS_PER_SECOND; // next sound of any  type can play between 0.8 and 2.0s in the future
 	next_time     = tfticks + double(rgen.rand_uniform(2.5, 5.0))*TICKS_PER_SECOND; // next sound of this type can play between 2.5 and 5.0s in the future
 	gen_sound_thread_safe((SOUND_ZOMBIE1 + sound_id), (sound_pos_bs + get_camera_coord_space_xlate()));
-	//register_building_sound(sound_pos_bs, 0.2); // alert other nearby zombies?
+	if (alert_other_zombies) {register_building_sound(sound_pos_bs, 0.4);}
 }
 
 // gameplay logic

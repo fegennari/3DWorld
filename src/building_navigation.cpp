@@ -24,7 +24,7 @@ bool in_building_gameplay_mode();
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
 bool can_ai_follow_player(pedestrian_t const &person);
 bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
-void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix);
+void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
@@ -915,10 +915,11 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			choose_dest = 0;
 			speed_mult  = 1.5; // faster when the player is in the same room
 			// run logic to play zombie sounds
-			bool play_sound(same_room_and_floor_as_player(state, person)); // always play sound if in the same room and floor
+			bool const same_room_and_floor(same_room_and_floor_as_player(state, person));
+			bool play_sound(same_room_and_floor); // always play sound if in the same room and floor
 			if (!play_sound && (person_ix & 1)) {play_sound |= is_player_visible(state, person, 1);} // 50% of zombies use line of sight test
 			if (!play_sound && (person_ix & 2)) {play_sound |= has_nearby_sound(person, get_window_vspace());} // 50% of zombies use sound test
-			if (play_sound) {maybe_play_zombie_sound(person.pos, person_ix);}
+			if (play_sound) {maybe_play_zombie_sound(person.pos, person_ix, same_room_and_floor);} // alert other zombies if in the same room and floor as the player
 		}
 	}
 	if (choose_dest) { // no current destination, choose a new destination
