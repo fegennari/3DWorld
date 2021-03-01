@@ -619,6 +619,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PAINTCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 12.0,  8.0,   "paint can");
 	bldg_obj_types[TYPE_LG_BALL   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 15.0,  1.2,   "ball");
 	bldg_obj_types[TYPE_HANGER_ROD] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 10.0,  5.0,   "hanger rod");
+	bldg_obj_types[TYPE_DRAIN     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "drain pipe");
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0, "toilet");
 	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 80.0,  55.0,  "sink");
@@ -766,7 +767,7 @@ public:
 		if (drunk > 0.0) {
 			drunkenness += drunk;
 			oss << ": +" << round_fp(100.0*drunk) << "% Drunkenness";
-			if (drunkenness > 0.99f && (drunkenness - drunk) <= 0.99f) {oss << "\nYou are drunk"; text_color = OLIVE;}
+			if (drunkenness > 0.99f && (drunkenness - drunk) <= 0.99f) {oss << "\nYou are drunk"; text_color = DK_GREEN;}
 		}
 		if (!bladder_was_full && bladder >= 0.9f) {oss << "\nYou need to use the bathroom"; text_color = YELLOW;}
 		print_text_onscreen(oss.str(), text_color, 1.0, 3*TICKS_PER_SECOND, 0);
@@ -1091,7 +1092,18 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		else if (obj.flags & RO_FLAG_TAKEN1) {obj.flags |= RO_FLAG_TAKEN2;} // take dirt
 		else {obj.flags |= RO_FLAG_TAKEN1;} // take plant
 	}
-	else {obj.type = TYPE_BLOCKER; obj.flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);} // replace it with an invisible blocker that won't collide with anything
+	else if (obj.type == TYPE_TOILET || obj.type == TYPE_SINK) { // leave a drain in the floor
+		cube_t drain;
+		drain.set_from_point(point(obj.xc(), obj.yc(), obj.z1()));
+		drain.expand_by_xy(0.065*obj.dz());
+		drain.z2() += 0.02*obj.dz();
+		obj = room_object_t(drain, TYPE_DRAIN, obj.room_id, 0, 0, RO_FLAG_NOCOLL, obj.light_amt, SHAPE_CYLIN, DK_GRAY);
+		create_small_static_vbos(building);
+	}
+	else { // replace it with an invisible blocker that won't collide with anything
+		obj.type  = TYPE_BLOCKER;
+		obj.flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);
+	}
 	if (is_light) {clear_and_recreate_lights();}
 	update_draw_state_for_room_object(old_obj, building);
 }

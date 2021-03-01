@@ -743,6 +743,12 @@ void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=
 	get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(c, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
 }
 
+void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=1
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // unshadowed, small
+	mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0); // draw sides only
+	mat.add_disk_to_verts(point(c.xc(), c.yc(), c.z2()), 0.5*c.dx(), 0, BLACK); // draw top as black
+}
+
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
 
@@ -2512,6 +2518,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_PEN: case TYPE_PENCIL: add_pen_pencil(*i); break;
 		case TYPE_LG_BALL:   add_lg_ball  (*i); break;
 		case TYPE_HANGER_ROD:add_hanger_rod(*i); break;
+		case TYPE_DRAIN:     add_drain_pipe(*i); break;
 		default: break;
 		}
 	} // for i
