@@ -14,7 +14,7 @@ float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but large
 int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 
-extern int frame_counter, display_mode, player_in_closet;
+extern int frame_counter, display_mode, player_in_closet, animate2;
 extern float fticks;
 extern double camera_zh;
 extern building_params_t global_building_params;
@@ -517,12 +517,12 @@ bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, bool front_doo
 
 // Warning: this may be called from a different thread from the one that uses it for AI updates
 void building_t::register_player_in_building(point const &camera_bs, unsigned building_id) const {
-	prev_player_building_loc = cur_player_building_loc;
-	cur_player_building_loc  = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
-	cpbl_update_frame = frame_counter;
+	if (animate2) {prev_player_building_loc = cur_player_building_loc;} // only update previous pos when AI is running so that it doesn's miss a floor or room change
+	cur_player_building_loc = building_dest_t(get_building_loc_for_pt(camera_bs), camera_bs, building_id);
+	cpbl_update_frame       = frame_counter;
 }
 void end_register_player_in_building() {
-	if (cpbl_update_frame != frame_counter) {prev_player_building_loc = cur_player_building_loc = building_dest_t();} // player not in build, reset
+	if (cpbl_update_frame != frame_counter) {prev_player_building_loc = cur_player_building_loc = building_dest_t();} // player not in building, reset
 }
 
 bool building_t::choose_dest_goal(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const {
