@@ -489,11 +489,10 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 	assert(drawer_ix < 16);
 	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
 
-	if (drawer_ix&1) {
-		room_object_t box(drawer, TYPE_BOX, c.room_id, c.dim, c.dir);
-		//box.z2() -= 0.2*drawer.dz();
+	// TODO: add TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_BOOK, TYPE_BOTTLE, cell phone, wallet, money, etc.
+	if (drawer_ix & 1) {
+		room_object_t box(drawer, TYPE_BOX, c.room_id, c.dim, c.dir, RO_FLAG_WAS_EXP);
 		box.expand_by(-0.2*drawer.dx(), -0.2*drawer.dy(), -0.1*drawer.dz());
-		//box.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
 		return box;
 	}
 	return room_object_t(); // no item
