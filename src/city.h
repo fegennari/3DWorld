@@ -681,11 +681,11 @@ struct pedestrian_t : public waiting_obj_t {
 	unsigned plot, next_plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city, model_id, ssn, colliding_ped, cur_rseed;
 	unsigned char stuck_count;
-	bool collided, ped_coll, is_stopped, in_the_road, at_crosswalk, at_dest, has_dest_bldg, has_dest_car, destroyed, in_building, following_player;
+	bool collided, ped_coll, is_stopped, in_the_road, at_crosswalk, at_dest, has_dest_bldg, has_dest_car, destroyed, in_building, following_player, is_on_stairs;
 
 	pedestrian_t(float radius_) : target_pos(all_zeros), dir(zero_vector), vel(zero_vector), pos(all_zeros), radius(radius_), speed(0.0), anim_time(0.0), plot(0), next_plot(0), dest_plot(0),
 		dest_bldg(0), city(0), model_id(0), ssn(0), colliding_ped(0), cur_rseed(1), stuck_count(0), collided(0), ped_coll(0), is_stopped(0), in_the_road(0), at_crosswalk(0), at_dest(0),
-		has_dest_bldg(0), has_dest_car(0), destroyed(0), in_building(0), following_player(0) {}
+		has_dest_bldg(0), has_dest_car(0), destroyed(0), in_building(0), following_player(0), is_on_stairs(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
 	string str() const;
@@ -696,7 +696,8 @@ struct pedestrian_t : public waiting_obj_t {
 	float get_z2     () const {return (get_z1() + get_height());}
 	cube_t get_bcube () const;
 	bool target_valid() const {return (target_pos != all_zeros);}
-	bool on_stairs   () const {return (fabs(pos.z - target_pos.z) > 0.01*radius);} // walking on a slope; allow for some floating-point error
+	//bool on_stairs   () const {return (fabs(pos.z - target_pos.z) > 0.01*radius);} // walking on a slope; allow for some floating-point error
+	bool on_stairs   () const {return is_on_stairs;}
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
 	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);
 	void stop();

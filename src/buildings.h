@@ -669,7 +669,7 @@ struct building_ai_state_t {
 	vector<point> path; // stored backwards, next point on path is path.back()
 
 	building_ai_state_t() : is_first_path(1), on_new_path_seg(0), goal_type(GOAL_TYPE_NONE), cur_room(0), dest_room(0) {}
-	void next_path_pt(pedestrian_t &person, bool same_floor);
+	void next_path_pt(pedestrian_t &person, bool same_floor, bool starting_path);
 };
 
 struct colored_cube_t;

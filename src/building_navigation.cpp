@@ -550,6 +550,7 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, pedestrian_t &pers
 	state.dest_room     = cand_room; // set but not yet used
 	person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
 	person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
+	person.is_on_stairs = 0;
 
 	if (!same_floor) { // allow moving to a different floor, currently only one floor at a time
 		//room_t const &room(get_room(loc.room_ix));
@@ -599,8 +600,9 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 	assert(interior && interior->nav_graph);
 	building_loc_t const loc(get_building_loc_for_pt(person.pos));
 	if (loc.room_ix < 0) return 0; // not in a room
-	state.dest_room   = state.cur_room = loc.room_ix; // set to the same room and pos just in case
-	person.target_pos = person.pos; // set but not yet used
+	state.dest_room     = state.cur_room = loc.room_ix; // set to the same room and pos just in case
+	person.target_pos   = person.pos; // set but not yet used
+	person.is_on_stairs = 0;
 	if (interior->rooms.size() == 1) return 0; // no other room to move to
 	float const floor_spacing(get_window_vspace());
 
@@ -751,9 +753,10 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 	return 1;
 }
 
-void building_ai_state_t::next_path_pt(pedestrian_t &person, bool same_floor) {
+void building_ai_state_t::next_path_pt(pedestrian_t &person, bool same_floor, bool starting_path) {
 	assert(!path.empty());
-	person.target_pos = path.back();
+	person.is_on_stairs = (!same_floor && !starting_path && person.target_pos.z != path.back().z);
+	person.target_pos   = path.back();
 	if (same_floor) {person.target_pos.z = person.pos.z;} // make sure zvals are equal (ignore zval of room center)
 	path.pop_back();
 }
@@ -911,7 +914,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			choose_dest = 1; // or increment person.cur_rseed and return AI_WAITING? or restore person and state to prev values?
 		}
 		else { // success
-			state.next_path_pt(person, stay_on_one_floor);
+			state.next_path_pt(person, stay_on_one_floor, 1);
 			person.following_player = 1;
 			choose_dest = 0;
 			speed_mult  = 1.5; // faster when the player is in the same room
@@ -941,7 +944,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			return AI_WAITING;
 		}
 		state.is_first_path = 0;
-		state.next_path_pt(person, stay_on_one_floor);
+		state.next_path_pt(person, stay_on_one_floor, 1);
 		return AI_BEGIN_PATH;
 	}
 	float const max_dist(person.speed*speed_mult*fticks);
@@ -951,7 +954,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	if (dist_less_than(person.pos, person.target_pos, 1.1f*max_dist)) { // at dest
 		assert(bcube.contains_pt(person.target_pos));
 		person.pos = person.target_pos;
-		if (!state.path.empty()) {state.next_path_pt(person, stay_on_one_floor); return AI_NEXT_PT;} // move to next path point
+		if (!state.path.empty()) {state.next_path_pt(person, stay_on_one_floor, 0); return AI_NEXT_PT;} // move to next path point
 		// don't wait if we can follow the player
 		bool const no_wait(global_building_params.ai_target_player && (can_target_player(state, person) || has_nearby_sound(person, get_window_vspace())));
 		if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, 10.0));} // stop for 1-10 seconds
@@ -1013,11 +1016,13 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	}
 	// logic to clip this person to correct room Z-bounds in case something went wrong; remove if/when this is fixed
 	// Note: we probably can't use the room Z bounds here becase the person may be on the stairs connecting two stacked parts
-	float const min_valid_zval(bcube.z1() + 0.5f*get_floor_thickness() + person.radius), max_valid_zval(bcube.z2() - person.radius), floor_spacing(get_window_vspace());
+	float const min_valid_zval(bcube.z1() + 0.5f*get_floor_thickness() + person.radius), max_valid_zval(bcube.z2() - person.radius);
 
-	if (player_in_this_building && !person.on_stairs()) { // movement in XY, not on stairs, snap to nearest floor; this is optional and is done just in case something went wrong
+	if (player_in_this_building && !person.on_stairs()) { // movement in XY, not on stairs, snap to nearest floor
+		// this is optional and is done just in case something went wrong
 		assert(state.cur_room < interior->rooms.size());
 		room_t const &room(interior->rooms[state.cur_room]);
+		float const floor_spacing(get_window_vspace());
 		int cur_floor(max(0, round_fp((new_pos.z - min_valid_zval)/floor_spacing)));
 		min_eq(cur_floor, (round_fp(room.dz()/floor_spacing) - 1)); // clip to the valid floors for this room
 		float const adj_zval(cur_floor*floor_spacing + min_valid_zval);
