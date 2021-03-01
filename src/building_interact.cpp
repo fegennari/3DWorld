@@ -825,7 +825,7 @@ public:
 		if (!in_building_gameplay_mode()) return;
 		// handle player fall damage logic
 		point const camera_pos(get_camera_pos());
-		float const fall_damage_start(5.0*CAMERA_RADIUS); // should be a function of building floor spacing?
+		float const fall_damage_start(3.0*CAMERA_RADIUS); // should be a function of building floor spacing?
 		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
 		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start && camera_in_building) {
