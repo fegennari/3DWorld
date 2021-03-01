@@ -2010,26 +2010,37 @@ public:
 		}
 	}
 
+	struct building_ai_cand_t {
+		unsigned bix, num;
+		bool is_house;
+		building_ai_cand_t(unsigned b, bool h) : bix(b), num(0), is_house(h) {}
+	};
+
 	bool place_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
 		assert(locs.empty());
 		if (num == 0 || empty() || !ADD_BUILDING_INTERIORS) return 0; // no people, buildings, or interiors
-		vector<unsigned> cand_buildings;
+		vector<building_ai_cand_t> cand_buildings; // {building_ix, is_house}
 
 		for (unsigned i = 0; i < buildings.size(); ++i) {
 			building_t const &b(buildings[i]);
 			if (!b.interior) continue;
-			unsigned const num_add(b.is_house ? 1 : 2); // two chances for office building compare to house (could vary by size/num_floors as well)
-			for (unsigned n = 0; n < num_add; ++n) {cand_buildings.push_back(i);}
+			unsigned const num_add(b.is_house ? 1 : 2); // two chances for office building compared to house (could vary by size/num_floors as well)
+			for (unsigned n = 0; n < num_add; ++n) {cand_buildings.emplace_back(i, b.is_house);}
 		}
 		if (cand_buildings.empty()) return 0; // no interiors
 		locs.reserve(num);
 		rand_gen_t rgen2; // Note: we could also use our rgen member variable
+		unsigned tries(0);
 
 		for (unsigned n = 0; n < num; ++n) {
-			point ppos;
-			unsigned const bix(cand_buildings[rgen2.rand() % cand_buildings.size()]);
-			if (buildings[bix].place_person(ppos, radius, rgen2)) {locs.emplace_back(ppos, bix);}
-		}
+			for (unsigned attempts = 0; attempts < 5; ++attempts) { // make up to 5 attempts to choose a building
+				point ppos;
+				building_ai_cand_t &chosen(cand_buildings[rgen2.rand() % cand_buildings.size()]);
+				++tries;
+				if (attempts < 3 && chosen.is_house && chosen.num >= 4) continue; // try another building if this is a house and already has > 4 people in it
+				if (buildings[chosen.bix].place_person(ppos, radius, rgen2)) {locs.emplace_back(ppos, chosen.bix); ++chosen.num; break;}
+			}
+		} // for n
 		if (locs.empty()) return 0;
 		sort(locs.begin(), locs.end());
 		peds_by_bix.resize(buildings.size(), -1);
