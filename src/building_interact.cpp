@@ -14,7 +14,7 @@ float const OBJ_DECELERATE = 0.008;
 float const OBJ_GRAVITY    = 0.0003;
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
-float const ALERT_THRESH   = 0.1; // min sound alert level for AIs
+float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 
 bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0);
 int can_pickup_bldg_obj(0);
@@ -1159,7 +1159,15 @@ void register_building_sound(point const &pos, float volume) {
 	assert(volume > 0.0); // can't be negative
 #pragma omp critical(building_sounds_update)
 	{ // since this can be called by both the draw thread and the AI update thread, it should be in a critical section
-		if (volume > ALERT_THRESH && cur_sounds.size() < 100) {cur_sounds.emplace_back(pos, volume);} // cap at 100 sounds in case they're not being cleared
+		if (volume > ALERT_THRESH && cur_sounds.size() < 100) { // cap at 100 sounds in case they're not being cleared
+			float const max_merge_dist(0.5*CAMERA_RADIUS);
+			bool merged(0);
+
+			for (auto i = cur_sounds.begin(); i != cur_sounds.end(); ++i) { // attempt to merge with an existing nearby sound
+				if (dist_less_than(pos, i->pos, max_merge_dist)) {i->radius += volume; merged = 1;}
+			}
+			if (!merged) {cur_sounds.emplace_back(pos, volume);} // Note: volume is stored in radius field of sphere_t
+		}
 		cur_building_sound_level += volume;
 	}
 }
