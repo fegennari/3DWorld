@@ -15,5 +15,7 @@ Cities:
 - Secondary Building roads
 
 Buildings:
+* Drug effects: Blurry/DOF, double vision, blind
+* Add keys
 * Add objects to dresser drawers
 * Gameplay mode for TT buildings

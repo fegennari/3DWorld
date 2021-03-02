@@ -13,7 +13,8 @@ extern building_params_t global_building_params;
 
 void building_t::add_interior_door(door_t &door) {
 	assert(interior);
-	door.open = (fract(interior->doors.size()*123.456) < global_building_params.open_door_prob);
+	door.open   = (fract(interior->doors.size()*1.618034) < global_building_params.open_door_prob);
+	door.locked = (!door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob);
 	if (!SPLIT_DOOR_PER_FLOOR) {interior->doors.push_back(door); return;} // add a single door across all floors
 	float const floor_spacing(get_window_vspace()), door_height(floor_spacing - get_floor_thickness());
 

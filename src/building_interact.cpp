@@ -36,6 +36,7 @@ void get_chair_cubes(room_object_t const &c, cube_t cubes[3]);
 void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only);
 room_object_t get_dresser_middle(room_object_t const &c);
 room_object_t get_desk_drawers_part(room_object_t const &c);
+bool player_can_unlock_door();
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -276,7 +277,10 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		}
 		register_building_sound(center, ((obj.type == TYPE_CLOSET) ? 0.25 : 0.5)); // closets are quieter, to allow players to more easily hide
 	}
-	else {toggle_door_state(door_ix, 1, 1, closest_to.z);} // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
+	else { // interior door
+		if (interior->doors[door_ix].locked && !player_can_unlock_door()) return 0; // locked
+		toggle_door_state(door_ix, 1, 1, closest_to.z); // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
+	}
 	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	return 1;
 }
@@ -707,7 +711,7 @@ bool is_consumable(room_object_t const &obj) {
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
 	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
-	bool prev_in_building;
+	bool prev_in_building, has_key;
 
 	void register_player_death(unsigned sound_id, std::string const &why) {
 		point const xlate(get_camera_coord_space_xlate());
@@ -717,14 +721,14 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		clear(); // respawn
 	}
 public:
-	player_inventory_t() : best_value(0.0) {clear();}
+	player_inventory_t() : best_value(0.0), has_key(0) {clear();}
 
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
 		cur_value     = cur_weight = tot_value = tot_weight = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
-		prev_in_building = 0;
+		prev_in_building = has_key = 0;
 		carried.clear();
 	}
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
@@ -733,6 +737,12 @@ public:
 	float get_speed_mult () const {return (1.0f - 0.4f*get_carry_weight_ratio())*((bladder > 0.9) ? 0.6 : 1.0);} // 40% reduction for heavy load, 40% reduction for full bladder
 	float get_drunkenness() const {return drunkenness;}
 
+	bool can_unlock_door() const {
+		if (has_key) return 1;
+		print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
+		gen_sound_thread_safe(SOUND_CLICK, get_camera_pos(), 1.0);
+		return 0;
+	}
 	void add_item(room_object_t const &obj) {
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
 		bool const bladder_was_full(bladder >= 0.9);
@@ -790,6 +800,7 @@ public:
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
 		tot_value  += cur_value;  cur_value  = 0.0;
 		tot_weight += cur_weight; cur_weight = 0.0;
+		has_key = 0; // key only good for current building
 		carried.clear(); // or add to collected?
 		oss << "Total value $" << tot_value << " Total weight " << tot_weight << " lbs";
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
@@ -870,6 +881,7 @@ player_inventory_t player_inventory;
 
 float get_player_drunkenness() {return player_inventory.get_drunkenness();}
 float get_player_building_speed_mult() {return player_inventory.get_speed_mult();}
+bool player_can_unlock_door() {return player_inventory.can_unlock_door();}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound

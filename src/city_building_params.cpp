@@ -399,6 +399,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "open_door_prob") {
 		if (!read_float(fp, global_building_params.open_door_prob)) {buildings_file_err(str, error);}
 	}
+	else if (str == "locked_door_prob") {
+	if (!read_float(fp, global_building_params.locked_door_prob)) {buildings_file_err(str, error);}
+	}
 	else if (str == "basement_prob") {
 		if (!read_float(fp, global_building_params.basement_prob)) {buildings_file_err(str, error);}
 	}

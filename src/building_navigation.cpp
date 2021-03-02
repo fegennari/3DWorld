@@ -459,7 +459,7 @@ void building_t::build_nav_graph() const {
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
 		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
-			if (!d->open && global_building_params.ai_opens_doors < 2) continue; // door starts off closed, treat it as a barrier for now and don't connect the rooms
+			if (!d->open && (d->locked || global_building_params.ai_opens_doors < 2)) continue; // door starts off closed/locked, treat it as a barrier for now and don't connect the rooms
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
 			cube_t dc(*d);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
@@ -471,7 +471,7 @@ void building_t::build_nav_graph() const {
 		for (unsigned s = 0; s < num_stairs; ++s) { // stairs
 			stairwell_t const &stairwell(interior->stairwells[s]);
 
-			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors
+			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors; doors on stairs can't be locked
 				assert((unsigned)stairwell.stairs_door_ix < interior->doors.size());
 				if (!interior->doors[stairwell.stairs_door_ix].open) continue; // stairs blocked by closed door, don't connect
 			}
@@ -998,7 +998,8 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	bool const might_have_closed_door(global_building_params.open_door_prob < 1.0 || (player_in_this_building && has_basement()));
 
 	if (interior->door_state_updated || (global_building_params.ai_opens_doors == 2 && might_have_closed_door)) {
-		// check for any doors the player has closed; this can be slow, so we only enable it for buildings where the player changed the door state, or when the AI can open all doors
+		// check for any doors that started open or the player has closed;
+		// this can be slow, so we only enable it for buildings where the player changed the door state, or when the AI can open all doors
 		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 			if (i->open) continue; // doors tend to block the player, don't collide with them unless they're closed
 			if (new_pos.z < i->z1() || new_pos.z > i->z2())         continue; // wrong part/floor
@@ -1007,7 +1008,9 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
 			if (!door.line_intersects(person.pos, person.target_pos)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
 
-			if (global_building_params.ai_opens_doors) {toggle_door_state((i - interior->doors.begin()), player_in_this_building, 0, person.pos.z);} // by_player=0
+			if (global_building_params.ai_opens_doors && !i->locked) {
+				toggle_door_state((i - interior->doors.begin()), player_in_this_building, 0, person.pos.z); // by_player=0
+			}
 			else {
 				person.wait_for(5.0); // wait for 5s and then choose a new desination
 				return AI_WAITING; // cut the path short at this closed door

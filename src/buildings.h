@@ -154,7 +154,7 @@ struct building_params_t {
 	unsigned num_place, num_tries, cur_prob, max_shadow_maps;
 	float ao_factor, sec_extra_spacing, player_coll_radius_scale;
 	float window_width, window_height, window_xspace, window_yspace; // windows
-	float wall_split_thresh, max_fp_wind_xscale, max_fp_wind_yscale, open_door_prob, basement_prob, ball_prob; // interiors
+	float wall_split_thresh, max_fp_wind_xscale, max_fp_wind_yscale, open_door_prob, locked_door_prob, basement_prob, ball_prob; // interiors
 
 	// building AI params
 	bool ai_target_player, ai_follow_player;
@@ -173,8 +173,8 @@ struct building_params_t {
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), dome_roof(0),
 		onion_roof(0), enable_people_ai(0), add_city_interiors(0), enable_rotated_room_geom(0), num_place(num), num_tries(10), cur_prob(1),
 		max_shadow_maps(32), ao_factor(0.0), sec_extra_spacing(0.0), player_coll_radius_scale(1.0), window_width(0.0), window_height(0.0), window_xspace(0.0),
-		window_yspace(0.0), wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), open_door_prob(1.0), basement_prob(0.5), ball_prob(0.3),
-		ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), player_weight_limit(100.0), range_translate(zero_vector) {}
+		window_yspace(0.0), wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), open_door_prob(1.0), locked_door_prob(0.0), basement_prob(0.5),
+		ball_prob(0.3), ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), player_weight_limit(100.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}
@@ -590,9 +590,10 @@ struct stairwell_t : public cube_t, public stairs_landing_base_t {
 typedef vector<stairwell_t> vect_stairwell_t;
 
 struct door_t : public cube_t {
-	bool dim, open_dir, open, on_stairs;
-	door_t() : dim(0), open_dir(0), open(0), on_stairs(0) {}
-	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0) : cube_t(c), dim(dim_), open_dir(dir), open(open_), on_stairs(os) {assert(is_strictly_normalized());}
+	bool dim, open_dir, open, locked, on_stairs;
+	door_t() : dim(0), open_dir(0), open(0), locked(0), on_stairs(0) {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0) :
+		cube_t(c), dim(dim_), open_dir(dir), open(open_), locked(0), on_stairs(os) {assert(is_strictly_normalized());}
 };
 typedef vector<door_t> vect_door_t;
 
