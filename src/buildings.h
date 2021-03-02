@@ -249,7 +249,7 @@ enum {
 	TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_NIGHTSTAND, TYPE_FLOORING, TYPE_CLOSET,
 	TYPE_WALL_TRIM, TYPE_RAILING, TYPE_CRATE, TYPE_BOX, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_SHOWER, TYPE_RDESK, TYPE_BOTTLE,
 	TYPE_WINE_RACK, TYPE_COMPUTER, TYPE_MWAVE, TYPE_PAPER, TYPE_BLINDS, TYPE_PEN, TYPE_PENCIL, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_HANGER_ROD,
-	TYPE_DRAIN,
+	TYPE_DRAIN, TYPE_KEY,
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, NUM_ROBJ_TYPES};
@@ -389,7 +389,7 @@ public:
 	unsigned get_tot_vert_count() const {return (num_qverts + num_itverts);}
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
-	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin,
+	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin=all_zeros,
 		unsigned skip_faces=0, bool swap_tex_st=0, bool mirror_x=0, bool mirror_y=0, bool inverted=0);
 	void add_ortho_cylin_to_verts(cube_t const &c, colorRGBA const &color, int dim, bool draw_bot, bool draw_top, bool two_sided=0, bool inv_tb=0,
 		float rs_bot=1.0, float rs_top=1.0, float side_tscale=1.0, float end_tscale=1.0, bool skip_sides=0, unsigned ndiv=N_CYL_SIDES, float side_tscale_add=0.0, bool swap_txy=0);
@@ -476,6 +476,7 @@ struct building_room_geom_t {
 	void add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm);
 	void add_hanger_rod(room_object_t const &c);
 	void add_drain_pipe(room_object_t const &c);
+	void add_key(room_object_t const &c);
 	void add_crate(room_object_t const &c);
 	void add_box(room_object_t const &c);
 	void add_paint_can(room_object_t const &c);

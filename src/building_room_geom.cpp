@@ -489,7 +489,7 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 	assert(drawer_ix < 16);
 	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
 
-	// TODO: add TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_BOOK, TYPE_BOTTLE, cell phone, wallet, money, etc.
+	// TODO: add TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_BOOK, TYPE_BOTTLE, TYPE_KEY, cell phone, wallet, money, etc.
 	if (drawer_ix & 1) {
 		room_object_t box(drawer, TYPE_BOX, c.room_id, c.dim, c.dir, RO_FLAG_WAS_EXP);
 		box.expand_by(-0.2*drawer.dx(), -0.2*drawer.dy(), -0.1*drawer.dz());
@@ -746,6 +746,11 @@ void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // unshadowed, small
 	mat.add_vcylin_to_verts(c, apply_light_color(c), 0, 0); // draw sides only
 	mat.add_disk_to_verts(point(c.xc(), c.yc(), c.z2()), 0.5*c.dx(), 0, BLACK); // draw top as black
+}
+
+void building_room_geom_t::add_key(room_object_t const &c) { // is_small=1
+	rgeom_mat_t &key_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
+	key_mat.add_cube_to_verts(c, apply_light_color(c)); // TODO: make thisa key shape
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -2518,6 +2523,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_LG_BALL:   add_lg_ball  (*i); break;
 		case TYPE_HANGER_ROD:add_hanger_rod(*i); break;
 		case TYPE_DRAIN:     add_drain_pipe(*i); break;
+		case TYPE_KEY:       add_key       (*i); break;
 		default: break;
 		}
 	} // for i

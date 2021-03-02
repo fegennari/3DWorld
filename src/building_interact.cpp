@@ -626,6 +626,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_LG_BALL   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 15.0,  1.2,   "ball");
 	bldg_obj_types[TYPE_HANGER_ROD] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 10.0,  5.0,   "hanger rod");
 	bldg_obj_types[TYPE_DRAIN     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "drain pipe");
+	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key");
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0, "toilet");
 	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 80.0,  55.0,  "sink");
@@ -744,6 +745,7 @@ public:
 		return 0;
 	}
 	void add_item(room_object_t const &obj) {
+		if (obj.type == TYPE_KEY) {has_key = 1;}
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
 		bool const bladder_was_full(bladder >= 0.9);
 		colorRGBA text_color(GREEN);
