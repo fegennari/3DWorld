@@ -1392,6 +1392,9 @@
     <None Include="shaders\mirror_reflection.frag">
       <Filter>Shaders\frag</Filter>
     </None>
+    <None Include="shaders\double_vision.frag">
+      <Filter>Shaders\frag\Fullscreen</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">
