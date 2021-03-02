@@ -58,7 +58,7 @@ tile_offset_t model3d_offset;
 vector<clear_area_t> tile_smaps_to_clear;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
-extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, player_in_basement;
+extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, player_in_basement;
 extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt, num_rnd_grass_blocks;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv, draw_model;
@@ -3407,7 +3407,10 @@ void render_tt_models(int reflection_pass, bool transparent_pass) {
 void draw_tiled_terrain(int reflection_pass) {
 
 	//RESET_TIME;
+	bool const disable_depth_clamp(enable_depth_clamp && !reflection_pass && camera_in_building); // helps with terrain covering basement stairs entrance
+	if (disable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	terrain_tile_draw.draw(reflection_pass);
+	if (disable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // restore
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	if (reflection_pass) return; // nothing else to do
 
