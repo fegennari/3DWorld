@@ -456,7 +456,7 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
 	float const row_spacing(height/num_rows), door_thick(0.05*height), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0);
-	float const drawer_extend(((c.type == TYPE_DESK) ? 0.4 : 0.7)*dir_sign*depth);
+	float const drawer_extend(((c.type == TYPE_DESK) ? 0.5 : 0.8)*dir_sign*depth);
 	cube_t d_row(c);
 	d_row.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir];
 	d_row.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
@@ -488,14 +488,34 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 /*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix) {
 	assert(drawer_ix < 16);
 	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
+	vector3d const sz(drawer.get_size());
+	cube_t inside(drawer);
+	inside.z1() += (0.2/0.9)*sz.z; // place on bottom surface
+	rand_gen_t rgen;
+	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
+	unsigned const type_ix(rgen.rand() % 10); // 0-9
+	room_object_t obj; // starts as no item
 
 	// TODO: add TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_BOOK, TYPE_BOTTLE, TYPE_KEY, cell phone, wallet, money, etc.
-	if (drawer_ix & 1) {
-		room_object_t box(drawer, TYPE_BOX, c.room_id, c.dim, c.dir, RO_FLAG_WAS_EXP);
-		box.expand_by(-0.2*drawer.dx(), -0.2*drawer.dy(), -0.1*drawer.dz());
-		return box;
+	switch (type_ix) {
+	case 0: case 2: case 3: case 4: // box - common
+		obj = room_object_t(inside, TYPE_BOX, c.room_id, rgen.rand_bool(), rgen.rand_bool());
+		
+		for (unsigned d = 0; d < 2; ++d) {
+			obj.d[d][0] += rgen.rand_uniform(0.1, 0.3)*sz[d];
+			obj.d[d][1] -= rgen.rand_uniform(0.1, 0.3)*sz[d];
+		}
+		obj.z2() -= rgen.rand_uniform(0.1, 0.5)*sz.z;
+		break;
+	case 5: // key - rare
+		obj = room_object_t(inside, TYPE_KEY, c.room_id, rgen.rand_bool(), rgen.rand_bool());
+		obj.expand_in_dim( obj.dim, -0.40*sz[ obj.dim]); // long  dim
+		obj.expand_in_dim(!obj.dim, -0.46*sz[!obj.dim]); // short dim
+		obj.z2() = obj.z1() + 0.05*sz.z;
+		break;
 	}
-	return room_object_t(); // no item
+	obj.flags |= RO_FLAG_WAS_EXP;
+	return obj;
 }
 
 void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
