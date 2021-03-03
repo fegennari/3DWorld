@@ -235,8 +235,10 @@ void run_postproc_effects() {
 			}
 		}
 	}
-	if (drunkenness > 0.5) {
-		add_color_only_effect("drunken_wave", 1.0f*(drunkenness - 0.5f));
+	if (drunkenness > 0.5) { // at least slightly drunk
+		if (drunkenness > 1.5) {add_2d_blur();} // very drunk
+		if (drunkenness > 1.0) {add_color_only_effect("double_vision", 0.5f*(drunkenness - 1.0f));} // moderately drunk
+		add_color_only_effect("drunken_wave", 1.0f*(min(drunkenness, 1.25f) - 0.5f));
 	}
 	else if (camera_underwater) {
 		//add_color_only_effect("screen_space_blur");
