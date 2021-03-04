@@ -925,7 +925,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		assert(!(obj.flags & RO_FLAG_EXPANDED)); // should not have been expanded
 		expand_object(obj);
 		bool const picked_up(player_pickup_object(building, at_pos, in_dir)); // call recursively on contents
-																			  // if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
+		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
 		if (!picked_up) {create_small_static_vbos(building);} // assumes expanded objects are all "small"
 		return picked_up;
 	}
@@ -1021,7 +1021,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 	return closest_obj_id;
 }
 
-bool building_room_geom_t::open_nearest_drawer(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item) {
+bool building_room_geom_t::open_nearest_drawer(building_t &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item) {
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
@@ -1073,14 +1073,16 @@ bool building_room_geom_t::open_nearest_drawer(building_t const &building, point
 		if (!register_player_object_pickup(item, at_pos)) return 0;
 		obj.item_flags |= (1U << closest_obj_id); // flag item as taken
 		player_inventory.add_item(item);
+		update_draw_state_for_room_object(item, building);
 	}
 	else { // open or close the drawer
 		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
 		point const drawer_center(drawers[closest_obj_id].get_cube_center());
 		gen_sound_thread_safe(SOUND_SLIDING, (drawer_center + get_camera_coord_space_xlate()), 0.5);
 		register_building_sound(drawer_center, 0.4);
+		create_small_static_vbos(building);
+		//modified_by_player = 1; // ???
 	}
-	create_small_static_vbos(building);
 	return 1;
 }
 
