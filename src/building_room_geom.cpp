@@ -496,21 +496,22 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 	unsigned const type_ix(rgen.rand() % 10); // 0-9
 	room_object_t obj; // starts as no item
 
-	// TODO: add TYPE_BOX, TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_BOOK, TYPE_BOTTLE, TYPE_KEY, cell phone, wallet, money, etc.
+	// TODO: add TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_BOOK, TYPE_BOTTLE, cell phone, wallet, money, etc.
 	switch (type_ix) {
 	case 0: case 2: case 3: case 4: // box - common
 		obj = room_object_t(inside, TYPE_BOX, c.room_id, rgen.rand_bool(), rgen.rand_bool());
 		
 		for (unsigned d = 0; d < 2; ++d) {
-			obj.d[d][0] += rgen.rand_uniform(0.1, 0.3)*sz[d];
-			obj.d[d][1] -= rgen.rand_uniform(0.1, 0.3)*sz[d];
+			obj.d[d][0] += rgen.rand_uniform(0.1, 0.4)*sz[d];
+			obj.d[d][1] -= rgen.rand_uniform(0.1, 0.4)*sz[d];
 		}
-		obj.z2() -= rgen.rand_uniform(0.1, 0.5)*sz.z;
+		obj.z2() -= rgen.rand_uniform(0.1, 0.6)*sz.z;
 		break;
 	case 5: // key - rare
 		obj = room_object_t(inside, TYPE_KEY, c.room_id, rgen.rand_bool(), rgen.rand_bool());
 		obj.expand_in_dim( obj.dim, -0.40*sz[ obj.dim]); // long  dim
 		obj.expand_in_dim(!obj.dim, -0.46*sz[!obj.dim]); // short dim
+		for (unsigned d = 0; d < 2; ++d) {obj.translate_dim(d, 0.4*sz[d]*rgen.rand_uniform(-1.0, 1.0));}
 		obj.z2() = obj.z1() + 0.05*sz.z;
 		break;
 	}
