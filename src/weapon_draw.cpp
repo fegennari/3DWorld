@@ -983,6 +983,16 @@ void draw_inventory() {
 	}
 }
 
+void draw_qbd_with_textured_shader(quad_batch_draw const &qbd, int tid) {
+
+	select_texture(tid);
+	shader_t s;
+	s.begin_simple_textured_shader(); // no lighting
+	glDisable(GL_DEPTH_TEST);
+	qbd.draw();
+	glEnable(GL_DEPTH_TEST);
+}
+
 void show_player_keycards() {
 
 	if (spectate) return; // onlys show if player is alive and playing
@@ -990,18 +1000,21 @@ void show_player_keycards() {
 	set<unsigned> const &keycards(sstates[CAMERA_ID].keycards);
 	if (keycards.empty()) return;
 	float const ar(float(window_width)/float(window_height)), dx(0.006*ar), quad_sz_x(0.35*dx), quad_sz_y(0.7*quad_sz_x), x0(0.052*ar);
-	point pos(x0, 0.052, -10.0*NEAR_CLIP); // top right, extending left
-	shader_t s;
-	s.begin_simple_textured_shader(); // no lighting
+	point pos(x0, 0.052, -10.0*DEF_NEAR_CLIP); // top right, extending left
 	quad_batch_draw qbd;
 
 	for (auto i = keycards.begin(); i != keycards.end(); ++i) {
 		qbd.add_quad_dirs(pos, quad_sz_x*plus_x, quad_sz_y*plus_y, get_keycard_color(*i));
 		pos.x -= dx;
 	}
-	select_texture(KEYCARD_TEX);
-	glDisable(GL_DEPTH_TEST);
-	qbd.draw();
-	glEnable(GL_DEPTH_TEST);
+	draw_qbd_with_textured_shader(qbd, KEYCARD_TEX);
+}
+
+void show_key_icon() {
+
+	float const ar(float(window_width)/float(window_height)), dx(0.006*ar), quad_sz_x(0.35*dx), quad_sz_y(0.5*quad_sz_x), x0(0.052*ar);
+	quad_batch_draw qbd;
+	qbd.add_quad_dirs(point(x0, 0.052, -10.0*DEF_NEAR_CLIP), quad_sz_x*plus_x, quad_sz_y*plus_y, WHITE); // top right
+	draw_qbd_with_textured_shader(qbd, get_texture_by_name("interiors/key.png"));
 }
 

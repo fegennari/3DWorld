@@ -37,6 +37,7 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 room_object_t get_dresser_middle(room_object_t const &c);
 room_object_t get_desk_drawers_part(room_object_t const &c);
 bool player_can_unlock_door();
+void show_key_icon();
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -834,6 +835,7 @@ public:
 		if (in_building_gameplay_mode()) {
 			// Note: shields is used for drunkenness; values are scaled from 0-1 to 0-100; powerup values are for bladder fullness
 			draw_health_bar(100.0*player_health, 100.0*drunkenness, bladder, YELLOW, get_carry_weight_ratio(), WHITE);
+			if (has_key) {show_key_icon();}
 		}
 	}
 	void next_frame() {
