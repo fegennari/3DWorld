@@ -11,19 +11,20 @@ bool city_model_t::read(FILE *fp, bool is_helicopter) {
 
 	// filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult <blade_mat_id for helicopter> [shadow_mat_ids]
 	assert(fp);
-	unsigned line_num(0); // unused
+	unsigned line_num(0), swap_xyz(0), shadow_mat_id(0); // Note: line_num is unused
 	fn = read_quoted_string(fp, line_num);
 	if (fn.empty()) return 0;
 	if (!read_int(fp, recalc_normals)) return 0; // 0,1,2
 	if (!read_int(fp, body_mat_id))    return 0;
 	if (!read_int(fp, fixed_color_id)) return 0;
-	if (!read_float(fp, xy_rot)) return 0;
-	if (!read_bool(fp, swap_yz)) return 0;
-	if (!read_float(fp, scale))  return 0;
+	if (!read_float(fp, xy_rot))  return 0;
+	if (!read_uint(fp, swap_xyz)) return 0; // {swap none, swap Y with Z, swap X with Z}
+	if (!read_float(fp, scale))   return 0;
 	if (!read_float(fp, lod_mult) || lod_mult < 0.0)  return 0;
 	if (is_helicopter && !read_int(fp, blade_mat_id)) return 0;
-	unsigned shadow_mat_id(0);
 	while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
+	swap_xz = bool(swap_xyz & 2);
+	swap_yz = bool(swap_xyz & 1);
 	valid = 1; // success
 	return 1;
 }
@@ -42,6 +43,7 @@ vector3d city_model_loader_t::get_model_world_space_size(unsigned id) { // Note:
 	if (!is_model_valid(id)) return zero_vector; // error?
 	city_model_t const &model_file(get_model(id));
 	vector3d sz(at(id).get_bcube().get_size());
+	if (model_file.swap_xz) {std::swap(sz.x, sz.z);}
 	if (model_file.swap_yz) {std::swap(sz.y, sz.z);}
 	if (round_fp(model_file.xy_rot/90.0) & 1) {std::swap(sz.x, sz.y);} // swap x/y for 90 and 270 degree rotations
 	return sz;
@@ -106,12 +108,12 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 	// Note: in model space, front-back=z, left-right=x, top-bot=y (for model_file.swap_yz=1)
 	float const sz_scale(obj_bcube.get_size().sum() / bcube.get_size().sum());
-	float const height(model_file.swap_yz ? bcube.dy() : bcube.dz());
+	float const height(model_file.swap_xz ? bcube.dx() : (model_file.swap_yz ? bcube.dy() : bcube.dz()));
 	float const z_offset(0.5*height - (pos.z - obj_bcube.z1())/sz_scale); // translate required to map bottom of model to bottom of obj_bcube post transform
 	
 	if (enable_animations) {
 		s.add_uniform_float("animation_scale",    model_file.scale/sz_scale); // Note: determined somewhat experimentally
-		s.add_uniform_float("model_delta_height", (0.1*height + (model_file.swap_yz ? bcube.y1() : bcube.z1())));
+		s.add_uniform_float("model_delta_height", (0.1*height + (model_file.swap_xz ? bcube.x1() : (model_file.swap_yz ? bcube.y1() : bcube.z1()))));
 	}
 	fgPushMatrix();
 	translate_to(pos + vector3d(0.0, 0.0, z_offset*sz_scale)); // z_offset is in model space, scale to world space
@@ -119,6 +121,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	else if (dir.x < 0.0) {fgRotate(180.0, 0.0, 0.0, 1.0);}
 	if (dir.z != 0.0) {fgRotate(TO_DEG*asinf(-dir.z), 0.0, 1.0, 0.0);} // handle cars on a slope
 	if (model_file.xy_rot != 0.0) {fgRotate(model_file.xy_rot, 0.0, 0.0, 1.0);} // apply model rotation about z/up axis (in degrees)
+	if (model_file.swap_xz) {fgRotate(90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
 	if (model_file.swap_yz) {fgRotate(90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
 	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
 	translate_to(-bcube.get_cube_center()); // cancel out model local translate

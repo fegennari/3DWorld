@@ -59,7 +59,7 @@ city traffic_balance_val 0.9
 city new_city_prob 0.5
 city enable_car_path_finding 1
 city convert_model_files 1
-# car_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult [shadow_mat_ids]
+# car_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 city car_model ../models/cars/sports_car/sportsCar.model3d        1 22 -1 90  1 1.0 1.0  20 22
 city car_model ../models/cars/natla_car/natla_car.model3d         1 -1  2 90  1 1.0 0.5  1 # always GRAY (writing to model3d file inverts DDS textures)
 city car_model ../models/cars/speedCar/speedCar.model3d           1 -1  6 0   1 1.0 0.5  4 5 # always DK_BLUE (writing to model3d file inverts DDS textures)
@@ -78,7 +78,7 @@ use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 allow_model3d_quads 1 # 0 is slightly faster for drawing but uses more memory (must recreate model3d files to change this)
 
-# helicopter_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult blade_mat_id [shadow_mat_ids]
+# helicopter_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult blade_mat_id [shadow_mat_ids]
 city helicopter_model ../models/cars/Helicopter/md500.3DS         1  0 0 90  0 2.0 1.0  -1 0  # always white color, no separate blade material, material 0 for shadows
 city helicopter_model ../models/cars/Helicopter_ka27/ka27.model3d 1  0 0 90  1 2.5 1.0   1 # always white color, materials are {body, prop blade}; prop blade rotates a bit off center
 
@@ -87,7 +87,7 @@ city num_peds 10000
 city num_building_peds 50000
 city ped_speed 0.001
 city ped_respawn_at_dest 1
-# ped_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult [shadow_mat_ids]
+# ped_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 city ped_model ../models/people/muro/muro.model3d         1 0 -1 90  1 1.0  1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
 city ped_model ../models/people/Patrick/Patrick.model3d   1 0 -1 90  1 1.0  1.0  0
 #city ped_model ../models/people/Alfred/Alfred.model3d     1 0 -1 90  1 1.0  1.0  0 # arms out in odd position, low poly
@@ -100,7 +100,7 @@ city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 -1 90  1 0.8  1.0 
 city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 -1 90  1 0.7 1.0  0 3
 #city ped_model ../models/people/makehuman/Test/test.model3d   1 0 -1 90  1 1.0 1.0  0
 
-# filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult [shadow_mat_ids]
+# filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 city toilet_model ../models/interiors/toilet/toilet.model3d  1 -1 -1 0  1 1.0 1.0  0
 city urinal_model ../models/interiors/urinal/urinal4.model3d  1 -1 -1 0  1 1.0 1.0  0
 #city urinal_model ../models/interiors/urinal/Urinal_N120707.3DS  1 -1 -1 180  0 1.0 1.0  0
