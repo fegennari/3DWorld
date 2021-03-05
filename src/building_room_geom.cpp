@@ -2507,6 +2507,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	//highres_timer_t timer("Gen Room Geom Small"); // 5.6ms
 	mats_small .clear();
 	mats_plants.clear();
+	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(objs);
 	add_small_static_objs_to_verts(expanded_objs);
 	mats_small .create_vbos(building);
@@ -2555,8 +2556,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_visible() || !i->is_obj_model_type()) continue;
-		vector3d dir(zero_vector);
-		dir[i->dim] = (i->dir ? 1.0 : -1.0);
+		vector3d dir(i->get_dir());
 
 		if (i->flags & RO_FLAG_RAND_ROT) {
 			float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
@@ -2677,7 +2677,8 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	}
 	disable_blend();
 	vbo_wrap_t::post_render();
-	//if (!obj_model_insts.empty()) {glDisable(GL_CULL_FACE);} // better but slower?
+	bool const disable_cull_face(0/*!obj_model_insts.empty() || !model_objs.empty()*/); // better but slower?
+	if (disable_cull_face) {glDisable(GL_CULL_FACE);}
 	point const camera_bs(camera_pdu.pos - xlate), building_center(building.bcube.get_cube_center());
 	bool const is_rotated(building.is_rotated());
 	oc.set_exclude_bix(building_ix);
@@ -2685,11 +2686,11 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
-		auto &obj(get_room_object_by_index(i->obj_id));
+		room_object_t &obj(get_room_object_by_index(i->obj_id));
 		if (!player_in_building && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
 		point obj_center(obj.get_cube_center());
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
-		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*obj.dz())) continue; // too far away
+		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*obj.dz())) continue; // too far away (obj.max_len()?)
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && obj.is_lit());
@@ -2699,7 +2700,20 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		if (is_emissive) {s.set_color_e(BLACK);}
 		obj_drawn = 1;
 	} // for i
-	//if (!obj_model_insts.empty()) {glEnable(GL_CULL_FACE);}
+	if (!shadow_only && !reflection_pass && player_in_building) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects
+		for (auto i = model_objs.begin(); i != model_objs.end(); ++i) {
+			point obj_center(i->get_cube_center());
+			if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
+			if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*i->max_len())) continue; // too far away
+			if (!(is_rotated ? building.is_rot_cube_visible(*i, xlate) : camera_pdu.cube_visible(*i + xlate))) continue; // VFC
+			if ((display_mode & 0x08) && building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)) continue;
+			vector3d dir(i->get_dir());
+			if (is_rotated) {building.do_xy_rotate_normal(dir);}
+			building_obj_model_loader.draw_model(s, obj_center, *i, dir, i->color, xlate, i->get_model_id(), shadow_only, 0, 0);
+			obj_drawn = 1;
+		} // for i
+	}
+	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid()) { // draw the item the player is holding

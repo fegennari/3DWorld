@@ -354,6 +354,7 @@ struct room_object_t : public cube_t {
 	int get_model_id () const {return ((type == TYPE_MONITOR) ? OBJ_MODEL_TV : (type + OBJ_MODEL_TOILET - TYPE_TOILET));} // monitor has same model as TV
 	void set_as_bottle(unsigned rand_id);
 	colorRGBA get_color() const;
+	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}
 	void set_rand_gen_state(rand_gen_t &rgen) const {rgen.set_state(obj_id+1, room_id+1);}
 };
 
@@ -425,7 +426,7 @@ struct building_room_geom_t {
 	unsigned stairs_start; // index of first object of TYPE_STAIR
 	point tex_origin;
 	colorRGBA wood_color;
-	vector<room_object_t> objs, expanded_objs; // objects placed in rooms; expanded_objs is for things like shelves that have been expanded for player interaction
+	vector<room_object_t> objs, expanded_objs, model_objs; // objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha; // {large static, small static, dynamic, lights, plants, transparent} materials
