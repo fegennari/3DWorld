@@ -39,6 +39,7 @@ tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0) {return tid_nm_pair_t(t
 int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
 int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
+bool has_key_3d_model  () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
 vect_cube_t get_temp_cubes() {temp_cubes.clear(); return temp_cubes;}
 vector<room_object_t> &get_temp_objects() {temp_objects.clear(); return temp_objects;}
@@ -507,11 +508,11 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 		}
 		obj.z2() -= rgen.rand_uniform(0.1, 0.6)*sz.z;
 		break;
-	case 5: // key - rare
+	case 5: // key - rare (Note: aspect ratio of key depends on aspect ratio of door, but key model is always a constant aspect ratio)
 		obj = room_object_t(inside, TYPE_KEY, c.room_id, rgen.rand_bool(), rgen.rand_bool());
 		obj.expand_in_dim( obj.dim, -0.40*sz[ obj.dim]); // long  dim
 		obj.expand_in_dim(!obj.dim, -0.46*sz[!obj.dim]); // short dim
-		for (unsigned d = 0; d < 2; ++d) {obj.translate_dim(d, 0.4*sz[d]*rgen.rand_uniform(-1.0, 1.0));}
+		for (unsigned d = 0; d < 2; ++d) {obj.translate_dim(d, 0.35*sz[d]*rgen.rand_uniform(-1.0, 1.0));}
 		obj.z2() = obj.z1() + 0.05*sz.z;
 		break;
 	}
@@ -771,7 +772,7 @@ void building_room_geom_t::add_drain_pipe(room_object_t const &c) { // is_small=
 
 void building_room_geom_t::add_key(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &key_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
-	key_mat.add_cube_to_verts(c, apply_light_color(c)); // TODO: make thisa key shape
+	key_mat.add_cube_to_verts(c, apply_light_color(c)); // placeholder for case where there's no key 3D model
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -2545,7 +2546,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_LG_BALL:   add_lg_ball  (*i); break;
 		case TYPE_HANGER_ROD:add_hanger_rod(*i); break;
 		case TYPE_DRAIN:     add_drain_pipe(*i); break;
-		case TYPE_KEY:       add_key       (*i); break;
+		case TYPE_KEY: if (has_key_3d_model()) {model_objs.push_back(*i);} else {add_key(*i);} break; // draw or add as 3D model
 		default: break;
 		}
 	} // for i

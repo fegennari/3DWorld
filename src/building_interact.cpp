@@ -626,7 +626,6 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_LG_BALL   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 15.0,  1.2,   "ball");
 	bldg_obj_types[TYPE_HANGER_ROD] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 10.0,  5.0,   "hanger rod");
 	bldg_obj_types[TYPE_DRAIN     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "drain pipe");
-	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key");
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0, "toilet");
 	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 80.0,  55.0,  "sink");
@@ -641,6 +640,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_LAMP      ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 25.0,  12.0,  "lamp");
 	bldg_obj_types[TYPE_WASHER    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 300.0, 150.0, "washer");
 	bldg_obj_types[TYPE_DRYER     ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 300.0, 160.0, "dryer");
+	// keys are special because they're potentially either a small object or an object model (in a drawer)
+	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key");
 	//                                                pc ac pu at im ls value  weight  name
 }
 
