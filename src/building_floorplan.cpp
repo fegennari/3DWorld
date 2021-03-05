@@ -1269,16 +1269,19 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					max_eq(stairs_width, get_min_front_clearance()); // ensure the player can fit
 					max_eq(stairs_pad,   get_min_front_clearance()); // ensure the player can fit
 				}
-				bool dim(0);
+				bool dim(0), too_small(0);
 				if (min(place_region.dx(), place_region.dy()) < 1.5*len_with_pad) {dim = (place_region.dx() < place_region.dy());} // use larger dim
 				else {dim = rgen.rand_bool();}
 				bool const stairs_dir(rgen.rand_bool());
 
 				for (unsigned d = 0; d < 2; ++d) {
 					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
-					cand.d[d][0] = rgen.rand_uniform(place_region.d[d][0], (place_region.d[d][1] - stairs_sz)); // LLC
+					float const v1(place_region.d[d][0]), v2(place_region.d[d][1] - stairs_sz);
+					if (v2 <= v1) {too_small = 1; break;}
+					cand.d[d][0] = rgen.rand_uniform(v1, v2); // LLC
 					cand.d[d][1] = cand.d[d][0] + stairs_sz; // URC
 				}
+				if (too_small) continue;
 				cube_t cand_test[2] = {cand, cand}; // {lower, upper} parts, starts on lower floor
 				cand_test[0].z1() += 0.1*window_vspacing; cand_test[0].z2() -= 0.1*window_vspacing; // shrink to lower part
 				cand_test[1].z1() += 1.1*window_vspacing; cand_test[1].z2() += 0.9*window_vspacing; // move to upper part
@@ -1302,8 +1305,9 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 						for (unsigned d = 0; d < 2; ++d) {wall_clipped |= subtract_cube_from_cubes(cand_test[e], interior->walls[d], nullptr, 1);} // clip_in_z=1
 					}
 				}
-				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
 				assert(cand.is_strictly_normalized());
+				cand.expand_in_dim(dim, -stairs_pad); // subtract off padding
+				if (!cand.is_strictly_normalized()) continue; // not enough space, likely because the player radius/front clearance is too large
 				// add walls around stairs if room walls were clipped or this is the basement; otherwise, make stairs straight with railings;
 				// basement stairs only have walls on the bottom floor, so we set is_at_top=0
 				stairs_shape const sshape((is_basement || wall_clipped) ? (stairs_shape)SHAPE_WALLED : (stairs_shape)SHAPE_STRAIGHT);
