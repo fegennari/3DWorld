@@ -2602,20 +2602,6 @@ void building_room_geom_t::expand_object(room_object_t &c) {
 	c.flags |= RO_FLAG_EXPANDED; // flag as expanded
 }
 
-struct occlusion_stats_t {
-	unsigned nobj, next, nnear, nvis, ndraw;
-	int last_frame_counter;
-	occlusion_stats_t() : last_frame_counter(0) {reset();}
-	void reset() {nobj = next = nnear = nvis = ndraw = 0;}
-
-	void update() {
-		if (frame_counter == last_frame_counter) return; // same frame
-		last_frame_counter = frame_counter;
-		cout << TXT(nobj) << TXT(next) << TXT(nnear) << TXT(nvis) << TXT(ndraw) << endl;
-		reset();
-	}
-};
-
 void rotate_dir_about_z(vector3d &dir, float rate) { // Note: assumes dir is normalized
 	if (rate == 0.0) return;
 	assert(dir.z == 0.0); // dir must be in XY plane
@@ -2628,8 +2614,6 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	assert(obj.type == TYPE_OFF_CHAIR); // only office chairs are supported for now
 	rotate_dir_about_z(inst.dir, office_chair_rot_rate);
 }
-
-occlusion_stats_t occlusion_stats;
 
 // Note: non-const because it creates the VBO
 void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
@@ -2702,17 +2686,12 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
 		auto &obj(get_room_object_by_index(i->obj_id));
-		//++occlusion_stats.nobj;
 		if (!player_in_building && obj.is_interior()) continue; // don't draw objects in interior rooms if the player is outside the building (useful for office bathrooms)
-		//++occlusion_stats.next;
 		point obj_center(obj.get_cube_center());
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*obj.dz())) continue; // too far away
-		//++occlusion_stats.nnear;
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
-		//++occlusion_stats.nvis;
 		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
-		//++occlusion_stats.ndraw;
 		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && obj.is_lit());
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
@@ -2720,7 +2699,6 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		if (is_emissive) {s.set_color_e(BLACK);}
 		obj_drawn = 1;
 	} // for i
-	//occlusion_stats.update();
 	//if (!obj_model_insts.empty()) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
