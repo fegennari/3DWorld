@@ -15,6 +15,6 @@ Cities:
 - Secondary Building roads
 
 Buildings:
-* Add keys
+* Gen door verts only when building is close
+* Draw doors individually per floor
 * Add objects to dresser drawers
-* Gameplay mode for TT buildings
