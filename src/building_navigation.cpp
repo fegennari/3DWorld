@@ -936,7 +936,10 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			return AI_WAITING;
 		}
 		else if (ret != 1) { // if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame
-			if (!ai_follow_player()) {person.speed = 0.0;} // movement will be stopped from now on, if not following the player
+			if (!ai_follow_player()) { // if not following the player
+				//person.speed = 0.0; // movement will be stopped from now on - not valid if we get into this state before gameplay is enabled
+				person.wait_for(2.0); // stop for 2 seconds, then try again
+			}
 			return AI_STOP;
 		}
 		if (!find_route_to_point(person, coll_dist, state.is_first_path, 0, 0, state.path)) { // following_player=0, is_moving_target=0
