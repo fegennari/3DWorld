@@ -413,9 +413,9 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 };
 
 struct obj_model_inst_t {
-	unsigned obj_id, model_id;
+	unsigned obj_id;
 	vector3d dir;
-	obj_model_inst_t(unsigned oid, unsigned mid, vector3d const &d) : obj_id(oid), model_id(mid), dir(d) {}
+	obj_model_inst_t(unsigned oid, vector3d const &d) : obj_id(oid), dir(d) {}
 };
 
 struct building_room_geom_t {

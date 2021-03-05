@@ -2564,7 +2564,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 			dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
 		}
 		if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
-		obj_model_insts.emplace_back((i - objs.begin()), i->get_model_id(), dir);
+		obj_model_insts.emplace_back((i - objs.begin()), dir);
 		//get_material(tid_nm_pair_t()).add_cube_to_verts(*i, WHITE, tex_origin); // for debugging of model bcubes
 	} // for i
 }
@@ -2693,10 +2693,10 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*obj.dz())) continue; // too far away (obj.max_len()?)
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
-		bool const is_emissive(i->model_id == OBJ_MODEL_LAMP && obj.is_lit());
+		bool const is_emissive(obj.type == TYPE_LAMP && obj.is_lit());
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
-		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, i->model_id, shadow_only, 0, 0);
+		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0);
 		if (is_emissive) {s.set_color_e(BLACK);}
 		obj_drawn = 1;
 	} // for i
