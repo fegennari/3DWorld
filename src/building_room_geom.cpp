@@ -2605,7 +2605,6 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::create_door_vbos(building_t const &building) {
-	// interior doors: add as house doors; these really should be separate tquads per floor, see SPLIT_DOOR_PER_FLOOR in building_floorplan.cpp
 	vector<door_t> const &doors(building.interior->doors);
 
 	for (auto i = doors.begin(); i != doors.end(); ++i) {

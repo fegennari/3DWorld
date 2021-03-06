@@ -915,6 +915,7 @@ private:
 	int get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const;
 	void register_open_ext_door_state(int door_ix);
 	void add_interior_door(door_t &door);
+	void add_interior_door_for_floor(door_t &door);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side);
 	void play_door_open_close_sound(point const &pos, bool open, float pitch=1.0) const;

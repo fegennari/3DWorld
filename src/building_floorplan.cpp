@@ -6,24 +6,27 @@
 #include "buildings.h"
 #include "profiler.h"
 
-bool const SPLIT_DOOR_PER_FLOOR = 0; // allows mixed open/closed doors per-floor, and better texture scaling, but slower, and uses 2x more memory
+bool const SPLIT_DOOR_PER_FLOOR = 1; // allows mixed open/closed doors per-floor, and better texture scaling, but slower, and uses more memory
 
 extern building_params_t global_building_params;
 
 
 void building_t::add_interior_door(door_t &door) {
 	assert(interior);
-	door.open   = (fract(interior->doors.size()*1.618034) < global_building_params.open_door_prob);
-	door.locked = (!door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob);
-	if (!SPLIT_DOOR_PER_FLOOR) {interior->doors.push_back(door); return;} // add a single door across all floors
+	if (!SPLIT_DOOR_PER_FLOOR) {add_interior_door_for_floor(door); return;} // add a single door across all floors
 	float const floor_spacing(get_window_vspace()), door_height(floor_spacing - get_floor_thickness());
 
 	// Note: door.dz() should be an exact multiple of floor_spacing except for an extra floor thickness at the bottom
 	for (float zval = door.z1(); zval + 0.5f*floor_spacing < door.z2(); zval += floor_spacing) { // continue until we don't have enough space left to add a door
 		door_t door_seg(door);
 		set_cube_zvals(door_seg, zval, zval+door_height); // clip to ceiling
-		interior->doors.push_back(door_seg);
+		add_interior_door_for_floor(door_seg);
 	}
+}
+void building_t::add_interior_door_for_floor(door_t &door) {
+	door.open   = (              fract(interior->doors.size()*1.61803) < global_building_params.open_door_prob  ); // use the golden ratio
+	door.locked = (!door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob); // use pi
+	interior->doors.push_back(door);
 }
 
 void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir) {
