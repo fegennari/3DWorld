@@ -41,9 +41,8 @@ void show_key_icon();
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
-void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0) {
-	float const dist(p2p_dist(get_camera_pos(), (pos + get_camera_coord_space_xlate())));
-	float const dscale(10.0*CAMERA_RADIUS); // distance at which volume is halved
+void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0) { // Note: pos is in camera space
+	float const dist(p2p_dist(get_camera_pos(), pos)), dscale(10.0*CAMERA_RADIUS); // distance at which volume is halved
 	gain *= dscale/(dist + dscale);
 #pragma omp critical(gen_sound)
 	gen_sound(id, pos, gain, pitch);
