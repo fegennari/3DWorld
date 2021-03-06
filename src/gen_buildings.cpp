@@ -1235,8 +1235,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 			}
 			drawer.add_tquad(*this, door_side, bcube, tp, color, 0, exclude_frame, 0); // invert_tc_x=0, no_tc=0
 		} // for d
-		if (opened || (PLAYER_CAN_OPEN_DOORS && !exterior)) {
-			// add untextured door edges; only needed for open doors, but we need to allocate the vertex data for interior closed doors if the player can later open them
+		if (opened) { // add untextured door edges; only needed for open doors
 			for (unsigned e = 0; e < num_edges; ++e) {
 				drawer.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // invert_tc_x=0, exclude_frame=0, no_tc=1, will use a single texel from the corner of the door texture
 			}
