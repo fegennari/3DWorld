@@ -637,8 +637,9 @@ struct building_interior_t {
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
 	bool update_elevators(point const &player_pos, float floor_thickness);
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, vector<room_object_t>::const_iterator self, vector3d *cnorm) const;
-	bool check_sphere_coll_walls_elevators_doors(point &pos, point const &p_last, float radius, float wall_test_extra_z, vector3d *cnorm) const;
+	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius, vector<room_object_t>::const_iterator self, vector3d *cnorm) const;
+	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
+		float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->mats_dynamic.clear();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const;
 };
@@ -833,6 +834,8 @@ struct building_t : public building_geom_t {
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass) const;
 	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;
+	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
+		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
 	void invalidate_nav_graph();
 private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
@@ -842,8 +845,6 @@ private:
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
-	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
-		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	void cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const;
 	cube_t get_part_containing_pt(point const &pt) const;

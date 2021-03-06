@@ -398,7 +398,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 		if (new_center != center) { // check for collisions and move to new location
 			vector3d cnorm;
 
-			if (interior->check_sphere_coll(new_center, center, radius, c, &cnorm)) {
+			if (interior->check_sphere_coll(*this, new_center, center, radius, c, &cnorm)) {
 				if (cnorm == plus_z) { // collision with the floor
 					if (fabs(velocity.z) < 0.25*OBJ_GRAVITY*fticks) {velocity.z = 0.0;} // zero velocity z component if near zero to reduce instability
 				}

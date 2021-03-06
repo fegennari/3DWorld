@@ -333,7 +333,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	float const floor_spacing(get_window_vspace()), floor_thickness(get_floor_thickness());
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale); // XY radius can be smaller to allow player to fit between furniture
 	// pass in radius as wall_test_extra_z as a hack to allow player to step over a wall that's below the stairs connecting stacked parts
-	bool had_coll(interior->check_sphere_coll_walls_elevators_doors(pos, p_last, xy_radius, radius, cnorm));
+	bool had_coll(interior->check_sphere_coll_walls_elevators_doors(*this, pos, p_last, xy_radius, radius, 0, cnorm)); // check_open_doors=0 (to avoid getting the player stuck)
 	bool on_stairs(0);
 	float obj_z(max(pos.z, p_last.z)); // use p_last to get orig zval
 	
@@ -431,8 +431,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	return had_coll; // will generally always be true due to floors
 }
 
-bool building_interior_t::check_sphere_coll(point &pos, point const &p_last, float radius, vector<room_object_t>::const_iterator self, vector3d *cnorm) const {
-	bool had_coll(check_sphere_coll_walls_elevators_doors(pos, p_last, radius, 0.0, cnorm));
+bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius, vector<room_object_t>::const_iterator self, vector3d *cnorm) const {
+	bool had_coll(check_sphere_coll_walls_elevators_doors(building, pos, p_last, radius, 0.0, 1, cnorm)); // check_open_doors=1
 
 	if (pos.z < p_last.z) { // check floor collision if falling
 		cube_t scube; scube.set_from_sphere(pos, radius);
@@ -477,7 +477,9 @@ bool building_interior_t::check_sphere_coll(point &pos, point const &p_last, flo
 }
 
 // Note: should be valid for players and other spherical objects
-bool building_interior_t::check_sphere_coll_walls_elevators_doors(point &pos, point const &p_last, float radius, float wall_test_extra_z, vector3d *cnorm) const {
+bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
+	float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const
+{
 	float const obj_z(max(pos.z, p_last.z)), wall_test_z(obj_z + wall_test_extra_z); // use p_last to get orig zval
 	bool had_coll(0);
 
@@ -499,7 +501,22 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(point &pos, po
 		else {had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, 1, cnorm);} // skip_z=1
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
-		if (i->open) continue; // doors tend to block the player and other objects, don't collide with them unless they're closed
+		if (i->open) {
+			if (!check_open_doors) continue; // doors tend to block the player and other objects, don't collide with them unless they're closed
+			// TODO: rough proximity check
+			tquad_with_ix_t const door(building.set_door_from_cube(*i, i->dim, i->open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, i->open, 0, 0, 0));
+			vector3d const normal(-door.get_norm()); // negated
+			float rdist, thick;
+			
+			if (sphere_ext_poly_int_base(door.pts[0], normal, pos, radius, i->get_sz_dim(i->dim), thick, rdist)) {
+				if (sphere_poly_intersect(door.pts, door.npts, pos, normal, rdist, thick)) {
+					pos += normal*(thick - rdist);
+					if (cnorm) {*cnorm = normal;}
+					had_coll = 1;
+				}
+			}
+			continue;
+		}
 		if (obj_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
 		had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, 0, cnorm); // skip_z=0
 	}
