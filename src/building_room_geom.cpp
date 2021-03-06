@@ -380,6 +380,13 @@ colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
 colorRGBA building_room_geom_t::apply_wood_light_color(room_object_t const &o) const {return apply_light_color(o, wood_color);}
 colorRGBA apply_light_color(room_object_t const &o) {return apply_light_color(o, o.color);} // use object color
 
+void building_room_geom_t::add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
+	colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc)
+{
+	assert(tquad.npts == 4); // quads only, for doors
+	add_tquad_to_verts(bg, tquad, bcube, tex, color, mats_doors.get_material(tex, 1).quad_verts, invert_tc_x, exclude_frame, no_tc); // inc_shadows=1
+}
+
 tid_nm_pair_t const untex_shad_mat(-1, 2.0); // make sure it's different from default tid_nm_pair_t so that it's not grouped with shadowed materials
 
 void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
@@ -2376,6 +2383,7 @@ void building_room_geom_t::clear_materials() { // can be called to update textur
 	clear_static_small_vbos();
 	mats_dynamic.clear();
 	mats_lights.clear();
+	mats_doors.clear();
 }
 void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 	mats_static.clear();
@@ -2504,6 +2512,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	mats_static.create_vbos(building);
 	mats_alpha .create_vbos(building);
 }
+
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 5.6ms
 	mats_small .clear();
@@ -2514,6 +2523,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	mats_small .create_vbos(building);
 	mats_plants.create_vbos(building);
 }
+
 void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add) {
 	float const tscale(2.0/obj_scale);
 
@@ -2551,6 +2561,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		}
 	} // for i
 }
+
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
 	obj_model_insts.clear();
 	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
@@ -2569,6 +2580,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 		//get_material(tid_nm_pair_t()).add_cube_to_verts(*i, WHITE, tex_origin); // for debugging of model bcubes
 	} // for i
 }
+
 void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
 	float const tscale(2.0/obj_scale);
@@ -2579,6 +2591,7 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	}
 	mats_lights.create_vbos(building);
 }
+
 void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible() || !i->is_dynamic()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
@@ -2589,6 +2602,16 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		}
 	} // for i
 	mats_dynamic.create_vbos(building);
+}
+
+void building_room_geom_t::create_door_vbos(building_t const &building) {
+	// interior doors: add as house doors; these really should be separate tquads per floor, see SPLIT_DOOR_PER_FLOOR in building_floorplan.cpp
+	vector<door_t> const &doors(building.interior->doors);
+
+	for (auto i = doors.begin(); i != doors.end(); ++i) {
+		building.add_door_verts(*i, *this, tquad_with_ix_t::TYPE_HDOOR, i->dim, i->open_dir, i->open, 0, 0, i->on_stairs); // opens_out=0, exterior=0
+	}
+	mats_doors.create_vbos(building);
 }
 
 void building_room_geom_t::expand_object(room_object_t &c) {
@@ -2650,10 +2673,12 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	}
 	if (mats_lights .empty()) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
 	if (mats_dynamic.empty()) {create_dynamic_vbos(building);} // create dynamic materials if needed (no limit)
+	if (mats_doors  .empty()) {create_door_vbos   (building);} // create door    materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	mats_static .draw(s, shadow_only, reflection_pass);
 	mats_lights .draw(s, shadow_only, reflection_pass);
 	mats_dynamic.draw(s, shadow_only, reflection_pass);
+	mats_doors  .draw(s, shadow_only, reflection_pass);
 
 	if (inc_small) {
 		mats_small.draw(s, shadow_only, reflection_pass);

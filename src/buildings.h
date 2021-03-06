@@ -429,7 +429,8 @@ struct building_room_geom_t {
 	vector<room_object_t> objs, expanded_objs, model_objs; // objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
-	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha; // {large static, small static, dynamic, lights, plants, transparent} materials
+	// {large static, small static, dynamic, lights, plants, transparent, door} materials
+	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
 
 	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), materials_invalid(0), modified_by_player(0),
@@ -440,12 +441,14 @@ struct building_room_geom_t {
 	void clear_static_vbos();
 	void clear_static_small_vbos();
 	void clear_and_recreate_lights() {lights_changed = 1;} // cache the state and apply the change later in case this is called from a different thread
-	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() +
-		mats_dynamic.count_all_verts() + mats_lights.count_all_verts() + mats_plants.count_all_verts() + mats_alpha.count_all_verts());}
+	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_dynamic.count_all_verts() +
+		mats_lights.count_all_verts() + mats_plants.count_all_verts() + mats_alpha.count_all_verts() + mats_doors.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0, bool transparent=0);
 	rgeom_mat_t &get_wood_material(float tscale=1.0, bool inc_shadows=1, bool dynamic=0, bool small=0);
 	rgeom_mat_t &get_metal_material(bool inc_shadows=0, bool dynamic=0, bool small=0);
 	colorRGBA apply_wood_light_color(room_object_t const &o) const;
+	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
+		colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc);
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
@@ -521,6 +524,7 @@ struct building_room_geom_t {
 	void create_obj_model_insts(building_t const &building);
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
+	void create_door_vbos(building_t const &building);
 	void draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	unsigned allocate_dynamic_state();
@@ -619,12 +623,10 @@ struct building_interior_t {
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
 	vect_cube_t exclusion;
-	vector<unsigned> doors_to_update;
 	std::unique_ptr<building_room_geom_t> room_geom;
 	std::unique_ptr<building_nav_graph_t> nav_graph;
 	draw_range_t draw_range;
 	uint64_t top_ceilings_mask; // bit mask for ceilings that are on the top floor and have no floor above them
-	unsigned door_vert_start_ix; // for updating vertex data when door open/close state is changed
 	bool door_state_updated, is_unconnected;
 
 	building_interior_t();
@@ -788,7 +790,6 @@ struct building_t : public building_geom_t {
 	bool toggle_room_light(point const &closest_to);
 	bool toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval);
-	void update_door_verts(building_creator_t &bc) const;
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
 	bool player_pickup_object(point const &at_pos, vector3d const &in_dir);
@@ -831,8 +832,7 @@ struct building_t : public building_geom_t {
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass) const;
-	void add_interior_door_to_bdraw(building_draw_t &bdraw, unsigned door_ix) const;
-	void update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) const;
+	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;
 	void invalidate_nav_graph();
 private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
@@ -841,7 +841,6 @@ private:
 	bool move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
-	void add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
 		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
@@ -1022,6 +1021,8 @@ int get_int_door_tid  ();
 int get_normal_map_for_bldg_tid(int tid);
 unsigned register_sign_text(std::string const &text);
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen);
+void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
+	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);

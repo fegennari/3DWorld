@@ -292,7 +292,7 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	door.open ^= 1; // toggle open state
 	invalidate_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
-	interior->doors_to_update.push_back(door_ix);
+	if (has_room_geom()) {interior->room_geom->mats_doors.clear();} // need to recreate doors VBO
 
 	if (player_in_this_building) { // is it really safe to call this from the AI thread?
 		point const door_center(door.xc(), door.yc(), zval);

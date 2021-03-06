@@ -350,6 +350,66 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 	for (unsigned i = 0; i < bg.num_sides; ++i) {pts[i].assign((cc.x + rx*pts[i].x), (cc.y + ry*pts[i].y), 0.0);} // convert normals to points
 }
 
+// Note: invert_tc only applies to doors
+void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
+	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x, bool exclude_frame, bool no_tc)
+{
+	assert(tquad.npts == 3 || tquad.npts == 4); // triangles or quads
+	point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
+	vert_norm_comp_tc_color vert;
+	float tsx(0.0), tsy(0.0), tex_off(0.0);
+	bool dim(0);
+
+	if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
+		tsx = 2.0f*tex.tscale_x; tsy = 2.0f*tex.tscale_y; // adjust for local vs. global space change
+		dim = (tquad.pts[0].x == tquad.pts[1].x);
+		if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
+	}
+	else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
+		float const denom(0.5f*(bcube.dx() + bcube.dy()));
+		tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
+	}
+	vert.set_c4(color);
+	vector3d normal(tquad.get_norm());
+	if (bg.is_rotated()) {bg.do_xy_rotate_normal(normal);}
+	vert.set_norm(normal);
+	invert_tc_x ^= (tquad.type == tquad_with_ix_t::TYPE_IDOOR2); // interior door, back face
+
+	for (unsigned i = 0; i < tquad.npts; ++i) {
+		vert.v = tquad.pts[i];
+
+		if (no_tc) { // untextured, for door edges
+			vert.t[0] = vert.t[1] = 0.0;
+		}
+		else if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
+			vert.t[0] = (vert.v[dim] + tex_off)*tsx; // use nonzero width dim
+			vert.t[1] = (vert.v.z - bcube.z1())*tsy;
+		}
+		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
+			vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
+			vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
+		}
+		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC) { // roof access cover
+			if (fabs(normal.z) > 0.5) {vert.t[0] = vert.v.x*tsx; vert.t[1] = vert.v.y*tsy;} // facing up, use XY plane
+			else {vert.t[0] = (vert.v.x + vert.v.y)*tsx; vert.t[1] = vert.v.z*tsy;} // facing to the side, use XZ or YZ plane
+		}
+		else if (tquad.is_exterior_door() || tquad.type == tquad_with_ix_t::TYPE_HELIPAD || tquad.type == tquad_with_ix_t::TYPE_SOLAR) { // textured from (0,0) to (1,1)
+			vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
+			vert.t[1] = float((i == 2 || i == 3));
+			if (tquad.type == tquad_with_ix_t::TYPE_SOLAR) {vert.t[0] *= 4.0; vert.t[1] *= 4.0;} // 4 reptitions in each dimension
+		}
+		else if (tquad.is_interior_door()) { // interior door textured/stretched in Y
+			vert.t[0] = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
+			vert.t[1] = tex.tscale_y*((i == 2 || i == 3));
+			if (exclude_frame) {vert.t[0] = 0.07 + 0.86*vert.t[0];}
+		}
+		else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
+		else {assert(0);}
+		if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
+		verts.push_back(vert);
+	} // for i
+}
+
 
 #define EMIT_VERTEX() \
 	vert.v = pt*sz + llc; \
@@ -445,17 +505,6 @@ class building_draw_t {
 			clear_cont(tri_verts); // no longer needed
 			if (!quad_verts.empty()) {vbo.create_and_upload(quad_verts, 0, 1);}
 			clear_cont(quad_verts); // no longer needed
-		}
-		void update_vbo_data(draw_block_t const &src_block, unsigned start_vertex, bool update_tris) {
-			vect_vnctcc_t const &src(update_tris ? src_block.tri_verts : src_block.quad_verts);
-			assert(!src.empty()); // this assert isn't strictly necessary, but may prevent us from accidentally updating the wrong buffers
-			if (src.empty()) return; // no data to update
-			assert(vbo.vbo_valid()); // VBO must have been allocated, otherwise we can't update its contents
-			if (update_tris) {start_vertex += tri_vbo_off;} // move to start of triangle block
-			else {assert(start_vertex + src.size() <= tri_vbo_off);} // check that the range we plan to update fits into the quads data; we can't check this for triangles
-			vbo.pre_render();
-			upload_vbo_sub_data(src.data(), start_vertex*sizeof(vect_vnctcc_t::value_type), src.size()*sizeof(vect_vnctcc_t::value_type));
-			vbo.post_render();
 		}
 		void register_tile_id(unsigned tid) {
 			if (tid+1 == pos_by_tile.size()) return; // already saw this tile
@@ -632,65 +681,10 @@ public:
 		} // end draw end(s)
 	}
 
-	// Note: invert_tc only applies to doors
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
 		bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0)
 	{
-		assert(tquad.npts == 3 || tquad.npts == 4); // triangles or quads
-		auto &verts(get_verts(tex, (tquad.npts == 3))); // 0=quads, 1=tris
-		point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
-		vert_norm_comp_tc_color vert;
-		float tsx(0.0), tsy(0.0), tex_off(0.0);
-		bool dim(0);
-
-		if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
-			tsx = 2.0f*tex.tscale_x; tsy = 2.0f*tex.tscale_y; // adjust for local vs. global space change
-			dim = (tquad.pts[0].x == tquad.pts[1].x);
-			if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
-		}
-		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
-			float const denom(0.5f*(bcube.dx() + bcube.dy()));
-			tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
-		}
-		vert.set_c4(color);
-		vector3d normal(tquad.get_norm());
-		if (bg.is_rotated()) {bg.do_xy_rotate_normal(normal);}
-		vert.set_norm(normal);
-		invert_tc_x ^= (tquad.type == tquad_with_ix_t::TYPE_IDOOR2); // interior door, back face
-		
-		for (unsigned i = 0; i < tquad.npts; ++i) {
-			vert.v = tquad.pts[i];
-
-			if (no_tc) { // untextured, for door edges
-				vert.t[0] = vert.t[1] = 0.0;
-			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_WALL) { // side/wall
-				vert.t[0] = (vert.v[dim] + tex_off)*tsx; // use nonzero width dim
-				vert.t[1] = (vert.v.z - bcube.z1())*tsy;
-			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
-				vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
-				vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
-			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC) { // roof access cover
-				if (fabs(normal.z) > 0.5) {vert.t[0] = vert.v.x*tsx; vert.t[1] = vert.v.y*tsy;} // facing up, use XY plane
-				else {vert.t[0] = (vert.v.x + vert.v.y)*tsx; vert.t[1] = vert.v.z*tsy;} // facing to the side, use XZ or YZ plane
-			}
-			else if (tquad.is_exterior_door() || tquad.type == tquad_with_ix_t::TYPE_HELIPAD || tquad.type == tquad_with_ix_t::TYPE_SOLAR) { // textured from (0,0) to (1,1)
-				vert.t[0] = float((i == 1 || i == 2) ^ invert_tc_x);
-				vert.t[1] = float((i == 2 || i == 3));
-				if (tquad.type == tquad_with_ix_t::TYPE_SOLAR) {vert.t[0] *= 4.0; vert.t[1] *= 4.0;} // 4 reptitions in each dimension
-			}
-			else if (tquad.is_interior_door()) { // interior door textured/stretched in Y
-				vert.t[0] = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
-				vert.t[1] = tex.tscale_y*((i == 2 || i == 3));
-				if (exclude_frame) {vert.t[0] = 0.07 + 0.86*vert.t[0];}
-			}
-			else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
-			else {assert(0);}
-			if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
-			verts.push_back(vert);
-		} // for i
+		add_tquad_to_verts(bg, tquad, bcube, tex, color, get_verts(tex, (tquad.npts == 3)), invert_tc_x, exclude_frame, no_tc); // 0=quads, 1=tris
 	}
 
 	// clip_windows: 0=no clip, 1=clip for building, 2=clip for house
@@ -1007,19 +1001,6 @@ public:
 	void draw_quads_for_draw_range(shader_t &s, draw_range_t const &draw_range, bool shadow_only=0) {
 		for (unsigned i = 0; i < MAX_DRAW_BLOCKS; ++i) {draw_quad_geom_range(s, draw_range.vr[i], shadow_only);}
 	}
-	void update_vbo_data(building_draw_t const &src_bdraw, unsigned start_vertex, bool update_tris) {
-		bool found(0);
-
-		for (auto i = src_bdraw.to_draw.begin(); i != src_bdraw.to_draw.end(); ++i) {
-			if (i->empty()) continue; // this is not the slot we want to update
-			assert(!found); // only one slot can be nonempty
-			found = 1;
-			unsigned const slot_ix(get_to_draw_ix(i->tex));
-			assert(slot_ix < to_draw.size()); // must be a valid slot index for this bdraw
-			to_draw[slot_ix].update_vbo_data(*i, start_vertex, update_tris);
-		} // for i
-		assert(found);
-	}
 }; // end building_draw_t
 
 
@@ -1210,21 +1191,12 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bdraw.add_section(*this, empty_vc, door, tid_nm_pair_t(WHITE_TEX), GRAY, dim_mask2, 0, 0, 1, 0);
 			}
 		} // for i
-		// interior doors: add as house doors; these really should be separate tquads per floor (1.1M T), see SPLIT_DOOR_PER_FLOOR in building_floorplan.cpp
-		interior->door_vert_start_ix = bdraw.get_num_verts(tid_nm_pair_t(get_building_ext_door_tid(tquad_with_ix_t::TYPE_HDOOR))); // cache for later use in door open/close update
-		for (unsigned i = 0; i < interior->doors.size(); ++i) {add_interior_door_to_bdraw(bdraw, i);}
-		bdraw.end_draw_range_capture(interior->draw_range);
+		// Note: interior doors are drawn as part of room_geom
+		bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms
 	} // end interior case
 }
 
-void building_t::update_door_open_state_verts(building_draw_t &bdraw_interior, unsigned door_ix) const {
-	building_draw_t bdraw;
-	add_interior_door_to_bdraw(bdraw, door_ix);
-	unsigned const start_vertex(interior->door_vert_start_ix + 16*door_ix); // 4 quads/sides per door (front + back + two edges) = 16 verts per door
-	bdraw_interior.update_vbo_data(bdraw, start_vertex, 0); // update_tris=0 (update quads)
-}
-
-void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const {
+template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const {
 
 	float const ty(exterior ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
@@ -1261,23 +1233,19 @@ void building_t::add_door_to_bdraw(cube_t const &D, building_draw_t &bdraw, uint
 				swap(door_side.pts[2], door_side.pts[3]);
 				door_side.type = tquad_with_ix_t::TYPE_IDOOR2;
 			}
-			bdraw.add_tquad(*this, door_side, bcube, tp, color, 0, exclude_frame);
+			drawer.add_tquad(*this, door_side, bcube, tp, color, 0, exclude_frame, 0); // invert_tc_x=0, no_tc=0
 		} // for d
 		if (opened || (PLAYER_CAN_OPEN_DOORS && !exterior)) {
 			// add untextured door edges; only needed for open doors, but we need to allocate the vertex data for interior closed doors if the player can later open them
 			for (unsigned e = 0; e < num_edges; ++e) {
-				bdraw.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // no_tc=1, will use a single texel from the corner of the door texture
+				drawer.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // invert_tc_x=0, exclude_frame=0, no_tc=1, will use a single texel from the corner of the door texture
 			}
 		}
 	} // for side
 }
 
-void building_t::add_interior_door_to_bdraw(building_draw_t &bdraw, unsigned door_ix) const {
-	assert(interior);
-	assert(door_ix < interior->doors.size());
-	door_t const &door(interior->doors[door_ix]);
-	add_door_to_bdraw(door, bdraw, tquad_with_ix_t::TYPE_HDOOR, door.dim, door.open_dir, door.open, 0, 0, door.on_stairs); // opens_out=0, exterior=0
-}
+// explicit template specialization
+template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;
 
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt) const {
 
@@ -1418,7 +1386,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 	} // for d
 }
 
-bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) {
+bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) { // for exterior doors
 	tquad_with_ix_t door;
 	int const door_ix(find_ext_door_close_to_point(door, pos, dist));
 	register_open_ext_door_state(door_ix);
@@ -1431,7 +1399,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	building_draw_t open_door_draw;
 	vector3d const normal(door.get_norm());
 	bool const opens_outward(!is_house), dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
-	add_door_to_bdraw(door.get_bcube(), open_door_draw, door.type, dim, dir, 1, opens_outward, 1, 0); // opened=1, exterior=1, on_stairs=0
+	add_door_verts(door.get_bcube(), open_door_draw, door.type, dim, dir, 1, opens_outward, 1, 0); // opened=1, exterior=1, on_stairs=0
 
 	// draw other exterior doors as closed in case they're visible through the open door
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
@@ -1439,7 +1407,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 		vector3d const normal2(d->get_norm());
 		if (dot_product_ptv(normal2, pos, d->pts[0]) > 0.0) continue; // facing exterior of door rather than interior, skip
 		bool const dim2(fabs(normal2.x) < fabs(normal2.y)), dir2(normal2[dim] > 0.0); // dir2 is reversed
-		add_door_to_bdraw(d->get_bcube(), open_door_draw, d->type, dim2, dir2, 0, opens_outward, 1, 0); // opened=0, exterior=1, on_stairs
+		add_door_verts(d->get_bcube(), open_door_draw, d->type, dim2, dir2, 0, opens_outward, 1, 0); // opened=0, exterior=1, on_stairs
 	}
 	open_door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
 	return 1;
@@ -2287,7 +2255,6 @@ public:
 						if (reflection_pass && !b.bcube.contains_pt_xy(camera_xlated)) continue; // not the correct building
 						if (!b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-						b.update_door_verts(**i); // this update is required for when AI open doors; this may be a frame too late, and won't show for distant buildings, but that should be close enough
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
@@ -2337,7 +2304,6 @@ public:
 						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2 && camera_surf_collide) {b.update_player_interact_objects(camera_xlated, bi->ix, ped_ix);} // update dynamic objects if the player is in the building
-						b.update_door_verts(**i); // update here, before the next shadow pass, if the player changed a door state
 					} // for bi
 				} // for g
 			} // for i
@@ -2689,8 +2655,6 @@ public:
 		building_draw_int_ext_walls.clear_vbos();
 		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom(1);} // force=1; likely required for tiled buildings
 	}
-	void update_building_door_open_state_verts(building_t const &building, unsigned door_ix) {building.update_door_open_state_verts(building_draw_interior, door_ix);}
-
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
@@ -2921,13 +2885,6 @@ public:
 		return 0;
 	}
 }; // building_creator_t
-
-// Note: this must be defined after building_creator_t is defined
-void building_t::update_door_verts(building_creator_t &bc) const {
-	if (!interior) return;
-	for (auto i = interior->doors_to_update.begin(); i != interior->doors_to_update.end(); ++i) {bc.update_building_door_open_state_verts(*this, *i);}
-	interior->doors_to_update.clear();
-}
 
 
 class building_tiles_t {

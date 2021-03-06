@@ -15,6 +15,5 @@ Cities:
 - Secondary Building roads
 
 Buildings:
-* Gen door verts only when building is close
 * Draw doors individually per floor
 * Add objects to dresser drawers

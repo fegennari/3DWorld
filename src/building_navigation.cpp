@@ -1141,5 +1141,5 @@ bool building_t::room_containing_pt_has_stairs(point const &pt) const {
 }
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
-building_interior_t::building_interior_t() : top_ceilings_mask(0), door_vert_start_ix(0), door_state_updated(0), is_unconnected(0) {}
+building_interior_t::building_interior_t() : top_ceilings_mask(0), door_state_updated(0), is_unconnected(0) {}
 building_interior_t::~building_interior_t() {}
