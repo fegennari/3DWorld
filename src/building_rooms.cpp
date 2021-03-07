@@ -321,13 +321,11 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 					cube_t paper;
 					set_cube_zvals(paper, c.z2(), c.z2()+thickness); // very thin
 					unsigned const num_papers(rgen.rand() % 8); // 0-7
-					colorRGBA const cream(0.9, 0.9, 0.8), vlt_yellow(1.0, 1.0, 0.5);
-					colorRGBA const paper_colors[6] = {WHITE, WHITE, WHITE, cream, cream, vlt_yellow};
 
 					for (unsigned n = 0; n < num_papers; ++n) { // okay if they overlap
 						set_wall_width(paper, rgen.rand_uniform(c.d[ dim][0]+pheight, c.d[ dim][1]-pheight), 0.5*pheight,  dim);
 						set_wall_width(paper, rgen.rand_uniform(c.d[!dim][0]+pwidth,  c.d[!dim][1]-pwidth),  0.5*pwidth,  !dim);
-						objs.emplace_back(paper, TYPE_PAPER, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%6]);
+						objs.emplace_back(paper, TYPE_PAPER, room_id, dim, !dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, paper_colors[rgen.rand()%NUM_PAPER_COLORS]);
 						set_obj_id(objs);
 						paper.z2() += thickness; // to avoid Z-fighting if different colors
 					} // for n
@@ -336,8 +334,6 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 			float const pp_len(0.077*vspace), pp_dia(0.0028*vspace), edge_space(0.75*pp_len); // ~7.5 inches long
 
 			if (edge_space < 0.25*min(c.dx(), c.dy())) { // desk is large enough for pens/pencils
-				colorRGBA const pen_colors   [4] = {WHITE, BLACK, colorRGBA(0.2, 0.4, 1.0), RED};
-				colorRGBA const pencil_colors[2] = {colorRGBA(1.0, 0.75, 0.25), colorRGBA(1.0, 0.5, 0.1)};
 				float const pp_z1(c.z2() + 0.3f*pp_dia); // move above papers, and avoid self shadow from the desk
 				cube_t pp_bcube;
 				set_cube_zvals(pp_bcube, pp_z1, pp_z1+pp_dia);
@@ -1307,8 +1303,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 		if (bad_placement) continue;
 		if (is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
-		colorRGBA const crate_color(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
-		objs.emplace_back(crate, (rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX), room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CUBE, crate_color); // crate or box
+		objs.emplace_back(crate, (rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX), room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CUBE, gen_box_color(rgen)); // crate or box
 		set_obj_id(objs); // used to select texture
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
@@ -1605,7 +1600,7 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 		vector3d sz;
 		gen_crate_sz(sz, rgen, window_vspacing);
 		sz *= 1.5; // make larger than storage room boxes
-		place_obj_along_wall(TYPE_BOX, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start);
+		place_obj_along_wall(TYPE_BOX, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0, gen_box_color(rgen));
 	} // for n
 }
 

@@ -649,7 +649,7 @@ void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) 
 		set_cube_zvals(C, interior.z1(), (interior.z1() + box_sz*rgen.rand_uniform(0.8, 1.5)));
 		C.expand_by_xy(sz);
 		if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-		C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
+		C.color = gen_box_color(rgen);
 		C.dim   = rgen.rand_bool();
 		C.dir   = rgen.rand_bool();
 		objects.push_back(C);
@@ -871,7 +871,7 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 			set_cube_zvals(C, S.z2(), (S.z2() + shelf_clearance*sz_scale*rgen.rand_uniform(0.4, 0.98)));
 			C.expand_by_xy(sz);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-			C.color = colorRGBA(rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0), rgen.rand_uniform(0.9, 1.0)); // add minor color variation
+			C.color = gen_box_color(rgen);
 			C.dim   = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
 
 			if (is_house || rgen.rand_bool()) {C.type = TYPE_BOX; objects.push_back(C);}
