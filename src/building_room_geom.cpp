@@ -493,37 +493,88 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 	} // for n
 }
 
+void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen) {
+	c.d[ dim][0] = rgen.rand_uniform(c.d[ dim][0], (c.d[ dim][1] - length));
+	c.d[ dim][1] = c.d[ dim][0] + length;
+	c.d[!dim][0] = rgen.rand_uniform(c.d[!dim][0], (c.d[!dim][1] - width));
+	c.d[!dim][1] = c.d[!dim][0] + width;
+}
+
 /*static*/ room_object_t building_room_geom_t::get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix) {
 	assert(drawer_ix < 16);
 	if (c.item_flags & (1U << drawer_ix)) {return room_object_t();} // item has been taken
-	vector3d const sz(drawer.get_size());
-	cube_t inside(drawer);
-	inside.z1() += (0.2/0.9)*sz.z; // place on bottom surface
+	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
-	unsigned const type_ix(rgen.rand() % 10); // 0-9
+	//unsigned const type_ix(rgen.rand() % 10); // 0-9
+	unsigned const type_ix(rgen.rand() % 7);
 	room_object_t obj; // starts as no item
 
-	// TODO: add TYPE_PAPER, TYPE_PEN, TYPE_PENCIL, TYPE_BOOK, TYPE_BOTTLE, cell phone, wallet, money, etc.
+	// TODO: cell phone, wallet, money, etc.
 	switch (type_ix) {
-	case 0: case 2: case 3: case 4: // box - common
-		obj = room_object_t(inside, TYPE_BOX, c.room_id, rgen.rand_bool(), rgen.rand_bool());
-		
-		for (unsigned d = 0; d < 2; ++d) {
-			obj.d[d][0] += rgen.rand_uniform(0.1, 0.4)*sz[d];
-			obj.d[d][1] -= rgen.rand_uniform(0.1, 0.4)*sz[d];
-		}
-		obj.z2() -= rgen.rand_uniform(0.1, 0.6)*sz.z;
+	case 0: // box
+	{
+		float const length(rand_uniform(0.4, 0.9)*sz[c.dim]), width(rand_uniform(0.4, 0.9)*sz[!c.dim]);
+		obj = room_object_t(drawer, TYPE_BOX, c.room_id, rgen.rand_bool(), rgen.rand_bool());
+		obj.color = gen_box_color(rgen);
+		obj.z2()  = (obj.z1() + rgen.rand_uniform(0.4, 0.8)*sz.z);
+		set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
 		break;
-	case 5: // key - rare (Note: aspect ratio of key depends on aspect ratio of door, but key model is always a constant aspect ratio)
-		obj = room_object_t(inside, TYPE_KEY, c.room_id, rgen.rand_bool(), rgen.rand_bool());
+	}
+	case 1: // paper
+	{
+		float const length(2.0*sz.z), width(0.77*length);
+
+		if (length < 1.1*sz[c.dim] && width < 1.1*sz[!c.dim]) { // if it can fit
+			obj = room_object_t(drawer, TYPE_PAPER, c.room_id, c.dim, c.dir);
+			obj.obj_id = rgen.rand();
+			obj.color  = paper_colors[rgen.rand()%NUM_PAPER_COLORS];
+			obj.z2()   = (obj.z1() + 0.01*sz.z);
+			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
+		}
+		break;
+	}
+	case 2: case 3: // pen/pencil
+	{
+		float const length(min(1.7f*sz.z, 0.9f*sz[!c.dim])), diameter(0.036*length);
+		obj = room_object_t(drawer, ((type_ix == 2) ? (unsigned)TYPE_PEN : (unsigned)TYPE_PENCIL), c.room_id, !c.dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
+		obj.color = ((obj.type == TYPE_PEN) ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]);
+		obj.z2()  = (obj.z1() + diameter);
+		set_rand_pos_for_sz(obj, !c.dim, length, diameter, rgen);
+		break;
+	}
+	case 4: // book TODO: always small geom
+	{
+		float const length(rand_uniform(0.6, 0.9)*min(sz[0], sz[1])), width(rand_uniform(0.6, 1.0)*length);
+		obj = room_object_t(drawer, TYPE_BOOK, c.room_id, c.dim, c.dir);
+		obj.obj_id = rgen.rand();
+		obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
+		obj.z2()   = (obj.z1() + rgen.rand_uniform(0.1, 0.35)*sz.z);
+		set_rand_pos_for_sz(obj, !c.dim, length, width, rgen);
+		break;
+	}
+	case 5: // key (Note: aspect ratio of key depends on aspect ratio of door, but key model is always a constant aspect ratio)
+	{
+		obj = room_object_t(drawer, TYPE_KEY, c.room_id, rgen.rand_bool(), rgen.rand_bool());
 		obj.expand_in_dim( obj.dim, -0.40*sz[ obj.dim]); // long  dim
 		obj.expand_in_dim(!obj.dim, -0.46*sz[!obj.dim]); // short dim
 		for (unsigned d = 0; d < 2; ++d) {obj.translate_dim(d, 0.35*sz[d]*rgen.rand_uniform(-1.0, 1.0));}
 		obj.z2() = obj.z1() + 0.05*sz.z;
 		break;
 	}
-	obj.flags |= RO_FLAG_WAS_EXP;
+	case 6: // bottle
+	{
+		float const length(rand_uniform(0.7, 0.9)*min(1.8f*sz.z, sz[!c.dim])), diameter(length*rgen.rand_uniform(0.24, 0.36));
+		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, !c.dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
+		obj.set_as_bottle(rgen.rand());
+		obj.z2() = (obj.z1() + diameter);
+		set_rand_pos_for_sz(obj, !c.dim, length, diameter, rgen);
+		break;
+	}
+	// 7-9 empty
+	}
+	obj.flags    |= RO_FLAG_WAS_EXP;
+	obj.light_amt = c.light_amt;
 	return obj;
 }
 
@@ -554,9 +605,9 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 			cube_t bottom(drawer_body), left(drawer_body), right(drawer_body), back(drawer_body);
 			left.z1() = right.z1() = bottom.z2() = drawer_body.z2() - 0.8*dheight;
 			left.z2() = right.z2() = drawer_body.z2() - 0.1*dheight; // sides slightly shorter than the front and back
-			left .d[!c.dim][1] -= 0.87*dwidth;
-			right.d[!c.dim][0] += 0.87*dwidth;
-			back.d[c.dim][ c.dir] = c.d[c.dim][c.dir] + 0.25f*dir_sign*drawer_thick; // flush with front face and narrow
+			left .d[!c.dim][1]    -= 0.87*dwidth; // set width of left  side
+			right.d[!c.dim][0]    += 0.87*dwidth; // set width of right side
+			back.d[c.dim][ c.dir]  = c.d[c.dim][c.dir] + 0.25f*dir_sign*drawer_thick; // flush with front face and narrow
 			unsigned const skip_mask_front_back(get_skip_mask_for_xy(c.dim));
 			colorRGBA const blr_color(drawer_color*0.4 + apply_wood_light_color(c)*0.4); // halfway between base and drawer colors, but slightly darker
 			// swap the texture orientation of drawers to make them stand out more
@@ -568,7 +619,12 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 			// it would be better to cut a hole into the front of the desk for the drawer to slide into, but that seems to be difficult
 			drawer_mat.add_cube_to_verts(back, drawer_color, tex_origin, get_face_mask(c.dim,c.dir), 1);
 			door_skip_faces_mod = 0; // need to draw interior face
-			room_object_t const obj(get_item_in_drawer(c, drawer_body, (i - drawers.begin())));
+			cube_t interior(drawer_body);
+			interior.z1() = bottom.z2();
+			interior.d[!c.dim][0] = left .d[!c.dim][1];
+			interior.d[!c.dim][1] = right.d[!c.dim][0];
+			interior.d[ c.dim][!c.dir] = back.d[c.dim][c.dir];
+			room_object_t const obj(get_item_in_drawer(c, interior, (i - drawers.begin())));
 			if (obj.type != TYPE_NONE) {objects.push_back(obj);}
 		}
 		drawer_mat.add_cube_to_verts(*i, drawer_color, tex_origin, door_skip_faces_mod, 1); // swap the texture orientation of drawers to make them stand out more
@@ -1180,7 +1236,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	bool const is_coke((c.obj_id % NUM_BOTTLE_COLORS) == 1);
 	main_cylin.expand_in_dim(dim1, 0.02*radius); // expand slightly in radius
 	main_cylin.expand_in_dim(dim2, 0.02*radius); // expand slightly in radius
-	main_cylin.d[dim][c.dir] += dir_sign*0.2*sz.z; main_cylin.d[dim][!c.dir] -= dir_sign*0.1*sz.z; // shrink in length
+	main_cylin.d[dim][c.dir] += dir_sign*0.24*sz.z; main_cylin.d[dim][!c.dir] -= dir_sign*0.12*sz.z; // shrink in length
 	rgeom_mat_t &label_mat(get_material((is_coke ? tid_nm_pair_t(get_texture_by_name("interiors/coke_label.jpg")) : tid_nm_pair_t()), 0, 0, 1));
 	label_mat.add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // white label
 }

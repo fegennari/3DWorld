@@ -1077,6 +1077,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 
 	if (pickup_item) { // pick up item in drawer rather than opening drawer
 		if (!(obj.drawer_flags & (1U << closest_obj_id))) return 0; // drawer is not open
+		// Note: drawer cube passed in is not shrunk to the interior part, but that should be okay because we're not doing a line test against that object
 		room_object_t const item(get_item_in_drawer(obj, drawers[closest_obj_id], closest_obj_id));
 		if (item.type == TYPE_NONE) return 0; // no item
 		if (!register_player_object_pickup(item, at_pos)) return 0;
