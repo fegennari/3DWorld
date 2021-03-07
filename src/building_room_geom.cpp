@@ -543,10 +543,10 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		set_rand_pos_for_sz(obj, !c.dim, length, diameter, rgen);
 		break;
 	}
-	case 4: // book TODO: always small geom
+	case 4: // book
 	{
 		float const length(rgen.rand_uniform(0.6, 0.9)*min(sz[0], sz[1])), width(rgen.rand_uniform(0.6, 1.0)*length);
-		obj = room_object_t(drawer, TYPE_BOOK, c.room_id, !c.dim, c.dir);
+		obj = room_object_t(drawer, TYPE_BOOK, c.room_id, !c.dim, (c.dir ^ c.dim));
 		obj.obj_id = rgen.rand();
 		obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 		obj.z2()   = (obj.z1() + rgen.rand_uniform(0.1, 0.35)*sz.z);
@@ -1504,6 +1504,8 @@ void building_room_geom_t::add_book_title(string const &title, cube_t const &tit
 }
 
 void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle, unsigned extra_skip_faces, bool no_title) {
+	bool const draw_cover_as_small(c.flags & RO_FLAG_WAS_EXP); // books taken from drawers are always drawn as small objects
+	if (draw_cover_as_small && !inc_sm) return; // nothing to draw
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz());
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
@@ -1524,11 +1526,11 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	tilt_angle *= (c.dim ? -1.0 : 1.0);
 	bool has_cover(0);
 
-	if (inc_lg) { // add book geom
+	if (draw_cover_as_small ? inc_sm : inc_lg) { // add book geom
 		colorRGBA const color(apply_light_color(c));
 		// skip top face, bottom face if not tilted, thickness dim if upright
 		unsigned const skip_faces(extra_skip_faces | ((tilt_angle == 0.0) ? EF_Z1 : 0) | (upright ? get_skip_mask_for_xy(tdim) : EF_Z2));
-		rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0)); // unshadowed, since shadows are too small to have much effect
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, draw_cover_as_small)); // unshadowed, since shadows are too small to have much effect
 		unsigned const qv_start(mat.quad_verts.size());
 		mat.add_cube_to_verts(bot,   color, tex_origin, (extra_skip_faces | EF_Z1)); // untextured, skip bottom face
 		mat.add_cube_to_verts(top,   color, tex_origin, (extra_skip_faces | (upright ? EF_Z1 : 0))); // untextured, skip bottom face if upright
@@ -2585,6 +2587,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 
 void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add) {
 	float const tscale(2.0/obj_scale);
+	get_material(tid_nm_pair_t(), 0, 0, 1); // must ensure book covers are drawn before the text so that alpha blending works properly, so add the untextured cover material first
 
 	for (auto i = objs_to_add.begin(); i != objs_to_add.end(); ++i) {
 		if (!i->is_visible() || i->is_dynamic()) continue; // skip invisible and dynamic objects
