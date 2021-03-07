@@ -503,9 +503,13 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		if (i->open) {
 			if (!check_open_doors) continue; // doors tend to block the player and other objects, don't collide with them unless they're closed
-			// TODO: rough proximity check
+			float const door_width(i->get_sz_dim(!i->dim));
+			cube_t door_bounds(*i);
+			door_bounds.expand_by_xy(door_width);
+			if (!sphere_cube_intersect(pos, radius, door_bounds)) continue; // check intersection with rough/conservative door bounds (optimization)
 			tquad_with_ix_t const door(building.set_door_from_cube(*i, i->dim, i->open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, i->open, 0, 0, 0));
-			vector3d const normal(-door.get_norm()); // negated
+			vector3d normal(door.get_norm());
+			if (dot_product_ptv(normal, pos, door.pts[0]) < 0.0) {normal.negate();} // use correct normal sign
 			float rdist, thick;
 			
 			if (sphere_ext_poly_int_base(door.pts[0], normal, pos, radius, i->get_sz_dim(i->dim), thick, rdist)) {

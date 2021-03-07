@@ -15,5 +15,4 @@ Cities:
 - Secondary Building roads
 
 Buildings:
-* Ball collision with open doors
 * Add objects to dresser drawers
