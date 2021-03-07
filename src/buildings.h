@@ -600,6 +600,7 @@ struct door_t : public cube_t {
 	door_t() : dim(0), open_dir(0), open(0), locked(0), on_stairs(0) {}
 	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0) :
 		cube_t(c), dim(dim_), open_dir(dir), open(open_), locked(0), on_stairs(os) {assert(is_strictly_normalized());}
+	bool is_closed_and_locked() const {return (!open && locked);}
 };
 typedef vector<door_t> vect_door_t;
 

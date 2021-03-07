@@ -38,6 +38,7 @@ room_object_t get_dresser_middle(room_object_t const &c);
 room_object_t get_desk_drawers_part(room_object_t const &c);
 bool player_can_unlock_door();
 void show_key_icon();
+bool player_has_room_key();
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -278,7 +279,8 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 		register_building_sound(center, ((obj.type == TYPE_CLOSET) ? 0.25 : 0.5)); // closets are quieter, to allow players to more easily hide
 	}
 	else { // interior door
-		if (interior->doors[door_ix].locked && !player_can_unlock_door()) return 0; // locked
+		door_t &door(interior->doors[door_ix]);
+		if (door.is_closed_and_locked() && !player_can_unlock_door()) return 0; // locked
 		toggle_door_state(door_ix, 1, 1, closest_to.z); // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
 	}
 	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
@@ -1242,6 +1244,8 @@ void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool
 
 // gameplay logic
 
+bool player_has_room_key() {return player_inventory.player_has_key();}
+
 bool register_ai_player_coll(bool &has_key) { // returns is_dead
 	static double last_coll_time(0.0);
 	
@@ -1253,7 +1257,7 @@ bool register_ai_player_coll(bool &has_key) { // returns is_dead
 	player_inventory.take_damage(0.04*fticks); // take damage over time
 	
 	if (player_inventory.player_is_dead()) {
-		if (player_inventory.player_has_key()) {has_key = 1;}
+		if (player_has_room_key()) {has_key = 1;}
 		return 1;
 	}
 	return 0;

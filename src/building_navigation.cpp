@@ -461,7 +461,7 @@ void building_t::build_nav_graph() const {
 
 		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
 			// door starts off closed/locked, treat it as a barrier for now and don't connect the rooms; we could check person.has_key, but this graph is shared across all people
-			if (!d->open && (d->locked || global_building_params.ai_opens_doors < 2)) continue;
+			if (d->is_closed_and_locked() || (!d->open && global_building_params.ai_opens_doors < 2)) continue;
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
 			cube_t dc(*d);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
@@ -1013,7 +1013,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
 			if (!door.line_intersects(person.pos, person.target_pos)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
 
-			if (global_building_params.ai_opens_doors && (!i->locked || person.has_key)) { // can open the door
+			if (global_building_params.ai_opens_doors && (!i->is_closed_and_locked() || person.has_key)) { // can open the door
 				toggle_door_state((i - interior->doors.begin()), player_in_this_building, 0, person.pos.z); // by_player=0
 			}
 			else { // can't open the door
