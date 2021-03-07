@@ -281,6 +281,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
 		if (door.is_closed_and_locked() && !player_can_unlock_door()) return 0; // locked
+		if (door.locked && !player_has_room_key()) {door.locked = 0;} // don't lock door when closing, to prevent the player from locking themselves in a room
 		toggle_door_state(door_ix, 1, 1, closest_to.z); // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
 	}
 	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
