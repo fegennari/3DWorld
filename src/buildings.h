@@ -1038,5 +1038,3 @@ void draw_cars_in_garages(vector3d const &xlate, bool shadow_only);
 void create_mirror_reflection_if_needed();
 void draw_city_roads(int trans_op_mask, vector3d const &xlate);
 
-void register_ai_player_coll(pedestrian_t const &person);
-

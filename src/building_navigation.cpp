@@ -25,6 +25,7 @@ bool ai_follow_player() {return (global_building_params.ai_follow_player || in_b
 bool can_ai_follow_player(pedestrian_t const &person);
 bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies);
+bool register_ai_player_coll(bool &has_key);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
@@ -459,7 +460,8 @@ void building_t::build_nav_graph() const {
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
 		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
-			if (!d->open && (d->locked || global_building_params.ai_opens_doors < 2)) continue; // door starts off closed/locked, treat it as a barrier for now and don't connect the rooms
+			// door starts off closed/locked, treat it as a barrier for now and don't connect the rooms; we could check person.has_key, but this graph is shared across all people
+			if (!d->open && (d->locked || global_building_params.ai_opens_doors < 2)) continue;
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
 			cube_t dc(*d);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
@@ -902,7 +904,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	build_nav_graph();
 
 	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
-		register_ai_player_coll(person);
+		register_ai_player_coll(person.has_key); // Note: returns is_dead, so we could track kills here
 	}
 	bool choose_dest(!person.target_valid());
 	bool const update_path(need_to_update_ai_path(state, person));
@@ -1011,10 +1013,10 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
 			if (!door.line_intersects(person.pos, person.target_pos)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
 
-			if (global_building_params.ai_opens_doors && !i->locked) {
+			if (global_building_params.ai_opens_doors && (!i->locked || person.has_key)) { // can open the door
 				toggle_door_state((i - interior->doors.begin()), player_in_this_building, 0, person.pos.z); // by_player=0
 			}
-			else {
+			else { // can't open the door
 				person.wait_for(5.0); // wait for 5s and then choose a new desination
 				return AI_WAITING; // cut the path short at this closed door
 			}

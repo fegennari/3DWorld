@@ -738,6 +738,8 @@ public:
 	float get_carry_weight_ratio() const {return min(1.0f, cur_weight/global_building_params.player_weight_limit);}
 	float get_speed_mult () const {return (1.0f - 0.4f*get_carry_weight_ratio())*((bladder > 0.9) ? 0.6 : 1.0);} // 40% reduction for heavy load, 40% reduction for full bladder
 	float get_drunkenness() const {return drunkenness;}
+	bool  player_is_dead () const {return (player_health <= 0.0);}
+	bool  player_has_key () const {return has_key;}
 
 	bool can_unlock_door() const {
 		if (has_key) return 1;
@@ -848,15 +850,15 @@ public:
 		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start && camera_in_building) {
 			// only take fall damage when inside the building (no falling off the roof for now)
 			player_health -= 1.0f*(delta_z - fall_damage_start)/fall_damage_start;
-			if (player_health < 0.0) {register_player_death(SOUND_SQUISH, " of a fall"); return;} // dead
+			if (player_is_dead()) {register_player_death(SOUND_SQUISH, " of a fall"); return;} // dead
 			gen_sound_thread_safe(SOUND_SQUISH, get_camera_pos(), 0.5);
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 			register_building_sound((camera_pos - get_camera_coord_space_xlate()), 1.0);
 		}
 		prev_player_zval = player_zval;
 		// handle death events
-		if (player_health < 0.0) {register_player_death(SOUND_SCREAM3, ""); return;} // dead
-		if (drunkenness   > 2.0) {register_player_death(SOUND_DROWN,   " of alcohol poisoning"); return;}
+		if (player_is_dead() ) {register_player_death(SOUND_SCREAM3, ""); return;} // dead
+		if (drunkenness > 2.0) {register_player_death(SOUND_DROWN,   " of alcohol poisoning"); return;}
 		// update state for next frame
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks)); // slowly decrease over time
 		
@@ -1240,7 +1242,7 @@ void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool
 
 // gameplay logic
 
-void register_ai_player_coll(pedestrian_t const &person) {
+bool register_ai_player_coll(bool &has_key) { // returns is_dead
 	static double last_coll_time(0.0);
 	
 	if (tfticks - last_coll_time > 2.0*TICKS_PER_SECOND) {
@@ -1249,6 +1251,12 @@ void register_ai_player_coll(pedestrian_t const &person) {
 	}
 	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
 	player_inventory.take_damage(0.04*fticks); // take damage over time
+	
+	if (player_inventory.player_is_dead()) {
+		if (player_inventory.player_has_key()) {has_key = 1;}
+		return 1;
+	}
+	return 0;
 }
 
 void building_gameplay_action_key(int mode) {
