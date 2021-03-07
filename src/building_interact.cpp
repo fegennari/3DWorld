@@ -751,7 +751,6 @@ public:
 		return 0;
 	}
 	void add_item(room_object_t const &obj) {
-		if (obj.type == TYPE_KEY) {has_key = 1;}
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
 		bool const bladder_was_full(bladder >= 0.9);
 		colorRGBA text_color(GREEN);
@@ -771,7 +770,10 @@ public:
 			player_health = min(1.0f, (player_health + health));
 			oss << ": +" << round_fp(100.0*health) << "% Health";
 		}
-		if (health == 0.0 && drunk == 0.0) { // print value and weight if item is not consumed
+		if (obj.type == TYPE_KEY) {
+			has_key = 1; // mark as having the key, but it doesn't go into the inventory or contribute to weight or value
+		}
+		else if (health == 0.0 && drunk == 0.0) { // print value and weight if item is not consumed
 			float const value(get_obj_value(obj)), weight(get_obj_weight(obj));
 			cur_value  += value;
 			cur_weight += weight;
