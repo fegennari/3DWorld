@@ -1175,11 +1175,14 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	if (!is_empty) { // draw cap if nonempty
 		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[bool(c.obj_id & 64)]), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	}
+	// add the label
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
+	bool const is_coke((c.obj_id % NUM_BOTTLE_COLORS) == 1);
 	main_cylin.expand_in_dim(dim1, 0.02*radius); // expand slightly in radius
 	main_cylin.expand_in_dim(dim2, 0.02*radius); // expand slightly in radius
-	main_cylin.d[dim][c.dir] += dir_sign*0.3*sz.z; main_cylin.d[dim][!c.dir] -= dir_sign*0.15*sz.z; // shrink in length
-	get_material(tid_nm_pair_t(), 0, 0, 1).add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // white label
+	main_cylin.d[dim][c.dir] += dir_sign*0.2*sz.z; main_cylin.d[dim][!c.dir] -= dir_sign*0.1*sz.z; // shrink in length
+	rgeom_mat_t &label_mat(get_material((is_coke ? tid_nm_pair_t(get_texture_by_name("interiors/coke_label.jpg")) : tid_nm_pair_t()), 0, 0, 1));
+	label_mat.add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // white label
 }
 
 void building_room_geom_t::add_paper(room_object_t const &c) {
