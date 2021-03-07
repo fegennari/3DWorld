@@ -514,7 +514,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	switch (type_ix) {
 	case 0: // box
 	{
-		float const length(rand_uniform(0.4, 0.9)*sz[c.dim]), width(rand_uniform(0.4, 0.9)*sz[!c.dim]);
+		float const length(rgen.rand_uniform(0.4, 0.9)*sz[c.dim]), width(rgen.rand_uniform(0.4, 0.9)*sz[!c.dim]);
 		obj = room_object_t(drawer, TYPE_BOX, c.room_id, rgen.rand_bool(), rgen.rand_bool());
 		obj.color = gen_box_color(rgen);
 		obj.z2()  = (obj.z1() + rgen.rand_uniform(0.4, 0.8)*sz.z);
@@ -545,8 +545,8 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 4: // book TODO: always small geom
 	{
-		float const length(rand_uniform(0.6, 0.9)*min(sz[0], sz[1])), width(rand_uniform(0.6, 1.0)*length);
-		obj = room_object_t(drawer, TYPE_BOOK, c.room_id, c.dim, c.dir);
+		float const length(rgen.rand_uniform(0.6, 0.9)*min(sz[0], sz[1])), width(rgen.rand_uniform(0.6, 1.0)*length);
+		obj = room_object_t(drawer, TYPE_BOOK, c.room_id, !c.dim, c.dir);
 		obj.obj_id = rgen.rand();
 		obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 		obj.z2()   = (obj.z1() + rgen.rand_uniform(0.1, 0.35)*sz.z);
@@ -564,7 +564,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 6: // bottle
 	{
-		float const length(rand_uniform(0.7, 0.9)*min(1.8f*sz.z, sz[!c.dim])), diameter(length*rgen.rand_uniform(0.24, 0.36));
+		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, sz[!c.dim])), diameter(length*rgen.rand_uniform(0.24, 0.36));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, !c.dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.set_as_bottle(rgen.rand());
 		obj.z2() = (obj.z1() + diameter);
