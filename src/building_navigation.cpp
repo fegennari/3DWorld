@@ -732,7 +732,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 			path.push_back(stairs_exit);
 
 			if (stairs.shape == SHAPE_U) { // add 2 extra points on mid-level landing; entrance and exit will be on the same side
-				bool const dim(stairs.dim), dir(stairs.dir), side(dir); // Note: see code in add_stairs_and_elevators()
+				bool const dim(stairs.dim), dir(stairs.dir); // Note: see code in add_stairs_and_elevators()
 				float const turn_pt(stairs.d[dim][dir] - 0.1*(dir ? 1.0 : -1.0)*stairs.get_sz_dim(dim)), seg_delta_z(0.45f*(to.z - from.z));
 				point exit_turn(stairs_exit.x, stairs_exit.y, (to.z - seg_delta_z));
 				exit_turn[dim] = turn_pt;

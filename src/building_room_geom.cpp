@@ -581,7 +581,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	vect_cube_t &drawers(get_temp_cubes());
 	get_drawer_cubes(c, drawers, 1); // front_only=1
 	assert(drawers.size() <= 16); // we only have 16 bits to store drawer flags
-	float const depth(c.get_sz_dim(c.dim)), height(c.dz()), drawer_thick(0.05*height), handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
+	float const height(c.dz()), drawer_thick(0.05*height), handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1, 0, 1)); // shadowed, small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
