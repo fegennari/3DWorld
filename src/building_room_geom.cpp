@@ -1210,22 +1210,23 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c)), cap_colors[2] = {LT_GRAY, GOLD};
 	vector3d const sz(c.get_size());
 	unsigned const dim(get_max_dim(sz)), dim1((dim+1)%3), dim2((dim+2)%3);
-	bool const is_empty(c.is_bottle_empty()), add_bottom(max(sz.x, sz.y) > sz.z); // add bottom if bottle is on its side
+	bool const is_empty(c.is_bottle_empty()), add_bottom(dim != 2); // add bottom if bottle is on its side
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
+	float const length(sz[dim]); // AKA height, if standing up
 	cube_t sphere(c), main_cylin(c), top_cylin(c);
-	sphere.d[dim][ c.dir] = c.d[dim][c.dir] + dir_sign*0.5*sz[dim];
-	sphere.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.3*sz.z;
-	main_cylin.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.15*sz.z;
+	sphere.d[dim][ c.dir] = c.d[dim][c.dir] + dir_sign*0.5*length;
+	sphere.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.3*length;
+	main_cylin.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.15*length;
 	top_cylin .d[dim][ c.dir] = main_cylin.d[dim][!c.dir]; // there will be some intersection, but that should be okay
 	top_cylin.expand_in_dim(dim1, -0.32*sz[dim1]); // smaller radius
 	top_cylin.expand_in_dim(dim2, -0.32*sz[dim2]); // smaller radius
 	cube_t cap(top_cylin);
-	top_cylin.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*sz[dim]; // set cap thickness
+	top_cylin.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*length; // set cap thickness
 	cap.expand_in_dim(dim1, 0.034*sz[dim1]); // slightly larger radius
 	cap.expand_in_dim(dim2, 0.034*sz[dim2]); // slightly larger radius
 	mat.add_sphere_to_verts(sphere, color, 1); // low_detail=1
 	mat.add_ortho_cylin_to_verts(main_cylin, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
-	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 0, is_empty, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // draw neck of bottle; draw top if empty
+	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, 0, is_empty, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // draw neck of bottle; draw top if empty (should this be a truncated cone?)
 
 	if (!is_empty) { // draw cap if nonempty
 		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[bool(c.obj_id & 64)]), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
@@ -1235,7 +1236,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	bool const is_coke((c.obj_id % NUM_BOTTLE_COLORS) == 1);
 	main_cylin.expand_in_dim(dim1, 0.02*radius); // expand slightly in radius
 	main_cylin.expand_in_dim(dim2, 0.02*radius); // expand slightly in radius
-	main_cylin.d[dim][c.dir] += dir_sign*0.24*sz.z; main_cylin.d[dim][!c.dir] -= dir_sign*0.12*sz.z; // shrink in length
+	main_cylin.d[dim][c.dir] += dir_sign*0.24*length; main_cylin.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
 	rgeom_mat_t &label_mat(get_material((is_coke ? tid_nm_pair_t(get_texture_by_name("interiors/coke_label.jpg")) : tid_nm_pair_t()), 0, 0, 1));
 	label_mat.add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // white label
 }
