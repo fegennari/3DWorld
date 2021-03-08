@@ -41,7 +41,7 @@ int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
 bool has_key_3d_model  () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
-vect_cube_t get_temp_cubes() {temp_cubes.clear(); return temp_cubes;}
+vect_cube_t &get_temp_cubes() {temp_cubes.clear(); return temp_cubes;}
 vector<room_object_t> &get_temp_objects() {temp_objects.clear(); return temp_objects;}
 
 // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2 to match CSG cube flags
