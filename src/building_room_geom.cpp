@@ -506,8 +506,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
-	//unsigned const type_ix(rgen.rand() % 10); // 0-9
-	unsigned const type_ix(rgen.rand() % 7);
+	unsigned const type_ix(rgen.rand() % 10); // 0-9
 	room_object_t obj; // starts as no item
 
 	// TODO: cell phone, wallet, money, etc.
@@ -550,7 +549,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		obj.obj_id = rgen.rand();
 		obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 		obj.z2()   = (obj.z1() + rgen.rand_uniform(0.1, 0.35)*sz.z);
-		set_rand_pos_for_sz(obj, !c.dim, length, width, rgen);
+		set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
 		break;
 	}
 	case 5: // key (Note: aspect ratio of key depends on aspect ratio of door, but key model is always a constant aspect ratio)
@@ -564,7 +563,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 6: // bottle
 	{
-		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, sz[!c.dim])), diameter(length*rgen.rand_uniform(0.24, 0.36));
+		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, sz[!c.dim])), diameter(length*rgen.rand_uniform(0.28, 0.36));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, !c.dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.set_as_bottle(rgen.rand());
 		obj.z2() = (obj.z1() + diameter);
