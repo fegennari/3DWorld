@@ -904,7 +904,9 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	build_nav_graph();
 
 	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
-		register_ai_player_coll(person.has_key); // Note: returns is_dead, so we could track kills here
+		if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos)) {
+			register_ai_player_coll(person.has_key); // Note: returns is_dead, so we could track kills here
+		}
 	}
 	bool choose_dest(!person.target_valid());
 	bool const update_path(need_to_update_ai_path(state, person));

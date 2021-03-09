@@ -939,6 +939,7 @@ private:
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	public:
 	// ray queries
+	bool check_line_intersect_doors(point const &p1, point const &p2) const;
 	bool is_pt_visible(point const &p1, point const &p2) const;
 	bool is_sphere_visible(point const &center, float radius, point const &pt) const;
 	bool is_pt_lit(point const &pt) const;

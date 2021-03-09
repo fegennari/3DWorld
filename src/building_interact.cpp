@@ -520,19 +520,22 @@ bool trace_ray_through_cubes(vect_cube_t const &cubes, point const &p1, point co
 	} // for n
 	return 0; // ray has exited the cubes
 }
-bool building_t::is_pt_visible(point const &p1, point const &p2) const {
-	if (!interior) return 1;
-	if (is_light_occluded(p1, p2)) return 0; // okay to call for non-light point; checks walls, ceilings, and floors
+bool building_t::check_line_intersect_doors(point const &p1, point const &p2) const {
 	float const wall_thickness(get_wall_thickness());
-	if (parts.size() > 1 && !trace_ray_through_cubes(parts, p1, p2, 0.01*wall_thickness)) return 0; // view blocked by exterior wall (ignores windows)
-	
+
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->open) continue; // check only closed doors
 		cube_t door(*i);
 		door.expand_in_dim(i->dim, 0.5*wall_thickness); // increase door thickness
-		if (door.line_intersects(p1, p2)) return 0;
+		if (door.line_intersects(p1, p2)) return 1;
 	}
-	return 1;
+	return 0;
+}
+bool building_t::is_pt_visible(point const &p1, point const &p2) const {
+	if (!interior) return 1;
+	if (is_light_occluded(p1, p2)) return 0; // okay to call for non-light point; checks walls, ceilings, and floors
+	if (parts.size() > 1 && !trace_ray_through_cubes(parts, p1, p2, 0.01*get_wall_thickness())) return 0; // view blocked by exterior wall (ignores windows)
+	return !check_line_intersect_doors(p1, p2);
 }
 bool building_t::is_sphere_visible(point const &center, float radius, point const &pt) const {
 	if (!interior) return 1;
@@ -958,10 +961,11 @@ bool has_cube_line_coll(point const &p1, point const &p2, vect_cube_t const &cub
 	}
 	return 0;
 }
-bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2) const {
+bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2) const { // and interior doors
 	if (!interior) return 0;
 	for (unsigned d = 0; d < 2; ++d) {if (has_cube_line_coll(p1, p2, interior->walls[d])) return 1;}
-	return (has_cube_line_coll(p1, p2, interior->ceilings) || has_cube_line_coll(p1, p2, interior->floors)); // or is only checking one good enough?
+	if (has_cube_line_coll(p1, p2, interior->ceilings) || has_cube_line_coll(p1, p2, interior->floors)) return 1; // or is only checking one good enough?
+	return check_line_intersect_doors(p1, p2);
 }
 
 bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> const &objs) {
