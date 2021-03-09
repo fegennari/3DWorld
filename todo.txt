@@ -15,4 +15,3 @@ Cities:
 - Secondary Building roads
 
 Buildings:
-* Add objects to dresser drawers

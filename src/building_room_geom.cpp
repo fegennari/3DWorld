@@ -39,7 +39,7 @@ tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0) {return tid_nm_pair_t(t
 int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
 int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
-int get_money_tid      () {return get_texture_by_name("normal_maps/dollar20.jpg");}
+int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");}
 bool has_key_3d_model  () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
 vect_cube_t &get_temp_cubes() {temp_cubes.clear(); return temp_cubes;}
@@ -572,12 +572,27 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 7: // money
 	{
-		// TODO: TYPE_MONEY
+		float const length(0.5*sz.z), width(2.35*length);
+
+		if (length < 1.1*sz[c.dim] && width < 1.1*sz[!c.dim]) { // if it can fit
+			obj = room_object_t(drawer, TYPE_MONEY, c.room_id, c.dim, c.dir);
+			obj.z2() = (obj.z1() + 0.01*sz.z);
+			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
+		}
 		break;
 	}
 	case 8: // phone
 	{
-		// TODO: TYPE_PHONE
+		float const length(1.1*sz.z), width(0.45*length);
+
+		if (length < 1.1*sz[c.dim] && width < 1.1*sz[!c.dim]) { // if it can fit
+			unsigned const NUM_PHONE_COLORS = 7; // for the case
+			colorRGBA const phone_colors[NUM_PHONE_COLORS] = {WHITE, GRAY, DK_GRAY, GRAY_BLACK, BLUE, RED, PINK};
+			obj = room_object_t(drawer, TYPE_PHONE, c.room_id, c.dim, c.dir);
+			obj.color = phone_colors[rgen.rand() % NUM_PHONE_COLORS];
+			obj.z2()  = (obj.z1() + 0.06*length);
+			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
+		}
 		break;
 	}
 	case 9: // empty
@@ -849,12 +864,14 @@ void building_room_geom_t::add_key(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_money(room_object_t const &c) { // is_small=1
-	get_material(tid_nm_pair_t(get_money_tid(), 0.0), 0, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2); // top face only, no shadows
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_money_tid(), 0.0), 0, 0, 1));
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only, no shadows
 }
 
 void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
-	// TODO: black top surface, curved edges, etc.
-	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face, no shadows
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1));
+	mat.add_cube_to_verts(c, apply_light_color(c),        zero_vector,  EF_Z12); // sides, no shadows
+	mat.add_cube_to_verts(c, apply_light_color(c, BLACK), zero_vector, ~EF_Z2 ); // top,   no shadows
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -2533,6 +2550,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_LG_BALL:  return texture_color(get_lg_ball_tid(*this));
 	case TYPE_HANGER_ROD:return get_textured_wood_color();
 	case TYPE_MONEY:    return texture_color(get_money_tid());
+	case TYPE_PHONE:    return color*0.5; // 50% case color, 50% black
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
