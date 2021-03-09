@@ -402,8 +402,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				if (sphere_cube_intersect(pos, xy_radius, *c)) {
 					float const width(c->get_sz_dim(!c->dir));
 					cube_t sides[2] = {*c, *c};
-					sides[0].d[!c->dir][1] -= 0.95*width;
-					sides[1].d[!c->dir][0] += 0.95*width;
+					sides[0].d[!c->dim][1] -= 0.95*width;
+					sides[1].d[!c->dim][0] += 0.95*width;
 					for (unsigned d = 0; d < 2; ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
 				}
 			}
