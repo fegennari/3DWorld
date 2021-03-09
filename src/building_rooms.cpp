@@ -1498,7 +1498,8 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	if (overlaps_other_room_obj(keepout, objs_start)) return 0;
 	bool const inc_open(!is_house && !room.is_office);
 	if (is_cube_close_to_doorway(tc, room, 0.0, inc_open)) return 0; // bad placement
-	if ((room.has_stairs || room.has_elevator) && interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
+	// Note: it's not legal to guard the below check with (room.has_stairs || room.has_elevator) because room.has_stairs may not be set for stack connector stairs that split a wall
+	if (interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
 	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, room, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
 	return 1; // success
 }
