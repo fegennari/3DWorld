@@ -1034,7 +1034,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		room_t const &room(interior->rooms[state.cur_room]);
 		float const floor_spacing(get_window_vspace());
 		int cur_floor(max(0, round_fp((new_pos.z - min_valid_zval)/floor_spacing)));
-		min_eq(cur_floor, (round_fp(room.dz()/floor_spacing) - 1)); // clip to the valid floors for this room
+		min_eq(cur_floor, (round_fp((room.z2() - bcube.z1())/floor_spacing) - 1)); // clip to the valid floors for this room relative to lowest building floor
 		float const adj_zval(cur_floor*floor_spacing + min_valid_zval);
 		if (fabs(adj_zval - new_pos.z) > 0.1*person.radius) {person.target_pos = all_zeros; state.path.clear();} // if we snap to the floor, reset the target and path
 		new_pos.z = adj_zval;
