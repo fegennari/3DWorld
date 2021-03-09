@@ -482,7 +482,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 	float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const
 {
-	float const wall_test_z(pos.z + wall_test_extra_z); // use p_last to get orig zval
+	float const obj_z(max(pos.z, p_last.z)), wall_test_z(obj_z + wall_test_extra_z); // use p_last to get orig zval
 	bool had_coll(0);
 
 	// Note: pos.z may be too small here and we should really use obj_z, so skip_z must be set to 1 in cube tests and obj_z tested explicitly instead
@@ -493,7 +493,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 		}
 	}
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
-		if (pos.z < e->z1() || pos.z > e->z2()) continue; // wrong part/floor
+		if (obj_z < e->z1() || obj_z > e->z2()) continue; // wrong part/floor
 
 		if (1/*obj_z < e->z1() + floor_spacing*/) { // should players only be allowed in elevators on the ground floor?
 			cube_t cubes[5];
@@ -523,7 +523,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			}
 			continue;
 		}
-		if (pos.z < i->z1() || pos.z > i->z2()) continue; // wrong part/floor
+		if (obj_z < i->z1() || obj_z > i->z2()) continue; // wrong part/floor
 		had_coll |= sphere_cube_int_update_pos(pos, radius, *i, p_last, 1, 0, cnorm); // skip_z=0
 	} // for i
 	return had_coll;
