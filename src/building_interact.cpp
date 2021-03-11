@@ -1152,7 +1152,7 @@ void building_room_geom_t::update_draw_state_for_room_object(room_object_t const
 		if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
 		if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
 		if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
-		if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object may affect the AI navigation graph
+		//if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object should not affect the AI navigation graph
 	}
 	modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 }
