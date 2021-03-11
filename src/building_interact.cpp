@@ -811,12 +811,12 @@ public:
 		return 1;
 	}
 	void collect_items() {
+		has_key = 0; // key only good for current building
 		if (carried.empty()) return; // nothing to add
 		std::ostringstream oss;
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
 		tot_value  += cur_value;  cur_value  = 0.0;
 		tot_weight += cur_weight; cur_weight = 0.0;
-		has_key = 0; // key only good for current building
 		carried.clear(); // or add to collected?
 		oss << "Total value $" << tot_value << " Total weight " << tot_weight << " lbs";
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
