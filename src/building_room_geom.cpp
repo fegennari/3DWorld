@@ -1267,7 +1267,8 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, (is_empty && c.dir), (is_empty && !c.dir), 0, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv);
 
 	if (!is_empty) { // draw cap if nonempty
-		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[bool(c.obj_id & 64)]), dim, c.dir, !c.dir, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
+		bool const draw_bot(c.flags & RO_FLAG_WAS_EXP);
+		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[bool(c.obj_id & 64)]), dim, (draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	}
 	// add the label
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
