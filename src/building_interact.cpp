@@ -292,7 +292,8 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	assert(interior && door_ix < interior->doors.size());
 	door_t &door(interior->doors[door_ix]);
 	door.open ^= 1; // toggle open state
-	invalidate_nav_graph(); // we just invalidated the AI navigation graph and must rebuild it; any in-progress paths may have people walking through closed doors
+	// we changed the door state, but navigation should adapt to this, except for doors on stairs (which are special)
+	if (door.on_stairs) {invalidate_nav_graph();} // any in-progress paths may have people walking to and stopping at closed/locked doors
 	interior->door_state_updated = 1; // required for AI navigation logic to adjust to this change
 	if (has_room_geom()) {interior->room_geom->mats_doors.clear();} // need to recreate doors VBO
 

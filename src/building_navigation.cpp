@@ -31,21 +31,22 @@ point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.
 
 // Note: this should go into building_t/buildings.h at some point, but is temporarily here
 class building_nav_graph_t {
-	struct pt_with_ix_t { // size=12
-		unsigned ix;
-		vector2d pt[2]; // stairs store {up, down}
-		pt_with_ix_t(unsigned ix_, vector2d const &ptu, vector2d const &ptd) : ix(ix_) {pt[0] = ptu; pt[1] = ptd;}
+	struct conn_room_t { // size=16
+		unsigned ix; // node index
+		int door_ix; // index of connecting door on first floor; -1 for connections with out a door
+		vector2d pt[2]; // stairs entry/exit point {up, down}
+		conn_room_t(unsigned ix_, int dix, vector2d const &ptu, vector2d const &ptd) : ix(ix_), door_ix(dix) {pt[0] = ptu; pt[1] = ptd;}
 	};
 	struct node_t { // represents one room or one stairwell
 		bool has_exit, is_hallway, is_stairs; // has_exit and is_stairs are not yet used
 		cube_t bcube;
-		vector<pt_with_ix_t> conn_rooms;
+		vector<conn_room_t> conn_rooms;
 		node_t() : has_exit(0), is_hallway(0), is_stairs(0) {}
 		point get_center(float zval) const {return get_cube_center_zval(bcube, zval);}
 
-		void add_conn_room(unsigned room, cube_t const &cu, cube_t const &cd) {
+		void add_conn_room(unsigned room, int door_ix, cube_t const &cu, cube_t const &cd) {
 			for (auto i = conn_rooms.begin(); i != conn_rooms.end(); ++i) {if (i->ix == room) return;} // ignore duplicates
-			conn_rooms.emplace_back(room, vector2d(cu.xc(), cu.yc()), vector2d(cd.xc(), cd.yc()));
+			conn_rooms.emplace_back(room, door_ix, vector2d(cu.xc(), cu.yc()), vector2d(cd.xc(), cd.yc()));
 		}
 	};
 	struct a_star_node_state_t {
@@ -102,13 +103,13 @@ public:
 			entry_u.d[dim][ dir] = entry_u.d[dim][!dir] + extend; // shrink to extend length at the entrance to the stairs when going up
 			entry_d.d[dim][!dir] = entry_d.d[dim][ dir] - extend; // shrink to extend length at the entrance to the stairs when going down
 		}
-		get_node(room).add_conn_room(node_ix2, entry_u, entry_d);
-		n2.add_conn_room(room, entry_u, entry_d);
+		get_node(room).add_conn_room(node_ix2, -1, entry_u, entry_d);
+		n2.add_conn_room(room, -1, entry_u, entry_d);
 	}
-	void connect_rooms(unsigned room1, unsigned room2, cube_t const &conn_bcube) { // graph is bidirectional
+	void connect_rooms(unsigned room1, unsigned room2, int door_ix, cube_t const &conn_bcube) { // graph is bidirectional
 		assert(room1 < num_rooms && room2 < num_rooms);
-		get_node(room1).add_conn_room(room2, conn_bcube, conn_bcube);
-		get_node(room2).add_conn_room(room1, conn_bcube, conn_bcube);
+		get_node(room1).add_conn_room(room2, door_ix, conn_bcube, conn_bcube);
+		get_node(room2).add_conn_room(room1, door_ix, conn_bcube, conn_bcube);
 	}
 	void disconnect_room_pair(unsigned room1, unsigned room2) { // remove connections in both directions
 		assert(room1 != room2 && room1 < num_rooms && room2 < num_rooms);
@@ -377,10 +378,25 @@ public:
 		if (p1_extend_pt != p1) {path.push_back(p1_extend_pt);} // add if p1 was clamped
 		return 1;
 	}
+
+	bool can_use_conn(conn_room_t const &conn, vect_door_t const &doors, float zval, bool has_key) const {
+		if (conn.door_ix < 0) return 1; // no door
+		if (global_building_params.ai_opens_doors && has_key) return 1; // locked door won't stop us
+		unsigned const door_ix(conn.door_ix);
+		assert(door_ix < doors.size());
+		door_t const &first_door(doors[door_ix]);
+
+		for (auto i = (doors.begin() + door_ix); i != doors.end(); ++i) {
+			if (i->x1() != first_door.x1() || i->y1() != first_door.y1()) break; // we've reached the end of the vertical stack of doors
+			if (zval < i->z1() || zval > i->z2()) continue; // not the correct floor
+			return (i->open || (global_building_params.ai_opens_doors && (!i->locked || has_key)));
+		}
+		return 1; // Note: we can get here for complex floorplan office buildings with bad interior walls (-4.18, 4.28, -3.46)
+	}
 	
 	// A* algorithm; Note: path is stored backwards
 	bool find_path_points(unsigned room1, unsigned room2, unsigned ped_ix, float radius, float height, bool use_stairs, bool is_first_path,
-		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, point const &cur_pt, vector<point> &path) const
+		bool up_or_down, unsigned ped_rseed, vect_cube_t const &avoid, point const &cur_pt, vect_door_t const &doors, bool has_key, vector<point> &path) const
 	{
 		// Note: opening and closing doors updates the nav graph; an AI encountering a closed door after choosing a path can either open it or stop and wait
 		assert(room1 < nodes.size() && room2 < nodes.size());
@@ -417,6 +433,7 @@ public:
 				float const new_g_score(sn.g_score + p2p_dist_xy(center, pt) + p2p_dist_xy(pt, conn_center));
 				if (!open[i->ix]) {open[i->ix] = 1;}
 				else if (new_g_score >= sn.g_score) continue; // not better
+				if (!can_use_conn(*i, doors, cur_pt.z, has_key)) continue; // blocked by closed or locked door
 				sn.came_from_ix = cur;
 				sn.path_pt.assign(pt.x, pt.y, cur_pt.z);
 				
@@ -440,7 +457,7 @@ cube_t building_t::get_walkable_room_bounds(room_t const &room) const {
 	return c;
 }
 
-void building_t::build_nav_graph() const {
+void building_t::build_nav_graph() const { // Note: does not depend on room geom
 
 	assert(interior);
 	if (interior->nav_graph && !interior->nav_graph->invalid) return; // already built
@@ -460,14 +477,15 @@ void building_t::build_nav_graph() const {
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
 		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
-			// door starts off closed/locked, treat it as a barrier for now and don't connect the rooms; we could check person.has_key, but this graph is shared across all people
-			if (d->is_closed_and_locked() || (!d->open && global_building_params.ai_opens_doors < 2)) continue;
+			// if SPLIT_DOOR_PER_FLOOR, we should only add this door if it's on the same floor as our graph but that doesn't work because the graph is shared across all floors,
+			// so instead we'll have to record the door index and check the correct door during path finding; it's not valid to test door open/locked state here
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
 			cube_t dc(*d);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
+			unsigned const door_ix(d - interior->doors.begin());
 
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
-				if (dc.intersects_no_adj(interior->rooms[r2])) {ng.connect_rooms(r, r2, *d); break;}
+				if (dc.intersects_no_adj(interior->rooms[r2])) {ng.connect_rooms(r, r2, door_ix, *d); break;}
 			}
 		} // for d
 		for (unsigned s = 0; s < num_stairs; ++s) { // stairs
@@ -475,7 +493,7 @@ void building_t::build_nav_graph() const {
 
 			if (stairwell.stairs_door_ix >= 0 && global_building_params.ai_opens_doors < 2) { // check for open doors; doors on stairs can't be locked
 				assert((unsigned)stairwell.stairs_door_ix < interior->doors.size());
-				if (!interior->doors[stairwell.stairs_door_ix].open) continue; // stairs blocked by closed door, don't connect
+				if (!interior->doors[stairwell.stairs_door_ix].open) continue; // stairs blocked by closed door, don't connect (even if unlocked)
 			}
 			if (room.intersects_no_adj(stairwell)) {ng.connect_stairs(r, s, stairwell.dim, stairwell.dir, (stairwell.shape == SHAPE_U));}
 		}
@@ -485,7 +503,7 @@ void building_t::build_nav_graph() const {
 				if (!room2.is_hallway || room2.z1() != room.z1() || !room2.intersects(c)) continue; // not a connected hallway
 				cube_t conn_cube(c);
 				conn_cube.intersect_with_cube(room2);
-				ng.connect_rooms(r, r2, conn_cube);
+				ng.connect_rooms(r, r2, -1, conn_cube);
 			} // for r2
 		}
 		//for (unsigned e = 0; e < interior->elevators.size(); ++e) {} // elevators are not yet used by AIs so are ignored here
@@ -719,11 +737,13 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 			vector<point> from_path;
 			// Note: passing use_stairs=0 here because it's unclear if we want to go through stairs nodes in our A* algorithm
 			// from => stairs
-			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,  up_or_down, person.cur_rseed, avoid, from, from_path)) continue;
+			if (!interior->nav_graph->find_path_points(loc1.room_ix, stairs_room_ix, person.ssn, radius, height, 0, is_first_path,
+				up_or_down, person.cur_rseed, avoid, from, interior->doors, person.has_key, from_path)) continue;
 			point const seg2_start(interior->nav_graph->get_stairs_entrance_pt(to.z, stairs_room_ix, !up_or_down)); // other end
 			interior->get_avoid_cubes(avoid, (seg2_start.z - radius), (seg2_start.z + z2_add), get_floor_thickness(), following_player); // new floor, new zval, new avoid cubes
 			// stairs => to
-			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path, !up_or_down, person.cur_rseed, avoid, seg2_start, path)) continue;
+			if (!interior->nav_graph->find_path_points(stairs_room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path,
+				!up_or_down, person.cur_rseed, avoid, seg2_start, interior->doors, person.has_key, path)) continue;
 			assert(!path.empty() && !from_path.empty());
 			path.push_back(seg2_start); // other end of the stairs
 			// add two more points to straighten the entrance and exit paths; this segment doesn't check for intersection with stairs
@@ -750,7 +770,8 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 		return 0; // failed
 	}
 	assert(loc1.room_ix != loc2.room_ix);
-	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path, 0, person.cur_rseed, avoid, from, path)) return 0;
+	if (!interior->nav_graph->find_path_points(loc1.room_ix, loc2.room_ix, person.ssn, radius, height, 0, is_first_path,
+		0, person.cur_rseed, avoid, from, interior->doors, person.has_key, path)) return 0;
 	assert(!path.empty());
 	return 1;
 }
