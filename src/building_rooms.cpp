@@ -1606,11 +1606,12 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 }
 
 void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
+	if (room.is_hallway) return; // no objects placed in hallways, but there shouldn't be any surfaces either (except for reception desk?)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
 	float const place_book_prob(( is_house ? 1.0 : 0.5)*(room.is_office ? 0.8 : 1.0));
-	float const place_bottle_prob(is_house ? 1.0 : (room.is_office ? 0.80 : 0.0));
-	float const place_plant_prob (is_house ? 1.0 : (room.is_office ? 0.25 : 0.0));
+	float const place_bottle_prob(is_house ? 1.0 : (room.is_office ? 0.80 : 0.50));
+	float const place_plant_prob (is_house ? 1.0 : (room.is_office ? 0.25 : 0.15));
 	unsigned const objs_end(objs.size());
 	bool placed_book_on_counter(0);
 
