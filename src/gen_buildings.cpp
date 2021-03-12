@@ -398,10 +398,11 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 			vert.t[1] = float((i == 2 || i == 3));
 			if (tquad.type == tquad_with_ix_t::TYPE_SOLAR) {vert.t[0] *= 4.0; vert.t[1] *= 4.0;} // 4 reptitions in each dimension
 		}
-		else if (tquad.is_interior_door()) { // interior door textured/stretched in Y
+		else if (tquad.is_interior_door()) { // interior door textured/stretched in Y unless SPLIT_DOOR_PER_FLOOR=1
 			vert.t[0] = tex.tscale_x*((i == 1 || i == 2) ^ invert_tc_x);
 			vert.t[1] = tex.tscale_y*((i == 2 || i == 3));
 			if (exclude_frame) {vert.t[0] = 0.07 + 0.86*vert.t[0];}
+			if (SPLIT_DOOR_PER_FLOOR) {vert.t[1] *= 0.97;} // trim off the top door frame
 		}
 		else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
 		else {assert(0);}
@@ -1198,7 +1199,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 
 template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const {
 
-	float const ty(exterior ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for interior doors
+	float const ty((exterior || SPLIT_DOOR_PER_FLOOR) ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for unsplit interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
 	bool const opens_up(door_type == tquad_with_ix_t::TYPE_GDOOR);
 	bool const exclude_frame(door_type == tquad_with_ix_t::TYPE_HDOOR && !exterior && opened); // exclude the frame on open interior doors

@@ -6,8 +6,6 @@
 #include "buildings.h"
 #include "profiler.h"
 
-bool const SPLIT_DOOR_PER_FLOOR = 1; // allows mixed open/closed doors per-floor, and better texture scaling, but slower, and uses more memory
-
 extern building_params_t global_building_params;
 
 
