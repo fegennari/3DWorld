@@ -1756,6 +1756,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					point new_center(room_center);
 					new_center[room_dim] += ((bool(d) ^ first_dir) ? -1.0 : 1.0)*(0.2 + 0.05*n)*r->get_sz_dim(room_dim);
 					set_light_xy(sec_light, new_center, light_size, !room_dim, light_shape); // flip the light dim
+					// TODO: check for doors
 					if (!interior->is_blocked_by_stairs_or_elevator_no_expand(sec_light, fc_thick)) {use_sec_light = 1; break;} // add if not blocked
 				}
 			}
@@ -1771,18 +1772,19 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			room_center.z = z + fc_thick; // floor height
 			// top floor may have stairs connecting to upper stack
 			bool const top_floor(f+1 == num_floors), check_stairs((!is_house || has_basement()) && parts.size() > 1 && top_floor && r->z2() < bcube.z2()); // z2 check may not be effective
-			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs);
+			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs), roof_access_stairs(0), top_of_stairs(has_stairs && top_floor);
 
-			if (!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) { // check for stairwells connecting stacked parts (is this still needed?)
+			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
+				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
 				for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 					if (!r->contains_cube_xy(*s)) continue; // stairs not in this room
 					// Note: here we adjust stairs zval by floor_thickness to include stairs in the floor but not in the room above
 					if (s->z1() + floor_thickness > r->z2()) continue; // stairs above the room
 					if (s->z2() + floor_thickness < r->z1()) continue; // stairs below the room
+					if (s->roof_access) {top_of_stairs = 0;}
 					has_stairs = 1;
-				}
+				} // for s
 			}
-			bool const top_of_stairs(has_stairs && top_floor);
 			cube_t light;
 			if (!blocked_by_stairs || top_of_stairs) {light = pri_light;}
 			else if (use_sec_light) {light = sec_light; light_dim ^= 1;}

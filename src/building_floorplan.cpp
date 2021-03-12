@@ -1105,7 +1105,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 
 				for (unsigned i = 0; i < 4; ++i) {
 					cube_t &c(to_add[i]);
-					if (!c.is_zero_area()) {details.emplace_back(c, ROOF_OBJ_SCAP);} // skip open side
+					if (!c.is_zero_area()) {details.emplace_back(c, (uint8_t)ROOF_OBJ_SCAP);} // skip open side
 				}
 				box.z1() = front.z2() = box.z2() - fc_thick;
 				details.emplace_back(box,   ROOF_OBJ_SCAP); // top
