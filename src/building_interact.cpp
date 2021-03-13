@@ -929,11 +929,11 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 	return interior->room_geom->player_pickup_object(*this, at_pos, in_dir);
 }
 bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
-	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS));
-	
-	if (obj_id < 0) { // no object can be picked up
-		return open_nearest_drawer(building, at_pos, in_dir, 2.5*CAMERA_RADIUS, 1); // try objects in drawers; pickup_item=1
-	}
+	float drawer_range(2.5*CAMERA_RADIUS), obj_dist(0.0);
+	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS, obj_dist));
+	if (obj_id >= 0) {min_eq(drawer_range, obj_dist);} // only include drawers that are closer than the pickup object
+	if (open_nearest_drawer(building, at_pos, in_dir, 2.5*CAMERA_RADIUS, 1)) return 1; // try objects in drawers; pickup_item=1
+	if (obj_id < 0) return 0; // no object to pick up
 	room_object_t &obj(get_room_object_by_index(obj_id));
 
 	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !(obj.flags & RO_FLAG_EXPANDED))) { // shelves or unexpanded wine rack
@@ -983,7 +983,7 @@ bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> 
 	return 0;
 }
 
-int building_room_geom_t::find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range) const {
+int building_room_geom_t::find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, float &obj_dist) const {
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
@@ -1034,6 +1034,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			dmin_sq = dsq; // this object is the closest, even if it can't be picked up
 		} // for i
 	} // for vect_id
+	obj_dist = sqrt(dmin_sq);
 	return closest_obj_id;
 }
 
