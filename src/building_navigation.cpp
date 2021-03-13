@@ -1049,7 +1049,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	// Note: we probably can't use the room Z bounds here becase the person may be on the stairs connecting two stacked parts
 	float const min_valid_zval(bcube.z1() + 0.5f*get_floor_thickness() + person.radius), max_valid_zval(bcube.z2() - person.radius);
 
-	if (player_in_this_building && !person.on_stairs()) { // movement in XY, not on stairs, snap to nearest floor
+	if (player_in_this_building && !person.on_stairs() && state.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
 		// this is optional and is done just in case something went wrong
 		assert(state.cur_room < interior->rooms.size());
 		room_t const &room(interior->rooms[state.cur_room]);
