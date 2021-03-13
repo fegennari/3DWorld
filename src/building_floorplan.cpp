@@ -1174,13 +1174,13 @@ template<typename T> void subtract_cubes_from_cube(cube_t const &c, T const &sub
 }
 template void subtract_cubes_from_cube(cube_t const &c, vect_cube_t const &sub, vect_cube_t &out, vect_cube_t &out2); // explicit instantiation
 
-bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes, bool clip_in_z) {
+bool subtract_cube_from_cubes(cube_t const &s, vect_cube_t &cubes, vect_cube_t *holes, bool clip_in_z, bool include_adj) {
 	unsigned iter_end(cubes.size()); // capture size before splitting
 	bool was_clipped(0);
 
 	for (unsigned i = 0; i < iter_end; ++i) {
 		cube_t const &c(cubes[i]);
-		if (!c.intersects_no_adj(s)) continue; // keep it
+		if (!(include_adj ? c.intersects(s) : c.intersects_no_adj(s))) continue; // keep it
 		
 		if (holes) {
 			cube_t hole(c);

@@ -565,6 +565,17 @@ class building_draw_t {
 	point cur_camera_pos;
 	bool is_city;
 
+	struct wall_seg_t {
+		float dlo, dhi, ilo, ihi;
+		wall_seg_t() : dlo(0.0), dhi(1.0), ilo(0.0), ihi(1.0) {}
+
+		wall_seg_t(float dlo_, float dhi_, float ilo_, float ihi_) : dlo(dlo_), dhi(dhi_), ilo(ilo_), ihi(ihi_) {
+			assert(dlo < dhi && ilo < ihi && dlo >= 0.0f && dhi <= 1.0f && ilo >= 0.0f && ihi <= 1.0f);
+		}
+	};
+	vector<wall_seg_t> segs;
+	vect_cube_t faces;
+
 public:
 	unsigned cur_tile_id;
 	vect_cube_t temp_cubes, temp_cubes2;
@@ -758,86 +769,29 @@ public:
 					UNROLL_3X(verts[ix+i_].set_norm(vert);)
 					continue; // no windows/clipping
 				}
-				struct wall_seg_t {
-					float dlo, dhi, ilo, ihi;
-					bool enabled;
-					wall_seg_t() : dlo(0), dhi(1), ilo(0), ihi(1), enabled(0) {}
-					
-					void finalize() {
-						if (dlo >= dhi || ilo >= ihi) {enabled = 0;} // clipped to zero area (can happen in buildings with overlapping cubes)
-						assert(dlo >= 0.0f && dhi <= 1.0f && ilo >= 0.0f && ihi <= 1.0f);
+				segs.clear();
+
+				if (bg.has_interior() && parts.size() > 1 && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
+					cube_t face(cube);
+					face.d[n][!j]  = face.d[n][j]; // shrink to zero thickness face
+					faces.clear();
+					faces.push_back(face);
+					float const sz_d_inv(1.0/sz[d]), sz_i_inv(1.0/sz[i]);
+
+					for (auto p = parts.begin(); (p + bg.has_chimney) != parts.end(); ++p) {
+						if (!p->contains_cube(cube)) {subtract_cube_from_cubes(*p, faces, nullptr, 1, 1);} // skip ourself (including door part), no holes, clip_in_z=1, include_adj=1
 					}
-				};
-				wall_seg_t segs[5]; // lo, hi, top, lo_top, hi_top
-				segs[0].enabled = 1; // default is first segment used only
-
-				if (bg.has_interior() && !parts.empty() && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
-					unsigned const xy(1 - n); // non-Z parameteric dim (the one we're clipping)
-					float &clo1((d == xy) ? segs[0].dlo : segs[0].ilo), &chi1((d == xy) ? segs[0].dhi : segs[0].ihi); // clip dim values (first seg)
-					float &clo2((d == xy) ? segs[1].dlo : segs[1].ilo); // clip dim values (second seg)
-					float const face_val(cube.d[n][j]);
-
-					// Note: in general we shouldn't compare floats with ==, but in this case we know the values have been directly assigned so they really should be equal
-					for (auto p = (parts.rbegin() + bg.has_chimney); p != parts.rend(); ++p) { // iterate backwards, tallest to shortest
-						if (*p == cube) continue; // skip ourself
-						if (p->d[n][!j] != face_val && (p->d[n][0] >= face_val || p->d[n][1] <= face_val)) continue; // face not contained in dir of normal (inc opposing aligned val)
-						float const pxy1(p->d[xy][0]), pxy2(p->d[xy][1]), cxy1(cube.d[xy][0]), cxy2(cube.d[xy][1]); // end points used for clipping
-						if (pxy2 <= cxy1 || pxy1 >= cxy2) continue; // no overlap in XY dim
-						if (p->z2() <= cube.z1() || cube.z2() <= p->z1()) continue; // no overlap in Z
-						// not sure if this can actually happen, will handle it if it does; it would apply to porch roofs without the edge adjustment hack
-						// doesn't apply to windows (partial height walls but not windows)
-						if (!clip_windows && p->z1() > cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high)
-
-						if (p->z2() < cube.z2()) { // opposing cube doesn't cover this cube in Z (ceiling too low); this should only happen for one part
-							float const z_split((p->z2() - cube.z1())/sz.z); // parametric value of Z split point
-							assert(z_split >= 0.0 && z_split <= 1.0);
-
-							if (segs[2].enabled) { // already have a Z segment - can only clip in Z (can happen for buildings with overlapping parts)
-								for (unsigned n = 0; n < 2; ++n) {
-									if (!segs[n].enabled) continue; // no segment assigned to this slot, don't need to split
-									float const p_lo((pxy1 - cxy1)/sz[xy]), p_hi((pxy2 - cxy1)/sz[xy]);
-									// check if this part partially contains this face in XY; if so, create more segs if there are slots available;
-									// it's rare to get into this case, and the two continues are never reached for the current set of buildings that are created,
-									// so it seems like 5 segments is always enough - though it may be cleaner to use a splitting loop somehow
-									if (p_lo > clo1) {
-										if (segs[3].enabled) continue; // don't have any extra segs, leave the exterior wall even if it's partially interior
-										segs[3] = segs[n];
-										((d == xy) ? segs[3].dhi : segs[3].ihi) = p_lo; // x2/y2 ends at part x1/y1
-									}
-									if (p_hi < chi1) {
-										if (segs[4].enabled) continue; // don't have any extra segs, leave the exterior wall even if it's partially interior
-										segs[4] = segs[n];
-										((d == xy) ? segs[4].dlo : segs[4].ilo) = p_hi; // x1/y1 starts at part x2/y2
-									}
-									if (d == xy) {segs[0].ilo = segs[1].ilo = z_split;} else {segs[0].dlo = segs[1].dlo = z_split;} // clip off bottom
-								}
-								continue;
-							}
-							// don't copy/enable the top segment for house windows because houses always have a sloped roof section on top that will block the windows
-							if (clip_windows != 2) {segs[2] = segs[0];} // copy from first segment (likely still [0,1]), will set enabled=1
-							if (d == xy) {segs[0].ihi = segs[1].ihi = segs[2].ilo = z_split;} else {segs[0].dhi = segs[1].dhi = segs[2].dlo = z_split;} // adjust Z dim
-						}
-						bool const cov_lo(pxy1 <= cxy1), cov_hi(pxy2 >= cxy2);
-						if (cov_lo && cov_hi) {segs[0].enabled = 0; continue;} // fully contained - drop
-						// Note: we can get into the cov_lo and cov_hi cases for two different parts and both edges will be clipped
-						if      (cov_lo) {clo1 = (pxy2 - cxy1)/sz[xy];} // clip on lo side
-						else if (cov_hi) {chi1 = (pxy1 - cxy1)/sz[xy];} // clip on hi side
-						else { // clip on both sides and emit two quads
-							chi1 = (pxy1 - cxy1)/sz[xy]; // lo side, first  seg
-							clo2 = (pxy2 - cxy1)/sz[xy]; // hi side, second seg
-							assert(chi1 >= 0.0 && chi1 <= 1.0);
-							assert(clo2 >= 0.0 && clo2 <= 1.0);
-							segs[1].enabled = 1;
-							// TODO: none of the curent secondary buildings have another adjacency, and it's difficult to handle, so stop here;
-							// note that larger city buildings can have them (for example the one close to the starting pos), so this will need to be handled eventually
-							break;
-						}
-					} // for p
-				} // end wall clipping
-				for (unsigned s = 0; s < 5; ++s) {
-					wall_seg_t &seg(segs[s]);
-					seg.finalize();
-					if (!seg.enabled) continue; // this segment unused
+					for (unsigned f = 0; f < faces.size(); ++f) { // convert from cubes to parametric coordinates in [0.0, 1.0] range
+						cube_t const &F(faces[f]);
+						if (F.get_sz_dim(d) == 0.0 || F.get_sz_dim(i) == 0.0) continue; // adjacent part zero area strip, skip
+						segs.emplace_back((F.d[d][0] - llc[d])*sz_d_inv, (F.d[d][1] - llc[d])*sz_d_inv, (F.d[i][0] - llc[i])*sz_i_inv, (F.d[i][1] - llc[i])*sz_i_inv);
+					}
+				}
+				else {
+					segs.push_back(wall_seg_t()); // single seg
+				}
+				for (auto s = segs.begin(); s != segs.end(); ++s) {
+					wall_seg_t const &seg(*s);
 					unsigned const ix(verts.size()); // first vertex of this quad
 					pt[d] = seg.dlo;
 					pt[i] = (j ? seg.ilo : seg.ihi); // need to orient the vertices differently for each side
@@ -851,7 +805,7 @@ public:
 					EMIT_VERTEX(); // 1 !j
 					float const offset((j ? 1.0 : -1.0)*offset_val);
 
-					if (s < 2 && (door_sides & (1 << (2*n + j)))) { // clip zval to exclude door z-range (except for top segment)
+					if (((i == 2) ? seg.ilo : seg.dlo) < 0.01 && (door_sides & (1 << (2*n + j)))) { // clip zval to exclude door z-range (except for top segment)
 						for (unsigned k = ix; k < ix+4; ++k) {
 							auto &v(verts[k]);
 							float const delta(door_ztop - v.v.z);
@@ -2566,7 +2520,7 @@ public:
 	}
 	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
 		if (buildings.empty()) return;
-		//timer_t timer("Get Building Verts"); // 39/115
+		//timer_t timer("Get Building Verts"); // 136/636
 #pragma omp parallel for schedule(static) num_threads(3)
 		for (int pass = 0; pass < 3; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
 			if (pass == 0) { // exterior pass
