@@ -1658,7 +1658,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	} // for i
 }
 
-void set_light_xy(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
+void set_light_xyz(cube_t &light, point const &center, float light_size, bool light_dim, room_obj_shape light_shape) {
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		float const sz(((light_shape == SHAPE_CYLIN || light_shape == SHAPE_SPHERE) ? 1.6 : ((bool(dim) == light_dim) ? 2.2 : 1.0))*light_size);
 		light.d[dim][0] = center[dim] - sz;
@@ -1742,10 +1742,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		float const light_val(22.0*light_size);
 		r->light_intensity = light_val*light_val/r->get_area_xy(); // average for room, unitless; light surface area divided by room surface area with some fudge constant
 		cube_t pri_light, sec_light;
-		set_light_xy(pri_light, room_center, light_size, room_dim, light_shape);
+		set_light_xyz(pri_light, room_center, light_size, room_dim, light_shape);
 		if (!r->contains_cube_xy(pri_light)) {pri_light.set_to_zeros();} // disable light if it doesn't fit (small room)
 		bool const blocked_by_stairs(!r->is_hallway && interior->is_blocked_by_stairs_or_elevator_no_expand(pri_light, fc_thick));
-		bool use_sec_light(0), added_bathroom(0);
+		bool use_sec_light(0), sec_light_int_door(0), added_bathroom(0);
 		float z(r->z1());
 
 		if (blocked_by_stairs) { // blocked by stairs - see if we can add a light off to the side in the other orient
@@ -1755,11 +1755,15 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				for (unsigned n = 0; n < 5; ++n) { // try 5 different shift values: 0.2, 0.25, 0.3, 0.35, 0.4
 					point new_center(room_center);
 					new_center[room_dim] += ((bool(d) ^ first_dir) ? -1.0 : 1.0)*(0.2 + 0.05*n)*r->get_sz_dim(room_dim);
-					set_light_xy(sec_light, new_center, light_size, !room_dim, light_shape); // flip the light dim
-					// TODO: check for doors
-					if (!interior->is_blocked_by_stairs_or_elevator_no_expand(sec_light, fc_thick)) {use_sec_light = 1; break;} // add if not blocked
-				}
-			}
+					set_light_xyz(sec_light, new_center, light_size, !room_dim, light_shape); // flip the light dim
+					if (interior->is_blocked_by_stairs_or_elevator_no_expand(sec_light, fc_thick)) continue; // skip if blocked
+					cube_t test_cube(sec_light);
+					test_cube.expand_in_dim(2, 0.4*window_vspacing); // expand to cover nearly an entire floor so that it's guaranteed to overlap a door
+					sec_light_int_door = is_cube_close_to_doorway(test_cube, *r, 0.0, 1);
+					use_sec_light = 1;
+					break;
+				} // for n
+			} // for d
 		}
 		r->interior = (is_basement || get_part_for_room(*r).contains_cube_xy_no_adj(*r)); // AKA windowless
 		// make chair colors consistent for each part by using a few variables for a hash
@@ -1786,13 +1790,14 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				} // for s
 			}
 			cube_t light;
+			bool light_int_door(0);
 			if (!blocked_by_stairs || top_of_stairs) {light = pri_light;}
-			else if (use_sec_light) {light = sec_light; light_dim ^= 1;}
+			else if (use_sec_light) {light = sec_light; light_int_door = sec_light_int_door; light_dim ^= 1;}
 			int light_obj_ix(-1);
 
 			if (!light.is_all_zeros()) { // add a light to the center of the ceiling of this room if there's space (always for top of stairs)
 				light.z2() = z + floor_height - fc_thick;
-				light.z1() = light.z2() - light_thick;
+				light.z1() = light.z2() - (light_int_door ? 0.01 : 1.0)*light_thick; // if light intersects door, move it up into the ceiling rather than letting it hang down into the room
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
 
 				// check ped_bcubes and set is_lit if any are people are in this floor of this room
