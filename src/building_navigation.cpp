@@ -957,7 +957,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		int const ret(choose_dest_room(state, person, rgen, stay_on_one_floor)); // 0=failed, 1=success, 2=failed but can retry
 
 		if (ret == 2 && interior->door_state_updated) { // wait rather than stopping in case the player trapped this person in a room by closing the door
-			person.wait_for(5.0); // stop for 5 seconds, then try again
+			person.wait_for(2.0); // stop for 2 seconds, then try again
 			return AI_WAITING;
 		}
 		else if (ret != 1) { // if there's no valid room or valid path, set the speed to 0 so that we don't check this every frame
@@ -985,7 +985,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		if (!state.path.empty()) {state.next_path_pt(person, stay_on_one_floor, 0); return AI_NEXT_PT;} // move to next path point
 		// don't wait if we can follow the player
 		bool const no_wait(global_building_params.ai_target_player && (can_target_player(state, person) || has_nearby_sound(person, get_window_vspace())));
-		if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, 10.0));} // stop for 1-10 seconds
+		if (!no_wait) {person.wait_for(rgen.rand_uniform(1.0, (can_ai_follow_player(person) ? 2.0 : 10.0)));} // stop for 1-10s, 1-2s if player is in this building in gameplay mode
 		state.on_new_path_seg = 1; // allow player following AI update logic to rerun this frame
 		return AI_AT_DEST;
 	}
