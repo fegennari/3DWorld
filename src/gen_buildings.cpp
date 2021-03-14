@@ -771,7 +771,7 @@ public:
 				}
 				segs.clear();
 
-				if (bg.has_interior() && parts.size() > (1 + bg.has_chimney) && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
+				if (bg.has_interior() && parts.size() > (1U + bg.has_chimney) && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
 					cube_t face(cube);
 					face.d[n][!j] = face.d[n][j]; // shrink to zero thickness face
 					faces.clear();
@@ -779,14 +779,17 @@ public:
 					float const sz_d_inv(1.0/sz[d]), sz_i_inv(1.0/sz[i]);
 
 					for (auto p = parts.begin(); (p + bg.has_chimney) != parts.end(); ++p) {
-						// skip ourself (including door part), and check for overlap in the two quad dims
-						if (!p->contains_cube(cube) && cube.d[d][1] > p->d[d][0] && cube.d[d][0] < p->d[d][1] && cube.d[i][1] > p->d[i][0] && cube.d[i][0] < p->d[i][1]) {
-							subtract_cube_from_cubes(*p, faces, nullptr, 1, 1); // no holes, clip_in_z=1, include_adj=1
-						}
+						if (p->contains_cube(cube)) continue; // skip ourself (including door part)
+						if (cube.d[d][1] <= p->d[d][0] || cube.d[d][0] >= p->d[d][1] || cube.d[i][1] <= p->d[i][0] || cube.d[i][0] >= p->d[i][1]) continue; // check for overlap in the two quad dims
+						// doesn't apply to windows (partial height walls but not windows)
+						if (!clip_windows && p->z1() > cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high)
+						subtract_cube_from_cubes(*p, faces, nullptr, 1, 1); // no holes, clip_in_z=1, include_adj=1
 					}
 					for (unsigned f = 0; f < faces.size(); ++f) { // convert from cubes to parametric coordinates in [0.0, 1.0] range
 						cube_t const &F(faces[f]);
 						if (F.get_sz_dim(d) == 0.0 || F.get_sz_dim(i) == 0.0) continue; // adjacent part zero area strip, skip
+						// don't copy/enable the top segment for house windows because houses always have a sloped roof section on top that will block the windows
+						if (clip_windows == 2 && F.z1() > cube.z1()) continue;
 						segs.emplace_back((F.d[d][0] - llc[d])*sz_d_inv, (F.d[d][1] - llc[d])*sz_d_inv, (F.d[i][0] - llc[i])*sz_i_inv, (F.d[i][1] - llc[i])*sz_i_inv);
 					}
 				}
@@ -808,7 +811,7 @@ public:
 					EMIT_VERTEX(); // 1 !j
 					float const offset((j ? 1.0 : -1.0)*offset_val);
 
-					if (((i == 2) ? seg.ilo : seg.dlo) < 0.01 && (door_sides & (1 << (2*n + j)))) { // clip zval to exclude door z-range (except for top segment)
+					if (((i == 2) ? seg.ilo : seg.dlo) == 0.0 && (door_sides & (1 << (2*n + j)))) { // clip zval to exclude door z-range (except for top segment)
 						for (unsigned k = ix; k < ix+4; ++k) {
 							auto &v(verts[k]);
 							float const delta(door_ztop - v.v.z);
