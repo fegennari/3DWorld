@@ -138,6 +138,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 {
 	if (!is_valid()) return 0; // invalid building
 	if (radius > 0.0 && !(xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, bcube) : sphere_cube_intersect((pos - xlate), radius, bcube))) return 0;
+	float const xy_radius(radius*global_building_params.player_coll_radius_scale);
 	point pos2(pos), p_last2(p_last), center;
 	bool had_coll(0), is_interior(0);
 	float part_z2(bcube.z2());
@@ -158,7 +159,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 				if (d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // doesn't apply to roof door
 				cube_t bc(d->get_bcube());
 				bool const door_dim(bc.dy() < bc.dx());
-				bc.expand_in_dim(door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
+				bc.expand_in_dim( door_dim, 1.1*radius); // expand by radius plus some tolerance in door dim
+				bc.expand_in_dim(!door_dim, -0.5*xy_radius); // shrink slightly in the other dim to prevent the player from clipping through the wall next to the door
 				bc.z1() -= max(radius, (float)camera_zh); // account for player on steep slope up to door - require player head above doorframe bottom
 				if (bc.contains_pt(pos2_bs)) return 0; // check if we can use a door - disable collsion detection to allow the player to walk through
 			}
