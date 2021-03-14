@@ -771,15 +771,18 @@ public:
 				}
 				segs.clear();
 
-				if (bg.has_interior() && parts.size() > 1 && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
+				if (bg.has_interior() && parts.size() > (1 + bg.has_chimney) && n != 2) { // clip walls XY to remove intersections; this applies to both walls and windows
 					cube_t face(cube);
-					face.d[n][!j]  = face.d[n][j]; // shrink to zero thickness face
+					face.d[n][!j] = face.d[n][j]; // shrink to zero thickness face
 					faces.clear();
 					faces.push_back(face);
 					float const sz_d_inv(1.0/sz[d]), sz_i_inv(1.0/sz[i]);
 
 					for (auto p = parts.begin(); (p + bg.has_chimney) != parts.end(); ++p) {
-						if (!p->contains_cube(cube)) {subtract_cube_from_cubes(*p, faces, nullptr, 1, 1);} // skip ourself (including door part), no holes, clip_in_z=1, include_adj=1
+						// skip ourself (including door part), and check for overlap in the two quad dims
+						if (!p->contains_cube(cube) && cube.d[d][1] > p->d[d][0] && cube.d[d][0] < p->d[d][1] && cube.d[i][1] > p->d[i][0] && cube.d[i][0] < p->d[i][1]) {
+							subtract_cube_from_cubes(*p, faces, nullptr, 1, 1); // no holes, clip_in_z=1, include_adj=1
+						}
 					}
 					for (unsigned f = 0; f < faces.size(); ++f) { // convert from cubes to parametric coordinates in [0.0, 1.0] range
 						cube_t const &F(faces[f]);
@@ -2520,7 +2523,7 @@ public:
 	}
 	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
 		if (buildings.empty()) return;
-		//timer_t timer("Get Building Verts"); // 136/636
+		//timer_t timer("Get Building Verts"); // 140/670
 #pragma omp parallel for schedule(static) num_threads(3)
 		for (int pass = 0; pass < 3; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
 			if (pass == 0) { // exterior pass
