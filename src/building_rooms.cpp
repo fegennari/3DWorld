@@ -181,14 +181,14 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 		center[dim] = room_bounds.d[dim][dir]; // against this wall
 		bool is_good(0);
 
-		for (unsigned m = 0; m < 80; ++m) { // try to find a point near a doorway
+		for (unsigned m = 0; m < 40; ++m) { // try to find a point near a doorway
 			center[!dim] = rgen.rand_uniform(room_bounds.d[!dim][0], room_bounds.d[!dim][1]);
 			if (doorways.empty()) break; // no doorways, keep this point
 				
 			for (auto i = doorways.begin(); i != doorways.end(); ++i) {
-				float const dmin(radius + i->dx() + i->dy());
-				if (!i->closest_dist_less_than(center, 2.0*dmin)) continue; // too far
-				if ( i->closest_dist_less_than(center, dmin)) {is_good = 0; break;} // too close, reject this point
+				float const dmin(radius + i->dx() + i->dy()), dist_sq(p2p_dist_sq(center, i->closest_pt(center)));
+				if (dist_sq > 4.0*dmin*dmin) continue; // too far
+				if (dist_sq <     dmin*dmin) {is_good = 0; break;} // too close, reject this point
 				is_good = 1; // close enough, keep this point
 			}
 			if (is_good) break; // done; may never get here if no points are good, but the code below will handle that
