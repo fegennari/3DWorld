@@ -410,7 +410,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 				c.d[!long_dim][!dir] = wall_pos + dir_sign*cube_depth;
 				cube_t test_cube(c);
 				test_cube.d[!long_dim][!dir] += dir_sign*0.5*cube_depth; // allow space for people to enter the cubicle
-				if (interior->is_cube_close_to_doorway(test_cube, room, 0.0, 1, 1)) continue; // too close to a doorway; inc_open=1, check_zval=1
+				if (interior->is_cube_close_to_doorway(test_cube, room, 0.0, 1)) continue; // too close to a doorway; inc_open=1
 				if (interior->is_blocked_by_stairs_or_elevator(test_cube)) continue;
 				bool const against_window(room.d[!long_dim][dir] == part.d[!long_dim][dir]);
 				objs.emplace_back(c, TYPE_CUBICLE, room_id, !long_dim, dir, 0, tot_light_amt, ((against_window && !is_middle) ? SHAPE_SHORT : SHAPE_CUBE));
@@ -886,7 +886,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 				if ((i->dy() < i->dx()) == br_dim) continue; // door in wrong dim
-				if (!is_cube_close_to_door(c, 0.0, 0, *i, 2, 1)) continue; // check both dirs, check_zval=1
+				if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
 				sink_side = side; sink_side_set = 1;
 				place_area.d[!br_dim][side] += (sink_side ? -1.0 : 1.0)*(i->get_sz_dim(br_dim) - 0.25*swidth); // add sink clearance for the door to close
 				br_door = *i;
@@ -927,7 +927,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			stall.d[br_dim][ dir] = wall_pos; // + wall_thickness?
 			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth;
 			
-			if (!interior->is_cube_close_to_doorway(stall, room, 0.0, 1, 1)) { // skip if close to a door (for rooms with doors at both ends); inc_open=1
+			if (!interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) { // skip if close to a door (for rooms with doors at both ends); inc_open=1
 				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, 0, tot_light_amt);
 				objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, 0, tot_light_amt, SHAPE_CUBE, stall_color);
 			}
@@ -1237,10 +1237,10 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	unsigned num_placed(0), num_doors(0);
 
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-		num_doors += is_cube_close_to_door(test_cube, 0.0, 0, *i, 2, 1); // check both dirs, check_zval=1
+		num_doors += is_cube_close_to_door(test_cube, 0.0, 0, *i, 2); // check both dirs
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-		if (!is_cube_close_to_door(test_cube, 0.0, 0, *i, 2, 1)) continue; // check both dirs, check_zval=1
+		if (!is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) continue; // check both dirs
 		exclude.push_back(*i);
 		exclude.back().expand_in_dim( i->dim, 0.6*room.get_sz_dim(i->dim));
 		// if there are multiple doors (houses only?), expand the exclude area more in the other dimension to make sure there's a path between doors

@@ -643,7 +643,7 @@ struct building_interior_t {
 	building_interior_t();
 	~building_interior_t();
 	float get_doorway_width() const;
-	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0, bool check_zval=0) const;
+	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0f, bool inc_open=0) const;
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
@@ -1020,7 +1020,7 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5]);
 void get_bed_cubes(room_object_t const &c, cube_t cubes[6]);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_t const &door, cube_t const &room);
-bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs, bool check_zval);
+bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);
