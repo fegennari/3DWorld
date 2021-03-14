@@ -1241,6 +1241,8 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 	float const window_vspacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness()), wall_thickness(get_wall_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
 	bool const is_basement(has_basement() && part == parts[basement_part_ix]);
+	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated
+	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 1 : 10), num_iters(20*iter_mult_factor);
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it (but roof geom may get us into this case anyway)
 		bool connected(0);
@@ -1269,10 +1271,10 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 
 			// is it better to extend the existing stairs in *p, or the stairs we're creating here (stairs_cut) if they line up?
 			// iterations: 0-19: place in pri hallway, 20-39: place anywhere, 40-159: shrink size, 150-179: compact stairs, 180-199: allow cut walls
-			for (unsigned n = 0; n < 200; ++n) { // make 200 tries to add stairs
-				cube_t place_region((n < 20) ? pref_shared : shared); // use preferred shared area from primary hallway for first 20 iterations
+			for (unsigned n = 0; n < num_iters; ++n) { // make 200 tries to add stairs
+				cube_t place_region((n < 2*iter_mult_factor) ? pref_shared : shared); // use preferred shared area from primary hallway for first 20 iterations
 
-				if (n >= 40 && n < 160 && (n%10) == 0) { // decrease stairs size slightly every 10 iterations, 12 times
+				if (n >= 4*iter_mult_factor && n < 16*iter_mult_factor && (n%iter_mult_factor) == 0) { // decrease stairs size slightly every 10 iterations, 12 times
 					stairs_width -= 0.025*doorway_width; // 1.2*DW => 0.9*DW
 					stairs_pad   -= 0.030*doorway_width; // 1.0*WD => 0.64*DW
 					len_with_pad -= 0.230*doorway_width*(is_basement ? 1.2 : 0.0); // 6.0*DW => 3.24*DW / 2.689*DW ; basement can have steeper stairs
