@@ -220,7 +220,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		float const cube_width(psz[min_dim]);
 		bool const first_part(p == parts.begin()), first_part_this_stack(first_part || (p-1)->z1() < p->z1());
 		bool const use_hallway(!is_house && !has_complex_floorplan && first_part_this_stack && (p+1 == parts.end() || (p+1)->z1() > p->z1()) && cube_width > 4.0*min_wall_len);
-		unsigned const rooms_start(interior->rooms.size()), part_id(p - parts.begin());
+		unsigned const rooms_start(interior->rooms.size()), part_id(p - parts.begin()), num_doors_per_stack(SPLIT_DOOR_PER_FLOOR ? num_floors : 1);
 		cube_t hall, place_area(*p);
 		place_area.expand_by_xy(-wall_edge_spacing); // shrink slightly to avoid z-fighting with walls
 		float window_hspacing[2] = {0.0};
@@ -270,11 +270,13 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					unsigned const num_cent_rooms(num_rooms - 2); // skip the rooms on each side
 					unsigned const num_doors_inner_rooms(add_doors_to_main_wall ? 3U : 2U);
 					unsigned const num_offices(4*(num_cent_rooms + 4)); // X/Y mirror symmetry
+					unsigned const min_num_doors(num_offices + 2*add_doors_to_main_wall*num_cent_rooms + 4); // at least one per office
 					assert(num_cent_rooms > 0);
 					hall_walls.reserve(2*(11 + num_doors_inner_rooms*num_cent_rooms)); // long dim (along hall dir)
 					room_walls.reserve(2*(10 + 2*num_cent_rooms)); // short dim
 					interior->rooms.reserve(num_offices + 7); // num_offices + pri hall + 2 sec hall + 4 conn hall
-					interior->doors.reserve(num_offices + 2*add_doors_to_main_wall*num_cent_rooms + 4); // at least one per office
+					interior->door_stacks.reserve(min_num_doors);
+					interior->doors.reserve(num_doors_per_stack*min_num_doors);
 					interior->exclusion.reserve(6); // 2 sec hallways + 4 conn hallways
 					unsigned const bathroom_ix(rgen.rand_bool() ? 0 : num_cent_rooms-1); // place bathrooms on one of the end center rooms
 
@@ -440,7 +442,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 					room_walls.reserve(4*(rooms_per_side+1)*num_sec_halls + 2*(num_sec_halls-1)); // walls with doors + room dividers
 					split_walls.reserve(2*rooms_per_side*(num_sec_halls+1));
 					interior->rooms.reserve(num_offices + 2*num_sec_halls + 1); // offices + sec hallways + pri hallway
-					interior->doors.reserve(num_offices); // one per office
+					interior->door_stacks.reserve(num_offices); // one per office
+					interior->doors.reserve(num_doors_per_stack*num_offices);
 					interior->exclusion.reserve(2*num_sec_halls);
 					unsigned const bathroom_ix((num_sec_halls <= 2) ? 0 : (rgen.rand()%(num_sec_halls-1))); // place bathrooms in rooms near the central hallway
 
@@ -571,7 +574,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				} // for s
 				// add rooms and doors
 				interior->rooms.reserve(2*num_rooms + 1); // two rows of rooms + hallway
-				interior->doors.reserve(2*num_rooms);
+				interior->door_stacks.reserve(2*num_rooms);
+				interior->doors.reserve(num_doors_per_stack*2*num_rooms);
 				float const wall_end(p->d[!min_dim][1]);
 				float pos(p->d[!min_dim][0]);
 
@@ -611,9 +615,11 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			point part_door_open_dir_tp(p->get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
 			
 			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
-				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*parts.size());}
-				interior->rooms.reserve(8*parts.size()); // two rows of rooms + optional hallway
-				interior->doors.reserve(4*parts.size());
+				unsigned const num_parts(parts.size()), num_doors_est(4*num_parts + has_basement());
+				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*num_parts);}
+				interior->rooms.reserve(8*num_parts); // two rows of rooms + optional hallway
+				interior->door_stacks.reserve(num_doors_est);
+				interior->doors.reserve(num_doors_per_stack*num_doors_est);
 			}
 			while (!to_split.empty()) {
 				split_cube_t const c(to_split.back()); // Note: non-const because door_lo/door_hi is modified during T-junction insert
