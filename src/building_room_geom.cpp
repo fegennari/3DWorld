@@ -2560,7 +2560,7 @@ colorRGBA room_object_t::get_color() const {
 }
 
 void building_room_geom_t::create_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom"); // 3.3ms
+	//highres_timer_t timer("Gen Room Geom"); // 3.6ms
 	float const tscale(2.0/obj_scale);
 	mats_static.clear();
 	mats_alpha .clear();
@@ -2616,7 +2616,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom Small"); // 5.6ms
+	//highres_timer_t timer("Gen Room Geom Small"); // 8.8ms
 	mats_small .clear();
 	mats_plants.clear();
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
@@ -2668,6 +2668,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 }
 
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
+	//highres_timer_t timer("Gen Room Model Insts");
 	obj_model_insts.clear();
 	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
 
@@ -2698,6 +2699,7 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
+	//highres_timer_t timer("Gen Room Geom Dynamic");
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible() || !i->is_dynamic()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
 		switch (i->type) {
@@ -2710,6 +2712,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::create_door_vbos(building_t const &building) {
+	//highres_timer_t timer("Gen Room Geom Doors"); // 0.1ms
 	vector<door_t> const &doors(building.interior->doors);
 
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
