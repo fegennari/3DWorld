@@ -1047,7 +1047,7 @@ int get_normal_map_for_bldg_tid(int tid);
 unsigned register_sign_text(std::string const &text);
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen);
 void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
-	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0);
+	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0, bool no_rotate=0);
 void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,

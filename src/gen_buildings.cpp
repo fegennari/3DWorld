@@ -352,10 +352,11 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 
 // Note: invert_tc only applies to doors
 void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
-	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x, bool exclude_frame, bool no_tc)
+	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x, bool exclude_frame, bool no_tc, bool no_rotate)
 {
 	assert(tquad.npts == 3 || tquad.npts == 4); // triangles or quads
-	point const center(!bg.is_rotated() ? all_zeros : bcube.get_cube_center()); // rotate about bounding cube / building center
+	bool const do_rotate(bg.is_rotated() && !no_rotate);
+	point const center(do_rotate ? bcube.get_cube_center() : all_zeros); // rotate about bounding cube / building center
 	vert_norm_comp_tc_color vert;
 	float tsx(0.0), tsy(0.0), tex_off(0.0);
 	bool dim(0);
@@ -371,7 +372,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 	}
 	vert.set_c4(color);
 	vector3d normal(tquad.get_norm());
-	if (bg.is_rotated()) {bg.do_xy_rotate_normal(normal);}
+	if (do_rotate) {bg.do_xy_rotate_normal(normal);}
 	vert.set_norm(normal);
 	invert_tc_x ^= (tquad.type == tquad_with_ix_t::TYPE_IDOOR2); // interior door, back face
 
@@ -406,7 +407,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		}
 		else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
 		else {assert(0);}
-		if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
+		if (do_rotate) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
 		verts.push_back(vert);
 	} // for i
 }

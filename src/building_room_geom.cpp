@@ -270,7 +270,7 @@ void rgeom_mat_t::clear() {
 	num_qverts = num_itverts = num_ixs = 0;
 }
 
-void rotate_vertst(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building) {
+void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building) {
 	point const center(building.bcube.get_cube_center());
 
 	for (auto i = verts.begin(); i != verts.end(); ++i) {
@@ -283,8 +283,8 @@ void rotate_vertst(vector<rgeom_mat_t::vertex_t> &verts, building_t const &build
 
 void rgeom_mat_t::create_vbo(building_t const &building) {
 	if (building.is_rotated()) { // rotate all vertices to match the building rotation
-		rotate_vertst(quad_verts, building);
-		rotate_vertst(itri_verts, building);
+		rotate_verts(quad_verts, building);
+		rotate_verts(itri_verts, building);
 	}
 	num_qverts  = quad_verts.size();
 	num_itverts = itri_verts.size();
@@ -385,7 +385,7 @@ void building_room_geom_t::add_tquad(building_geom_t const &bg, tquad_with_ix_t 
 	colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc)
 {
 	assert(tquad.npts == 4); // quads only, for doors
-	add_tquad_to_verts(bg, tquad, bcube, tex, color, mats_doors.get_material(tex, 1).quad_verts, invert_tc_x, exclude_frame, no_tc); // inc_shadows=1
+	add_tquad_to_verts(bg, tquad, bcube, tex, color, mats_doors.get_material(tex, 1).quad_verts, invert_tc_x, exclude_frame, no_tc, 1); // inc_shadows=1, no_rotate=1
 }
 
 tid_nm_pair_t const untex_shad_mat(-1, 2.0); // make sure it's different from default tid_nm_pair_t so that it's not grouped with shadowed materials
