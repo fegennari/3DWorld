@@ -147,18 +147,19 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	unsigned const NUM_COLORS = 6;
 	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
-	float const radius(0.02f*(3 + rr)*get_window_vspace()), height(0.55f*(3 + rar)*radius); // radius={0.06, 0.08, 0.10} x AR={1.65, 2.2, 2.75}
+	float const floor_spacing(get_window_vspace()), radius(0.02f*(3 + rr)*floor_spacing), height(0.55f*(3 + rar)*radius); // radius={0.06, 0.08, 0.10} x AR={1.65, 2.2, 2.75}
 	cube_t room_bounds(get_walkable_room_bounds(room)), room_exp(room);
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
-	int const floor_ix(int((zval - room.z1())/get_window_vspace()));
+	int const floor_ix(int((zval - room.z1())/floor_spacing));
 	bool const cylin(((mat_ix + 13*real_num_parts + 5*hallway_dim + 131*floor_ix) % 7) < 4); // varies per-building, per-floor
 	point center;
-	center.z = zval + 0.001*get_window_vspace(); // slightly above the floor to avoid z-fighting
+	center.z = zval + 0.001*floor_spacing; // slightly above the floor to avoid z-fighting
 	unsigned skip_wall(4); // start at an invalid value
 	// find interior doorways connected to this room
 	float const wall_thickness(get_wall_thickness());
 	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
+	set_cube_zvals(room_exp, zval, (zval + floor_spacing)); // clip to z-range of this floor (optimization)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t avoid;
 	vect_cube_t doorways;
