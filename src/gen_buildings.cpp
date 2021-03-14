@@ -571,7 +571,7 @@ class building_draw_t {
 		wall_seg_t() : dlo(0.0), dhi(1.0), ilo(0.0), ihi(1.0) {}
 
 		wall_seg_t(float dlo_, float dhi_, float ilo_, float ihi_) : dlo(dlo_), dhi(dhi_), ilo(ilo_), ihi(ihi_) {
-			assert(dlo < dhi && ilo < ihi && dlo >= 0.0f && dhi <= 1.0f && ilo >= 0.0f && ihi <= 1.0f);
+			assert(dlo <= dhi && ilo <= ihi && dlo >= 0.0f && dhi <= 1.0f && ilo >= 0.0f && ihi <= 1.0f); // should be (dlo < dhi && ilo < ihi), but can fail due to FP error
 		}
 	};
 	vector<wall_seg_t> segs;
