@@ -1055,7 +1055,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
 			bdraw.add_fence(*i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE);
 		}
-		if (!driveway.is_all_zeros()) {
+		if (has_driveway()) {
 			tid_nm_pair_t const tex(get_texture_by_name("roads/asphalt.jpg"), 16.0);
 			bdraw.add_section(*this, empty_vc, driveway, tex, WHITE, 7, 1, 0, 1, 0); // all dims, skip bottom, no AO
 		}

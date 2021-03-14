@@ -247,8 +247,8 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
 			had_coll |= sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr);
 		}
-		if (!driveway.is_all_zeros()) { // include driveways, though this may not be necessary and not correct since driveway is outside the bcube
-			had_coll |= sphere_cube_int_update_pos(pos2, radius, driveway, p_last, 1, xy_only, cnorm_ptr);
+		if (!has_driveway()) { // include driveways, though this may not be necessary and not correct since driveway is outside the bcube
+			had_coll |= sphere_cube_int_update_pos(pos2, radius, (driveway + xlate), p_last2, 1, xy_only, cnorm_ptr);
 		}
 		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
 			for (auto i = details.begin(); i != details.end(); ++i) {
@@ -1980,7 +1980,7 @@ void building_t::update_grass_exclude_at_pos(point const &pos, vector3d const &x
 	get_exclude_cube(pos, cube_t(),       grass_exclude1, camera_in_building); // first/closest cube
 	get_exclude_cube(pos, grass_exclude1, grass_exclude2, camera_in_building); // second closest cube
 	
-	if (!driveway.is_all_zeros()) { // make driveway a grass exclude cube if one is available; this generally fails, but is a good idea if we can extend grass_exclude to more cubes
+	if (has_driveway()) { // make driveway a grass exclude cube if one is available; this generally fails, but is a good idea if we can extend grass_exclude to more cubes
 		if      (grass_exclude1.is_all_zeros()) {grass_exclude1 = driveway;}
 		else if (grass_exclude2.is_all_zeros()) {grass_exclude2 = driveway;}
 	}

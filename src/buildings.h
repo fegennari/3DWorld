@@ -732,6 +732,7 @@ struct building_t : public building_geom_t {
 	bool has_sec_bldg () const {return (has_garage || has_shed);}
 	bool has_pri_hall () const {return (hallway_dim <= 1);} // otherswise == 2
 	bool has_basement () const {return (basement_part_ix >= 0);}
+	bool has_driveway () const {return !driveway.is_all_zeros();}
 	bool is_basement(vect_cube_t::const_iterator it) const {return (int(it - parts.begin()) == basement_part_ix);}
 	bool is_pos_in_basement(point const &pos) const {return (has_basement() && parts[basement_part_ix].contains_pt(pos));};
 	colorRGBA get_avg_side_color  () const {return side_color  .modulate_with(get_material().side_tex.get_avg_color());}
