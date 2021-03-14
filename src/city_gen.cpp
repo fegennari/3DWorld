@@ -209,9 +209,6 @@ cube_t get_bcube(bridge_t const &bridge) {
 	bcube.d[bridge.dim][0] += shrink; bcube.d[bridge.dim][1] -= shrink;
 	return bcube;
 }
-bool check_bcube_sphere_coll(cube_t const &bcube, point const &sc, float radius, bool xy_only) {
-	return (xy_only ? sphere_cube_intersect_xy(sc, radius, bcube) : sphere_cube_intersect(sc, radius, bcube));
-}
 template<typename T> bool check_bcubes_sphere_coll(vector<T> const &bcubes, point const &sc, float radius, bool xy_only) {
 	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
 		if (check_bcube_sphere_coll(get_bcube(*i), sc, radius, xy_only)) return 1;
