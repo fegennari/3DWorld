@@ -1038,7 +1038,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const steep_mult_rock (1.0f/(0.8f*sthresh[0][0] - 0.5f*sthresh[0][0]));
 		float const vnz_scale((mesh_gen_mode == MGEN_DWARP_GPU) ? SQRT2 : 1.0); // allow for steeper slopes when domain warping is used
 		int const llc_x(x1 - xoff2), llc_y(y1 - yoff2);
-		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0);
+		point const query_pos(get_xval(tsize/2 + llc_x), get_yval(tsize/2 + llc_y), 0.0); // in local tile space
 		bool const check_mesh_mask(check_mesh_disable(query_pos, radius)), check_buildings(no_grass_under_buildings());
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,

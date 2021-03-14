@@ -247,9 +247,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
 			had_coll |= sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr);
 		}
-		if (!has_driveway()) { // include driveways, though this may not be necessary and not correct since driveway is outside the bcube
-			had_coll |= sphere_cube_int_update_pos(pos2, radius, (driveway + xlate), p_last2, 1, xy_only, cnorm_ptr);
-		}
+		// Note: driveways are handled elsewhere in the control flow
 		if (!xy_only) { // don't need to check details and roof in xy_only mode because they're contained in the XY footprint of the parts
 			for (auto i = details.begin(); i != details.end(); ++i) {
 				if (sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr)) {had_coll = 1;} // cube, flag as colliding
@@ -1185,7 +1183,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				if (is_garage) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
 				//garage_dim = long_dim;
 
-				if (is_garage) { // add driveway TODO: need to disable grass
+				if (is_garage) { // add driveway
 					bool const ddir((long_dim == dim) ? dir : dir2);
 					driveway = c;
 					driveway.z2() = driveway.z1() + 0.02*door_height;
@@ -1977,13 +1975,8 @@ void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &
 }
 
 void building_t::update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const {
-	get_exclude_cube(pos, cube_t(),       grass_exclude1, camera_in_building); // first/closest cube
+	get_exclude_cube(pos, cube_t(),       grass_exclude1, camera_in_building); // first/closest  cube
 	get_exclude_cube(pos, grass_exclude1, grass_exclude2, camera_in_building); // second closest cube
-	
-	if (has_driveway()) { // make driveway a grass exclude cube if one is available; this generally fails, but is a good idea if we can extend grass_exclude to more cubes
-		if      (grass_exclude1.is_all_zeros()) {grass_exclude1 = driveway;}
-		else if (grass_exclude2.is_all_zeros()) {grass_exclude2 = driveway;}
-	}
 	if (!grass_exclude1.is_all_zeros()) {grass_exclude1 = get_rotated_bcube(grass_exclude1) + xlate;}
 	if (!grass_exclude2.is_all_zeros()) {grass_exclude2 = get_rotated_bcube(grass_exclude2) + xlate;}
 }

@@ -3136,6 +3136,7 @@ public:
 	void get_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) const {
 		get_plots_sphere_coll(pos, radius, xy_only, out);
 		road_gen.get_roads_sphere_coll(pos, radius, include_intersections, xy_only, out, out_bt);
+		get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);
 	}
 	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm) const {
 		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;

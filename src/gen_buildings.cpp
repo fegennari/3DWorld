@@ -1492,23 +1492,25 @@ class building_creator_t {
 
 	struct grid_elem_t {
 		vector<cube_with_ix_t> bc_ixs;
+		vect_cube_t road_segs; // or driveways
 		cube_t bcube;
 		bool has_room_geom;
 		grid_elem_t() : has_room_geom(0) {}
+		bool empty() const {return (bc_ixs.empty() && road_segs.empty());}
 
-		void add(cube_t const &c, unsigned ix) {
-			if (bc_ixs.empty()) {bcube = c;} else {bcube.union_with_cube(c);}
-			bc_ixs.emplace_back(c, ix);
+		void add(cube_t const &c, unsigned ix, bool is_road_seg) {
+			bcube.assign_or_union_with_cube(c);
+			if (is_road_seg) {road_segs.push_back(c);} else {bc_ixs.emplace_back(c, ix);}
 		}
 	};
 	vector<grid_elem_t> grid, grid_by_tile;
 
 	grid_elem_t &get_grid_elem(unsigned gx, unsigned gy) {
-		assert(gx < grid_sz && gy < grid_sz);
+		assert(gx < grid_sz && gy < grid_sz && !grid.empty());
 		return grid[gy*grid_sz + gx];
 	}
 	grid_elem_t const &get_grid_elem(unsigned gx, unsigned gy) const {
-		assert(gx < grid_sz && gy < grid_sz);
+		assert(gx < grid_sz && gy < grid_sz && !grid.empty());
 		return grid[gy*grid_sz + gx];
 	}
 	struct bix_by_x1 {
@@ -1537,11 +1539,11 @@ class building_creator_t {
 			assert(ixr[0][d] < grid_sz && ixr[1][d] < grid_sz);
 		}
 	}
-	void add_to_grid(cube_t const &bcube, unsigned bix) {
+	void add_to_grid(cube_t const &bcube, unsigned bix, bool is_road_seg) {
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
-			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {get_grid_elem(x, y).add(bcube, bix);}
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {get_grid_elem(x, y).add(bcube, bix, is_road_seg);}
 		}
 	}
 	bool check_for_overlaps(vector<unsigned> const &ixs, cube_t const &test_bc, building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const {
@@ -1566,7 +1568,10 @@ class building_creator_t {
 			grid_by_tile.front().bc_ixs.reserve(buildings.size());
 
 			for(unsigned bix = 0; bix < buildings.size(); ++bix) {
-				if (!buildings[bix].bcube.is_all_zeros()) {grid_by_tile.front().add(buildings[bix].bcube, bix);} // skip invalid buildings
+				building_t const &b(buildings[bix]);
+				if (b.bcube.is_all_zeros()) continue; // skip invalid buildings
+				grid_by_tile.front().add(b.bcube, bix, 0);
+				if (b.enable_driveway_coll()) {grid_by_tile.front().add(b.driveway, bix, 1);} // add driveway as well
 			}
 			return;
 		}
@@ -1575,9 +1580,9 @@ class building_creator_t {
 
 		for(unsigned bix = 0; bix < buildings.size(); ++bix) {
 			unsigned gix;
-			cube_t const &bcube(buildings[bix].bcube);
-			if (bcube.is_all_zeros()) continue; // skip invalid buildings
-			uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(bcube.get_cube_center()));
+			building_t const &b(buildings[bix]);
+			if (b.bcube.is_all_zeros()) continue; // skip invalid buildings
+			uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(b.bcube.get_cube_center()));
 			auto it(tile_to_gbt.find(tile_id));
 
 			if (it == tile_to_gbt.end()) { // new element
@@ -1589,7 +1594,8 @@ class building_creator_t {
 				gix = it->second;
 				assert(gix < grid_by_tile.size());
 			}
-			grid_by_tile[gix].add(bcube, bix);
+			grid_by_tile[gix].add(b.bcube, bix, 0);
+			if (b.enable_driveway_coll()) {grid_by_tile[gix].add(b.driveway, bix, 1);} // add driveway as well
 		} // for bix
 	}
 
@@ -1787,7 +1793,7 @@ public:
 				assert(b.bcube.is_strictly_normalized());
 				mat.side_color.gen_color(b.side_color, rgen);
 				mat.roof_color.gen_color(b.roof_color, rgen);
-				add_to_grid(b.bcube, buildings.size());
+				add_to_grid(b.bcube, buildings.size(), 0);
 				vector3d const sz(b.bcube.get_size());
 				float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
 				UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
@@ -1870,6 +1876,9 @@ public:
 				if (num_comp > 1) {cout << num_comp << ": " << b->bcube.get_cube_center().str() << endl;}
 			}
 			cout << endl;
+		}
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) { // add driveways
+			if (b->enable_driveway_coll()) {add_to_grid(b->driveway, (b - buildings.begin()), 1);}
 		}
 		for (auto g = grid.begin(); g != grid.end(); ++g) { // update grid bcube zvals to include building roofs
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
@@ -2615,7 +2624,7 @@ public:
 		building_draw_int_ext_walls.clear_vbos();
 		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom(1);} // force=1; likely required for tiled buildings
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
 		if (empty()) return 0;
 		vector3d const xlate(get_camera_coord_space_xlate());
 		vect_cube_t ped_bcubes; // reused across calls
@@ -2626,14 +2635,14 @@ public:
 			if (!range.contains_pt_xy(p1x)) return 0; // outside buildings bcube
 			unsigned const gix(get_grid_ix(p1x));
 			grid_elem_t const &ge(grid[gix]);
-			if (ge.bc_ixs.empty()) return 0; // skip empty grid
+			if (ge.empty()) return 0; // skip empty grid
 			if (!(xy_only ? ge.bcube.contains_pt_xy(p1x) : ge.bcube.contains_pt(p1x))) return 0; // no intersection - skip this grid
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 				if (!(xy_only ? b->contains_pt_xy(p1x) : b->contains_pt(p1x))) continue;
 				if (get_building(b->ix).check_sphere_coll(pos, p_last, ped_bcubes, xlate, 0.0, xy_only, points, cnorm, check_interior)) return 1;
 			}
-			return 0; // no coll
+			return check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm);
 		}
 		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
 		if (!range.intersects_xy(bcube)) return 0; // outside buildings bcube
@@ -2644,7 +2653,7 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.bc_ixs.empty()) continue; // skip empty grid
+				if (ge.empty()) continue; // skip empty grid
 				if (!(xy_only ? sphere_cube_intersect_xy(pos, (radius + dist), (ge.bcube + xlate)) :
 					sphere_cube_intersect(pos, (radius + dist), (ge.bcube + xlate)))) continue; // Note: makes little difference
 
@@ -2659,9 +2668,37 @@ public:
 					}
 					if (get_building(b->ix).check_sphere_coll(pos, p_last, ped_bcubes, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
 				} // for b
+				if (check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm)) return 1;
 			} // for x
 		} // for y
 		return 0;
+	}
+	bool check_road_seg_sphere_coll(grid_elem_t const &ge, point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
+		for (auto r = ge.road_segs.begin(); r != ge.road_segs.end(); ++r) {
+			if (sphere_cube_int_update_pos(pos, radius, (*r + xlate), p_last, 1, xy_only, cnorm)) return 1;
+		}
+		return 0;
+	}
+	// Note: pos is in building space, out is in camera space; no building rotation applied
+	void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) const {
+		if (empty()) return;
+		cube_t bcube; bcube.set_from_sphere(pos, radius);
+		if (!range.intersects_xy(bcube)) return; // outside buildings bcube
+		vector3d const xlate(get_camera_coord_space_xlate());
+		unsigned ixr[2][2];
+		get_grid_range(bcube, ixr);
+
+		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
+			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
+				grid_elem_t const &ge(get_grid_elem(x, y));
+				if (ge.road_segs.empty()) continue; // skip empty grid
+
+				// Note: no grid bcube test for now; driveways are sparse so it's probably not needed
+				for (auto r = ge.road_segs.begin(); r != ge.road_segs.end(); ++r) {
+					if (check_bcube_sphere_coll(*r, pos, radius, xy_only)) {out.push_back(*r + xlate);}
+				}
+			} // for x
+		} // for y
 	}
 
 	// Note: p1 and p2 are in camera space
@@ -2914,6 +2951,9 @@ public:
 		}
 		return 0;
 	}
+	void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) const {
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);}
+	}
 	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const { // Note p1/p2 are in camera space
 		if (p1.x == p2.x && p1.y == p2.y) { // vertical line, use map lookup optimization (for overhead map mode)
 			auto it(get_tile_by_pos(p1));
@@ -3047,11 +3087,15 @@ bool check_buildings_sphere_coll(point const &pos, float radius, bool apply_tt_x
 bool check_buildings_point_coll(point const &pos, bool apply_tt_xlate, bool xy_only, bool check_interior) {
 	return check_buildings_sphere_coll(pos, 0.0, apply_tt_xlate, xy_only, check_interior);
 }
-bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode
-	point center(pos + get_tt_xlate_val());
+bool check_buildings_no_grass(point const &pos) { // for tiled terrain mode; pos is in local space
+	point center(pos + get_tt_xlate_val()); // convert from building space to camera space
 	if (building_creator.check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1; // secondary buildings only
 	if (building_tiles  .check_sphere_coll(center, pos, 0.0, 1, nullptr)) return 1;
 	return 0;
+}
+void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) { // for tiled terrain mode; pos is in local space
+	building_creator.get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);
+	building_tiles  .get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);
 }
 unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) { // for line_intersect_city()
 	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
