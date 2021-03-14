@@ -1019,9 +1019,11 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			else if (i->type == tquad_with_ix_t::TYPE_TRIM) {
 				bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(), LT_GRAY); // untextured
 			}
-			else {
-				bool const is_wall_tex(i->type != tquad_with_ix_t::TYPE_ROOF && i->type != tquad_with_ix_t::TYPE_ROOF_ACC);
-				bdraw.add_tquad(*this, *i, bcube, (is_wall_tex ? mat.side_tex : mat.roof_tex), (is_wall_tex ? side_color : roof_color)); // use type to select roof vs. side texture
+			else if (i->type == tquad_with_ix_t::TYPE_ROOF || i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // use roof texture
+				bdraw.add_tquad(*this, *i, bcube, mat.roof_tex.get_scaled_version(2.0), roof_color);
+			}
+			else { // use wall texture
+				bdraw.add_tquad(*this, *i, bcube, mat.side_tex, side_color);
 			}
 		}
 		for (auto i = details.begin(); i != details.end(); ++i) { // draw roof details
@@ -1044,7 +1046,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				color = side_color;
 			}
 			else { // otherwise use roof color
-				tex   = mat.roof_tex.get_scaled_version(0.5);
+				tex   = mat.roof_tex.get_scaled_version(1.5);
 				color = detail_color*(pointed ? 0.5 : 1.0);
 			}
 			bdraw.add_section(b, empty_vc, *i, tex, color, 7, skip_bot, 0, 1, 0); // all dims, no AO
