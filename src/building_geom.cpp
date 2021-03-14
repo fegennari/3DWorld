@@ -194,7 +194,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 	}
 	if (is_interior) {
 		point pos2_bs(pos2 - xlate);
-		if (check_sphere_coll_interior(pos2_bs, (p_last - xlate), ped_bcubes, radius, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
+		if (check_sphere_coll_interior(pos2_bs, (p_last2 - xlate), ped_bcubes, radius, xy_only, cnorm_ptr)) {pos2 = pos2_bs + xlate; had_coll = 1;}
 	}
 	else {
 		for (auto i = parts.begin(); i != parts.end(); ++i) {
@@ -245,7 +245,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 			had_coll |= part_coll;
 		} // for i
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
-			had_coll |= sphere_cube_int_update_pos(pos2, radius, *i, p_last, 1, xy_only, cnorm_ptr);
+			had_coll |= sphere_cube_int_update_pos(pos2, radius, (*i + xlate), p_last2, 1, xy_only, cnorm_ptr);
 		}
 		if (!driveway.is_all_zeros()) { // include driveways, though this may not be necessary and not correct since driveway is outside the bcube
 			had_coll |= sphere_cube_int_update_pos(pos2, radius, driveway, p_last, 1, xy_only, cnorm_ptr);
@@ -265,7 +265,7 @@ bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t 
 
 						if (draw_building_interiors && i->type == tquad_with_ix_t::TYPE_ROOF_ACC) { // don't allow walking on roof access tquads
 							if (rdist < -radius*normal.z) continue; // player is below this tquad
-							else {pos2.x = p_last.x; pos2.y = p_last.y; break;} // block the player from walking here (can only walk through raised opening)
+							else {pos2.x = p_last2.x; pos2.y = p_last2.y; break;} // block the player from walking here (can only walk through raised opening)
 						}
 						pos2.z += (radius - rdist)/normal.z; // determine the distance we need to move vertically to achieve this diag separation
 					}
