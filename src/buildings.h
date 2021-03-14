@@ -605,11 +605,16 @@ struct stairwell_t : public cube_t, public stairs_landing_base_t {
 };
 typedef vector<stairwell_t> vect_stairwell_t;
 
-struct door_t : public cube_t {
-	bool dim, open_dir, open, locked, on_stairs;
-	door_t() : dim(0), open_dir(0), open(0), locked(0), on_stairs(0) {}
-	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0) :
-		cube_t(c), dim(dim_), open_dir(dir), open(open_), locked(0), on_stairs(os) {assert(is_strictly_normalized());}
+struct door_stack_t : public cube_t {
+	bool dim, open_dir, on_stairs;
+	door_stack_t() : dim(0), open_dir(0), on_stairs(0) {}
+	door_stack_t(cube_t const &c, bool dim_, bool dir, bool os=0) :
+		cube_t(c), dim(dim_), open_dir(dir), on_stairs(os) {assert(is_strictly_normalized());}
+};
+struct door_t : public door_stack_t {
+	bool open, locked;
+	door_t() : open(0), locked(0) {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0) : door_stack_t(c, dim_, dir, os), open(open_), locked(0) {}
 	bool is_closed_and_locked() const {return (!open && locked);}
 };
 typedef vector<door_t> vect_door_t;
@@ -630,6 +635,7 @@ struct building_interior_t {
 	vect_cube_t floors, ceilings, walls[2]; // walls are split by dim
 	vect_stairwell_t stairwells;
 	vector<door_t> doors;
+	vector<door_stack_t> door_stacks;
 	vector<landing_t> landings; // for stairs and elevators
 	vector<room_t> rooms;
 	vector<elevator_t> elevators;
@@ -1019,7 +1025,7 @@ cube_t get_building_lights_bcube();
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5]);
 void get_bed_cubes(room_object_t const &c, cube_t cubes[6]);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
-bool door_opens_inward(door_t const &door, cube_t const &room);
+bool door_opens_inward(door_stack_t const &door, cube_t const &room);
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);

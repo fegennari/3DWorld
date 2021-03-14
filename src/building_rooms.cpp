@@ -168,7 +168,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 		avoid = objs[objs_start];
 		avoid.expand_by_xy(get_min_front_clearance());
 	}
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (i->intersects(room_exp)) {doorways.push_back(*i);}
 	}
 	if (check_last_obj) {
@@ -456,7 +456,7 @@ unsigned building_t::count_num_int_doors(room_t const &room) const {
 	float const wall_thickness(get_wall_thickness());
 	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
 	unsigned num(0);
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {num += i->intersects(room_exp);}
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {num += i->intersects(room_exp);}
 	return num;
 }
 
@@ -885,7 +885,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			set_cube_zvals(c, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
 			c.d[!br_dim][!side] = c.d[!br_dim][side] + (side ? -1.0 : 1.0)*wall_thickness; // shrink to near zero area in this dim
 
-			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+			for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 				if ((i->dy() < i->dx()) == br_dim) continue; // door in wrong dim
 				if (!is_cube_close_to_door(c, 0.0, 0, *i, 2)) continue; // check both dirs
 				sink_side = side; sink_side_set = 1;
@@ -1038,7 +1038,7 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 		}
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {add_door_if_blocker(i->get_bcube(), room, 0, 0, blockers);} // exterior doors, inc_open=0
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {add_door_if_blocker(*i, room, door_opens_inward(*i, room), i->open_dir, blockers);} // interior doors
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {add_door_if_blocker(*i, room, door_opens_inward(*i, room), i->open_dir, blockers);} // interior doors
 	float const doorway_width(interior->get_doorway_width());
 
 	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
@@ -1237,10 +1237,10 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
 	unsigned num_placed(0), num_doors(0);
 
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		num_doors += is_cube_close_to_door(test_cube, 0.0, 0, *i, 2); // check both dirs
 	}
-	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		if (!is_cube_close_to_door(test_cube, 0.0, 0, *i, 2)) continue; // check both dirs
 		exclude.push_back(*i);
 		exclude.back().expand_in_dim( i->dim, 0.6*room.get_sz_dim(i->dim));
@@ -2045,7 +2045,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vect_cube_t trim_cubes;
 
-	for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) { // vertical strips on each side + strip on top of interior doors
+	for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) { // vertical strips on each side + strip on top of interior doors
 		if (d->on_stairs) continue; // no frame for stairs door, skip
 		cube_t trim(*d);
 		trim.expand_in_dim(d->dim, door_trim_exp);

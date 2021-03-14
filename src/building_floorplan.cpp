@@ -11,7 +11,8 @@ extern building_params_t global_building_params;
 
 void building_t::add_interior_door(door_t &door) {
 	assert(interior);
-	if (!SPLIT_DOOR_PER_FLOOR) {add_interior_door_for_floor(door); return;} // add a single door across all floors
+	interior->door_stacks.push_back(door);
+	if (!SPLIT_DOOR_PER_FLOOR || door.on_stairs) {add_interior_door_for_floor(door); return;} // add a single door across all floors
 	float const floor_spacing(get_window_vspace()), door_height(floor_spacing - get_floor_thickness());
 
 	// Note: door.dz() should be an exact multiple of floor_spacing except for an extra floor thickness at the bottom
@@ -22,8 +23,10 @@ void building_t::add_interior_door(door_t &door) {
 	}
 }
 void building_t::add_interior_door_for_floor(door_t &door) {
-	door.open   = (              fract(interior->doors.size()*1.61803) < global_building_params.open_door_prob  ); // use the golden ratio
-	door.locked = (!door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob); // use pi
+	if (!door.on_stairs) { // don't set open/locked state for stairs doors
+		door.open   = (              fract(interior->doors.size()*1.61803) < global_building_params.open_door_prob  ); // use the golden ratio
+		door.locked = (!door.open && fract(interior->doors.size()*3.14159) < global_building_params.locked_door_prob); // use pi
+	}
 	interior->doors.push_back(door);
 }
 
@@ -1329,7 +1332,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					door.expand_in_dim(!dim, -0.15*cand.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
 					assert(door.is_strictly_normalized());
 					interior->stairwells.back().stairs_door_ix = (int16_t)interior->doors.size(); // record door index gating stairs for AI navigation
-					interior->doors.push_back(door);
+					add_interior_door(door);
 				}
 				// attempt to cut holes in ceiling of this part and floor of above part
 				cube_t cut_cube(cand);

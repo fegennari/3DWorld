@@ -2007,7 +2007,7 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 	s.nverts += interior->room_geom->get_num_verts();
 }
 
-bool door_opens_inward(door_t const &door, cube_t const &room) {
+bool door_opens_inward(door_stack_t const &door, cube_t const &room) {
 	return (room.is_all_zeros() || (door.d[door.dim][0] < room.get_center_dim(door.dim)) == door.open_dir); // null room always returns 1 (conservative)
 }
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs) {
@@ -2028,7 +2028,7 @@ bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, f
 	return (interior ? interior->is_cube_close_to_doorway(c, room, dmin, inc_open) : 0); // test interior doors
 }
 bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // ignores zvals
-	for (auto i = doors.begin(); i != doors.end(); ++i) { // interior doors
+	for (auto i = door_stacks.begin(); i != door_stacks.end(); ++i) { // interior doors
 		if (is_cube_close_to_door(c, dmin, (inc_open && door_opens_inward(*i, room)), *i, (i->dim ^ i->open_dir ^ 1))) return 1;
 	}
 	return 0;
@@ -2092,6 +2092,7 @@ void building_interior_t::finalize() {
 	remove_excess_cap(ceilings);
 	remove_excess_cap(rooms);
 	remove_excess_cap(doors);
+	remove_excess_cap(door_stacks);
 	remove_excess_cap(landings);
 	remove_excess_cap(stairwells);
 	remove_excess_cap(elevators);
