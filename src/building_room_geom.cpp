@@ -1564,17 +1564,25 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	axis[c.dim] = 1.0; // along book width
 	tilt_angle *= (c.dim ? -1.0 : 1.0);
 	bool has_cover(0);
+	bool const draw_cover_lg(draw_cover_as_small || inc_sm), draw_cover_sm(draw_cover_as_small || inc_lg);
+	colorRGBA const color(apply_light_color(c));
+	// skip top face, bottom face if not tilted, thickness dim if upright
+	unsigned const sides_mask(upright ? get_skip_mask_for_xy(tdim) : EF_Z2), spine_mask(~get_face_mask(c.dim, !c.dir));
+	unsigned const skip_faces(extra_skip_faces | ((tilt_angle == 0.0) ? EF_Z1 : 0) | sides_mask);
 
-	if (draw_cover_as_small ? inc_sm : inc_lg) { // add book geom
-		colorRGBA const color(apply_light_color(c));
-		// skip top face, bottom face if not tilted, thickness dim if upright
-		unsigned const skip_faces(extra_skip_faces | ((tilt_angle == 0.0) ? EF_Z1 : 0) | (upright ? get_skip_mask_for_xy(tdim) : EF_Z2));
+	if (draw_cover_as_small || inc_lg) { // draw large faces: outside faces of covers and spine
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, draw_cover_as_small)); // unshadowed, since shadows are too small to have much effect
 		unsigned const qv_start(mat.quad_verts.size());
-		mat.add_cube_to_verts(bot,   color, tex_origin, (extra_skip_faces | EF_Z1)); // untextured, skip bottom face
-		mat.add_cube_to_verts(top,   color, tex_origin, (extra_skip_faces | (upright ? EF_Z1 : 0))); // untextured, skip bottom face if upright
-		mat.add_cube_to_verts(spine, color, tex_origin, skip_faces); // untextured
-		mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), tex_origin, (skip_faces | ~get_face_mask(c.dim, !c.dir))); // untextured
+		mat.add_cube_to_verts(c, color, tex_origin, (extra_skip_faces | ~(sides_mask | spine_mask))); // untextured
+		rotate_verts(mat.quad_verts, axis, tilt_angle, about, qv_start);
+	}
+	if (draw_cover_as_small || inc_sm) { // draw small faces: insides of covers, edges, and pages
+		rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // unshadowed, since shadows are too small to have much effect
+		unsigned const qv_start(mat.quad_verts.size());
+		mat.add_cube_to_verts(bot,   color, tex_origin, (extra_skip_faces | EF_Z1 | ~get_face_mask(tdim, 0))); // untextured, skip bottom face
+		mat.add_cube_to_verts(top,   color, tex_origin, (extra_skip_faces | (upright ? EF_Z1 : 0) | ~get_face_mask(tdim, 1))); // untextured, skip top face, skip bottom face if upright
+		mat.add_cube_to_verts(spine, color, tex_origin, (skip_faces | spine_mask)); // untextured, skip back of spine (drawn as lg geom)
+		mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), tex_origin, (skip_faces | spine_mask)); // untextured
 		rotate_verts(mat.quad_verts, axis, tilt_angle, about, qv_start);
 	}
 	if (ADD_BOOK_COVERS && inc_sm && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
@@ -2560,7 +2568,7 @@ colorRGBA room_object_t::get_color() const {
 }
 
 void building_room_geom_t::create_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom"); // 3.6ms
+	//highres_timer_t timer("Gen Room Geom"); // 2.35ms
 	float const tscale(2.0/obj_scale);
 	mats_static.clear();
 	mats_alpha .clear();
@@ -2616,7 +2624,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom Small"); // 8.8ms
+	//highres_timer_t timer("Gen Room Geom Small"); // 9.1ms
 	mats_small .clear();
 	mats_plants.clear();
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
