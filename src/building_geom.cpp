@@ -109,7 +109,7 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 	bool updated(0);
 
 	// FIXME: if the player is moving too quickly, the intersection with a side polygon may be missed,
-	// which allows the player to travel through the building, but using a line intersection test from p_past2 to pos has other problems
+	// which allows the player to travel through the building, but using a line intersection test from p_last to pos has other problems
 	for (unsigned S = 0; S < num_sides; ++S) { // generate vertex data quads
 		for (unsigned d = 0, ix = 0; d < 2; ++d) {
 			point const &p(points[(S+d)%num_sides]);

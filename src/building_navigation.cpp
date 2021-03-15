@@ -727,7 +727,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 		bool const straight_only = 0;
 		vector<unsigned> nearest_stairs;
 		find_nearest_stairs(from, to, nearest_stairs, straight_only); // pass in loc1.part_ix if both loc part_ix values are equal?
-		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down FIXME: handle part_ix
+		bool const up_or_down(loc1.floor_ix > loc2.floor_ix); // 0=up, 1=down; Note: floor_ix is relative to bcube.z1(), so is consistent across parts
 
 		for (auto s = nearest_stairs.begin(); s != nearest_stairs.end(); ++s) { // try using stairs, closest to furthest
 			assert(*s < interior->stairwells.size());
