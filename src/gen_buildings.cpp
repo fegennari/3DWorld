@@ -659,7 +659,7 @@ public:
 						if (apply_ao) {vert.copy_color(cw[d^e]);}
 						verts.push_back(vert);
 					}
-					if (clip_windows) {clip_low_high(verts[verts.size()-1].t[1], verts[verts.size()-2].t[1]);} // is this necessary?
+					if (clip_windows) {clip_low_high_tc(verts[verts.size()-1].t[1], verts[verts.size()-2].t[1]);} // is this necessary?
 				} // for d
 			} // for S
 		} // end draw sides
@@ -698,6 +698,21 @@ public:
 		bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0)
 	{
 		add_tquad_to_verts(bg, tquad, bcube, tex, color, get_verts(tex, (tquad.npts == 3)), invert_tc_x, exclude_frame, no_tc); // 0=quads, 1=tris
+	}
+	void clip_low_high_vertex(float &v0_, float &v1_, float &t0_, float &t1_) {
+		bool const swapped(t1_ < t0_);
+		float &v0(swapped ? v1_ : v0_), &v1(swapped ? v0_ : v1_), &t0(swapped ? t1_ : t0_), &t1(swapped ? t0_ : t1_);
+		if (t1 - t0 < 0.5) {t0 = t1 = 0.0;} // too small to have a window
+		else if (t0 != t1) { // clip both vertex coordinates and tex coords to maintain a constant texture scale (dv/dt)
+			float const old_t0(t0), old_t1(t1), dv_dt((v1 - v0)/(t1 - t0));
+			t0  = ceil (t0 - 0.01);
+			t1  = floor(t1 + 0.01);
+			if (t0 >= t1) {t0 = t1 = 0.0;} // too small to have a window
+			else {
+				v0 += (t0 - old_t0)*dv_dt;
+				v1 += (t1 - old_t1)*dv_dt;
+			}
+		}
 	}
 
 	// clip_windows: 0=no clip, 1=clip for building, 2=clip for house
@@ -825,10 +840,17 @@ public:
 						for (unsigned k = ix; k < ix+4; ++k) {verts[k].v[n] += offset;}
 					}
 					if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
-						clip_low_high(verts[ix+0].t[!st], verts[ix+1].t[!st]);
-						clip_low_high(verts[ix+2].t[!st], verts[ix+3].t[!st]);
-						clip_low_high(verts[ix+0].t[ st], verts[ix+3].t[ st]);
-						clip_low_high(verts[ix+1].t[ st], verts[ix+2].t[ st]);
+#if 0
+						clip_low_high_vertex(verts[ix+0].v[i], verts[ix+1].v[i], verts[ix+0].t[!st], verts[ix+1].t[!st]);
+						clip_low_high_vertex(verts[ix+2].v[i], verts[ix+3].v[i], verts[ix+2].t[!st], verts[ix+3].t[!st]);
+						clip_low_high_vertex(verts[ix+0].v[d], verts[ix+3].v[d], verts[ix+0].t[ st], verts[ix+3].t[ st]);
+						clip_low_high_vertex(verts[ix+1].v[d], verts[ix+2].v[d], verts[ix+1].t[ st], verts[ix+2].t[ st]);
+#else
+						clip_low_high_tc(verts[ix+0].t[!st], verts[ix+1].t[!st]);
+						clip_low_high_tc(verts[ix+2].t[!st], verts[ix+3].t[!st]);
+						clip_low_high_tc(verts[ix+0].t[ st], verts[ix+3].t[ st]);
+						clip_low_high_tc(verts[ix+1].t[ st], verts[ix+2].t[ st]);
+#endif
 						// Note: if we're drawing windows, and either of the texture coords have zero ranges, we can drop this quad; but this is uncommon and maybe not worth the trouble
 					}
 					if (clamp_cube != nullptr && *clamp_cube != cube && n < 2) { // x/y dims only

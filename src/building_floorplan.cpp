@@ -63,7 +63,7 @@ int building_t::get_num_windows_on_side(float xy1, float xy2) const {
 	assert(xy1 < xy2);
 	float const tscale(get_material().get_floorplan_window_xscale());
 	float t0(tscale*xy1), t1(tscale*xy2);
-	clip_low_high(t0, t1);
+	clip_low_high_tc(t0, t1);
 	return round_fp(t1 - t0);
 }
 float building_t::get_window_h_border() const {return 0.5*(1.0 - global_building_params.get_window_width_fract ());} // (0.0, 1.0)

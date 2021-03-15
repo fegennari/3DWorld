@@ -1003,7 +1003,7 @@ struct ped_draw_vars_t {
 		: building(b), oc(oc_), s(s_), xlate(x), bix(bix_), shadow_only(so), reflection_pass(rp) {}
 };
 
-inline void clip_low_high(float &t0, float &t1) {
+inline void clip_low_high_tc(float &t0, float &t1) {
 	if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()
 }
