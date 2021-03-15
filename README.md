@@ -112,6 +112,14 @@ https://3dworldgen.blogspot.com/
 
 Here are some screenshots linked from my blog:
 
+![alt text](https://1.bp.blogspot.com/-GW82PSnZt7s/X7DVx4wb4aI/AAAAAAAACxM/4PSV1e2iI8wzVEXVnA9K3GPrPqfdpKmcwCLcBGAsYHQ/w640-h360/office_libraries.jpg)
+
+Procedural building interior - a library with procedurally generated books. (config_heightmap.txt)
+
+![alt text](https://1.bp.blogspot.com/-x8EY3wBRA2c/X-2bpKYDQ5I/AAAAAAAAC1g/4SAgBAdGIzY8LmDFgCLjyIMsrwsBsbplgCLcBGAsYHQ/w640-h360/solar_panels_with_sides.jpg)
+
+Procedurally generated houses and office buildings with full interiors. (config_heightmap.txt)
+
 ![alt text](https://1.bp.blogspot.com/-sGemMLy_VXc/Wx10wAEwSxI/AAAAAAAABj8/FKLHXZ27qBsNPXE7fZU1vXo-N06NjV5EQCLcBGAs/s640/spheres_low_noise.jpg)
 
 Reflective (metal), refractive (glass), emissive, and translucent spheres in night time scene with indirect lighting. Drawn in realtime; spheres can be moved interactively. (config_white_plane.txt)
