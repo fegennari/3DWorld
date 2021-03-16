@@ -730,11 +730,12 @@ public:
 		if (clip_windows) {tex_vert_off.z -= bg.bcube.get_llc().z;} // don't adjust X/Y pos for windows, because other code needs to know where windows are placed
 		else {tex_vert_off -= bg.bcube.get_llc();} // normalize to building LLC to keep tex coords small
 		if (is_city && cube.z1() == bg.bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
-		float const window_vspacing(bg.get_material().get_floor_spacing()), offset_val(0.01*offset_scale*window_vspacing);
+		float const window_vspacing(bg.get_window_vspace()), window_h_border(0.75*bg.get_window_h_border()), offset_val(0.01*offset_scale*window_vspacing);
 		
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // n = dim of normal, i/d = other dims
 			if (!(dim_mask & (1<<n))) continue; // check for enabled dims
+			bool const do_xy_clip(clip_windows && n < 2 && !bg.is_rotated()), clip_d(d != 2); // clip the non-z dim;
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (skip_bottom && n == 2 && j == 0) continue; // skip bottom side
@@ -778,7 +779,16 @@ public:
 					faces.clear();
 					faces.push_back(face);
 					float const sz_d_inv(1.0/sz[d]), sz_i_inv(1.0/sz[i]);
+					float num_windows(0.0);
 
+					if (do_xy_clip) { // side of non-rotated building
+						unsigned const cdim(clip_d ? d : i); // clip dim, horizontal (X or Y)
+						float tlo(tscale[0]*(face.d[cdim][0] + tex_vert_off[cdim]) + tex.txoff), thi(tscale[0]*(face.d[cdim][1] + tex_vert_off[cdim]) + tex.txoff); // TCx
+						clip_low_high_tc(tlo, thi); // TCx of unclipped wall
+						num_windows = (thi - tlo); // for unclipped wall
+						assert(num_windows >= 0.0);
+						if (num_windows < 0.5) continue; // no space for a window before clip
+					}
 					for (auto p = parts.begin(); (p + bg.has_chimney) != parts.end(); ++p) {
 						if (p->contains_cube(cube)) continue; // skip ourself (including door part)
 						if (cube.d[d][1] <= p->d[d][0] || cube.d[d][0] >= p->d[d][1] || cube.d[i][1] <= p->d[i][0] || cube.d[i][0] >= p->d[i][1]) continue; // check for overlap in the two quad dims
@@ -791,8 +801,16 @@ public:
 						if (F.get_sz_dim(d) == 0.0 || F.get_sz_dim(i) == 0.0) continue; // adjacent part zero area strip, skip
 						// don't copy/enable the top segment for house windows because houses always have a sloped roof section on top that will block the windows
 						if (clip_windows == 2 && F.z1() > cube.z1()) continue;
-						segs.emplace_back((F.d[d][0] - llc[d])*sz_d_inv, (F.d[d][1] - llc[d])*sz_d_inv, (F.d[i][0] - llc[i])*sz_i_inv, (F.d[i][1] - llc[i])*sz_i_inv);
-					}
+						wall_seg_t seg((F.d[d][0] - llc[d])*sz_d_inv, (F.d[d][1] - llc[d])*sz_d_inv, (F.d[i][0] - llc[i])*sz_i_inv, (F.d[i][1] - llc[i])*sz_i_inv);
+
+						if (do_xy_clip) { // clip the horizontal vertices of the quad that was just added to make the windows line up with the other side
+							float &lo(clip_d ? seg.dlo : seg.ilo), &hi(clip_d ? seg.dhi : seg.ihi);
+							if (lo > 0.01) {lo = ceil (lo*num_windows - window_h_border)/num_windows;} // if clipped on lo edge, round up   to nearest whole window
+							if (hi < 0.99) {hi = floor(hi*num_windows + window_h_border)/num_windows;} // if clipped on hi edge, round down to nearest whole window
+							if (hi - lo < 0.01) continue; // no space for a window after clip (optimization)
+						}
+						segs.emplace_back(seg);
+					} // for f
 				}
 				else {
 					segs.push_back(wall_seg_t()); // single seg
@@ -824,7 +842,7 @@ public:
 					else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the building wall to avoid z-fighting
 						for (unsigned k = ix; k < ix+4; ++k) {verts[k].v[n] += offset;}
 					}
-					if (clip_windows && n < 2) { // clip the quad that was just added (side of building)
+					if (clip_windows && n < 2) { // clip the texture coordinates of the quad that was just added (side of building)
 						clip_low_high_tc(verts[ix+0].t[!st], verts[ix+1].t[!st]);
 						clip_low_high_tc(verts[ix+2].t[!st], verts[ix+3].t[!st]);
 						clip_low_high_tc(verts[ix+0].t[ st], verts[ix+3].t[ st]);
