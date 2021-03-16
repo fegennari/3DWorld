@@ -1679,7 +1679,7 @@ bool has_bcube_int_stairs_exp(cube_t const &bcube, vect_stairwell_t const &stair
 	return 0;
 }
 
-// Note: these three floats can be calculated from mat.get_floor_spacing(), but it's easier to change the constants if we just pass them in
+// Note: these three floats can be calculated from get_window_vspace(), but it's easier to change the constants if we just pass them in
 void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes, unsigned building_ix) {
 
 	assert(interior);

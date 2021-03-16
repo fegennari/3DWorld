@@ -680,7 +680,7 @@ void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float di
 	if (invert_normal) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap vertex order to invert normal
 
 	if (door.type == tquad_with_ix_t::TYPE_RDOOR) { // not on a wall, use shift relative to floor/wall thickness
-		door_shift = 0.01*(dir ? 1.0 : -1.0)*get_material().get_floor_spacing();
+		door_shift = 0.01*(dir ? 1.0 : -1.0)*get_window_vspace();
 	}
 	else {
 		door_shift = bcube.dz(); // start with a large value
@@ -853,7 +853,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	}
 	// generate building levels and splits
 	float const height(base.dz()), dz(height/num_levels);
-	float const abs_min_edge_move(0.5*mat.get_floor_spacing()); // same as door width
+	float const abs_min_edge_move(0.5*get_window_vspace()); // same as door width
 	bool const not_too_small(min(bcube.dx(), bcube.dy()) > 4.0*abs_min_edge_move);
 	assert(height > 0.0);
 
@@ -1020,7 +1020,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 {
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
-	float const door_shift(0.01*get_material().get_floor_spacing());
+	float const door_shift(0.01*get_window_vspace());
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
 	cube_t door;
@@ -1765,7 +1765,7 @@ void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the r
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
 	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
-	float const window_vspacing(get_material().get_floor_spacing()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
+	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
 
 	if (!is_rectangle) { // polygon roof, can only add AC units

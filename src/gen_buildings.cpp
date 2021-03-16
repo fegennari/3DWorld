@@ -1162,7 +1162,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 
 template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const {
 
-	float const ty((exterior || SPLIT_DOOR_PER_FLOOR) ? 1.0 : D.dz()/get_material().get_floor_spacing()); // tile door texture across floors for unsplit interior doors
+	float const ty((exterior || SPLIT_DOOR_PER_FLOOR) ? 1.0 : D.dz()/get_window_vspace()); // tile door texture across floors for unsplit interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
 	bool const opens_up(door_type == tquad_with_ix_t::TYPE_GDOOR);
 	bool const exclude_frame(door_type == tquad_with_ix_t::TYPE_HDOOR && !exterior && opened); // exclude the frame on open interior doors
@@ -1231,8 +1231,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	} else {color = mat.window_color;}
 	// only clip non-city windows; city building windows tend to be aligned with the building textures (maybe should be a material option?)
 	int const clip_windows(mat.no_city ? (is_house ? 2 : 1) : 0);
-	float const floor_spacing(mat.get_floor_spacing());
-	float const door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (ground_floor_z1 + floor_spacing) : doors.front().pts[2].z));
+	float const floor_spacing(get_window_vspace()), door_ztop(doors.empty() ? 0.0f : (EXACT_MULT_FLOOR_HEIGHT ? (ground_floor_z1 + floor_spacing) : doors.front().pts[2].z));
 	unsigned draw_parts_mask(0);
 	bool room_with_stairs(0);
 	cube_t cont_part; // part containing the point
@@ -1329,7 +1328,7 @@ void building_t::get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const
 }
 
 void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const {
-	float const floor_spacing(get_material().get_floor_spacing());
+	float const floor_spacing(get_window_vspace());
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // cut a hole for each door
 		tquad_with_ix_t door(*d);
