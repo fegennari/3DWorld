@@ -3118,7 +3118,7 @@ void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool 
 // tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: normal map, 5: noise, 6: shadow map, 9: cloud noise
 void tile_draw_t::draw_grass(bool reflection_pass) {
 
-	if (reflection_pass) return; // no grass reflections (yet)
+	if (reflection_pass)    return; // no grass reflections (yet)
 	if (player_in_basement) return; // grass can sometimes appear in a building basement, so disable it when the player is in the basement
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
@@ -3409,8 +3409,11 @@ void draw_tiled_terrain(int reflection_pass) {
 	//RESET_TIME;
 	bool const disable_depth_clamp(enable_depth_clamp && !reflection_pass && camera_in_building); // helps with terrain covering basement stairs entrance
 	if (disable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
+	// don't need to draw the bottom of the terrain when in the basement; for some reason the faces are backwards
+	if (player_in_basement)  {glEnable (GL_CULL_FACE); glCullFace(GL_FRONT);}
 	terrain_tile_draw.draw(reflection_pass);
-	if (disable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // restore
+	if (player_in_basement)  {glDisable(GL_CULL_FACE); glCullFace(GL_BACK);}
+	if (disable_depth_clamp) {glEnable (GL_DEPTH_CLAMP);} // restore
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 	if (reflection_pass) return; // nothing else to do
 

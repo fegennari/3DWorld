@@ -31,7 +31,7 @@ extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable
 extern bool teleport_to_screenshot, enable_dlight_bcubes;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
-extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks;
+extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks, FAR_CLIP;
 extern point sun_pos, pre_smap_player_pos;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
@@ -1483,13 +1483,16 @@ void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	s.set_cur_color(ALPHA0); // fully transparent
 	select_texture(WHITE_TEX);
 	enable_blend();
+	glEnable(GL_CULL_FACE);
 
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
 		if (i->z1() >= basement.z2()) continue; // not basement stairwell
 		cube_t stairs_top(*i);
-		set_cube_zvals(stairs_top, basement.z2()-thickness, basement.z2()+thickness); // stairs XY clipped to zval of basement ceiling
+		// only draw top surface - bottom surface of terrain is not drawn when player is in the basement
+		set_cube_zvals(stairs_top, basement.z2()-FAR_CLIP, basement.z2()+thickness);
 		draw_simple_cube(stairs_top, 0, 4); // draw top and bottom only; should only get here once
 	} // for i
+	glDisable(GL_CULL_FACE);
 	disable_blend();
 }
 
