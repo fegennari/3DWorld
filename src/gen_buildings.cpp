@@ -19,7 +19,8 @@ bool const ADD_ROOM_LIGHTS       = 1;
 bool const DRAW_EXT_REFLECTIONS  = 1;
 bool const PLAYER_CAN_OPEN_DOORS = 1;
 bool const LINEAR_ROOM_DLIGHT_ATTEN = 1;
-float const WIND_LIGHT_ON_RAND   = 0.08;
+float const WIND_LIGHT_ON_RAND      = 0.08;
+float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
 bool camera_in_building(0), player_in_basement(0), interior_shadow_maps(0);
 int player_in_closet(0); // 0=not in closet, 1=in open closet, 2=in closed closet with light off, 3=in closet closet with light on
@@ -1478,20 +1479,18 @@ void building_t::add_split_roof_shadow_quads(building_draw_t &bdraw) const {
 // to be called when the player is inside this building; when outside the building, the exterior walls/windows will write to the depth buffer instead
 void building_t::write_basement_entrance_depth_pass(shader_t &s) const {
 	if (!interior || !has_basement()) return;
-	float const thickness(0.5*get_floor_thickness());
-	cube_t const &basement(parts[basement_part_ix]);
+	float const zval(parts[basement_part_ix].z2()), z(zval + BASEMENT_ENTRANCE_SCALE*get_floor_thickness());
 	s.set_cur_color(ALPHA0); // fully transparent
 	select_texture(WHITE_TEX);
 	enable_blend();
 	glEnable(GL_CULL_FACE);
 
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
-		if (i->z1() >= basement.z2()) continue; // not basement stairwell
-		cube_t stairs_top(*i);
+		if (i->z1() >= zval) continue; // not basement stairwell
 		// only draw top surface - bottom surface of terrain is not drawn when player is in the basement
-		set_cube_zvals(stairs_top, basement.z2()-FAR_CLIP, basement.z2()+thickness);
-		draw_simple_cube(stairs_top, 0, 4); // draw top and bottom only; should only get here once
-	} // for i
+		vert_wrap_t const verts[4] = {point(i->x1(), i->y1(), z), point(i->x2(), i->y1(), z), point(i->x2(), i->y2(), z), point(i->x1(), i->y2(), z)};
+		draw_verts(verts, 4, GL_TRIANGLE_FAN); // single quad
+	}
 	glDisable(GL_CULL_FACE);
 	disable_blend();
 }
@@ -2274,8 +2273,8 @@ public:
 						building_cont_player = &b; // there can be only one
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
-						this_frame_camera_in_building = 1;
-						if (b.is_pos_in_basement(camera_xlated)) {this_frame_player_in_basement = 1;}
+						this_frame_camera_in_building  = 1;
+						this_frame_player_in_basement |= b.is_pos_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()));
 						player_building = &b;
 
 						if (display_mode & 0x10) { // compute indirect lighting
