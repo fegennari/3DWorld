@@ -615,7 +615,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			point part_door_open_dir_tp(p->get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
 			
 			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
-				unsigned const num_parts(parts.size()), num_doors_est(4*num_parts + has_basement());
+				unsigned const num_parts(get_real_num_parts()), num_doors_est(4*num_parts + has_basement());
 				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*num_parts);}
 				interior->rooms.reserve(8*num_parts); // two rows of rooms + optional hallway
 				interior->door_stacks.reserve(num_doors_est);
