@@ -535,11 +535,12 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 2: case 3: // pen/pencil
 	{
-		float const length(min(1.7f*sz.z, 0.9f*sz[!c.dim])), diameter(0.036*length);
-		obj = room_object_t(drawer, ((type_ix == 2) ? (unsigned)TYPE_PEN : (unsigned)TYPE_PENCIL), c.room_id, !c.dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
+		bool const dim(!c.dim); // always opposite orient of the drawer
+		float const length(min(1.7f*sz.z, 0.9f*sz[dim])), diameter(0.036*length);
+		obj = room_object_t(drawer, ((type_ix == 2) ? (unsigned)TYPE_PEN : (unsigned)TYPE_PENCIL), c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.color = ((obj.type == TYPE_PEN) ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]);
 		obj.z2()  = (obj.z1() + diameter);
-		set_rand_pos_for_sz(obj, !c.dim, length, diameter, rgen);
+		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}
 	case 4: // book
@@ -563,11 +564,12 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 6: // bottle
 	{
-		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, sz[!c.dim])), diameter(length*rgen.rand_uniform(0.28, 0.36));
-		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, !c.dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
+		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
+		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, min(sz[0], sz[1]))), diameter(length*rgen.rand_uniform(0.26, 0.34));
+		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.set_as_bottle(rgen.rand());
 		obj.z2() = (obj.z1() + diameter);
-		set_rand_pos_for_sz(obj, !c.dim, length, diameter, rgen);
+		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}
 	case 7: // money
@@ -583,15 +585,16 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 8: // phone
 	{
+		bool const dim(c.dim ^ rgen.rand_bool()); // random orient
 		float const length(1.1*sz.z), width(0.45*length);
 
-		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
+		if (length < 0.9*sz[dim] && width < 0.9*sz[!dim]) { // if it can fit
 			unsigned const NUM_PHONE_COLORS = 7; // for the case
 			colorRGBA const phone_colors[NUM_PHONE_COLORS] = {WHITE, GRAY, DK_GRAY, GRAY_BLACK, BLUE, RED, PINK};
-			obj = room_object_t(drawer, TYPE_PHONE, c.room_id, c.dim, c.dir);
+			obj = room_object_t(drawer, TYPE_PHONE, c.room_id, dim, c.dir);
 			obj.color = phone_colors[rgen.rand() % NUM_PHONE_COLORS];
 			obj.z2()  = (obj.z1() + 0.06*length);
-			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
+			set_rand_pos_for_sz(obj, dim, length, width, rgen);
 		}
 		break;
 	}
