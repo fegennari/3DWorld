@@ -576,7 +576,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 
 		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
 			obj = room_object_t(drawer, TYPE_MONEY, c.room_id, c.dim, c.dir);
-			obj.z2() = (obj.z1() + 0.01*sz.z);
+			obj.z2() = (obj.z1() + 0.01*length*((rgen.rand()%20) + 1)); // 1-20 bills
 			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
 		}
 		break;
@@ -866,6 +866,9 @@ void building_room_geom_t::add_key(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_money(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_money_tid(), 0.0), 0, 0, 1));
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only, no shadows
+	unsigned const verts_start(mat.quad_verts.size());
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z12); // sides, no shadows
+	for (auto i = mat.quad_verts.begin() + verts_start; i != mat.quad_verts.end(); ++i) {i->t[0] = i->t[1] = 0.0;} // set tex coords to 0 for sides to use border texture color
 }
 
 void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1

@@ -633,7 +633,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_LG_BALL   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 15.0,  1.2,   "ball");
 	bldg_obj_types[TYPE_HANGER_ROD] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 10.0,  5.0,   "hanger rod");
 	bldg_obj_types[TYPE_DRAIN     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "drain pipe");
-	bldg_obj_types[TYPE_MONEY     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 200.0, 0.0,   "pile of money"); // 10x $20 bills
+	bldg_obj_types[TYPE_MONEY     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 20.0,  0.0,   "pile of money"); // $20 bills
 	bldg_obj_types[TYPE_PHONE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 200.0, 0.1,   "cell phone");
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -709,6 +709,10 @@ float get_obj_value(room_object_t const &obj) {
 			float const val_mult((rgen.rand_float() < 0.25) ? 10 : 1); // 25% of papers have higher value
 			value = val_mult*(2 + (rgen.rand()%10))*(1 + (rgen.rand()%10));
 		}
+	}
+	else if (obj.type == TYPE_MONEY) {
+		unsigned const num_bills(round_fp(obj.dz()/(0.01*obj.get_sz_dim(obj.dim))));
+		value *= num_bills;
 	}
 	return value;
 }
