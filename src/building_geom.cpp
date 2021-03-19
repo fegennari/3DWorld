@@ -956,7 +956,7 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 	// generate L, T, U, H, +, O shape
 	point const llc(seed_cube.get_llc()), sz(seed_cube.get_size());
 	bool const allow_courtyard(seed_cube.dx() < 1.6*seed_cube.dy() && seed_cube.dy() < 1.6*seed_cube.dx()); // AR < 1.6:1
-	int const shape(rand()%(allow_courtyard ? 10 : 9)); // 0-9
+	int const shape(rgen.rand()%(allow_courtyard ? 10 : 9)); // 0-9
 	has_courtyard = (shape == 9);
 	bool const is_hpo(shape >= 7);
 	bool const dim(rgen.rand_bool()); // {x,y}
@@ -1105,11 +1105,11 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			dir2         = rgen.rand_bool(); // in !dim
 			dim          = rgen.rand_bool();
 			shrink[dir2] = rgen.rand_uniform(0.4, 0.6)*(dir2 ? -1.0 : 1.0);
-			delta_height = max(0.0f, rand_uniform(-0.1, 0.5));
+			delta_height = max(0.0f, rgen.rand_uniform(-0.1, 0.5));
 		}
 		else if (type == 2) { // two-part
 			dim          = get_largest_xy_dim(base); // choose longest dim
-			delta_height = rand_uniform(0.1, 0.5);
+			delta_height = rgen.rand_uniform(0.1, 0.5);
 
 			for (unsigned d = 0; d < 2; ++d) {
 				if (rgen.rand_bool()) {shrink[d] = rgen.rand_uniform(0.2, 0.35)*(d ? -1.0 : 1.0);}
