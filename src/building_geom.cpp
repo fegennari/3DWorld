@@ -310,19 +310,29 @@ bool check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, point 
 	return had_coll;
 }
 bool check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	if (!sphere_cube_intersect(pos, radius, c)) return 0; // not intersection with closet bounding cube (optimization)
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes); // get cubes for walls and door; required to handle collision with closet interior
 	return check_cubes_collision(cubes, (c.is_open() ? 4U : 5U), pos, p_last, radius, cnorm); // only check for door collision if closet door is closed
 }
 bool check_bed_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	if (!sphere_cube_intersect(pos, radius, c)) return 0; // not intersection with closet bounding cube (optimization)
 	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 	get_bed_cubes(c, cubes);
 	unsigned num_to_check(5); // skip legs_bcube
 	if (c.flags & RO_FLAG_TAKEN1) {--num_to_check;} // skip pillows
 	if (c.flags & RO_FLAG_TAKEN3) {--num_to_check;} // skip mattress
-	return check_cubes_collision(cubes, num_to_check, pos, p_last, radius, cnorm);
+	if (check_cubes_collision(cubes, num_to_check, pos, p_last, radius, cnorm)) return 1;
+	get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
+	return check_cubes_collision(cubes, 4, pos, p_last, radius, cnorm); // check legs
+}
+bool check_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm, bool is_desk) {
+	cube_t cubes[5];
+	get_table_cubes(c, cubes, is_desk);
+	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
+}
+bool check_chair_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	cube_t cubes[3]; // seat, back, legs_bcube
+	get_chair_cubes(c, cubes);
+	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
 
 // Note: pos and p_last are already in rotated coordinate space
@@ -376,9 +386,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
+			if (!sphere_cube_intersect(pos, xy_radius, *c)) continue; // optimization
 
 			if (c->type == TYPE_RAILING) { // only collide with railing at top of stairs, not when walking under stairs
-				if (!sphere_cube_intersect(pos, xy_radius, *c)) continue; // optimization
 				cylinder_3dw const railing(get_railing_cylinder(*c));
 				float const t((pos[c->dim] - railing.p1[c->dim])/(railing.p2[c->dim] - railing.p1[c->dim]));
 				float const railing_zval(railing.p1.z + CLIP_TO_01(t)*(railing.p2.z - railing.p1.z));
@@ -451,9 +461,10 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
 		if (c == self || c->no_coll() || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING) continue; // ignore blockers and railings
+		if (!sphere_cube_intersect(pos, radius, *c)) continue; // no intersection (optimization)
 		// Note: add special handling for things like elevators, cubicles, and bathroom stalls? right now these are only in office buildings, where there are no dynamic objects
 
-		if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+		if (c->shape == SHAPE_CYLIN) { // vertical cylinder (including table)
 			float const cradius(c->get_radius());
 			point const center(c->get_cube_center());
 			cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, c->z2()), cradius, cradius);
@@ -465,14 +476,14 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			if (cnorm) {*cnorm = (pos - center).get_norm();}
 			had_coll = 1;
 		}
-		else if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
-			had_coll |= check_closet_collision(*c, pos, p_last, radius, cnorm);
-		}
-		else if (c->type == TYPE_BED) { // beds are special because they're common collision objects and they're not filled cubes
-			had_coll |= check_bed_collision(*c, pos, p_last, radius, cnorm);
-		}
 		else { // assume it's a cube
-			had_coll |= sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, cnorm); // skip_z=0
+			// closets, beds, tables, desks, and chairs are special because they're common collision objects and they're not filled cubes
+			if      (c->type == TYPE_CLOSET) {had_coll |= check_closet_collision(*c, pos, p_last, radius, cnorm);} // special case to handle closet interiors
+			else if (c->type == TYPE_BED  )  {had_coll |= check_bed_collision   (*c, pos, p_last, radius, cnorm);}
+			else if (c->type == TYPE_TABLE)  {had_coll |= check_table_collision (*c, pos, p_last, radius, cnorm, 0);}
+			else if (c->type == TYPE_DESK )  {had_coll |= check_table_collision (*c, pos, p_last, radius, cnorm, 1);}
+			else if (c->type == TYPE_CHAIR)  {had_coll |= check_chair_collision (*c, pos, p_last, radius, cnorm);}
+			else {had_coll |= sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, cnorm);} // skip_z=0
 		}
 	} // for c
 	return had_coll;

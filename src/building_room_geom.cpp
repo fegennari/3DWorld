@@ -390,6 +390,14 @@ void building_room_geom_t::add_tquad(building_geom_t const &bg, tquad_with_ix_t 
 
 tid_nm_pair_t const untex_shad_mat(-1, 2.0); // make sure it's different from default tid_nm_pair_t so that it's not grouped with shadowed materials
 
+void get_table_cubes(room_object_t const &c, cube_t cubes[5], bool is_desk) {
+	assert(c.shape != SHAPE_CYLIN); // can't call this on cylindrical table
+	cube_t top(c), legs_bcube(c);
+	top.z1() += (is_desk ? 0.85 : 0.88)*c.dz(); // Note: default table with top_dz=0.12, leg_width=0.08; desk is 0.15/0.06
+	legs_bcube.z2() = top.z1();
+	cubes[0] = top;
+	get_tc_leg_cubes(legs_bcube, (is_desk ? 0.06 : 0.08), (cubes+1));
+}
 void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
 	cube_t top(c), legs_bcube(c);
 	top.z1() += (1.0 - top_dz)*c.dz();

@@ -32,8 +32,6 @@ extern building_dest_t cur_player_building_loc;
 
 
 void place_player_at_xy(float xval, float yval);
-void get_chair_cubes(room_object_t const &c, cube_t cubes[3]);
-void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only);
 room_object_t get_dresser_middle(room_object_t const &c);
 room_object_t get_desk_drawers_part(room_object_t const &c);
 bool player_can_unlock_door();
