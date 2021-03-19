@@ -529,7 +529,7 @@ bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, bool front_doo
 
 	for (auto d = doors.begin(); d != doors.end(); ++d) { // exterior doors
 		if (!d->is_exterior_door() || d->type == tquad_with_ix_t::TYPE_RDOOR) continue;
-		if (room_exp.intersects(d->get_bcube())) return 1;
+		if (room_exp.contains_pt(d->get_bcube().get_cube_center())) return 1;
 		if (front_door_only) return 0; // assumes the first door is the front door
 	}
 	return 0;
