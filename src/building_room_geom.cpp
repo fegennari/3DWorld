@@ -524,7 +524,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	{
 		float const length(2.0*sz.z), width(0.77*length);
 
-		if (length < 1.1*sz[c.dim] && width < 1.1*sz[!c.dim]) { // if it can fit
+		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
 			obj = room_object_t(drawer, TYPE_PAPER, c.room_id, c.dim, c.dir);
 			obj.obj_id = rgen.rand();
 			obj.color  = paper_colors[rgen.rand()%NUM_PAPER_COLORS];
@@ -574,7 +574,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	{
 		float const length(0.5*sz.z), width(2.35*length);
 
-		if (length < 1.1*sz[c.dim] && width < 1.1*sz[!c.dim]) { // if it can fit
+		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
 			obj = room_object_t(drawer, TYPE_MONEY, c.room_id, c.dim, c.dir);
 			obj.z2() = (obj.z1() + 0.01*sz.z);
 			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
@@ -585,7 +585,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	{
 		float const length(1.1*sz.z), width(0.45*length);
 
-		if (length < 1.1*sz[c.dim] && width < 1.1*sz[!c.dim]) { // if it can fit
+		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
 			unsigned const NUM_PHONE_COLORS = 7; // for the case
 			colorRGBA const phone_colors[NUM_PHONE_COLORS] = {WHITE, GRAY, DK_GRAY, GRAY_BLACK, BLUE, RED, PINK};
 			obj = room_object_t(drawer, TYPE_PHONE, c.room_id, c.dim, c.dir);
