@@ -2697,7 +2697,11 @@ public:
 	}
 	bool check_road_seg_sphere_coll(grid_elem_t const &ge, point &pos, point const &p_last, vector3d const &xlate, float radius, bool xy_only, vector3d *cnorm) const {
 		for (auto r = ge.road_segs.begin(); r != ge.road_segs.end(); ++r) {
-			if (sphere_cube_int_update_pos(pos, radius, (*r + xlate), p_last, 1, xy_only, cnorm)) return 1;
+			cube_t const cube(*r + xlate);
+			if (!cube.contains_pt_xy(pos) || (pos.z - radius) > cube.z2()) continue; // no collision - test top surface only
+			pos.z = cube.z2() + radius;
+			if (cnorm) {*cnorm = plus_z;}
+			return 1;
 		}
 		return 0;
 	}
