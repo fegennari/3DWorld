@@ -471,7 +471,7 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 	out.reserve(unsigned(target*num_ixs));
 
 	for (unsigned i = 0; i < num_ixs; i += 3) { // iterate by triangle
-		unsigned new_ixs[3];
+		unsigned new_ixs[3] = {};
 		for (unsigned n = 0; n < 3; ++n) {new_ixs[n] = remap.get_remapped_val(indices[i+n]);}
 		if (new_ixs[0] == new_ixs[1] || new_ixs[1] == new_ixs[2] || new_ixs[2] == new_ixs[0]) continue; // duplicate vertices, degenerate triangle, skip
 		UNROLL_3X(out.push_back(new_ixs[i_]);)
@@ -680,7 +680,7 @@ template<typename T> float indexed_vntc_vect_t<T>::calc_area(unsigned npts) {
 	float area(0.0);
 	unsigned const nv(num_verts());
 	for (unsigned i = 0; i < nv; i += npts) {area += get_prim_area(i, npts);}
-	avg_area_per_tri = area/(nv/npts);
+	avg_area_per_tri = area/float(nv/npts);
 	return area;
 }
 
@@ -1421,7 +1421,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf) const 
 	assert(spacing > 0.0);
 
 	// calculate scene voxel bounds
-	int bounds[2][2], num_xy[2]; // {x,y}x{lo,hi}
+	int bounds[2][2] = {}, num_xy[2] = {}; // {x,y}x{lo,hi}
 	calc_bounds(bcube, bounds, spacing);
 	cout << "bounds: ";
 
@@ -2479,7 +2479,7 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 	//cube_t const bcube(xf.get_xformed_cube(get_cur_model("get bcube").get_bcube()));
 	cube_t const bcube(get_polygons_bcube(ppts));
 	vector3d const csz(bcube.get_size());
-	unsigned ndiv[3];
+	unsigned ndiv[3] = {};
 	uint64_t tot_grid(1);
 	for (unsigned i = 0; i < 3; ++i) {ndiv[i] = max(2U, min(1024U, unsigned(csz[i]/grid_spacing))); tot_grid *= ndiv[i];} // clamp to [2,1024] range
 	cout << "polygons: " << ppts.size() << ", grid: " << ndiv[0] << "x" << ndiv[1] << "x" << ndiv[2] << endl;

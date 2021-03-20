@@ -757,7 +757,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 	} // for i
 	if (has_zero_alpha && !no_avg_color_alpha_fill) {
 		calc_color(); // needed to ensure color is correct (may be recalculated later)
-		unsigned char avg_rgb[3];
+		unsigned char avg_rgb[3] = {};
 		UNROLL_3X(avg_rgb[i_] = (unsigned char)(255*color[i_]);)
 
 		// set all alpha=0 texels to the average non-transparent color to improve mipmap quality
@@ -1516,7 +1516,7 @@ void create_landscape_texture() {
 				texture_t const &ta(textures[DIRT_TEX]);
 				unsigned char const *ta_data(ta.get_data());
 				int const tofa(ta.ncolors*(((i+toy)&(ta.height-1))*ta.width + ((j+tox)&(ta.width-1))));
-				unsigned char temp[3];
+				unsigned char temp[3] = {};
 
 				if (id == GROUND_TEX || id2 == ROCK_TEX) {
 					texture_t const &tb(textures[ROCK_TEX]);
@@ -1984,7 +1984,7 @@ vector2d get_billboard_texture_uv(point const *const points, point const &pos) {
 
 	assert(points != NULL);
 	// ordered: (s,t) => (0,1), (0,0), (1,0), (1,1)
-	float d[4]; // distance from coll point to quad edge
+	float d[4] = {}; // distance from coll point to quad edge
 
 	for (unsigned i = 0; i < 4; ++i) {
 		unsigned const in((i+1)&3);
