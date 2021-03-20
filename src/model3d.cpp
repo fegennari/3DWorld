@@ -89,7 +89,8 @@ void texture_manager::free_client_mem() { // Note: should not be called if model
 
 bool texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump) {
 
-	if (t.is_loaded()) return 0;
+	if (t.is_loaded()) return 0; // already loaded from disk
+	if (t.is_bound() ) return 0; // already bound to a texture/sent to the GPU, no need to reload
 	//if (is_bump) {t.do_compress = 0;} // don't compress normal maps
 	// Note: it's incorrect to call t.has_alpha() here because that uses color, which hasn't been computed yet (t.init() is called later);
 	// but that's okay, do_gl_init() will disable custom mipmaps for textures with color.A == 1.0
