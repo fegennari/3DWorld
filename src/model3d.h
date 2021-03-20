@@ -377,17 +377,15 @@ protected:
 	string_map_t tex_map; // maps texture filenames to texture indexes
 
 public:
-	bool free_after_upload;
-
-	texture_manager() : free_after_upload(0) {}
 	unsigned create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0, bool force_grayscale=0);
 	void clear();
 	void free_tids();
 	void free_textures();
+	void free_client_mem();
 	bool ensure_texture_loaded(texture_t &t, int tid, bool is_bump);
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
 	bool ensure_tid_loaded(int tid, bool is_bump) {return ((tid >= 0) ? ensure_texture_loaded(get_texture(tid), tid, is_bump) : 0);}
-	void ensure_tid_bound(int tid) {if (tid >= 0) {get_texture(tid).check_init(free_after_upload);}} // if allocated
+	void ensure_tid_bound(int tid) {if (tid >= 0) {get_texture(tid).check_init();}} // if allocated
 	void bind_texture(int tid) const {get_texture(tid).bind_gl();}
 	colorRGBA get_tex_avg_color(int tid) const {return get_texture(tid).get_avg_color();}
 	bool has_binary_alpha(int tid) const {return get_texture(tid).has_binary_alpha;}

@@ -83,6 +83,9 @@ void texture_manager::free_tids() {
 void texture_manager::free_textures() {
 	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {t->free_data();}
 }
+void texture_manager::free_client_mem() { // Note: should not be called if model textures can overlap with predefined textures
+	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {t->free_client_mem();}
+}
 
 bool texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump) {
 
@@ -1061,9 +1064,6 @@ void material_t::ensure_textures_loaded(texture_manager &tmgr) {
 	if (use_spec_map()) {tmgr.ensure_tid_loaded(ns_tid,   0);} else {ns_tid   = -1;}
 }
 
-void maybe_free_tid(texture_manager &tmgr, unsigned tid) {
-	if (tid < BUILTIN_TID_START) {tmgr.get_texture(tid).free_client_mem();}
-}
 void maybe_upload_and_free(texture_manager &tmgr, unsigned tid) {
 	if (tid < BUILTIN_TID_START) {tmgr.ensure_tid_bound(tid);} // upload to GPU and free if not a built-in texture
 }
@@ -1076,7 +1076,7 @@ void material_t::init_textures(texture_manager &tmgr) {
 	ensure_textures_loaded(tmgr);
 	might_have_alpha_comp |= tmgr.might_have_alpha_comp(tid);
 	
-	if (tmgr.free_after_upload) { // now that textures have been loaded, free their client memory; will need to be reloaded before sending to GPU
+	if (no_store_model_textures_in_memory) { // now that textures have been loaded, send the data to the GPU so that they can be freed early
 		maybe_upload_and_free(tmgr, get_render_texture());
 		if (use_bump_map()) {maybe_upload_and_free(tmgr, bump_tid);}
 		if (use_spec_map()) {maybe_upload_and_free(tmgr, s_tid);}
@@ -1586,7 +1586,7 @@ void model3d::free_context() {
 	clear_smaps();
 	free_texture(model_refl_tid);
 	free_texture(model_indir_tid);
-	if (tmgr.free_after_upload) {textures_loaded = 0;} // must reload textures
+	if (no_store_model_textures_in_memory) {textures_loaded = 0;} // must reload textures
 }
 
 void model3d::clear_smaps() { // frees GL state
@@ -1601,10 +1601,10 @@ void model3d::clear_smaps() { // frees GL state
 void model3d::load_all_used_tids() {
 
 	if (textures_loaded) return; // is this safe to skip?
-	tmgr.free_after_upload = no_store_model_textures_in_memory;
 //#pragma omp parallel for schedule(dynamic) // not thread safe due to texture_t::resize() GL calls and reuse of textures across materials
 	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].init_textures(tmgr);}
 	textures_loaded = 1;
+	if (no_store_model_textures_in_memory) {tmgr.free_client_mem();}
 }
 
 
