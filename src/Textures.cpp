@@ -534,6 +534,7 @@ void texture_t::do_gl_init(bool free_after_upload) {
 		tmem += tsize;
 		cout << "tex vmem = " << tmem << endl;
 	}
+	//timer_t timer("Load and Upload Texture " + name);
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
 	//RESET_TIME;
 	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, mirror, mirror, 0, anisotropy);

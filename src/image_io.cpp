@@ -91,6 +91,8 @@ string get_file_extension(string const &filename, unsigned level, bool make_lowe
 
 void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale, bool ignore_word_alignment) {
 
+	//timer_t timer("Load Texture " + name);
+
 	if (type > 0) { // generated texture
 		alloc();
 		memset(data, 0, num_bytes()); // zero the values to make sure we don't accidentally use it uninitialized before the texture is generated

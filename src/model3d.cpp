@@ -1163,7 +1163,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
 			bind_texture_tu_or_white_tex(tmgr, s_tid,  8); // specular map
-			bind_texture_tu_or_white_tex(tmgr, ns_tid, 9); // gloss map (FIXME: unclear how to interpret map_ns in object files)
+			bind_texture_tu_or_white_tex(tmgr, ns_tid, 9); // gloss map (Note: unclear how to interpret map_ns in object files)
 		}
 		if (metalness >= 0.0) {shader.add_uniform_float("metalness", metalness);} // set metalness if specified/valid; may or may not be used
 		bool const set_ref_ix(!disable_shader_effects /*&& alpha < 1.0*/ && ni != 1.0);
