@@ -1599,7 +1599,6 @@ void model3d::clear_smaps() { // frees GL state
 	smap_data.clear();
 }
 
-
 void model3d::load_all_used_tids() {
 
 	if (textures_loaded) return; // is this safe to skip?

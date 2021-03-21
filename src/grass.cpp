@@ -174,9 +174,10 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 		float dmin_sq(dmax*dmax); // start at max allowed dist
 		unsigned merge_ix(i); // start at ourself (invalid)
 		unsigned const end_val(min(i+search_dist, end_ix));
+		point const &ref_pt(grass[i].p);
 
 		for (unsigned cur = i+1; cur < end_val; ++cur) {
-			float const dist_sq(p2p_dist_xy_sq(grass[i].p, grass[cur].p));
+			float const dist_sq(p2p_dist_xy_sq(ref_pt, grass[cur].p));
 					
 			if (dist_sq < dmin_sq) {
 				dmin_sq  = dist_sq;
@@ -233,7 +234,7 @@ void grass_tile_manager_t::gen_grass() {
 		for (unsigned i = 0; i < num_rnd_grass_blocks; ++i) {gen_lod_block(i, lod);}
 	}
 	cout << "Grass Blades: " << size() << ", Cap: " << grass.capacity()
-		 << ", CPU Mem: " << 3*grass.capacity()*sizeof(grass_t) << ", GPU Mem: " << 3*size()*sizeof(grass_data_t) << endl;
+		 << ", CPU Mem: " << grass.capacity()*sizeof(grass_t) << ", GPU Mem: " << 3*size()*sizeof(grass_data_t) << endl;
 	PRINT_TIME("Grass Tile Gen");
 }
 
