@@ -541,6 +541,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
 	int camera_room(-1);
+	vect_cube_t moving_objs;
 	ped_bcubes.clear();
 
 	if (camera_in_building) {
@@ -572,6 +573,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		cube_t bcube_exp(bcube);
 		bcube_exp.expand_by_xy(2.0*window_vspacing);
 		camera_near_building = bcube_exp.contains_pt(camera_bs);
+	}
+	if (camera_near_building) { // build moving objects vector
+		for (auto i = objs.begin(); i != objs_end; ++i) {
+			if (i->is_visible() && i->is_moving()) {moving_objs.push_back(*i);}
+		}
 	}
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_lit() || !i->is_light_type()) continue; // light not on, or not a light or lamp
@@ -711,11 +717,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				}
 			}
 			if (!dynamic_shadows) { // check moving objects
-				auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
-
-				for (auto i = objs.begin(); i != objs_end; ++i) {
-					if (i->is_visible() && i->is_moving() && lpos_rot.z > i->z2() && i->intersects(clipped_bc) &&
-						dist_less_than(lpos_rot, i->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
+				for (auto j = moving_objs.begin(); j != moving_objs.end(); ++j) {
+					if (lpos_rot.z > j->z2() && j->intersects(clipped_bc) && dist_less_than(lpos_rot, j->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
 				}
 			}
 		}
