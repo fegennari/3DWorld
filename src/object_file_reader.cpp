@@ -322,7 +322,7 @@ public:
 	bool load_mat_lib(string const &fn) { // Note: could cache filename, but seems to never be included more than once
 		ifstream mat_in;
 		if (open_include_file(fn, "material library", mat_in).empty()) return 0;
-		cout << "loading material library " << fn << endl;
+		cout << "Loading material library " << fn << endl;
 		int cur_mat_id(-1); // not set
 		material_t *cur_mat(0);
 		string s, tfn, material_name;
@@ -483,26 +483,24 @@ public:
 	}
 
 	bool load_from_model3d_file(bool verbose) {
-		RESET_TIME;
-
 		if (!model.read_from_disk(filename)) {
 			cerr << "Error reading model3d file " << filename << endl;
 			return 0;
 		}
-		PRINT_TIME("Model3d File Load");
-		set<string> mat_lib_fns;
-		model.get_all_mat_lib_fns(mat_lib_fns);
+		{ // open a scope
+			timer_t timer("Model3d File Load");
+			set<string> mat_lib_fns;
+			model.get_all_mat_lib_fns(mat_lib_fns);
 		
-		for (auto i = mat_lib_fns.begin(); i != mat_lib_fns.end(); ++i) {
-			if (!load_mat_lib(*i)) {
-				cerr << "Error reading material library file " << *i << endl;
-				//return 0;
+			for (auto i = mat_lib_fns.begin(); i != mat_lib_fns.end(); ++i) {
+				if (!load_mat_lib(*i)) {
+					cerr << "Error reading material library file " << *i << endl;
+					//return 0;
+				}
 			}
 		}
-		model.load_all_used_tids();
-		PRINT_TIME("Model Texture Load");
+		{timer_t timer("Model3d Texture Load"); model.load_all_used_tids();}
 		if (verbose) {model.show_stats();}
-		PRINT_TIME("Total Model3d Load");
 		return 1;
 	}
 

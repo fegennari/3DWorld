@@ -17,6 +17,7 @@
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
 bool const ENABLE_INTER_REFLECTIONS = 1;
+bool const SHOW_MODEL_BCUBE_CENTER  = 0;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
@@ -2150,9 +2151,14 @@ void model3d::get_stats(model3d_stats_t &stats) const {
 
 void model3d::show_stats() const {
 
-	cout << "model stats:" << endl; 
-	cout << "bcube: " << bcube.str() << endl;
-	cout << "center: " << bcube.get_cube_center().str() << ", size: " << bcube.get_size().str() << endl;
+	if (SHOW_MODEL_BCUBE_CENTER) { // more verbose
+		cout << "Model stats:" << endl;
+		cout << "bcube: " << bcube.str() << endl;
+		cout << "center: " << bcube.get_cube_center().str() << ", size: " << bcube.get_size().str() << endl;
+	}
+	else { // less verbose
+		cout << "Model stats: "; // no newline
+	}
 	model3d_stats_t stats;
 	get_stats(stats);
 	stats.print();
