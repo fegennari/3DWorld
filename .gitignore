@@ -12,14 +12,7 @@ obj/
 lib/
 noback/
 ffmpeg.exe.lnk
-freealut-1.1.0-bin/
-freeglut-2.8.1/
-glew-2.0.0/
-jpeg-9a/
-libpng-1.2.20/
-tiff-4.0.3/
-zlib-1.2.1/
-zlib/
+deps_build/
 screenshot*.jpg
 video_out*.mp4
 positions.log.txt
