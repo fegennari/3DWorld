@@ -262,24 +262,27 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>glut-3.7.6-bin;JPEG-6B;glew-1.5.6\include;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\Targa;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\pthreads-dll-2004-05-16\include;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freealut-1.1.0-bin\include;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20;zlib-1.2.1</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\jpeg-9a;dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut-1.1.0-bin\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <PrecompiledHeaderOutputFile>.\Debug/3DWorld.pch</PrecompiledHeaderOutputFile>
       <AssemblerListingLocation>.\Debug/</AssemblerListingLocation>
       <ObjectFileName>.\Debug/</ObjectFileName>
       <ProgramDataBaseFileName>.\Debug/</ProgramDataBaseFileName>
-      <BrowseInformation>true</BrowseInformation>
+      <BrowseInformation>false</BrowseInformation>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CallingConvention>Cdecl</CallingConvention>
       <CompileAs>Default</CompileAs>
       <AdditionalOptions>/openmp %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <DisableSpecificWarnings>4244;6993;26437</DisableSpecificWarnings>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -287,14 +290,15 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;libjpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;glut64.lib</AdditionalDependencies>
+      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>jpeg-6b;glut-3.7.6-bin;glew-1.5.6-64\lib;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\pthreads-dll-2004-05-16\lib;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freealut-1.1.0-bin\lib;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\zlib-1.2.1</AdditionalLibraryDirectories>
-      <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories>dependencies\jpeg-9a\Release;dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut-1.1.0-bin\lib;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">
