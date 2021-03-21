@@ -1603,6 +1603,7 @@ void model3d::clear_smaps() { // frees GL state
 void model3d::load_all_used_tids() {
 
 	if (textures_loaded) return; // is this safe to skip?
+	timer_t timer("Model3d Texture Load");
 //#pragma omp parallel for schedule(dynamic) // not thread safe due to texture_t::resize() GL calls and reuse of textures across materials
 	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].init_textures(tmgr);}
 	textures_loaded = 1;

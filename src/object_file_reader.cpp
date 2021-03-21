@@ -499,7 +499,7 @@ public:
 				}
 			}
 		}
-		{timer_t timer("Model3d Texture Load"); model.load_all_used_tids();}
+		model.load_all_used_tids();
 		if (verbose) {model.show_stats();}
 		return 1;
 	}
@@ -737,7 +737,6 @@ public:
 		remove_excess_cap(colors);
 		PRINT_TIME("Object File Load");
 		model.load_all_used_tids(); // need to load the textures here to get the colors
-		PRINT_TIME("Model Texture Load");
 		size_t const num_blocks(pblocks.size());
 		model3d::proc_model_normals(vn, recalc_normals); // if recalc_normals
 
