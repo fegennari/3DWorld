@@ -81,6 +81,7 @@ class shader_t : public property_map_t {
 	typedef map<unsigned, subroutine_val_t> subroutine_map_t;
 	subroutine_map_t subroutines;
 	property_map_t property_map;
+	unsigned user_flags;
 
 	int pm_loc, mvm_loc, mvmi_loc, mvpm_loc, nm_loc; // matrices
 
@@ -92,7 +93,7 @@ class shader_t : public property_map_t {
 	void clear_vntc_locs() {vnct_locs[0] = vnct_locs[1] = vnct_locs[2] = vnct_locs[3] = -1;}
 
 public:
-	shader_t() : program(0), last_spec(ALPHA0), emission_loc(-1), specular_color_loc(-1), pm_loc(-1), mvm_loc(-1), mvmi_loc(-1), mvpm_loc(-1), nm_loc(-1) {
+	shader_t() : program(0), last_spec(ALPHA0), emission_loc(-1), specular_color_loc(-1), user_flags(0), pm_loc(-1), mvm_loc(-1), mvmi_loc(-1), mvpm_loc(-1), nm_loc(-1) {
 		clear_vntc_locs();
 	}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
@@ -200,6 +201,11 @@ public:
 	void set_specular(float spec, float shine) {set_specular_color(colorRGB(spec, spec, spec), shine);}
 	void set_material(base_mat_t const &mat);
 	void clear_specular() {set_specular(0.0, 0.0);}
+
+	unsigned get_user_flags() const {return user_flags;}
+	bool get_user_flag(unsigned fbit) const {assert(fbit < 32); return (user_flags & (1<<fbit));}
+	void set_user_flags(unsigned f) {user_flags = f;}
+	void set_user_flag(unsigned fbit, bool val) {assert(fbit < 32); if (val) {user_flags |= (1<<fbit);} else {user_flags &= ~(1<<fbit);}}
 };
 
 

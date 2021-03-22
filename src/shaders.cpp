@@ -863,6 +863,7 @@ bool shader_t::begin_shader(bool do_enable) {
 	cache_vnct_locs();
 	cache_matrix_locs();
 	emission_loc = specular_color_loc = -1;
+	user_flags   = 0; // clear user flags
 	if (do_enable) {enable();}
 #if 0 // debugging
 	glValidateProgram(program);
