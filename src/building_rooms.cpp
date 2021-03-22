@@ -162,7 +162,8 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	set_cube_zvals(room_exp, zval, (zval + floor_spacing)); // clip to z-range of this floor (optimization)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t avoid;
-	vect_cube_t doorways;
+	static vect_cube_t doorways; // reuse across rooms
+	doorways.clear();
 
 	if (!objs.empty() && objs[objs_start].type == TYPE_TABLE) { // make sure there's enough space for the player to walk around the table
 		avoid = objs[objs_start];
