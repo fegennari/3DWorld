@@ -339,7 +339,8 @@ bool building_t::add_desk_to_room(rand_gen_t rgen, room_t const &room, vect_cube
 				float const pp_z1(c.z2() + 0.3f*pp_dia); // move above papers, and avoid self shadow from the desk
 				cube_t pp_bcube;
 				set_cube_zvals(pp_bcube, pp_z1, pp_z1+pp_dia);
-				unsigned const num_pp(rgen.rand()&3); // 0-3
+				bool const is_big_office(!is_house && room.is_office && interior->rooms.size() > 40);
+				unsigned const num_pp(rgen.rand()&(is_big_office ? 2 : 3)); // 0-3 for houses, 0-2 for big office buildings
 
 				for (unsigned n = 0; n < num_pp; ++n) {
 					bool const is_pen(rgen.rand_bool());
@@ -1607,13 +1608,14 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	} // for n
 }
 
-void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
+void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement) {
 	if (room.is_hallway) return; // no objects placed in hallways, but there shouldn't be any surfaces either (except for reception desk?)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
-	float const place_book_prob(( is_house ? 1.0 : 0.5)*(room.is_office ? 0.8 : 1.0));
-	float const place_bottle_prob(is_house ? 1.0 : (room.is_office ? 0.80 : 0.50));
-	float const place_plant_prob (is_house ? 1.0 : (room.is_office ? 0.25 : 0.15));
+	bool const sparse_place(floor > 0 && interior->rooms.size() > 40); // fewer objects on upper floors of large office buildings as an optimization
+	float const place_book_prob(( is_house ? 1.0 : 0.5)*(room.is_office ? 0.80 : 1.00)*(sparse_place ? 0.75 : 1.0));
+	float const place_bottle_prob(is_house ? 1.0 :      (room.is_office ? 0.80 : 0.50)*(sparse_place ? 0.50 : 1.0));
+	float const place_plant_prob (is_house ? 1.0 :      (room.is_office ? 0.25 : 0.15)*(sparse_place ? 0.75 : 1.0));
 	unsigned const objs_end(objs.size());
 	bool placed_book_on_counter(0);
 
@@ -1945,7 +1947,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 			}
 			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
-				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, is_basement);
+				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement);
 			}
 			if (is_house) { // place house-specific items
 				if (!is_bathroom && !is_kitchen && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) { // place bookcase 80% of the time, but not in bathrooms or kitchens
@@ -1974,7 +1976,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					added_library = 1;
 				}
 			}
-			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30 : 50)) == 0) {
+			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, interior->rooms.size()))) == 0) {
 				// office, no cubicles or bathroom - try to make it a library (in rare cases)
 				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {r->assign_to(RTYPE_LIBRARY, f);}
 			}
