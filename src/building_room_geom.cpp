@@ -1273,21 +1273,29 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	bool const is_empty(c.is_bottle_empty()), add_bottom(dim != 2); // add bottom if bottle is on its side
 	float const dir_sign(c.dir ? -1.0 : 1.0), radius(0.25f*(sz[dim1] + sz[dim2])); // base should be square (default/avg radius is 0.15*height)
 	float const length(sz[dim]); // AKA height, if standing up
-	cube_t sphere(c), main_cylin(c), top_cylin(c);
+	cube_t sphere(c), body(c), neck(c);
 	sphere.d[dim][ c.dir] = c.d[dim][c.dir] + dir_sign*0.5*length;
 	sphere.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.3*length;
-	main_cylin.d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.15*length;
-	top_cylin .d[dim][ c.dir] = main_cylin.d[dim][!c.dir]; // there will be some intersection, but that should be okay
-	top_cylin.expand_in_dim(dim1, -0.29*sz[dim1]); // smaller radius
-	top_cylin.expand_in_dim(dim2, -0.29*sz[dim2]); // smaller radius
-	cube_t cap(top_cylin);
-	top_cylin.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*length; // set cap thickness
+	body  .d[dim][!c.dir] = sphere.d[dim][c.dir] + dir_sign*0.15*length;
+	neck  .d[dim][ c.dir] = body.d[dim][!c.dir]; // there will be some intersection, but that should be okay
+	neck.expand_in_dim(dim1, -0.29*sz[dim1]); // smaller radius
+	neck.expand_in_dim(dim2, -0.29*sz[dim2]); // smaller radius
+	cube_t cap(neck);
+	neck.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*length; // set cap thickness
 	cap.expand_in_dim(dim1, -0.006*sz[dim1]); // slightly larger radius than narrow end of neck
 	cap.expand_in_dim(dim2, -0.006*sz[dim2]); // slightly larger radius than narrow end of neck
-	mat.add_sphere_to_verts(sphere, color, 1); // low_detail=1
-	mat.add_ortho_cylin_to_verts(main_cylin, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
+
+	if (0) { // draw as a truncaced cone
+		sphere.d[dim][c.dir] = body.d[dim][!c.dir]; // shorten to be flush with the main cylinder
+		float rs_neck(0.93*neck.get_sz_dim(dim1)/sphere.get_sz_dim(dim1));
+		mat.add_ortho_cylin_to_verts(sphere, color, dim, 0, 0, 0, 0, (c.dir ? rs_neck : 1.0), (c.dir ? 1.0 : rs_neck), 1.0, 1.0, 0, bottle_ndiv);
+	}
+	else { // draw as a sphere
+		mat.add_sphere_to_verts(sphere, color, 1); // low_detail=1
+	}
+	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	// draw neck of bottle as a truncated cone; draw top if empty
-	mat.add_ortho_cylin_to_verts(top_cylin,  color, dim, (is_empty && c.dir), (is_empty && !c.dir), 0, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv);
+	mat.add_ortho_cylin_to_verts(neck, color, dim, (is_empty && c.dir), (is_empty && !c.dir), 0, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv);
 
 	if (!is_empty) { // draw cap if nonempty
 		bool const draw_bot(c.flags & RO_FLAG_WAS_EXP);
@@ -1296,11 +1304,11 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	// add the label
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
 	bool const is_coke((c.obj_id % NUM_BOTTLE_COLORS) == 1);
-	main_cylin.expand_in_dim(dim1, 0.02*radius); // expand slightly in radius
-	main_cylin.expand_in_dim(dim2, 0.02*radius); // expand slightly in radius
-	main_cylin.d[dim][c.dir] += dir_sign*0.24*length; main_cylin.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
+	body.expand_in_dim(dim1, 0.02*radius); // expand slightly in radius
+	body.expand_in_dim(dim2, 0.02*radius); // expand slightly in radius
+	body.d[dim][c.dir] += dir_sign*0.24*length; body.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
 	rgeom_mat_t &label_mat(get_material((is_coke ? tid_nm_pair_t(get_texture_by_name("interiors/coke_label.jpg")) : tid_nm_pair_t()), 0, 0, 1));
-	label_mat.add_ortho_cylin_to_verts(main_cylin, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // white label
+	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // white label
 }
 
 void building_room_geom_t::add_paper(room_object_t const &c) {
