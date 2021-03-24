@@ -203,31 +203,40 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_
 void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail, xform_matrix const *const matrix) {
 	static vector<vert_norm_tc> cached_verts[2]; // high/low detail, reused across all calls
 	static vector<vert_norm_comp_tc> cached_vncs[2];
+	static vector<unsigned> cached_ixs[2];
 	vector<vert_norm_tc> &verts(cached_verts[low_detail]);
 	vector<vert_norm_comp_tc> &vncs(cached_vncs[low_detail]);
+	vector<unsigned> &ixs(cached_ixs[low_detail]);
 
 	if (verts.empty()) { // not yet created, create and cache verts
 		sd_sphere_d sd(all_zeros, 1.0, (low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV));
 		sphere_point_norm spn;
 		sd.gen_points_norms(spn);
-		sd.get_quad_points(verts);
+		sd.get_quad_points(verts, &ixs);
+		assert((ixs.size()&3) == 0); // must be a multiple of 4
 		vncs.resize(verts.size());
 		for (unsigned i = 0; i < verts.size(); ++i) {vncs[i] = vert_norm_comp_tc(verts[i].v, verts[i].n, verts[i].t[0], verts[i].t[1]);}
 	}
 	color_wrapper const cw(color);
 	point const center(c.get_cube_center()), size(0.5*c.get_size());
+	unsigned const ioff(itri_verts.size());
 
 	if (matrix) { // must apply matrix transform to verts and normals and reconstruct norm_comps
 		for (auto i = verts.begin(); i != verts.end(); ++i) {
 			point pt(i->v*size);
 			vector3d normal(i->n);
 			matrix->apply_to_vector3d(pt); matrix->apply_to_vector3d(normal);
-			quad_verts.emplace_back((pt + center), normal, i->t[0], i->t[1], cw);
+			itri_verts.emplace_back((pt + center), normal, i->t[0], i->t[1], cw);
 		}
 	}
 	else { // can use vncs (norm_comps)
-		for (auto i = vncs.begin(); i != vncs.end(); ++i) {quad_verts.emplace_back((i->v*size + center), *i, i->t[0], i->t[1], cw);}
+		for (auto i = vncs.begin(); i != vncs.end(); ++i) {itri_verts.emplace_back((i->v*size + center), *i, i->t[0], i->t[1], cw);}
 	}
+	for (auto i = ixs.begin(); i != ixs.end(); i += 4) { // indices are for quads, but we want triangles, so expand them
+		indices.push_back(*(i+0) + ioff); indices.push_back(*(i+1) + ioff); indices.push_back(*(i+2) + ioff);
+		indices.push_back(*(i+3) + ioff); indices.push_back(*(i+0) + ioff); indices.push_back(*(i+2) + ioff);
+	}
+	assert(indices.back() < itri_verts.size());
 }
 
 class rgeom_alloc_t {
@@ -295,6 +304,7 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 		rotate_verts(quad_verts, building);
 		rotate_verts(itri_verts, building);
 	}
+	assert(itri_verts.empty() == indices.empty());
 	num_qverts  = quad_verts.size();
 	num_itverts = itri_verts.size();
 	num_ixs     = indices.size();
@@ -324,7 +334,7 @@ void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
 	vertex_t::set_vbo_arrays();
 	if (num_qverts > 0) {draw_quads_as_tris(num_qverts);}
 
-	if (num_itverts > 0) { // index quads, used for cylinders
+	if (num_itverts > 0) { // index quads, used for cylinders and spheres
 		assert(ivbo > 0);
 		bind_vbo(ivbo, 1);
 		//glDisable(GL_CULL_FACE); // two sided lighting requires fewer verts (no duplicates), but must be set in the shader
@@ -2655,7 +2665,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom Small"); // 9.1ms
+	//highres_timer_t timer("Gen Room Geom Small"); // 7.9ms, slow building at 26,16
 	mats_small .clear();
 	mats_plants.clear();
 	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
