@@ -200,13 +200,14 @@ void rgeom_mat_t::add_disk_to_verts(point const &pos, float radius, bool normal_
 	}
 }
 
-void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail, xform_matrix const *const matrix) {
+void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail, vector3d const &skip_hemi_dir, xform_matrix const *const matrix) {
 	static vector<vert_norm_tc> cached_verts[2]; // high/low detail, reused across all calls
 	static vector<vert_norm_comp_tc> cached_vncs[2];
 	static vector<unsigned> cached_ixs[2];
 	vector<vert_norm_tc> &verts(cached_verts[low_detail]);
 	vector<vert_norm_comp_tc> &vncs(cached_vncs[low_detail]);
 	vector<unsigned> &ixs(cached_ixs[low_detail]);
+	bool const draw_hemisphere(skip_hemi_dir != zero_vector);
 
 	if (verts.empty()) { // not yet created, create and cache verts
 		sd_sphere_d sd(all_zeros, 1.0, (low_detail ? N_SPHERE_DIV/2 : N_SPHERE_DIV));
@@ -233,9 +234,13 @@ void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, b
 		for (auto i = vncs.begin(); i != vncs.end(); ++i) {itri_verts.emplace_back((i->v*size + center), *i, i->t[0], i->t[1], cw);}
 	}
 	for (auto i = ixs.begin(); i != ixs.end(); i += 4) { // indices are for quads, but we want triangles, so expand them
+		if (draw_hemisphere) { // only draw one hemisphere; can drop some verts as well, but that's difficult
+			vector3d const face_normal(verts[*(i+0)].n + verts[*(i+1)].n + verts[*(i+2)].n); // use one triangle, no need to normalize
+			if (dot_product(face_normal, skip_hemi_dir) > 0.0) continue; // skip this face/quad (optimization)
+		}
 		indices.push_back(*(i+0) + ioff); indices.push_back(*(i+1) + ioff); indices.push_back(*(i+2) + ioff);
 		indices.push_back(*(i+3) + ioff); indices.push_back(*(i+0) + ioff); indices.push_back(*(i+2) + ioff);
-	}
+	} // for i
 	assert(indices.back() < itri_verts.size());
 }
 
@@ -1294,15 +1299,10 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	neck.d[dim][!c.dir] = cap.d[dim][c.dir] = c.d[dim][!c.dir] - dir_sign*0.08*length; // set cap thickness
 	cap.expand_in_dim(dim1, -0.006*sz[dim1]); // slightly larger radius than narrow end of neck
 	cap.expand_in_dim(dim2, -0.006*sz[dim2]); // slightly larger radius than narrow end of neck
-
-	if (0) { // draw as a truncaced cone
-		sphere.d[dim][c.dir] = body.d[dim][!c.dir]; // shorten to be flush with the main cylinder
-		float rs_neck(0.93*neck.get_sz_dim(dim1)/sphere.get_sz_dim(dim1));
-		mat.add_ortho_cylin_to_verts(sphere, color, dim, 0, 0, 0, 0, (c.dir ? rs_neck : 1.0), (c.dir ? 1.0 : rs_neck), 1.0, 1.0, 0, bottle_ndiv);
-	}
-	else { // draw as a sphere
-		mat.add_sphere_to_verts(sphere, color, 1); // low_detail=1
-	}
+	// draw as a sphere
+	vector3d skip_hemi_dir(zero_vector);
+	skip_hemi_dir[dim] = -dir_sign;
+	mat.add_sphere_to_verts(sphere, color, 1, skip_hemi_dir); // low_detail=1
 	mat.add_ortho_cylin_to_verts(body, color, dim, (add_bottom && !c.dir), (add_bottom && c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	// draw neck of bottle as a truncated cone; draw top if empty
 	mat.add_ortho_cylin_to_verts(neck, color, dim, (is_empty && c.dir), (is_empty && !c.dir), 0, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv);
@@ -2510,13 +2510,13 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	bool const dynamic(c.is_dynamic()); // either small or dynamic
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0), 1, dynamic, !dynamic));
 	// rotate the texture coords when the ball is rolling
-	mat.add_sphere_to_verts(c, apply_light_color(c), 0, (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
 }
 /*static*/ void building_room_geom_t::draw_lg_ball_in_building(room_object_t const &c, shader_t &s) {
 	float const angle(atan2(cview_dir.y, cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
 	xform_matrix rot_matrix(get_rotation_matrix(plus_z, angle));
 	rgeom_mat_t mat(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0));
-	mat.add_sphere_to_verts(c, apply_light_color(c), 0, &rot_matrix); // low_detail=0
+	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, &rot_matrix); // low_detail=0
 	mat.tex.set_gl(s);
 	draw_quad_verts_as_tris(mat.quad_verts);
 }
