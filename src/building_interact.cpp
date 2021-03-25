@@ -810,6 +810,10 @@ public:
 		print_text_onscreen(oss.str(), text_color, 1.0, 3*TICKS_PER_SECOND, 0);
 	}
 	bool take_person(bool &person_has_key, float person_height) {
+		if (drunkenness < 1.5) { // not drunk enough
+			print_text_onscreen("Not drunk enough", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
+			return 0;
+		}
 		float const value(100), weight((person_height > 0.025) ? 180.0 : 80.0); // always worth $100; use height to select man vs. girl
 		if (!check_weight_limit(weight)) {show_weight_limit_message(); return 0;}
 		has_key    |= person_has_key; person_has_key = 0; // steal their key
