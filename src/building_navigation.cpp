@@ -908,6 +908,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check for other people colliding with this person and handle it
 				if (p->dest_bldg != person.dest_bldg) break; // done with this building
 				if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
+				if (p->destroyed) continue; // dead
 				float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 				if (!dist_xy_less_than(person.pos, p->pos, rsum)) continue; // not intersecting
 				move_person_to_not_collide(person, *p, person.pos, rsum, coll_dist); // if we get here, we have to actively move out of the way
@@ -1014,6 +1015,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check all other people in the same building after this one and attempt to avoid them
 			if (p->dest_bldg != person.dest_bldg) break; // done with this building
 			if (fabs(person.pos.z - p->pos.z) > coll_dist) continue; // different floors
+			if (p->destroyed) continue; // dead
 			float const rsum(coll_dist + COLL_RADIUS_SCALE*p->radius);
 			if (!dist_xy_less_than(new_pos, p->pos, rsum)) continue; // new pos not close
 			if (!dist_xy_less_than(person.pos, p->pos, rsum)) return AI_STOP; // old pos not intersecting, stop

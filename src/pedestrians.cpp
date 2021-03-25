@@ -139,6 +139,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		if (i->plot != target_plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
 		float const dist_sq(p2p_dist_xy_sq(pos, i->pos));
 		if (dist_sq > prox_radius_sq) continue; // proximity test
+		if (i->destroyed) continue; // dead
 		float const r_sum(0.6f*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
 		if (dist_sq < r_sum*r_sum) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
 		if (speed < TOLERANCE) continue;
@@ -183,6 +184,7 @@ bool pedestrian_t::check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsign
 	for (auto i = peds.begin()+pid+1; i != peds.end(); ++i) { // check every ped until we exit target_plot
 		if (i->plot != plot) break; // moved to a new plot, no collision, done; since plots are globally unique across cities, we don't need to check cities
 		if (!dist_xy_less_than(pos, i->pos, 0.6f*(radius + i->radius))) continue; // no collision
+		if (i->destroyed) continue; // dead
 		i->collided = i->ped_coll = 1; i->colliding_ped = pid;
 		return 1; // Note: could omit this return and continue processing peds
 	} // for i
@@ -854,7 +856,7 @@ void ped_manager_t::get_peds_crossing_roads(ped_city_vect_t &pcv) const {
 	pcv.clear();
 
 	for (auto i = peds.begin(); i != peds.end(); ++i) {
-		if (!i->in_the_road || i->is_stopped) continue; // not actively crossing the road
+		if (!i->in_the_road || i->is_stopped || i->destroyed) continue; // not actively crossing the road
 		bool const road_dim(fabs(i->vel.y) < fabs(i->vel.x)); // ped should be moving across the road, so velocity should give us the road dim (opposite of velocity dim)
 		int const road_ix(get_road_ix_for_ped_crossing(*i, road_dim));
 		if (road_ix >= 0) {pcv.add_ped(*i, road_ix);}
@@ -1149,7 +1151,7 @@ void ped_manager_t::get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, 
 
 	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
 		if (p->dest_bldg != bix) break; // done with this building
-		bcubes.push_back(p->get_bcube());
+		if (!p->destroyed) {bcubes.push_back(p->get_bcube());}
 	}
 }
 
