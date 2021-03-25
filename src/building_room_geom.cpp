@@ -2085,7 +2085,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 }
 
 void building_room_geom_t::add_trashcan(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
+	rgeom_mat_t &mat(get_material(untex_shad_mat, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.shape == SHAPE_CYLIN) {
@@ -2632,7 +2632,6 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 		case TYPE_WINE_RACK: add_wine_rack(*i, 1, 0, tscale); break;
 		case TYPE_DESK:    add_desk    (*i, tscale, 1, 0); break;
 		case TYPE_RDESK:   add_reception_desk(*i, tscale); break;
-		case TYPE_TCAN:    add_trashcan(*i); break;
 		case TYPE_BED:     add_bed     (*i, 1, 0, tscale); break;
 		case TYPE_WINDOW:  add_window  (*i, tscale); break;
 		case TYPE_TUB:     add_tub_outer(*i); break;
@@ -2690,6 +2689,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_BED:       add_bed      (*i, 0, 1, tscale); break;
 		case TYPE_DESK:      add_desk     (*i, tscale, 0, 1); break;
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 0, 1); break;
+		case TYPE_TCAN:      add_trashcan(*i); break;
 		case TYPE_SIGN:      add_sign     (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
 		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
