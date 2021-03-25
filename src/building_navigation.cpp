@@ -25,7 +25,7 @@ bool ai_follow_player() {return (global_building_params.ai_follow_player || in_b
 bool can_ai_follow_player(pedestrian_t const &person);
 bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies);
-bool register_ai_player_coll(bool &has_key);
+int register_ai_player_coll(bool &has_key, float height);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
 
@@ -927,7 +927,13 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 
 	if (can_ai_follow_player(person) && dist_less_than(person.pos, cur_player_building_loc.pos, 1.2f*(person.radius + get_scaled_player_radius()))) {
 		if (!check_for_wall_ceil_floor_int(person.pos, cur_player_building_loc.pos)) {
-			register_ai_player_coll(person.has_key); // Note: returns is_dead, so we could track kills here
+			int const ret_status(register_ai_player_coll(person.has_key, person.get_height())); // return value: 0=no effect, 1=player is killed, 2=this person is killed
+			if (ret_status == 1) {} // player is killed, we could track kills here
+			else if (ret_status == 2) { // player defeats zombie
+				person.destroyed = 1;
+				person.speed     = 0.0;
+				return AI_STOP;
+			}
 		}
 	}
 	bool choose_dest(!person.target_valid());

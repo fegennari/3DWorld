@@ -721,6 +721,12 @@ bool is_consumable(room_object_t const &obj) {
 	return (in_building_gameplay_mode() && obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_NO_CONS));
 }
 
+void show_weight_limit_message() {
+	std::ostringstream oss;
+	oss << "Over weight limit of " << global_building_params.player_weight_limit << " lbs";
+	print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
+}
+
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
 	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
@@ -745,7 +751,8 @@ public:
 		carried.clear();
 	}
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
-	bool can_pick_up_item(room_object_t const &obj) const {return ((cur_weight + get_obj_weight(obj)) <= global_building_params.player_weight_limit);}
+	bool check_weight_limit(float weight) const {return ((cur_weight + weight) <= global_building_params.player_weight_limit);}
+	bool can_pick_up_item(room_object_t const &obj) const {return check_weight_limit(get_obj_weight(obj));}
 	float get_carry_weight_ratio() const {return min(1.0f, cur_weight/global_building_params.player_weight_limit);}
 	float get_speed_mult () const {return (1.0f - 0.4f*get_carry_weight_ratio())*((bladder > 0.9) ? 0.6 : 1.0);} // 40% reduction for heavy load, 40% reduction for full bladder
 	float get_drunkenness() const {return drunkenness;}
@@ -802,6 +809,17 @@ public:
 		if (!bladder_was_full && bladder >= 0.9f) {oss << "\nYou need to use the bathroom"; text_color = YELLOW;}
 		print_text_onscreen(oss.str(), text_color, 1.0, 3*TICKS_PER_SECOND, 0);
 	}
+	bool take_person(bool &person_has_key, float person_height) {
+		float const value(100), weight((person_height > 0.025) ? 180.0 : 80.0); // always worth $100; use height to select man vs. girl
+		if (!check_weight_limit(weight)) {show_weight_limit_message(); return 0;}
+		has_key    |= person_has_key; person_has_key = 0; // steal their key
+		cur_value  += value;
+		cur_weight += weight;
+		std::ostringstream oss;
+		oss << "zombie: value $" << value << " weight " << weight << " lbs";
+		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
+		return 1; // success
+	}
 	bool drop_last_item(room_object_t &obj, bool dynamic_only) {
 		if (carried.empty()) return 0;
 		if (dynamic_only && !carried.back().has_dstate()) return 0;
@@ -814,7 +832,7 @@ public:
 	}
 	void collect_items() {
 		has_key = 0; // key only good for current building
-		if (carried.empty()) return; // nothing to add
+		if (carried.empty() && cur_weight == 0.0 && cur_value == 0.0) return; // nothing to add
 		std::ostringstream oss;
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
 		tot_value  += cur_value;  cur_value  = 0.0;
@@ -915,14 +933,13 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 		return 0;
 	}
 	if (!can_pick_up) {
-		std::ostringstream oss;
-		oss << "Over weight limit of " << global_building_params.player_weight_limit << " lbs";
-		print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
+		show_weight_limit_message();
 		return 0;
 	}
 	if (is_consumable(obj)) {gen_sound_thread_safe(SOUND_GULP, get_camera_pos(), 1.0 );}
 	else                    {gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.25);}
 	register_building_sound_for_obj(obj, at_pos);
+	do_room_obj_pickup = 0; // no more object pickups
 	return 1;
 }
 
@@ -1260,7 +1277,13 @@ void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool
 
 bool player_has_room_key() {return player_inventory.player_has_key();}
 
-bool register_ai_player_coll(bool &has_key) { // returns is_dead
+// return value: 0=no effect, 1=player is killed, 2=this person is killed
+int register_ai_player_coll(bool &has_key, float height) {
+	if (do_room_obj_pickup && player_inventory.take_person(has_key, height)) {
+		gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.5);
+		do_room_obj_pickup = 0; // no more object pickups
+		return 2;
+	}
 	static double last_coll_time(0.0);
 	
 	if (tfticks - last_coll_time > 2.0*TICKS_PER_SECOND) {
