@@ -582,6 +582,7 @@ void draw_sides_and_bottom(bool shadow_pass) {
 			select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);
 		}
 		else {
+			mesh_tbt_data.ensure_textures(texture);
 			s.setup_enabled_lights(2, 1); // sun and moon VS lighting
 			s.set_vert_shader("ads_lighting.part*+two_lights_texture");
 			s.set_frag_shader("linear_fog.part+tiling_and_blending.part+textured_with_tb");
@@ -589,7 +590,6 @@ void draw_sides_and_bottom(bool shadow_pass) {
 			s.begin_shader();
 			s.set_cur_color(WHITE);
 			if (fog_enabled) {s.setup_fog_scale();}
-			mesh_tbt_data.ensure_textures(texture);
 			mesh_tbt_data.bind_shader(s);
 		}
 		bool const back_face_cull = 1;
