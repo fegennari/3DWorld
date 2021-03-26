@@ -79,6 +79,27 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, poi
 		} // for j
 	} // for i
 }
+// untextured version of the above function
+void rgeom_mat_t::add_cube_to_verts_untextured(cube_t const &c, colorRGBA const &color, unsigned skip_faces) {
+	vertex_t v;
+	v.set_c4(color);
+
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			if (skip_faces & (1 << (2*(2-n) + j))) continue; // skip this face
+			v.set_ortho_norm(n, j);
+			v.v[n] = c.d[n][j];
+
+			for (unsigned s1 = 0; s1 < 2; ++s1) {
+				v.v[d[1]] = c.d[d[1]][s1];
+				v.v[d[0]] = c.d[d[0]][!(j^s1)]; quad_verts.push_back(v);
+				v.v[d[0]] = c.d[d[0]][ (j^s1)]; quad_verts.push_back(v);
+			} // for s1
+		} // for j
+	} // for i
+}
 
 template<typename T> void add_inverted_triangles(T &verts, vector<unsigned> &indices, unsigned verts_start, unsigned ixs_start) {
 	unsigned const verts_end(verts.size()), numv(verts_end - verts_start);
@@ -866,7 +887,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				if (is_side) {btrim.d[!c.dim][!d    ] -= (d     ? 1.0 : -1.0)*trim_plus_wall_thick;} // expand on the inside of the closet
 				else         {btrim.d[ c.dim][!c.dir] -= (c.dir ? 1.0 : -1.0)*trim_plus_wall_thick;} // expand on the inside of the closet
 				btrim.z2() = c.z1() + trim_height;
-				get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(btrim, trim_color, tex_origin, skip_faces); // is_small, untextured, no shadows; both interior and exterior
+				get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts_untextured(btrim, trim_color, skip_faces); // is_small, untextured, no shadows; both interior and exterior
 				set_cube_zvals(trim, c.z2()-trim_height, c.z2());
 				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color)); // ceiling trim, missing end caps; exterior only
 			} // for d
@@ -1131,14 +1152,14 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 		bracket.translate_dim(!c.dim, b_offset);
 
 		for (unsigned b = 0; b < num_brackets; ++b) {
-			metal_mat.add_cube_to_verts(bracket, bracket_color, zero_vector, (skip_faces | EF_Z2)); // skip top faces, maybe back
+			metal_mat.add_cube_to_verts_untextured(bracket, bracket_color, (skip_faces | EF_Z2)); // skip top faces, maybe back
 
 			if (s == 0) { // add vertical brackets on first shelf
 				cube_t vbracket(bracket);
 				set_cube_zvals(vbracket, c.z1(), c.z2());
 				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness; // nearly against the wall
 				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
-				metal_mat.add_cube_to_verts(vbracket, bracket_color, zero_vector, (skip_faces | EF_Z12)); // skip top/bottom faces, maybe back
+				metal_mat.add_cube_to_verts_untextured(vbracket, bracket_color, (skip_faces | EF_Z12)); // skip top/bottom faces, maybe back
 			}
 			bracket.translate_dim(!c.dim, b_step);
 		} // for b
@@ -1398,7 +1419,7 @@ void building_room_geom_t::add_wall_trim(room_object_t const &c) {
 		if (c.flags & RO_FLAG_ADJ_LO) {skip_faces |= ~get_face_mask(c.dim, 0);}
 		if (c.flags & RO_FLAG_ADJ_HI) {skip_faces |= ~get_face_mask(c.dim, 1);}
 		skip_faces |= ((c.flags & RO_FLAG_ADJ_BOT) ? EF_Z1 : 0) | ((c.flags & RO_FLAG_ADJ_TOP) ? EF_Z2 : 0);
-		mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces); // is_small, untextured, no shadows, not light scale
+		mat.add_cube_to_verts_untextured(c, c.color, skip_faces); // is_small, untextured, no shadows
 	}
 }
 
@@ -1542,13 +1563,13 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	exp.z = exp[!c.dim] = (whiteboard ? 0.04 : 0.06)*c.dz(); // frame width
 	exp[c.dim] = (whiteboard ? -0.1 : -0.25)*c.get_sz_dim(c.dim); // shrink in this dim
 	frame.expand_by(exp);
-	get_material(tid_nm_pair_t()).add_cube_to_verts(frame, (whiteboard ? GRAY : BLACK), tex_origin, skip_faces, 0);
+	get_material(tid_nm_pair_t()).add_cube_to_verts_untextured(frame, (whiteboard ? GRAY : BLACK), skip_faces);
 	
 	if (whiteboard) { // add a marker ledge
 		cube_t ledge(c);
 		ledge.z2() = ledge.z1() + 0.016*c.dz(); // along the bottom edge
 		ledge.d[c.dim][c.dir] += (c.dir ? 1.5 : -1.5)*c.get_sz_dim(c.dim); // extrude outward
-		get_material(untex_shad_mat, 1).add_cube_to_verts(ledge, GRAY, tex_origin, (1 << (2*(2-c.dim) + !c.dir)), 0); // shadowed
+		get_material(untex_shad_mat, 1).add_cube_to_verts_untextured(ledge, GRAY, (1 << (2*(2-c.dim) + !c.dir))); // shadowed
 	}
 }
 
@@ -1600,7 +1621,6 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	shrink[c.dim] = shrink[upright ? 2 : !c.dim] = -indent;
 	pages.expand_by(shrink);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
-	vector3d const tex_origin(c.get_llc());
 	vector3d axis, about(c.get_urc());
 	axis[c.dim] = 1.0; // along book width
 	tilt_angle *= (c.dim ? -1.0 : 1.0);
@@ -1614,16 +1634,16 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	if (draw_cover_as_small || inc_lg) { // draw large faces: outside faces of covers and spine
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, draw_cover_as_small)); // unshadowed, since shadows are too small to have much effect
 		unsigned const qv_start(mat.quad_verts.size());
-		mat.add_cube_to_verts(c, color, tex_origin, (extra_skip_faces | ~(sides_mask | spine_mask))); // untextured
+		mat.add_cube_to_verts_untextured(c, color, (extra_skip_faces | ~(sides_mask | spine_mask))); // untextured
 		rotate_verts(mat.quad_verts, axis, tilt_angle, about, qv_start);
 	}
 	if (draw_cover_as_small || inc_sm) { // draw small faces: insides of covers, edges, and pages
 		rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // unshadowed, since shadows are too small to have much effect
 		unsigned const qv_start(mat.quad_verts.size());
-		mat.add_cube_to_verts(bot,   color, tex_origin, (extra_skip_faces | EF_Z1 | ~get_face_mask(tdim, 0))); // untextured, skip bottom face
-		mat.add_cube_to_verts(top,   color, tex_origin, (extra_skip_faces | (upright ? EF_Z1 : 0) | ~get_face_mask(tdim, 1))); // untextured, skip top face, skip bottom face if upright
-		mat.add_cube_to_verts(spine, color, tex_origin, (skip_faces | spine_mask)); // untextured, skip back of spine (drawn as lg geom)
-		mat.add_cube_to_verts(pages, apply_light_color(c, WHITE), tex_origin, (skip_faces | spine_mask)); // untextured
+		mat.add_cube_to_verts_untextured(bot,   color, (extra_skip_faces | EF_Z1 | ~get_face_mask(tdim, 0))); // untextured, skip bottom face
+		mat.add_cube_to_verts_untextured(top,   color, (extra_skip_faces | (upright ? EF_Z1 : 0) | ~get_face_mask(tdim, 1))); // untextured, skip top face, skip bottom face if upright
+		mat.add_cube_to_verts_untextured(spine, color, (skip_faces | spine_mask)); // untextured, skip back of spine (drawn as lg geom)
+		mat.add_cube_to_verts_untextured(pages, apply_light_color(c, WHITE), (skip_faces | spine_mask)); // untextured
 		rotate_verts(mat.quad_verts, axis, tilt_angle, about, qv_start);
 	}
 	if (ADD_BOOK_COVERS && inc_sm && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
@@ -1637,7 +1657,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		bool const swap_xy(upright ^ (!c.dim));
 		rgeom_mat_t &cover_mat(get_material(tid_nm_pair_t(picture_tid, 0.0), 0, 0, 1));
 		unsigned const qv_start(cover_mat.quad_verts.size());
-		cover_mat.add_cube_to_verts(cover, WHITE, tex_origin, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows, small=1
+		cover_mat.add_cube_to_verts(cover, WHITE, zero_vector, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows, small=1
 		rotate_verts(cover_mat.quad_verts, axis, tilt_angle, about, qv_start);
 		has_cover = 1;
 	} // end cover image
@@ -2133,7 +2153,7 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	point const tex_origin(c.get_llc()); // doesn't really need to be set, since stall is untextured
 
 	if (c.shape == SHAPE_SHORT) { // wall separating urinals, drawn as a single cube
-		mat.add_cube_to_verts(c, color, tex_origin, ~get_face_mask(c.dim, c.dir));
+		mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, c.dir));
 		return;
 	}
 	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(2.0*wall_thick), door_gap(0.3*wall_thick);
@@ -2151,17 +2171,17 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	front1.d[!c.dim][1] = door.d[!c.dim][0];
 	front2.d[!c.dim][0] = door.d[!c.dim][1];
 	unsigned const side_skip_mask(get_skip_mask_for_xy(c.dim));
-	mat.add_cube_to_verts(side1,  color, tex_origin, side_skip_mask);
-	mat.add_cube_to_verts(side2,  color, tex_origin, side_skip_mask);
-	mat.add_cube_to_verts(front1, color, tex_origin, EF_Z12);
-	mat.add_cube_to_verts(front2, color, tex_origin, EF_Z12);
+	mat.add_cube_to_verts_untextured(side1,  color, side_skip_mask);
+	mat.add_cube_to_verts_untextured(side2,  color, side_skip_mask);
+	mat.add_cube_to_verts_untextured(front1, color, EF_Z12);
+	mat.add_cube_to_verts_untextured(front2, color, EF_Z12);
 
 	if (c.is_open()) {
 		// draw open door?
 	}
 	else {
 		door.expand_in_dim(!c.dim, -door_gap);
-		mat.add_cube_to_verts(door, color, tex_origin);
+		mat.add_cube_to_verts_untextured(door, color);
 	}
 }
 
@@ -2243,7 +2263,7 @@ unsigned register_sign_text(string const &text) {return sign_helper.register_tex
 void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text) {
 	if (inc_back) {
 		unsigned const skip_faces((c.flags & RO_FLAG_HANGING) ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless hanging
-		get_material(tid_nm_pair_t(), 0).add_cube_to_verts(c, WHITE, zero_vector, skip_faces); // back of the sign, always white (for now)
+		get_material(tid_nm_pair_t(), 0).add_cube_to_verts_untextured(c, WHITE, skip_faces); // back of the sign, always white (for now)
 	}
 	if (!inc_text) return;
 	// add sign text
@@ -2309,11 +2329,11 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		colorRGBA const sink_color(apply_light_color(c, GRAY));
 		get_metal_material(0).add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
-		metal_mat.add_cube_to_verts(faucet1, sink_color, tex_origin, EF_Z12); // vertical part of faucet, skip top and bottom faces
-		metal_mat.add_cube_to_verts(faucet2, sink_color, tex_origin, 0); // horizontal part of faucet, draw all faces
+		metal_mat.add_cube_to_verts_untextured(faucet1, sink_color, EF_Z12); // vertical part of faucet, skip top and bottom faces
+		metal_mat.add_cube_to_verts_untextured(faucet2, sink_color, 0); // horizontal part of faucet, draw all faces
 
 		if (c.type == TYPE_BRSINK) { // bathroom sink
-			metal_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2); // outside of basin, no top surface, shadowed
+			metal_mat.add_cube_to_verts_untextured(sink, sink_color, EF_Z2); // outside of basin, no top surface, shadowed
 			cube_t front(c);
 			front.z2() = top.z1();
 			front.z1() = sink.z1() - 0.1*dz; // slightly below the sink basin
@@ -2331,10 +2351,10 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 			dishwasher.d[ c.dim][ c.dir] += dir_sign*0.05*depth; // front
 			dishwasher.d[!c.dim][!side ]  = sink.d[!c.dim][side] + (side ? 1.0 : -1.0)*0.1*depth;
 			dishwasher.d[!c.dim][ side ]  = dishwasher.d[!c.dim][!side] + (side ? 1.0 : -1.0)*1.05*depth;
-			metal_mat.add_cube_to_verts(dishwasher, dw_color, tex_origin, dw_skip_faces);
+			metal_mat.add_cube_to_verts_untextured(dishwasher, dw_color, dw_skip_faces);
 			cube_t dishwasher_back(dishwasher), handle(dishwasher);
 			dishwasher_back.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // flush with the cabinet
-			metal_mat.add_cube_to_verts(dishwasher_back, dw_color, tex_origin, ~dw_skip_faces); // draw only the back face, in case it's visible through a window
+			metal_mat.add_cube_to_verts_untextured(dishwasher_back, dw_color, ~dw_skip_faces); // draw only the back face, in case it's visible through a window
 			handle.z1() += 0.77*dz;
 			handle.z2() -= 0.10*dz;
 			handle.expand_in_dim(!c.dim, -0.1*depth);
@@ -2431,7 +2451,7 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 		bool const side(n & 1); // alternate
 		handle.d[!c.dim][0] = door.d[!c.dim][0] + (side ? near_side : far_side);
 		handle.d[!c.dim][1] = door.d[!c.dim][1] - (side ? far_side : near_side);
-		handle_mat.add_cube_to_verts(handle, handle_color, tex_origin, door_skip_faces); // same skip_faces
+		handle_mat.add_cube_to_verts_untextured(handle, handle_color, door_skip_faces); // same skip_faces
 	} // for n
 }
 
@@ -2453,7 +2473,7 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 	rgeom_mat_t &mat(get_material(untex_shad_mat, 1));
 	colorRGBA const color(apply_light_color(c));
-	mat.add_cube_to_verts(c, color, zero_vector, EF_Z12); // shadowed, no top/bottom faces
+	mat.add_cube_to_verts_untextured(c, color, EF_Z12); // shadowed, no top/bottom faces
 }
 
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
@@ -2732,7 +2752,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 		}
 		if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
 		obj_model_insts.emplace_back((i - objs.begin()), dir);
-		//get_material(tid_nm_pair_t()).add_cube_to_verts(*i, WHITE, tex_origin); // for debugging of model bcubes
+		//get_material(tid_nm_pair_t()).add_cube_to_verts_untextured(*i, WHITE); // for debugging of model bcubes
 	} // for i
 }
 
