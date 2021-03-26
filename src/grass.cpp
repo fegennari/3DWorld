@@ -307,7 +307,7 @@ public:
 		if (grass_tex_enabled) {
 			occ_map.resize(om_stride*(MESH_Y_SIZE+1), 0);
 		
-			#pragma omp parallel for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1)
 			for (int y = 0; y <= MESH_Y_SIZE; ++y) {
 				rand_gen_t occ_rgen;
 				occ_rgen.set_state(845631*y, 667239);
@@ -330,7 +330,7 @@ public:
 		vector<vector<grass_t>> grass_local(MESH_Y_SIZE); // one per Y row
 		float const rscale_x(DX_VAL/2147483562.0), rscale_y(DY_VAL/2147483562.0);
 
-		#pragma omp parallel for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1)
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			// create thread private copies of these three variables
 			vector<unsigned> &mesh_to_grass(mesh_to_grass_local[y]);
@@ -694,7 +694,8 @@ public:
 		point const camera(get_camera_pos()), adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
 		float const close_dist(2.0*vector3d(DX_VAL, DY_VAL, grass_length).mag());
 		float const scene_size(vector3d(X_SCENE_SIZE, Y_SCENE_SIZE, (ztop - zbottom)).mag());
-		bool const no_clip(camera_pdu.sphere_visible_test(point(0.0, 0.0, 0.5f*(ztop + zbottom)), -0.5*scene_size)); // scene mostly visible
+		// disable grass block culling for voxel grass, or if the scene is mostly visible
+		bool const no_clip(has_voxel_grass || camera_pdu.sphere_visible_test(point(0.0, 0.0, 0.5f*(ztop + zbottom)), -0.5*scene_size));
 		vector<unsigned> nearby_ixs;
 
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
