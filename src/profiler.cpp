@@ -7,6 +7,8 @@
 
 using std::string;
 
+void maybe_update_loading_screen(const char *str);
+
 
 template <typename T> class timing_profiler {
 
@@ -27,6 +29,7 @@ public:
 	void register_time(const char *str, T delta_time) {
 		if (enabled) {entries[str].add(delta_time);}
 		else {cout << str << " time = " << delta_time << endl;}
+		maybe_update_loading_screen(str);
 	}
 	void stats() const {
 		if (entries.empty()) return;

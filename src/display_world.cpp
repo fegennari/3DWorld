@@ -34,7 +34,7 @@ float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.75;
 
 
-bool mesh_invalidated(1), fog_enabled(0), tt_fire_button_down(0);
+bool mesh_invalidated(1), fog_enabled(0), tt_fire_button_down(0), in_loading_screen(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned enabled_lights(0), cur_display_iter(0); // 8 bit flags for enabled_lights
 float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
@@ -724,6 +724,18 @@ void flashlight_next_frame() {
 	flashlight_on = 0;
 }
 
+void maybe_update_loading_screen(const char *str) {
+	if (!in_loading_screen) return;
+	check_gl_error(566);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	fgPushMatrix();
+	fgLoadIdentity();
+	draw_text(PURPLE, -0.01, 0.0, -0.02, (string("Loading: ") + str), 1.0);
+	fgPopMatrix();
+	glutSwapBuffers();
+	check_gl_error(567);
+}
+
 void display() {
 
 	check_gl_error(0);
@@ -733,7 +745,8 @@ void display() {
 		config_bkg_color_and_clear(1);
 		draw_text(PURPLE, 0.0, 0.008, -0.02, "Loading...", 2.5);
 		swap_buffers_and_redraw();
-		start_maximized = 0;
+		start_maximized   = 0;
+		in_loading_screen = (world_mode == WMODE_INF_TERRAIN); // only in tiled terrain mode for now (for slow city/buildings scene)
 		return;
 	}
 	RESET_TIME;
@@ -1051,6 +1064,7 @@ void display() {
 	swap_buffers_and_redraw();
 	check_gl_error(11);
 	if (TIMETEST) PRINT_TIME("Y");
+	in_loading_screen = 0; // if we got to the end of display(), loading is done
 }
 
 
