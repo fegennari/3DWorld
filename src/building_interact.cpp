@@ -16,7 +16,7 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 
-bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0);
+bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), city_action_key(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 room_object_t player_held_object;
@@ -1305,10 +1305,16 @@ int register_ai_player_coll(bool &has_key, float height) {
 }
 
 void building_gameplay_action_key(int mode) {
-	// show crosshair on first pickup because it's too difficult to pick up objects without it
-	if      (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
-	else if (mode == 2) {drop_last_pickup_object = 1;} // 'E'
-	else                {toggle_door_open_state  = 1;} // 'q'
+	if (camera_in_building) { // building interior action
+		// show crosshair on first pickup because it's too difficult to pick up objects without it
+		if      (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
+		else if (mode == 2) {drop_last_pickup_object = 1;} // 'E'
+		else                {toggle_door_open_state  = 1;} // 'q'
+	}
+	else { // building exterior/city/road/car action
+		if      (mode != 0) {city_action_key = 1;} // 'e'/'E'
+		else                {} // 'q'
+	}
 }
 
 void building_gameplay_next_frame() {
@@ -1332,6 +1338,6 @@ void building_gameplay_next_frame() {
 	// reset state for next frame
 	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
 	can_pickup_bldg_obj = 0;
-	do_room_obj_pickup  = 0;
+	do_room_obj_pickup  = city_action_key = 0;
 }
 

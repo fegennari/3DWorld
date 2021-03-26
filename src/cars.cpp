@@ -12,7 +12,7 @@
 bool const DYNAMIC_HELICOPTERS = 1;
 float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
-extern bool tt_fire_button_down, enable_hcopter_shadows;
+extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key;
 extern int display_mode, game_mode, map_mode, animate2;
 extern float FAR_CLIP;
 extern point pre_smap_player_pos;
@@ -672,6 +672,10 @@ car_t const *car_manager_t::get_car_at(point const &p1, point const &p2) const {
 	} // for cb
 	return nullptr; // no car found
 }
+car_t const *car_manager_t::get_car_at_player(float max_dist) const {
+	point const p1(get_camera_pos() - get_camera_coord_space_xlate()), p2(p1 + cview_dir*max_dist);
+	return get_car_at(p1, p2);
+}
 
 bool car_manager_t::line_intersect_cars(point const &p1, point const &p2, float &t) const { // Note: p1/p2 in local TT space
 	bool ret(0);
@@ -1067,14 +1071,18 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		dstate.post_draw();
 		fgPopMatrix();
 
-		if (tt_fire_button_down && !game_mode && !garages_pass) {
-			point const p1(get_camera_pos() - xlate), p2(p1 + cview_dir*FAR_CLIP);
-			car_t const *car(get_car_at(p1, p2));
+		if (tt_fire_button_down && !game_mode && !garages_pass && !shadow_only) {
+			car_t const *const car(get_car_at_player(FAR_CLIP)); // no distance limit
 			if (car != nullptr && !car->in_garage()) {dstate.set_label_text(car->label_str(), (car->get_center() + xlate));} // car found
 		}
 	}
 	if ((trans_op_mask & 2) && !shadow_only) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	dstate.show_label_text();
+
+	if (city_action_key && !garages_pass && !shadow_only) {
+		car_t const *const car(get_car_at_player(8.0*CAMERA_RADIUS));
+		if (car != nullptr) {print_text_onscreen(car->label_str(), YELLOW, 1.0, 1.5*TICKS_PER_SECOND, 0);}
+	}
 }
 
 void car_manager_t::draw_helicopters(bool shadow_only) {
