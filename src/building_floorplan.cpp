@@ -169,9 +169,9 @@ int building_t::classify_room_wall(room_t const &room, float zval, bool dim, boo
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 	if (!interior_enabled()) return;
 
-	// make up to 20 attempts to generate a connected interior; the first attempt almost always succeeds; currently it only fails if a house basement is unconnected
+	// make up to 16 attempts to generate a connected interior; the first attempt almost always succeeds; currently it only fails if a house basement is unconnected
 	// 64 houses are unconnected, this loop fixes all but 6 of them after 3 iterations; 12 iterations is required for 100% success
-	for (unsigned n = 0; n < 20; ++n) {
+	for (unsigned n = 0; n < 16; ++n) {
 		gen_interior_int(rgen, has_overlapping_cubes);
 		if (!interior->is_unconnected) break; // done
 	}
