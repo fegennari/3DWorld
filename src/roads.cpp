@@ -499,7 +499,9 @@ void road_isec_t::draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, poin
 
 void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const {
 	if (num_conn == 2) return; // no stoplights
-	if (!dstate.check_cube_visible(*this, 0.16, shadow_only)) return; // dist_scale=0.16
+	cube_t sl_bcube(*this);
+	sl_bcube.z2() += 0.276*city_params.road_width; // add max stoplight height
+	if (!dstate.check_cube_visible(sl_bcube, 0.16, shadow_only)) return; // dist_scale=0.16
 	point const center(get_cube_center() + dstate.xlate);
 	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 	vector3d const cview_dir(camera_pdu.pos - center);
