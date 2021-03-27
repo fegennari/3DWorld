@@ -1222,7 +1222,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 			}
 			drawer.add_tquad(*this, door_side, bcube, tp, color, 0, exclude_frame, 0); // invert_tc_x=0, no_tc=0
 		} // for d
-		if (opened) { // add untextured door edges; only needed for open doors
+		if (opened || on_stairs) { // add untextured door edges; only needed for open doors or doors at the bottom of basement stairs
 			for (unsigned e = 0; e < num_edges; ++e) {
 				drawer.add_tquad(*this, door_edges[e], bcube, tp, color, 0, 0, 1); // invert_tc_x=0, exclude_frame=0, no_tc=1, will use a single texel from the corner of the door texture
 			}
