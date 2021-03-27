@@ -7,7 +7,6 @@
 #include "gl_ext_arb.h" // for vbo_wrap_t
 #include "transform_obj.h" // for xform_matrix
 
-bool const ADD_BUILDING_INTERIORS  = 1;
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 bool const ENABLE_MIRROR_REFLECTIONS = 1;
 bool const SPLIT_DOOR_PER_FLOOR    = 1; // allows mixed open/closed doors per-floor, and better texture scaling, but slower, and uses more memory

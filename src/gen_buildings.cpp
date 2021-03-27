@@ -1981,7 +1981,7 @@ public:
 
 	bool place_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
 		assert(locs.empty());
-		if (num == 0 || empty() || !ADD_BUILDING_INTERIORS) return 0; // no people, buildings, or interiors
+		if (num == 0 || empty()) return 0; // no people or buildings
 		vector<building_ai_cand_t> cand_buildings; // {building_ix, is_house}
 
 		for (unsigned i = 0; i < buildings.size(); ++i) {

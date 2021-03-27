@@ -132,7 +132,6 @@ void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out) { // subtra
 }
 
 bool building_t::interior_enabled() const {
-	if (!ADD_BUILDING_INTERIORS) return 0; // disabled
 	if (world_mode != WMODE_INF_TERRAIN) return 0; // tiled terrain mode only
 	if (!global_building_params.windows_enabled()) return 0; // no windows, can't assign floors and generate interior
 	//if (has_overlapping_cubes) return; // overlapping cubes buildings are more difficult to handle
