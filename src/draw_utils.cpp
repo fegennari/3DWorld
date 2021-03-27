@@ -606,10 +606,10 @@ public:
 		
 		// create 20 triangles of the icosahedron
 		tri_ixs_t const tixs[20] = {
-			tri_ixs_t(0, 11, 5), tri_ixs_t(0, 5, 1), tri_ixs_t(0, 1, 7), tri_ixs_t(0, 7, 10), tri_ixs_t(0, 10, 11),
-			tri_ixs_t(1, 5, 9), tri_ixs_t(5, 11, 4), tri_ixs_t(11, 10, 2), tri_ixs_t(10, 7, 6), tri_ixs_t(7, 1, 8),
-			tri_ixs_t(3, 9, 4), tri_ixs_t(3, 4, 2), tri_ixs_t(3, 2, 6), tri_ixs_t(3, 6, 8), tri_ixs_t(3, 8, 9),
-			tri_ixs_t(4, 9, 5), tri_ixs_t(2, 4, 11), tri_ixs_t(6, 2, 10), tri_ixs_t(8, 6, 7), tri_ixs_t(9, 8, 1)
+			tri_ixs_t(0, 11, 5), tri_ixs_t(0, 5 , 1 ), tri_ixs_t(0 , 1 , 7 ), tri_ixs_t(0 , 7, 10), tri_ixs_t(0, 10, 11),
+			tri_ixs_t(1, 5 , 9), tri_ixs_t(5, 11, 4 ), tri_ixs_t(11, 10, 2 ), tri_ixs_t(10, 7, 6 ), tri_ixs_t(7, 1 , 8 ),
+			tri_ixs_t(3, 9 , 4), tri_ixs_t(3, 4 , 2 ), tri_ixs_t(3 , 2 , 6 ), tri_ixs_t(3 , 6, 8 ), tri_ixs_t(3, 8 , 9 ),
+			tri_ixs_t(4, 9 , 5), tri_ixs_t(2, 4 , 11), tri_ixs_t(6 , 2 , 10), tri_ixs_t(8 , 6, 7 ), tri_ixs_t(9, 8 , 1 )
 		};
 		vector<tri_ixs_t> faces(20);
 		for (unsigned i = 0; i < 20; ++i) {faces[i] = tixs[i];}
@@ -621,8 +621,8 @@ public:
 			for (auto f = faces.begin(); f != faces.end(); ++f) { // replace triangle by 4 triangles
 				unsigned mps[3];
 				UNROLL_3X(mps[i_] = get_midpoint(f->v[i_], f->v[(i_+1)%3]);)
-				UNROLL_3X(faces2.push_back(tri_ixs_t(f->v[i_], mps[i_], mps[(i_+2)%3]));)
-				faces2.push_back(tri_ixs_t(mps[0], mps[1], mps[2]));
+				UNROLL_3X(faces2.emplace_back(f->v[i_], mps[i_], mps[(i_+2)%3]);)
+				faces2.emplace_back(mps[0], mps[1], mps[2]);
 			}
 			faces.clear();
 			faces.swap(faces2);
