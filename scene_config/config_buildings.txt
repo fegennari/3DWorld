@@ -9,6 +9,10 @@ buildings add_city_interiors     0
 buildings gen_building_interiors 1
 start_in_inf_terrain 1
 
+# smaller, good for entering buildings
+camera_radius 0.012
+camera_height 0.030
+
 ntrees 50 # fewer trees
 inf_terrain_scenery 0 # off for now
 
