@@ -1888,7 +1888,8 @@ public:
 		} // if flatten_mesh
 		{ // open a scope
 			timer_t timer2("Gen Building Geometry", !is_tile);
-#pragma omp parallel for schedule(static,1) if (!is_tile)
+			bool const use_mt(!is_tile || global_building_params.gen_building_interiors); // only single threaded for tiles with no interiors, which is a fast case anyway
+#pragma omp parallel for schedule(static,1) num_threads(2) if (use_mt)
 			for (int i = 0; i < (int)buildings.size(); ++i) {buildings[i].gen_geometry(i, 1337*i+rseed);}
 		} // close the scope
 		if (0 && non_city_only) { // perform room graph analysis
