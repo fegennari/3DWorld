@@ -23,7 +23,7 @@ float city_dlight_pcf_offset_scale(1.0);
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
-extern bool enable_dlight_shadows, dl_smap_enabled, draw_building_interiors, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
+extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
 extern int rand_gen_index, display_mode, animate2, draw_model;
 extern unsigned shadow_map_sz, cur_display_iter, max_unique_trees;
 extern float water_plane_z, shadow_map_pcf_offset, cobj_z_bias, fticks;
