@@ -36,7 +36,10 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 	rot_cos = cos(rot_angle);
 	parts.clear();
 	parts.push_back(bcube); // this is the actual building base
-	cube_t const &bc(parts.back());
+	set_bcube_from_rotated_cube(parts.back());
+}
+
+void building_t::set_bcube_from_rotated_cube(cube_t const &bc) {
 	point const center(bc.get_cube_center());
 
 	for (unsigned i = 0; i < 4; ++i) {
@@ -680,8 +683,9 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 
 void building_t::calc_bcube_from_parts() {
 	assert(!parts.empty());
-	bcube = parts[0];
-	for (auto i = parts.begin()+1; i != parts.end(); ++i) {bcube.union_with_cube(*i);} // update bcube
+	cube_t bc(parts[0]);
+	for (auto i = parts.begin()+1; i != parts.end(); ++i) {bc.union_with_cube(*i);} // update bcube
+	if (!is_rotated()) {bcube = bc;} else {set_bcube_from_rotated_cube(bc);} // apply rotation if needed and set bcube
 }
 
 void building_t::move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const {
