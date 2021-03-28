@@ -738,7 +738,8 @@ public:
 		else {tex_vert_off -= bg.bcube.get_llc();} // normalize to building LLC to keep tex coords small
 		if (is_city && cube.z1() == bg.bcube.z1()) {skip_bottom = 1;} // skip bottoms of first floor parts drawn in cities
 		float const window_vspacing(bg.get_window_vspace()), window_h_border(0.75*bg.get_window_h_border()), offset_val(0.01*offset_scale*window_vspacing);
-		
+		vector3d norm; // used for rotated buildings
+
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // n = dim of normal, i/d = other dims
 			if (!(dim_mask & (1<<n))) continue; // check for enabled dims
@@ -751,8 +752,8 @@ public:
 				if (dim_mask & (1<<(2*n+dir+3)))     continue; // check for disabled faces
 				if (clamp_cube != nullptr && (cube.d[n][dir] < clamp_cube->d[n][0] || cube.d[n][dir] > clamp_cube->d[n][1])) continue; // outside clamp cube, drop this face
 				
-				if (n < 2 && bg.is_rotated()) { // XY only
-					vector3d norm; norm.z = 0.0;
+				if (n < 2 && is_rotated) { // XY only
+					norm.z = 0.0;
 					if (n == 0) {norm.x =  bg.rot_cos; norm.y = bg.rot_sin;} // X
 					else        {norm.x = -bg.rot_sin; norm.y = bg.rot_cos;} // Y
 					vert.set_norm(j ? norm : -norm);
@@ -842,12 +843,15 @@ public:
 							auto &v(verts[k]);
 							float const delta(door_ztop - v.v.z);
 							if (v.v.z < door_ztop) {v.v.z = door_ztop;} // make all windows start above the door
-							v.v[n] += offset; // move slightly away from the building wall to avoid z-fighting (vertex is different from building and won't have same depth)
+							// move slightly away from the building wall to avoid z-fighting (vertex is different from building and won't have same depth)
+							if (is_rotated) {v.v += offset*norm;} else {v.v[n] += offset;}
 							if (delta > 0.0) {v.t[1] += tscale[1]*delta;} // recalculate tex coord
 						}
 					}
 					else if (clip_windows && DRAW_WINDOWS_AS_HOLES) { // move slightly away from the building wall to avoid z-fighting
-						for (unsigned k = ix; k < ix+4; ++k) {verts[k].v[n] += offset;}
+						for (unsigned k = ix; k < ix+4; ++k) {
+							if (is_rotated) {verts[k].v += offset*norm;} else {verts[k].v[n] += offset;}
+						}
 					}
 					if (clip_windows && n < 2) { // clip the texture coordinates of the quad that was just added (side of building)
 						clip_low_high_tc(verts[ix+0].t[!st], verts[ix+1].t[!st]);
