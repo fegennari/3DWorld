@@ -273,6 +273,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "max_floorplan_window_yscale") {
 		if (!read_float(fp, global_building_params.max_fp_wind_yscale)) {buildings_file_err(str, error);}
 	}
+	else if (str == "interior_view_dist_scale") {
+		if (!read_float(fp, global_building_params.interior_view_dist_scale)) {buildings_file_err(str, error);}
+	}
 	else if (str == "tt_only") {
 		if (!read_bool(fp, global_building_params.tt_only)) {buildings_file_err(str, error);}
 	}
