@@ -743,6 +743,7 @@ void display() {
 	if (start_maximized) {
 		toggle_fullscreen();
 		config_bkg_color_and_clear(1);
+		bind_vao(0); // set to default VAO
 		draw_text(PURPLE, 0.0, 0.008, -0.02, "Loading...", 2.5);
 		swap_buffers_and_redraw();
 		start_maximized   = 0;
