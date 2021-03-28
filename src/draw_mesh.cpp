@@ -32,7 +32,7 @@ float lt_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava, fog_enabled;
-extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
+extern int num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z, snow_cov_amt, CAMERA_RADIUS;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, FAR_CLIP, sun_radius, ocean_depth_opacity_mult;

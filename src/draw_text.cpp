@@ -10,7 +10,7 @@
 string const default_font_texture_atlas_fn = "textures/atlas/text_atlas.png";
 string font_texture_atlas_fn(default_font_texture_atlas_fn);
 
-extern int window_height, display_mode, draw_model;
+extern int window_height, display_mode;
 extern double tfticks;
 extern vector<popup_text_t> popup_text;
 

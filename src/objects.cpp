@@ -16,7 +16,7 @@ float const NDIV_SCALE = 200.0;
 
 
 extern bool group_back_face_cull, has_any_billboard_coll, begin_motion, fast_transparent_spheres;
-extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
+extern int display_mode, destroy_thresh, xoff2, yoff2;
 extern float temperature, rain_wetness, snow_cov_amt;
 extern double tfticks;
 extern unsigned ALL_LT[];

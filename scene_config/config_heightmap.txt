@@ -5,7 +5,7 @@ start_maximized 1
 enable_mouse_look 1
 enable_timing_profiler 0
 #use_core_context 1
-disable_tt_water_reflect 1 # not neede for cities because cities aren't near water
+disable_tt_water_reflect 1 # not needed for cities because cities aren't near water
 enable_model3d_bump_maps 1 # for pedestrians
 
 camera_radius 0.03 # default is 0.06
