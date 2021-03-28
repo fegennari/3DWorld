@@ -2243,6 +2243,7 @@ public:
 						continue;
 					}
 					if (!camera_pdu.sphere_and_cube_visible_test((g->bcube.get_cube_center() + xlate), g->bcube.get_bsphere_radius(), (g->bcube + xlate))) continue; // VFC
+					if (is_first_tile) {(*i)->ensure_interior_geom_vbos();} // we need the interior geom at this point
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (!g->bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far
@@ -2564,11 +2565,49 @@ public:
 		}
 		bdraw.finalize(grid_by_tile.size());
 	}
-	void get_all_drawn_verts() { // Note: non-const; building_draw is modified
+	void get_interior_drawn_verts() {
+		// pre-allocate interior wall, celing, and floor verts, assuming all buildings have the same materials
+		tid_vert_counter_t vert_counter;
+
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+			if (!b->interior) continue; // no interior
+			building_mat_t const &mat(b->get_material());
+			unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size()) + 36*b->interior->elevators.size());
+			unsigned const nfloors(b->interior->floors.size());
+			vert_counter.update_count(mat.house_floor_tex.tid, 4*((b->is_house && nfloors > 0) ? (nfloors - b->has_sec_bldg()) : 0));
+			vert_counter.update_count(mat.floor_tex.tid, 4*(b->is_house ? b->has_sec_bldg() : nfloors));
+			vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
+			vert_counter.update_count(mat.wall_tex.tid, nv_wall);
+			vert_counter.update_count(FENCE_TEX, 12*b->interior->elevators.size());
+			vert_counter.update_count(building_texture_mgr.get_hdoor_tid(), 8*b->interior->doors.size());
+			vert_counter.update_count(WHITE_TEX, 8*b->interior->doors.size());
+		}
+		for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) {
+			unsigned const count(vert_counter.get_count(i));
+			if (count > 0) {building_draw_interior.reserve_verts(tid_nm_pair_t(i), count);}
+		}
+		// generate vertex data
+		building_draw_interior.clear();
+		building_draw_int_ext_walls.clear();
+
+		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
+			building_draw_interior.cur_tile_id = (g - grid_by_tile.begin());
+
+			for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {
+				get_building(i->ix).get_all_drawn_verts(building_draw_interior,      0, 1, 0); // interior
+				get_building(i->ix).get_all_drawn_verts(building_draw_int_ext_walls, 0, 0, 1); // interior of exterior walls
+			}
+		}
+		building_draw_interior.finalize(grid_by_tile.size());
+		building_draw_int_ext_walls.finalize(grid_by_tile.size());
+	}
+	void get_all_drawn_verts(bool is_tile) { // Note: non-const; building_draw is modified
 		if (buildings.empty()) return;
 		//timer_t timer("Get Building Verts"); // 140/670
-#pragma omp parallel for schedule(static) num_threads(3)
-		for (int pass = 0; pass < 3; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
+		int const num_passes(is_tile ? 2 : 3); // skip interior pass for tiles; these verts will be generated later when they're needed for drawing
+
+#pragma omp parallel for schedule(static) num_threads(num_passes)
+		for (int pass = 0; pass < num_passes; ++pass) { // parallel loop doesn't help much because pass 0 takes most of the time
 			if (pass == 0) { // exterior pass
 				building_draw_vbo.clear();
 
@@ -2578,65 +2617,41 @@ public:
 				}
 				building_draw_vbo.finalize(grid_by_tile.size());
 			}
-			else if (pass == 1) { // interior pass
-				// pre-allocate interior wall, celing, and floor verts, assuming all buildings have the same materials
-				tid_vert_counter_t vert_counter;
-
-				for (auto b = buildings.begin(); b != buildings.end(); ++b) {
-					if (!b->interior) continue; // no interior
-					building_mat_t const &mat(b->get_material());
-					unsigned const nv_wall(16*(b->interior->walls[0].size() + b->interior->walls[1].size() + b->interior->landings.size()) + 36*b->interior->elevators.size());
-					unsigned const nfloors(b->interior->floors.size());
-					vert_counter.update_count(mat.house_floor_tex.tid, 4*((b->is_house && nfloors > 0) ? (nfloors - b->has_sec_bldg()) : 0));
-					vert_counter.update_count(mat.floor_tex.tid, 4*(b->is_house ? b->has_sec_bldg() : nfloors));
-					vert_counter.update_count((b->is_house ? mat.house_ceil_tex.tid : mat.ceil_tex.tid ), 4*b->interior->ceilings.size());
-					vert_counter.update_count(mat.wall_tex.tid, nv_wall);
-					vert_counter.update_count(FENCE_TEX, 12*b->interior->elevators.size());
-					vert_counter.update_count(building_texture_mgr.get_hdoor_tid(), 8*b->interior->doors.size());
-					vert_counter.update_count(WHITE_TEX, 8*b->interior->doors.size());
-				}
-				for (unsigned i = 0; i < tid_mapper.get_num_slots(); ++i) {
-					unsigned const count(vert_counter.get_count(i));
-					if (count > 0) {building_draw_interior.reserve_verts(tid_nm_pair_t(i), count);}
-				}
-				// generate vertex data
-				building_draw_interior.clear();
-				building_draw_int_ext_walls.clear();
-
-				for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
-					building_draw_interior.cur_tile_id = (g - grid_by_tile.begin());
-					
-					for (auto i = g->bc_ixs.begin(); i != g->bc_ixs.end(); ++i) {
-						get_building(i->ix).get_all_drawn_verts(building_draw_interior,      0, 1, 0); // interior
-						get_building(i->ix).get_all_drawn_verts(building_draw_int_ext_walls, 0, 0, 1); // interior of exterior walls
-					}
-				}
-				building_draw_interior.finalize(grid_by_tile.size());
-				building_draw_int_ext_walls.finalize(grid_by_tile.size());
-			}
-			else if (pass == 2) { // windows pass
+			else if (pass == 1) { // windows pass
 				get_all_window_verts(building_draw_windows, 0);
 				if (is_night(WIND_LIGHT_ON_RAND)) {get_all_window_verts(building_draw_wind_lights, 1);} // only generate window verts at night
 			}
+			else if (pass == 2) { // interior pass; skip for is_tile case
+				get_interior_drawn_verts();
+			}
 		} // for pass
 	}
-	void create_vbos(bool is_tile) { // Note: non-const; building_draw is modified
+	void update_mem_usage(bool is_tile) {
+		unsigned const num_everts(building_draw_vbo.num_verts() + building_draw_windows.num_verts() + building_draw_wind_lights.num_verts());
+		unsigned const num_etris( building_draw_vbo.num_tris () + building_draw_windows.num_tris () + building_draw_wind_lights.num_tris ());
+		unsigned const num_iverts(building_draw_interior.num_verts() + building_draw_int_ext_walls.num_verts());
+		unsigned const num_itris( building_draw_interior.num_tris () + building_draw_int_ext_walls.num_tris ());
+		gpu_mem_usage += (num_everts + num_iverts)*sizeof(vert_norm_comp_tc_color);
+		if (!is_tile) {cout << "Building V: " << num_everts << ", T: " << num_etris << ", interior V: " << num_iverts << ", T: " << num_itris << ", mem: " << gpu_mem_usage << endl;}
+	}
+	void create_vbos(bool is_tile) {
 		building_texture_mgr.check_windows_texture();
 		tid_mapper.init();
 		timer_t timer("Create Building VBOs", !is_tile);
-		get_all_drawn_verts();
-		
-		if (!is_tile) {
-			unsigned const num_everts(building_draw_vbo.num_verts() + building_draw_windows.num_verts() + building_draw_wind_lights.num_verts());
-			unsigned const num_etris( building_draw_vbo.num_tris () + building_draw_windows.num_tris () + building_draw_wind_lights.num_tris ());
-			unsigned const num_iverts(building_draw_interior.num_verts() + building_draw_int_ext_walls.num_verts());
-			unsigned const num_itris( building_draw_interior.num_tris () + building_draw_int_ext_walls.num_tris ());
-			gpu_mem_usage = (num_everts + num_iverts)*sizeof(vert_norm_comp_tc_color);
-			cout << "Building V: " << num_everts << ", T: " << num_etris << ", interior V: " << num_iverts << ", T: " << num_itris << ", mem: " << gpu_mem_usage << endl;
-		}
+		get_all_drawn_verts(is_tile);
+		update_mem_usage(is_tile);
 		building_draw_vbo.upload_to_vbos();
 		building_draw_windows.upload_to_vbos();
 		building_draw_wind_lights.upload_to_vbos(); // Note: may be empty if not night time
+		building_draw_interior.upload_to_vbos();
+		building_draw_int_ext_walls.upload_to_vbos();
+	}
+	void ensure_interior_geom_vbos() { // only for is_tile case
+		if (!has_interior_geom) return; // no interior geom, nothing to do
+		if (!building_draw_interior.empty()) return; // already created
+		//timer_t timer("Create Building Interiors VBOs");
+		get_interior_drawn_verts();
+		update_mem_usage(1); // is_tile=1
 		building_draw_interior.upload_to_vbos();
 		building_draw_int_ext_walls.upload_to_vbos();
 	}
@@ -2654,6 +2669,7 @@ public:
 		building_draw_interior.clear_vbos();
 		building_draw_int_ext_walls.clear_vbos();
 		for (auto i = buildings.begin(); i != buildings.end(); ++i) {i->clear_room_geom(1);} // force=1; likely required for tiled buildings
+		gpu_mem_usage = 0;
 	}
 	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
 		if (empty()) return 0;
