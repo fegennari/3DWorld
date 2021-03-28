@@ -1514,7 +1514,7 @@ class building_creator_t {
 	building_draw_t building_draw, building_draw_vbo, building_draw_windows, building_draw_wind_lights, building_draw_interior, building_draw_int_ext_walls;
 	point_sprite_drawer_sized building_lights;
 	vector<point> points; // reused temporary
-	bool use_smap_this_frame;
+	bool use_smap_this_frame, has_interior_geom;
 
 	struct grid_elem_t {
 		vector<cube_with_ix_t> bc_ixs;
@@ -1669,7 +1669,8 @@ class building_creator_t {
 	};
 
 public:
-	building_creator_t(bool is_city=0) : grid_sz(1), gpu_mem_usage(0), max_extent(zero_vector), building_draw(is_city), building_draw_vbo(is_city), use_smap_this_frame(0) {}
+	building_creator_t(bool is_city=0) : grid_sz(1), gpu_mem_usage(0), max_extent(zero_vector), building_draw(is_city), building_draw_vbo(is_city),
+		use_smap_this_frame(0), has_interior_geom(0) {}
 	bool empty() const {return buildings.empty();}
 
 	void clear() {
@@ -1904,8 +1905,9 @@ public:
 			}
 			cout << endl;
 		}
-		for (auto b = buildings.begin(); b != buildings.end(); ++b) { // add driveways
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) { // add driveways and calculate has_interior_geom
 			if (b->enable_driveway_coll()) {add_to_grid(b->driveway, (b - buildings.begin()), 1);}
+			has_interior_geom |= b->has_interior();
 		}
 		for (auto g = grid.begin(); g != grid.end(); ++g) { // update grid bcube zvals to include building roofs
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
@@ -2103,7 +2105,7 @@ public:
 
 	void add_interior_lights(vector3d const &xlate, cube_t &lights_bcube) { // Note: non const because this caches light bcubes
 		if (!ADD_ROOM_LIGHTS) return;
-		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || building_draw_interior.empty()) return; // no interior
+		if (!DRAW_WINDOWS_AS_HOLES || !draw_building_interiors || !has_interior_geom) return; // no interior
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		vector<point> points; // reused temporary
 		vect_cube_t ped_bcubes; // reused temporary
@@ -2159,7 +2161,7 @@ public:
 			assert(*i);
 			have_windows     |= !(*i)->building_draw_windows.empty();
 			have_wind_lights |= !(*i)->building_draw_wind_lights.empty();
-			have_interior    |= (draw_building_interiors && !(*i)->building_draw_interior.empty());
+			have_interior    |= (draw_building_interiors && (*i)->has_interior_geom);
 			max_eq(max_draw_ix, (*i)->building_draw_vbo.get_num_draw_blocks());
 			if (night) {(*i)->ensure_window_lights_vbos();}
 			
@@ -2624,9 +2626,9 @@ public:
 		
 		if (!is_tile) {
 			unsigned const num_everts(building_draw_vbo.num_verts() + building_draw_windows.num_verts() + building_draw_wind_lights.num_verts());
-			unsigned const num_etris(building_draw_vbo.num_tris() + building_draw_windows.num_tris() + building_draw_wind_lights.num_tris());
+			unsigned const num_etris( building_draw_vbo.num_tris () + building_draw_windows.num_tris () + building_draw_wind_lights.num_tris ());
 			unsigned const num_iverts(building_draw_interior.num_verts() + building_draw_int_ext_walls.num_verts());
-			unsigned const num_itris(building_draw_interior.num_tris() + building_draw_int_ext_walls.num_tris());
+			unsigned const num_itris( building_draw_interior.num_tris () + building_draw_int_ext_walls.num_tris ());
 			gpu_mem_usage = (num_everts + num_iverts)*sizeof(vert_norm_comp_tc_color);
 			cout << "Building V: " << num_everts << ", T: " << num_etris << ", interior V: " << num_iverts << ", T: " << num_itris << ", mem: " << gpu_mem_usage << endl;
 		}
