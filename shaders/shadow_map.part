@@ -31,7 +31,8 @@ float calc_shadow_pcf(in sampler2DShadow sm_tex, in vec4 shadow_coord) {
 float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in mat4 matrix, in sampler2DShadow sm_tex, in vec3 lpos) {
 #ifndef NO_SMAP_NORMAL_OFFSET
 #ifdef DYNAMIC_SMAP_BIAS
-	pos.xyz += norm_bias_scale*tan(acos(clamp(dot(normal, normalize(lpos)), 0.05, 1.0)))*z_bias*normal;
+	float v  = clamp(dot(normal, normalize(lpos)), 0.05, 1.0);
+	pos.xyz += norm_bias_scale*(sqrt(1.0 - v*v)/v)*z_bias*normal; // tan(acos(v))
 #else
 	pos.xyz += norm_bias_scale*z_bias*normal;
 	//pos.xyz += norm_bias_scale*z_bias*normalize(fg_ModelViewMatrixInverse[3].xyz - pos.xyz); // world space view vector
