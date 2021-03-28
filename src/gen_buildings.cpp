@@ -2230,7 +2230,7 @@ public:
 				float const door_open_dist(get_door_open_dist());
 				float const ddist_scale((*i)->building_draw_windows.empty() ? 0.05 : 1.0); // if there are no windows, we can wait until the player is very close to draw the interior
 				occlusion_checker_noncity_t oc(**i);
-				if (!reflection_pass) {oc.set_camera(camera_pdu);}
+				bool is_first_tile(1);
 
 				for (auto g = (*i)->grid_by_tile.begin(); g != (*i)->grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 					if (reflection_pass && !g->bcube.contains_pt_xy(camera_xlated)) continue; // not the correct tile
@@ -2246,6 +2246,8 @@ public:
 					(*i)->building_draw_interior.draw_tile(s, (g - (*i)->grid_by_tile.begin()));
 					// iterate over nearby buildings in this tile and draw interior room geom, generating it if needed
 					if (!g->bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far
+					if (is_first_tile && !reflection_pass) {oc.set_camera(camera_pdu);} // setup occlusion culling on the first visible tile
+					is_first_tile = 0;
 					
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
