@@ -195,18 +195,23 @@ bool check_obj_dir_dist(point const &closest_to, vector3d const &in_dir, cube_t 
 	return (dot_product(in_dir, (vis_pt - closest_to).get_norm()) > 0.5); // door is not in the correct direction, skip
 }
 
-bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d const &in_dir) { // called for the player
+bool building_t::toggle_door_state_closest_to(point const &closest_to_in, vector3d const &in_dir_in) { // called for the player
 	if (!interior) return 0; // error?
 	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace());
 	float closest_dist_sq(0.0);
 	unsigned door_ix(0), obj_ix(0);
 	bool is_obj(0);
-
+	vector3d in_dir(in_dir_in);
+	point closest_to(closest_to_in);
+	
+	if (is_rotated()) {
+		do_xy_rotate_normal_inv(in_dir);
+		do_xy_rotate_inv(bcube.get_cube_center(), closest_to);
+	}
 	if (!player_in_closet) { // if the player is in the closet, only the closet door can be opened
 		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 			if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
-			point center(i->get_cube_center());
-			if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
+			point const center(i->get_cube_center());
 			float const dist_sq(p2p_dist_sq(closest_to, center));
 			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq) continue; // not the closest
 			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, dmax)) continue; // door is not in the correct direction or too far away, skip
@@ -235,7 +240,6 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to, vector3d 
 				center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
 			}
 			else {center = i->closest_pt(closest_to);}
-			if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
 			if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
 			float const dist_sq(p2p_dist_sq(closest_to, center));
 			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq)      continue; // not the closest

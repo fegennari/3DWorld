@@ -108,14 +108,15 @@ void do_xy_rotate(float rot_sin, float rot_cos, point const &center, point &pos)
 	pos.x = x*rot_cos - y*rot_sin + center.x;
 	pos.y = y*rot_cos + x*rot_sin + center.y;
 }
+void do_xy_rotate_normal(float rot_sin, float rot_cos, point &pos) { // point rotate without the translate
+	float const x(pos.x), y(pos.y);
+	pos.x = x*rot_cos - y*rot_sin;
+	pos.y = y*rot_cos + x*rot_sin;
+}
 void building_geom_t::do_xy_rotate    (point const &center, point &pos) const {::do_xy_rotate( rot_sin, rot_cos, center, pos);}
 void building_geom_t::do_xy_rotate_inv(point const &center, point &pos) const {::do_xy_rotate(-rot_sin, rot_cos, center, pos);}
-
-void building_geom_t::do_xy_rotate_normal(point &n) const { // point rotate without the translate
-	float const x(n.x), y(n.y);
-	n.x = x*rot_cos - y*rot_sin;
-	n.y = y*rot_cos + x*rot_sin;
-}
+void building_geom_t::do_xy_rotate_normal    (point &n) const {::do_xy_rotate_normal( rot_sin, rot_cos, n);}
+void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_normal(-rot_sin, rot_cos, n);}
 
 
 class building_texture_mgr_t {
@@ -712,7 +713,8 @@ public:
 		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0, bool invert_normals=0, cube_t const *const clamp_cube=nullptr)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
-		point const center(!bg.is_rotated() ? all_zeros : bg.bcube.get_cube_center()); // rotate about bounding cube / building center
+		bool const is_rotated(bg.is_rotated());
+		point const center(!is_rotated ? all_zeros : bg.bcube.get_cube_center()); // rotate about bounding cube / building center
 		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 
 		if (bg.num_sides != 4) { // not a cube, use cylinder
@@ -740,7 +742,7 @@ public:
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3), d((i+1)%3), st(i&1); // n = dim of normal, i/d = other dims
 			if (!(dim_mask & (1<<n))) continue; // check for enabled dims
-			bool const do_xy_clip(clip_windows && n < 2 && !bg.is_rotated()), clip_d(d != 2); // clip the non-z dim;
+			bool const do_xy_clip(clip_windows && n < 2 && !is_rotated), clip_d(d != 2); // clip the non-z dim;
 
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (skip_bottom && n == 2 && j == 0) continue; // skip bottom side
@@ -854,7 +856,7 @@ public:
 						clip_low_high_tc(verts[ix+1].t[ st], verts[ix+2].t[ st]);
 						// Note: if we're drawing windows, and either of the texture coords have zero ranges, we can drop this quad; but this is uncommon and maybe not worth the trouble
 					}
-					if (clamp_cube != nullptr && *clamp_cube != cube && n < 2) { // x/y dims only
+					if (clamp_cube != nullptr && *clamp_cube != cube && n < 2 && !is_rotated) { // x/y dims only; can't apply to rotated building
 						unsigned const dim((i == 2) ? d : i); // x/y
 						unsigned const sec_vix(ix + (st ? 1 : 3)); // opposite vertex in this dim
 						float const delta_tc(verts[sec_vix].t[0]   - verts[ix].t[0]  );
@@ -1233,13 +1235,19 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 // explicit template specialization
 template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;
 
-void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt) const {
+void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt_in) const {
 
 	if (!is_valid()) return; // invalid building
+	point only_cont_pt;
+
+	if (only_cont_pt_in) {
+		only_cont_pt = *only_cont_pt_in;
+		maybe_inv_rotate_point(only_cont_pt);
+	}
 	building_mat_t const &mat(get_material());
 
 	if (!global_building_params.windows_enabled() || (lights_pass ? !mat.add_wind_lights : !mat.add_windows)) { // no windows for this material
-		if (only_cont_pt != nullptr) {cut_holes_for_ext_doors(bdraw, *only_cont_pt, 0xFFFF);} // still need to draw holes for doors
+		if (only_cont_pt_in) {cut_holes_for_ext_doors(bdraw, only_cont_pt, 0xFFFF);} // still need to draw holes for doors
 		return;
 	}
 	int const window_tid(building_texture_mgr.get_window_tid());
@@ -1259,29 +1267,29 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	bool room_with_stairs(0);
 	cube_t cont_part; // part containing the point
 
-	if (only_cont_pt != nullptr) {
-		cont_part = get_part_containing_pt(*only_cont_pt);
-		room_with_stairs = room_containing_pt_has_stairs(*only_cont_pt);
+	if (only_cont_pt_in) {
+		cont_part = get_part_containing_pt(only_cont_pt);
+		room_with_stairs = room_containing_pt_has_stairs(only_cont_pt);
 	}
 	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
 		if (is_basement(i)) continue; // skip the basement
 		cube_t draw_part;
 		cube_t const *clamp_cube(nullptr);
 
-		if (only_cont_pt != nullptr && !i->contains_pt(*only_cont_pt)) { // not the part containing the point
+		if (only_cont_pt_in && !i->contains_pt(only_cont_pt)) { // not the part containing the point
 			if (room_with_stairs && are_parts_stacked(*i, cont_part)) { // windows may be visible through stairs in rooms with stacked parts
 				draw_part = cont_part;
 				draw_part.intersect_with_cube_xy(*i);
 				clamp_cube = &draw_part;
 			}
 			else {
-				if (i->z2() < only_cont_pt->z || i->z1() > only_cont_pt->z) continue; // z-range not contained, skip
+				if (i->z2() < only_cont_pt.z || i->z1() > only_cont_pt.z) continue; // z-range not contained, skip
 				bool skip(0);
 
 				for (unsigned d = 0; d < 2; ++d) {
 					if (i->d[ d][0] != cont_part.d[ d][1] && i->d[ d][1] != cont_part.d[ d][0]) continue; // not adj in dim d
 					if (i->d[!d][0] >= cont_part.d[!d][1] || i->d[!d][1] <= cont_part.d[!d][0]) continue; // no overlap in dim !d
-					if (i->d[!d][1] < (*only_cont_pt)[!d] || i->d[!d][0] > (*only_cont_pt)[!d]) {skip = 1; break;} // other dim range not contained, skip
+					if (i->d[!d][1] < only_cont_pt[!d] || i->d[!d][0] > only_cont_pt[!d]) {skip = 1; break;} // other dim range not contained, skip
 					draw_part = *i; // deep copy
 					max_eq(draw_part.d[!d][0], cont_part.d[!d][0]); // clamp to contained part in dim !d
 					min_eq(draw_part.d[!d][1], cont_part.d[!d][1]);
@@ -1339,8 +1347,8 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 			} // for dir
 		} // for dim
 	} // for i
-	if (only_cont_pt != nullptr) { // camera inside this building, cut out holes so that the exterior doors show through
-		cut_holes_for_ext_doors(bdraw, *only_cont_pt, draw_parts_mask);
+	if (only_cont_pt_in) { // camera inside this building, cut out holes so that the exterior doors show through
+		cut_holes_for_ext_doors(bdraw, only_cont_pt, draw_parts_mask);
 	}
 }
 
@@ -1398,9 +1406,10 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	return 1;
 }
 
-void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt, bool make_all_front) const {
-
+void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, building_draw_t &bdraw_back, point const &only_cont_pt_in, bool make_all_front) const {
 	if (!is_valid()) return; // invalid building
+	point only_cont_pt(only_cont_pt_in);
+	maybe_inv_rotate_point(only_cont_pt);
 	building_mat_t const &mat(get_material());
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	

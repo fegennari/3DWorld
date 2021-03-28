@@ -641,11 +641,11 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d 
 // Note: if xy_radius == 0.0, this is a point test; otherwise, it's an approximate vertical cylinder test
 bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const {
 
-	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection
+	if (xy_radius == 0.0 && !bcube.contains_pt(pos)) return 0; // no intersection (bcube does not need to be rotated)
 	point pr(pos);
-	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), pr);} // inverse rotate - negate the sine term
+	maybe_inv_rotate_point(pr);
 
-	for (auto i = parts.begin(); i != parts.end(); ++i) {
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 		if (pr.z > i->z2() || pr.z < i->z1()) continue; // no overlap in z
 
 		if (use_cylinder_coll()) { // vertical cylinder
