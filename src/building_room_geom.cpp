@@ -1335,8 +1335,8 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	// add the label
 	// Note: we could add a bottom sphere to make it a capsule, then translate below the surface in -z to flatten the bottom
 	bool const is_coke((c.obj_id % NUM_BOTTLE_COLORS) == 1);
-	body.expand_in_dim(dim1, 0.02*radius); // expand slightly in radius
-	body.expand_in_dim(dim2, 0.02*radius); // expand slightly in radius
+	body.expand_in_dim(dim1, 0.03*radius); // expand slightly in radius
+	body.expand_in_dim(dim2, 0.03*radius); // expand slightly in radius
 	body.d[dim][c.dir] += dir_sign*0.24*length; body.d[dim][!c.dir] -= dir_sign*0.12*length; // shrink in length
 	rgeom_mat_t &label_mat(get_material((is_coke ? tid_nm_pair_t(get_texture_by_name("interiors/coke_label.jpg")) : tid_nm_pair_t()), 0, 0, 1));
 	label_mat.add_ortho_cylin_to_verts(body, apply_light_color(c, WHITE), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv); // white label
