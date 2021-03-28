@@ -2002,11 +2002,11 @@ public:
 
 		for (unsigned i = 0; i < buildings.size(); ++i) {
 			building_t const &b(buildings[i]);
-			if (!b.interior) continue;
+			if (!b.interior || b.is_rotated()) continue; // skip rotated buildings because AI logic doesn't work in them
 			unsigned const num_add(b.is_house ? 1 : 2); // two chances for office building compared to house (could vary by size/num_floors as well)
 			for (unsigned n = 0; n < num_add; ++n) {cand_buildings.emplace_back(i, b.is_house);}
 		}
-		if (cand_buildings.empty()) return 0; // no interiors
+		if (cand_buildings.empty()) return 0; // no interiors, or all buildings rotated
 		locs.reserve(num);
 		rand_gen_t rgen2; // Note: we could also use our rgen member variable
 		unsigned tries(0);
