@@ -2226,7 +2226,7 @@ int main(int argc, char** argv) {
 	glutInitWindowSize(window_width, window_height);
 
 	if (init_core_context) {
-		glutInitContextVersion(4, 2);
+		glutInitContextVersion(4, 3);
 		glutInitContextFlags(GLUT_CORE_PROFILE
 #if _DEBUG
 			| GLUT_DEBUG
