@@ -413,7 +413,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		}
 		else if (tquad.type == tquad_with_ix_t::TYPE_TRIM) {} // untextured - no tex coords
 		else {assert(0);}
-		if (do_rotate) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);}
+		if (do_rotate) {bg.do_xy_rotate(center, vert.v);}
 		verts.push_back(vert);
 	} // for i
 }
@@ -426,7 +426,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 	vert.t[0] += tex.txoff; \
 	vert.t[1] += tex.tyoff; \
 	if (apply_ao) {vert.copy_color(cw[pt.z > 0.5]);} \
-	if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, center, vert.v);} \
+	if (bg.is_rotated()) {bg.do_xy_rotate(center, vert.v);} \
 	verts.push_back(vert);
 
 #define EMIT_VERTEX_SIMPLE() \
@@ -657,7 +657,7 @@ public:
 						vert.set_norm(normal.get_norm());
 					}
 					vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), 0.0);
-					if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, vert.v);}
+					if (bg.is_rotated()) {bg.do_xy_rotate(rot_center, vert.v);}
 
 					for (unsigned e = 0; e < 2; ++e) {
 						vert.v.z = ((d^e) ? z_top : pos.z);
@@ -680,7 +680,7 @@ public:
 				center.t[0] = center.t[1] = 0.0; // center of texture space for this disk
 				center.v = pos;
 				if (d) {center.v.z += height;}
-				if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, center.v);}
+				if (bg.is_rotated()) {bg.do_xy_rotate(rot_center, center.v);}
 				unsigned const start(tri_verts.size());
 
 				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data triangles
@@ -691,7 +691,7 @@ public:
 						vector3d const &n(normals[(S+e)%ndiv]);
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), center.v.z);
 						vert.t[0] = tscale_x*n[0]; vert.t[1] = tscale_y*n[1];
-						if (bg.is_rotated()) {do_xy_rotate(bg.rot_sin, bg.rot_cos, rot_center, vert.v);}
+						if (bg.is_rotated()) {bg.do_xy_rotate(rot_center, vert.v);}
 						tri_verts.push_back(vert);
 					}
 				} // for S
