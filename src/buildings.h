@@ -104,6 +104,7 @@ struct tid_nm_pair_t { // size=28
 	int get_nm_tid() const {return ((nm_tid < 0) ? FLAT_NMAP_TEX : nm_tid);}
 	colorRGBA get_avg_color() const {return texture_color(tid);}
 	tid_nm_pair_t get_scaled_version(float scale) const;
+	bool bind_reflection_shader() const;
 	void set_gl(shader_t &s) const;
 	void unset_gl(shader_t &s) const;
 	void toggle_transparent_windows_mode();

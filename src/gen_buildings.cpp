@@ -25,7 +25,6 @@ float const BASEMENT_ENTRANCE_SCALE = 0.33;
 bool camera_in_building(0), player_in_basement(0), interior_shadow_maps(0);
 int player_in_closet(0); // 0=not in closet, 1=in open closet, 2=in closed closet with light off, 3=in closet closet with light on
 building_params_t global_building_params;
-shader_t reflection_shader;
 building_t const *player_building(nullptr);
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, toggle_door_open_state;
@@ -36,6 +35,7 @@ extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks, FAR_CLIP;
 extern point sun_pos, pre_smap_player_pos;
 extern vector<light_source> dl_sources;
 extern tree_placer_t tree_placer;
+extern shader_t reflection_shader;
 
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
@@ -51,21 +51,8 @@ tid_nm_pair_t tid_nm_pair_t::get_scaled_version(float scale) const {
 void tid_nm_pair_t::set_gl(shader_t &s) const {
 	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();}
 	else if (tid == REFLECTION_TEXTURE_ID) {
-		if (room_mirror_ref_tid == 0) {select_texture(WHITE_TEX);}
-		else { // use a custom shader that uses screen coordinates to clip the texture to the mirror bounds; inefficient (wastes texels), but simple
-			bind_2d_texture(room_mirror_ref_tid);
-
-			if (reflection_shader.is_setup()) {reflection_shader.make_current();}
-			else {
-				reflection_shader.set_vert_shader("mirror_reflection");
-				reflection_shader.set_frag_shader("mirror_reflection");
-				reflection_shader.begin_shader();
-				reflection_shader.add_uniform_int("reflection_tex", 0);
-			}
-			return;
-		}
-	}
-	else {select_texture(tid);}
+		if (bind_reflection_shader()) return;
+	} else {select_texture(tid);}
 	select_multitex(get_nm_tid(), 5);
 	bool const no_normal_map(get_nm_tid() == FLAT_NMAP_TEX);
 	
@@ -77,10 +64,7 @@ void tid_nm_pair_t::set_gl(shader_t &s) const {
 	if (spec_mag > 0  ) {s.set_specular(spec_mag/255.0, shininess);}
 }
 void tid_nm_pair_t::unset_gl(shader_t &s) const {
-	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {
-		s.make_current();
-		return;
-	}
+	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {s.make_current(); return;}
 	if (emissive > 0.0) {s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
 	if (spec_mag > 0  ) {s.clear_specular();}
 }
@@ -277,7 +261,7 @@ struct building_lights_manager_t : public city_lights_manager_t {
 		finalize_lights(dl_sources);
 	}
 	virtual bool enable_lights() const {return ((draw_building_interiors && ADD_ROOM_LIGHTS) || flashlight_on);}
-}; // city_gen_t
+};
 
 building_lights_manager_t building_lights_manager;
 

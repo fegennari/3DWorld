@@ -8,6 +8,7 @@
 bool disable_city_shadow_maps(0);
 unsigned room_mirror_ref_tid(0);
 room_object_t cur_room_mirror;
+shader_t reflection_shader;
 
 extern int display_mode, window_width, window_height;
 extern float CAMERA_RADIUS;
@@ -152,5 +153,20 @@ bool building_t::find_mirror_needing_reflection(vector3d const &xlate) const {
 		}
 	} // for h
 	return 0; // not found
+}
+
+bool tid_nm_pair_t::bind_reflection_shader() const {
+	if (room_mirror_ref_tid == 0) {select_texture(WHITE_TEX); return 0;}
+	// use a custom shader that uses screen coordinates to clip the texture to the mirror bounds; inefficient (wastes texels), but simple
+	bind_2d_texture(room_mirror_ref_tid);
+
+	if (reflection_shader.is_setup()) {reflection_shader.make_current();}
+	else { // setup reflection_shader
+		reflection_shader.set_vert_shader("mirror_reflection");
+		reflection_shader.set_frag_shader("mirror_reflection");
+		reflection_shader.begin_shader();
+		reflection_shader.add_uniform_int("reflection_tex", 0);
+	}
+	return 1;
 }
 
