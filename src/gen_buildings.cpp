@@ -3136,7 +3136,7 @@ void gen_buildings() {
 	if (world_mode == WMODE_INF_TERRAIN && have_cities()) {
 		building_creator_city.gen(global_building_params, 1, 0, 0, 1); // city buildings
 		global_building_params.restore_prev_pos_range(); // hack to undo clip to city bounds to allow buildings to extend further out
-		building_creator.gen     (global_building_params, 0, 1, 0, 1); // non-city secondary buildings
+		if (global_building_params.add_secondary_buildings) {building_creator.gen(global_building_params, 0, 1, 0, 1);} // non-city secondary buildings
 	} else {building_creator.gen (global_building_params, 0, 0, 0, 1);} // mixed buildings
 }
 void draw_buildings(int shadow_only, int reflection_pass, vector3d const &xlate) {
