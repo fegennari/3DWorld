@@ -836,7 +836,7 @@ bool has_nearby_sound(pedestrian_t const &person, float floor_spacing) {
 }
 
 bool building_t::same_room_and_floor_as_player(building_ai_state_t const &state, pedestrian_t const &person) const {
-	return (cur_player_building_loc.room_ix == (int)state.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z));
+	return (cur_player_building_loc.room_ix == state.cur_room && cur_player_building_loc.floor_ix == get_floor_for_zval(person.pos.z));
 }
 bool building_t::is_player_visible(building_ai_state_t const &state, pedestrian_t const &person, unsigned vis_test) const {
 	if (vis_test == 0) return 1; // no visibility test
@@ -1059,8 +1059,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 
 	if (player_in_this_building && !person.on_stairs() && state.cur_room >= 0) { // movement in XY, not on stairs, room is valid: snap to nearest floor
 		// this is optional and is done just in case something went wrong
-		assert(state.cur_room < interior->rooms.size());
-		room_t const &room(interior->rooms[state.cur_room]);
+		room_t const &room(get_room(state.cur_room));
 		float const floor_spacing(get_window_vspace());
 		int cur_floor(max(0, round_fp((new_pos.z - min_valid_zval)/floor_spacing)));
 		min_eq(cur_floor, (round_fp((room.z2() - bcube.z1())/floor_spacing) - 1)); // clip to the valid floors for this room relative to lowest building floor
@@ -1084,22 +1083,20 @@ void building_t::ai_room_lights_update(building_ai_state_t const &state, pedestr
 	if ((frame_counter + person_ix) & 7) return; // update room info only every 8 frames
 	int const room_ix(get_room_containing_pt(person.pos));
 	if (room_ix < 0) return; // room is not valid (between rooms, etc.)
-	room_t const &cur_room(get_room(room_ix));
-	set_room_light_state_to(cur_room, person.pos.z, 1); // make sure current room light is on
-	if ((unsigned)room_ix == state.cur_room) return; // same room as last time - done
-	assert(state.cur_room < interior->rooms.size());
+	set_room_light_state_to(get_room(room_ix), person.pos.z, 1); // make sure current room light is on
+	if (room_ix == state.cur_room) return; // same room as last time - done
 	bool other_person_in_room(0);
 
 	// check for other people in the room before turning the lights off on them
 	for (unsigned i = person_ix; i-- ;) { // look behind
 		pedestrian_t const &p(people[i]);
 		if (p.dest_bldg != person.dest_bldg) break; // done with this building
-		if (get_room_containing_pt(p.pos) == (int)state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
+		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
 	for (unsigned i = person_ix+1; i < people.size() && !other_person_in_room; ++i) { // look ahead
 		pedestrian_t const &p(people[i]);
 		if (p.dest_bldg != person.dest_bldg) break; // done with this building
-		if (get_room_containing_pt(p.pos) == (int)state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
+		if (get_room_containing_pt(p.pos) == state.cur_room && fabs(person.pos.z - p.pos.z) < get_window_vspace()) {other_person_in_room = 1; break;}
 	}
 	if (!other_person_in_room) {set_room_light_state_to(get_room(state.cur_room), person.pos.z, 0);} // make sure old room light is off
 }
