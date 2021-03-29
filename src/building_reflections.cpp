@@ -100,7 +100,8 @@ bool building_t::is_cube_face_visible_from_pt(cube_t const &c, point const &p, u
 
 bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const {
 	assert(interior);
-	point const camera_bs(camera_pdu.pos - xlate);
+	point camera_bs(camera_pdu.pos - xlate);
+	maybe_inv_rotate_point(camera_bs); // rotate camera pos into building space
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	float const camera_z1(camera_bs.z - CAMERA_RADIUS), camera_z2(camera_bs.z + CAMERA_RADIUS);

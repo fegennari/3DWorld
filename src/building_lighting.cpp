@@ -538,6 +538,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness);
 	assert(interior->room_geom->stairs_start <= objs.size());
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	point camera_rot(camera_bs);
+	maybe_inv_rotate_point(camera_rot); // rotate camera pos into building space
 	unsigned camera_part(parts.size()); // start at an invalid value
 	bool camera_by_stairs(0), camera_on_stairs(0), camera_in_hallway(0), camera_near_building(camera_in_building);
 	int camera_room(-1);
@@ -546,28 +548,28 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 
 	if (camera_in_building) {
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
-			if (i->contains_pt(camera_bs)) {camera_part = (i - parts.begin()); break;}
+			if (i->contains_pt(camera_rot)) {camera_part = (i - parts.begin()); break;}
 		}
-		int const room_ix(get_room_containing_pt(camera_bs));
+		int const room_ix(get_room_containing_pt(camera_rot));
 
 		if (room_ix >= 0) { // Note: stairs connecting stacked parts aren't flagged with has_stairs because stairs only connect to the bottom floor, but they're partially handled below
 			room_t const &room(get_room(room_ix));
-			unsigned const cur_floor(max(0.0f, (camera_bs.z - room.z1()))/window_vspacing);
+			unsigned const cur_floor(max(0.0f, (camera_rot.z - room.z1()))/window_vspacing);
 			camera_room       = room_ix;
 			camera_by_stairs  = room.has_stairs;
 			camera_in_hallway = room.is_hallway;
 			unsigned const room_type(room.get_room_type(cur_floor));
 			assert(room_type < NUM_RTYPES);
 			if (display_mode & 0x20) {lighting_update_text = room_names[room_type];} // debugging, key '6'
-			register_player_in_building(camera_bs, building_id); // required for AI following logic
+			register_player_in_building(camera_rot, building_id); // required for AI following logic
 
 			if (camera_by_stairs) {
 				for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
-					if (i->contains_pt(camera_bs)) {camera_on_stairs = 1; break;}
+					if (i->contains_pt(camera_rot)) {camera_on_stairs = 1; break;}
 				}
 			}
 		}
-		//lighting_update_text = ((is_sphere_lit(camera_bs, get_scaled_player_radius()) || is_sphere_lit((camera_bs - vector3d(0.0, 0.0, camera_zh)), get_scaled_player_radius())) ? "Lit" : "Unlit");
+		//lighting_update_text = ((is_sphere_lit(camera_rot, get_scaled_player_radius()) || is_sphere_lit((camera_rot - vector3d(0.0, 0.0, camera_zh)), get_scaled_player_radius())) ? "Lit" : "Unlit");
 	}
 	else {
 		cube_t bcube_exp(bcube);
@@ -615,7 +617,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (floor_is_above || floor_is_below) { // light is on a different floor from the camera
 			if (camera_in_building && (room.part_id == camera_part ||
-				(room.contains_pt_xy(camera_bs) && camera_z < ceil_z+window_vspacing && camera_z > floor_z-window_vspacing)))
+				(room.contains_pt_xy(camera_rot) && camera_z < ceil_z+window_vspacing && camera_z > floor_z-window_vspacing)))
 			{
 				// player is on a different floor of the same building part, or more than one floor away in a part stack, and can't see a light from the floor above/below
 				if (!stairs_light) continue; // camera in building and on wrong floor, don't add light
@@ -630,16 +632,19 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					assert(camera_part < parts.size());
 					cube_t const &cpart(parts[camera_part]);
 					if (cpart.z2() <= room.z1() || cpart.z1() >= room.z2()) continue; // light in a different vertical stack than the camera
-					// is it better to check if light half sphere is occluded by the floor above/below?
-					cube_t const &part(get_part_for_room(room));
-					bool visible[2] = {0};
 
-					for (unsigned d = 0; d < 2; ++d) { // for each dim
-						bool const dir(camera_bs[d] > lpos_rot[d]);
-						if ((camera_bs[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
-						visible[d] = (room.ext_sides & (1 << (2*d + dir)));
+					if (!is_rotated()) { // check exterior wall visibility; this part doesn't work for rotated buildings
+						// is it better to check if light half sphere is occluded by the floor above/below?
+						cube_t const &part(get_part_for_room(room));
+						bool visible[2] = {0};
+
+						for (unsigned d = 0; d < 2; ++d) { // for each dim
+							bool const dir(camera_bs[d] > lpos_rot[d]);
+							if ((camera_bs[d] > part.d[d][dir]) ^ dir) continue; // camera not on the outside face of the part containing this room, so can't see through any windows
+							visible[d] = (room.ext_sides & (1 << (2*d + dir)));
+						}
+						if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
 					}
-					if (!visible[0] && !visible[1]) continue; // room is not on the exterior of the building on either side facing the camera
 				}
 			}
 		} // end camera on different floor case
@@ -652,7 +657,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		clipped_bc.intersect_with_cube(bcube);
 		if (!stairs_light) {clipped_bc.z1() = floor_z - fc_thick; clipped_bc.z2() = ceil_z + fc_thick;} // clip zval to current floor if light not in a room with stairs or elevator
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
-		//if (line_intersect_walls(lpos, camera_bs)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
+		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		// update lights_bcube and add light(s)
 
 		if (is_lamp) { // lamps are generally against a wall and not in a room with stairs and only illuminate that one room
@@ -705,7 +710,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				dynamic_shadows = 1; // toggling a door state will generally invalidate shadows in the building for that frame
 			}
 			else if (camera_surf_collide && camera_in_building && lpos_rot.z > camera_bs.z && (camera_on_stairs || lpos_rot.z < (camera_bs.z + window_vspacing)) &&
-				clipped_bc.contains_pt(camera_bs) && dist_less_than(lpos_rot, camera_bs, dshadow_radius))
+				clipped_bc.contains_pt(camera_rot) && dist_less_than(lpos_rot, camera_bs, dshadow_radius))
 			{
 				dynamic_shadows = 1; // camera shadow
 			}
