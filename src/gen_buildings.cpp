@@ -782,8 +782,6 @@ public:
 					for (auto p = parts.begin(); (p + bg.has_chimney) != parts.end(); ++p) {
 						if (p->contains_cube(cube)) continue; // skip ourself (including door part)
 						if (cube.d[d][1] <= p->d[d][0] || cube.d[d][0] >= p->d[d][1] || cube.d[i][1] <= p->d[i][0] || cube.d[i][0] >= p->d[i][1]) continue; // check for overlap in the two quad dims
-						// doesn't apply to windows (partial height walls but not windows)
-						if (!clip_windows && p->z1() > cube.z1()) continue; // opposing cube doesn't cover this cube in Z (floor too high)
 						subtract_cube_from_cubes(*p, faces, nullptr, 1, 1); // no holes, clip_in_z=1, include_adj=1
 					}
 					for (unsigned f = 0; f < faces.size(); ++f) { // convert from cubes to parametric coordinates in [0.0, 1.0] range
