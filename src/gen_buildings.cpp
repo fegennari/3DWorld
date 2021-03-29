@@ -17,8 +17,6 @@ bool const DRAW_WINDOWS_AS_HOLES = 1;
 bool const ADD_ROOM_SHADOWS      = 1;
 bool const ADD_ROOM_LIGHTS       = 1;
 bool const DRAW_EXT_REFLECTIONS  = 1;
-bool const PLAYER_CAN_OPEN_DOORS = 1;
-bool const LINEAR_ROOM_DLIGHT_ATTEN = 1;
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
@@ -293,7 +291,7 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 	bool const have_indir(enable_indir && indir_tex_mgr.enabled() && player_in_closet < 2); // disable indir if the player is in a closed closet
 	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
 	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
-	if (LINEAR_ROOM_DLIGHT_ATTEN) {s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1);} // FS; improves room lighting (better light distribution vs. framerate trade-off)
+	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
 	city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir);
 	set_interior_lighting(s, have_indir);
 	if (have_indir) {indir_tex_mgr.setup_for_building(s);}
@@ -2298,7 +2296,7 @@ public:
 						}
 						// run any player interaction logic here
 						if (toggle_room_light) {b.toggle_room_light(camera_xlated);}
-						if (toggle_door_open_state && PLAYER_CAN_OPEN_DOORS) {b.toggle_door_state_closest_to(camera_xlated, cview_dir);}
+						if (toggle_door_open_state) {b.toggle_door_state_closest_to(camera_xlated, cview_dir);}
 						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2 && camera_surf_collide) {b.update_player_interact_objects(camera_xlated, bi->ix, ped_ix);} // update dynamic objects if the player is in the building
