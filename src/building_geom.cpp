@@ -389,7 +389,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
-			if (!sphere_cube_intersect(pos, xy_radius, *c)) continue; // optimization
+			cube_t c_extended(*c);
+			if (c->type == TYPE_STAIR) {c_extended.z1() -= camera_zh;} // handle the player's head (for stairs), or is pos already at this height?
+			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
 			if (c->type == TYPE_RAILING) { // only collide with railing at top of stairs, not when walking under stairs
 				cylinder_3dw const railing(get_railing_cylinder(*c));
@@ -422,14 +424,9 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 					for (unsigned d = 0; d < 2; ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
 				}
 			}
-			else { // assume it's a cube
-				cube_t c_extended(*c);
-				c_extended.z1() -= camera_zh; // handle the player's head (for stairs), or is pos already at this height?
-				
-				if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm)) { // skip_z=0
-					if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
-					had_coll = 1;
-				}
+			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm)) { // assume it's a cube; skip_z=0
+				if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
+				had_coll = 1;
 			}
 		} // for c
 	}
