@@ -3076,6 +3076,9 @@ public:
 		cout << TXT(num) << TXT(locs.size()) << TXT(tiles.size()) << TXT(tot_buildings) << endl; // TESTING
 		return 1;
 	}
+	void update_ai_state(vector<pedestrian_t> &people, float delta_dir) {
+		assert(0); // not yet implemented; see above code
+	}
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
 		auto it(get_tile_by_pos(pdu.pos));
 		if (it != tiles.end()) {it->second.get_occluders(pdu, state);}
@@ -3234,12 +3237,24 @@ bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, 
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
 bool enable_building_people_ai() {return global_building_params.enable_people_ai;}
 
+unsigned ped_building_type(3); // 0=building_creator, 1=building_creator_city, 2=building_tiles, 3=invalid
+
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num) {
-	if (building_tiles.place_people(locs, radius, speed_mult, num)) return 1; // try building tiles first; if they're empty or placement fails, try secondary buildings
-	//if (building_creator_city.place_people(locs, radius, speed_mult, num)) return 1; // don't place people in city buildings for now; they're already on the city sidewalks
-	return building_creator.place_people(locs, radius, speed_mult, num); // regular/secondary buildings
+	// the current system only supports people in one type of building creator;
+	// try building tiles first; if they're empty or placement fails, try secondary buildings; if that fails, try city buildings
+	if (building_tiles       .place_people(locs, radius, speed_mult, num)) {ped_building_type = 2; return 1;}
+	if (building_creator     .place_people(locs, radius, speed_mult, num)) {ped_building_type = 0; return 1;} // regular/secondary buildings
+	if (building_creator_city.place_people(locs, radius, speed_mult, num)) {ped_building_type = 1; return 1;} // city buildings
+	return 0; // can't place people
 }
-void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir) {building_creator.update_ai_state(people, delta_dir);}
+void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir) {
+	switch (ped_building_type) {
+	case 0: building_creator     .update_ai_state(people, delta_dir); break;
+	case 1: building_creator_city.update_ai_state(people, delta_dir); break;
+	case 2: building_tiles       .update_ai_state(people, delta_dir); break;
+	default: assert(0); // invalid building type - this function should not be called if place_building_people() returned 0
+	}
+}
 
 void get_all_garages(vect_cube_t &garages) {
 	building_creator.get_all_garages(garages);
