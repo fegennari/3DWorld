@@ -593,7 +593,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			unsigned const NUM_COLORS = 6;
 			colorRGBA const colors[NUM_COLORS] = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
 			unsigned flags(RO_FLAG_NOCOLL); // no collisions, as an optimization since the player and AI can't get onto the dresser/nightstand anyway
-			if (!room_is_lit && rgen.rand_bool()) {flags |= RO_FLAG_LIT;} // 50% chance of being lit if the room is dark
+			if (rgen.rand_bool() && !room_is_lit) {flags |= RO_FLAG_LIT;} // 50% chance of being lit if the room is dark (Note: don't let room_is_lit affect rgen)
 			objs.emplace_back(lamp, TYPE_LAMP, room_id, obj.dim, obj.dir, flags, tot_light_amt, SHAPE_CYLIN, colors[rgen.rand()%NUM_COLORS]); // Note: invalidates obj ref
 		}
 	}
@@ -1689,6 +1689,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	if (interior->room_geom) return; // already generated?
 	setup_bldg_obj_types(); // initialize object types if not already done
 	//highres_timer_t timer("Gen Room Details");
+	vect_cube_t empty_cubes;
+	// Note: people move from room to room, so using their current positions for room object generation is both nondeterministic and unnecessary
+	vect_cube_t const &blockers(empty_cubes); // or ped_bcubes
 	interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
@@ -1804,7 +1807,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				light.z1() = light.z2() - (light_int_door ? 0.01 : 1.0)*light_thick; // if light intersects door, move it up into the ceiling rather than letting it hang down into the room
 				is_lit = (r->is_hallway || ((rgen.rand() & (top_of_stairs ? 3 : 1)) != 0)); // 50% of lights are on, 75% for top of stairs, 100% for hallways
 
-				// check ped_bcubes and set is_lit if any are people are in this floor of this room
+				// check ped_bcubes and set is_lit if any people are in this floor of this room
 				for (auto p = ped_bcubes.begin(); p != ped_bcubes.end() && !is_lit; ++p) {
 					if (!p->intersects_xy(*r)) continue; // person not in this room
 					if (p->z2() < light.z1() && p->z1() + floor_height > light.z2()) {is_lit = 1;} // on this floor
@@ -1906,7 +1909,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
 				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
-					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, ped_bcubes, room_center.z, room_id, tot_light_amt, objs_start, is_lit, light_ix_assign);
+					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, blockers, room_center.z, room_id, tot_light_amt, objs_start, is_lit, light_ix_assign);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
@@ -1922,7 +1925,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (!added_obj && rgen.rand_float() < (is_basement ? 0.4 : (r->is_office ? 0.6 : (is_house ? 0.95 : 0.5)))) {
 				// place a table and maybe some chairs near the center of the room if it's not a hallway;
 				// 60% of the time for offices, 95% of the time for houses, and 50% for other buildings
-				unsigned const num_tcs(add_table_and_chairs(rgen, *r, ped_bcubes, room_id, room_center, chair_color, 0.1, tot_light_amt));
+				unsigned const num_tcs(add_table_and_chairs(rgen, *r, blockers, room_id, room_center, chair_color, 0.1, tot_light_amt));
 				if (num_tcs > 0) {added_tc = added_obj = can_place_onto = 1; num_chairs = num_tcs - 1;}
 				// on ground floor, try to make this a kitchen; not all houses will have a kitchen with this logic - maybe we need fewer bedrooms?
 				if (added_tc && !(added_kitchen_mask & floor_mask) && (!is_house || f == 0) && !is_basement) { // office buildings can also have kitchens, even on non-ground floors
@@ -1936,7 +1939,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (added_obj) {r->assign_to(RTYPE_STORAGE, f);}
 			}
 			if (!added_obj && (!is_basement || rgen.rand_bool())) { // try to place a desk if there's no table, bed, etc.
-				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, ped_bcubes, chair_color, room_center.z, room_id, tot_light_amt, is_basement);
+				added_obj = can_place_onto = added_desk = add_desk_to_room(rgen, *r, blockers, chair_color, room_center.z, room_id, tot_light_amt, is_basement);
 				if (added_obj && !r->has_stairs) {r->assign_to((is_house ? (room_type)RTYPE_STUDY : (room_type)RTYPE_OFFICE), f);} // or other room type - may be overwritten below
 			}
 			if (is_house && (added_tc || added_desk) && !is_kitchen && f == 0) { // don't add second living room unless we added a kitchen and have enough rooms
