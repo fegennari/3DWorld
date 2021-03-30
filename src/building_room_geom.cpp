@@ -330,6 +330,9 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 		rotate_verts(quad_verts, building);
 		rotate_verts(itri_verts, building);
 	}
+	create_vbo_no_rotate();
+}
+void rgeom_mat_t::create_vbo_no_rotate() {
 	assert(itri_verts.empty() == indices.empty());
 	num_qverts  = quad_verts.size();
 	num_itverts = itri_verts.size();
@@ -2535,10 +2538,12 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 /*static*/ void building_room_geom_t::draw_lg_ball_in_building(room_object_t const &c, shader_t &s) {
 	float const angle(atan2(cview_dir.y, cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
 	xform_matrix rot_matrix(get_rotation_matrix(plus_z, angle));
+	// Note: since we're using indexed triangles now, we can't simply call draw_quad_verts_as_tris(); instead we create temp VBO/IBO; not the most efficient solution, but it should work
 	rgeom_mat_t mat(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0));
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, &rot_matrix); // low_detail=0
-	mat.tex.set_gl(s);
-	draw_quad_verts_as_tris(mat.quad_verts);
+	mat.create_vbo_no_rotate();
+	mat.draw(s, 0, 0);
+	mat.clear();
 }
 
 void building_room_geom_t::clear() {
