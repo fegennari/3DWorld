@@ -1535,7 +1535,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 	door.pts[0][!dim] = door.pts[3][!dim] = c.d[!dim][ dir]; //  dir side
 	door.pts[1][!dim] = door.pts[2][!dim] = c.d[!dim][!dir]; // !dir side
 	door.pts[0][ dim] = door.pts[1][ dim] = door.pts[2][dim] = door.pts[3][dim] = pos;
-	if (dim == 0) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap two corner points to flip windowing dir and invert normal for doors oriented in X
+	if (dim == 0) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap two corner points to flip winding dir and invert normal for doors oriented in X
 
 	if (opened) { // rotate 90 degrees about pts[0]/pts[3] - change pts[1]/pts[2]
 		if (opens_up) { // rotates inward and upward
