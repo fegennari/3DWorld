@@ -468,7 +468,15 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			float const cradius(c->get_radius());
 			point const center(c->get_cube_center());
 			cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, c->z2()), cradius, cradius);
-			had_coll |= sphere_vert_cylin_intersect(pos, radius, cylin, cnorm);
+
+			if (c->type == TYPE_TABLE) {
+				cylinder_3dw top(cylin), base(cylin);
+				top.p1.z  = base.p2.z = c->z2() - 0.12*c->dz(); // top shifted down by 0.12
+				base.r1  *= 0.4; base.r2 *= 0.4; // vertical support has radius 0.08, legs have radius of 0.6, so use something in between
+				// FIXME: handle top intersection
+				had_coll |= (sphere_vert_cylin_intersect(pos, radius, top, cnorm) || sphere_vert_cylin_intersect(pos, radius, base, cnorm));
+			}
+			else {had_coll |= sphere_vert_cylin_intersect(pos, radius, cylin, cnorm);}
 		}
 		else if (c->shape == SHAPE_SPHERE) { // sphere
 			point const center(c->get_cube_center());
