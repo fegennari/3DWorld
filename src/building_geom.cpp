@@ -444,17 +444,28 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	return had_coll; // will generally always be true due to floors
 }
 
+// called on basketballs and soccer balls
 bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius, vector<room_object_t>::const_iterator self, vector3d *cnorm) const {
 	bool had_coll(check_sphere_coll_walls_elevators_doors(building, pos, p_last, radius, 0.0, 1, cnorm)); // check_open_doors=1
+	cube_t scube; scube.set_from_sphere(pos, radius);
 
 	if (pos.z < p_last.z) { // check floor collision if falling
-		cube_t scube; scube.set_from_sphere(pos, radius);
 		max_eq(scube.z2(), (p_last.z - radius)); // extend up to touch the bottom of the last position to prevent it from going through the floor in one frame
 
-		for (auto f = floors.begin(); f != floors.end(); ++f) {
-			if (!f->intersects(scube)) continue; // overlap
-			pos.z = f->z2() + radius; // move to just touch the top of the floor
+		for (auto i = floors.begin(); i != floors.end(); ++i) {
+			if (!i->intersects(scube)) continue; // overlap
+			pos.z = i->z2() + radius; // move to just touch the top of the floor
 			if (cnorm) {*cnorm = plus_z;} // collision with top surface of floor
+			had_coll = 1;
+		}
+	}
+	else { // check ceiling collision if rising
+		min_eq(scube.z1(), (p_last.z + radius)); // extend down
+
+		for (auto i = ceilings.begin(); i != ceilings.end(); ++i) {
+			if (!i->intersects(scube)) continue; // overlap
+			pos.z = i->z1() - radius; // move to just touch the top of the ceiling
+			if (cnorm) {*cnorm = -plus_z;} // collision with top surface of ceiling
 			had_coll = 1;
 		}
 	}
