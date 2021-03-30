@@ -17,6 +17,7 @@ extern bldg_obj_type_t bldg_obj_types[];
 
 float get_railing_height(room_object_t const &c);
 cylinder_3dw get_railing_cylinder(room_object_t const &c);
+bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm);
 
 /*static*/ float building_t::get_scaled_player_radius() {return CAMERA_RADIUS*global_building_params.player_coll_radius_scale;}
 
@@ -403,7 +404,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				float const cradius(c->get_radius());
 				point const center(c->get_cube_center());
 				cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, (c->z2() + radius)), cradius, cradius); // extend upward by radius
-				had_coll |= sphere_vert_cylin_intersect(pos, xy_radius, cylin, cnorm);
+				had_coll |= sphere_vert_cylin_intersect_with_ends(pos, xy_radius, cylin, cnorm);
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere
 				point const center(c->get_cube_center());
@@ -473,10 +474,9 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 				cylinder_3dw top(cylin), base(cylin);
 				top.p1.z  = base.p2.z = c->z2() - 0.12*c->dz(); // top shifted down by 0.12
 				base.r1  *= 0.4; base.r2 *= 0.4; // vertical support has radius 0.08, legs have radius of 0.6, so use something in between
-				// FIXME: handle top intersection
-				had_coll |= (sphere_vert_cylin_intersect(pos, radius, top, cnorm) || sphere_vert_cylin_intersect(pos, radius, base, cnorm));
+				had_coll |= (sphere_vert_cylin_intersect_with_ends(pos, radius, top, cnorm) || sphere_vert_cylin_intersect_with_ends(pos, radius, base, cnorm));
 			}
-			else {had_coll |= sphere_vert_cylin_intersect(pos, radius, cylin, cnorm);}
+			else {had_coll |= sphere_vert_cylin_intersect_with_ends(pos, radius, cylin, cnorm);}
 		}
 		else if (c->shape == SHAPE_SPHERE) { // sphere
 			point const center(c->get_cube_center());

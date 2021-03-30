@@ -433,7 +433,7 @@ bool line_sphere_int_closest_pt_t(point const &p1, point const &p2, point const 
 }
 
 
-bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm) {
+bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm) { // Note: checks sides but not ends
 
 	float const rsum(radius + max(c.r1, c.r2));
 	assert(rsum > radius); // cylin not degenerate
@@ -443,6 +443,27 @@ bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const
 	center = point(c.p1.x, c.p1.y, center.z) + normal*(1.001*rsum); // move center out along cylin normal so it doesn't intersect
 	if (cnorm) {*cnorm = normal;}
 	return 1;
+}
+
+bool sphere_vert_cylin_intersect_with_ends(point &center, float radius, cylinder_3dw const &c, vector3d *cnorm) {
+
+	assert(c.r1 == c.r2); // only supports constant radius cylinder
+
+	if (dist_xy_less_than(center, c.p1, c.r1)) { // test ends
+		float const z1(min(c.p1.z, c.p2.z)), z2(max(c.p1.z, c.p2.z)), zc(0.5f*(z1 + z2));
+
+		if (center.z < zc && (center.z + radius) > z1) { // collision with bottom
+			center.z = z1 - radius;
+			if (cnorm) {*cnorm = -plus_z;}
+			return 1;
+		}
+		if (center.z > zc && (center.z - radius) < z2) { // collision with top
+			center.z = z2 + radius;
+			if (cnorm) {*cnorm = plus_z;}
+			return 1;
+		}
+	}
+	return sphere_vert_cylin_intersect(center, radius, c, cnorm); // check the sides
 }
 
 
