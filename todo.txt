@@ -13,4 +13,12 @@ Cities:
 - Larger spacing between office building floors
 - Secondary Building roads
 
-Buildings:
+Building interaction/gameplay ideas:
+* Ball elasticity/bounce depends on objects: less bounce on bed mattresses and couches
+* More throwable/dropable object types
+* Zombies retreat when hit with objects
+* Interactive colored spraypaint that works on walls, ceilings, floors, and pictures
+* Interactive toilet paper that can be unrolled and leaves a trail
+* Sinks have running water
+* Kitchen cabinet doors can be opened
+* Mirrors in the bathroom can be opened
