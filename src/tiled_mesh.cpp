@@ -1977,7 +1977,7 @@ int tile_t::get_tid_under_point(point const &pos) const {
 bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const {
 
 	if (is_distant) return 0; // Note: this can be made to work, but won't work as-is
-	//if (!pine_trees .empty()) {} // TODO: check pine trees with -= dtree_off.get_xlate()
+	//if (!pine_trees .empty()) {} // TODO: check pine  trees with -= dtree_off.get_xlate()
 	//if (!decid_trees.empty()) {} // TODO: check decid trees with -= dtree_off.get_xlate()
 	point v1c(v1), v2c(v2); // clipped verts
 	if (!do_line_clip(v1c, v2c, get_mesh_bcube().d)) return 0;

@@ -390,7 +390,7 @@ void platform::advance_timestep() {
 			// need to update collision structure when there is an x/y delta by removing/adding to coll_cells (except for cubes)
 			bool const update_colls(cobj.type != COLL_CUBE && (delta.x != 0.0 || delta.y != 0.0));
 			cobj.move_cobj(delta, update_colls); // move object
-			// TODO: squish player or stop when hit player?
+			// may crush the player (see vert_coll_detector::check_cobj_intersect()); could also maybe make the platform stop when hitting the player
 			if (destroys) {destroy_coll_objs(cobj.get_center_pt(), 1000.0, NO_SOURCE, IMPACT, cobj.get_bsphere_radius());}
 		}
 		for (vector<unsigned>::const_iterator i = lights.begin(); i != lights.end(); ++i) {
