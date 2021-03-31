@@ -330,9 +330,10 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 		rotate_verts(quad_verts, building);
 		rotate_verts(itri_verts, building);
 	}
-	create_vbo_no_rotate();
+	create_vbo_inner();
+	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be cleared
 }
-void rgeom_mat_t::create_vbo_no_rotate() {
+void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
 	num_qverts  = quad_verts.size();
 	num_itverts = itri_verts.size();
@@ -349,7 +350,6 @@ void rgeom_mat_t::create_vbo_no_rotate() {
 		for (auto i = indices.begin(); i != indices.end(); ++i) {*i += num_qverts;} // shift indices to match the new vertex location
 		create_vbo_and_upload(ivbo, indices, 1, 1);
 	}
-	rgeom_alloc.free(*this); // vertex and index data is no longer needed and can be cleared
 }
 
 void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
@@ -2536,12 +2536,14 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, (c.has_dstate() ? &get_dstate(c).rot_matrix : nullptr)); // low_detail=0
 }
 /*static*/ void building_room_geom_t::draw_lg_ball_in_building(room_object_t const &c, shader_t &s) {
+	//highres_timer_t timer("Draw Ball"); // 0.105ms
 	float const angle(atan2(cview_dir.y, cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
 	xform_matrix rot_matrix(get_rotation_matrix(plus_z, angle));
 	// Note: since we're using indexed triangles now, we can't simply call draw_quad_verts_as_tris(); instead we create temp VBO/IBO; not the most efficient solution, but it should work
-	rgeom_mat_t mat(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0));
+	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO/IBO are recreated every time
+	mat.tex = tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0);
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, &rot_matrix); // low_detail=0
-	mat.create_vbo_no_rotate();
+	mat.create_vbo_inner();
 	mat.draw(s, 0, 0);
 	mat.clear();
 }

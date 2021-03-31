@@ -414,7 +414,7 @@ public:
 	void add_disk_to_verts(point const &pos, float radius, bool normal_z_neg, colorRGBA const &color);
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, vector3d const &skip_hemi_dir=zero_vector, xform_matrix const *const matrix=nullptr);
 	void create_vbo(building_t const &building);
-	void create_vbo_no_rotate();
+	void create_vbo_inner();
 	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
 };
 
