@@ -2015,7 +2015,6 @@ public:
 
 	// called once per frame
 	void update_ai_state(vector<pedestrian_t> &people, float delta_dir) { // returns the new pos of each person; dir/orient can be determined from the delta
-		if (!global_building_params.enable_people_ai || !draw_building_interiors || !animate2) return;
 		buildings.ai_room_update(ai_state, people, delta_dir, ai_rgen);
 	}
 
@@ -3208,13 +3207,15 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
 cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bcube();}
-// used for pedestrians
+// used for pedestrians in cities
 cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}
-cube_t get_sec_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);}
 bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator_city.check_line_coll_building(p1, p2, building_id);}
 int get_building_bcube_contains_pos(point const &pos) {return building_creator_city.get_building_bcube_contains_pos(pos);}
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id) {return building_creator_city.check_ped_coll(pos, radius, plot_id, building_id);}
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id) {return building_creator_city.select_building_in_plot(plot_id, rand_val, building_id);}
+
+// used for people in buildings
+cube_t get_sec_building_bcube(unsigned building_id) {return building_creator.get_building_bcube(building_id);} // unused
 bool enable_building_people_ai() {return global_building_params.enable_people_ai;}
 
 unsigned ped_building_type(3); // 0=building_creator, 1=building_creator_city, 2=building_tiles, 3=invalid
@@ -3228,6 +3229,7 @@ bool place_building_people(vect_building_place_t &locs, float radius, float spee
 	return 0; // can't place people
 }
 void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir) {
+	if (!global_building_params.enable_people_ai || !draw_building_interiors || !animate2) return;
 	switch (ped_building_type) {
 	case 0: building_creator     .update_ai_state(people, delta_dir); break;
 	case 1: building_creator_city.update_ai_state(people, delta_dir); break;

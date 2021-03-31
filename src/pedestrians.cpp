@@ -814,7 +814,6 @@ void ped_manager_t::next_frame() {
 
 	if (!peds.empty()) {
 		//timer_t timer("Ped Update"); // ~3.9ms for 10K peds
-
 		// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
 	#pragma omp critical(modify_car_data)
 		{car_manager.extract_car_data(cars_by_city);}
@@ -829,9 +828,7 @@ void ped_manager_t::next_frame() {
 		if (need_to_sort_peds) {sort_by_city_and_plot();}
 		first_frame = 0;
 	}
-	if (!peds_b.empty() && enable_building_people_ai()) { // update people in buildings
-		update_building_ai_state(peds_b, delta_dir);
-	}
+	if (!peds_b.empty()) {update_building_ai_state(peds_b, delta_dir);} // update people in buildings
 }
 
 pedestrian_t const *ped_manager_t::get_ped_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space
