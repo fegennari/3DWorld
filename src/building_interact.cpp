@@ -219,7 +219,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to_in, vector
 			door_ix = (i - interior->doors.begin());
 		} // for i
 	}
-	if (interior->room_geom) { // check for closet doors in houses and bathroom stalls in office buildings
+	if (interior->room_geom) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
 		vector<room_object_t> &objs(interior->room_geom->objs);
 		auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 
@@ -228,9 +228,10 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to_in, vector
 			bool keep(0);
 			if (i->type == TYPE_CLOSET && i->is_small_closet()) {keep = 1;} // closet with small door, door can be opened
 			else if (!player_in_closet) {
-				if (i->type == TYPE_TOILET) {keep = 1;} // toilet can be flushed
+				if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
 				else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE) {keep = 1;} // cube bathroom stall can be opened
 				else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
+				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 			}
 			if (!keep) continue;
 			point center;
@@ -258,8 +259,12 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to_in, vector
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
 		point const center(obj.xc(), obj.yc(), closest_to.z); // generate sound from the player height
 
-		if (obj.type == TYPE_TOILET) { // toilet can be flushed, but otherwise is not modified
+		if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
 			gen_sound_thread_safe(SOUND_FLUSH, (center + get_camera_coord_space_xlate()));
+		}
+		else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
+			// TODO: play sound in a loop until water is turned off and show water?
+			gen_sound_thread_safe(SOUND_WATER, (center + get_camera_coord_space_xlate()));
 		}
 		else {
 			if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
@@ -268,8 +273,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to_in, vector
 				// play a sound?
 				return 0; // done, doesn't count as a door
 			}
-			if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} // close
-			else               {obj.flags |=  RO_FLAG_OPEN;} // open
+			if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} else {obj.flags |=  RO_FLAG_OPEN;} // open/close
 			interior->room_geom->clear_static_vbos(); // need to regen object data
 		
 			if (obj.type == TYPE_CLOSET) {
