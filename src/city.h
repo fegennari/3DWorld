@@ -678,15 +678,15 @@ struct pedestrian_t : public waiting_obj_t {
 	point target_pos, dest_car_center; // since cars are sorted each frame, we can't find their positions by index so we need to cache them here
 	vector3d dir, vel;
 	point pos;
-	float radius, speed, anim_time;
+	float radius, speed, anim_time, retreat_time;
 	unsigned plot, next_plot, dest_plot, dest_bldg; // Note: can probably be made unsigned short later, though these are global plot and building indices
 	unsigned short city, model_id, ssn, colliding_ped, cur_rseed;
 	unsigned char stuck_count;
 	bool collided, ped_coll, is_stopped, in_the_road, at_crosswalk, at_dest, has_dest_bldg, has_dest_car, destroyed, in_building, following_player, is_on_stairs, has_key;
 
-	pedestrian_t(float radius_) : target_pos(all_zeros), dir(zero_vector), vel(zero_vector), pos(all_zeros), radius(radius_), speed(0.0), anim_time(0.0), plot(0), next_plot(0), dest_plot(0),
-		dest_bldg(0), city(0), model_id(0), ssn(0), colliding_ped(0), cur_rseed(1), stuck_count(0), collided(0), ped_coll(0), is_stopped(0), in_the_road(0), at_crosswalk(0), at_dest(0),
-		has_dest_bldg(0), has_dest_car(0), destroyed(0), in_building(0), following_player(0), is_on_stairs(0), has_key(0) {}
+	pedestrian_t(float radius_) : target_pos(all_zeros), dir(zero_vector), vel(zero_vector), pos(all_zeros), radius(radius_), speed(0.0), anim_time(0.0), retreat_time(0.0),
+		plot(0), next_plot(0), dest_plot(0), dest_bldg(0), city(0), model_id(0), ssn(0), colliding_ped(0), cur_rseed(1), stuck_count(0), collided(0), ped_coll(0), is_stopped(0),
+		in_the_road(0), at_crosswalk(0), at_dest(0), has_dest_bldg(0), has_dest_car(0), destroyed(0), in_building(0), following_player(0), is_on_stairs(0), has_key(0) {}
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
 	string str() const;
@@ -827,6 +827,7 @@ public:
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv);
 	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const;
+	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 	void free_context() {ped_model_loader.free_context();}
 	//vector3d get_dest_move_dir(point const &pos) const;

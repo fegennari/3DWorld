@@ -15,7 +15,6 @@ Cities:
 
 Building interaction/gameplay ideas:
 * More throwable/dropable object types
-* Zombies retreat when hit with objects
 * Interactive colored spraypaint that works on walls, ceilings, floors, and pictures
 * Interactive toilet paper that can be unrolled and leaves a trail
 * Sinks have running water

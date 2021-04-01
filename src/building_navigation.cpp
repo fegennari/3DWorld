@@ -10,6 +10,7 @@
 
 bool const STAY_ON_ONE_FLOOR  = 0;
 float const COLL_RADIUS_SCALE = 0.75; // somewhat smaller than radius, but larger than PED_WIDTH_SCALE
+float const RETREAT_TIME      = 4.0f*TICKS_PER_SECOND; // 4s
 
 int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
@@ -24,7 +25,7 @@ bool in_building_gameplay_mode();
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
 bool can_ai_follow_player(pedestrian_t const &person);
 bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
-void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies);
+void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority=0);
 int register_ai_player_coll(bool &has_key, float height);
 
 point get_cube_center_zval(cube_t const &c, float zval) {return point(c.xc(), c.yc(), zval);}
@@ -826,7 +827,8 @@ bool can_ai_follow_player(pedestrian_t const &person) {
 	if (!ai_follow_player()) return 0; // disabled
 	if (!cur_player_building_loc.is_valid()) return 0; // no target
 	if (cur_player_building_loc.building_ix != (int)person.dest_bldg) return 0; // wrong building
-	if (player_in_closet >= 2) return 0; // ignore player if in the closet with the door closed
+	if (player_in_closet >= 2)     return 0; // ignore player if in the closet with the door closed
+	if (person.retreat_time > 0.0) return 0; // ignore the player if retreating
 	return 1;
 }
 bool has_nearby_sound(pedestrian_t const &person, float floor_spacing) {
@@ -902,7 +904,16 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	float &wait_time(person.waiting_start); // reuse this field
 	float speed_mult(1.0);
 	person.following_player = 0; // reset for this frame
-
+	
+	if (person.retreat_time > 0.0) {
+		if (person.retreat_time == RETREAT_TIME) { // first retreating frame - clear path
+			state.path.clear();
+			person.target_pos = all_zeros;
+		}
+		//wait_time = 0.0; // no waiting while retreating
+		person.retreat_time -= fticks;
+		max_eq(person.retreat_time, 0.0f);
+	}
 	if (wait_time > 0) {
 		if (wait_time > fticks && !can_ai_follow_player(person)) { // waiting; don't wait if there's a player to follow
 			for (auto p = people.begin()+person_ix+1; p < people.end(); ++p) { // check for other people colliding with this person and handle it
@@ -1168,6 +1179,20 @@ bool building_t::room_containing_pt_has_stairs(point const &pt) const {
 	int const room_ix(get_room_containing_pt(pt));
 	if (room_ix < 0) return 0; // no room contains this point
 	return get_room(room_ix).has_stairs;
+}
+
+void ped_manager_t::register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {
+	if (velocity == zero_vector) return; // stationary object, ignore it
+	if (!ai_follow_player())     return; // not in gameplay mode, ignore it
+	assert(person_ix < peds_b.size());
+	pedestrian_t &person(peds_b[person_ix]);
+
+	if (obj.type == TYPE_LG_BALL) { // currently this is the only throwable/dynamic object
+		if (obj.zc() < (person.get_z1() + 0.25*person.get_height())) return; // less than 25% up, coll with legs, assume this is kicking a ball that's on the floor
+		if (person.retreat_time == 0.0) {maybe_play_zombie_sound(person.pos, person_ix, 1, 1);} // player sound on first retreat: alert_other_zombies=1, high_priority=1
+		// Note: this isn't really thread safe, but it should be okay to modify this state while the AI thread is running
+		person.retreat_time = RETREAT_TIME; // retreat
+	}
 }
 
 // these must be here to handle deletion of building_nav_graph_t, which is only defined in this file
