@@ -340,7 +340,7 @@ bool check_ball_kick(room_object_t &ball, vector3d &velocity, point &new_center,
 	float const radius(ball.get_radius()), r_sum(radius + pradius);
 	if (ball.z2() < pz1 || ball.z1() > pz2 || !dist_xy_less_than(ppos, center, r_sum)) return 0; // no collision
 	vector3d const dir((center - ppos).get_norm());
-	new_center = (center + (r_sum - p2p_dist_xy(ppos, center))*dir); // move so that it no longer collides
+	new_center = (center + (1.05*r_sum - p2p_dist_xy(ppos, center))*dir); // move so that it no longer collides with a bit of tolerance
 	velocity.x = KICK_VELOCITY*dir.x; velocity.y = KICK_VELOCITY*dir.y; // keep existing velocity.z
 	return 1;
 }
