@@ -660,7 +660,8 @@ struct building_interior_t {
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
 	bool update_elevators(point const &player_pos, float floor_thickness);
-	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius, vector<room_object_t>::const_iterator self, vector3d *cnorm) const;
+	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
+		vector<room_object_t>::const_iterator self, vector3d *cnorm, float &hardness) const;
 	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 		float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->mats_dynamic.clear();}

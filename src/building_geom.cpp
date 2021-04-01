@@ -137,6 +137,7 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 	return 0;
 }
 
+// Note: used for the player
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, vector3d const &xlate,
 	float radius, bool xy_only, vector<point> &points, vector3d *cnorm_ptr, bool check_interior) const
 {
@@ -305,41 +306,43 @@ float room_object_t::get_radius() const {
 	return 0.0; // never gets here
 }
 
-bool check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, point &pos, point const &p_last, float radius, vector3d *cnorm) {
-	bool had_coll(0);
+// Note: returns bit vector for each cube that collides; supports up to 32 cubes
+unsigned check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	unsigned coll_ret(0);
 
 	for (unsigned n = 0; n < num_cubes; ++n) {
-		if (!cubes[n].is_all_zeros()) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 0, cnorm);} // skip_z=0
+		if (!cubes[n].is_all_zeros() && sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 0, cnorm)) {coll_ret |= (1<<n);} // skip_z=0
 	}
-	return had_coll;
+	return coll_ret;
 }
-bool check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+unsigned check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes); // get cubes for walls and door; required to handle collision with closet interior
 	return check_cubes_collision(cubes, (c.is_open() ? 4U : 5U), pos, p_last, radius, cnorm); // only check for door collision if closet door is closed
 }
-bool check_bed_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 	get_bed_cubes(c, cubes);
 	unsigned num_to_check(5); // skip legs_bcube
 	if (c.flags & RO_FLAG_TAKEN1) {--num_to_check;} // skip pillows
 	if (c.flags & RO_FLAG_TAKEN3) {--num_to_check;} // skip mattress
-	if (check_cubes_collision(cubes, num_to_check, pos, p_last, radius, cnorm)) return 1;
+	unsigned coll_ret(check_cubes_collision(cubes, num_to_check, pos, p_last, radius, cnorm));
 	get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
-	return check_cubes_collision(cubes, 4, pos, p_last, radius, cnorm); // check legs
+	coll_ret |= (check_cubes_collision(cubes, 4, pos, p_last, radius, cnorm) << 5); // check legs
+	return coll_ret;
 }
-bool check_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm, bool is_desk) {
+unsigned check_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm, bool is_desk) {
 	cube_t cubes[5];
 	get_table_cubes(c, cubes, is_desk);
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
-bool check_chair_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+unsigned check_chair_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[3]; // seat, back, legs_bcube
 	get_chair_cubes(c, cubes);
 	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
 
-// Note: pos and p_last are already in rotated coordinate space
+// Note: used for the player; pos and p_last are already in rotated coordinate space
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm) const {
 	pos.z = bcube.z1(); // start at building z1 rather than the terrain height in case we're at the foot of a steep hill
@@ -413,7 +416,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				had_coll = 1;
 			}
 			else if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
-				had_coll |= check_closet_collision(*c, pos, p_last, xy_radius, cnorm);
+				had_coll |= (bool)check_closet_collision(*c, pos, p_last, xy_radius, cnorm);
 				if (c->contains_pt(pos)) {player_in_closet = (interior->room_geom->closet_light_is_on(*c) ? 3 : (c->is_open() ? 1 : 2));}
 			}
 			else if (c->type == TYPE_STALL && c->is_open()) { // collision test with sides only
@@ -444,9 +447,12 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	return had_coll; // will generally always be true due to floors
 }
 
-// called on basketballs and soccer balls
-bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius, vector<room_object_t>::const_iterator self, vector3d *cnorm) const {
+// Note: called on basketballs and soccer balls
+bool building_interior_t::check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
+	vector<room_object_t>::const_iterator self, vector3d *cnorm, float &hardness) const
+{
 	bool had_coll(check_sphere_coll_walls_elevators_doors(building, pos, p_last, radius, 0.0, 1, cnorm)); // check_open_doors=1
+	if (had_coll) {hardness = 1.0;}
 	cube_t scube; scube.set_from_sphere(pos, radius);
 
 	if (pos.z < p_last.z) { // check floor collision if falling
@@ -456,7 +462,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			if (!i->intersects(scube)) continue; // overlap
 			pos.z = i->z2() + radius; // move to just touch the top of the floor
 			if (cnorm) {*cnorm = plus_z;} // collision with top surface of floor
-			had_coll = 1;
+			had_coll = 1; hardness = 1.0;
 		}
 	}
 	else { // check ceiling collision if rising
@@ -466,7 +472,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			if (!i->intersects(scube)) continue; // overlap
 			pos.z = i->z1() - radius; // move to just touch the top of the ceiling
 			if (cnorm) {*cnorm = -plus_z;} // collision with top surface of ceiling
-			had_coll = 1;
+			had_coll = 1; hardness = 1.0;
 		}
 	}
 	if (!room_geom) {return had_coll;} // no room geometry
@@ -474,6 +480,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
 		if (c == self || c->no_coll() || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING) continue; // ignore blockers and railings
 		if (!sphere_cube_intersect(pos, radius, *c)) continue; // no intersection (optimization)
+		unsigned coll_ret(0);
 		// Note: add special handling for things like elevators, cubicles, and bathroom stalls? right now these are only in office buildings, where there are no dynamic objects
 
 		if (c->shape == SHAPE_CYLIN) { // vertical cylinder (including table)
@@ -485,24 +492,31 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 				cylinder_3dw top(cylin), base(cylin);
 				top.p1.z  = base.p2.z = c->z2() - 0.12*c->dz(); // top shifted down by 0.12
 				base.r1  *= 0.4; base.r2 *= 0.4; // vertical support has radius 0.08, legs have radius of 0.6, so use something in between
-				had_coll |= (sphere_vert_cylin_intersect_with_ends(pos, radius, top, cnorm) || sphere_vert_cylin_intersect_with_ends(pos, radius, base, cnorm));
+				coll_ret |= unsigned(sphere_vert_cylin_intersect_with_ends(pos, radius, top, cnorm) || sphere_vert_cylin_intersect_with_ends(pos, radius, base, cnorm));
 			}
-			else {had_coll |= sphere_vert_cylin_intersect_with_ends(pos, radius, cylin, cnorm);}
+			else {coll_ret |= (unsigned)sphere_vert_cylin_intersect_with_ends(pos, radius, cylin, cnorm);}
 		}
 		else if (c->shape == SHAPE_SPHERE) { // sphere
 			point const center(c->get_cube_center());
 			if (!dist_less_than(pos, center, (c->get_radius() + radius))) continue;
 			if (cnorm) {*cnorm = (pos - center).get_norm();}
-			had_coll = 1;
+			coll_ret |= 1;
 		}
 		else { // assume it's a cube
 			// closets, beds, tables, desks, and chairs are special because they're common collision objects and they're not filled cubes
-			if      (c->type == TYPE_CLOSET) {had_coll |= check_closet_collision(*c, pos, p_last, radius, cnorm);} // special case to handle closet interiors
-			else if (c->type == TYPE_BED  )  {had_coll |= check_bed_collision   (*c, pos, p_last, radius, cnorm);}
-			else if (c->type == TYPE_TABLE)  {had_coll |= check_table_collision (*c, pos, p_last, radius, cnorm, 0);}
-			else if (c->type == TYPE_DESK )  {had_coll |= check_table_collision (*c, pos, p_last, radius, cnorm, 1);}
-			else if (c->type == TYPE_CHAIR)  {had_coll |= check_chair_collision (*c, pos, p_last, radius, cnorm);}
-			else {had_coll |= sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, cnorm);} // skip_z=0
+			if      (c->type == TYPE_CLOSET) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, cnorm);} // special case to handle closet interiors
+			else if (c->type == TYPE_BED  )  {coll_ret |= check_bed_collision   (*c, pos, p_last, radius, cnorm);}
+			else if (c->type == TYPE_TABLE)  {coll_ret |= check_table_collision (*c, pos, p_last, radius, cnorm, 0);}
+			else if (c->type == TYPE_DESK )  {coll_ret |= check_table_collision (*c, pos, p_last, radius, cnorm, 1);}
+			else if (c->type == TYPE_CHAIR)  {coll_ret |= check_chair_collision (*c, pos, p_last, radius, cnorm);}
+			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, cnorm);} // skip_z=0
+		}
+		if (coll_ret) { // collision with this object - set hardness
+			if      (c->type == TYPE_COUCH) {hardness = 0.6;} // couches are soft
+			else if (c->type == TYPE_RUG  ) {hardness = 0.8;} // rug is somewhat soft (Note: rugs aren't collidable yet anyway)
+			else if (c->type == TYPE_BED && (coll_ret & 24)) {hardness = 0.5;} // pillow/mattress collision is very soft
+			else {hardness = 1.0;}
+			had_coll = 1;
 		}
 	} // for c
 	return had_coll;
