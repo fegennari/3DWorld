@@ -368,9 +368,19 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 		bool on_floor(0);
 		point new_center(center);
 		bool kicked(check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius)); // check the player
+		bool const is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
 
 		for (auto p = ped_bcubes.begin(); p != ped_bcubes.end(); ++p) { // check building AI people
-			kicked |= check_ball_kick(*c, velocity, new_center, p->get_cube_center(), p->z1(), p->z2(), 0.6*p->dx()); // assume dx == dy == radius
+			if (is_moving_fast) { // treat collision as a bounce
+				vector3d cnorm;
+
+				if (sphere_cube_int_update_pos(new_center, radius, *p, center, 1, 0, &cnorm)) {
+					apply_object_bounce(velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
+				}
+			}
+			else { // treat collision as a kick
+				kicked = check_ball_kick(*c, velocity, new_center, p->get_cube_center(), p->z1(), p->z2(), 0.6*p->dx()); // assume dx == dy == radius
+			}
 		}
 		if (kicked) {
 			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
