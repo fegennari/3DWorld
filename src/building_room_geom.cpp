@@ -936,6 +936,17 @@ void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 	mat.add_cube_to_verts(c, apply_light_color(c, BLACK), zero_vector, ~EF_Z2 ); // top,   no shadows
 }
 
+void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
+	// TODO: add inner tube and/or holder as well?
+	get_material(untex_shad_mat).add_ortho_cylin_to_verts(c, apply_light_color(c), c.dim, 1, 1);
+}
+
+void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
+	// TODO: separate cap + body + label
+	bool const add_bottom(c.dim != 2); // if on its side
+	get_material(untex_shad_mat).add_ortho_cylin_to_verts(c, apply_light_color(c), c.dim, (add_bottom || c.dir), (add_bottom || !c.dir));
+}
+
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
 
@@ -2738,6 +2749,8 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_KEY: if (has_key_3d_model()) {model_objs.push_back(*i);} else {add_key(*i);} break; // draw or add as 3D model
 		case TYPE_MONEY:     add_money(*i); break;
 		case TYPE_PHONE:     add_phone(*i); break;
+		case TYPE_TPROLL:    add_tproll(*i); break;
+		case TYPE_SPRAYCAN:  add_spraycan(*i); break;
 		default: break;
 		}
 	} // for i
