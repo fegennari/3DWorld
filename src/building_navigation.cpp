@@ -910,8 +910,9 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		if (person.retreat_time == RETREAT_TIME) { // first retreating frame - clear path
 			state.path.clear();
 			person.target_pos = all_zeros;
+			//state.is_first_path = 1; // probably not needed
 		}
-		//wait_time = 0.0; // no waiting while retreating
+		wait_time = 0.0; // no waiting while retreating
 		person.retreat_time -= fticks;
 		max_eq(person.retreat_time, 0.0f);
 	}

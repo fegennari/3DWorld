@@ -46,6 +46,7 @@ void pedestrian_t::go() {
 void pedestrian_t::wait_for(float seconds) {
 	anim_time     = 0.0; // reset animation
 	waiting_start = seconds*TICKS_PER_SECOND; // stop for N seconds
+	target_pos    = all_zeros; // clear any previous target
 }
 cube_t pedestrian_t::get_bcube() const {
 	cube_t c;
@@ -1180,6 +1181,7 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 		dir_horiz.normalize();
 		//colorRGBA const &color(ped.following_player ? RED : WHITE); // force red when following player, for debugging purposes
 		//colorRGBA const &color(ped.on_stairs() ? RED : WHITE);
+		//colorRGBA const &color((ped.retreat_time > 0.0) ? RED : WHITE);
 		colorRGBA const &color(ALPHA0); // A=0.0, leave unchanged
 		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, color, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
 	}
