@@ -14,9 +14,9 @@ Cities:
 - Secondary Building roads
 
 Building interaction/gameplay ideas:
-* More throwable/dropable object types
 * Interactive colored spraypaint that works on walls, ceilings, floors, and pictures
 * Interactive toilet paper that can be unrolled and leaves a trail
 * Sinks have running water
-* Kitchen cabinet doors can be opened
-* Mirrors in the bathroom can be opened
+- More throwable/dropable object types
+- Kitchen cabinet doors can be opened
+- Mirrors in the bathroom can be opened
