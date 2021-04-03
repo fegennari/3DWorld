@@ -893,7 +893,7 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		bool const has_throwable(!carried.empty() && carried.back().has_dstate());
+		bool const has_throwable(!carried.empty() && (carried.back().has_dstate() || carried.back().type == TYPE_SPRAYCAN)); // ball or spraypaint can
 		if (has_throwable) {player_held_object = carried.back();} // deep copy last pickup object if throwable
 
 		if (display_framerate) { // controlled by framerate toggle

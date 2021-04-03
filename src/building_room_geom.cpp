@@ -563,7 +563,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
-	unsigned const type_ix(rgen.rand() % 10); // 0-9
+	unsigned const type_ix(rgen.rand() % 11); // 0-10
 	room_object_t obj; // starts as no item
 
 	switch (type_ix) {
@@ -654,7 +654,17 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		}
 		break;
 	}
-	case 9: // empty
+	case 9: // spray paint can
+	{
+		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
+		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz[0], sz[1]))), diameter(0.3*length);
+		colorRGBA const color(spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]);
+		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, color);
+		obj.z2() = (obj.z1() + diameter);
+		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
+		break;
+	}
+	case 10: // empty
 		break;
 	}
 	obj.flags    |= RO_FLAG_WAS_EXP;
@@ -2959,10 +2969,15 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid()) { // draw the item the player is holding
-		assert(player_held_object.type == TYPE_LG_BALL); // this is currently the only supported object type
 		player_held_object.translate((camera_bs + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS)) - player_held_object.get_cube_center());
-		bind_vbo(0); // not using a VBO here
-		draw_lg_ball_in_building(player_held_object, s);
+
+		if (player_held_object.type == TYPE_LG_BALL) { // this is currently the only supported dynamic object type
+			draw_lg_ball_in_building(player_held_object, s);
+		}
+		else if (player_held_object.type == TYPE_SPRAYCAN) {
+			//add_spraycan(player_held_object); // TODO: need to use temp buffer like in draw_lg_ball_in_building()
+		}
+		else {assert(0);}
 	}
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters
 		enable_blend();
