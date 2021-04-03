@@ -1736,6 +1736,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 		for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 			if (r->is_sec_bldg) continue; // garage/shed excluded - not a normal room
+			if (has_basement() && r->part_id == (int)basement_part_ix) continue; // skip the basement
 			bool const on_first_floor(calc_num_floors(*r, window_vspacing, floor_thickness) == 1); // if a single floor, this must be on the first floor
 
 			if (can_be_bedroom_or_bathroom(*r, on_first_floor)) { // find best bathroom with no hard size constraints
