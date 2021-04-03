@@ -233,6 +233,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE) {keep = 1;} // cube bathroom stall can be opened
 				else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
+				//else if (i->type == TYPE_TPROLL) {keep = 1;}
 			}
 			if (!keep) continue;
 			point center;
@@ -256,7 +257,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		}
 		if (closest_dist_sq == 0.0) return 0; // no door or object found
 	}
-	if (is_obj) { // closet, toilet, bathroom stall, or office chair
+	if (is_obj) { // closet, toilet, bathroom stall, office chair, or toilet paper roll
 		auto &obj(interior->room_geom->objs[obj_ix]);
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
 		point const center(obj.xc(), obj.yc(), closest_to.z); // generate sound from the player height
@@ -267,6 +268,9 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
 			// TODO: play sound in a loop until water is turned off and show water?
 			gen_sound_thread_safe(SOUND_WATER, (center + get_camera_coord_space_xlate()));
+		}
+		else if (obj.type == TYPE_TPROLL) {
+			// TODO: unroll toilet paper roll
 		}
 		else {
 			if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
@@ -682,6 +686,7 @@ bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
 }
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_PICTURE && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
+	if (obj.type == TYPE_TPROLL  && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
 
 	if (obj.type == TYPE_BED) { // player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name
 		if (obj.flags & RO_FLAG_TAKEN2) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 250.0, 80.0, "mattress"  );} // third item to take from bed
@@ -1169,6 +1174,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	bool const is_light(obj.type == TYPE_LIGHT);
 
 	if (obj.type == TYPE_PICTURE && !(obj.flags & RO_FLAG_TAKEN1)) {obj.flags |= RO_FLAG_TAKEN1;} // take picture, leave frame
+	else if (obj.type == TYPE_TPROLL && !(obj.flags & RO_FLAG_TAKEN1)) {obj.flags |= RO_FLAG_TAKEN1;} // take toilet paper roll, leave holder
 	else if (obj.type == TYPE_BED) {
 		if      (obj.flags & RO_FLAG_TAKEN2) {obj.flags |= RO_FLAG_TAKEN3;} // take mattress
 		else if (obj.flags & RO_FLAG_TAKEN1) {obj.flags |= RO_FLAG_TAKEN2;} // take sheets

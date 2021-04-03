@@ -759,7 +759,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	// place toilet first because it's in the corner out of the way and higher priority
 	if (have_toilet) { // have a toilet model
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_TOILET)); // L, W, H
-		float const height(0.35*floor_spacing), width(height*sz.y/sz.z), length(height*sz.x/sz.z);
+		float const height(0.35*floor_spacing), width(height*sz.y/sz.z), length(height*sz.x/sz.z); // for toilet
 		unsigned const first_corner(rgen.rand() & 3);
 		bool const first_dim(rgen.rand_bool());
 
@@ -782,10 +782,21 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 				objs.emplace_back(c,  TYPE_TOILET,  room_id, dim, !dir, 0, tot_light_amt);
 				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_toilet = 1; // done
+
+				if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the adjacent wall
+					// TODO: check for windows?
+					add_tp_roll(room, room_id, tot_light_amt, dim, (dim ? xdir : ydir), 0.18*height, (c. z1() + 0.7*height), c.get_center_dim(dim));
+				}
 			} // for d
 		} // for n
 		if (!placed_toilet) { // if the toilet can't be placed in a corner, allow it to be placed anywhere; needed for small offices
-			placed_obj |= place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, room, 0.35, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);
+			placed_toilet = place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, room, 0.35, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);
+			placed_obj   |= placed_toilet;
+
+			if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the same wall as the toilet
+				//room_object_t const &toilet(objs.back()); // okay if this is the blocker
+				// TODO: add_tp_roll()
+			}
 		}
 	}
 	if (is_house && !is_basement && (floor > 0 || rgen.rand_bool())) { // try to add a shower; 50% chance if on first floor; not in basements (due to drawing artifacts)
@@ -843,6 +854,17 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 		}
 	}
 	return placed_obj;
+}
+
+void building_t::add_tp_roll(room_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos) {
+	float const diameter(length);
+	cube_t tp;
+	set_cube_zvals(tp, zval, (zval + diameter));
+	set_wall_width(tp, wall_pos, 0.5*length, dim); // set length
+	tp.d[!dim][ dir] = room.d[!dim][dir]; // against the wall
+	tp.d[!dim][!dir] = tp  .d[!dim][dir] + (dir ? -1.0 : 1.0)*diameter; // set the diameter
+	interior->room_geom->objs.emplace_back(tp, TYPE_TPROLL, room_id, !dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
+	set_obj_id(interior->room_geom->objs);
 }
 
 bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
@@ -933,6 +955,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			if (!interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) { // skip if close to a door (for rooms with doors at both ends); inc_open=1
 				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, 0, tot_light_amt);
 				objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, 0, tot_light_amt, SHAPE_CUBE, stall_color);
+				// TODO: add_tp_roll()
 			}
 			stall_pos += stall_step;
 		} // for n
