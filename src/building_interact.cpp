@@ -148,7 +148,7 @@ bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
 	return 0;
 }
 
-// doors
+// doors and other interactive objects
 
 int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
 	point query_pt(pos);
@@ -195,7 +195,7 @@ bool check_obj_dir_dist(point const &closest_to, vector3d const &in_dir, cube_t 
 	return (dot_product(in_dir, (vis_pt - closest_to).get_norm()) > 0.5); // door is not in the correct direction, skip
 }
 
-bool building_t::toggle_door_state_closest_to(point const &closest_to_in, vector3d const &in_dir_in) { // called for the player
+bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in) { // called for the player
 	if (!interior) return 0; // error?
 	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace());
 	float closest_dist_sq(0.0);
@@ -222,6 +222,7 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to_in, vector
 	if (interior->room_geom) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
 		vector<room_object_t> &objs(interior->room_geom->objs);
 		auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+		point const query_ray_end(closest_to + dmax*in_dir);
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix) continue; // object not in the same room as the player
@@ -243,8 +244,9 @@ bool building_t::toggle_door_state_closest_to(point const &closest_to_in, vector
 			else {center = i->closest_pt(closest_to);}
 			if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
 			float const dist_sq(p2p_dist_sq(closest_to, center));
-			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq)      continue; // not the closest
-			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, dmax)) continue; // door is not in the correct direction or too far away, skip
+			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq) continue; // not the closest
+			if (!i->closest_dist_less_than(closest_to, dmax)) continue; // too far
+			if (in_dir != zero_vector && !i->line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
 			closest_dist_sq = dist_sq; obj_ix = (i - objs.begin());
 			is_obj = 1;
 		} // for i

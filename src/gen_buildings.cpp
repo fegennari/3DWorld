@@ -2293,7 +2293,7 @@ public:
 						}
 						// run any player interaction logic here
 						if (toggle_room_light) {b.toggle_room_light(camera_xlated);}
-						if (toggle_door_open_state) {b.toggle_door_state_closest_to(camera_xlated, cview_dir);}
+						if (toggle_door_open_state) {b.apply_player_action_key(camera_xlated, cview_dir);}
 						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2 && camera_surf_collide) {b.update_player_interact_objects(camera_xlated, bi->ix, ped_ix);} // update dynamic objects if the player is in the building

@@ -836,7 +836,7 @@ struct building_t : public building_geom_t {
 	void write_basement_entrance_depth_pass(shader_t &s) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
-	bool toggle_door_state_closest_to(point const &closest_to_in, vector3d const &in_dir_in);
+	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
