@@ -61,9 +61,8 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	int const room_id(get_room_containing_pt(query_pt));
 	if (room_id < 0) return 0; // closest_to is not contained in a room of this building
 	room_t const &room(get_room(room_id));
-	point light_pos;
 	float closest_dist_sq(0.0);
-	unsigned closest_light(0);
+	int closest_light(-1);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || i->room_id != room_id) continue; // not a light, or the wrong room
@@ -72,25 +71,31 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
 		float const dist_sq(p2p_dist_sq(closest_to, center));
-		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; closest_light = (i - objs.begin()); light_pos = center;}
+		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; closest_light = int(i - objs.begin());}
 	} // for i
-	room_object_t &light(objs[closest_light]);
+	if (closest_light < 0) return 0;
+	toggle_light_object(objs[closest_light]);
+	return 1;
+}
+
+void building_t::toggle_light_object(room_object_t const &light) {
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	bool updated(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
-		if (i->is_light_type() && i->room_id == room_id && i->z1() == light.z1()) { // Note: closet light should have a different z1 that should not match the room lights
+		if (i->is_light_type() && i->room_id == light.room_id && i->z1() == light.z1()) { // Note: closet light should have a different z1 that should not match the room lights
 			i->toggle_lit_state(); // Note: doesn't update indir lighting
 			if (i->type == TYPE_LAMP) continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
-			set_obj_lit_state_to(room_id, light.z2(), i->is_lit()); // update object lighting flags as well
+			set_obj_lit_state_to(light.room_id, light.z2(), i->is_lit()); // update object lighting flags as well
 			updated = 1;
 		}
 	} // for i
 	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
-	point const sound_pos(get_camera_pos() + (light_pos - closest_to)); // Note: computed relative to closest_to so that this works for either camera or building coord space
-	gen_sound_thread_safe(SOUND_CLICK, sound_pos);
+	point const light_pos(light.get_cube_center());
+	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(light_pos));
 	register_building_sound(light_pos, 0.1);
 	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
-	return 1;
 }
 
 bool building_t::set_room_light_state_to(room_t const &room, float zval, bool make_on) { // called by AI people
@@ -178,7 +183,7 @@ void building_t::register_open_ext_door_state(int door_ix) {
 	auto const &door(doors[dix]);
 	vector3d const normal(door.get_norm());
 	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
-	point const door_center(door.get_bcube().get_cube_center()), sound_pos(door_center + get_camera_coord_space_xlate()); // convert to camera space
+	point const door_center(door.get_bcube().get_cube_center()), sound_pos(local_to_camera_space(door_center)); // convert to camera space
 	gen_sound_thread_safe((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	point pos_interior(door_center);
 	pos_interior[dim] += (dir ? 1.0 : -1.0)*CAMERA_RADIUS; // move point to the building interior so that it's a valid AI position
@@ -227,14 +232,16 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix) continue; // object not in the same room as the player
 			bool keep(0);
-			if (i->type == TYPE_CLOSET && i->is_small_closet()) {keep = 1;} // closet with small door, door can be opened
+			if (i->type == TYPE_CLOSET && i->is_small_closet() && in_dir.z < 0.5) {keep = 1;} // closet with small door, door can be opened; not looking up at the light
 			else if (!player_in_closet) {
 				if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
 				else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE) {keep = 1;} // cube bathroom stall can be opened
 				else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
+				else if (i->is_light_type()) {keep = 1;} // room light or lamp
 				//else if (i->type == TYPE_TPROLL) {keep = 1;}
 			}
+			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 			if (!keep) continue;
 			point center;
 
@@ -261,16 +268,22 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		auto &obj(interior->room_geom->objs[obj_ix]);
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
 		point const center(obj.xc(), obj.yc(), closest_to.z); // generate sound from the player height
+		bool no_sound(0);
 
 		if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
-			gen_sound_thread_safe(SOUND_FLUSH, (center + get_camera_coord_space_xlate()));
+			gen_sound_thread_safe(SOUND_FLUSH, local_to_camera_space(center));
 		}
 		else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
 			// TODO: play sound in a loop until water is turned off and show water?
-			gen_sound_thread_safe(SOUND_WATER, (center + get_camera_coord_space_xlate()));
+			gen_sound_thread_safe(SOUND_WATER, local_to_camera_space(center));
+		}
+		else if (obj.is_light_type()) {
+			toggle_light_object(obj);
+			no_sound = 1; // sound has already been registered above
 		}
 		else if (obj.type == TYPE_TPROLL) {
 			// TODO: unroll toilet paper roll
+			no_sound = 1;
 		}
 		else {
 			if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
@@ -288,7 +301,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			}
 			play_door_open_close_sound(center, obj.is_open(), pitch);
 		}
-		register_building_sound(center, ((obj.type == TYPE_CLOSET) ? 0.25 : 0.5)); // closets are quieter, to allow players to more easily hide
+		if (!no_sound) {register_building_sound(center, ((obj.type == TYPE_CLOSET) ? 0.25 : 0.5));} // closets are quieter, to allow players to more easily hide
 	}
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
@@ -316,16 +329,19 @@ void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_buildin
 	}
 }
 
-void building_t::play_door_open_close_sound(point const &pos, bool open, float pitch) const {
+point building_t::local_to_camera_space(point const &pos) const {
 	point pos_rot(pos);
 	if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), pos_rot);}
-	point const sound_pos(pos_rot + get_camera_coord_space_xlate()); // convert to camera space
-	gen_sound_thread_safe((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos, 1.0, pitch);
+	return (pos_rot + get_camera_coord_space_xlate()); // convert to camera space
+}
+
+void building_t::play_door_open_close_sound(point const &pos, bool open, float pitch) const {
+	gen_sound_thread_safe((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_to_camera_space(pos), 1.0, pitch);
 }
 
 // dynamic objects: elevators and balls
 
-void apply_object_bounce(vector3d &velocity, vector3d const &cnorm, point const &pos, float hardness, bool on_floor) {
+void apply_object_bounce(building_t const &building, vector3d &velocity, vector3d const &cnorm, point const &pos, float hardness, bool on_floor) {
 	bool const vert_coll(cnorm == plus_z);
 	float const vmag(velocity.mag()), elasticity(OBJ_ELASTICITY*hardness);
 	if (vmag < TOLERANCE) return;
@@ -336,7 +352,7 @@ void apply_object_bounce(vector3d &velocity, vector3d const &cnorm, point const 
 	float const bounce_volume(min(1.0f, (vert_coll ? 0.5f : 1.0f)*vmag/KICK_VELOCITY)); // relative to kick velocity
 
 	if (bounce_volume > 0.25) { // apply bounce sound
-		if (bounce_volume > 0.5) {gen_sound_thread_safe(SOUND_KICK_BALL, (pos + get_camera_coord_space_xlate()), 0.75*bounce_volume*bounce_volume);}
+		if (bounce_volume > 0.5) {gen_sound_thread_safe(SOUND_KICK_BALL, building.local_to_camera_space(pos), 0.75*bounce_volume*bounce_volume);}
 		register_building_sound(pos, 0.7*bounce_volume);
 	}
 }
@@ -382,7 +398,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 
 				if (sphere_cube_int_update_pos(new_center, radius, *p, center, 1, 0, &cnorm)) {
 					register_person_hit((first_ped_ix + (p - ped_bcubes.begin())), *c, velocity);
-					apply_object_bounce(velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
+					apply_object_bounce(*this, velocity, cnorm, new_center, 0.75, on_floor); // hardness=0.75
 				}
 			}
 			else { // treat collision as a kick
@@ -393,7 +409,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 			c->flags |= RO_FLAG_DYNAMIC; // make it dynamic
 
 			if ((tfticks - last_sound_tfticks) > 1.0*TICKS_PER_SECOND && !dist_less_than(new_center, last_sound_pt, radius)) { // play at most once per second
-				gen_sound_thread_safe(SOUND_KICK_BALL, (new_center + get_camera_coord_space_xlate()), 0.5);
+				gen_sound_thread_safe(SOUND_KICK_BALL, local_to_camera_space(new_center), 0.5);
 				register_building_sound(new_center, 0.75);
 				last_sound_tfticks = tfticks;
 				last_sound_pt      = new_center;
@@ -430,12 +446,12 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 				if (cnorm == plus_z) { // collision with the floor or the top surface of something
 					if (fabs(velocity.z) < 0.25*OBJ_GRAVITY*fticks) {velocity.z = 0.0;} // zero velocity z component if near zero to reduce instability
 				}
-				apply_object_bounce(velocity, cnorm, new_center, hardness, on_floor);
+				apply_object_bounce(*this, velocity, cnorm, new_center, hardness, on_floor);
 			}
 			point const prev_new_center(new_center);
 			
 			if (move_sphere_to_valid_part(new_center, center, radius) && new_center != prev_new_center) { // collision with exterior wall
-				apply_object_bounce(velocity, (new_center - prev_new_center).get_norm(), new_center, 1.0, on_floor); // hardness=1.0
+				apply_object_bounce(*this, velocity, (new_center - prev_new_center).get_norm(), new_center, 1.0, on_floor); // hardness=1.0
 			}
 			if (new_center != center) {apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));}
 			if (!was_dynamic) {interior->room_geom->clear_static_small_vbos();} // static => dynamic transition, need to remove from static object vertex data
@@ -1150,7 +1166,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	else { // open or close the drawer
 		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
 		point const drawer_center(drawers[closest_obj_id].get_cube_center());
-		gen_sound_thread_safe(SOUND_SLIDING, (drawer_center + get_camera_coord_space_xlate()), 0.5);
+		gen_sound_thread_safe(SOUND_SLIDING, building.local_to_camera_space(drawer_center), 0.5);
 		register_building_sound(drawer_center, 0.4);
 		create_small_static_vbos(building);
 		//modified_by_player = 1; // ???

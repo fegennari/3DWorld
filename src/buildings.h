@@ -836,6 +836,7 @@ struct building_t : public building_geom_t {
 	void write_basement_entrance_depth_pass(shader_t &s) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to);
+	void toggle_light_object(room_object_t const &light);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
@@ -884,6 +885,7 @@ struct building_t : public building_geom_t {
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
 		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
 	void invalidate_nav_graph();
+	point local_to_camera_space(point const &pos) const;
 private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t &rgen);
