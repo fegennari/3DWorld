@@ -18,9 +18,9 @@ float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 
-unsigned const NUM_BOTTLE_COLORS = 4;
-unsigned const NUM_BOOK_COLORS   = 16;
-unsigned const NUM_PAPER_COLORS  = 6;
+unsigned const NUM_BOTTLE_TYPES = 5;
+unsigned const NUM_BOOK_COLORS  = 16;
+unsigned const NUM_PAPER_COLORS = 6;
 colorRGBA const book_colors[NUM_BOOK_COLORS] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 colorRGBA const cream(0.9, 0.9, 0.8), vlt_yellow(1.0, 1.0, 0.5);
 colorRGBA const paper_colors[NUM_PAPER_COLORS] = {WHITE, WHITE, WHITE, cream, cream, vlt_yellow};
@@ -39,6 +39,22 @@ struct building_t;
 class building_creator_t;
 class light_ix_assign_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
+
+struct bottle_params_t {
+	std::string name, texture_fn;
+	colorRGBA color;
+	float value;
+	bottle_params_t(std::string const &n, std::string const &fn, colorRGBA const &c, float v) : name(n), texture_fn(fn), color(c), value(v) {}
+};
+
+// Note: we could add colorRGBA(0.8, 0.9, 1.0, 0.4) for water bottles, but transparent objects require removing interior faces such as half of the sphere
+bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
+	bottle_params_t("bottle of water",  "", colorRGBA(0.4, 0.7, 1.0 ), 1.0),
+	bottle_params_t("bottle of Coke",   "interiors/coke_label.jpg", colorRGBA(0.2, 0.1, 0.05), 1.0),
+	bottle_params_t("bottle of beer",   "", colorRGBA(0.1, 0.4, 0.1 ), 3.0),
+	bottle_params_t("bottle of wine",   "", BLACK, 10.0),
+	bottle_params_t("bottle of poison", "yuck.png", BLACK, 5.0),
+};
 
 struct building_occlusion_state_t {
 	int exclude_bix;
@@ -354,6 +370,7 @@ struct room_object_t : public cube_t {
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
+	unsigned get_bottle_type() const {return (obj_id % NUM_BOTTLE_TYPES);}
 	unsigned get_orient () const {return (2*dim + dir);}
 	float get_radius() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
@@ -365,7 +382,7 @@ struct room_object_t : public cube_t {
 	int get_sheet_tid() const;
 	int get_paper_tid() const;
 	int get_model_id () const {return ((type == TYPE_MONITOR) ? OBJ_MODEL_TV : (type + OBJ_MODEL_TOILET - TYPE_TOILET));} // monitor has same model as TV
-	void set_as_bottle(unsigned rand_id);
+	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1);
 	colorRGBA get_color() const;
 	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}
 	void set_rand_gen_state(rand_gen_t &rgen) const {rgen.set_state(obj_id+1, room_id+1);}

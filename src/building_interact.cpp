@@ -698,14 +698,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		return type;
 	}
 	if (obj.type == TYPE_BOTTLE) {
-		bldg_obj_type_t type;
-		switch (obj.obj_id % NUM_BOTTLE_COLORS) { // water, Coke, beer, wine
-		case 0: type = bldg_obj_type_t(0, 0, 1, 0, 0, 2,  1.0, 1.0, "bottle of water"); break;
-		case 1: type = bldg_obj_type_t(0, 0, 1, 0, 0, 2,  1.0, 1.0, "bottle of Coke" ); break;
-		case 2: type = bldg_obj_type_t(0, 0, 1, 0, 0, 2,  3.0, 1.0, "bottle of beer" ); break;
-		case 3: type = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 10.0, 1.0, "bottle of wine" ); break;
-		default: assert(0);
-		}
+		bottle_params_t const &bparams(bottle_params[obj.get_bottle_type()]);
+		bldg_obj_type_t type(0, 0, 1, 0, 0, 2,  bparams.value, 1.0, bparams.name);
+
 		if (obj.is_bottle_empty()) {
 			type.name    = "empty " + type.name;
 			type.weight *= 0.25;
@@ -795,17 +790,24 @@ public:
 		oss << get_taken_obj_type(obj).name;
 
 		if (is_consumable(obj)) { // nonempty bottle, consumable
-			switch (obj.obj_id % NUM_BOTTLE_COLORS) {
-			case 0: health = 0.25; break; // water
-			case 1: health = 0.50; break; // Coke
-			case 2: drunk  = 0.25; break; // beer
-			case 3: drunk  = 0.50; break; // wine (entire bottle)
+			switch (obj.get_bottle_type()) {
+			case 0: health =  0.25; break; // water
+			case 1: health =  0.50; break; // Coke
+			case 2: drunk  =  0.25; break; // beer
+			case 3: drunk  =  0.50; break; // wine (entire bottle)
+			case 4: health = -0.50; break; // poison - take damage
 			default: assert(0);
 			}
 		}
-		if (health > 0.0) {
+		if (health > 0.0) { // heal
 			player_health = min(1.0f, (player_health + health));
 			oss << ": +" << round_fp(100.0*health) << "% Health";
+		}
+		if (health < 0.0) { // take damage
+			player_health += health;
+			oss << ": " << round_fp(100.0*health) << "% Health";
+			text_color = RED;
+			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 		}
 		if (obj.type == TYPE_KEY) {
 			has_key = 1; // mark as having the key, but it doesn't go into the inventory or contribute to weight or value

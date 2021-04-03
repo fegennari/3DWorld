@@ -1417,7 +1417,7 @@ void building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place
 	if (!avoid.is_all_zeros() && bottle.intersects(avoid)) return; // only make one attempt
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
-	objs.back().set_as_bottle(rgen.rand());
+	objs.back().set_as_bottle(rgen.rand(), 3); // 0-3; excludes poison
 }
 
 void building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
