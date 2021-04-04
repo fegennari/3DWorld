@@ -436,6 +436,7 @@ public:
 	void create_vbo(building_t const &building);
 	void create_vbo_inner();
 	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
+	void upload_draw_and_clear(shader_t &s);
 };
 
 struct building_materials_t : public vector<rgeom_mat_t> {
@@ -538,7 +539,8 @@ struct building_room_geom_t {
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void add_lg_ball(room_object_t const &c);
-	static void draw_lg_ball_in_building(room_object_t const &c, shader_t &s);
+	static void draw_lg_ball_in_building (room_object_t const &c, shader_t &s);
+	static void draw_spraycan_in_building(room_object_t const &c, shader_t &s);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
 	void expand_bookcase(room_object_t const &c);

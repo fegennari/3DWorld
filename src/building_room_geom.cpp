@@ -374,6 +374,12 @@ void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
 	if (!shadow_only) {tex.unset_gl(s);}
 }
 
+void rgeom_mat_t::upload_draw_and_clear(shader_t &s) {
+	create_vbo_inner();
+	draw(s, 0, 0);
+	clear();
+}
+
 void building_materials_t::clear() {
 	for (iterator m = begin(); m != end(); ++m) {m->clear();}
 	vector<rgeom_mat_t>::clear();
@@ -977,14 +983,29 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 	holder_mat.add_cube_to_verts(plate, holder_color, zero_vector, ~get_face_mask(c.dim, c.dir)); // skip the face against the wall
 }
 
-void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
+void add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 	unsigned const dim(get_max_dim(c.get_size()));
 	bool const add_bottom(dim != 2); // if on its side
 	cube_t can(c), cap(c);
 	can.d[dim][!c.dir] = cap.d[dim][c.dir] = (c.d[dim][c.dir] + 0.7*c.get_sz_dim(dim)); // point between top of can and bottom of cap
-	rgeom_mat_t &mat(get_material(untex_shad_mat, 1, 0, 1));
 	mat.add_ortho_cylin_to_verts(can, apply_light_color(c, DK_GRAY), dim, (add_bottom && !c.dir), (add_bottom && c.dir)); // sides + bottom (if on side)
 	mat.add_ortho_cylin_to_verts(cap, apply_light_color(c), dim, c.dir, !c.dir); // sides + top
+}
+void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
+	add_spraycan_to_material(c, get_material(untex_shad_mat, 1, 0, 1));
+}
+/*static*/ void building_room_geom_t::draw_spraycan_in_building(room_object_t const &c, shader_t &s) {
+	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO is recreated every time
+	room_object_t c_rot(c);
+	c_rot.dir = 0; // facing up
+	unsigned const dim(get_max_dim(c.get_size()));
+	
+	if (dim != 2) { // if not oriented in Z
+		UNROLL_2X(swap(c_rot.d[dim][i_], c_rot.d[2][i_]);); // rotate into Z dir
+		c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
+	}
+	add_spraycan_to_material(c_rot, mat);
+	mat.upload_draw_and_clear(s);
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -2612,9 +2633,7 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO/IBO are recreated every time
 	mat.tex = tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0);
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, &rot_matrix); // low_detail=0
-	mat.create_vbo_inner();
-	mat.draw(s, 0, 0);
-	mat.clear();
+	mat.upload_draw_and_clear(s);
 }
 
 void building_room_geom_t::clear() {
@@ -3002,7 +3021,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 			draw_lg_ball_in_building(player_held_object, s);
 		}
 		else if (player_held_object.type == TYPE_SPRAYCAN) {
-			//add_spraycan(player_held_object); // TODO: need to use temp buffer like in draw_lg_ball_in_building()
+			draw_spraycan_in_building(player_held_object, s);
 		}
 		else {assert(0);}
 	}
