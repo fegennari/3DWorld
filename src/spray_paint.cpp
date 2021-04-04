@@ -24,6 +24,7 @@ colorRGBA custom_color(WHITE);
 extern unsigned spheres_mode;
 extern int display_mode, camera_coll_id;
 extern float CAMERA_RADIUS, FAR_CLIP;
+extern double tfticks;
 extern coll_obj_group coll_objects;
 
 
@@ -133,7 +134,12 @@ void spray_paint(bool mode) {
 		if (display_mode & 0x01) {add_color_to_landscape_texture(color, coll_pos.x, coll_pos.y, 1.5*radius);}
 		if (display_mode & 0x02) {modify_grass_at(coll_pos, 1.5*radius, 0, 0, 0, 1, 1, 0, color);}
 	}
-	gen_sound(SOUND_SPRAY, (pos + CAMERA_RADIUS*cview_dir), 0.2, 1.0);
+	static double next_sound_time(0.0);
+
+	if (tfticks > next_sound_time) { // don't play sound too frequently
+		gen_sound(SOUND_SPRAY, (pos + CAMERA_RADIUS*cview_dir), 0.2, 1.0);
+		next_sound_time = tfticks + double(0.5)*TICKS_PER_SECOND;
+	}
 }
 
 
