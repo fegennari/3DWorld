@@ -22,6 +22,7 @@ object_model_loader_t building_obj_model_loader;
 extern bool camera_in_building;
 extern int display_mode, frame_counter, player_in_closet;
 extern float office_chair_rot_rate;
+extern point pre_smap_player_pos;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
 extern room_object_t player_held_object;
@@ -3019,8 +3020,9 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
 	if (player_in_building && !shadow_only) {
-		if (player_held_object.is_valid()) { // draw the item the player is holding
-			player_held_object.translate((camera_bs + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS)) - player_held_object.get_cube_center());
+		if (player_held_object.is_valid()) { // draw the item the player is holding; pre_smap_player_pos should be the correct position for reflections
+			point const obj_pos((reflection_pass ? pre_smap_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
+			player_held_object.translate(obj_pos - player_held_object.get_cube_center());
 
 			if (player_held_object.type == TYPE_LG_BALL) { // this is currently the only supported dynamic object type
 				draw_lg_ball_in_building(player_held_object, s);
