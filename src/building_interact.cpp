@@ -246,6 +246,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 				else if (i->is_light_type()) {keep = 1;} // room light or lamp
 				//else if (i->type == TYPE_TPROLL) {keep = 1;}
+				// open books? use elevators? tilt pictures? use microwave?
 			}
 			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 			if (!keep) continue;
@@ -1290,12 +1291,16 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 	return obj_dstate[obj.obj_id];
 }
 
+bool line_int_cube_get_t(point const &p1, point const &p2, cube_t const &cube, float &tmin) {
+	float tmin0(0.0), tmax0(1.0);
+	if (get_line_clip(p1, p2, cube.d, tmin0, tmax0) && tmin0 < tmin) {tmin = tmin0; return 1;}
+	return 0;
+}
 bool line_int_cubes_get_t(point const &p1, point const &p2, vect_cube_t const &cubes, float &tmin, cube_t &target) {
 	bool had_int(0);
 
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
-		float tmin0(0.0), tmax0(1.0);
-		if (get_line_clip(p1, p2, c->d, tmin0, tmax0) && tmin0 < tmin) {tmin = tmin0; target = *c; had_int = 1;}
+		if (line_int_cube_get_t(p1, p2, *c, tmin)) {target = *c; had_int = 1;}
 	}
 	return had_int;
 }
@@ -1309,7 +1314,8 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	}
 	// find intersection point and normal; assumes pos is inside the building
 	assert(interior);
-	point const pos2(pos + bcube.get_size().mag()*dir);
+	float const max_radius(2.0*CAMERA_RADIUS), max_dist(8.0*max_radius);
+	point const pos2(pos + max_dist*dir);
 	float tmin(1.0);
 	vector3d normal;
 	cube_t target;
@@ -1324,8 +1330,17 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
 	// TODO: include exterior walls; okay to add spraypaint over windows
 	if (normal == zero_vector) return; // no walls, ceilings, or floors hit
+
+	// check for rugs, pictures, and whiteboards, which can all be painted over
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	bool const is_wall(normal.z == 0.0), is_floor(normal == plus_z);
+
+	for (auto i = objs.begin(); i != objs_end; ++i) { // update tmin, but normal should be unchanged
+		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD)) || (is_floor && i->type == TYPE_RUG)) {line_int_cube_get_t(pos, pos2, *i, tmin);}
+	}
 	point p_int(pos + tmin*(pos2 - pos));
-	float const dist(p2p_dist(pos, p_int)), max_radius(2.0*CAMERA_RADIUS), radius(min(max_radius, max(0.05f*max_radius, 0.1f*dist))); // modified version of get_spray_radius()
+	float const dist(p2p_dist(pos, p_int)), radius(min(max_radius, max(0.05f*max_radius, 0.1f*dist))); // modified version of get_spray_radius()
 	float const alpha((radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	p_int += 0.01*radius*normal; // move slightly away from the surface
 	unsigned const dim(get_max_dim(normal)), d1((dim+1)%3), d2((dim+2)%3);
