@@ -33,7 +33,7 @@ unsigned get_num_screenshot_tids();
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
 
-void draw_building_interior_spraypaint();
+void draw_building_interior_spraypaint(building_t const &building, bool player_in_building);
 
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
@@ -3019,21 +3019,21 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
-	if (player_in_building && !shadow_only) {
-		if (player_held_object.is_valid()) { // draw the item the player is holding; pre_smap_player_pos should be the correct position for reflections
-			point const obj_pos((reflection_pass ? pre_smap_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
-			player_held_object.translate(obj_pos - player_held_object.get_cube_center());
+	if (player_in_building && !shadow_only && player_held_object.is_valid()) {
+		// draw the item the player is holding; pre_smap_player_pos should be the correct position for reflections
+		point const obj_pos((reflection_pass ? pre_smap_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
+		player_held_object.translate(obj_pos - player_held_object.get_cube_center());
 
-			if (player_held_object.type == TYPE_LG_BALL) { // this is currently the only supported dynamic object type
-				draw_lg_ball_in_building(player_held_object, s);
-			}
-			else if (player_held_object.type == TYPE_SPRAYCAN) {
-				draw_spraycan_in_building(player_held_object, s);
-			}
-			else {assert(0);}
+		if (player_held_object.type == TYPE_LG_BALL) { // this is currently the only supported dynamic object type
+			draw_lg_ball_in_building(player_held_object, s);
 		}
-		draw_building_interior_spraypaint();
+		else if (player_held_object.type == TYPE_SPRAYCAN) {
+			draw_spraycan_in_building(player_held_object, s);
+		}
+		else {assert(0);}
 	}
+	if (!shadow_only) {draw_building_interior_spraypaint(building, player_in_building);} // alpha blended, should be drawn near last
+
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters
 		enable_blend();
 		mats_alpha.draw(s, shadow_only, reflection_pass);

@@ -1046,7 +1046,7 @@ void add_camera_flashlight() {
 	//add_dynamic_light(FLASHLIGHT_RAD, lpos, get_flashlight_color(), cview_dir, FLASHLIGHT_BW);
 	flashlight_on = 1;
 
-	if (display_mode & 0x0100) { // add one bounce of indirect lighting
+	if (world_mode == WMODE_GROUND && (display_mode & 0x0100)) { // add one bounce of indirect lighting
 		unsigned const NUM_VPLS = 32;
 		float const theta(acosf(1.0f - FLASHLIGHT_BW /*- 0.5*LT_DIR_FALLOFF*/)); // flashlight beam angle
 		float const rad_per_len(0.95*tan(theta));

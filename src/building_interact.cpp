@@ -26,7 +26,7 @@ vector<sphere_t> cur_sounds; // radius = sound volume
 quad_batch_draw spraypaint_qbd;
 building_t const *last_entered_building(nullptr);
 
-extern bool toggle_door_open_state, camera_in_building;
+extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
@@ -465,9 +465,9 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 			c->translate(new_center - center);
 		}
 	} // for c
-	if (use_last_pickup_object) {
+	if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
 		maybe_use_last_pickup_room_object(player_pos);
-		use_last_pickup_object = 0;
+		use_last_pickup_object = 0; // reset for next frame
 	}
 }
 
@@ -880,15 +880,7 @@ public:
 	bool use_last_item(room_object_t &obj) {
 		if (carried.empty()) return 0; // no carried item
 		obj = carried.back(); // deep copy
-		
-		if (!obj.has_dstate()) { // not a droppable/throwable item(ball)
-			if (obj.type == TYPE_SPRAYCAN) {
-				gen_sound_thread_safe_at_player(SOUND_SPRAY, 0.25);
-				register_building_sound((get_camera_pos() - get_camera_coord_space_xlate()), 0.1);
-				return 1;
-			}
-			return 0;
-		}
+		if (!obj.has_dstate()) {return (obj.type == TYPE_SPRAYCAN);} // not a droppable/throwable item(ball); only spraypaint can be used
 		// drop the item - remove it from our inventory
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
@@ -1271,7 +1263,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	room_object_t obj;
 	if (!player_inventory.use_last_item(obj)) return 0;
 
-	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it
+	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it; only activated with use_object/'E' key
 		float const cradius(get_scaled_player_radius());
 		point const obj_bot_center(obj.xc(), obj.yc(), obj.z1());
 		point dest(player_pos + (1.2f*(cradius + obj.get_radius()))*cview_dir);
@@ -1282,7 +1274,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		gen_sound_thread_safe(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
 		register_building_sound_for_obj(obj, player_pos);
 	}
-	else if (obj.type == TYPE_SPRAYCAN) {apply_spraypaint(player_pos, cview_dir, obj.color);}
+	else if (obj.type == TYPE_SPRAYCAN) {apply_spraypaint(player_pos, cview_dir, obj.color);} // active with either use_object or fire key
 	else {assert(0);}
 	return 1;
 }
@@ -1308,7 +1300,14 @@ bool line_int_cubes_get_t(point const &p1, point const &p2, vect_cube_t const &c
 	return had_int;
 }
 void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRGBA const &color) {
-	// Note: assumes pos is inside the building
+	static double next_sound_time(0.0);
+
+	if (tfticks > next_sound_time) { // play sound even if nothing is sprayed, but not too frequently
+		gen_sound_thread_safe_at_player(SOUND_SPRAY, 0.25);
+		register_building_sound(pos, 0.1);
+		next_sound_time = tfticks + double(0.5)*TICKS_PER_SECOND;
+	}
+	// find intersection point and normal; assumes pos is inside the building
 	assert(interior);
 	point const pos2(pos + bcube.get_size().mag()*dir);
 	float tmin(1.0);
@@ -1336,20 +1335,24 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 		unsigned const d(e ? d2 : d1);
 		if (p_int[d] - 0.9*radius < target.d[d][0] || p_int[d] + 0.9*radius > target.d[d][1]) return; // extends outside the target surface in this dim
 	}
+	static point last_p_int(all_zeros);
+	if (dist_less_than(p_int, last_p_int, 0.1*max_radius)) return; // too close to previous point, skip (to avoid overlapping sprays at the same location)
+	last_p_int = p_int;
 	vector3d dir1, dir2; // unit vectors
 	dir1[d1] = 1.0; dir2[d2] = 1.0;
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
 	spraypaint_qbd.add_quad_dirs(p_int, radius*dir1*winding_order_sign, radius*dir2, color, normal);
 }
 
-void draw_building_interior_spraypaint() {
+void draw_building_interior_spraypaint(building_t const &building, bool player_in_building) {
+	if (!player_in_building && (&building != last_entered_building)) return; // spraypaint only applies to one building
 	if (spraypaint_qbd.empty()) return;
 	select_texture(BLUR_CENT_TEX);
-	glDepthFunc(GL_LEQUAL);
+	glDepthMask(GL_FALSE);
 	enable_blend();
 	spraypaint_qbd.draw();
 	disable_blend();
-	glDepthFunc(GL_LESS);
+	glDepthMask(GL_TRUE);
 }
 
 // sound/audio tracking

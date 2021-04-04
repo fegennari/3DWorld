@@ -1043,8 +1043,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		// else avialable
 		break;
 
-	case 'E': // reset leaf colors
-		if (world_mode == WMODE_INF_TERRAIN && have_buildings()) {building_gameplay_action_key(2); break;} // throw/drop building object
+	case 'E': // reset leaf colors / building gameplay use object
+		if (world_mode == WMODE_INF_TERRAIN && have_buildings()) {building_gameplay_action_key(2); break;} // use building object
 		leaf_color_coherence = 0.5;
 		tree_color_coherence = 0.2;
 		leaf_base_color.R    = 0.2;
