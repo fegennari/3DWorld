@@ -2248,11 +2248,12 @@ public:
 						if (reflection_pass && !b.bcube.contains_pt_xy(camera_xlated)) continue; // not the correct building
 						if (!b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
+						if (!camera_near_building && !b.has_windows()) continue; // player is outside a windowless building (city office building)
+						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
-						bool const player_in_building(b.bcube.contains_pt_xy(camera_xlated));
-						b.gen_and_draw_room_geom(s, oc, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, player_in_building); // shadow_only=0
+						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated)); // player is within the building's bcube
+						b.gen_and_draw_room_geom(s, oc, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
