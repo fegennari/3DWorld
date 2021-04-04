@@ -946,13 +946,20 @@ void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
-	float const radius(0.5*c.dz()), length(c.get_sz_dim(!c.dim)), roll_shrink(-radius*fract(123.456*c.obj_id)), rod_shrink(-0.7*radius); // randomly partially empty
+	float const radius(0.5*c.dz()), length(c.get_sz_dim(!c.dim)), rod_shrink(-0.7*radius);
 
 	if (!(c.flags & RO_FLAG_TAKEN1)) { // draw the roll if not taken
+		rgeom_mat_t &roll_mat(get_material(untex_shad_mat, 1, 0, 1));
+		colorRGBA const tp_color(apply_light_color(c));
+		float const roll_shrink(0.75*rod_shrink*fract(123.456*c.obj_id)); // randomly partially empty (25-100%)
 		cube_t roll(c);
 		roll.expand_in_dim(c.dim, roll_shrink);
 		roll.expand_in_dim(2,     roll_shrink); // z
-		get_material(untex_shad_mat, 1, 0, 1).add_ortho_cylin_to_verts(roll, apply_light_color(c), !c.dim, 1, 1); // c.dim applies to the wall; the roll is oriented perpendicular
+		roll_mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1); // c.dim applies to the wall; the roll is oriented perpendicular
+		cube_t square(roll); // hanging square of TP
+		set_cube_zvals(square, c.z1(), c.zc()); // starts at the centerline (tangent) and extends to the bottom
+		square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
+		roll_mat.add_cube_to_verts(square, tp_color, zero_vector, ~get_skip_mask_for_xy(c.dim)); // only draw front/back faces
 	}
 	// draw the holder attached to the wall
 	rgeom_mat_t &holder_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
@@ -971,10 +978,13 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
-	// TODO: separate cap + body + label
 	unsigned const dim(get_max_dim(c.get_size()));
 	bool const add_bottom(dim != 2); // if on its side
-	get_material(untex_shad_mat, 1, 0, 1).add_ortho_cylin_to_verts(c, apply_light_color(c), dim, (add_bottom || c.dir), (add_bottom || !c.dir));
+	cube_t can(c), cap(c);
+	can.d[dim][!c.dir] = cap.d[dim][c.dir] = (c.d[dim][c.dir] + 0.7*c.get_sz_dim(dim)); // point between top of can and bottom of cap
+	rgeom_mat_t &mat(get_material(untex_shad_mat, 1, 0, 1));
+	mat.add_ortho_cylin_to_verts(can, apply_light_color(c, DK_GRAY), dim, (add_bottom && !c.dir), (add_bottom && c.dir)); // sides + bottom (if on side)
+	mat.add_ortho_cylin_to_verts(cap, apply_light_color(c), dim, c.dir, !c.dir); // sides + top
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -1154,7 +1164,7 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 		float const spcan_height(0.55*z_step), spcan_radius(0.17*spcan_height); // fixed size
 
 		if (min(c_sz.x, c_sz.y) > 5.0*spcan_radius) { // add if shelf wide/deep enough
-			unsigned const num_spcans(rgen.rand_bool() ? 0 : (rgen.rand() % 4)); // 0-3, 50% chance
+			unsigned const num_spcans(((rgen.rand()%5) < 3) ? (rgen.rand() % 4) : 0); // 0-3, 60% chance
 			C.dir  = C.dim = 0;
 			C.type = TYPE_SPRAYCAN;
 
