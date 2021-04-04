@@ -657,9 +657,8 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	case 9: // spray paint can
 	{
 		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
-		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz[0], sz[1]))), diameter(0.3*length);
-		colorRGBA const color(spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]);
-		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, color);
+		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz[0], sz[1]))), diameter(0.34*length);
+		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]);
 		obj.z2() = (obj.z1() + diameter);
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
@@ -975,7 +974,7 @@ void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	// TODO: separate cap + body + label
 	unsigned const dim(get_max_dim(c.get_size()));
 	bool const add_bottom(dim != 2); // if on its side
-	get_material(untex_shad_mat, 1, 0, 1).add_ortho_cylin_to_verts(c, apply_light_color(c), c.dim, (add_bottom || c.dir), (add_bottom || !c.dir));
+	get_material(untex_shad_mat, 1, 0, 1).add_ortho_cylin_to_verts(c, apply_light_color(c), dim, (add_bottom || c.dir), (add_bottom || !c.dir));
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -1038,6 +1037,19 @@ unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
 void add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &objects, vect_cube_t &cubes) {
 	if (!has_bcube_int(obj, cubes)) {objects.push_back(obj); cubes.push_back(obj);}
 }
+void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen) {
+	point center;
+	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
+	C.set_from_point(center);
+	set_cube_zvals(C, S.z2(), S.z2()+height);
+	C.expand_by_xy(sz);
+}
+void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen) {
+	point center;
+	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + spacing), (S.d[d][1] - spacing));} // place at least spacing from edge
+	C.set_from_sphere(center, radius);
+	set_cube_zvals(C, S.z2(), S.z2()+height);
+}
 void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects) {
 	room_object_t c(c_in);
 	c.flags |= RO_FLAG_WAS_EXP;
@@ -1053,12 +1065,13 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 		cube_t const &S(shelves[s]);
 		room_object_t C(c);
 		vector3d sz;
-		point center;
 		cubes.clear();
 		// add crates/boxes
 		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : 13)); // 0-12
 
 		for (unsigned n = 0; n < num_boxes; ++n) {
+			point center;
+
 			for (unsigned d = 0; d < 2; ++d) {
 				sz[d] = 0.5*width*sz_scale*(is_house ? 1.5 : 1.0)*rgen.rand_uniform(0.45, 0.8); // x,y half width
 				center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
@@ -1080,38 +1093,34 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 		} // for n
 		// add computers; what about monitors?
 		bool const top_shelf(s+1 == num_shelves);
-		unsigned const num_comps(rgen.rand() % (is_house ? 3 : 6)); // 0-5
 		float const h_val(0.21*1.1*dz), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
 		sz[ c.dim] = 0.5*cdepth;
 		sz[!c.dim] = 0.5*cwidth;
-		C.dim  = c.dim; C.dir = !c.dir; // reset dim, flip dir
-		C.type = TYPE_COMPUTER;
 
 		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || cheight < shelf_clearance)) { // if it fits in all dims
+			unsigned const num_comps(rgen.rand() % (is_house ? 3 : 6)); // 0-5
+			C.dim  = c.dim; C.dir = !c.dir; // reset dim, flip dir
+			C.type = TYPE_COMPUTER;
+
 			for (unsigned n = 0; n < num_comps; ++n) {
-				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
-				C.set_from_point(center);
-				set_cube_zvals(C, S.z2(), S.z2()+cheight);
-				C.expand_by_xy(sz);
+				gen_xy_pos_for_cube_obj(C, S, sz, cheight, rgen);
 				add_if_not_intersecting(C, objects, cubes);
-			} // for n
+			}
 		}
 		// add keyboards
-		unsigned const num_kbds(rgen.rand() % 5); // 0-4
 		float const kbd_hwidth(0.7*0.5*1.1*2.0*h_val), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
 		sz[ c.dim] = 0.5*kbd_depth;
 		sz[!c.dim] = kbd_hwidth;
-		C.type = TYPE_KEYBOARD;
 
 		if (2.1*sz.x < c_sz.x && 2.1*sz.y < c_sz.y && (top_shelf || kbd_height < shelf_clearance)) { // if it fits in all dims
+			unsigned const num_kbds(rgen.rand() % 5); // 0-4
+			C.type = TYPE_KEYBOARD;
+
 			for (unsigned n = 0; n < num_kbds; ++n) {
-				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
-				C.set_from_point(center);
-				set_cube_zvals(C, S.z2(), S.z2()+kbd_height);
-				C.expand_by_xy(sz);
+				gen_xy_pos_for_cube_obj(C, S, sz, kbd_height, rgen);
 				C.dir = rgen.rand_bool();
 				add_if_not_intersecting(C, objects, cubes);
-			} // for n
+			}
 		}
 		// add bottles
 		unsigned const num_bottles(((rgen.rand()&3) == 0) ? 0 : (rgen.rand() % 9)); // 0-8, 75% chance
@@ -1122,12 +1131,10 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 			// same as building_t::place_bottle_on_obj()
 			float const bottle_height(z_step*rgen.rand_uniform(0.4, 0.7)), bottle_radius(z_step*rgen.rand_uniform(0.07, 0.11));
 			if (min(c_sz.x, c_sz.y) < 5.0*bottle_radius) continue; // shelf not wide/deep enough to add this bottle
-			for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + 2.0*bottle_radius), (S.d[d][1] - 2.0*bottle_radius));} // place at least 2*radius from edge
-			C.set_from_sphere(center, bottle_radius);
-			set_cube_zvals(C, S.z2(), S.z2()+bottle_height);
+			gen_xy_pos_for_round_obj(C, S, bottle_radius, bottle_height, 2.0*bottle_radius, rgen);
 			C.set_as_bottle(rgen.rand() & 127); // no empty bottles - don't set 7th bit
 			add_if_not_intersecting(C, objects, cubes);
-		} // for n
+		}
 		// add paint cans
 		float const pc_height(0.64*z_step), pc_radius(0.28*z_step), pc_edge_spacing(1.1*pc_radius);
 
@@ -1138,12 +1145,24 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 			C.shape = SHAPE_CYLIN;
 
 			for (unsigned n = 0; n < num_pcans; ++n) {
-				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + pc_edge_spacing), (S.d[d][1] - pc_edge_spacing));} // place at least pc_edge_spacing from edge
-				C.set_from_sphere(center, pc_radius);
-				set_cube_zvals(C, S.z2(), S.z2()+pc_height);
+				gen_xy_pos_for_round_obj(C, S, pc_radius, pc_height, pc_edge_spacing, rgen);
 				add_if_not_intersecting(C, objects, cubes);
-			} // for n
+			}
 			C.shape = SHAPE_CUBE; // reset for next object type
+		}
+		// add spraypaint cans
+		float const spcan_height(0.55*z_step), spcan_radius(0.17*spcan_height); // fixed size
+
+		if (min(c_sz.x, c_sz.y) > 5.0*spcan_radius) { // add if shelf wide/deep enough
+			unsigned const num_spcans(rgen.rand_bool() ? 0 : (rgen.rand() % 4)); // 0-3, 50% chance
+			C.dir  = C.dim = 0;
+			C.type = TYPE_SPRAYCAN;
+
+			for (unsigned n = 0; n < num_spcans; ++n) {
+				gen_xy_pos_for_round_obj(C, S, spcan_radius, spcan_height, 1.5*spcan_radius, rgen);
+				C.color = spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]; // random color
+				add_if_not_intersecting(C, objects, cubes);
+			}
 		}
 		// add large balls to houses
 		float const ball_radius(0.048*1.1*dz); // 4.7 inches
@@ -1153,14 +1172,12 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 			C.color = WHITE;
 			C.type  = TYPE_LG_BALL;
 			C.shape = SHAPE_SPHERE;
-			center.z = S.z2() + ball_radius;
 
 			for (unsigned n = 0; n < num_balls; ++n) {
-				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + ball_radius), (S.d[d][1] - ball_radius));} // place at least ball_radius from edge
-				C.set_from_sphere(center, ball_radius);
+				gen_xy_pos_for_round_obj(C, S, ball_radius, 2.0*ball_radius, ball_radius, rgen);
 				C.item_flags = rgen.rand_bool(); // random type
 				add_if_not_intersecting(C, objects, cubes);
-			} // for n
+			}
 			C.shape      = SHAPE_CUBE; // reset for next object type
 			C.item_flags = 0;          // reset for next object type
 		}
