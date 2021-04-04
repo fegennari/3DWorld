@@ -864,7 +864,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	return placed_obj;
 }
 
-void building_t::add_tp_roll(room_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos) {
+void building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos) {
 	float const diameter(length);
 	cube_t tp;
 	set_cube_zvals(tp, zval, (zval + diameter));
@@ -891,7 +891,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 		sheight = 0.36*floor_spacing; swidth = 0.3*floor_spacing; slength = 0.32*floor_spacing;
 	}
 	float stall_width(2.0*twidth), sink_spacing(1.75*swidth);
-	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0);
+	bool br_dim(room.dy() < room.dx()), sink_side(0), sink_side_set(0); // br_dim is the smaller dim
 	cube_t place_area(room), br_door;
 	place_area.expand_by(-0.5*wall_thickness);
 
@@ -963,7 +963,10 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			if (!interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) { // skip if close to a door (for rooms with doors at both ends); inc_open=1
 				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, 0, tot_light_amt);
 				objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, 0, tot_light_amt, SHAPE_CUBE, stall_color);
-				// TODO: add_tp_roll()
+				float const tp_length(0.18*theight), wall_pos(toilet.get_center_dim(br_dim));
+				cube_t stall_inner(stall);
+				stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
+				add_tp_roll(stall_inner, room_id, tot_light_amt, !br_dim, dir, tp_length, (zval + 0.7*theight), wall_pos);
 			}
 			stall_pos += stall_step;
 		} // for n
