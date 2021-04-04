@@ -2716,6 +2716,8 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_HANGER_ROD:return get_textured_wood_color();
 	case TYPE_MONEY:    return texture_color(get_money_tid());
 	case TYPE_PHONE:    return color*0.5; // 50% case color, 50% black
+	case TYPE_TPROLL:   return (WHITE*0.75  + GRAY*0.25);
+	case TYPE_SPRAYCAN: return (DK_GRAY*0.5 + color*0.5);
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(building_obj_model_loader.get_avg_color(get_model_id()));} // handle models
