@@ -784,8 +784,16 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 				placed_obj = placed_toilet = 1; // done
 
 				if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the adjacent wall
-					// TODO: check for windows?
-					add_tp_roll(room, room_id, tot_light_amt, dim, (dim ? xdir : ydir), 0.18*height, (c. z1() + 0.7*height), c.get_center_dim(dim));
+					bool const tp_dir(dim ? xdir : ydir);
+					float const length(0.18*height), wall_pos(c.get_center_dim(dim)), far_edge_pos(wall_pos + (dir ? -1.0 : 1.0)*0.5*length);
+					cube_t const part(get_part_for_room(room));
+
+					// if this wall has windows and bathroom has multiple exterior walls (which means it has non-glass block windows), don't place a TP roll
+					if (is_basement || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
+						!is_val_inside_window(part, dim, far_edge_pos, get_hspacing_for_part(part, dim), get_window_h_border()) || count_ext_walls_for_room(room, zval) <= 1)
+					{
+						add_tp_roll(room, room_id, tot_light_amt, !dim, tp_dir, length, (c.z1() + 0.7*height), wall_pos);
+					}
 				}
 			} // for d
 		} // for n
@@ -860,10 +868,10 @@ void building_t::add_tp_roll(room_t const &room, unsigned room_id, float tot_lig
 	float const diameter(length);
 	cube_t tp;
 	set_cube_zvals(tp, zval, (zval + diameter));
-	set_wall_width(tp, wall_pos, 0.5*length, dim); // set length
-	tp.d[!dim][ dir] = room.d[!dim][dir]; // against the wall
-	tp.d[!dim][!dir] = tp  .d[!dim][dir] + (dir ? -1.0 : 1.0)*diameter; // set the diameter
-	interior->room_geom->objs.emplace_back(tp, TYPE_TPROLL, room_id, !dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
+	set_wall_width(tp, wall_pos, 0.5*length, !dim); // set length
+	tp.d[dim][ dir] = room.d[dim][dir]; // against the wall
+	tp.d[dim][!dir] = tp  .d[dim][dir] + (dir ? -1.0 : 1.0)*diameter; // set the diameter
+	interior->room_geom->objs.emplace_back(tp, TYPE_TPROLL, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
 	set_obj_id(interior->room_geom->objs);
 }
 
@@ -2344,12 +2352,7 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 
 void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor) { // frosted window blocks
 	room_t const &room(get_room(room_id));
-	unsigned num_ext_walls(0);
-
-	for (unsigned dim = 0; dim < 2; ++dim) {
-		for (unsigned dir = 0; dir < 2; ++dir) {num_ext_walls += (classify_room_wall(room, window.z1(), dim, dir, 0) == ROOM_WALL_EXT);}
-	}
-	if (num_ext_walls != 1) return; // it looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
+	if (count_ext_walls_for_room(room, window.z1()) != 1) return; // it looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c(window);
 	c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*get_wall_thickness());

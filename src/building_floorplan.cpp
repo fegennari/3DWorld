@@ -165,6 +165,14 @@ int building_t::classify_room_wall(room_t const &room, float zval, bool dim, boo
 	} // for p
 	return ROOM_WALL_EXT; // exterior
 }
+unsigned building_t::count_ext_walls_for_room(room_t const &room, float zval) const {
+	unsigned num_ext_walls(0);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {num_ext_walls += (classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT);}
+	}
+	return num_ext_walls;
+}
 
 void building_t::gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes) { // Note: contained in building bcube, so no bcube update is needed
 	if (!interior_enabled()) return;
