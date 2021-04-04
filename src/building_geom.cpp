@@ -421,7 +421,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			}
 			else if (c->type == TYPE_STALL && c->is_open()) { // collision test with sides only
 				if (sphere_cube_intersect(pos, xy_radius, *c)) {
-					float const width(c->get_sz_dim(!c->dir));
+					float const width(c->get_sz_dim(!c->dim));
 					cube_t sides[2] = {*c, *c};
 					sides[0].d[!c->dim][1] -= 0.95*width;
 					sides[1].d[!c->dim][0] += 0.95*width;
