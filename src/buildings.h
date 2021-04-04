@@ -983,6 +983,7 @@ private:
 	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
+	void apply_spraypaint(point const &pos, vector3d const &dir, colorRGBA const &color);
 	public:
 	// ray queries
 	bool check_line_intersect_doors(point const &p1, point const &p2) const;

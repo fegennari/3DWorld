@@ -5,6 +5,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "openal_wrap.h"
+#include "draw_utils.h" // for quad_batch_draw
 
 // physics constants, currently applied to balls
 float const KICK_VELOCITY  = 0.0025;
@@ -22,6 +23,8 @@ float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
+quad_batch_draw spraypaint_qbd;
+building_t const *last_entered_building(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode;
@@ -882,7 +885,7 @@ public:
 			if (obj.type == TYPE_SPRAYCAN) {
 				gen_sound_thread_safe_at_player(SOUND_SPRAY, 0.25);
 				register_building_sound((get_camera_pos() - get_camera_coord_space_xlate()), 0.1);
-				// TODO: apply spraypaint
+				return 1;
 			}
 			return 0;
 		}
@@ -1032,10 +1035,11 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 }
 
 void building_t::register_player_enter_building() const {
-	// nothing to do yet
+	if (this != last_entered_building) {spraypaint_qbd.clear();} // spraypaint disappears when the player enters another building
 }
 void building_t::register_player_exit_building() const {
 	player_inventory.collect_items();
+	last_entered_building = this;
 }
 
 bool has_cube_line_coll(point const &p1, point const &p2, vect_cube_t const &cubes) {
@@ -1261,6 +1265,7 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	update_draw_state_for_room_object(obj, building);
 	return 1;
 }
+
 bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	assert(has_room_geom());
 	room_object_t obj;
@@ -1277,6 +1282,8 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		gen_sound_thread_safe(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
 		register_building_sound_for_obj(obj, player_pos);
 	}
+	else if (obj.type == TYPE_SPRAYCAN) {apply_spraypaint(player_pos, cview_dir, obj.color);}
+	else {assert(0);}
 	return 1;
 }
 
@@ -1289,6 +1296,60 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 	assert(obj.has_dstate());
 	assert(obj.obj_id < obj_dstate.size());
 	return obj_dstate[obj.obj_id];
+}
+
+bool line_int_cubes_get_t(point const &p1, point const &p2, vect_cube_t const &cubes, float &tmin, cube_t &target) {
+	bool had_int(0);
+
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		float tmin0(0.0), tmax0(1.0);
+		if (get_line_clip(p1, p2, c->d, tmin0, tmax0) && tmin0 < tmin) {tmin = tmin0; target = *c; had_int = 1;}
+	}
+	return had_int;
+}
+void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRGBA const &color) {
+	// Note: assumes pos is inside the building
+	assert(interior);
+	point const pos2(pos + bcube.get_size().mag()*dir);
+	float tmin(1.0);
+	vector3d normal;
+	cube_t target;
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		if (line_int_cubes_get_t(pos, pos2, interior->walls[d], tmin, target)) {
+			normal    = zero_vector;
+			normal[d] = -SIGN(dir[d]); // normal is opposite of ray dir in this dim
+		}
+	}
+	if (line_int_cubes_get_t(pos, pos2, interior->floors  , tmin, target)) {normal =  plus_z;}
+	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
+	// TODO: include exterior walls; okay to add spraypaint over windows
+	if (normal == zero_vector) return; // no walls, ceilings, or floors hit
+	point p_int(pos + tmin*(pos2 - pos));
+	float const dist(p2p_dist(pos, p_int)), max_radius(2.0*CAMERA_RADIUS), radius(min(max_radius, max(0.05f*max_radius, 0.1f*dist))); // modified version of get_spray_radius()
+	float const alpha((radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
+	p_int += 0.01*radius*normal; // move slightly away from the surface
+	unsigned const dim(get_max_dim(normal)), d1((dim+1)%3), d2((dim+2)%3);
+
+	// check that entire circle is contained in the target
+	for (unsigned e = 0; e < 2; ++e) {
+		unsigned const d(e ? d2 : d1);
+		if (p_int[d] - 0.9*radius < target.d[d][0] || p_int[d] + 0.9*radius > target.d[d][1]) return; // extends outside the target surface in this dim
+	}
+	vector3d dir1, dir2; // unit vectors
+	dir1[d1] = 1.0; dir2[d2] = 1.0;
+	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
+	spraypaint_qbd.add_quad_dirs(p_int, radius*dir1*winding_order_sign, radius*dir2, color, normal);
+}
+
+void draw_building_interior_spraypaint() {
+	if (spraypaint_qbd.empty()) return;
+	select_texture(BLUR_CENT_TEX);
+	glDepthFunc(GL_LEQUAL);
+	enable_blend();
+	spraypaint_qbd.draw();
+	disable_blend();
+	glDepthFunc(GL_LESS);
 }
 
 // sound/audio tracking
