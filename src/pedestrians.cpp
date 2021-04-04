@@ -1180,8 +1180,8 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 		dir_horiz.z = 0.0; // always face a horizontal direction, even if walking on a slope
 		dir_horiz.normalize();
 		//colorRGBA const &color(ped.following_player ? RED : WHITE); // force red when following player, for debugging purposes
-		//colorRGBA const &color(ped.on_stairs() ? RED : WHITE);
-		//colorRGBA const &color((ped.retreat_time > 0.0) ? RED : WHITE);
+		//colorRGBA const &color(ped.on_stairs() ? RED : ALPHA0);
+		//colorRGBA const &color((ped.retreat_time > 0.0) ? RED : ALPHA0);
 		colorRGBA const &color(ALPHA0); // A=0.0, leave unchanged
 		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, color, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
 	}

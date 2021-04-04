@@ -789,7 +789,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 					cube_t const part(get_part_for_room(room));
 
 					// if this wall has windows and bathroom has multiple exterior walls (which means it has non-glass block windows), don't place a TP roll
-					if (is_basement || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
+					if (is_basement || !has_windows() || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
 						!is_val_inside_window(part, dim, far_edge_pos, get_hspacing_for_part(part, dim), get_window_h_border()) || count_ext_walls_for_room(room, zval) <= 1)
 					{
 						add_tp_roll(room, room_id, tot_light_amt, !dim, tp_dir, length, (c.z1() + 0.7*height), wall_pos);
@@ -813,7 +813,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 		//cube_t const part(get_part_for_room(room));
 		bool is_ext_wall[2][2] = {0};
 		
-		if (!is_basement) { // precompute which walls are exterior, {dim}x{dir}; basement walls are not considered exterior because there are no windows
+		if (!is_basement && has_windows()) { // precompute which walls are exterior, {dim}x{dir}; basement walls are not considered exterior because there are no windows
 			for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 		}
 		for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
@@ -1290,7 +1290,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (rgen.rand_bool()) continue; // only add shelves to 50% of the walls
 			
-			if (is_house && !is_basement && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
+			if (is_house && !is_basement && has_windows() && classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT) {
 				// don't place shelves against exterior house walls in case there are windows
 				cube_t const part(get_part_for_room(room));
 				float const h_spacing(get_hspacing_for_part(part, !dim));
@@ -1541,7 +1541,7 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	return 1; // success
 }
 
-bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	if (!room_object_t::enable_pictures()) return 0; // disabled
 	
 	if (!is_house && !room.is_office) {
@@ -1552,6 +1552,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 	if (room.get_room_type(0) == RTYPE_STORAGE) return 0; // no pictures or whiteboards in storage rooms (always first floor)
 	cube_t const &part(get_part_for_room(room));
 	float const floor_height(get_window_vspace()), wall_thickness(get_wall_thickness());
+	bool const check_for_windows(!is_basement && has_windows());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool was_hung(0);
 
@@ -1563,7 +1564,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 		for (unsigned dim2 = 0; dim2 < 2; ++dim2) {
 			for (unsigned dir2 = 0; dir2 < 2; ++dir2) {
 				bool const dim(bool(dim2) ^ pref_dim), dir(bool(dir2) ^ pref_dir);
-				if (fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
+				if (check_for_windows && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
 				cube_t c(room);
 				set_cube_zvals(c, zval+0.25*floor_height, zval+0.9*floor_height-floor_thick);
 				c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.6*wall_thickness; // Note: offset by an additional half wall thickness
@@ -1578,7 +1579,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 	for (unsigned dim = 0; dim < 2; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			float const wall_pos(room.d[dim][dir]);
-			if (fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
+			if (check_for_windows && fabs(room.d[dim][dir] - part.d[dim][dir]) < 1.1*wall_thickness) continue; // on part boundary, likely exterior wall where there may be windows, skip
 			if (!room.is_hallway && rgen.rand_float() < 0.2) continue; // skip 20% of the time unless it's a hallway
 			float const height(floor_height*rgen.rand_uniform(0.3, 0.6)), width(height*rgen.rand_uniform(1.5, 2.0)); // width > height
 			if (width > 0.8*room.get_sz_dim(!dim)) continue; // not enough space
@@ -1920,7 +1921,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			if (r->no_geom) {
 				if (is_house && r->is_hallway) { // allow pictures and rugs in the hallways of houses
-					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());
+					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());} // 50% of the time; not all rugs will be placed
 				}
 				if (!is_house && r->is_hallway && f == 0 && *r == pri_hall) { // first floor primary hallway, make it the lobby
@@ -2041,7 +2042,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			}
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
-			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start));
+			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement));
 
 			if (is_bathroom || is_kitchen || rgen.rand_float() < 0.8) { // 80% of the time, always in bathrooms and kitchens
 				add_trashcan_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, (was_hung && !is_house)); // no trashcans on same wall as office whiteboard
@@ -2232,7 +2233,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		} // for dim
 	} // for i
 	// add window trim
-	if (is_rotated()) return; // not yet working for rotated buildings
+	if (is_rotated())   return; // not yet working for rotated buildings
+	if (!has_windows()) return; // no windows
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well

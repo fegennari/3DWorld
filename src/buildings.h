@@ -771,6 +771,7 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_roof_color  () const {return roof_color  .modulate_with(get_material().roof_tex.get_avg_color());}
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const;
+	bool has_windows() const {return get_material().add_windows;}
 	float get_window_vspace  () const {return get_material().get_floor_spacing();}
 	float get_floor_thickness() const {return (is_house ? FLOOR_THICK_VAL_HOUSE : FLOOR_THICK_VAL_OFFICE)*get_window_vspace();}
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
@@ -944,7 +945,7 @@ private:
 	void place_bottle_on_obj (rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);
 	void place_plant_on_obj  (rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid);
 	bool add_rug_to_room     (rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
-	bool hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
+	bool hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
 	void add_plants_to_room  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num);
 	void add_boxes_to_room   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned max_num);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
