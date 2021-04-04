@@ -16,7 +16,7 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 
-bool do_room_obj_pickup(0), drop_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), city_action_key(0);
+bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), city_action_key(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 room_object_t player_held_object;
@@ -45,6 +45,9 @@ void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float 
 	gain *= dscale/(dist + dscale);
 #pragma omp critical(gen_sound)
 	gen_sound(id, pos, gain, pitch);
+}
+void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float pitch=1.0) {
+	gen_sound_thread_safe(id, get_camera_pos(), gain, pitch);
 }
 
 // lights
@@ -459,9 +462,9 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 			c->translate(new_center - center);
 		}
 	} // for c
-	if (drop_last_pickup_object) {
-		maybe_add_last_pickup_room_object(player_pos);
-		drop_last_pickup_object = 0;
+	if (use_last_pickup_object) {
+		maybe_use_last_pickup_room_object(player_pos);
+		use_last_pickup_object = 0;
 	}
 }
 
@@ -486,7 +489,7 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 			update_dynamic_draw_data(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
 			
 			if ((int)move_dir != prev_move_dir) {
-				gen_sound_thread_safe(SOUND_SLIDING, get_camera_pos(), 0.2); // play this sound quietly when the elevator starts moving or changes direction
+				gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.2); // play this sound quietly when the elevator starts moving or changes direction
 				register_building_sound(player_pos, 0.4);
 			}
 			prev_move_dir = move_dir;
@@ -775,7 +778,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 	void register_player_death(unsigned sound_id, std::string const &why) {
 		point const xlate(get_camera_coord_space_xlate());
 		place_player_at_xy(xlate.x, xlate.y); // move back to the origin/spawn location
-		gen_sound_thread_safe(sound_id, get_camera_pos());
+		gen_sound_thread_safe_at_player(sound_id);
 		print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10);
 		clear(); // respawn
 	}
@@ -802,7 +805,7 @@ public:
 	bool can_unlock_door() const {
 		if (has_key) return 1;
 		print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
-		gen_sound_thread_safe(SOUND_CLICK, get_camera_pos(), 1.0);
+		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);
 		return 0;
 	}
 	void add_item(room_object_t const &obj) {
@@ -871,10 +874,19 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 		return 1; // success
 	}
-	bool drop_last_item(room_object_t &obj, bool dynamic_only) {
-		if (carried.empty()) return 0;
-		if (dynamic_only && !carried.back().has_dstate()) return 0;
+	bool use_last_item(room_object_t &obj) {
+		if (carried.empty()) return 0; // no carried item
 		obj = carried.back(); // deep copy
+		
+		if (!obj.has_dstate()) { // not a droppable/throwable item(ball)
+			if (obj.type == TYPE_SPRAYCAN) {
+				gen_sound_thread_safe_at_player(SOUND_SPRAY, 0.25);
+				register_building_sound((get_camera_pos() - get_camera_coord_space_xlate()), 0.1);
+				// TODO: apply spraypaint
+			}
+			return 0;
+		}
+		// drop the item - remove it from our inventory
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
 		assert(cur_value >= 0.0 && cur_weight >= 0.0); // is this okay if there's FP rounding error?
@@ -933,7 +945,7 @@ public:
 			// only take fall damage when inside the building (no falling off the roof for now)
 			player_health -= 1.0f*(delta_z - fall_damage_start)/fall_damage_start;
 			if (player_is_dead()) {register_player_death(SOUND_SQUISH, " of a fall"); return;} // dead
-			gen_sound_thread_safe(SOUND_SQUISH, get_camera_pos(), 0.5);
+			gen_sound_thread_safe_at_player(SOUND_SQUISH, 0.5);
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
 			register_building_sound((camera_pos - get_camera_coord_space_xlate()), 1.0);
 		}
@@ -945,7 +957,7 @@ public:
 		drunkenness = max(0.0f, (drunkenness - 0.0001f*fticks)); // slowly decrease over time
 		
 		if (player_near_toilet) { // empty bladder
-			if (bladder > 0.9) {gen_sound_thread_safe(SOUND_GASP, get_camera_pos());} // urinate
+			if (bladder > 0.9) {gen_sound_thread_safe_at_player(SOUND_GASP);} // urinate
 			if (bladder > 0.0) { // toilet flush
 #pragma omp critical(gen_sound)
 				gen_delayed_sound(1.0, SOUND_FLUSH, get_camera_pos()); // delay by 1s
@@ -957,7 +969,7 @@ public:
 			bladder_time += fticks;
 
 			if (bladder_time > 5.0*TICKS_PER_SECOND) { // play the "I have to go" sound
-				gen_sound_thread_safe(SOUND_HURT, get_camera_pos());
+				gen_sound_thread_safe_at_player(SOUND_HURT);
 				bladder_time = 0.0;
 			}
 		}
@@ -987,8 +999,8 @@ bool register_player_object_pickup(room_object_t const &obj, point const &at_pos
 		show_weight_limit_message();
 		return 0;
 	}
-	if (is_consumable(obj)) {gen_sound_thread_safe(SOUND_GULP, get_camera_pos(), 1.0 );}
-	else                    {gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.25);}
+	if (is_consumable(obj)) {gen_sound_thread_safe_at_player(SOUND_GULP, 1.0 );}
+	else                    {gen_sound_thread_safe_at_player(SOUND_ITEM, 0.25);}
 	register_building_sound_for_obj(obj, at_pos);
 	do_room_obj_pickup = 0; // no more object pickups
 	return 1;
@@ -1249,20 +1261,22 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	update_draw_state_for_room_object(obj, building);
 	return 1;
 }
-bool building_t::maybe_add_last_pickup_room_object(point const &player_pos) {
+bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	assert(has_room_geom());
-	bool const dynamic_only = 1;
 	room_object_t obj;
-	if (!player_inventory.drop_last_item(obj, dynamic_only)) return 0;
-	float const cradius(get_scaled_player_radius());
-	point const obj_bot_center(obj.xc(), obj.yc(), obj.z1());
-	point dest(player_pos + (1.2f*(cradius + obj.get_radius()))*cview_dir);
-	dest.z -= 0.5*cradius; // slightly below the player's face
-	obj.translate(dest - obj_bot_center);
-	if (obj.has_dstate()) {obj.flags |= RO_FLAG_DYNAMIC;} // make it dynamic, assuming it will be dropped/thrown
-	if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
-	gen_sound_thread_safe(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
-	register_building_sound_for_obj(obj, player_pos);
+	if (!player_inventory.use_last_item(obj)) return 0;
+
+	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it
+		float const cradius(get_scaled_player_radius());
+		point const obj_bot_center(obj.xc(), obj.yc(), obj.z1());
+		point dest(player_pos + (1.2f*(cradius + obj.get_radius()))*cview_dir);
+		dest.z -= 0.5*cradius; // slightly below the player's face
+		obj.translate(dest - obj_bot_center);
+		if (obj.has_dstate()) {obj.flags |= RO_FLAG_DYNAMIC;} // make it dynamic, assuming it will be dropped/thrown
+		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
+		gen_sound_thread_safe(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
+		register_building_sound_for_obj(obj, player_pos);
+	}
 	return 1;
 }
 
@@ -1332,14 +1346,14 @@ bool player_has_room_key() {return player_inventory.player_has_key();}
 // return value: 0=no effect, 1=player is killed, 2=this person is killed
 int register_ai_player_coll(bool &has_key, float height) {
 	if (do_room_obj_pickup && player_inventory.take_person(has_key, height)) {
-		gen_sound_thread_safe(SOUND_ITEM, get_camera_pos(), 0.5);
+		gen_sound_thread_safe_at_player(SOUND_ITEM, 0.5);
 		do_room_obj_pickup = 0; // no more object pickups
 		return 2;
 	}
 	static double last_coll_time(0.0);
 	
 	if (tfticks - last_coll_time > 2.0*TICKS_PER_SECOND) {
-		gen_sound_thread_safe(SOUND_SCREAM1, get_camera_pos());
+		gen_sound_thread_safe_at_player(SOUND_SCREAM1);
 		last_coll_time = tfticks;
 	}
 	add_camera_filter(colorRGBA(RED, 0.25), 1, -1, CAM_FILT_DAMAGE); // 1 tick of red damage
@@ -1356,8 +1370,8 @@ void building_gameplay_action_key(int mode) {
 	if (camera_in_building) { // building interior action
 		// show crosshair on first pickup because it's too difficult to pick up objects without it
 		if      (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
-		else if (mode == 2) {drop_last_pickup_object = 1;} // 'E'
-		else                {toggle_door_open_state  = 1;} // 'q'
+		else if (mode == 2) {use_last_pickup_object = 1;} // 'E'
+		else                {toggle_door_open_state = 1;} // 'q'
 	}
 	else { // building exterior/city/road/car action
 		if      (mode != 0) {city_action_key = 1;} // 'e'/'E'
