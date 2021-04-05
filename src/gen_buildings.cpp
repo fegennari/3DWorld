@@ -52,12 +52,7 @@ void tid_nm_pair_t::set_gl(shader_t &s) const {
 		if (bind_reflection_shader()) return;
 	} else {select_texture(tid);}
 	select_multitex(get_nm_tid(), 5);
-	bool const no_normal_map(get_nm_tid() == FLAT_NMAP_TEX);
-	
-	if (bool(s.get_user_flag(0)) != no_normal_map) {
-		s.add_uniform_float("bump_map_mag", (no_normal_map ? 0.0 : 1.0)); // enable or disable normal map
-		s.set_user_flag(0, no_normal_map);
-	}
+	s.add_uniform_float("bump_map_mag", ((get_nm_tid() == FLAT_NMAP_TEX) ? 0.0 : 1.0)); // enable or disable normal map
 	if (emissive > 0.0) {s.add_uniform_float("emissive_scale", emissive);} // enable emissive
 	if (spec_mag > 0  ) {s.set_specular(spec_mag/255.0, shininess);}
 }
