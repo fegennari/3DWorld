@@ -23,7 +23,7 @@ float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
-quad_batch_draw spraypaint_qbd;
+quad_batch_draw spraypaint_qbd, blood_qbd;
 building_t const *spraypainted_building(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
@@ -1388,9 +1388,10 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	//if (maybe_hit_window) {spraypaint_qbd.add_quad_dirs(p_int, -dx, dy, color, normal);} // add back facing quad that's visible from outside the building
 }
 
-void draw_building_interior_spraypaint(building_t const &building) {
-	if (&building != spraypainted_building) return; // spraypaint only applies to one building
-	if (spraypaint_qbd.empty()) return;
+void draw_building_interior_spraypaint(building_t const *const building) {
+	if (!spraypainted_building || spraypaint_qbd.empty()) return; // no spraypaint
+	if (building && building != spraypainted_building)    return; // wrong building
+	if (!camera_pdu.cube_visible(spraypainted_building->bcube + get_camera_coord_space_xlate())) return; // VFC
 	select_texture(BLUR_CENT_TEX);
 	glDepthMask(GL_FALSE);
 	enable_blend();

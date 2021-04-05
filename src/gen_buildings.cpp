@@ -2327,7 +2327,7 @@ public:
 			// draw back faces of buildings, which will be interior walls
 			setup_building_draw_shader(s, min_alpha, 1, 1, 1); // enable_indir=1, force_tsl=1, use_texgen=1
 			glEnable(GL_CULL_FACE);
-			glCullFace(reflection_pass ? GL_BACK : GL_FRONT);
+			glCullFace(reflection_pass ? GL_BACK : GL_FRONT); // draw back faces
 
 			for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 				if ((*i)->empty()) continue; // no buildings
@@ -2382,6 +2382,12 @@ public:
 				holes_shader.end_shader();
 			}
 			glDisable(GL_CULL_FACE);
+#if 0
+			setup_building_draw_shader(s, min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
+			draw_building_interior_spraypaint();
+			reset_interior_lighting(s);
+			s.end_shader();
+#endif
 		} // end draw_interior
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights
