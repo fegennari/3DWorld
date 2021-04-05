@@ -1329,7 +1329,6 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
 	// TODO: include exterior walls; okay to add spraypaint over windows
 	if (normal == zero_vector) return; // no walls, ceilings, or floors hit
-
 	// check for rugs, pictures, and whiteboards, which can all be painted over
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
@@ -1339,6 +1338,7 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD)) || (is_floor && i->type == TYPE_RUG)) {line_int_cube_get_t(pos, pos2, *i, tmin);}
 	}
 	point p_int(pos + tmin*(pos2 - pos));
+	if (check_line_intersect_doors(pos, p_int)) return; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened
 	float const dist(p2p_dist(pos, p_int)), radius(min(max_radius, max(0.05f*max_radius, 0.1f*dist))); // modified version of get_spray_radius()
 	float const alpha((radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	p_int += 0.01*radius*normal; // move slightly away from the surface
