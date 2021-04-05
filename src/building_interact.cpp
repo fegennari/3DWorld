@@ -1327,8 +1327,34 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	}
 	if (line_int_cubes_get_t(pos, pos2, interior->floors  , tmin, target)) {normal =  plus_z;}
 	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
-	// TODO: include exterior walls; okay to add spraypaint over windows
+	
+	// include exterior walls; okay to add spraypaint over windows
+	cube_t const part(get_part_containing_pt(pos));
+	float tmin0(0.0), tmax0(1.0);
+	bool maybe_hit_window(0);
+
+	if (get_line_clip(pos, pos2, part.d, tmin0, tmax0) && tmax0 < tmin) { // part edge is the closest intersection point
+		// check other parts to see if ray continues into them; if not, it exited the building; this implementation isn't perfect but should be close enough
+		point const cand_p_int(pos + tmax0*(pos2 - pos));
+		float const tolerance(0.01*get_wall_thickness());
+		bool found(0);
+
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			if (*p == part || !p->contains_pt_exp(cand_p_int, tolerance)) continue; // ray does not continue into this new part
+			if (check_line_clip(cand_p_int, pos2, p->d)) {found = 1; break;} // ray continues into this part
+		}
+		if (!found) { // ray has exited the building
+			vector3d n(zero_vector);
+
+			for (unsigned d = 0; d < 2; ++d) { // find the closest intersecting cube XY edge, which will determine the normal vector
+				if (fabs(cand_p_int[d] - part.d[d][0]) < tolerance) {n[d] =  1.0; break;} // test low  edge
+				if (fabs(cand_p_int[d] - part.d[d][1]) < tolerance) {n[d] = -1.0; break;} // test high edge
+			}
+			if (n != zero_vector) {tmin = tmax0; normal = n; target = part; maybe_hit_window = 1;}
+		}
+	}
 	if (normal == zero_vector) return; // no walls, ceilings, or floors hit
+
 	// check for rugs, pictures, and whiteboards, which can all be painted over
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
@@ -1342,6 +1368,7 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	float const dist(p2p_dist(pos, p_int)), radius(min(max_radius, max(0.05f*max_radius, 0.1f*dist))); // modified version of get_spray_radius()
 	float const alpha((radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	p_int += 0.01*radius*normal; // move slightly away from the surface
+	assert(bcube.contains_pt(p_int));
 	unsigned const dim(get_max_dim(normal)), d1((dim+1)%3), d2((dim+2)%3);
 
 	// check that entire circle is contained in the target
@@ -1356,7 +1383,9 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	dir1[d1] = 1.0; dir2[d2] = 1.0;
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
 	if (this != spraypainted_building) {spraypaint_qbd.clear(); spraypainted_building = this;} // spraypaint switches to this building
-	spraypaint_qbd.add_quad_dirs(p_int, radius*dir1*winding_order_sign, radius*dir2, color, normal);
+	vector3d const dx(radius*dir1*winding_order_sign*(maybe_hit_window ? -1.0 : 1.0)), dy(radius*dir2);
+	spraypaint_qbd.add_quad_dirs(p_int, dx, dy, color, normal);
+	//if (maybe_hit_window) {spraypaint_qbd.add_quad_dirs(p_int, -dx, dy, color, normal);} // add back facing quad that's visible from outside the building
 }
 
 void draw_building_interior_spraypaint(building_t const &building) {
