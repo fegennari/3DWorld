@@ -24,7 +24,7 @@ room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 quad_batch_draw spraypaint_qbd;
-building_t const *last_entered_building(nullptr);
+building_t const *spraypainted_building(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode;
@@ -1028,11 +1028,10 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 }
 
 void building_t::register_player_enter_building() const {
-	if (this != last_entered_building) {spraypaint_qbd.clear();} // spraypaint disappears when the player enters another building
+	// nothing to do yet
 }
 void building_t::register_player_exit_building() const {
 	player_inventory.collect_items();
-	last_entered_building = this;
 }
 
 bool has_cube_line_coll(point const &p1, point const &p2, vect_cube_t const &cubes) {
@@ -1356,11 +1355,12 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	vector3d dir1, dir2; // unit vectors
 	dir1[d1] = 1.0; dir2[d2] = 1.0;
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
+	if (this != spraypainted_building) {spraypaint_qbd.clear(); spraypainted_building = this;} // spraypaint switches to this building
 	spraypaint_qbd.add_quad_dirs(p_int, radius*dir1*winding_order_sign, radius*dir2, color, normal);
 }
 
-void draw_building_interior_spraypaint(building_t const &building, bool player_in_building) {
-	if (!player_in_building && (&building != last_entered_building)) return; // spraypaint only applies to one building
+void draw_building_interior_spraypaint(building_t const &building) {
+	if (&building != spraypainted_building) return; // spraypaint only applies to one building
 	if (spraypaint_qbd.empty()) return;
 	select_texture(BLUR_CENT_TEX);
 	glDepthMask(GL_FALSE);

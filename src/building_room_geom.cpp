@@ -33,7 +33,7 @@ unsigned get_num_screenshot_tids();
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
 
-void draw_building_interior_spraypaint(building_t const &building, bool player_in_building);
+void draw_building_interior_spraypaint(building_t const &building);
 
 
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
@@ -3032,7 +3032,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		}
 		else {assert(0);}
 	}
-	if (!shadow_only) {draw_building_interior_spraypaint(building, player_in_building);} // alpha blended, should be drawn near last
+	if (!shadow_only) {draw_building_interior_spraypaint(building);} // alpha blended, should be drawn near last
 
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters
 		enable_blend();
