@@ -117,7 +117,8 @@ public:
 		remove_connection(room1, room2);
 		remove_connection(room2, room1);
 	}
-	bool is_room_connected_to(unsigned room1, unsigned room2) const { // Note: likely faster than running full A* algorithm
+	bool is_room_connected_to(unsigned room1, unsigned room2, vect_door_t const &doors, float zval, bool has_key) const {
+		// Note: likely faster than running full A* algorithm
 		assert(room1 < num_rooms && room2 < num_rooms);
 		if (room1 == room2) return 1;
 		vector<uint8_t> seen(nodes.size(), 0);
@@ -131,7 +132,10 @@ public:
 
 			for (auto i = node.conn_rooms.begin(); i != node.conn_rooms.end(); ++i) {
 				if (i->ix == room2) return 1; // found, done
-				if (!seen[i->ix]) {pend.push_back(i->ix); seen[i->ix] = 1;}
+				if (seen[i->ix]) continue;
+				if (!can_use_conn(*i, doors, zval, has_key)) continue; // blocked by closed or locked door
+				pend.push_back(i->ix);
+				seen[i->ix] = 1;
 			}
 		} // end while()
 		return 0; // not found
@@ -566,7 +570,7 @@ bool building_t::choose_dest_goal(building_ai_state_t &state, pedestrian_t &pers
 	if (!goal.is_valid()) return 0; // player or sound
 	unsigned const cand_room(goal.room_ix);
 	room_t const &room(get_room(cand_room)); // target room
-	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) return 0; // unreachable
+	if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) return 0; // unreachable
 	state.cur_room      = loc.room_ix;
 	state.dest_room     = cand_room; // set but not yet used
 	person.target_pos   = (global_building_params.ai_target_player ? goal.pos: get_center_of_room(cand_room));
@@ -636,7 +640,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		if (1 || same_floor) { // for now, always do this so that we don't have to handle walking between stacked parts
 			if (person.pos.z < room.z1() || person.pos.z > room.z2()) continue; // room above or below the current pos (won't walk between stacks)
 		}
-		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room)) continue;
+		if (!interior->nav_graph->is_room_connected_to(loc.room_ix, cand_room, interior->doors, person.pos.z, person.has_key)) continue;
 		state.dest_room     = cand_room; // set but not yet used
 		person.target_pos   = get_center_of_room(cand_room);
 		person.target_pos.z = person.pos.z; // keep orig zval to stay on the same floor
