@@ -123,7 +123,7 @@ char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, ship_cube_map_reflection;
+extern bool clear_landscape_vbo, use_dense_voxels, tree_4th_branches, model_calc_tan_vect, water_is_lava, use_grass_tess, def_tex_compress, ship_cube_map_reflection, flashlight_on;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints, last_inventory_frame;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
@@ -1153,7 +1153,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			sstates[CAMERA_ID].jump_time = 0.25*TICKS_PER_SECOND; // suppress extra jump if space is held down too long
 		}
 		else if (world_mode == WMODE_INF_TERRAIN && map_mode) {teleport_to_map_location();}
-		else {fire_weapon();} // fire
+		else {fire_weapon(); flashlight_on = 0;} // fire; spacebar doesn't toggle flashlight because flashlight_on is cleared at the beginning of display()
 		break;
 	case '<': // decrease weapon velocity
 		ball_velocity = max(0.0, ball_velocity-5.0);
