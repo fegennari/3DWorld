@@ -23,8 +23,8 @@ float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
-quad_batch_draw spraypaint_qbd, blood_qbd;
-building_t const *spraypainted_building(nullptr);
+quad_batch_draw spraypaint_qbd[2], blood_qbd; // spraypaint_qbd: {interior walls, exterior walls}
+building_t const *spraypaint_bldg(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode;
@@ -1331,7 +1331,7 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	// include exterior walls; okay to add spraypaint over windows
 	cube_t const part(get_part_containing_pt(pos));
 	float tmin0(0.0), tmax0(1.0);
-	bool maybe_hit_window(0);
+	bool exterior_wall(0);
 
 	if (get_line_clip(pos, pos2, part.d, tmin0, tmax0) && tmax0 < tmin) { // part edge is the closest intersection point
 		// check other parts to see if ray continues into them; if not, it exited the building; this implementation isn't perfect but should be close enough
@@ -1350,7 +1350,7 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 				if (fabs(cand_p_int[d] - part.d[d][0]) < tolerance) {n[d] =  1.0; break;} // test low  edge
 				if (fabs(cand_p_int[d] - part.d[d][1]) < tolerance) {n[d] = -1.0; break;} // test high edge
 			}
-			if (n != zero_vector) {tmin = tmax0; normal = n; target = part; maybe_hit_window = 1;}
+			if (n != zero_vector) {tmin = tmax0; normal = n; target = part; exterior_wall = 1;}
 		}
 	}
 	if (normal == zero_vector) return; // no walls, ceilings, or floors hit
@@ -1382,20 +1382,28 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	vector3d dir1, dir2; // unit vectors
 	dir1[d1] = 1.0; dir2[d2] = 1.0;
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
-	if (this != spraypainted_building) {spraypaint_qbd.clear(); spraypainted_building = this;} // spraypaint switches to this building
-	vector3d const dx(radius*dir1*winding_order_sign*(maybe_hit_window ? -1.0 : 1.0)), dy(radius*dir2);
-	spraypaint_qbd.add_quad_dirs(p_int, dx, dy, color, normal);
-	//if (maybe_hit_window) {spraypaint_qbd.add_quad_dirs(p_int, -dx, dy, color, normal);} // add back facing quad that's visible from outside the building
+	
+	if (this != spraypaint_bldg) { // spraypaint switches to this building
+		for (unsigned d = 0; d < 2; ++d) {spraypaint_qbd[d].clear();}
+		spraypaint_bldg = this;
+	}
+	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
+	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
+	spraypaint_qbd[exterior_wall].add_quad_dirs(p_int, dx, radius*dir2, color, normal);
 }
 
-void draw_building_interior_spraypaint(building_t const *const building) {
-	if (!spraypainted_building || spraypaint_qbd.empty()) return; // no spraypaint
-	if (building && building != spraypainted_building)    return; // wrong building
-	if (!camera_pdu.cube_visible(spraypainted_building->bcube + get_camera_coord_space_xlate())) return; // VFC
+bool have_spraypaint_for_building(bool exterior) {
+	return (spraypaint_bldg && !spraypaint_qbd[exterior].empty() && camera_pdu.cube_visible(spraypaint_bldg->bcube + get_camera_coord_space_xlate())); // VFC
+}
+void draw_building_interior_spraypaint(unsigned int_ext_mask, building_t const *const building) {
+	if (building && building != spraypaint_bldg) return; // wrong building
+	bool const interior(int_ext_mask & 1), exterior(int_ext_mask & 2);
+	if ((!interior || spraypaint_qbd[0].empty()) && (!exterior || spraypaint_qbd[1].empty())) return; // no spraypaint to draw
 	select_texture(BLUR_CENT_TEX);
-	glDepthMask(GL_FALSE);
+	glDepthMask(GL_FALSE); // disable depth write
 	enable_blend();
-	spraypaint_qbd.draw();
+	if (interior) {spraypaint_qbd[0].draw();}
+	if (exterior) {spraypaint_qbd[1].draw();}
 	disable_blend();
 	glDepthMask(GL_TRUE);
 }

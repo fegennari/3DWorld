@@ -281,6 +281,10 @@ void reset_interior_lighting(shader_t &s) {
 	s.add_uniform_float("ambient_scale", 1.0); // reset to default
 	s.add_uniform_float("hemi_lighting_scale", 0.5); // reset to default
 }
+void reset_interior_lighting_and_end_shader(shader_t &s) {
+	reset_interior_lighting(s);
+	s.end_shader();
+}
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen) {
 	float const pcf_scale = 0.2;
 	bool const have_indir(enable_indir && indir_tex_mgr.enabled() && player_in_closet < 2); // disable indir if the player is in a closed closet
@@ -2254,7 +2258,7 @@ public:
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
-						if (reflection_pass == 2)  continue; // interior room, don't need to draw windows and exterior doors
+						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, door_type); // and draw opened door
 						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
@@ -2303,8 +2307,7 @@ public:
 				camera_in_building = this_frame_camera_in_building;
 				player_in_basement = this_frame_player_in_basement;
 			}
-			reset_interior_lighting(s);
-			s.end_shader();
+			reset_interior_lighting_and_end_shader(s);
 			reflection_shader.clear();
 
 			// update indir lighting using ray casting
@@ -2356,16 +2359,14 @@ public:
 				(*i)->building_draw_int_ext_walls.draw(s, 0, 0, 0, exclude); // exterior walls only, no stencil test
 				s.add_uniform_vector3d("texgen_origin", zero_vector);
 			} // for i
-			reset_interior_lighting(s);
-			s.end_shader();
+			reset_interior_lighting_and_end_shader(s);
 
 			if (DRAW_EXT_REFLECTIONS || !reflection_pass) {
 				// if we're not by an exterior door, draw the back sides of exterior doors as closed; always draw non-ext walls/non doors (roof geom)
 				int const tex_filt_mode(ext_door_draw.empty() ? 2 : 3);
 				setup_building_draw_shader(s, min_alpha, 0, 1, 0); // enable_indir=0, force_tsl=1, use_texgen=0
 				for (auto i = bcs.begin(); i != bcs.end(); ++i) {(*i)->building_draw_vbo.draw(s, 0, 0, tex_filt_mode);}
-				reset_interior_lighting(s);
-				s.end_shader();
+				reset_interior_lighting_and_end_shader(s);
 			}
 			glCullFace(reflection_pass ? GL_FRONT : GL_BACK); // draw front faces
 
@@ -2382,12 +2383,12 @@ public:
 				holes_shader.end_shader();
 			}
 			glDisable(GL_CULL_FACE);
-#if 0
-			setup_building_draw_shader(s, min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
-			draw_building_interior_spraypaint();
-			reset_interior_lighting(s);
-			s.end_shader();
-#endif
+
+			if (reflection_pass != 2 && have_spraypaint_for_building(1)) { // draw spraypaint on building exterior, if needed; not for interior rooms
+				setup_building_draw_shader(s, 0.01, 1, 1, 0); // alpha test, enable_indir=1, force_tsl=1, use_texgen=0
+				draw_building_interior_spraypaint(2, nullptr); // exterior only
+				reset_interior_lighting_and_end_shader(s);
+			}
 		} // end draw_interior
 
 		// everything after this point is part of the building exteriors and uses city lights rather than building room lights

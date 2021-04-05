@@ -3030,7 +3030,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		}
 		else {assert(0);}
 	}
-	if (!shadow_only) {draw_building_interior_spraypaint(&building);} // alpha blended, should be drawn near last
+	if (!shadow_only) {draw_building_interior_spraypaint(3, &building);} // alpha blended, should be drawn near last; draw both interior and exterior
 
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters
 		enable_blend();
