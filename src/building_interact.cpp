@@ -1402,7 +1402,7 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	}
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
-	spraypaint_qbd[exterior_wall].add_quad_dirs(p_int, dx, radius*dir2, color, normal);
+	spraypaint_qbd[exterior_wall].add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
 }
 
 void building_t::add_blood_decal(point const &pos) const {
