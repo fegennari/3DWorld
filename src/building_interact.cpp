@@ -24,7 +24,7 @@ room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 quad_batch_draw spraypaint_qbd[2], blood_qbd; // spraypaint_qbd: {interior walls, exterior walls}
-building_t const *spraypaint_bldg(nullptr);
+building_t const *spraypaint_bldg(nullptr), *decals_bldg(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode;
@@ -1290,6 +1290,8 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 	return obj_dstate[obj.obj_id];
 }
 
+// spraypaint and decals
+
 bool line_int_cube_get_t(point const &p1, point const &p2, cube_t const &cube, float &tmin) {
 	float tmin0(0.0), tmax0(1.0);
 	if (get_line_clip(p1, p2, cube.d, tmin0, tmax0) && tmin0 < tmin) {tmin = tmin0; return 1;}
@@ -1392,6 +1394,23 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	spraypaint_qbd[exterior_wall].add_quad_dirs(p_int, dx, radius*dir2, color, normal);
 }
 
+void building_t::add_blood_decal(point const &pos) const {
+	if (!interior) return; // error?
+	if (this != decals_bldg) {blood_qbd.clear(); decals_bldg = this;} // decals switch to this building
+	float const floor_spacing(get_window_vspace()), radius(get_scaled_player_radius());
+	cube_t player_bcube;
+	player_bcube.set_from_sphere(pos, radius);
+	if (!bcube.contains_cube_xy(player_bcube)) return; // not contained/too close to walls
+
+	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // blood can only be placed on floors
+		if (pos.z < i->z2() || pos.z > (i->z2() + floor_spacing) || !i->contains_cube_xy(player_bcube)) continue; // wrong floor, or not contained
+		float const zval(i->z2() + 0.0015*floor_spacing); // slightly above rugs (0.0015 vs. 0.001)
+		tex_range_t const tex_range(tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2)); // 2x2 texture atlas
+		blood_qbd.add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, WHITE, plus_z, tex_range);
+		break; // there can be only one
+	} // for i
+}
+
 bool have_spraypaint_for_building(bool exterior) {
 	return (spraypaint_bldg && !spraypaint_qbd[exterior].empty() && camera_pdu.cube_visible(spraypaint_bldg->bcube + get_camera_coord_space_xlate())); // VFC
 }
@@ -1404,6 +1423,16 @@ void draw_building_interior_spraypaint(unsigned int_ext_mask, building_t const *
 	enable_blend();
 	if (interior) {spraypaint_qbd[0].draw();}
 	if (exterior) {spraypaint_qbd[1].draw();}
+	disable_blend();
+	glDepthMask(GL_TRUE);
+}
+void draw_building_interior_decals(building_t const *const building) { // interior only
+	if (building && building != decals_bldg) return; // wrong building
+	if (blood_qbd.empty()) return;
+	select_texture(BLOOD_SPLAT_TEX);
+	glDepthMask(GL_FALSE); // disable depth write
+	enable_blend();
+	blood_qbd.draw();
 	disable_blend();
 	glDepthMask(GL_TRUE);
 }

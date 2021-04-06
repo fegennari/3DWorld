@@ -984,7 +984,8 @@ private:
 	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
-	void apply_spraypaint(point const &pos, vector3d const &dir, colorRGBA const &color);
+	void apply_spraypaint(point const &pos, vector3d const &dir, colorRGBA const &color) const;
+	void add_blood_decal(point const &pos) const;
 	public:
 	// ray queries
 	bool check_line_intersect_doors(point const &p1, point const &p2) const;
@@ -1094,6 +1095,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out);
 bool have_spraypaint_for_building(bool exterior);
 void draw_building_interior_spraypaint(unsigned int_ext_mask, building_t const *const building);
+void draw_building_interior_decals(building_t const *const building);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);
