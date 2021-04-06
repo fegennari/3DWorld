@@ -1305,7 +1305,17 @@ bool line_int_cubes_get_t(point const &p1, point const &p2, vect_cube_t const &c
 	}
 	return had_int;
 }
-void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRGBA const &color) {
+vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float tolerance) {
+	vector3d n(zero_vector);
+
+	for (unsigned d = 0; d < 2; ++d) { // find the closest intersecting cube XY edge, which will determine the normal vector
+		if (fabs(p[d] - c.d[d][0]) < tolerance) {n[d] = -1.0; break;} // test low  edge
+		if (fabs(p[d] - c.d[d][1]) < tolerance) {n[d] = 1.0; break;} // test high edge
+	}
+	return n;
+}
+
+void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRGBA const &color) const {
 	static double next_sound_time(0.0);
 
 	if (tfticks > next_sound_time) { // play sound even if nothing is sprayed, but not too frequently
@@ -1315,7 +1325,7 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	}
 	// find intersection point and normal; assumes pos is inside the building
 	assert(interior);
-	float const max_radius(2.0*CAMERA_RADIUS), max_dist(8.0*max_radius);
+	float const max_radius(2.0*CAMERA_RADIUS), max_dist(8.0*max_radius), tolerance(0.01*get_wall_thickness());
 	point const pos2(pos + max_dist*dir);
 	float tmin(1.0);
 	vector3d normal;
@@ -1338,7 +1348,6 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	if (get_line_clip(pos, pos2, part.d, tmin0, tmax0) && tmax0 < tmin) { // part edge is the closest intersection point
 		// check other parts to see if ray continues into them; if not, it exited the building; this implementation isn't perfect but should be close enough
 		point const cand_p_int(pos + tmax0*(pos2 - pos));
-		float const tolerance(0.01*get_wall_thickness());
 		bool found(0);
 
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
@@ -1346,25 +1355,27 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 			if (check_line_clip(cand_p_int, pos2, p->d)) {found = 1; break;} // ray continues into this part
 		}
 		if (!found) { // ray has exited the building
-			vector3d n(zero_vector);
-
-			for (unsigned d = 0; d < 2; ++d) { // find the closest intersecting cube XY edge, which will determine the normal vector
-				if (fabs(cand_p_int[d] - part.d[d][0]) < tolerance) {n[d] =  1.0; break;} // test low  edge
-				if (fabs(cand_p_int[d] - part.d[d][1]) < tolerance) {n[d] = -1.0; break;} // test high edge
-			}
+			vector3d const n(-get_normal_for_ray_cube_int_xy(cand_p_int, part, tolerance)); // negate the normal because we're looking for the exit point from the cube
 			if (n != zero_vector) {tmin = tmax0; normal = n; target = part; exterior_wall = 1;}
 		}
 	}
-	if (normal == zero_vector) return; // no walls, ceilings, or floors hit
-
-	// check for rugs, pictures, and whiteboards, which can all be painted over
+	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets (and maybe later elevators and walled stairs)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
-	bool const is_wall(normal.z == 0.0), is_floor(normal == plus_z);
+	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
 
-	for (auto i = objs.begin(); i != objs_end; ++i) { // update tmin, but normal should be unchanged
-		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD)) || (is_floor && i->type == TYPE_RUG)) {line_int_cube_get_t(pos, pos2, *i, tmin);}
-	}
+	for (auto i = objs.begin(); i != objs_end; ++i) {
+		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD)) || (is_floor && i->type == TYPE_RUG)) {
+			line_int_cube_get_t(pos, pos2, *i, tmin); // Note: return value is ignored, we only need to update tmin; normal should be unchanged
+		}
+		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
+			point const cand_p_int(pos + tmin*(pos2 - pos));
+			normal = get_normal_for_ray_cube_int_xy(cand_p_int, *i, tolerance); // should always return a valid normal
+			target = *i;
+		}
+		// what about elevators? ignore the front face if the elevator doors are open?
+	} // for i
+	if (normal == zero_vector) return; // no walls, ceilings, floors, etc. hit
 	point p_int(pos + tmin*(pos2 - pos));
 	if (check_line_intersect_doors(pos, p_int)) return; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened
 	float const dist(p2p_dist(pos, p_int)), radius(min(max_radius, max(0.05f*max_radius, 0.1f*dist))); // modified version of get_spray_radius()
