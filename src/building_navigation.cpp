@@ -369,7 +369,9 @@ public:
 		} // end while()
 		return 0; // never gets here
 	}
-	bool complete_path_within_room(point const &p1, point const &p2, unsigned room, unsigned ped_ix, float radius, unsigned ped_rseed, vect_cube_t const &avoid, vector<point> &path) const {
+	bool complete_path_within_room(point const &p1, point const &p2, unsigned room, unsigned ped_ix, float radius,
+		unsigned ped_rseed, bool is_first_path, vect_cube_t const &avoid, vector<point> &path) const
+	{
 		// used for reaching a goal such as the player within the same room
 		cube_t const walk_area(calc_walkable_room_area(get_node(room), radius));
 		rand_gen_t rgen;
@@ -377,7 +379,9 @@ public:
 		vect_cube_t keepout;
 		path.push_back(p2); // Note: path is constructed backwards, so p2 is added first and connect_room_endpoints takes swapped arguments
 		// ignore starting collisions, for example collisions with stairwell when exiting stairs?
-		if (!connect_room_endpoints(avoid, walk_area, p2, p1, radius, path, keepout, rgen, 0, 1)) {path.clear(); return 0;} // ignore initial coll with p1
+		if (!connect_room_endpoints(avoid, walk_area, p2, p1, radius, path, keepout, rgen, 0, 1)) { // ignore initial coll with p1
+			if (!is_first_path) {path.clear(); return 0;} // ignore failure on first path to allow person to get out from an object they spawn in
+		}
 		// maybe add an extra path point to prevent clipping through walls when walking throug a doorway
 		point const p1_extend_pt(closest_room_pt(walk_area, p1));
 		if (p1_extend_pt != p1) {path.push_back(p1_extend_pt);} // add if p1 was clamped
@@ -661,6 +665,12 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		state.goal_type = GOAL_TYPE_ROOM;
 		return 1;
 	} // for n
+	if (loc.room_ix >= 0 && state.is_first_path) { // how about a different location in the same room? this will at least get the person unstuck from an object
+		point const room_center(get_center_of_room(loc.room_ix));
+		person.target_pos.x = room_center.x; person.target_pos.y = room_center.y;
+		state.goal_type = GOAL_TYPE_ROOM;
+		return 1;
+	}
 	return 2; // failed, but can retry
 }
 
@@ -727,7 +737,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
-		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, avoid, path);
+		return interior->nav_graph->complete_path_within_room(from, to, loc1.room_ix, person.ssn, radius, person.cur_rseed, is_first_path, avoid, path);
 	}
 	if (loc1.floor_ix != loc2.floor_ix) { // different floors: find path from <from> to nearest stairs, then find path from stairs to <to>
 		bool const straight_only = 0;
