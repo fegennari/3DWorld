@@ -131,9 +131,9 @@ public:
 			pend.pop_back();
 
 			for (auto i = node.conn_rooms.begin(); i != node.conn_rooms.end(); ++i) {
-				if (i->ix == room2) return 1; // found, done
 				if (seen[i->ix]) continue;
 				if (!can_use_conn(*i, doors, zval, has_key)) continue; // blocked by closed or locked door
+				if (i->ix == room2) return 1; // found, done
 				pend.push_back(i->ix);
 				seen[i->ix] = 1;
 			}
