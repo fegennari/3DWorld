@@ -1819,7 +1819,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			room_center.z = z + fc_thick; // floor height
 			// top floor may have stairs connecting to upper stack
 			bool const top_floor(f+1 == num_floors), check_stairs((!is_house || has_basement()) && parts.size() > 1 && top_floor && r->z2() < bcube.z2()); // z2 check may not be effective
-			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs), roof_access_stairs(0), top_of_stairs(has_stairs && top_floor);
+			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs), top_of_stairs(has_stairs && top_floor);
 
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
@@ -2015,7 +2015,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					added_library = 1;
 				}
 			}
-			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, interior->rooms.size()))) == 0) {
+			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, (unsigned)interior->rooms.size()))) == 0) {
 				// office, no cubicles or bathroom - try to make it a library (in rare cases)
 				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {r->assign_to(RTYPE_LIBRARY, f);}
 			}
