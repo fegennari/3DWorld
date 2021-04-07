@@ -314,7 +314,7 @@ unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door tr
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim
 unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim
 unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections and shelves
-unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation for 3D models; used for office chair
+unsigned const RO_FLAG_RAND_ROT= 0x8000; // random rotation; used for office chairs, papers, and pictures
 // object flags, third byte, for pickup/interact state
 unsigned const RO_FLAG_TAKEN1  = 0x010000; // no picture / no bed pillows
 unsigned const RO_FLAG_TAKEN2  = 0x020000; // no bed sheets

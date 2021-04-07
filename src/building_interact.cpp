@@ -245,8 +245,9 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 				else if (i->is_light_type()) {keep = 1;} // room light or lamp
+				else if (i->type == TYPE_PICTURE) {keep = 1;}
 				//else if (i->type == TYPE_TPROLL) {keep = 1;}
-				// open books? use elevators? tilt pictures? use microwave?
+				// open books? use elevators? tilt pictures? use microwave? draw on whiteboard?
 			}
 			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 			if (!keep) continue;
@@ -292,13 +293,19 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			// TODO: unroll toilet paper roll
 			no_sound = 1;
 		}
+		else if (obj.type == TYPE_PICTURE) { // tilt the picture
+			obj.flags |= RO_FLAG_RAND_ROT;
+			++obj.item_flags; // choose a different random rotation
+			interior->room_geom->update_draw_state_for_room_object(obj, *this);
+			no_sound = 1;
+		}
+		else if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
+			office_chair_rot_rate += 0.1;
+			obj.flags |= RO_FLAG_ROTATING;
+			// play a sound?
+			return 0; // done, doesn't count as a door
+		}
 		else {
-			if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
-				office_chair_rot_rate += 0.1;
-				obj.flags |= RO_FLAG_ROTATING;
-				// play a sound?
-				return 0; // done, doesn't count as a door
-			}
 			if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} else {obj.flags |=  RO_FLAG_OPEN;} // open/close
 			interior->room_geom->clear_static_vbos(); // need to regen object data
 		

@@ -1650,20 +1650,34 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
 	bool const mirror_x(!whiteboard && !(c.dim ^ c.dir));
 	vector3d const tex_origin(c.get_llc());
-	get_material(tid_nm_pair_t(picture_tid, 0.0)).add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim, mirror_x);
+	get_material(tid_nm_pair_t()); // ensure material is valid
+	rgeom_mat_t &picture_mat(get_material(tid_nm_pair_t(picture_tid, 0.0)));
+	unsigned const picture_qv_start(picture_mat.quad_verts.size());
+	picture_mat.add_cube_to_verts(c, c.color, tex_origin, skip_faces, !c.dim, mirror_x);
 	// add a frame
 	cube_t frame(c);
 	vector3d exp;
 	exp.z = exp[!c.dim] = (whiteboard ? 0.04 : 0.06)*c.dz(); // frame width
 	exp[c.dim] = (whiteboard ? -0.1 : -0.25)*c.get_sz_dim(c.dim); // shrink in this dim
 	frame.expand_by(exp);
-	get_material(tid_nm_pair_t()).add_cube_to_verts_untextured(frame, (whiteboard ? GRAY : BLACK), skip_faces);
+	rgeom_mat_t &frame_mat(get_material(tid_nm_pair_t()));
+	unsigned const frame_qv_start(frame_mat.quad_verts.size());
+	frame_mat.add_cube_to_verts_untextured(frame, (whiteboard ? GRAY : BLACK), skip_faces);
 	
 	if (whiteboard) { // add a marker ledge
 		cube_t ledge(c);
 		ledge.z2() = ledge.z1() + 0.016*c.dz(); // along the bottom edge
 		ledge.d[c.dim][c.dir] += (c.dir ? 1.5 : -1.5)*c.get_sz_dim(c.dim); // extrude outward
 		get_material(untex_shad_mat, 1).add_cube_to_verts_untextured(ledge, GRAY, (1 << (2*(2-c.dim) + !c.dir))); // shadowed
+	}
+	else if (c.flags & RO_FLAG_RAND_ROT) { // apply a random rotation
+		float const angle(0.2*(fract(PI*c.obj_id + 1.61803*c.item_flags) - 0.5)); // random rotation based on obj_id and item flags
+		point rotate_pt(c.get_cube_center());
+		rotate_pt.z += 0.45*c.dz(); // rotate about a point near the top of the picture
+		vector3d normal(zero_vector);
+		normal[c.dim] = (c.dir ? -1.0 : 1.0);
+		rotate_verts(picture_mat.quad_verts, normal, angle, rotate_pt, picture_qv_start);
+		rotate_verts(frame_mat  .quad_verts, normal, angle, rotate_pt, frame_qv_start  );
 	}
 }
 
