@@ -298,6 +298,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			obj.flags |= RO_FLAG_RAND_ROT;
 			++obj.item_flags; // choose a different random rotation
 			interior->room_geom->update_draw_state_for_room_object(obj, *this);
+			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.25, 2.0); // higher pitch
 			no_sound = 1;
 		}
 		else if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
