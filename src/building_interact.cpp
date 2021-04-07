@@ -284,6 +284,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
 			// TODO: play sound in a loop until water is turned off and show water?
 			gen_sound_thread_safe(SOUND_WATER, local_to_camera_space(center));
+			obj.flags ^= RO_FLAG_IS_ACTIVE; // toggle active bit
 		}
 		else if (obj.is_light_type()) {
 			toggle_light_object(obj);

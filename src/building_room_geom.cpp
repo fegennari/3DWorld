@@ -3013,6 +3013,10 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0);
 		if (is_emissive) {s.set_color_e(BLACK);}
+		
+		if (obj.flags & RO_FLAG_IS_ACTIVE) { // sink, tub, etc.
+			if (obj.type == TYPE_SINK) {} // TODO: draw water in sink
+		}
 		obj_drawn = 1;
 	} // for i
 	if (!shadow_only && !reflection_pass && player_in_building) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects
