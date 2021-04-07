@@ -3030,10 +3030,10 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		}
 		else {assert(0);}
 	}
-	if (!shadow_only) { // alpha blended, should be drawn near last
-		draw_building_interior_spraypaint(3, &building); // draw both interior and exterior
-		draw_building_interior_decals(&building); // for blood decals
-	}
+	// alpha blended, should be drawn near last
+	if (!shadow_only) {draw_building_interior_spraypaint(3, &building);} // draw both interior and exterior
+	if (player_in_building && !shadow_only) {draw_building_interior_decals(&building);} // for blood decals, only drawn for current building
+	
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters
 		enable_blend();
 		mats_alpha.draw(s, shadow_only, reflection_pass);
