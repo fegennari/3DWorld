@@ -404,6 +404,7 @@ struct rgeom_storage_t {
 
 	rgeom_storage_t() {}
 	rgeom_storage_t(tid_nm_pair_t const &tex_) : tex(tex_) {}
+	bool empty() const {return (quad_verts.empty() && itri_verts.empty());}
 	void clear();
 	void swap_vectors(rgeom_storage_t &s);
 	void swap(rgeom_storage_t &s);

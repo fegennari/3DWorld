@@ -2928,6 +2928,35 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	rotate_dir_about_z(inst.dir, office_chair_rot_rate);
 }
 
+class water_draw_t {
+	rgeom_mat_t mat;
+	float tex_off;
+public:
+	water_draw_t() : mat(rgeom_mat_t(tid_nm_pair_t(FOAM_TEX))), tex_off(0.0) {}
+
+	void add_water_for_sink(room_object_t const &obj) {
+		float const dz(obj.dz());
+		cube_t c;
+		point pos(obj.get_cube_center());
+		pos[obj.dim] += (obj.dir ? -1.0 : 1.0)*0.095*obj.get_sz_dim(obj.dim); // move a bit toward the back of the sink
+		c.set_from_sphere(pos, 0.0055*dz);
+		set_cube_zvals(c, (obj.z1() + 0.6*dz), (obj.z1() + 0.925*dz));
+		unsigned const verts_start(mat.itri_verts.size());
+		mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0);
+		for (auto i = mat.itri_verts.begin() + verts_start; i != mat.itri_verts.end(); ++i) {i->t[1] *= 2.0; i->t[1] += tex_off;}
+	}
+	void draw_and_clear(shader_t &s) {
+		if (mat.empty()) return;
+		enable_blend();
+		mat.upload_draw_and_clear(s);
+		disable_blend();
+		tex_off += 0.01*fticks; // animate the texture
+		if (tex_off > 1.0) {tex_off -= 1.0;}
+	}
+};
+
+water_draw_t water_draw;
+
 // Note: non-const because it creates the VBO
 void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
@@ -3014,8 +3043,8 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0);
 		if (is_emissive) {s.set_color_e(BLACK);}
 		
-		if (obj.flags & RO_FLAG_IS_ACTIVE) { // sink, tub, etc.
-			if (obj.type == TYPE_SINK) {} // TODO: draw water in sink
+		if (player_in_building && !shadow_only && (obj.flags & RO_FLAG_IS_ACTIVE)) { // sink, tub, etc.
+			if (obj.type == TYPE_SINK) {water_draw.add_water_for_sink(obj);}
 		}
 		obj_drawn = 1;
 	} // for i
@@ -3034,6 +3063,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
+	water_draw.draw_and_clear(s);
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid()) {
 		// draw the item the player is holding; pre_smap_player_pos should be the correct position for reflections
