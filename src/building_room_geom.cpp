@@ -20,7 +20,7 @@ vector<room_object_t> temp_objects;
 object_model_loader_t building_obj_model_loader;
 
 extern bool camera_in_building;
-extern int display_mode, frame_counter, player_in_closet;
+extern int display_mode, frame_counter, player_in_closet, animate2;
 extern float office_chair_rot_rate;
 extern point pre_smap_player_pos;
 extern pos_dir_up camera_pdu;
@@ -2942,15 +2942,15 @@ public:
 		c.set_from_sphere(pos, 0.0055*dz);
 		set_cube_zvals(c, (obj.z1() + 0.6*dz), (obj.z1() + 0.925*dz));
 		unsigned const verts_start(mat.itri_verts.size());
-		mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0);
-		for (auto i = mat.itri_verts.begin() + verts_start; i != mat.itri_verts.end(); ++i) {i->t[1] *= 2.0; i->t[1] += tex_off;}
+		mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0, 0, 0, 1.0, 1.0, 0.2);
+		for (auto i = mat.itri_verts.begin() + verts_start; i != mat.itri_verts.end(); ++i) {i->t[1] *= 1.2; i->t[1] += tex_off;}
 	}
 	void draw_and_clear(shader_t &s) {
 		if (mat.empty()) return;
 		enable_blend();
 		mat.upload_draw_and_clear(s);
 		disable_blend();
-		tex_off += 0.01*fticks; // animate the texture
+		if (animate2) {tex_off += 0.02*fticks;} // animate the texture
 		if (tex_off > 1.0) {tex_off -= 1.0;}
 	}
 };
