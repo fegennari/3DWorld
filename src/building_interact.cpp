@@ -1369,7 +1369,7 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 			if (n != zero_vector) {tmin = tmax0; normal = n; target = part; exterior_wall = 1;}
 		}
 	}
-	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets (and maybe later elevators and walled stairs)
+	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
@@ -1383,8 +1383,17 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 			normal = get_normal_for_ray_cube_int_xy(cand_p_int, *i, tolerance); // should always return a valid normal
 			target = *i;
 		}
-		// what about elevators? ignore the front face if the elevator doors are open?
 	} // for i
+	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+		float tmin0(tmin);
+		if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
+		if (i->contains_pt(pos)) continue; // can't spraypaint the outside of the elevator when standing inside it
+		point const cand_p_int(pos + tmin0*(pos2 - pos));
+		vector3d const n(get_normal_for_ray_cube_int_xy(cand_p_int, *i, tolerance)); // should always return a valid normal
+		if (i->open && n[i->dim] == (i->dir ? 1.0 : -1.0)) continue; // skip elevator opening
+		tmin = tmin0; normal = n; target = *i;
+	}
+	// what about walled stairs?
 	if (normal == zero_vector) return; // no walls, ceilings, floors, etc. hit
 	point p_int(pos + tmin*(pos2 - pos));
 	if (check_line_intersect_doors(pos, p_int)) return; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened
