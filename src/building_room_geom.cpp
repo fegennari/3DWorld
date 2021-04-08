@@ -596,12 +596,13 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		}
 		break;
 	}
-	case 2: case 3: // pen/pencil
+	case 2: case 3: // pen/pencil/marker
 	{
+		unsigned const types[3] = {TYPE_PEN, TYPE_PENCIL, TYPE_MARKER}, type(types[rgen.rand()%3]);
 		bool const dim(!c.dim); // always opposite orient of the drawer
-		float const length(min(1.7f*sz.z, 0.9f*sz[dim])), diameter(0.036*length);
-		obj = room_object_t(drawer, ((type_ix == 2) ? (unsigned)TYPE_PEN : (unsigned)TYPE_PENCIL), c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
-		obj.color = ((obj.type == TYPE_PEN) ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]);
+		float const length(min(1.7f*sz.z, 0.9f*sz[dim])), diameter(((type == TYPE_MARKER) ? 0.08 : 0.036)*length);
+		obj = room_object_t(drawer, type, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
+		obj.color = ((obj.type == TYPE_MARKER) ? marker_colors[rgen.rand()&7] : ((obj.type == TYPE_PEN) ? pen_colors[rgen.rand()&3] : pencil_colors[rgen.rand()&1]));
 		obj.z2()  = (obj.z1() + diameter);
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
@@ -1447,20 +1448,24 @@ void building_room_geom_t::add_paper(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_pen_pencil(room_object_t const &c_) {
+void building_room_geom_t::add_pen_pencil_marker(room_object_t const &c_) {
 	room_object_t c(c_);
 	if (!c.dir) {swap(c.d[c.dim][0], c.d[c.dim][1]); c.dir = 1;} // put in canonical orientation; okay if denormalized
 	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // unshadowed, small
-	bool const is_pen(c.type == TYPE_PEN);
+	bool const is_pen(c.type == TYPE_PEN), is_marker(c.type == TYPE_MARKER);
 	float const length(c.get_sz_dim(c.dim));
 	cube_t body(c), point(c);
-	body.d[c.dim][1] = point.d[c.dim][0] = c.d[c.dim][1] - (is_pen ? 0.08 : 0.10)*length;
+	body.d[c.dim][1] = point.d[c.dim][0] = c.d[c.dim][1] - (is_marker ? 0.25 : (is_pen ? 0.08 : 0.10))*length;
 	// non-AA rotation/direction?
 
-	if (is_pen) { // point is at the top
+	if (is_marker) {
+		mat.add_ortho_cylin_to_verts(body,  apply_light_color(c, WHITE), c.dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder, always white
+		mat.add_ortho_cylin_to_verts(point, color, c.dim, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder (cap)
+	}
+	else if (is_pen) { // point is at the top
 		mat.add_ortho_cylin_to_verts(body,  color, c.dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder
-		mat.add_ortho_cylin_to_verts(point, color, c.dim, 0, 1, 0, 0, 1.0, 0.2, 1.0, 1.0, 0, 16); // 16-sided truncated cone
+		mat.add_ortho_cylin_to_verts(point, color, c.dim, 0, 0, 0, 0, 1.0, 0.2, 1.0, 1.0, 0, 16); // 16-sided truncated cone
 	}
 	else { // eraser is at the bottom and point is at the top
 		colorRGBA const lt_wood(1.0, 0.8, 0.6);
@@ -2835,7 +2840,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_BOTTLE:    add_bottle   (*i); break;
 		case TYPE_PAPER:     add_paper    (*i); break;
 		case TYPE_PAINTCAN:  add_paint_can(*i); break;
-		case TYPE_PEN: case TYPE_PENCIL: add_pen_pencil(*i); break;
+		case TYPE_PEN: case TYPE_PENCIL: case TYPE_MARKER: add_pen_pencil_marker(*i); break;
 		case TYPE_LG_BALL:   add_lg_ball  (*i); break;
 		case TYPE_HANGER_ROD:add_hanger_rod(*i); break;
 		case TYPE_DRAIN:     add_drain_pipe(*i); break;
