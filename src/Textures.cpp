@@ -769,11 +769,19 @@ void texture_t::auto_insert_alpha_channel(int index) {
 	}
 }
 
+void texture_t::fill_to_grayscale_color(unsigned char color_val) {
+	assert(ncolors == 4);
+	assert(is_allocated());
+	unsigned const size(num_pixels());
+	for(unsigned i = 0; i < size; ++i) {UNROLL_3X(data[(i<<2)+i_] = color_val;);}
+}
+
 
 void texture_t::fill_transparent_with_avg_color() { // unused
 
-	unsigned const size(num_pixels());
 	assert(ncolors == 4);
+	assert(is_allocated());
+	unsigned const size(num_pixels());
 	colorRGBA avg_color(0.0, 0.0, 0.0, 1.0);
 
 	for(unsigned i = 0; i < size; ++i) {

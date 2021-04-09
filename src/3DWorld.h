@@ -1028,6 +1028,7 @@ public:
 	void load_dds(int index);
 	void load_ppm(int index, bool allow_diff_width_height);
 	void auto_insert_alpha_channel(int index);
+	void fill_to_grayscale_color(unsigned char color_val);
 	void fill_transparent_with_avg_color();
 	void do_invert_y();
 	void fix_word_alignment();
