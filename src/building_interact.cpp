@@ -1458,7 +1458,7 @@ void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const
 	select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
 	if (interior) {paint_qbd[0][0].draw();}
 	if (exterior) {paint_qbd[0][1].draw();}
-	select_texture(get_texture_by_name("circle.png")); // markers - sharp edges
+	select_texture(get_texture_by_name("circle.png", 0, 0, 1, 0.0, 1, 1, 1)); // markers - sharp edges, used as alpha mask with white background color
 	if (interior) {paint_qbd[1][0].draw();}
 	if (exterior) {paint_qbd[1][1].draw();}
 	disable_blend();
