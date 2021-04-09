@@ -2384,9 +2384,9 @@ public:
 			}
 			glDisable(GL_CULL_FACE);
 
-			if (reflection_pass != 2 && have_spraypaint_for_building(1)) { // draw spraypaint on building exterior, if needed; not for interior rooms
+			if (reflection_pass != 2 && have_paint_for_building(1)) { // draw spraypaint/markers on building exterior, if needed; not for interior rooms
 				setup_building_draw_shader(s, 0.01, 1, 1, 0); // alpha test, enable_indir=1, force_tsl=1, use_texgen=0
-				draw_building_interior_spraypaint(2, nullptr); // exterior only
+				draw_building_interior_paint(2, nullptr); // exterior only
 				reset_interior_lighting_and_end_shader(s);
 			}
 		} // end draw_interior

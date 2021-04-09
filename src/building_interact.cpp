@@ -23,8 +23,8 @@ float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
-quad_batch_draw spraypaint_qbd[2], blood_qbd; // spraypaint_qbd: {interior walls, exterior walls}
-building_t const *spraypaint_bldg(nullptr);
+quad_batch_draw paint_qbd[2][2], blood_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
+building_t const *paint_bldg(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode;
@@ -777,6 +777,7 @@ float get_obj_weight(room_object_t const &obj) {
 bool is_consumable(room_object_t const &obj) {
 	return (in_building_gameplay_mode() && obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_NO_CONS));
 }
+bool can_use_obj(room_object_t const &obj) {return (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER);} // excludes dynamic objects
 
 void show_weight_limit_message() {
 	std::ostringstream oss;
@@ -891,7 +892,7 @@ public:
 	bool use_last_item(room_object_t &obj) {
 		if (carried.empty()) return 0; // no carried item
 		obj = carried.back(); // deep copy
-		if (!obj.has_dstate()) {return (obj.type == TYPE_SPRAYCAN);} // not a droppable/throwable item(ball); only spraypaint can be used
+		if (!obj.has_dstate()) {return can_use_obj(obj);} // not a droppable/throwable item(ball); only spraypaint or markers can be used
 		// drop the item - remove it from our inventory
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
@@ -911,7 +912,7 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		bool const has_throwable(!carried.empty() && (carried.back().has_dstate() || carried.back().type == TYPE_SPRAYCAN)); // ball or spraypaint can
+		bool const has_throwable(!carried.empty() && (carried.back().has_dstate() || can_use_obj(carried.back()))); // ball, spraypaint, or marker
 		if (has_throwable) {player_held_object = carried.back();} // deep copy last pickup object if throwable
 
 		if (display_framerate) { // controlled by framerate toggle
@@ -946,6 +947,7 @@ public:
 		point const camera_pos(get_camera_pos());
 		float const fall_damage_start(3.0*CAMERA_RADIUS); // should be a function of building floor spacing?
 		float const player_zval(camera_pos.z), delta_z(prev_player_zval - player_zval);
+		
 		if (camera_in_building != prev_in_building) {prev_in_building = camera_in_building;}
 		else if (prev_player_zval != 0.0 && delta_z > fall_damage_start && camera_in_building) {
 			// only take fall damage when inside the building (no falling off the roof for now)
@@ -1284,7 +1286,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		gen_sound_thread_safe(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
 		register_building_sound_for_obj(obj, player_pos);
 	}
-	else if (obj.type == TYPE_SPRAYCAN) {apply_spraypaint(player_pos, cview_dir, obj.color);} // active with either use_object or fire key
+	else if (can_use_obj(obj)) {apply_paint(player_pos, cview_dir, obj.color, obj.type);} // active with either use_object or fire key
 	else {assert(0);}
 	return 1;
 }
@@ -1300,7 +1302,7 @@ room_obj_dstate_t &building_room_geom_t::get_dstate(room_object_t const &obj) {
 	return obj_dstate[obj.obj_id];
 }
 
-// spraypaint and decals
+// spraypaint, markers, and decals
 
 bool line_int_cube_get_t(point const &p1, point const &p2, cube_t const &cube, float &tmin) {
 	float tmin0(0.0), tmax0(1.0);
@@ -1320,22 +1322,24 @@ vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float t
 
 	for (unsigned d = 0; d < 2; ++d) { // find the closest intersecting cube XY edge, which will determine the normal vector
 		if (fabs(p[d] - c.d[d][0]) < tolerance) {n[d] = -1.0; break;} // test low  edge
-		if (fabs(p[d] - c.d[d][1]) < tolerance) {n[d] = 1.0; break;} // test high edge
+		if (fabs(p[d] - c.d[d][1]) < tolerance) {n[d] =  1.0; break;} // test high edge
 	}
 	return n;
 }
 
-void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRGBA const &color) const {
+void building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const type) const {
 	static double next_sound_time(0.0);
+	bool const is_spraypaint(type == TYPE_SPRAYCAN), is_marker(type == TYPE_MARKER);
+	assert(is_spraypaint || is_marker); // only these two are supported
 
-	if (tfticks > next_sound_time) { // play sound even if nothing is sprayed, but not too frequently
+	if (is_spraypaint && tfticks > next_sound_time) { // play sound even if nothing is sprayed, but not too frequently; marker has no sound
 		gen_sound_thread_safe_at_player(SOUND_SPRAY, 0.25);
 		register_building_sound(pos, 0.1);
 		next_sound_time = tfticks + double(0.5)*TICKS_PER_SECOND;
 	}
 	// find intersection point and normal; assumes pos is inside the building
 	assert(interior);
-	float const max_radius(2.0*CAMERA_RADIUS), max_dist(8.0*max_radius), tolerance(0.01*get_wall_thickness());
+	float const max_radius((is_spraypaint ? 2.0 : 0.05)*CAMERA_RADIUS), max_dist((is_spraypaint ? 16.0 : 3.0)*CAMERA_RADIUS), tolerance(0.01*get_wall_thickness());
 	point const pos2(pos + max_dist*dir);
 	float tmin(1.0);
 	vector3d normal;
@@ -1350,7 +1354,7 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	if (line_int_cubes_get_t(pos, pos2, interior->floors  , tmin, target)) {normal =  plus_z;}
 	if (line_int_cubes_get_t(pos, pos2, interior->ceilings, tmin, target)) {normal = -plus_z;}
 	
-	// include exterior walls; okay to add spraypaint over windows
+	// include exterior walls; okay to add spraypaint and markers over windows
 	cube_t const part(get_part_containing_pt(pos));
 	float tmin0(0.0), tmax0(1.0);
 	bool exterior_wall(0);
@@ -1397,8 +1401,8 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	if (normal == zero_vector) return; // no walls, ceilings, floors, etc. hit
 	point p_int(pos + tmin*(pos2 - pos));
 	if (check_line_intersect_doors(pos, p_int)) return; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened
-	float const dist(p2p_dist(pos, p_int)), radius(min(max_radius, max(0.05f*max_radius, 0.1f*dist))); // modified version of get_spray_radius()
-	float const alpha((radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
+	float const dist(p2p_dist(pos, p_int)), radius(is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*dist)) : max_radius); // modified version of get_spray_radius()
+	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	p_int += 0.01*radius*normal; // move slightly away from the surface
 	assert(bcube.contains_pt(p_int));
 	unsigned const dim(get_max_dim(normal)), d1((dim+1)%3), d2((dim+2)%3);
@@ -1415,13 +1419,13 @@ void building_t::apply_spraypaint(point const &pos, vector3d const &dir, colorRG
 	dir1[d1] = 1.0; dir2[d2] = 1.0;
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
 	
-	if (this != spraypaint_bldg) { // spraypaint switches to this building
-		for (unsigned d = 0; d < 2; ++d) {spraypaint_qbd[d].clear();}
-		spraypaint_bldg = this;
+	if (this != paint_bldg) { // paint switches to this building
+		for (unsigned d = 0; d < 4; ++d) {paint_qbd[d>>1][d&1].clear();}
+		paint_bldg = this;
 	}
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
-	spraypaint_qbd[exterior_wall].add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
+	paint_qbd[is_marker][exterior_wall].add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
 }
 
 void building_t::add_blood_decal(point const &pos) const {
@@ -1440,18 +1444,23 @@ void building_t::add_blood_decal(point const &pos) const {
 	} // for i
 }
 
-bool have_spraypaint_for_building(bool exterior) {
-	return (spraypaint_bldg && !spraypaint_qbd[exterior].empty() && camera_pdu.cube_visible(spraypaint_bldg->bcube + get_camera_coord_space_xlate())); // VFC
+bool have_paint_for_building(bool exterior) {
+	return (paint_bldg && !(paint_qbd[0][exterior].empty() && paint_qbd[1][exterior].empty()) &&
+		camera_pdu.cube_visible(paint_bldg->bcube + get_camera_coord_space_xlate())); // VFC
 }
-void draw_building_interior_spraypaint(unsigned int_ext_mask, building_t const *const building) {
-	if (building && building != spraypaint_bldg) return; // wrong building
+void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) {
+	if (building && building != paint_bldg) return; // wrong building
 	bool const interior(int_ext_mask & 1), exterior(int_ext_mask & 2);
-	if ((!interior || spraypaint_qbd[0].empty()) && (!exterior || spraypaint_qbd[1].empty())) return; // no spraypaint to draw
-	select_texture(BLUR_CENT_TEX);
+	if (!(interior && !(paint_qbd[0][0].empty() && paint_qbd[1][0].empty())) &&
+		!(exterior && !(paint_qbd[0][1].empty() && paint_qbd[1][1].empty()))) return; // nothing to draw
 	glDepthMask(GL_FALSE); // disable depth write
 	enable_blend();
-	if (interior) {spraypaint_qbd[0].draw();}
-	if (exterior) {spraypaint_qbd[1].draw();}
+	select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
+	if (interior) {paint_qbd[0][0].draw();}
+	if (exterior) {paint_qbd[0][1].draw();}
+	select_texture(get_texture_by_name("circle.png")); // markers - sharp edges
+	if (interior) {paint_qbd[1][0].draw();}
+	if (exterior) {paint_qbd[1][1].draw();}
 	disable_blend();
 	glDepthMask(GL_TRUE);
 }

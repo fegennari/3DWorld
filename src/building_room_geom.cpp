@@ -996,19 +996,6 @@ void add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	add_spraycan_to_material(c, get_material(untex_shad_mat, 1, 0, 1));
 }
-/*static*/ void building_room_geom_t::draw_spraycan_in_building(room_object_t const &c, shader_t &s) {
-	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO is recreated every time
-	room_object_t c_rot(c);
-	c_rot.dir = 0; // facing up
-	unsigned const dim(get_max_dim(c.get_size()));
-	
-	if (dim != 2) { // if not oriented in Z
-		UNROLL_2X(swap(c_rot.d[dim][i_], c_rot.d[2][i_]);); // rotate into Z dir
-		c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
-	}
-	add_spraycan_to_material(c_rot, mat);
-	mat.upload_draw_and_clear(s);
-}
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
 int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
@@ -1448,38 +1435,41 @@ void building_room_geom_t::add_paper(room_object_t const &c) {
 	}
 }
 
-void building_room_geom_t::add_pen_pencil_marker(room_object_t const &c_) {
+void add_pen_pencil_marker_to_material(room_object_t const &c_, rgeom_mat_t &mat) {
 	room_object_t c(c_);
-	if (!c.dir) {swap(c.d[c.dim][0], c.d[c.dim][1]); c.dir = 1;} // put in canonical orientation; okay if denormalized
+	unsigned const dim(get_max_dim(c.get_size()));
+	if (dim != 2 && !c.dir) {swap(c.d[dim][0], c.d[dim][1]); c.dir = 1;} // put in canonical orientation if not vertical; okay if denormalized
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 0, 0, 1)); // unshadowed, small
 	bool const is_pen(c.type == TYPE_PEN), is_marker(c.type == TYPE_MARKER);
-	float const length(c.get_sz_dim(c.dim));
+	float const length(c.get_sz_dim(dim));
 	cube_t body(c), point(c);
-	body.d[c.dim][1] = point.d[c.dim][0] = c.d[c.dim][1] - (is_marker ? 0.25 : (is_pen ? 0.08 : 0.10))*length;
+	body.d[dim][1] = point.d[dim][0] = c.d[dim][1] - (is_marker ? 0.25 : (is_pen ? 0.08 : 0.10))*length;
 	// non-AA rotation/direction?
 
 	if (is_marker) {
-		mat.add_ortho_cylin_to_verts(body,  apply_light_color(c, WHITE), c.dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder, always white
-		mat.add_ortho_cylin_to_verts(point, color, c.dim, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder (cap)
+		mat.add_ortho_cylin_to_verts(body,  apply_light_color(c, WHITE), dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder, always white
+		mat.add_ortho_cylin_to_verts(point, color, dim, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder (cap)
 	}
 	else if (is_pen) { // point is at the top
-		mat.add_ortho_cylin_to_verts(body,  color, c.dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder
-		mat.add_ortho_cylin_to_verts(point, color, c.dim, 0, 0, 0, 0, 1.0, 0.2, 1.0, 1.0, 0, 16); // 16-sided truncated cone
+		mat.add_ortho_cylin_to_verts(body,  color, dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // 16-sided cylinder
+		mat.add_ortho_cylin_to_verts(point, color, dim, 0, 0, 0, 0, 1.0, 0.2, 1.0, 1.0, 0, 16); // 16-sided truncated cone
 	}
 	else { // eraser is at the bottom and point is at the top
 		colorRGBA const lt_wood(1.0, 0.8, 0.6);
 		cube_t end_part(body), lead(point);
-		point.d[c.dim][1] = lead    .d[c.dim][0] = c.d[c.dim][1] - 0.03*length;
-		body .d[c.dim][0] = end_part.d[c.dim][1] = c.d[c.dim][0] + 0.09*length;
+		point.d[dim][1] = lead    .d[dim][0] = c.d[dim][1] - 0.03*length;
+		body .d[dim][0] = end_part.d[dim][1] = c.d[dim][0] + 0.09*length;
 		cube_t eraser(end_part), metal(end_part);
-		metal.d[c.dim][0] = eraser.d[c.dim][1] = c.d[c.dim][0] + 0.04*length;
-		mat.add_ortho_cylin_to_verts(body,   color,                          c.dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 6); // 6-sided cylinder, should really be made flat sided
-		mat.add_ortho_cylin_to_verts(point,  apply_light_color(c, lt_wood),  c.dim, 0, 0, 0, 0, 1.0, 0.3, 1.0, 1.0, 0, 12); // 12-sided truncated cone
-		mat.add_ortho_cylin_to_verts(lead,   apply_light_color(c, DK_GRAY),  c.dim, 0, 0, 0, 0, 0.3, 0.0, 1.0, 1.0, 0, 12); // 12-sided cone
-		mat.add_ortho_cylin_to_verts(metal,  apply_light_color(c, DK_GREEN), c.dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // 12-sided cylinder
-		mat.add_ortho_cylin_to_verts(eraser, apply_light_color(c, PINK),     c.dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // 12-sided cylinder
+		metal.d[dim][0] = eraser.d[dim][1] = c.d[dim][0] + 0.04*length;
+		mat.add_ortho_cylin_to_verts(body,   color,                          dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 6); // 6-sided cylinder, should really be made flat sided
+		mat.add_ortho_cylin_to_verts(point,  apply_light_color(c, lt_wood),  dim, 0, 0, 0, 0, 1.0, 0.3, 1.0, 1.0, 0, 12); // 12-sided truncated cone
+		mat.add_ortho_cylin_to_verts(lead,   apply_light_color(c, DK_GRAY),  dim, 0, 0, 0, 0, 0.3, 0.0, 1.0, 1.0, 0, 12); // 12-sided cone
+		mat.add_ortho_cylin_to_verts(metal,  apply_light_color(c, DK_GREEN), dim, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // 12-sided cylinder
+		mat.add_ortho_cylin_to_verts(eraser, apply_light_color(c, PINK),     dim, 1, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 12); // 12-sided cylinder
 	}
+}
+void building_room_geom_t::add_pen_pencil_marker(room_object_t const &c) {
+	add_pen_pencil_marker_to_material(c, get_material(tid_nm_pair_t(), 0, 0, 1)); // unshadowed, small
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
@@ -2933,6 +2923,22 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	rotate_dir_about_z(inst.dir, office_chair_rot_rate);
 }
 
+/*static*/ void building_room_geom_t::draw_spraycan_or_marker_in_building(room_object_t const &c, shader_t &s) {
+	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO is recreated every time
+	room_object_t c_rot(c);
+	c_rot.dir = 0; // facing up
+	unsigned const dim(get_max_dim(c.get_size()));
+
+	if (dim != 2) { // if not oriented in Z
+		UNROLL_2X(swap(c_rot.d[dim][i_], c_rot.d[2][i_]);); // rotate into Z dir
+		c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
+	}
+	if      (c.type == TYPE_SPRAYCAN) {add_spraycan_to_material         (c_rot, mat);}
+	else if (c.type == TYPE_MARKER  ) {add_pen_pencil_marker_to_material(c_rot, mat);}
+	else {assert(0);}
+	mat.upload_draw_and_clear(s);
+}
+
 class water_draw_t {
 	rgeom_mat_t mat;
 	float tex_off;
@@ -3075,16 +3081,16 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		point const obj_pos((reflection_pass ? pre_smap_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
 		player_held_object.translate(obj_pos - player_held_object.get_cube_center());
 
-		if (player_held_object.type == TYPE_LG_BALL) { // this is currently the only supported dynamic object type
+		if (player_held_object.type == TYPE_LG_BALL) { // the only supported dynamic object type
 			draw_lg_ball_in_building(player_held_object, s);
 		}
-		else if (player_held_object.type == TYPE_SPRAYCAN) {
-			draw_spraycan_in_building(player_held_object, s);
+		else if (player_held_object.type == TYPE_SPRAYCAN || player_held_object.type == TYPE_MARKER) {
+			draw_spraycan_or_marker_in_building(player_held_object, s);
 		}
 		else {assert(0);}
 	}
 	// alpha blended, should be drawn near last
-	if (!shadow_only) {draw_building_interior_spraypaint(3, &building);} // draw both interior and exterior
+	if (!shadow_only) {draw_building_interior_paint(3, &building);} // draw both interior and exterior
 	if (player_in_building && !shadow_only) {draw_building_interior_decals(&building);} // for blood decals, only drawn for current building
 	
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters

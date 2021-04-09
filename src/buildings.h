@@ -542,8 +542,8 @@ struct building_room_geom_t {
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void add_lg_ball(room_object_t const &c);
-	static void draw_lg_ball_in_building (room_object_t const &c, shader_t &s);
-	static void draw_spraycan_in_building(room_object_t const &c, shader_t &s);
+	static void draw_lg_ball_in_building(room_object_t const &c, shader_t &s);
+	static void draw_spraycan_or_marker_in_building(room_object_t const &c, shader_t &s);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
 	void expand_bookcase(room_object_t const &c);
@@ -987,7 +987,7 @@ private:
 	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
-	void apply_spraypaint(point const &pos, vector3d const &dir, colorRGBA const &color) const;
+	void apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const type) const;
 	void add_blood_decal(point const &pos) const;
 	public:
 	// ray queries
@@ -1096,8 +1096,8 @@ void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir,
 void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0, bool no_rotate=0);
 void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out);
-bool have_spraypaint_for_building(bool exterior);
-void draw_building_interior_spraypaint(unsigned int_ext_mask, building_t const *const building);
+bool have_paint_for_building(bool exterior);
+void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building);
 void draw_building_interior_decals(building_t const *const building);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
