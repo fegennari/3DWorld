@@ -966,6 +966,7 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 		roll_mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1); // c.dim applies to the wall; the roll is oriented perpendicular
 		cube_t square(roll); // hanging square of TP
 		set_cube_zvals(square, c.z1(), c.zc()); // starts at the centerline (tangent) and extends to the bottom
+		if (c.flags & RO_FLAG_HANGING) {square.z1() -= 3.0*c.dz();} // player has pulled it down lower
 		square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
 		roll_mat.add_cube_to_verts(square, tp_color, zero_vector, ~get_skip_mask_for_xy(c.dim)); // only draw front/back faces
 	}

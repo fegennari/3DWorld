@@ -23,7 +23,7 @@ float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
-quad_batch_draw paint_qbd[2][2], blood_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
+quad_batch_draw paint_qbd[2][2], blood_qbd, tp_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
 building_t const *paint_bldg(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
@@ -246,8 +246,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 				else if (i->is_light_type()) {keep = 1;} // room light or lamp
 				else if (i->type == TYPE_PICTURE) {keep = 1;}
-				//else if (i->type == TYPE_TPROLL) {keep = 1;}
-				// open books? use elevators? tilt pictures? use microwave? draw on whiteboard?
+				else if (i->type == TYPE_TPROLL ) {keep = 1;}
+				// open books? use elevators? use microwave?
 			}
 			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 			if (!keep) continue;
@@ -291,7 +291,11 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			no_sound = 1; // sound has already been registered above
 		}
 		else if (obj.type == TYPE_TPROLL) {
-			// TODO: unroll toilet paper roll
+			if (!(obj.flags & RO_FLAG_HANGING)) {
+				gen_sound_thread_safe_at_player(SOUND_FOOTSTEP, 0.5, 1.5); // could be better
+				interior->room_geom->clear_static_small_vbos(); // need to regen object data
+			}
+			obj.flags |= RO_FLAG_HANGING; // pull down the roll
 			no_sound = 1;
 		}
 		else if (obj.type == TYPE_PICTURE) { // tilt the picture
@@ -777,7 +781,7 @@ float get_obj_weight(room_object_t const &obj) {
 bool is_consumable(room_object_t const &obj) {
 	return (in_building_gameplay_mode() && obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_NO_CONS));
 }
-bool can_use_obj(room_object_t const &obj) {return (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER);} // excludes dynamic objects
+bool can_use_obj(room_object_t const &obj) {return (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER /*|| obj.type == TYPE_TPROLL*/);} // excludes dynamic objects
 
 void show_weight_limit_message() {
 	std::ostringstream oss;
@@ -1486,13 +1490,20 @@ void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const
 	glDepthMask(GL_TRUE);
 }
 void draw_building_interior_decals(building_t const *const building) { // interior only
-	if (blood_qbd.empty()) return;
-	select_texture(BLOOD_SPLAT_TEX);
-	glDepthMask(GL_FALSE); // disable depth write
-	enable_blend();
-	blood_qbd.draw();
-	disable_blend();
-	glDepthMask(GL_TRUE);
+	if (!tp_qbd.empty()) { // toilet paper squares
+		glDisable(GL_CULL_FACE); // draw both sides
+		select_texture(WHITE_TEX);
+		tp_qbd.draw();
+		glEnable(GL_CULL_FACE);
+	}
+	if (!blood_qbd.empty()) {
+		select_texture(BLOOD_SPLAT_TEX);
+		glDepthMask(GL_FALSE); // disable depth write
+		enable_blend();
+		blood_qbd.draw();
+		disable_blend();
+		glDepthMask(GL_TRUE);
+	}
 }
 
 // sound/audio tracking
