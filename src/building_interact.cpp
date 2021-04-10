@@ -1339,7 +1339,7 @@ void building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	}
 	// find intersection point and normal; assumes pos is inside the building
 	assert(interior);
-	float const max_radius((is_spraypaint ? 2.0 : 0.05)*CAMERA_RADIUS), max_dist((is_spraypaint ? 16.0 : 3.0)*CAMERA_RADIUS), tolerance(0.01*get_wall_thickness());
+	float const max_dist((is_spraypaint ? 16.0 : 3.0)*CAMERA_RADIUS), tolerance(0.01*get_wall_thickness());
 	point const pos2(pos + max_dist*dir);
 	float tmin(1.0);
 	vector3d normal;
@@ -1392,15 +1392,36 @@ void building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
 		if (i->contains_pt(pos)) continue; // can't spraypaint the outside of the elevator when standing inside it
-		point const cand_p_int(pos + tmin0*(pos2 - pos));
-		vector3d const n(get_normal_for_ray_cube_int_xy(cand_p_int, *i, tolerance)); // should always return a valid normal
+		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), *i, tolerance)); // should always return a valid normal
 		if (i->open && n[i->dim] == (i->dir ? 1.0 : -1.0)) continue; // skip elevator opening
 		tmin = tmin0; normal = n; target = *i;
+	}
+	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
+		if (i->shape == SHAPE_STRAIGHT) continue; // no walls, skip
+		// expand by wall half-width; see building_t::add_stairs_and_elevators()
+		float const step_len_pos(i->get_sz_dim(i->dim)/i->get_num_stairs()), wall_hw(0.15*step_len_pos);
+		cube_t c(*i);
+		c.expand_by_xy(0.15*step_len_pos);
+		float tmin0(tmin);
+		if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
+		if (c.contains_pt(pos)) continue; // can't spraypaint the outside of the stairs when standing inside them
+		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), c, tolerance)); // should always return a valid normal
+
+		if (i->shape == SHAPE_U) {
+			if (n[i->dim] == (i->dir ? -1.0 : 1.0)) continue; // skip stairs opening
+		}
+		else if (i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES) {
+			// Note: we skip the end for SHAPE_WALLED and only check the sides because it depends on the floor we're on
+			if (n[i->dim] != 0) continue; // skip stairs opening, either side
+		}
+		else {assert(0);} // unsupported stairs type
+		tmin = tmin0; normal = n; target = c;
 	}
 	// what about walled stairs?
 	if (normal == zero_vector) return; // no walls, ceilings, floors, etc. hit
 	point p_int(pos + tmin*(pos2 - pos));
 	if (check_line_intersect_doors(pos, p_int)) return; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened
+	float const max_radius((is_spraypaint ? 2.0 : 0.035)*CAMERA_RADIUS);
 	float const dist(p2p_dist(pos, p_int)), radius(is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*dist)) : max_radius); // modified version of get_spray_radius()
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
 	p_int += 0.01*radius*normal; // move slightly away from the surface
@@ -1413,7 +1434,7 @@ void building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		if (p_int[d] - 0.9*radius < target.d[d][0] || p_int[d] + 0.9*radius > target.d[d][1]) return; // extends outside the target surface in this dim
 	}
 	static point last_p_int(all_zeros);
-	if (dist_less_than(p_int, last_p_int, 0.1*max_radius)) return; // too close to previous point, skip (to avoid overlapping sprays at the same location)
+	if (dist_less_than(p_int, last_p_int, 0.25*radius)) return; // too close to previous point, skip (to avoid overlapping sprays at the same location)
 	last_p_int = p_int;
 	vector3d dir1, dir2; // unit vectors
 	dir1[d1] = 1.0; dir2[d2] = 1.0;

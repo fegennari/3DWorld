@@ -2391,7 +2391,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator) continue; // for elevator, not stairs
-		unsigned const num_stairs((i->shape == SHAPE_U) ? NUM_STAIRS_PER_FLOOR_U : NUM_STAIRS_PER_FLOOR);
+		unsigned const num_stairs(i->get_num_stairs());
 		float const stair_dz(window_vspacing/(num_stairs+1)), stair_height(stair_dz + floor_thickness);
 		bool const dim(i->dim), dir(i->dir), has_side_walls(i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES || i->shape == SHAPE_U);
 		bool const side(dir); // for U-shaped stairs; for now this needs to be consistent for the entire stairwell, can't use rgen.rand_bool()

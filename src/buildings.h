@@ -615,7 +615,8 @@ struct stairs_landing_base_t {
 	stairs_landing_base_t(bool dim_, bool dir_, bool roof_access_, stairs_shape shape_, bool sc=0) :
 		dim(dim_), dir(dir_), roof_access(roof_access_), stack_conn(sc), shape(shape_) {against_wall[0] = against_wall[1] = 0;}
 	void set_against_wall(bool val[2]) {against_wall[0] = val[0]; against_wall[1] = val[1];}
-	unsigned get_face_id() const {return (2*dim + dir);}
+	unsigned get_face_id   () const {return (2*dim + dir);}
+	unsigned get_num_stairs() const {return ((shape == SHAPE_U) ? NUM_STAIRS_PER_FLOOR_U : NUM_STAIRS_PER_FLOOR);}
 };
 
 struct landing_t : public cube_t, public stairs_landing_base_t {
