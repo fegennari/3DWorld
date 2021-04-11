@@ -242,7 +242,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			if (i->type == TYPE_CLOSET && i->is_small_closet() && in_dir.z < 0.5) {keep = 1;} // closet with small door, door can be opened; not looking up at the light
 			else if (!player_in_closet) {
 				if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
-				else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE) {keep = 1;} // cube bathroom stall can be opened
+				else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE)  {keep = 1;} // cube bathroom stall can be opened
 				else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 				else if (i->is_light_type()) {keep = 1;} // room light or lamp
@@ -1355,8 +1355,8 @@ vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float t
 	return n;
 }
 
-bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const type) const { // spraypaint or marker
-	bool const is_spraypaint(type == TYPE_SPRAYCAN), is_marker(type == TYPE_MARKER);
+bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const { // spraypaint or marker
+	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER);
 	assert(is_spraypaint || is_marker); // only these two are supported
 	// find intersection point and normal; assumes pos is inside the building
 	assert(interior);
@@ -1401,7 +1401,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	bool walls_blocked(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || type == TYPE_MIRROR)) || (is_floor && i->type == TYPE_RUG || i->type == TYPE_FLOORING)) {
+		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || i->type == TYPE_MIRROR)) || (is_floor && i->type == TYPE_RUG || i->type == TYPE_FLOORING)) {
 			if (line_int_cube_get_t(pos, pos2, *i, tmin)) {target = *i;} // Note: return value is ignored, we only need to update tmin and target; normal should be unchanged
 		}
 		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
@@ -1410,12 +1410,18 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 			target = *i;
 		}
 		else if (i->type == TYPE_STALL || i->type == TYPE_CUBICLE) {
+			cube_t c(*i);
+
+			if (i->type == TYPE_STALL && i->shape != SHAPE_SHORT) { // toilet stall, clip cube to wall height
+				float const dz(c.dz());
+				c.z2() -= 0.35*dz; c.z1() += 0.15*dz;
+			}
 			float tmin0(tmin);
-			if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
+			if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
 			if (i->contains_pt(pos)) continue; // inside stall/cubicle, can't paint the exterior
-			vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), *i, tolerance)); // should always return a valid normal
+			vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), c, tolerance)); // should always return a valid normal
 			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // only the side walls count
-			tmin = tmin0; normal = n; target = *i;
+			tmin = tmin0; normal = n; target = c;
 		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
