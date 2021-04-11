@@ -237,7 +237,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		point const query_ray_end(closest_to + dmax*in_dir);
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix) continue; // object not in the same room as the player
+			if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player
 			bool keep(0);
 			if (i->type == TYPE_CLOSET && i->is_small_closet() && in_dir.z < 0.5) {keep = 1;} // closet with small door, door can be opened; not looking up at the light
 			else if (!player_in_closet) {

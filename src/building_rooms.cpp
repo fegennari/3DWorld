@@ -2384,6 +2384,25 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	vector<room_object_t> &objs(interior->room_geom->objs);
+
+	// add elevator call buttons on each floor; must be done before setting stairs_start
+	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+		float const button_radius(0.3*wall_thickness);
+		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
+		assert(num_floors > 1); // otherwise, why have an elevator?
+
+		for (unsigned f = 0; f < num_floors; ++f) {
+			point pos;
+			pos[ i->dim] = i->d[i->dim][i->dir];
+			pos[!i->dim] = i->d[!i->dim][0] + 0.1*i->get_sz_dim(!i->dim); // to the low side
+			pos.z = i->z1() + (f + 0.45)*window_vspacing;
+			cube_t c; c.set_from_point(pos);
+			c.expand_in_dim(!i->dim, button_radius);
+			c.expand_in_dim(2, button_radius); // Z
+			c.d[i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.25*button_radius;
+			objs.emplace_back(c, TYPE_BUTTON, 0, i->dim, 0, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5));
+		} // for f
+	} // for e
 	interior->room_geom->stairs_start = objs.size();
 	interior->room_geom->has_elevators = (!interior->elevators.empty());
 	colorRGBA const railing_colors[3] = {GOLD, LT_GRAY, BLACK};
