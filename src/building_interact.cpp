@@ -276,53 +276,54 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	if (is_obj) { // closet, toilet, bathroom stall, office chair, or toilet paper roll
 		auto &obj(interior->room_geom->objs[obj_ix]);
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
-		point const center(obj.xc(), obj.yc(), closest_to.z); // generate sound from the player height
-		bool no_sound(0);
+		point const center(obj.xc(), obj.yc(), closest_to.z), local_center(local_to_camera_space(center)); // generate sound from the player height
+		float sound_scale(0.5); // for building sound level
 
 		if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
-			gen_sound_thread_safe(SOUND_FLUSH, local_to_camera_space(center));
+			gen_sound_thread_safe(SOUND_FLUSH, local_center);
 		}
 		else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
-			if (!(obj.flags & RO_FLAG_IS_ACTIVE)) {gen_sound_thread_safe(SOUND_WATER, local_to_camera_space(center));} // play sound when turning on
+			if (!(obj.flags & RO_FLAG_IS_ACTIVE)) {gen_sound_thread_safe(SOUND_WATER, local_center);} // play sound when turning on
 			if (obj.type == TYPE_SINK) {obj.flags ^= RO_FLAG_IS_ACTIVE;} // toggle active bit, only for sink for now
 			// TODO: play sound in a loop until water is turned off?
 		}
 		else if (obj.is_light_type()) {
 			toggle_light_object(obj);
-			no_sound = 1; // sound has already been registered above
+			sound_scale = 0.0; // sound has already been registered above
 		}
 		else if (obj.type == TYPE_TPROLL) {
 			if (!(obj.flags & RO_FLAG_HANGING)) {
-				gen_sound_thread_safe_at_player(SOUND_FOOTSTEP, 0.5, 1.5); // could be better
+				gen_sound_thread_safe(SOUND_FOOTSTEP, local_center, 0.5, 1.5); // could be better
 				interior->room_geom->clear_static_small_vbos(); // need to regen object data
+				obj.flags |= RO_FLAG_HANGING; // pull down the roll
 			}
-			obj.flags |= RO_FLAG_HANGING; // pull down the roll
-			no_sound = 1;
+			sound_scale = 0.0; // no sound
 		}
 		else if (obj.type == TYPE_PICTURE) { // tilt the picture
 			obj.flags |= RO_FLAG_RAND_ROT;
 			++obj.item_flags; // choose a different random rotation
 			interior->room_geom->update_draw_state_for_room_object(obj, *this);
-			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.25, 2.0); // higher pitch
-			no_sound = 1;
+			gen_sound_thread_safe(SOUND_SLIDING, local_center, 0.25, 2.0); // higher pitch
+			sound_scale = 0.0; // no sound
 		}
 		else if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
 			office_chair_rot_rate += 0.1;
 			obj.flags |= RO_FLAG_ROTATING;
-			// play a sound?
-			return 0; // done, doesn't count as a door
+			gen_sound_thread_safe(SOUND_SQUEAK, local_center, 0.25, 0.5); // lower pitch
+			sound_scale = 0.2;
 		}
 		else {
-			if (obj.is_open()) {obj.flags &= ~RO_FLAG_OPEN;} else {obj.flags |=  RO_FLAG_OPEN;} // open/close
+			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
 			interior->room_geom->clear_static_vbos(); // need to regen object data
 		
 			if (obj.type == TYPE_CLOSET) {
 				interior->room_geom->expand_object(obj); // expand any boxes so that the player can pick them up
 				//interior->room_geom->clear_static_small_vbos(); // no longer needed since closet interior is always drawn
+				sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 			}
 			play_door_open_close_sound(center, obj.is_open(), pitch);
 		}
-		if (!no_sound) {register_building_sound(center, ((obj.type == TYPE_CLOSET) ? 0.25 : 0.5));} // closets are quieter, to allow players to more easily hide
+		if (sound_scale > 0.0) {register_building_sound(center, sound_scale);}
 	}
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
