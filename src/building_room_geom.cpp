@@ -1000,7 +1000,10 @@ void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_button(room_object_t const &c) { // is_small=1
 	tid_nm_pair_t tp(untex_shad_mat);
 	if (c.flags & RO_FLAG_IS_ACTIVE) {tp.emissive = 1.0;} // make it lit when active
-	get_material(tp, 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), all_zeros, ~get_face_mask(c.dim, c.dir));
+	rgeom_mat_t &mat(get_material(tp, 1, 0, 1));
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts(c, apply_light_color(c), all_zeros, ~get_face_mask(c.dim, c.dir));} // square button
+	else if (c.shape == SHAPE_CYLIN) {mat.add_ortho_cylin_to_verts(c, apply_light_color(c), c.dim, !c.dir, c.dir);} // round button
+	else {assert(0);}
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
