@@ -1313,7 +1313,12 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		register_building_sound_for_obj(obj, player_pos);
 	}
 	else if (obj.can_use()) { // active with either use_object or fire key
-		if (!apply_paint(player_pos, cview_dir, obj.color, obj.type)) return 0; // TODO: set RO_FLAG_USED
+		if (obj.type == TYPE_TPROLL) {
+			if (!apply_toilet_paper(player_pos, cview_dir)) return 0;
+		}
+		else { // spraypaint or marker
+			if (!apply_paint(player_pos, cview_dir, obj.color, obj.type)) return 0;
+		}
 		player_inventory.mark_last_item_used();
 	}
 	else {assert(0);}
@@ -1492,6 +1497,11 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		next_sound_time = tfticks + double(is_spraypaint ? 0.5 : 0.25)*TICKS_PER_SECOND;
 	}
 	return 1;
+}
+
+bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir) const {
+	// TODO
+	return 0;
 }
 
 void building_t::add_blood_decal(point const &pos) const {

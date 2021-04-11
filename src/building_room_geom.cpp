@@ -2635,6 +2635,11 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 int get_lg_ball_tid   (room_object_t const &c) {return get_texture_by_name((c.item_flags & 1) ? "interiors/basketball.png" : "interiors/soccer_ball_diffuse.png");}
 int get_lg_ball_nm_tid(room_object_t const &c) {return ((c.item_flags & 1) ? -1 : get_texture_by_name("interiors/soccer_ball_normal.png"));}
 
+xform_matrix get_player_cview_rot_matrix() {
+	float const angle(atan2(cview_dir.y, cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
+	return get_rotation_matrix(plus_z, angle);
+}
+
 void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	bool const dynamic(c.is_dynamic()); // either small or dynamic
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0), 1, dynamic, !dynamic));
@@ -2643,8 +2648,7 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 }
 /*static*/ void building_room_geom_t::draw_lg_ball_in_building(room_object_t const &c, shader_t &s) {
 	//highres_timer_t timer("Draw Ball"); // 0.105ms
-	float const angle(atan2(cview_dir.y, cview_dir.x)); // angle of camera view in XY plane, for rotating about Z
-	xform_matrix rot_matrix(get_rotation_matrix(plus_z, angle));
+	xform_matrix const rot_matrix(get_player_cview_rot_matrix());
 	// Note: since we're using indexed triangles now, we can't simply call draw_quad_verts_as_tris(); instead we create temp VBO/IBO; not the most efficient solution, but it should work
 	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO/IBO are recreated every time
 	mat.tex = tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0);
@@ -2932,17 +2936,22 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 
 /*static*/ void building_room_geom_t::draw_interactive_player_obj(room_object_t const &c, shader_t &s) {
 	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO is recreated every time
-	room_object_t c_rot(c);
-	c_rot.dir = 0; // facing up
-	unsigned const dim(get_max_dim(c.get_size()));
 
-	if (dim != 2) { // if not oriented in Z
-		UNROLL_2X(swap(c_rot.d[dim][i_], c_rot.d[2][i_]);); // rotate into Z dir
-		c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
+	if (c.type == TYPE_SPRAYCAN || c.type == TYPE_MARKER) {
+		room_object_t c_rot(c);
+		c_rot.dir = 0; // facing up
+		unsigned const dim(get_max_dim(c.get_size()));
+
+		if (dim != 2) { // if not oriented in Z
+			UNROLL_2X(swap(c_rot.d[dim][i_], c_rot.d[2][i_]);); // rotate into Z dir
+			c_rot.translate(c.get_cube_center() - c_rot.get_cube_center()); // translate it back to the correct location
+		}
+		if (c.type == TYPE_SPRAYCAN) {add_spraycan_to_material(c_rot, mat);} else {add_pen_pencil_marker_to_material(c_rot, mat);}
 	}
-	if      (c.type == TYPE_SPRAYCAN) {add_spraycan_to_material         (c_rot, mat);}
-	else if (c.type == TYPE_MARKER  ) {add_pen_pencil_marker_to_material(c_rot, mat);}
-	else if (c.type == TYPE_TPROLL  ) {add_tproll_to_material           (c_rot, mat);}
+	else if (c.type == TYPE_TPROLL) {
+		//add_tproll_to_material(c_rot, mat); // apply get_player_cview_rot_matrix()?
+		mat.add_vcylin_to_verts(c, c.color, 0, 1); // simpler approach using a vertical cylinder, but there's no tube/hole
+	}
 	else {assert(0);}
 	mat.upload_draw_and_clear(s);
 }

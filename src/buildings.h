@@ -375,7 +375,7 @@ struct room_object_t : public cube_t {
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
-	bool can_use        () const {return (type == TYPE_SPRAYCAN || type == TYPE_MARKER /*|| type == TYPE_TPROLL*/);} // excludes dynamic objects
+	bool can_use        () const {return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL);} // excludes dynamic objects
 	bool is_interactive () const {return (has_dstate() || can_use());}
 	unsigned get_bottle_type() const {return (obj_id % NUM_BOTTLE_TYPES);}
 	unsigned get_orient () const {return (2*dim + dir);}
@@ -992,7 +992,8 @@ private:
 	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
-	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const type) const;
+	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const;
+	bool apply_toilet_paper(point const &pos, vector3d const &dir) const;
 	void add_blood_decal(point const &pos) const;
 public:
 	// ray queries
