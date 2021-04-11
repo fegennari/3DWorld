@@ -992,7 +992,7 @@ private:
 	bool can_target_player(building_ai_state_t const &state, pedestrian_t const &person) const;
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
-	void apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const type) const;
+	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const type) const;
 	void add_blood_decal(point const &pos) const;
 public:
 	// ray queries

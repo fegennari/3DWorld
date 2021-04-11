@@ -16,6 +16,7 @@ float const OBJ_GRAVITY    = 0.0003;
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
+unsigned const SPRAYCAN_MARKER_CAPACITY = 10000; // use a large number for now
 
 bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), city_action_key(0);
 int can_pickup_bldg_obj(0);
@@ -792,6 +793,7 @@ void show_weight_limit_message() {
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
 	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
+	unsigned last_item_use_count;
 	bool prev_in_building, has_key;
 
 	void register_player_death(unsigned sound_id, std::string const &why) {
@@ -809,6 +811,7 @@ public:
 		cur_value     = cur_weight = tot_value = tot_weight = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
+		last_item_use_count = 0;
 		prev_in_building = has_key = 0;
 		carried.clear();
 	}
@@ -861,7 +864,10 @@ public:
 			float const value(get_obj_value(obj)), weight(get_obj_weight(obj));
 			cur_value  += value;
 			cur_weight += weight;
+			bool const prev_was_interactive(!carried.empty() && carried.back().is_interactive()), cur_is_interactive(obj.is_interactive());
 			carried.push_back(obj);
+			if (prev_was_interactive && !cur_is_interactive) {swap(carried[carried.size()-2], carried.back());} // move the prev interactive object to the back
+			last_item_use_count = 0;
 			oss << ": value $";
 			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
 			else {oss << value;}
@@ -893,16 +899,26 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 		return 1; // success
 	}
-	bool use_last_item(room_object_t &obj) {
+	bool try_use_last_item(room_object_t &obj) {
 		if (carried.empty()) return 0; // no carried item
 		obj = carried.back(); // deep copy
-		if (!obj.has_dstate()) {return can_use_obj(obj);} // not a droppable/throwable item(ball); only spraypaint or markers can be used
-		// drop the item - remove it from our inventory
+		if (!obj.has_dstate()) {return obj.can_use();} // not a droppable/throwable item(ball); only spraypaint or markers can be used
+		remove_last_item(obj); // drop the item - remove it from our inventory
+		return 1;
+	}
+	void mark_last_item_used() {
+		assert(!carried.empty());
+		carried.back().flags |= RO_FLAG_USED;
+		++last_item_use_count;
+		if (last_item_use_count >= SPRAYCAN_MARKER_CAPACITY) {remove_last_item(carried.back());} // remove after too many
+	}
+	void remove_last_item(room_object_t &obj) {
+		assert(!carried.empty());
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
 		assert(cur_value >= 0.0 && cur_weight >= 0.0); // is this okay if there's FP rounding error?
 		carried.pop_back();
-		return 1;
+		last_item_use_count = 0;
 	}
 	void collect_items() {
 		has_key = 0; // key only good for current building
@@ -926,7 +942,11 @@ public:
 			if (cur_weight > 0.0 || tot_weight > 0.0 || best_value > 0.0) { // don't show stats until the player has picked something up
 				std::ostringstream oss;
 				oss << "Cur $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs  Best $" << best_value;
-				if (has_throwable) {oss << "  [" << get_taken_obj_type(carried.back()).name << "]";} // print the name of the throwable object
+				
+				if (has_throwable) {
+					oss << "  [" << get_taken_obj_type(carried.back()).name << "]"; // print the name of the throwable object
+					if (last_item_use_count > 0) {oss << " (" << last_item_use_count << ")";} // print use count
+				}
 				draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
 			}
 			if (in_building_gameplay_mode()) { // display sound meter
@@ -1278,7 +1298,7 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	assert(has_room_geom());
 	room_object_t obj;
-	if (!player_inventory.use_last_item(obj)) return 0;
+	if (!player_inventory.try_use_last_item(obj)) return 0;
 
 	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it; only activated with use_object/'E' key
 		float const cradius(get_scaled_player_radius());
@@ -1286,12 +1306,15 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		point dest(player_pos + (1.2f*(cradius + obj.get_radius()))*cview_dir);
 		dest.z -= 0.5*cradius; // slightly below the player's face
 		obj.translate(dest - obj_bot_center);
-		if (obj.has_dstate()) {obj.flags |= RO_FLAG_DYNAMIC;} // make it dynamic, assuming it will be dropped/thrown
+		obj.flags |= RO_FLAG_DYNAMIC; // make it dynamic, assuming it will be dropped/thrown
 		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
 		gen_sound_thread_safe(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
 		register_building_sound_for_obj(obj, player_pos);
 	}
-	else if (can_use_obj(obj)) {apply_paint(player_pos, cview_dir, obj.color, obj.type);} // active with either use_object or fire key
+	else if (obj.can_use()) { // active with either use_object or fire key
+		if (!apply_paint(player_pos, cview_dir, obj.color, obj.type)) return 0; // TODO: set RO_FLAG_USED
+		player_inventory.mark_last_item_used();
+	}
 	else {assert(0);}
 	return 1;
 }
@@ -1375,23 +1398,32 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
 	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
+	bool walls_blocked(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD)) || (is_floor && i->type == TYPE_RUG)) {
-			line_int_cube_get_t(pos, pos2, *i, tmin); // Note: return value is ignored, we only need to update tmin; normal should be unchanged
+		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || type == TYPE_MIRROR)) || (is_floor && i->type == TYPE_RUG || i->type == TYPE_FLOORING)) {
+			if (line_int_cube_get_t(pos, pos2, *i, tmin)) {target = *i;} // Note: return value is ignored, we only need to update tmin and target; normal should be unchanged
 		}
 		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
 			point const cand_p_int(pos + tmin*(pos2 - pos));
 			normal = get_normal_for_ray_cube_int_xy(cand_p_int, *i, tolerance); // should always return a valid normal
 			target = *i;
 		}
+		else if (i->type == TYPE_STALL || i->type == TYPE_CUBICLE) {
+			float tmin0(tmin);
+			if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
+			if (i->contains_pt(pos)) continue; // inside stall/cubicle, can't paint the exterior
+			vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), *i, tolerance)); // should always return a valid normal
+			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // only the side walls count
+			tmin = tmin0; normal = n; target = *i;
+		}
 	} // for i
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
-		if (i->contains_pt(pos)) continue; // can't spraypaint the outside of the elevator when standing inside it
+		if (i->contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the elevator when standing inside it
 		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), *i, tolerance)); // should always return a valid normal
-		if (i->open && n[i->dim] == (i->dir ? 1.0 : -1.0)) continue; // skip elevator opening
+		if (i->open && n[i->dim] == (i->dir ? 1.0 : -1.0)) {walls_blocked = 1; continue;} // skip elevator opening
 		tmin = tmin0; normal = n; target = *i;
 	}
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
@@ -1402,23 +1434,23 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		c.expand_by_xy(0.15*step_len_pos);
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
-		if (c.contains_pt(pos)) continue; // can't spraypaint the outside of the stairs when standing inside them
+		if (c.contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the stairs when standing inside them
 		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), c, tolerance)); // should always return a valid normal
 
 		if (i->shape == SHAPE_U) {
-			if (n[i->dim] == (i->dir ? -1.0 : 1.0)) continue; // skip stairs opening
+			if (n[i->dim] == (i->dir ? -1.0 : 1.0)) {walls_blocked = 1; continue;} // skip stairs opening
 		}
 		else if (i->shape == SHAPE_WALLED || i->shape == SHAPE_WALLED_SIDES) {
 			// Note: we skip the end for SHAPE_WALLED and only check the sides because it depends on the floor we're on
-			if (n[i->dim] != 0) continue; // skip stairs opening, either side
+			if (n[i->dim] != 0) {walls_blocked = 1; continue;} // skip stairs opening, either side
 		}
 		else {assert(0);} // unsupported stairs type
 		tmin = tmin0; normal = n; target = c;
 	}
-	// what about walled stairs?
-	if (normal == zero_vector) return; // no walls, ceilings, floors, etc. hit
+	if (normal == zero_vector) return 0; // no walls, ceilings, floors, etc. hit
+	if (walls_blocked && normal.z == 0.0) return 0; // can't spraypaint walls through elevator, stairs, etc.
 	point p_int(pos + tmin*(pos2 - pos));
-	if (check_line_intersect_doors(pos, p_int)) return; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened
+	if (check_line_intersect_doors(pos, p_int)) return 0; // blocked by door, no spraypaint; can't add spraypaint over door in case door is opened
 	float const max_radius((is_spraypaint ? 2.0 : 0.035)*CAMERA_RADIUS);
 	float const dist(p2p_dist(pos, p_int)), radius(is_spraypaint ? min(max_radius, max(0.05f*max_radius, 0.1f*dist)) : max_radius); // modified version of get_spray_radius()
 	float const alpha((is_spraypaint && radius > 0.5*max_radius) ? (1.0 - (radius - 0.5*max_radius)/max_radius) : 1.0); // 0.5 - 1.0
@@ -1429,10 +1461,10 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	// check that entire circle is contained in the target
 	for (unsigned e = 0; e < 2; ++e) {
 		unsigned const d(e ? d2 : d1);
-		if (p_int[d] - 0.9*radius < target.d[d][0] || p_int[d] + 0.9*radius > target.d[d][1]) return; // extends outside the target surface in this dim
+		if (p_int[d] - 0.9*radius < target.d[d][0] || p_int[d] + 0.9*radius > target.d[d][1]) return 0; // extends outside the target surface in this dim
 	}
 	static point last_p_int(all_zeros);
-	if (dist_less_than(p_int, last_p_int, 0.25*radius)) return; // too close to previous point, skip (to avoid overlapping sprays at the same location)
+	if (dist_less_than(p_int, last_p_int, 0.25*radius)) return 1; // too close to previous point, skip (to avoid overlapping sprays at the same location); still return 1
 	last_p_int = p_int;
 	vector3d dir1, dir2; // unit vectors
 	dir1[d1] = 1.0; dir2[d2] = 1.0;
@@ -1452,6 +1484,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		if (is_spraypaint) {register_building_sound(pos, 0.1);}
 		next_sound_time = tfticks + double(is_spraypaint ? 0.5 : 0.25)*TICKS_PER_SECOND;
 	}
+	return 1;
 }
 
 void building_t::add_blood_decal(point const &pos) const {
