@@ -497,7 +497,7 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 
 		for (auto i = objs_start; i != room_geom->objs.end(); ++i) { // find elevator car and see if player is in it
 			if (i->type != TYPE_ELEVATOR || i->room_id != elevator_id || !i->contains_pt(player_pos)) continue;
-			bool const move_dir(player_pos[!i->dim] < i->get_center_dim(!i->dim)); // player controls up/down direction based on which side of the elevator they stand on
+			bool const move_dir(cview_dir.z > 0.0); // player controls up/down direction based on the tilt of their head
 			float dist(min(0.5f*CAMERA_RADIUS, 0.04f*i->dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
 			if (move_dir) {min_eq(dist, (e->z2() - i->z2() - z_space));} // going up
 			else          {max_eq(dist, (e->z1() - i->z1() + z_space));} // going down
