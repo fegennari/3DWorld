@@ -953,23 +953,22 @@ void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 	mat.add_cube_to_verts(c, apply_light_color(c, BLACK), zero_vector, ~EF_Z2 ); // top,   no shadows
 }
 
+void add_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat) {
+	colorRGBA const tp_color(apply_light_color(c));
+	float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), roll_shrink(0.75*rod_shrink*fract(123.456*c.obj_id)); // randomly partially empty (25-100%)
+	cube_t roll(c);
+	roll.expand_in_dim(c.dim, roll_shrink);
+	roll.expand_in_dim(2,     roll_shrink); // z
+	mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1); // c.dim applies to the wall; the roll is oriented perpendicular
+	cube_t square(roll); // hanging square of TP
+	set_cube_zvals(square, c.z1(), c.zc()); // starts at the centerline (tangent) and extends to the bottom
+	if (c.flags & RO_FLAG_HANGING) {square.z1() -= 3.0*c.dz();} // player has pulled it down lower
+	square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
+	mat.add_cube_to_verts(square, tp_color, zero_vector, ~get_skip_mask_for_xy(c.dim)); // only draw front/back faces
+}
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
-	float const radius(0.5*c.dz()), length(c.get_sz_dim(!c.dim)), rod_shrink(-0.7*radius);
-
-	if (!(c.flags & RO_FLAG_TAKEN1)) { // draw the roll if not taken
-		rgeom_mat_t &roll_mat(get_material(untex_shad_mat, 1, 0, 1));
-		colorRGBA const tp_color(apply_light_color(c));
-		float const roll_shrink(0.75*rod_shrink*fract(123.456*c.obj_id)); // randomly partially empty (25-100%)
-		cube_t roll(c);
-		roll.expand_in_dim(c.dim, roll_shrink);
-		roll.expand_in_dim(2,     roll_shrink); // z
-		roll_mat.add_ortho_cylin_to_verts(roll, tp_color, !c.dim, 1, 1); // c.dim applies to the wall; the roll is oriented perpendicular
-		cube_t square(roll); // hanging square of TP
-		set_cube_zvals(square, c.z1(), c.zc()); // starts at the centerline (tangent) and extends to the bottom
-		if (c.flags & RO_FLAG_HANGING) {square.z1() -= 3.0*c.dz();} // player has pulled it down lower
-		square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
-		roll_mat.add_cube_to_verts(square, tp_color, zero_vector, ~get_skip_mask_for_xy(c.dim)); // only draw front/back faces
-	}
+	float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), length(c.get_sz_dim(!c.dim));
+	if (!(c.flags & RO_FLAG_TAKEN1)) {add_tproll_to_material(c, get_material(untex_shad_mat, 1, 0, 1));} // draw the roll if not taken
 	// draw the holder attached to the wall
 	rgeom_mat_t &holder_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
 	colorRGBA const holder_color(apply_light_color(c, GRAY));
@@ -996,6 +995,12 @@ void add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 }
 void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	add_spraycan_to_material(c, get_material(untex_shad_mat, 1, 0, 1));
+}
+
+void building_room_geom_t::add_button(room_object_t const &c) { // is_small=1
+	tid_nm_pair_t tp(untex_shad_mat);
+	if (c.flags & RO_FLAG_IS_ACTIVE) {tp.emissive = 1.0;} // make it lit when active
+	get_material(tp, 1, 0, 1).add_cube_to_verts(c, apply_light_color(c), all_zeros, ~get_face_mask(c.dim, c.dir));
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -2840,6 +2845,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_PHONE:     add_phone(*i); break;
 		case TYPE_TPROLL:    add_tproll(*i); break;
 		case TYPE_SPRAYCAN:  add_spraycan(*i); break;
+		case TYPE_BUTTON:    add_button(*i); break;
 		default: break;
 		}
 	} // for i
@@ -2924,7 +2930,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	rotate_dir_about_z(inst.dir, office_chair_rot_rate);
 }
 
-/*static*/ void building_room_geom_t::draw_spraycan_or_marker_in_building(room_object_t const &c, shader_t &s) {
+/*static*/ void building_room_geom_t::draw_interactive_player_obj(room_object_t const &c, shader_t &s) {
 	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO is recreated every time
 	room_object_t c_rot(c);
 	c_rot.dir = 0; // facing up
@@ -2936,6 +2942,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	}
 	if      (c.type == TYPE_SPRAYCAN) {add_spraycan_to_material         (c_rot, mat);}
 	else if (c.type == TYPE_MARKER  ) {add_pen_pencil_marker_to_material(c_rot, mat);}
+	else if (c.type == TYPE_TPROLL  ) {add_tproll_to_material           (c_rot, mat);}
 	else {assert(0);}
 	mat.upload_draw_and_clear(s);
 }
@@ -3081,13 +3088,8 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		// draw the item the player is holding; pre_smap_player_pos should be the correct position for reflections
 		point const obj_pos((reflection_pass ? pre_smap_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
 		player_held_object.translate(obj_pos - player_held_object.get_cube_center());
-
-		if (player_held_object.type == TYPE_LG_BALL) { // the only supported dynamic object type
-			draw_lg_ball_in_building(player_held_object, s);
-		}
-		else if (player_held_object.type == TYPE_SPRAYCAN || player_held_object.type == TYPE_MARKER) {
-			draw_spraycan_or_marker_in_building(player_held_object, s);
-		}
+		if (player_held_object.type == TYPE_LG_BALL) {draw_lg_ball_in_building(player_held_object, s);} // the only supported dynamic object type
+		else if (player_held_object.can_use()) {draw_interactive_player_obj(player_held_object, s);}
 		else {assert(0);}
 	}
 	// alpha blended, should be drawn near last

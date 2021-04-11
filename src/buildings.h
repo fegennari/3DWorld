@@ -279,7 +279,7 @@ enum {
 	TYPE_SIGN, TYPE_COUNTER, TYPE_CABINET, TYPE_KSINK, TYPE_BRSINK, TYPE_PLANT, TYPE_DRESSER, TYPE_NIGHTSTAND, TYPE_FLOORING, TYPE_CLOSET,
 	TYPE_WALL_TRIM, TYPE_RAILING, TYPE_CRATE, TYPE_BOX, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_SHOWER, TYPE_RDESK, TYPE_BOTTLE,
 	TYPE_WINE_RACK, TYPE_COMPUTER, TYPE_MWAVE, TYPE_PAPER, TYPE_BLINDS, TYPE_PEN, TYPE_PENCIL, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_HANGER_ROD,
-	TYPE_DRAIN, TYPE_MONEY, TYPE_PHONE, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_MARKER,
+	TYPE_DRAIN, TYPE_MONEY, TYPE_PHONE, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_MARKER, TYPE_BUTTON,
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, NUM_ROBJ_TYPES};
@@ -526,6 +526,7 @@ struct building_room_geom_t {
 	void add_phone(room_object_t const &c);
 	void add_tproll(room_object_t const &c);
 	void add_spraycan(room_object_t const &c);
+	void add_button(room_object_t const &c);
 	void add_crate(room_object_t const &c);
 	void add_box(room_object_t const &c);
 	void add_paint_can(room_object_t const &c);
@@ -545,8 +546,8 @@ struct building_room_geom_t {
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void add_lg_ball(room_object_t const &c);
-	static void draw_lg_ball_in_building(room_object_t const &c, shader_t &s);
-	static void draw_spraycan_or_marker_in_building(room_object_t const &c, shader_t &s);
+	static void draw_lg_ball_in_building   (room_object_t const &c, shader_t &s);
+	static void draw_interactive_player_obj(room_object_t const &c, shader_t &s);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
 	void expand_bookcase(room_object_t const &c);
