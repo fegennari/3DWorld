@@ -708,7 +708,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_MONEY     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 20.0,  0.0,   "pile of money"); // $20 bills
 	bldg_obj_types[TYPE_PHONE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 200.0, 0.1,   "cell phone");
 	bldg_obj_types[TYPE_TPROLL    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.10,  0.1,   "toilet paper roll");
-	bldg_obj_types[TYPE_SPRAYCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0,   1.0,   "spray paint can");
+	bldg_obj_types[TYPE_SPRAYCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0,   1.0,   "spray paint");
 	bldg_obj_types[TYPE_MARKER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.25,  0.05,  "marker");
 	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "button");
 	// 3D models
@@ -957,7 +957,7 @@ public:
 				
 				if (has_throwable) {
 					oss << "  [" << get_taken_obj_type(carried.back()).name << "]"; // print the name of the throwable object
-					if (last_item_use_count > 0) {oss << " (" << last_item_use_count << ")";} // print use count
+					if (last_item_use_count > 0) {oss << " (" << (SPRAYCAN_MARKER_CAPACITY - last_item_use_count) << "/" << SPRAYCAN_MARKER_CAPACITY << ")";} // print use/capacity
 				}
 				draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
 			}
