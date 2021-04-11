@@ -353,7 +353,7 @@ struct room_object_t : public cube_t {
 	float light_amt;
 	colorRGBA color;
 
-	room_object_t() : dim(0), dir(0), room_id(0), obj_id(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
+	room_object_t() : dim(0), dir(0), room_id(0), obj_id(0), drawer_flags(0), item_flags(0), type(TYPE_NONE), shape(SHAPE_CUBE), flags(0), light_amt(1.0) {}
 	room_object_t(cube_t const &c, room_object type_, uint8_t rid, bool dim_=0, bool dir_=0, unsigned f=0, float light=1.0,
 		room_obj_shape shape_=SHAPE_CUBE, colorRGBA const color_=WHITE) :
 		cube_t(c), dim(dim_), dir(dir_), room_id(rid), obj_id(0), drawer_flags(0), item_flags(0), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
