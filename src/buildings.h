@@ -329,7 +329,8 @@ unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
 unsigned const RO_FLAG_DYNAMIC  = 0x01000000; // dynamic object (balls, elevators, etc.)
 unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
 unsigned const RO_FLAG_NO_CONS  = 0x04000000; // this object is not consumable (bottles)
-unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, etc.
+unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, etc.
+unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.)
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
@@ -374,6 +375,8 @@ struct room_object_t : public cube_t {
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
+	bool can_use        () const {return (type == TYPE_SPRAYCAN || type == TYPE_MARKER /*|| type == TYPE_TPROLL*/);} // excludes dynamic objects
+	bool is_interactive () const {return (has_dstate() || can_use());}
 	unsigned get_bottle_type() const {return (obj_id % NUM_BOTTLE_TYPES);}
 	unsigned get_orient () const {return (2*dim + dir);}
 	float get_radius() const;
@@ -990,7 +993,7 @@ private:
 	void set_bcube_from_rotated_cube(cube_t const &bc);
 	void apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const type) const;
 	void add_blood_decal(point const &pos) const;
-	public:
+public:
 	// ray queries
 	bool check_line_intersect_doors(point const &p1, point const &p2) const;
 	bool is_pt_visible(point const &p1, point const &p2) const;

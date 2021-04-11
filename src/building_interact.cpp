@@ -773,6 +773,7 @@ float get_obj_value(room_object_t const &obj) {
 		unsigned const num_bills(round_fp(obj.dz()/(0.01*obj.get_sz_dim(obj.dim))));
 		value *= num_bills;
 	}
+	if (obj.flags & RO_FLAG_USED) {value *= 0.5;} // used objects have half value
 	return value;
 }
 float get_obj_weight(room_object_t const &obj) {
@@ -781,7 +782,6 @@ float get_obj_weight(room_object_t const &obj) {
 bool is_consumable(room_object_t const &obj) {
 	return (in_building_gameplay_mode() && obj.type == TYPE_BOTTLE && !obj.is_bottle_empty() && !(obj.flags & RO_FLAG_NO_CONS));
 }
-bool can_use_obj(room_object_t const &obj) {return (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER /*|| obj.type == TYPE_TPROLL*/);} // excludes dynamic objects
 
 void show_weight_limit_message() {
 	std::ostringstream oss;
@@ -912,11 +912,12 @@ public:
 		tot_value  += cur_value;  cur_value  = 0.0;
 		tot_weight += cur_weight; cur_weight = 0.0;
 		carried.clear(); // or add to collected?
+		last_item_use_count = 0;
 		oss << "Total value $" << tot_value << " Total weight " << tot_weight << " lbs";
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		bool const has_throwable(!carried.empty() && (carried.back().has_dstate() || can_use_obj(carried.back()))); // ball, spraypaint, or marker
+		bool const has_throwable(!carried.empty() && carried.back().is_interactive()); // ball, spraypaint, or marker
 		if (has_throwable) {player_held_object = carried.back();} // deep copy last pickup object if throwable
 
 		if (display_framerate) { // controlled by framerate toggle
