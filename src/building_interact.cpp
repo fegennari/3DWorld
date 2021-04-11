@@ -246,9 +246,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 				else if (i->is_light_type()) {keep = 1;} // room light or lamp
-				else if (i->type == TYPE_PICTURE) {keep = 1;}
-				else if (i->type == TYPE_TPROLL ) {keep = 1;}
-				// open books? use elevators? use microwave?
+				else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE) {keep = 1;}
+				// open books?
 			}
 			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 			if (!keep) continue;
@@ -281,10 +280,12 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 
 		if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
 			gen_sound_thread_safe(SOUND_FLUSH, local_center);
+			sound_scale = 0.5;
 		}
 		else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
 			if (!(obj.flags & RO_FLAG_IS_ACTIVE)) {gen_sound_thread_safe(SOUND_WATER, local_center);} // play sound when turning on
 			if (obj.type == TYPE_SINK) {obj.flags ^= RO_FLAG_IS_ACTIVE;} // toggle active bit, only for sink for now
+			sound_scale = 0.4;
 			// TODO: play sound in a loop until water is turned off?
 		}
 		else if (obj.is_light_type()) {
@@ -311,6 +312,15 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			obj.flags |= RO_FLAG_ROTATING;
 			gen_sound_thread_safe(SOUND_SQUEAK, local_center, 0.25, 0.5); // lower pitch
 			sound_scale = 0.2;
+		}
+		else if (obj.type == TYPE_MWAVE) { // beeps
+			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
+			sound_scale = 0.6;
+		}
+		else if (obj.type == TYPE_BUTTON) {
+			register_button_event(obj);
+			interior->room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change
+			obj.flags ^= RO_FLAG_IS_ACTIVE;
 		}
 		else {
 			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
@@ -700,6 +710,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_TPROLL    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.10,  0.1,   "toilet paper roll");
 	bldg_obj_types[TYPE_SPRAYCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0,   1.0,   "spray paint can");
 	bldg_obj_types[TYPE_MARKER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.25,  0.05,  "marker");
+	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "button");
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
 	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 80.0,  55.0,  "sink");
@@ -1502,6 +1513,10 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir) const {
 	// TODO
 	return 0;
+}
+
+void building_t::register_button_event(room_object_t const &button) {
+	// TODO
 }
 
 void building_t::add_blood_decal(point const &pos) const {

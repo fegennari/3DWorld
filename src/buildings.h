@@ -994,6 +994,7 @@ private:
 	void set_bcube_from_rotated_cube(cube_t const &bc);
 	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const;
 	bool apply_toilet_paper(point const &pos, vector3d const &dir) const;
+	void register_button_event(room_object_t const &button);
 	void add_blood_decal(point const &pos) const;
 public:
 	// ray queries
