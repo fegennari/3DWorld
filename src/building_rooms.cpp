@@ -792,7 +792,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 					if (is_basement || !has_windows() || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
 						!is_val_inside_window(part, dim, far_edge_pos, get_hspacing_for_part(part, dim), get_window_h_border()) || count_ext_walls_for_room(room, zval) <= 1)
 					{
-						add_tp_roll(room, room_id, tot_light_amt, !dim, tp_dir, length, (c.z1() + 0.7*height), wall_pos);
+						add_tp_roll(room_bounds, room_id, tot_light_amt, !dim, tp_dir, length, (c.z1() + 0.7*height), wall_pos);
 					}
 				}
 			} // for d
@@ -1025,7 +1025,7 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 				cube_t mirror(sinks_bcube);
 				mirror.expand_in_dim(!br_dim, -0.25*wall_thickness); // slightly smaller
 				mirror.d[br_dim][ dir] = wall_pos;
-				mirror.d[br_dim][!dir] = wall_pos +  + dir_sign*0.1*wall_thickness;
+				mirror.d[br_dim][!dir] = wall_pos + dir_sign*0.1*wall_thickness;
 				mirror.z1() = sinks_bcube.z2() + 0.25*floor_thickness;
 				mirror.z2() = zval + 0.9*floor_spacing - floor_thickness;
 				if (mirror.is_strictly_normalized()) {objs.emplace_back(mirror, TYPE_MIRROR, room_id, br_dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);}
