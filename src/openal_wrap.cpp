@@ -144,6 +144,7 @@ public:
 		add_new_sound("zombie3.wav"    ); // SOUND_ZOMBIE3
 		add_new_sound("zombie4.wav"    ); // SOUND_ZOMBIE4
 		add_new_sound("zombie5.wav"    ); // SOUND_ZOMBIE5
+		add_new_sound("squeak.wav"     ); // SOUND_SQUEAK
 		cout << endl;
 
 		// create sources

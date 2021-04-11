@@ -1331,16 +1331,9 @@ vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float t
 	return n;
 }
 
-void building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const type) const {
-	static double next_sound_time(0.0);
+bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const type) const { // spraypaint or marker
 	bool const is_spraypaint(type == TYPE_SPRAYCAN), is_marker(type == TYPE_MARKER);
 	assert(is_spraypaint || is_marker); // only these two are supported
-
-	if (is_spraypaint && tfticks > next_sound_time) { // play sound even if nothing is sprayed, but not too frequently; marker has no sound
-		gen_sound_thread_safe_at_player(SOUND_SPRAY, 0.25);
-		register_building_sound(pos, 0.1);
-		next_sound_time = tfticks + double(0.5)*TICKS_PER_SECOND;
-	}
 	// find intersection point and normal; assumes pos is inside the building
 	assert(interior);
 	float const max_dist((is_spraypaint ? 16.0 : 3.0)*CAMERA_RADIUS), tolerance(0.01*get_wall_thickness());
@@ -1451,6 +1444,13 @@ void building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
 	paint_qbd[is_marker][exterior_wall].add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
+	static double next_sound_time(0.0);
+
+	if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
+		gen_sound_thread_safe_at_player((is_spraypaint ? (int)SOUND_SPRAY : (int)SOUND_SQUEAK), 0.25);
+		if (is_spraypaint) {register_building_sound(pos, 0.1);}
+		next_sound_time = tfticks + double(is_spraypaint ? 0.5 : 0.25)*TICKS_PER_SECOND;
+	}
 }
 
 void building_t::add_blood_decal(point const &pos) const {
