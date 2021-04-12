@@ -2900,7 +2900,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		default: assert(0); // not a supported dynamic object type
 		}
 	} // for i
-	// draw elevator doors, which are now dynamic
+	// draw elevator doors, which are dynamic
 	for (auto i = building.interior->elevators.begin(); i != building.interior->elevators.end(); ++i) {
 		float const spacing(i->get_wall_thickness()), door_width(i->is_open ? 1.12*i->get_frame_width() : 0.99*0.5*i->get_sz_dim(!i->dim));
 

@@ -2388,8 +2388,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	// add elevator call buttons on each floor; must be done before setting stairs_start
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		float const button_radius(0.3*wall_thickness);
-		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
+		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness)), elevator_id(i - interior->elevators.begin());
 		assert(num_floors > 1); // otherwise, why have an elevator?
+		i->button_id_start = objs.size();
 
 		for (unsigned f = 0; f < num_floors; ++f) {
 			point pos;
@@ -2400,8 +2401,9 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			c.expand_in_dim(!i->dim, button_radius);
 			c.expand_in_dim(2, button_radius); // Z
 			c.d[i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.25*button_radius;
-			objs.emplace_back(c, TYPE_BUTTON, 0, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5));
+			objs.emplace_back(c, TYPE_BUTTON, elevator_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // use elevator_id for room_id
 		} // for f
+		i->button_id_end = objs.size();
 	} // for e
 	interior->room_geom->stairs_start = objs.size();
 	interior->room_geom->has_elevators = (!interior->elevators.empty());
@@ -2503,6 +2505,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		cube_t elevator_car(*i);
 		elevator_car.z1() += 0.05*get_floor_thickness(); // to prevent z-fighting when looking at the building from the bottom
 		elevator_car.z2() = elevator_car.z1() + window_vspacing; // currently at the bottom floor
+		i->car_obj_id = objs.size();
 		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, ((i->is_open ? RO_FLAG_OPEN : 0) | RO_FLAG_DYNAMIC));
 	}
 }

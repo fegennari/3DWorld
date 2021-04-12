@@ -580,11 +580,13 @@ struct building_room_geom_t {
 
 struct elevator_t : public cube_t {
 	bool dim, dir, is_open, at_edge, was_called; // door dim/dir
+	unsigned car_obj_id, button_id_start, button_id_end;
 	float target_zval;
 
-	elevator_t() : dim(0), dir(0), is_open(0), at_edge(0), was_called(0), target_zval(0.0) {}
+	elevator_t() : dim(0), dir(0), is_open(0), at_edge(0), was_called(0), car_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0) {}
 	elevator_t(cube_t const &c, bool dim_, bool dir_, bool open_, bool at_edge_) :
-		cube_t(c), dim(dim_), dir(dir_), is_open(open_), at_edge(at_edge_), was_called(0), target_zval(0.0) {assert(is_strictly_normalized());}
+		cube_t(c), dim(dim_), dir(dir_), is_open(open_), at_edge(at_edge_), was_called(0), car_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0)
+	{assert(is_strictly_normalized());}
 	float get_wall_thickness() const {return 0.02*get_sz_dim(!dim);}
 	float get_frame_width   () const {return 0.20*get_sz_dim(!dim);}
 	unsigned get_door_face_id() const {return (2*dim + dir);}
