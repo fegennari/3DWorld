@@ -867,7 +867,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			point center(room.get_cube_center());
 			float const center_shift(0.125*room.get_sz_dim(long_dim)*(rgen.rand_bool() ? -1.0 : 1.0));
 			center[long_dim] += center_shift; // make elevator off-center
-			elevator_t elevator(room, long_dim, rgen.rand_bool(), rgen.rand_bool(), 0); // elevator shaft
+			elevator_t elevator(room, long_dim, rgen.rand_bool(), 0, 0); // elevator shaft, doors always start off closed
 			elevator.x1() = center.x - 0.5*ewidth; elevator.x2() = center.x + 0.5*ewidth;
 			elevator.y1() = center.y - 0.5*ewidth; elevator.y2() = center.y + 0.5*ewidth;
 			add_or_extend_elevator(elevator, 1);
