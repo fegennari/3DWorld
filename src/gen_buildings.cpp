@@ -1131,7 +1131,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		}
 		for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 			bool const dim(i->dim), dir(i->dir);
-			float const width(i->get_sz_dim(!dim)), spacing(i->get_wall_thickness()), frame_width(i->get_frame_width()); // space between inner/outer walls + frame around door
+			float const spacing(i->get_wall_thickness()), frame_width(i->get_frame_width()); // space between inner/outer walls + frame around door
 			unsigned dim_mask(3); // x and y dims enabled
 			dim_mask |= (1 << (i->get_door_face_id() + 3)); // disable the face for the door opening
 			bdraw.add_section(*this, empty_vc, *i, mat.wall_tex, mat.wall_color, dim_mask, 0, 0, 1, 0); // outer elevator is textured like the walls
@@ -1151,17 +1151,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			tid_nm_pair_t wall_tex(FENCE_TEX, -1, 16.0, 16.0);
 			wall_tex.set_specular(0.5, 20.0);
 			bdraw.add_section(*this, empty_vc, inner_cube, wall_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
-			// add elevator doors; TODO: should be part of room_geom since doors are now dynamic
-			float const door_width(i->is_open ? 1.12*frame_width : 0.99*0.5*width);
-
-			for (unsigned d = 0; d < 2; ++d) { // left/right doors, untextured for now
-				unsigned dim_mask2(3); // x and y dims enabled
-				dim_mask2 |= (1 << (2*(!dim) + (!d) + 3)); // disable one interior
-				cube_t door(entrance);
-				door.expand_in_dim(dim, -0.2*spacing); // shrink slightly to make thinner
-				door.d[!dim][d] = door.d[!dim][!d] + (d ? 1.0f : -1.0f)*door_width;
-				bdraw.add_section(*this, empty_vc, door, tid_nm_pair_t(WHITE_TEX), GRAY, dim_mask2, 0, 0, 1, 0);
-			}
+			// Note elevator doors are dynamic and are drawn as part of room_geom
 		} // for i
 		// Note: interior doors are drawn as part of room_geom
 		bdraw.end_draw_range_capture(interior->draw_range); // 80MB, 394MB, 836ms

@@ -2900,6 +2900,18 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		default: assert(0); // not a supported dynamic object type
 		}
 	} // for i
+	// draw elevator doors, which are now dynamic
+	for (auto i = building.interior->elevators.begin(); i != building.interior->elevators.end(); ++i) {
+		float const spacing(i->get_wall_thickness()), door_width(i->is_open ? 1.12*i->get_frame_width() : 0.99*0.5*i->get_sz_dim(!i->dim));
+
+		for (unsigned d = 0; d < 2; ++d) { // left/right doors, untextured for now
+			cube_t door(*i);
+			door.d[i->dim][!i->dir] = door.d[i->dim][i->dir] + (i->dir ? -1.0f : 1.0f)*spacing; // set correct thickness
+			door.expand_in_dim(i->dim, -0.2*spacing); // shrink slightly to make thinner
+			door.d[!i->dim][d] = door.d[!i->dim][!d] + (d ? 1.0f : -1.0f)*door_width;
+			get_material(tid_nm_pair_t(), 1, 1).add_cube_to_verts(door, GRAY, all_zeros, (EF_Z12 | ~get_face_mask(!i->dim, !d)));
+		}
+	} // for e
 	mats_dynamic.create_vbos(building);
 }
 

@@ -524,6 +524,7 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 
 			if (fabs(dist) < 0.001*z_space) { // no movement, at target_zval or top/bottom of elevator shaft (check with a tolerance)
 				if (!e->was_called) break; // done
+				if (!e->is_open) {update_dynamic_draw_data();} // regen dynamic draw data to reflect change in open state
 				e->was_called = 0;
 				e->is_open    = 1;
 				i->flags     |= RO_FLAG_OPEN;
