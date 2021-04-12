@@ -998,13 +998,20 @@ void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 }
 
 void building_room_geom_t::add_button(room_object_t const &c) { // is_small=1
-	tid_nm_pair_t tp(untex_shad_mat);
-	colorRGBA const color(apply_light_color(c));
+	tid_nm_pair_t tp;
 	if (c.flags & RO_FLAG_IS_ACTIVE) {tp.emissive = 1.0;} // make it lit when active
+	colorRGBA const color(apply_light_color(c));
 	rgeom_mat_t &mat(get_material(tp, 0, 0, 1));
-	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts(c, color, all_zeros, ~get_face_mask(c.dim, c.dir));} // square button
+	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts(c, color, all_zeros, ~get_face_mask(c.dim, !c.dir));} // square button
 	else if (c.shape == SHAPE_CYLIN) {mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir);} // round button
 	else {assert(0);}
+	// add the frame for better color contrast
+	float const expand(0.7*c.dz());
+	cube_t frame(c);
+	frame.d[c.dim][c.dir] -= 0.9*(c.dir ? 1.0 : -1.0)*c.get_sz_dim(c.dim); // shorten to a sliver against the elevator wall
+	frame.expand_in_dim(!c.dim, expand);
+	frame.expand_in_dim(2,      expand); // Z
+	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(frame, apply_light_color(c, DK_GRAY), all_zeros, ~get_face_mask(c.dim, !c.dir));
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
