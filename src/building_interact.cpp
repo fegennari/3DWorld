@@ -28,7 +28,7 @@ quad_batch_draw paint_qbd[2][2], blood_qbd, tp_qbd; // paint_qbd: {spraypaint, m
 building_t const *paint_bldg(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
-extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode;
+extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode, animate2;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
@@ -318,9 +318,11 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			sound_scale = 0.6;
 		}
 		else if (obj.type == TYPE_BUTTON) {
-			register_button_event(obj);
-			interior->room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change
-			obj.flags ^= RO_FLAG_IS_ACTIVE;
+			if (!(obj.flags & RO_FLAG_IS_ACTIVE)) { // if not already active
+				register_button_event(obj);
+				interior->room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change
+				obj.flags |= RO_FLAG_IS_ACTIVE;
+			}
 		}
 		else {
 			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
@@ -401,7 +403,7 @@ bool check_ball_kick(room_object_t &ball, vector3d &velocity, point &new_center,
 
 void building_t::update_player_interact_objects(point const &player_pos, unsigned building_ix, int first_ped_ix) {
 	assert(interior);
-	interior->update_elevators(player_pos, get_floor_thickness());
+	if (animate2) {interior->update_elevators(player_pos, get_floor_thickness());}
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
 	float const fc_thick(0.5*get_floor_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
@@ -500,34 +502,72 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 bool building_interior_t::update_elevators(point const &player_pos, float floor_thickness) { // Note: player_pos is in building space
 	float const z_space(0.05*floor_thickness); // to prevent z-fighting
 	static int prev_move_dir(2); // starts at not-moving
+	bool was_updated(0);
 
-	// Note: the player can only be in one elevator at a time, so we can exit when we find the first containing elevator
+	// Note: the player can only be in one elevator at a time, but they can push the call button for one elevator and get into another, so we have to check all elevators
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
-		if (!e->contains_pt(player_pos)) continue; // player not in this elevator
+		if (!e->was_called && !e->contains_pt(player_pos)) continue; // player not in this elevator, and not called; skip
 		unsigned const elevator_id(e - elevators.begin());
-		auto objs_start(room_geom->objs.begin() + room_geom->stairs_start); // start with stairs and elevators
+		auto stairs_start(room_geom->objs.begin() + room_geom->stairs_start); // start with stairs and elevators
 
-		for (auto i = objs_start; i != room_geom->objs.end(); ++i) { // find elevator car and see if player is in it
-			if (i->type != TYPE_ELEVATOR || i->room_id != elevator_id || !i->contains_pt(player_pos)) continue;
-			bool const move_dir(cview_dir.z > 0.0); // player controls up/down direction based on the tilt of their head
+		for (auto i = stairs_start; i != room_geom->objs.end(); ++i) { // find elevator car for this elevator
+			if (i->type != TYPE_ELEVATOR || i->room_id != elevator_id) continue; // wrong elevator, etc
+			bool move_dir(0); // 0=down, 1=up
+			bool const player_in_elevator(i->contains_pt(player_pos));
+			if (player_in_elevator) {move_dir = (cview_dir.z > 0.0);} // player controls up/down direction based on the tilt of their head
+			else if (e->was_called) {move_dir = (e->target_zval > i->z1());} // elevator was called
+			else {continue;}
 			float dist(min(0.5f*CAMERA_RADIUS, 0.04f*i->dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
-			if (move_dir) {min_eq(dist, (e->z2() - i->z2() - z_space));} // going up
-			else          {max_eq(dist, (e->z1() - i->z1() + z_space));} // going down
-			if (fabs(dist) < 0.0001*z_space) break; // no movement, at top or bottom of elevator shaft (check with a tolerance)
-			i->z1() += dist; i->z2() += dist;
+			if (e->was_called && fabs(e->target_zval - i->z1()) < fabs(dist)) {dist = (e->target_zval - i->z1());} // move to position
+			else if (move_dir) {min_eq(dist, (e->z2() - i->z2() - z_space));} // going up
+			else               {max_eq(dist, (e->z1() - i->z1() + z_space));} // going down
+
+			if (fabs(dist) < 0.001*z_space) { // no movement, at target_zval or top/bottom of elevator shaft (check with a tolerance)
+				if (!e->was_called) break; // done
+				e->was_called = 0;
+				e->is_open    = 1;
+				i->flags     |= RO_FLAG_OPEN;
+
+				for (auto j = room_geom->objs.begin(); j != stairs_start; ++j) { // disable all call buttons for this elevator
+					if (j->type == TYPE_BUTTON && (j->flags & RO_FLAG_IS_ACTIVE) && e->contains_pt_exp(j->get_cube_center(), 0.5*floor_thickness)) {
+						j->flags &= ~RO_FLAG_IS_ACTIVE; // clear active/lit state
+						room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change
+					}
+				} // for j
+				break;
+			}
+			i->translate_dim(2, dist); // translate in Z
 			update_dynamic_draw_data(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
 			
 			if ((int)move_dir != prev_move_dir) {
-				gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.2); // play this sound quietly when the elevator starts moving or changes direction
+				if (player_in_elevator) {gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.2);} // play this sound quietly when the elevator starts moving or changes direction
 				register_building_sound(player_pos, 0.4);
 			}
 			prev_move_dir = move_dir;
-			return 1; // done
+			was_updated   = 1;
 		} // for i
-		break; // player in elevator shaft (on top of elevator?) but not inside elevator car, done
 	} // for e
+	if (was_updated) return 1;
 	prev_move_dir = 2;
 	return 0;
+}
+
+void building_t::register_button_event(room_object_t const &button) {
+	assert(interior);
+	float const floor_spacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness());
+	point const center(button.get_cube_center());
+	int const floor_ix(unsigned((center.z - bcube.z1())/floor_spacing));
+	assert(floor_ix >= 0); // must be inside the building
+	bool found_elevator(0);
+
+	for (auto e = interior->elevators.begin(); e != interior->elevators.end(); ++e) {
+		if (!e->contains_pt_exp(center, fc_thick)) continue;
+		e->target_zval = bcube.z1() + max(floor_spacing*floor_ix, 0.1f*fc_thick); // bottom of elevator car for this floor
+		e->was_called  = 1;
+		found_elevator = 1;
+		break; // there can be only one
+	}
+	assert(found_elevator); // currently, buttons are only used with elevators
 }
 
 bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
@@ -1446,7 +1486,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
 		if (i->contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the elevator when standing inside it
 		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), *i, tolerance)); // should always return a valid normal
-		if (i->open && n[i->dim] == (i->dir ? 1.0 : -1.0)) {walls_blocked = 1; continue;} // skip elevator opening
+		if (/*i->is_open &&*/ n[i->dim] == (i->dir ? 1.0 : -1.0)) {walls_blocked = 1; continue;} // skip elevator opening, even if not currently open
 		tmin = tmin0; normal = n; target = *i;
 	}
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
@@ -1513,10 +1553,6 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir) const {
 	// TODO
 	return 0;
-}
-
-void building_t::register_button_event(room_object_t const &button) {
-	// TODO
 }
 
 void building_t::add_blood_decal(point const &pos) const {

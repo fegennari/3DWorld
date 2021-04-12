@@ -1151,8 +1151,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			tid_nm_pair_t wall_tex(FENCE_TEX, -1, 16.0, 16.0);
 			wall_tex.set_specular(0.5, 20.0);
 			bdraw.add_section(*this, empty_vc, inner_cube, wall_tex, WHITE, dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 1);
-			// add elevator doors
-			float const door_width(i->open ? 1.12*frame_width : 0.99*0.5*width);
+			// add elevator doors; TODO: should be part of room_geom since doors are now dynamic
+			float const door_width(i->is_open ? 1.12*frame_width : 0.99*0.5*width);
 
 			for (unsigned d = 0; d < 2; ++d) { // left/right doors, untextured for now
 				unsigned dim_mask2(3); // x and y dims enabled

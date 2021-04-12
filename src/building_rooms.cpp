@@ -2503,7 +2503,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		cube_t elevator_car(*i);
 		elevator_car.z1() += 0.05*get_floor_thickness(); // to prevent z-fighting when looking at the building from the bottom
 		elevator_car.z2() = elevator_car.z1() + window_vspacing; // currently at the bottom floor
-		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, ((i->open ? RO_FLAG_OPEN : 0) | RO_FLAG_DYNAMIC));
+		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, ((i->is_open ? RO_FLAG_OPEN : 0) | RO_FLAG_DYNAMIC));
 	}
 }
 

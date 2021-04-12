@@ -110,7 +110,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 }
 
 unsigned elevator_t::get_coll_cubes(cube_t cubes[5]) const {
-	if (!open) {cubes[0] = *this; return 1;} // closed, entire elevator is 1 cube
+	if (!is_open) {cubes[0] = *this; return 1;} // closed, entire elevator is 1 cube
 	float const wwidth(get_wall_thickness()), fwidth(get_frame_width());
 	for (unsigned i = 0; i < 5; ++i) {cubes[i] = *this;} // start with full cube
 	cubes[0].d[dim][dir] = cubes[0].d[dim][!dir] + (dir ? 1.0 : -1.0)*wwidth; // back
