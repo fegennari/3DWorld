@@ -94,7 +94,7 @@ bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t con
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
 	if (office_chair_model) {
-		float const lum(0.4*chair_color.R + 0.2*chair_color.B + 0.1*chair_color.G); // calculate grayscale luminance
+		float const lum(chair_color.get_weighted_luminance()); // calculate grayscale luminance
 		objs.emplace_back(chair, TYPE_OFF_CHAIR, room_id, dim, dir, 0, tot_light_amt, SHAPE_CUBE, colorRGBA(lum, lum, lum));
 	}
 	else {
