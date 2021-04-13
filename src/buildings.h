@@ -41,6 +41,7 @@ struct pedestrian_t;
 struct building_t;
 class building_creator_t;
 class light_ix_assign_t;
+struct elevator_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 
 struct bottle_params_t {
@@ -499,6 +500,7 @@ struct building_room_geom_t {
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
 	void add_elevator(room_object_t const &c, float tscale);
+	void add_elevator_doors(elevator_t const &e);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);
 	void add_picture(room_object_t const &c);
@@ -587,10 +589,11 @@ struct elevator_t : public cube_t {
 	elevator_t(cube_t const &c, bool dim_, bool dir_, bool open_, bool at_edge_) :
 		cube_t(c), dim(dim_), dir(dir_), is_open(open_), at_edge(at_edge_), was_called(0), car_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0)
 	{assert(is_strictly_normalized());}
-	float get_wall_thickness() const {return 0.02*get_sz_dim(!dim);}
-	float get_frame_width   () const {return 0.20*get_sz_dim(!dim);}
+	float get_wall_thickness () const {return 0.02*get_sz_dim(!dim);}
+	float get_frame_width    () const {return 0.20*get_sz_dim(!dim);}
 	unsigned get_door_face_id() const {return (2*dim + dir);}
 	unsigned get_coll_cubes(cube_t cubes[5]) const; // returns 1 or 5 cubes
+	void call_elevator(float targ_z) {target_zval = targ_z; was_called = 1; is_open = 0;}
 };
 
 unsigned const NUM_RTYPE_SLOTS = 5; // enough for houses

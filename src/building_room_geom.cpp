@@ -1608,15 +1608,17 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin); // all faces drawn
 }
 
-void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
+float const elevator_fc_thick_scale(1.005*0.5*FLOOR_THICK_VAL_OFFICE);
+
+void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { // elevator car; dynamic=1
 	// elevator car, all materials are dynamic; no lighting scale
-	float const thickness(1.005*0.5*FLOOR_THICK_VAL_OFFICE*c.dz());
+	float const dz(c.dz()), thickness(elevator_fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
 	cube_t floor(c), ceil(c), back(c);
 	floor.z2() = floor.z1() + thickness;
 	ceil. z1() = ceil. z2() - thickness;
 	floor.expand_by_xy(-0.5f*thickness);
 	ceil .expand_by_xy(-0.5f*thickness);
-	back.d[c.dim][c.dir] = back.d[c.dim][!c.dir] + (c.dir ? 1.0 : -1.0)*thickness;
+	back.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + signed_thickness;
 	vector3d const tex_origin(c.get_llc());
 	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), floor_ceil_face_mask(front_face_mask & 60); // +Z faces
 	tid_nm_pair_t const paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
@@ -1624,12 +1626,62 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) {
 	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil, WHITE, tex_origin, floor_ceil_face_mask);
 	rgeom_mat_t &paneling_mat(get_material(paneling, 1, 1));
 	paneling_mat.add_cube_to_verts(back, WHITE, tex_origin, front_face_mask, !c.dim);
+	float const width(c.get_sz_dim(!c.dim)), frame_width(0.2*width), spacing(0.02*width), front_face(c.d[c.dim][c.dir] - signed_thickness);
+	cube_t front(c);
+	front.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*spacing; // slight gap with elevator doors
+	front.d[c.dim][!c.dir]  = front_face;
 
-	for (unsigned d = 0; d < 2; ++d) { // side walls
+	for (unsigned d = 0; d < 2; ++d) {
+		// side walls
+		unsigned const side_skip_faces(get_face_mask(!c.dim, !d));
 		cube_t side(c);
-		side.d[!c.dim][!d] = side.d[!c.dim][d] + (d ? -1.0 : 1.0)*thickness;
-		paneling_mat.add_cube_to_verts(side, WHITE, tex_origin, get_face_mask(!c.dim, !d), c.dim);
+		side.d[!c.dim][!d] = c.d[!c.dim][d] + (d ? -1.0 : 1.0)*thickness;
+		paneling_mat.add_cube_to_verts(side,  WHITE, tex_origin, side_skip_faces, c.dim);
+		// front sides of doors
+		front.d[!c.dim][ d] = side.d[!c.dim][!d];
+		front.d[!c.dim][!d] = c   .d[!c.dim][ d] + (d ? -1.0 : 1.0)*frame_width;
+		paneling_mat.add_cube_to_verts(front, WHITE, tex_origin, (get_face_mask(c.dim, !c.dir) & side_skip_faces), !c.dim); // draw front and inside side
 	}
+	// button panel: use c.item_flags to indicate which button is pressed/lit; drawer_flags indicates how many floors there are
+	rgeom_mat_t &button_mat(get_material(tid_nm_pair_t(), 0, 1));
+	cube_t panel(c);
+	panel.d[c.dim][ c.dir] = front_face; // flush front inner wall
+	panel.d[c.dim][!c.dir] = front_face - 0.1*signed_thickness; // set panel thickness
+	panel.d[!c.dim][0] = c.d[!c.dim][0] + 0.2*frame_width + thickness; // edge near the wall
+	panel.d[!c.dim][1] = panel.d[!c.dim][0] + 0.6*frame_width - thickness; // edge near door
+	panel.z1() += 0.3*dz; panel.z2() -= 0.3*dz;
+	button_mat.add_cube_to_verts(panel, DK_GRAY, all_zeros, ~get_face_mask(c.dim, c.dir));
+}
+
+void building_room_geom_t::add_elevator_doors(elevator_t const &e) {
+	float const spacing(e.get_wall_thickness()), closed_door_width(0.99*0.5*e.get_sz_dim(!e.dim)), open_door_width(1.12*e.get_frame_width());
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 1, 1));
+	float open_z1(e.z1()), open_z2(e.z2());
+
+	if (e.is_open) { // only draw the doors as open for the floor the elevator car is on
+		assert(e.car_obj_id < objs.size());
+		room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
+		float const thickness(elevator_fc_thick_scale*car.dz());
+		open_z1 = car.z1() + thickness; open_z2 = car.z2() - thickness;
+		assert(open_z1 < open_z2);
+	}
+	for (unsigned d = 0; d < 2; ++d) { // left/right doors, untextured for now
+		unsigned const skip_faces((e.is_open ? 0 : EF_Z12) | ~get_face_mask(!e.dim, !d)); // skip top and bottom if closed
+		cube_t door(e);
+		door.d[e.dim][!e.dir] = door.d[e.dim][e.dir] + (e.dir ? -1.0f : 1.0f)*spacing; // set correct thickness
+		door.expand_in_dim(e.dim, -0.2*spacing); // shrink slightly to make thinner
+		door.d[!e.dim][d] = e.d[!e.dim][!d] + (d ? 1.0f : -1.0f)*closed_door_width; // this section is always closed
+
+		if (e.is_open) { // only draw the doors as open for the floor the elevator car is on
+			cube_t open_door(door);
+			open_door.d[!e.dim][d] = e.d[!e.dim][!d] + (d ? 1.0f : -1.0f)*open_door_width;
+			open_door.z1() = door.z2() = open_z1; open_door.z2() = open_z2;
+			mat.add_cube_to_verts(open_door, GRAY, all_zeros, skip_faces); // open part
+			if (door.dz() > 0.0) {mat.add_cube_to_verts(door, GRAY, all_zeros, skip_faces);} // bottom part
+			door.z1() = open_z2; door.z2() = e.z2(); // top part
+		}
+		if (door.dz() > 0.0) {mat.add_cube_to_verts(door, GRAY, all_zeros, skip_faces);} // all or top part
+	} // for d
 }
 
 void building_room_geom_t::add_light(room_object_t const &c, float tscale) {
@@ -2907,18 +2959,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		default: assert(0); // not a supported dynamic object type
 		}
 	} // for i
-	// draw elevator doors, which are dynamic
-	for (auto i = building.interior->elevators.begin(); i != building.interior->elevators.end(); ++i) {
-		float const spacing(i->get_wall_thickness()), door_width(i->is_open ? 1.12*i->get_frame_width() : 0.99*0.5*i->get_sz_dim(!i->dim));
-
-		for (unsigned d = 0; d < 2; ++d) { // left/right doors, untextured for now
-			cube_t door(*i);
-			door.d[i->dim][!i->dir] = door.d[i->dim][i->dir] + (i->dir ? -1.0f : 1.0f)*spacing; // set correct thickness
-			door.expand_in_dim(i->dim, -0.2*spacing); // shrink slightly to make thinner
-			door.d[!i->dim][d] = door.d[!i->dim][!d] + (d ? 1.0f : -1.0f)*door_width;
-			get_material(tid_nm_pair_t(), 1, 1).add_cube_to_verts(door, GRAY, all_zeros, (EF_Z12 | ~get_face_mask(!i->dim, !d)));
-		}
-	} // for e
+	for (auto e = building.interior->elevators.begin(); e != building.interior->elevators.end(); ++e) {add_elevator_doors(*e);} // add dynamic elevator doors
 	mats_dynamic.create_vbos(building);
 }
 
