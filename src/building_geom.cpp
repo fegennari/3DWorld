@@ -539,12 +539,18 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
 		if (obj_z < e->z1() || obj_z > e->z2()) continue; // wrong part/floor
 
-		if (1/*obj_z < e->z1() + floor_spacing*/) { // should players only be allowed in elevators on the ground floor?
-			cube_t cubes[5];
-			unsigned const num_cubes(e->get_coll_cubes(cubes));
-			for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 1, cnorm);} // skip_z=1
+		if (room_geom && (e->is_open || e->contains_pt(point(pos.x, pos.y, obj_z)))) { // elevator is open, can enter | already inside elevator
+			assert(e->car_obj_id < room_geom->objs.size());
+			room_object_t &obj(room_geom->objs[e->car_obj_id]); // elevator car for this elevator
+
+			if ((obj_z - radius) > obj.z1() && (obj_z + radius) < obj.z2()) { // same floor as elevator car - can enter it; otherwise can't enter elevator shaft
+				cube_t cubes[5];
+				unsigned const num_cubes(e->get_coll_cubes(cubes));
+				for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 1, cnorm);} // skip_z=1
+				continue; // done with elevator
+			}
 		}
-		else {had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, 1, cnorm);} // skip_z=1
+		had_coll |= sphere_cube_int_update_pos(pos, radius, *e, p_last, 1, 1, cnorm); // handle as a single blocking cube; skip_z=1
 	} // for e
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		if (i->open) {
