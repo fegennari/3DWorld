@@ -2403,8 +2403,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			c.d[i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.25*button_radius;
 			objs.emplace_back(c, TYPE_BUTTON, elevator_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // use elevator_id for room_id
 		} // for f
-		i->button_id_end = objs.size();
-		// TODO: add light to top of elevator car
+		i->button_id_end = objs.size(); // AKA elevator_light_index
+		// add light to top of elevator car
+		cube_t light(point(i->xc(), i->yc(), (i->z1() + 0.05*floor_thickness + (1.0 - elevator_fc_thick_scale)*window_vspacing))); // starts on the first floor
+		light.z1() -= 0.02*window_vspacing;
+		light.expand_by_xy(0.06*window_vspacing);
+		objs.emplace_back(light, TYPE_LIGHT, i->room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV | RO_FLAG_LIT), 0.0, SHAPE_CYLIN, WHITE);
+		objs.back().obj_id = elevator_id;
 	} // for e
 	interior->room_geom->stairs_start = objs.size();
 	interior->room_geom->has_elevators = (!interior->elevators.empty());
@@ -2504,7 +2509,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
 		cube_t elevator_car(*i);
-		elevator_car.z1() += 0.05*get_floor_thickness(); // to prevent z-fighting when looking at the building from the bottom
+		elevator_car.z1() += 0.05*floor_thickness; // to prevent z-fighting when looking at the building from the bottom
 		elevator_car.z2() = elevator_car.z1() + window_vspacing; // currently at the bottom floor
 		i->car_obj_id = objs.size();
 		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, ((i->is_open ? RO_FLAG_OPEN : 0) | RO_FLAG_DYNAMIC));

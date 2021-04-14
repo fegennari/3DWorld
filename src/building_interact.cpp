@@ -74,6 +74,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || i->room_id != room_id) continue; // not a light, or the wrong room
 		if (bool(i->flags & RO_FLAG_IN_CLOSET) != bool(player_in_closet)) continue; // while in the closet, player can only toggle closet lights and not room lights
+		if (i->flags & RO_FLAG_IN_ELEV) continue; // can't toggle elevator light
 		if (!room.is_sec_bldg && get_floor_for_zval(i->z1()) != get_floor_for_zval(closest_to.z)) continue; // wrong floor (skip garages and sheds)
 		point center(i->get_cube_center());
 		if (is_rotated()) {do_xy_rotate(bcube.get_cube_center(), center);}
@@ -115,7 +116,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_LIGHT) continue; // not a light (excludes lamps)
-		if (i->flags & RO_FLAG_IN_CLOSET) continue; // skip lights in closets, these can only be toggled by the player
+		if (i->flags & (RO_FLAG_IN_CLOSET | RO_FLAG_IN_ELEV)) continue; // skip lights in closets or elevators, these can only be toggled by the player
 		if (i->z1() < zval || i->z1() > (zval + window_vspacing) || !room.contains_cube_xy(*i)) continue; // light is on the wrong floor or in the wrong room
 		if (i->is_lit() != make_on) {i->toggle_lit_state(); updated = 1;} // Note: doesn't update indir lighting or room light value
 	} // for i
@@ -540,7 +541,14 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 		}
 		obj.translate_dim(2, dist); // translate in Z
 		update_dynamic_draw_data(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
-			
+		assert(e->button_id_end < objs.size());
+		room_object_t &light(objs[e->button_id_end]); // light for this elevator
+
+		if (light.type != TYPE_BLOCKER) { // translate light as well, if not taken
+			assert(light.type == TYPE_LIGHT);
+			light.translate_dim(2, dist); // translate in Z
+			room_geom->clear_and_recreate_lights(); // or make elevator lights part of the elevator instead?
+		}
 		if ((int)move_dir != prev_move_dir) {
 			if (player_in_elevator) {gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.2);} // play this sound quietly when the elevator starts moving or changes direction
 			register_building_sound(player_pos, 0.4);

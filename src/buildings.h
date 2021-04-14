@@ -18,6 +18,8 @@ float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 
+float const elevator_fc_thick_scale(1.005*0.5*FLOOR_THICK_VAL_OFFICE);
+
 unsigned const NUM_BOTTLE_TYPES = 5;
 unsigned const NUM_BOOK_COLORS  = 16;
 unsigned const NUM_PAPER_COLORS = 6;
@@ -332,6 +334,7 @@ unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
 unsigned const RO_FLAG_NO_CONS  = 0x04000000; // this object is not consumable (bottles)
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, etc.
 unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.)
+unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
@@ -582,12 +585,11 @@ struct building_room_geom_t {
 
 struct elevator_t : public cube_t {
 	bool dim, dir, is_open, at_edge, was_called; // door dim/dir
-	unsigned car_obj_id, button_id_start, button_id_end;
+	unsigned room_id, car_obj_id, button_id_start, button_id_end;
 	float target_zval;
 
-	elevator_t() : dim(0), dir(0), is_open(0), at_edge(0), was_called(0), car_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0) {}
-	elevator_t(cube_t const &c, bool dim_, bool dir_, bool open_, bool at_edge_) :
-		cube_t(c), dim(dim_), dir(dir_), is_open(open_), at_edge(at_edge_), was_called(0), car_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0)
+	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool open_, bool at_edge_) :
+		cube_t(c), dim(dim_), dir(dir_), is_open(open_), at_edge(at_edge_), was_called(0), room_id(rid), car_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0)
 	{assert(is_strictly_normalized());}
 	float get_wall_thickness () const {return 0.02*get_sz_dim(!dim);}
 	float get_frame_width    () const {return 0.20*get_sz_dim(!dim);}

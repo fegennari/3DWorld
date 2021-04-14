@@ -1608,8 +1608,6 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin); // all faces drawn
 }
 
-float const elevator_fc_thick_scale(1.005*0.5*FLOOR_THICK_VAL_OFFICE);
-
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { // elevator car; dynamic=1
 	// elevator car, all materials are dynamic; no lighting scale
 	float const dz(c.dz()), thickness(elevator_fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);

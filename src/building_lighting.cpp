@@ -600,7 +600,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		room_t const &room(get_room(i->room_id));
-		bool const is_lamp(i->type == TYPE_LAMP);
+		bool const is_lamp(i->type == TYPE_LAMP), is_in_elevator(i->flags & RO_FLAG_IN_ELEV);
 		int const cur_floor((i->z1() - room.z1())/window_vspacing);
 		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(room.is_sec_bldg ? room.z1() : (level_z + fc_thick));
 		float const ceil_z(room.is_sec_bldg ? room.z2() : (level_z + window_vspacing - fc_thick)); // garages and sheds are all one floor
@@ -665,7 +665,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		sphere_bc.set_from_sphere(lpos, cull_radius);
 		cube_t clipped_bc(sphere_bc);
 		clipped_bc.intersect_with_cube(bcube);
-		if (!stairs_light) {clipped_bc.z1() = floor_z - fc_thick; clipped_bc.z2() = ceil_z + fc_thick;} // clip zval to current floor if light not in a room with stairs or elevator
+
+		if (!stairs_light && !is_in_elevator) { // clip zval to current floor if light not in a room with stairs or elevator
+			clipped_bc.z1() = floor_z - fc_thick;
+			clipped_bc.z2() = ceil_z + fc_thick;
+		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC
 		//if (line_intersect_walls(lpos, camera_rot)) continue; // straight line visibility test - for debugging, or maybe future use in assigning priorities
 		// update lights_bcube and add light(s)
@@ -692,22 +696,33 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		else {
 			color = i->get_color()*1.1; // make it extra bright
 		}
-		if (room.is_sec_bldg) {clipped_bc.intersect_with_cube(room);} // secondary buildings only light their single room
-		else {
-			assert(i->obj_id < light_bcubes.size());
-			cube_t &light_bcube(light_bcubes[i->obj_id]);
-
-			if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
-				light_bcube = clipped_bc;
-				refine_light_bcube(lpos, light_radius, room, light_bcube);
-			}
-			clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
-			clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
+		if (is_in_elevator) {
+			assert(i->obj_id < interior->elevators.size());
+			elevator_t const &e(interior->elevators[i->obj_id]);
+			assert(e.car_obj_id < objs.size());
+			room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
+			assert(car.contains_pt(lpos));
+			cube_t clip_cube(car); // light is constrained to the elevator car
+			if (e.is_open) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
+			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
 		}
-		clipped_bc.expand_by_xy(room_xy_expand); // expand so that offset exterior doors are properly handled
-		clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
-		
-		if (!clipped_bc.contains_cube(lpos)) {
+		else {
+			if (room.is_sec_bldg) {clipped_bc.intersect_with_cube(room);} // secondary buildings only light their single room
+			else {
+				assert(i->obj_id < light_bcubes.size());
+				cube_t &light_bcube(light_bcubes[i->obj_id]);
+
+				if (light_bcube.is_all_zeros()) { // not yet calculated - calculate and cache
+					light_bcube = clipped_bc;
+					refine_light_bcube(lpos, light_radius, room, light_bcube);
+				}
+				clipped_bc.x1() = light_bcube.x1(); clipped_bc.x2() = light_bcube.x2(); // copy X/Y but keep orig zvals
+				clipped_bc.y1() = light_bcube.y1(); clipped_bc.y2() = light_bcube.y2();
+			}
+			clipped_bc.expand_by_xy(room_xy_expand); // expand so that offset exterior doors are properly handled
+			clipped_bc.intersect_with_cube(sphere_bc); // clip to original light sphere, which still applies (only need to expand at building exterior)
+		}
+		if (!clipped_bc.contains_pt(lpos)) {
 			cout << TXT(clipped_bc.str()) << TXT(lpos.str()) << TXT(room.str()) << TXT(bcube.str()) << TXT(is_lamp) << endl;
 			assert(0);
 		}
@@ -741,11 +756,14 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, dynamic_shadows);
 		
 		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building (optimization)
-			cube_t room_exp(room);
-			room_exp.expand_by(room_xy_expand); // expand slightly so that points exactly on the room bounds and exterior doors are included
 			cube_t light_bc2(clipped_bc);
-			light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
-			min_eq(light_bc2.z2(), (ceil_z + fc_thick)); // doesn't reach higher than the ceiling of this room
+
+			if (!is_in_elevator) {
+				cube_t room_exp(room);
+				room_exp.expand_by(room_xy_expand); // expand slightly so that points exactly on the room bounds and exterior doors are included
+				light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
+				min_eq(light_bc2.z2(), (ceil_z + fc_thick)); // doesn't reach higher than the ceiling of this room
+			}
 			if (is_rotated()) {light_bc2 = get_rotated_bcube(light_bc2);}
 
 			if (is_lamp) { // add a second shadowed light source pointing up
