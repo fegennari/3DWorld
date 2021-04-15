@@ -704,7 +704,7 @@ struct building_interior_t {
 	bool is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin=0.0f, bool elevators_only=0) const;
 	bool is_blocked_by_stairs_or_elevator_no_expand(cube_t const &c, float dmin=0.0f) const;
 	void finalize();
-	bool update_elevators(point const &player_pos, float floor_thickness);
+	bool update_elevators(building_t const &building, point const &player_pos, float floor_thickness);
 	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
 		vector<room_object_t>::const_iterator self, vector3d *cnorm, float &hardness) const;
 	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,

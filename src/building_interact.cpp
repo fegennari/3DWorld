@@ -404,7 +404,7 @@ bool check_ball_kick(room_object_t &ball, vector3d &velocity, point &new_center,
 
 void building_t::update_player_interact_objects(point const &player_pos, unsigned building_ix, int first_ped_ix) {
 	assert(interior);
-	if (animate2) {interior->update_elevators(player_pos, get_floor_thickness());}
+	if (animate2) {interior->update_elevators(*this, player_pos, get_floor_thickness());}
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
 	float const fc_thick(0.5*get_floor_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
@@ -500,7 +500,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 	}
 }
 
-bool building_interior_t::update_elevators(point const &player_pos, float floor_thickness) { // Note: player_pos is in building space
+bool building_interior_t::update_elevators(building_t const &building, point const &player_pos, float floor_thickness) { // Note: player_pos is in building space
 	float const z_space(0.05*floor_thickness); // to prevent z-fighting
 	static int prev_move_dir(2); // starts at not-moving
 	vector<room_object_t> &objs(room_geom->objs);
@@ -536,6 +536,9 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 				if (j->flags & RO_FLAG_IS_ACTIVE) {j->flags &= ~RO_FLAG_IS_ACTIVE; was_updated = 1;} // clear active/lit state
 			}
 			if (was_updated) {room_geom->clear_static_small_vbos();} // need to regen object data due to lit state change
+			point const sound_pos(obj.get_cube_center());
+			gen_sound_thread_safe(SOUND_BEEP, building.local_to_camera_space(sound_pos), 0.5, 0.75); // lower frequency beep
+			register_building_sound(sound_pos, 0.5);
 			break;
 		}
 		obj.translate_dim(2, dist); // translate in Z
