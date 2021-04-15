@@ -508,30 +508,26 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 
 	// Note: the player can only be in one elevator at a time, but they can push the call button for one elevator and get into another, so we have to check all elevators
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
-		if (!e->was_called && !e->contains_pt(player_pos)) continue; // player not in this elevator, and not called; skip
+		if (!e->was_called) continue; // not called, skip
 		assert(e->car_obj_id < objs.size());
 		room_object_t &obj(objs[e->car_obj_id]); // elevator car for this elevator
 		assert(obj.type == TYPE_ELEVATOR && obj.room_id == (e - elevators.begin())); // sanity check
-		bool move_dir(0); // 0=down, 1=up
-		bool const player_in_elevator(obj.contains_pt(player_pos));
-		if (player_in_elevator) {move_dir = (cview_dir.z > 0.0);} // player controls up/down direction based on the tilt of their head
-		else if (e->was_called) {move_dir = (e->target_zval > obj.z1());} // elevator was called
-		else {continue;} // no position change
+		bool const move_dir(e->target_zval > obj.z1()); // 0=down, 1=up
+		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
 		float dist(min(0.5f*CAMERA_RADIUS, 0.04f*obj.dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
 		if (e->was_called && fabs(e->target_zval - obj.z1()) < fabs(dist)) {dist = (e->target_zval - obj.z1());} // move to position
 		else if (move_dir) {min_eq(dist, (e->z2() - obj.z2() - z_space));} // going up
 		else               {max_eq(dist, (e->z1() - obj.z1() + z_space));} // going down
 
 		if (fabs(dist) < 0.001*z_space) { // no movement, at target_zval or top/bottom of elevator shaft (check with a tolerance)
-			if (!e->was_called) break; // done
 			if (!e->is_open) {update_dynamic_draw_data();} // regen dynamic draw data to reflect change in open state
 			e->was_called = 0;
 			e->is_open    = 1;
 			obj.flags    |= RO_FLAG_OPEN;
-			assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
 			bool was_updated(0);
 
 			for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) { // disable all call buttons for this elevator
+				if (j->type == TYPE_BLOCKER) continue; // button was removed?
 				assert(j->type == TYPE_BUTTON);
 				if (j->flags & RO_FLAG_IS_ACTIVE) {j->flags &= ~RO_FLAG_IS_ACTIVE; was_updated = 1;} // clear active/lit state
 			}
@@ -551,8 +547,15 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			light.translate_dim(2, dist); // translate in Z
 			room_geom->clear_and_recreate_lights(); // or make elevator lights part of the elevator instead?
 		}
-		if ((int)move_dir != prev_move_dir) {
-			if (player_in_elevator) {gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.2);} // play this sound quietly when the elevator starts moving or changes direction
+		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
+			if (j->type == TYPE_BLOCKER) continue; // button was removed?
+			assert(j->type == TYPE_BUTTON);
+			if (j->flags & RO_FLAG_IN_ELEV) {j->translate_dim(2, dist);} // interior panel button, translate in Z
+		}
+		room_geom->clear_static_small_vbos(); // update translated buttons (TODO: too slow? add them as dynamic objects as part of the elevator?)
+
+		if ((int)move_dir != prev_move_dir && obj.contains_pt(player_pos)) { // moving, and player is in the elevator
+			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.2); // play this sound quietly when the elevator starts moving or changes direction
 			register_building_sound(player_pos, 0.4);
 		}
 		prev_move_dir = move_dir;

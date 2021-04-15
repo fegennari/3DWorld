@@ -334,7 +334,7 @@ unsigned const RO_FLAG_DSTATE   = 0x02000000; // this object has dynamic state
 unsigned const RO_FLAG_NO_CONS  = 0x04000000; // this object is not consumable (bottles)
 unsigned const RO_FLAG_IS_ACTIVE= 0x08000000; // active, for sinks, tubs, buttons, etc.
 unsigned const RO_FLAG_USED     = 0x10000000; // used by the player (spraypaint, marker, etc.)
-unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights
+unsigned const RO_FLAG_IN_ELEV  = 0x20000000; // for elevator lights and buttons
 
 struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
@@ -1096,6 +1096,7 @@ void get_table_cubes (room_object_t const &c, cube_t cubes[5], bool is_desk);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]);
 void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only);
+cube_t get_elevator_car_panel(room_object_t const &c);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_stack_t const &door, cube_t const &room);
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs);

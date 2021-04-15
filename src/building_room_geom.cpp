@@ -1608,6 +1608,18 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 	get_material(get_scaled_wall_tex(wall_tex), 1).add_cube_to_verts(c, c.color, tex_origin); // all faces drawn
 }
 
+// Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
+cube_t get_elevator_car_panel(room_object_t const &c) {
+	float const dz(c.dz()), thickness(elevator_fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
+	float const width(c.get_sz_dim(!c.dim)), frame_width(0.2*width), front_face(c.d[c.dim][c.dir] - signed_thickness);
+	cube_t panel(c);
+	panel.d[c.dim][ c.dir] = front_face; // flush front inner wall
+	panel.d[c.dim][!c.dir] = front_face - 0.1*signed_thickness; // set panel thickness
+	panel.d[!c.dim][0] = c.d[!c.dim][0] + 0.2*frame_width + thickness; // edge near the wall
+	panel.d[!c.dim][1] = panel.d[!c.dim][0] + 0.6*frame_width - thickness; // edge near door
+	panel.z1() += 0.28*dz; panel.z2() -= 0.28*dz;
+	return panel;
+}
 void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { // elevator car; dynamic=1
 	// elevator car, all materials are dynamic; no lighting scale
 	float const dz(c.dz()), thickness(elevator_fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
@@ -1640,15 +1652,9 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { 
 		front.d[!c.dim][!d] = c   .d[!c.dim][ d] + (d ? -1.0 : 1.0)*frame_width;
 		paneling_mat.add_cube_to_verts(front, WHITE, tex_origin, (get_face_mask(c.dim, !c.dir) & side_skip_faces), !c.dim); // draw front and inside side
 	}
-	// button panel: use c.item_flags to indicate which button is pressed/lit; drawer_flags indicates how many floors there are
-	rgeom_mat_t &button_mat(get_material(tid_nm_pair_t(), 0, 1));
-	cube_t panel(c);
-	panel.d[c.dim][ c.dir] = front_face; // flush front inner wall
-	panel.d[c.dim][!c.dir] = front_face - 0.1*signed_thickness; // set panel thickness
-	panel.d[!c.dim][0] = c.d[!c.dim][0] + 0.2*frame_width + thickness; // edge near the wall
-	panel.d[!c.dim][1] = panel.d[!c.dim][0] + 0.6*frame_width - thickness; // edge near door
-	panel.z1() += 0.3*dz; panel.z2() -= 0.3*dz;
-	button_mat.add_cube_to_verts(panel, DK_GRAY, all_zeros, ~get_face_mask(c.dim, c.dir));
+	// add button panel
+	get_material(tid_nm_pair_t(), 0, 1).add_cube_to_verts(get_elevator_car_panel(c), DK_GRAY, all_zeros, ~get_face_mask(c.dim, c.dir));
+	// TODO: add floor numbers to either the panel or the buttons themselves; num_floors is stored in c.drawer_flags
 }
 
 void building_room_geom_t::add_elevator_doors(elevator_t const &e) {
