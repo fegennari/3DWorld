@@ -62,7 +62,7 @@ void register_building_sound(point const &pos, float volume);
 bool building_t::toggle_room_light(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
 	if (!has_room_geom()) return 0; // error?
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	point query_pt(closest_to);
 	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
 	int const room_id(get_room_containing_pt(query_pt));
@@ -88,7 +88,7 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 
 void building_t::toggle_light_object(room_object_t const &light) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	bool updated(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
@@ -110,7 +110,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 	if (!has_room_geom()) return 0; // error?
 	if (room.is_hallway)  return 0; // don't toggle lights for hallways, which can have more than one light
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	float const window_vspacing(get_window_vspace());
 	bool updated(0);
 
@@ -128,7 +128,7 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 	assert(has_room_geom());
 	float const light_intensity(get_room(room_id).light_intensity);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	float const obj_zmin(light_z2 - get_window_vspace()); // get_floor_thickness()?
 	bool was_updated(0);
 
@@ -153,10 +153,10 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 }
 
 bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
-	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
+	auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type == TYPE_LIGHT && closet.contains_cube(*i)) {return i->is_lit();}
+		if (i->type == TYPE_LIGHT && (i->flags & RO_FLAG_IN_CLOSET) && closet.contains_cube(*i)) {return i->is_lit();}
 	}
 	return 0;
 }
@@ -234,7 +234,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	}
 	if (interior->room_geom) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
 		vector<room_object_t> &objs(interior->room_geom->objs);
-		auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+		auto objs_end(interior->room_geom->get_stairs_start()); // skip stairs and elevators
 		point const query_ray_end(closest_to + dmax*in_dir);
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
@@ -512,7 +512,6 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 		assert(e->car_obj_id < objs.size());
 		room_object_t &obj(objs[e->car_obj_id]); // elevator car for this elevator
 		assert(obj.type == TYPE_ELEVATOR && obj.room_id == (e - elevators.begin())); // sanity check
-		auto stairs_start(objs.begin() + room_geom->stairs_start); // start with stairs and elevators
 		bool move_dir(0); // 0=down, 1=up
 		bool const player_in_elevator(obj.contains_pt(player_pos));
 		if (player_in_elevator) {move_dir = (cview_dir.z > 0.0);} // player controls up/down direction based on the tilt of their head
@@ -541,8 +540,8 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 		}
 		obj.translate_dim(2, dist); // translate in Z
 		update_dynamic_draw_data(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
-		assert(e->button_id_end < objs.size());
-		room_object_t &light(objs[e->button_id_end]); // light for this elevator
+		assert(e->light_obj_id < objs.size());
+		room_object_t &light(objs[e->light_obj_id]); // light for this elevator
 
 		if (light.type != TYPE_BLOCKER) { // translate light as well, if not taken
 			assert(light.type == TYPE_LIGHT);
@@ -564,11 +563,8 @@ bool building_interior_t::update_elevators(point const &player_pos, float floor_
 void building_t::register_button_event(room_object_t const &button) {
 	assert(interior);
 	assert(button.room_id < interior->elevators.size()); // here room_id is elevator_id (buttons are only used with elevators)
-	float const floor_spacing(get_window_vspace());
-	point const center(button.get_cube_center());
-	int const floor_ix(unsigned((center.z - bcube.z1())/floor_spacing));
-	assert(floor_ix >= 0); // must be inside the building
-	interior->elevators[button.room_id].call_elevator(bcube.z1() + max(floor_spacing*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
+	unsigned const floor_ix(button.obj_id);
+	interior->elevators[button.room_id].call_elevator(bcube.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
 }
 
 bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
@@ -664,7 +660,7 @@ bool building_t::is_pt_lit(point const &pt) const {
 	int const room_id(get_room_containing_pt(pt)); // call this only once on center in is_sphere_lit()?
 	if (room_id < 0) return 0; // outside building?
 	room_t const &room(get_room(room_id));
-	auto objs_end(interior->room_geom->objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
@@ -1328,7 +1324,7 @@ void building_room_geom_t::update_draw_state_for_room_object(room_object_t const
 }
 
 int building_room_geom_t::find_avail_obj_slot() const {
-	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
+	auto objs_end(get_stairs_start()); // skip stairs and elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type == TYPE_BLOCKER) {return int(i - objs.begin());} // blockers are used as temporaries for room object placement and to replace removed objects
@@ -1454,7 +1450,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	}
 	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	auto objs_end(objs.begin() + interior->room_geom->stairs_start); // skip stairs and elevators
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
 	bool walls_blocked(0);
 

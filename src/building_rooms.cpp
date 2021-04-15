@@ -2385,6 +2385,17 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
+	// add elevator lights on each floor; must be done before setting buttons_start
+	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+		i->light_obj_id = objs.size();
+		cube_t light(point(i->xc(), i->yc(), (i->z1() + 0.05*floor_thickness + (1.0 - elevator_fc_thick_scale)*window_vspacing))); // starts on the first floor
+		light.z1() -= 0.02*window_vspacing;
+		light.expand_by_xy(0.06*window_vspacing);
+		objs.emplace_back(light, TYPE_LIGHT, i->room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV | RO_FLAG_LIT), 0.0, SHAPE_CYLIN, WHITE);
+		objs.back().obj_id = uint16_t(i - interior->elevators.begin()); // encode elevator index as obj_id
+	} // for e
+	interior->room_geom->buttons_start = objs.size();
+
 	// add elevator call buttons on each floor; must be done before setting stairs_start
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		float const button_radius(0.3*wall_thickness);
@@ -2402,16 +2413,11 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			c.expand_in_dim(2, button_radius); // Z
 			c.d[i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.25*button_radius;
 			objs.emplace_back(c, TYPE_BUTTON, elevator_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // use elevator_id for room_id
+			objs.back().obj_id = f; // encode floor index as obj_id
 		} // for f
-		i->button_id_end = objs.size(); // AKA elevator_light_index
-		// add light to top of elevator car
-		cube_t light(point(i->xc(), i->yc(), (i->z1() + 0.05*floor_thickness + (1.0 - elevator_fc_thick_scale)*window_vspacing))); // starts on the first floor
-		light.z1() -= 0.02*window_vspacing;
-		light.expand_by_xy(0.06*window_vspacing);
-		objs.emplace_back(light, TYPE_LIGHT, i->room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV | RO_FLAG_LIT), 0.0, SHAPE_CYLIN, WHITE);
-		objs.back().obj_id = elevator_id;
+		i->button_id_end = objs.size();
 	} // for e
-	interior->room_geom->stairs_start = objs.size();
+	interior->room_geom->stairs_start  = objs.size();
 	interior->room_geom->has_elevators = (!interior->elevators.empty());
 	colorRGBA const railing_colors[3] = {GOLD, LT_GRAY, BLACK};
 	colorRGBA const railing_color(railing_colors[rgen.rand()%3]); // set per-building

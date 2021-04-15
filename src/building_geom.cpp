@@ -371,7 +371,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 	if (interior->room_geom) { // collision with room geometry
 		vector<room_object_t> const &objs(interior->room_geom->objs);
 
-		for (auto c = (objs.begin() + interior->room_geom->stairs_start); c != objs.end(); ++c) { // check for and handle stairs first
+		for (auto c = interior->room_geom->get_stairs_start(); c != objs.end(); ++c) { // check for and handle stairs first
 			if (c->no_coll() || c->type != TYPE_STAIR) continue;
 			if (!c->contains_pt_xy(pos))  continue; // sphere not on this stair
 			if (obj_z < c->z1())          continue; // below the stair

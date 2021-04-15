@@ -468,7 +468,7 @@ struct building_room_geom_t {
 	bool has_elevators, has_pictures, lights_changed, materials_invalid, modified_by_player;
 	unsigned char num_pic_tids;
 	float obj_scale;
-	unsigned stairs_start; // index of first object of TYPE_STAIR
+	unsigned buttons_start, stairs_start; // index of first object of {TYPE_BUTTON, TYPE_STAIR}
 	point tex_origin;
 	colorRGBA wood_color;
 	vector<room_object_t> objs, expanded_objs, model_objs; // objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers
@@ -479,7 +479,7 @@ struct building_room_geom_t {
 	vect_cube_t light_bcubes;
 
 	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), materials_invalid(0), modified_by_player(0),
-		num_pic_tids(0), obj_scale(1.0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
+		num_pic_tids(0), obj_scale(1.0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
 	void clear_materials();
@@ -494,6 +494,8 @@ struct building_room_geom_t {
 	colorRGBA apply_wood_light_color(room_object_t const &o) const;
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 		colorRGBA const &color, bool invert_tc_x, bool exclude_frame, bool no_tc);
+	vector<room_object_t>::const_iterator get_std_objs_end() const {return (objs.begin() + buttons_start);}
+	vector<room_object_t>::const_iterator get_stairs_start() const {return (objs.begin() + stairs_start );}
 	// Note: these functions are all for drawing objects / adding them to the vertex list
 	void add_tc_legs(cube_t const &c, colorRGBA const &color, float width, float tscale);
 	void add_table(room_object_t const &c, float tscale, float top_dz, float leg_width);
@@ -585,11 +587,12 @@ struct building_room_geom_t {
 
 struct elevator_t : public cube_t {
 	bool dim, dir, is_open, at_edge, was_called; // door dim/dir
-	unsigned room_id, car_obj_id, button_id_start, button_id_end;
+	unsigned room_id, car_obj_id, light_obj_id, button_id_start, button_id_end;
 	float target_zval;
 
 	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool open_, bool at_edge_) :
-		cube_t(c), dim(dim_), dir(dir_), is_open(open_), at_edge(at_edge_), was_called(0), room_id(rid), car_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0)
+		cube_t(c), dim(dim_), dir(dir_), is_open(open_), at_edge(at_edge_), was_called(0), room_id(rid),
+		car_obj_id(0), light_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0)
 	{assert(is_strictly_normalized());}
 	float get_wall_thickness () const {return 0.02*get_sz_dim(!dim);}
 	float get_frame_width    () const {return 0.20*get_sz_dim(!dim);}

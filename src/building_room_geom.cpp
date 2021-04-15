@@ -2919,7 +2919,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
 	//highres_timer_t timer("Gen Room Model Insts");
 	obj_model_insts.clear();
-	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
+	auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_visible() || !i->is_obj_model_type()) continue;
@@ -2939,7 +2939,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
 	float const tscale(2.0/obj_scale);
-	auto objs_end(objs.begin() + stairs_start); // skip stairs and elevators
+	auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->is_visible() && i->type == TYPE_LIGHT) {add_light(*i, tscale);}
