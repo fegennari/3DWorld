@@ -2445,7 +2445,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		elevator_car.z2()  = elevator_car.z1() + window_vspacing; // currently at the bottom floor
 		cube_t const panel(get_elevator_car_panel(room_object_t(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, 0)));
 		float const dz(panel.dz()), button_spacing(dz/(num_floors + 1)); // add extra spacing on bottom and top of panel
-		float const inner_button_radius(min(button_radius, 0.35f*button_spacing)); // may need to be smaller
+		float const inner_button_radius(min(button_radius, min(0.35f*button_spacing, 0.4f*panel.get_sz_dim(!i->dim)))); // may need to be smaller
 		point pos;
 		pos[ i->dim] = panel.d[i->dim][!i->dir]; // front face of inside panel
 		pos[!i->dim] = panel.get_center_dim(!i->dim);

@@ -1618,8 +1618,8 @@ cube_t get_elevator_car_panel(room_object_t const &c) {
 	cube_t panel(c);
 	panel.d[c.dim][ c.dir] = front_face; // flush front inner wall
 	panel.d[c.dim][!c.dir] = front_face - 0.1*signed_thickness; // set panel thickness
-	panel.d[!c.dim][0] = c.d[!c.dim][0] + 0.2*frame_width + thickness; // edge near the wall
-	panel.d[!c.dim][1] = panel.d[!c.dim][0] + 0.6*frame_width - thickness; // edge near door
+	panel.d[!c.dim][0] = c.d[!c.dim][0] + 0.1*frame_width + thickness; // edge near the wall
+	panel.d[!c.dim][1] = panel.d[!c.dim][0] + 0.8*frame_width - thickness; // edge near door
 	panel.z1() += 0.28*dz; panel.z2() -= 0.28*dz;
 	return panel;
 }
@@ -1633,7 +1633,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { 
 	ceil .expand_by_xy(-0.5f*thickness);
 	back.d[c.dim][c.dir] = c.d[c.dim][!c.dir] + signed_thickness;
 	vector3d const tex_origin(c.get_llc());
-	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), floor_ceil_face_mask(front_face_mask & 60); // +Z faces
+	unsigned const front_face_mask(get_face_mask(c.dim, c.dir)), floor_ceil_face_mask(front_face_mask & (EF_X12 | EF_Y12)); // +Z faces
 	tid_nm_pair_t const paneling(get_tex_auto_nm(PANELING_TEX, 2.0f*tscale));
 	get_material(get_tex_auto_nm(TILE_TEX, tscale), 1, 1).add_cube_to_verts(floor, WHITE, tex_origin, floor_ceil_face_mask);
 	get_material(get_tex_auto_nm(get_rect_panel_tid(), tscale), 1, 1).add_cube_to_verts(ceil, WHITE, tex_origin, floor_ceil_face_mask);
@@ -1656,8 +1656,38 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { 
 		paneling_mat.add_cube_to_verts(front, WHITE, tex_origin, (get_face_mask(c.dim, !c.dir) & side_skip_faces), !c.dim); // draw front and inside side
 	}
 	// add button panel
-	get_material(tid_nm_pair_t(), 0, 1).add_cube_to_verts(get_elevator_car_panel(c), DK_GRAY, all_zeros, ~get_face_mask(c.dim, c.dir));
-	// TODO: add floor numbers to either the panel or the buttons themselves; num_floors is stored in c.drawer_flags
+	cube_t const panel(get_elevator_car_panel(c));
+	get_material(tid_nm_pair_t(), 0, 1).add_cube_to_verts(panel, DK_GRAY, all_zeros, ~get_face_mask(c.dim, c.dir));
+#if 0
+	// add floor numbers to either the panel (or the buttons themselves?)
+	unsigned const num_floors(c.drawer_flags);
+	assert(num_floors > 1);
+	float const button_spacing(panel.dz()/(num_floors + 1)); // add extra spacing on bottom and top of panel
+	float const panel_width(panel.get_sz_dim(!c.dim)), text_height(min(0.5f*panel_width, 0.8f*button_spacing));
+	point text_pos;
+	text_pos[ c.dim] = panel.d[c.dim][!c.dir] - 0.01*signed_thickness; // slightly in front of the panel
+	text_pos[!c.dim] = panel.d[!c.dim][0] + 0.05*panel_width; // TODO: side?
+	vector3d col_dir(zero_vector), normal(zero_vector);
+	bool const ldir(c.dim ^ c.dir);
+	col_dir[!c.dim] = (ldir  ? 1.0 : -1.0);
+	normal [ c.dim] = (c.dir ? 1.0 : -1.0);
+	static vector<vert_tc_t> verts;
+	ostringstream oss; // reused across buttons
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 1)); // dynamic=1
+	color_wrapper const cw(BLACK);
+	norm_comp const nc(normal);
+
+	for (unsigned f = 0; f < num_floors; ++f) {
+		text_pos.z = panel.z1() + (f + 1)*button_spacing - 0.5*text_height;
+		verts.clear();
+		oss.str("");
+		oss << (f+1); // floor index
+		gen_text_verts(verts, text_pos, oss.str(), 100.0*text_height, col_dir, plus_z, 1); // use_quads=1
+		assert(!verts.empty());
+		if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
+		for (auto i = verts.begin(); i != verts.end(); ++i) {mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], cw);}
+	} // for f
+#endif
 }
 
 void building_room_geom_t::add_elevator_doors(elevator_t const &e) {
