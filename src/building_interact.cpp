@@ -567,7 +567,8 @@ void building_t::register_button_event(room_object_t const &button) {
 	assert(interior);
 	assert(button.room_id < interior->elevators.size()); // here room_id is elevator_id (buttons are only used with elevators)
 	unsigned const floor_ix(button.obj_id);
-	interior->elevators[button.room_id].call_elevator(bcube.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
+	elevator_t &elevator(interior->elevators[button.room_id]);
+	elevator.call_elevator(elevator.z1() + max(get_window_vspace()*floor_ix, 0.05f*get_floor_thickness())); // bottom of elevator car for this floor
 }
 
 bool building_t::move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const { // Note: only moves in XY
