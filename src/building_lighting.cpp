@@ -130,7 +130,7 @@ unsigned elevator_t::get_coll_cubes(cube_t cubes[5]) const {
 	else { // closed
 		cube_t &front(cubes[3]);
 		front.d[dim][!dir] = front.d[dim][dir] + (dir ? -1.0 : 1.0)*wwidth; // front (sides + door)
-		return 5; // back + 2 sides + front
+		return 4; // back + 2 sides + front
 	}
 }
 
