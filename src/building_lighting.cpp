@@ -599,11 +599,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		//if (is_light_occluded(lpos_rot, camera_bs))  continue; // too strong a test in general, but may be useful for selecting high importance lights
 		//if (!camera_in_building && i->is_interior()) continue; // skip interior lights when camera is outside the building: makes little difference, not worth the trouble
 		room_t const &room(get_room(i->room_id));
-		bool const is_lamp(i->type == TYPE_LAMP), is_in_elevator(i->flags & RO_FLAG_IN_ELEV);
+		bool const is_lamp(i->type == TYPE_LAMP), is_in_elevator(i->flags & RO_FLAG_IN_ELEV), is_single_floor(room.is_sec_bldg || is_in_elevator);
 		int const cur_floor((i->z1() - room.z1())/window_vspacing);
-		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(room.is_sec_bldg ? room.z1() : (level_z + fc_thick));
-		float const ceil_z(room.is_sec_bldg ? room.z2() : (level_z + window_vspacing - fc_thick)); // garages and sheds are all one floor
-		bool const floor_is_above((camera_z < floor_z) && !room.is_sec_bldg), floor_is_below(camera_z > ceil_z); // secondary buildings are all one floor independent of height
+		float const level_z(room.z1() + cur_floor*window_vspacing), floor_z(is_single_floor ? room.z1() : (level_z + fc_thick));
+		float const ceil_z(is_single_floor ? room.z2() : (level_z + window_vspacing - fc_thick)); // garages and sheds are all one floor
+		bool const floor_is_above((camera_z < floor_z) && !is_single_floor), floor_is_below(camera_z > ceil_z); // secondary buildings are all one floor independent of height
 		// less culling if either the light or the camera is by stairs and light is on the floor above or below
 		bool stairs_light(0);
 
@@ -702,6 +702,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
 			assert(car.contains_pt(lpos));
 			cube_t clip_cube(car); // light is constrained to the elevator car
+			clip_cube.expand_by_xy(0.1*room_xy_expand); // expand to include walls adjacent to elevator (enough to account for FP error)
 			if (e.is_open) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
 			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
 		}
