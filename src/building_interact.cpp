@@ -518,9 +518,9 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 		if (e->was_called && fabs(e->target_zval - obj.z1()) < fabs(dist)) {dist = (e->target_zval - obj.z1());} // move to position
 		else if (move_dir) {min_eq(dist, (e->z2() - obj.z2() - z_space));} // going up
 		else               {max_eq(dist, (e->z1() - obj.z1() + z_space));} // going down
+		update_dynamic_draw_data(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
 
 		if (fabs(dist) < 0.001*z_space) { // no movement, at target_zval or top/bottom of elevator shaft (check with a tolerance)
-			if (!e->is_open) {update_dynamic_draw_data();} // regen dynamic draw data to reflect change in open state
 			e->was_called = 0;
 			e->is_open    = 1;
 			obj.flags    |= RO_FLAG_OPEN;
@@ -538,7 +538,6 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			break;
 		}
 		obj.translate_dim(2, dist); // translate in Z
-		update_dynamic_draw_data(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
 		assert(e->light_obj_id < objs.size());
 		room_object_t &light(objs[e->light_obj_id]); // light for this elevator
 
@@ -552,8 +551,6 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			assert(j->type == TYPE_BUTTON);
 			if (j->flags & RO_FLAG_IN_ELEV) {j->translate_dim(2, dist);} // interior panel button, translate in Z
 		}
-		room_geom->clear_static_small_vbos(); // update translated buttons (TODO: too slow? add them as dynamic objects as part of the elevator?)
-
 		if ((int)move_dir != prev_move_dir && obj.contains_pt(player_pos)) { // moving, and player is in the elevator
 			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.2); // play this sound quietly when the elevator starts moving or changes direction
 			register_building_sound(player_pos, 0.4);

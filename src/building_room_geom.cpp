@@ -997,21 +997,24 @@ void building_room_geom_t::add_spraycan(room_object_t const &c) { // is_small=1
 	add_spraycan_to_material(c, get_material(untex_shad_mat, 1, 0, 1));
 }
 
-void building_room_geom_t::add_button(room_object_t const &c) { // is_small=1
+void building_room_geom_t::add_button(room_object_t const &c) {
+	bool const in_elevator(c.flags & RO_FLAG_IN_ELEV);
 	tid_nm_pair_t tp;
 	if (c.flags & RO_FLAG_IS_ACTIVE) {tp.emissive = 1.0;} // make it lit when active
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &mat(get_material(tp, 0, 0, 1));
+	rgeom_mat_t &mat(get_material(tp, 0, in_elevator, !in_elevator)); // (in_elevator ? dynamic : small)
 	if      (c.shape == SHAPE_CUBE ) {mat.add_cube_to_verts(c, color, all_zeros, ~get_face_mask(c.dim, !c.dir));} // square button
 	else if (c.shape == SHAPE_CYLIN) {mat.add_ortho_cylin_to_verts(c, color, c.dim, !c.dir, c.dir);} // round button
 	else {assert(0);}
-	// add the frame for better color contrast
-	float const expand(0.7*c.dz());
-	cube_t frame(c);
-	frame.d[c.dim][c.dir] -= 0.9*(c.dir ? 1.0 : -1.0)*c.get_sz_dim(c.dim); // shorten to a sliver against the elevator wall
-	frame.expand_in_dim(!c.dim, expand);
-	frame.expand_in_dim(2,      expand); // Z
-	get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(frame, apply_light_color(c, DK_GRAY), all_zeros, ~get_face_mask(c.dim, !c.dir));
+	
+	if (!in_elevator) { // add the frame for better color contrast
+		float const expand(0.7*c.dz());
+		cube_t frame(c);
+		frame.d[c.dim][c.dir] -= 0.9*(c.dir ? 1.0 : -1.0)*c.get_sz_dim(c.dim); // shorten to a sliver against the elevator wall
+		frame.expand_in_dim(!c.dim, expand);
+		frame.expand_in_dim(2,      expand); // Z
+		get_material(tid_nm_pair_t(), 0, 0, 1).add_cube_to_verts(frame, apply_light_color(c, DK_GRAY), all_zeros, ~get_face_mask(c.dim, !c.dir)); // small
+	}
 }
 
 int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
@@ -2916,7 +2919,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_PHONE:     add_phone(*i); break;
 		case TYPE_TPROLL:    add_tproll(*i); break;
 		case TYPE_SPRAYCAN:  add_spraycan(*i); break;
-		case TYPE_BUTTON:    add_button(*i); break;
+		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects
 		default: break;
 		}
 	} // for i
@@ -2954,7 +2957,7 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 }
 
 void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
-	//highres_timer_t timer("Gen Room Geom Dynamic");
+	//highres_timer_t timer(string("Gen Room Geom Dynamic ") + (building.is_house ? "house" : "office"));
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!i->is_visible() || !i->is_dynamic()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
 		switch (i->type) {
@@ -2963,7 +2966,16 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		default: assert(0); // not a supported dynamic object type
 		}
 	} // for i
-	for (auto e = building.interior->elevators.begin(); e != building.interior->elevators.end(); ++e) {add_elevator_doors(*e);} // add dynamic elevator doors
+	for (auto e = building.interior->elevators.begin(); e != building.interior->elevators.end(); ++e) {
+		add_elevator_doors(*e); // add dynamic elevator doors
+		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
+
+		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
+			if (j->type == TYPE_BLOCKER) continue; // button was removed?
+			assert(j->type == TYPE_BUTTON);
+			if (j->flags & RO_FLAG_IN_ELEV) {add_button(*j);} // add button as a dynamic object if it's inside the elevator
+		}
+	} // for e
 	mats_dynamic.create_vbos(building);
 }
 
