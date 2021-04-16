@@ -2394,21 +2394,39 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
 	float const wall_thickness(get_wall_thickness()), elevator_car_z1_add(0.05*floor_thickness);
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	ostringstream oss; // reused across elevators/floors
 
-	// add elevator lights on each floor; must be done before setting buttons_start
+	// add elevator lights, and signs on each floor; must be done before setting buttons_start
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
+		// add light
 		i->light_obj_id = objs.size();
 		cube_t light(point(i->xc(), i->yc(), (i->z1() + elevator_car_z1_add + (1.0 - elevator_fc_thick_scale)*window_vspacing))); // starts on the first floor
 		light.z1() -= 0.02*window_vspacing;
 		light.expand_by_xy(0.06*window_vspacing);
 		objs.emplace_back(light, TYPE_LIGHT, i->room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV | RO_FLAG_LIT), 0.0, SHAPE_CYLIN, WHITE);
 		objs.back().obj_id = uint16_t(i - interior->elevators.begin()); // encode elevator index as obj_id
+		// add floor signs
+		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
+		float const ewidth(i->get_sz_dim(!i->dim));
+		cube_t sign;
+		sign.d[ i->dim][0] = sign.d[i->dim][1] = i->d[i->dim][i->dir];
+		sign.d[ i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.1*wall_thickness; // front of sign
+		set_wall_width(sign, (i->d[!i->dim][1] - 0.1*ewidth), 0.04*ewidth, !i->dim); // to the high side, opposite the call button
+
+		for (unsigned f = 0; f < num_floors; ++f) {
+			sign.z1() = i->z1()   + (f + 0.5)*window_vspacing;
+			sign.z2() = sign.z1() + 0.1*ewidth;
+			objs.emplace_back(sign, TYPE_SIGN, i->room_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DK_BLUE);
+			oss.str("");
+			oss << (f+1); // floor index
+			objs.back().obj_id = register_sign_text(oss.str());
+		}
 	} // for e
 	interior->room_geom->buttons_start = objs.size();
 
 	// add elevator buttons for each floor; must be done before setting stairs_start
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
-		float const button_radius(0.3*wall_thickness);
+		float const button_radius(0.3*wall_thickness), ewidth(i->get_sz_dim(!i->dim));
 		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness)), elevator_id(i - interior->elevators.begin());
 		assert(num_floors > 1); // otherwise, why have an elevator?
 		i->button_id_start = objs.size();
@@ -2416,8 +2434,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		// call buttons on each floor outside the elevator
 		for (unsigned f = 0; f < num_floors; ++f) {
 			point pos;
-			pos[ i->dim] = i->d[i->dim][i->dir];
-			pos[!i->dim] = i->d[!i->dim][0] + 0.1*i->get_sz_dim(!i->dim); // to the low side
+			pos[ i->dim] = i->d[i->dim][i->dir]; // front of the elevator
+			pos[!i->dim] = i->d[!i->dim][0] + 0.1*ewidth; // to the low side
 			pos.z = i->z1() + (f + 0.45)*window_vspacing;
 			add_elevator_button(pos, button_radius, i->dim, i->dir, elevator_id, f, 0, objs);
 		}
@@ -2480,6 +2498,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, side^is_rev); // Note: room_id=0, not tracked, unused
 				objs.back().shape = SHAPE_STAIRS_U;
 			} // for n
+			// TODO: add floor signs to stairs as well, similar to elevators?
 		}
 		// add walls and railings
 		bool const extend_walls_up(i->is_at_top && !i->roof_access); // space above is open, add a wall so that people can't fall down the stairs
