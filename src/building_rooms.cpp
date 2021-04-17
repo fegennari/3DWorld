@@ -2388,6 +2388,11 @@ void add_elevator_button(point const &pos, float button_radius, bool dim, bool d
 	objs.emplace_back(c, TYPE_BUTTON, elevator_id, dim, dir, (RO_FLAG_NOCOLL | (inside ? RO_FLAG_IN_ELEV : 0)), 1.0, SHAPE_CYLIN, colorRGBA(1.0, 0.9, 0.5)); // room_id=elevator_id
 	objs.back().obj_id = floor_id; // encode floor index as obj_id
 }
+void set_floor_text_for_sign(room_object_t &sign, unsigned floor_ix, ostringstream &oss) {
+	oss.str("");
+	oss << floor_ix;
+	sign.obj_id = register_sign_text(oss.str());
+}
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
@@ -2395,6 +2400,21 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	float const wall_thickness(get_wall_thickness()), elevator_car_z1_add(0.05*floor_thickness);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	ostringstream oss; // reused across elevators/floors
+
+	// add floor signs for U-shaped stairs (but not on the top floor?)
+	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
+		if (i->for_elevator || i->shape != SHAPE_U) continue; // not U-shaped stairs
+		point center;
+		center[ i->dim] = i->d[i->dim][!i->dir]; // front of stairs
+		center[!i->dim] = i->get_center_dim(!i->dim);
+		center.z = i->z1();
+		cube_t sign(center);
+		sign.d[i->dim][!i->dir] += (i->dir ? -1.0 : 1.0)*0.25*wall_thickness; // set sign thickness
+		sign.expand_in_dim(!i->dim, 1.2*wall_thickness); // set sign width
+		sign.z1() -= 2.5*wall_thickness; // set sign height
+		objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
+		set_floor_text_for_sign(objs.back(), i->floor, oss);
+	} // for i
 
 	// add elevator lights, and signs on each floor; must be done before setting buttons_start
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
@@ -2417,9 +2437,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 			sign.z1() = i->z1()   + (f + 0.5)*window_vspacing;
 			sign.z2() = sign.z1() + 0.1*ewidth;
 			objs.emplace_back(sign, TYPE_SIGN, i->room_id, i->dim, i->dir, RO_FLAG_NOCOLL, 1.0, SHAPE_CUBE, DK_BLUE);
-			oss.str("");
-			oss << (f+1); // floor index
-			objs.back().obj_id = register_sign_text(oss.str());
+			set_floor_text_for_sign(objs.back(), f+1, oss);
 		}
 	} // for e
 	interior->room_geom->buttons_start = objs.size();
@@ -2498,7 +2516,6 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(stair, TYPE_STAIR, 0, dim, side^is_rev); // Note: room_id=0, not tracked, unused
 				objs.back().shape = SHAPE_STAIRS_U;
 			} // for n
-			// TODO: add floor signs to stairs as well, similar to elevators?
 		}
 		// add walls and railings
 		bool const extend_walls_up(i->is_at_top && !i->roof_access); // space above is open, add a wall so that people can't fall down the stairs
