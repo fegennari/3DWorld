@@ -802,8 +802,17 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 			placed_obj   |= placed_toilet;
 
 			if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the same wall as the toilet
-				//room_object_t const &toilet(objs.back()); // okay if this is the blocker
-				// TODO: add_tp_roll()
+				room_object_t const &toilet(objs.back()); // okay if this is the blocker
+				
+				if (is_basement || !has_windows() || classify_room_wall(room, zval, toilet.dim, !toilet.dir, 0) != ROOM_WALL_EXT) { // check for possible windows
+					bool place_dir(rgen.rand_bool());
+
+					for (unsigned d = 0; d < 2; ++d) {
+						float const length(0.18*height), wall_pos(toilet.d[!toilet.dim][place_dir] + (place_dir ? 1.0 : -1.0)*0.5*width);
+						if (add_tp_roll(room_bounds, room_id, tot_light_amt, toilet.dim, !toilet.dir, length, (toilet.z1() + 0.7*height), wall_pos, 1)) break; // check_valid=1
+						place_dir ^= 1; // try the other dir
+					} // for d
+				}
 			}
 		}
 	}
@@ -864,15 +873,18 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	return placed_obj;
 }
 
-void building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos) {
+bool building_t::add_tp_roll(cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos, bool check_valid_pos) {
 	float const diameter(length);
 	cube_t tp;
 	set_cube_zvals(tp, zval, (zval + diameter));
 	set_wall_width(tp, wall_pos, 0.5*length, !dim); // set length
 	tp.d[dim][ dir] = room.d[dim][dir]; // against the wall
 	tp.d[dim][!dir] = tp  .d[dim][dir] + (dir ? -1.0 : 1.0)*diameter; // set the diameter
+	// Note: not checked against other bathroom objects because the toilet is placed first
+	if (check_valid_pos && (!room.contains_cube(tp) || is_cube_close_to_doorway(tp, room, 0.0, 1))) return 0;
 	interior->room_geom->objs.emplace_back(tp, TYPE_TPROLL, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN, WHITE);
 	set_obj_id(interior->room_geom->objs);
+	return 1;
 }
 
 bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor) {
