@@ -751,7 +751,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_TPROLL    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.10,  0.1,   "toilet paper roll");
 	bldg_obj_types[TYPE_SPRAYCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0,   1.0,   "spray paint");
 	bldg_obj_types[TYPE_MARKER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.25,  0.05,  "marker");
-	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "button");
+	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 2, 0.0,   0.0,   "button");
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
 	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 80.0,  55.0,  "sink");
@@ -1317,6 +1317,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building) { // Note: called when adding or removing objects
 	// reuild necessary VBOs and other data structures
 	if (obj.is_dynamic()) {mats_dynamic.clear();} // dynamic object
+	else if (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV)) {update_dynamic_draw_data();} // interior elevator buttons are drawn as dynamic objects
 	else { // static object
 		bldg_obj_type_t const type(get_taken_obj_type(obj));
 		if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object

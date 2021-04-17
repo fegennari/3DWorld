@@ -572,6 +572,7 @@ struct building_room_geom_t {
 	room_object_t &get_room_object_by_index(unsigned obj_id);
 	int find_avail_obj_slot() const;
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
+	void update_dynamic_draw_data() {mats_dynamic.clear();}
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
 	void add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add);
@@ -709,7 +710,7 @@ struct building_interior_t {
 		vector<room_object_t>::const_iterator self, vector3d *cnorm, float &hardness) const;
 	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 		float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const;
-	void update_dynamic_draw_data() {assert(room_geom); room_geom->mats_dynamic.clear();}
+	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const;
 };
 
