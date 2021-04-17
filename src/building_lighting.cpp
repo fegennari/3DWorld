@@ -683,6 +683,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		float const bwidth = 0.25; // as close to 180 degree FOV as we can get without shadow clipping
 		colorRGBA color;
+		bool dynamic_shadows(0);
 
 		if (is_lamp) { // no light refinement, since lamps are not aligned between floors; refinement doesn't help as much with houses anyway
 			if (i->obj_id == 0) { // this lamp has not yet been assigned a light bcube (ID 0 will never be valid because the bedroom will have a light assigned first)
@@ -705,6 +706,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			clip_cube.expand_in_dim(!e.dim, 0.1*room_xy_expand); // expand sides to include walls adjacent to elevator (enough to account for FP error)
 			if (e.is_open) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
 			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
+			dynamic_shadows |= e.was_called; // make sure to update shadows if elevator is moving
 		}
 		else {
 			if (room.is_sec_bldg) {clipped_bc.intersect_with_cube(room);} // secondary buildings only light their single room
@@ -728,7 +730,6 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		if (!is_rot_cube_visible(clipped_bc, xlate)) continue; // VFC - post clip
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, -plus_z, bwidth); // points down
-		bool dynamic_shadows(0);
 
 		if (camera_near_building && !is_lamp) {
 			if (toggle_door_open_state) {
