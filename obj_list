@@ -106,6 +106,7 @@ building_floorplan.o
 building_navigation.o
 building_rooms.o
 building_room_geom.o
+building_room_item_draw.o
 building_reflections.o
 building_pictures.o
 building_interact.o

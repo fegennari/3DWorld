@@ -15,6 +15,5 @@ Cities:
 
 Building interaction/gameplay ideas:
 * Interactive toilet paper that can be unrolled and leaves a trail
-- More throwable/dropable object types
+- More throwable/dropable object types (books, etc.)
 - Kitchen cabinet doors can be opened
-- Mirrors in the bathroom can be opened

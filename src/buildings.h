@@ -395,6 +395,7 @@ struct room_object_t : public cube_t {
 	int get_model_id () const {return ((type == TYPE_MONITOR) ? OBJ_MODEL_TV : (type + OBJ_MODEL_TOILET - TYPE_TOILET));} // monitor has same model as TV
 	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1);
 	colorRGBA get_color() const;
+	colorRGBA get_model_color() const;
 	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}
 	void set_rand_gen_state(rand_gen_t &rgen) const {rgen.set_state(obj_id+1, room_id+1);}
 };
@@ -532,6 +533,7 @@ struct building_room_geom_t {
 	void add_money(room_object_t const &c);
 	void add_phone(room_object_t const &c);
 	void add_tproll(room_object_t const &c);
+	static void add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat);
 	void add_spraycan(room_object_t const &c);
 	void add_button(room_object_t const &c);
 	void add_crate(room_object_t const &c);
@@ -546,6 +548,7 @@ struct building_room_geom_t {
 	void add_shower(room_object_t const &c, float tscale);
 	void add_bottle(room_object_t const &c);
 	void add_paper(room_object_t const &c);
+	static void add_pen_pencil_marker_to_material(room_object_t const &c_, rgeom_mat_t &mat);
 	void add_pen_pencil_marker(room_object_t const &c);
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
@@ -1115,6 +1118,7 @@ int get_int_door_tid  ();
 int get_normal_map_for_bldg_tid(int tid);
 unsigned register_sign_text(std::string const &text);
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen);
+void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building);
 void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0, bool no_rotate=0);
 void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out);
