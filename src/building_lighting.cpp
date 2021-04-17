@@ -702,7 +702,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
 			assert(car.contains_pt(lpos));
 			cube_t clip_cube(car); // light is constrained to the elevator car
-			clip_cube.expand_by_xy(0.1*room_xy_expand); // expand to include walls adjacent to elevator (enough to account for FP error)
+			clip_cube.expand_in_dim(!e.dim, 0.1*room_xy_expand); // expand sides to include walls adjacent to elevator (enough to account for FP error)
 			if (e.is_open) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
 			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
 		}
@@ -758,7 +758,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (camera_near_building && (is_lamp || lpos_rot.z > camera_bs.z)) { // only when the player is near/inside a building (optimization)
 			cube_t light_bc2(clipped_bc);
 
-			if (!is_in_elevator) {
+			if (is_in_elevator) {
+				light_bc2.intersect_with_cube(interior->elevators[i->obj_id]); // clip to elevator to avoid light leaking onto walls outside but near the elevator
+			}
+			else {
 				cube_t room_exp(room);
 				room_exp.expand_by(room_xy_expand); // expand slightly so that points exactly on the room bounds and exterior doors are included
 				light_bc2.intersect_with_cube(room_exp); // upward facing light is for this room only
