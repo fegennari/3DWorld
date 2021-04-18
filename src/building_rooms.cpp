@@ -804,8 +804,9 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 			if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the same wall as the toilet
 				room_object_t const &toilet(objs.back()); // okay if this is the blocker
 				
+				// Note: not calling is_val_inside_window() here because I don't have a test case for that and it may not even be possible to get here when the toilet is next to a window
 				if (is_basement || !has_windows() || classify_room_wall(room, zval, toilet.dim, !toilet.dir, 0) != ROOM_WALL_EXT) { // check for possible windows
-					bool place_dir(rgen.rand_bool());
+					bool place_dir(rgen.rand_bool()); // pick a random starting side
 
 					for (unsigned d = 0; d < 2; ++d) {
 						float const length(0.18*height), wall_pos(toilet.d[!toilet.dim][place_dir] + (place_dir ? 1.0 : -1.0)*0.5*width);
