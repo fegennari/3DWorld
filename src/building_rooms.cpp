@@ -2405,6 +2405,7 @@ void set_floor_text_for_sign(room_object_t &sign, unsigned floor_ix, ostringstre
 	oss.str("");
 	oss << floor_ix;
 	sign.obj_id = register_sign_text(oss.str());
+	if (floor_ix < 10) {sign.expand_in_dim(!sign.dim, -((floor_ix == 1) ? 0.2 : 0.1)*sign.get_sz_dim(!sign.dim));} // shrink width for single digit numbers
 }
 
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
@@ -2423,7 +2424,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		center.z = i->z1();
 		cube_t sign(center);
 		sign.d[i->dim][!i->dir] += (i->dir ? -1.0 : 1.0)*0.25*wall_thickness; // set sign thickness
-		sign.expand_in_dim(!i->dim, 1.2*wall_thickness); // set sign width
+		sign.expand_in_dim(!i->dim, 1.0*wall_thickness); // set sign width
 		sign.z1() -= 2.5*wall_thickness; // set sign height
 		objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
 		set_floor_text_for_sign(objs.back(), i->floor, oss);
@@ -2442,8 +2443,8 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
 		float const ewidth(i->get_sz_dim(!i->dim));
 		cube_t sign;
-		sign.d[ i->dim][0] = sign.d[i->dim][1] = i->d[i->dim][i->dir];
-		sign.d[ i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.1*wall_thickness; // front of sign
+		sign.d[i->dim][0] = sign.d[i->dim][1] = i->d[i->dim][i->dir];
+		sign.d[i->dim][i->dir] += (i->dir ? 1.0 : -1.0)*0.1*wall_thickness; // front of sign
 		set_wall_width(sign, (i->d[!i->dim][1] - 0.1*ewidth), 0.04*ewidth, !i->dim); // to the high side, opposite the call button
 
 		for (unsigned f = 0; f < num_floors; ++f) {
