@@ -28,7 +28,7 @@ quad_batch_draw paint_qbd[2][2], blood_qbd, tp_qbd; // paint_qbd: {spraypaint, m
 building_t const *paint_bldg(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
-extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode, animate2;
+extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode, animate2, camera_surf_collide;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
@@ -404,7 +404,7 @@ bool check_ball_kick(room_object_t &ball, vector3d &velocity, point &new_center,
 
 void building_t::update_player_interact_objects(point const &player_pos, unsigned building_ix, int first_ped_ix) {
 	assert(interior);
-	if (animate2) {interior->update_elevators(*this, player_pos, get_floor_thickness());}
+	interior->update_elevators(*this, player_pos, get_floor_thickness());
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
 	float const fc_thick(0.5*get_floor_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
@@ -424,7 +424,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 		bool const was_dynamic(c->is_dynamic());
 		bool on_floor(0);
 		point new_center(center);
-		bool kicked(check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius)); // check the player
+		bool kicked(camera_surf_collide && check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius)); // check the player
 		bool const is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
 
 		for (auto p = ped_bcubes.begin(); p != ped_bcubes.end(); ++p) { // check building AI people
