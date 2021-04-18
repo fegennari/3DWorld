@@ -2415,7 +2415,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	ostringstream oss; // reused across elevators/floors
 
-	// add floor signs for U-shaped stairs (but not on the top floor?)
+	// add floor signs for U-shaped stairs
 	for (auto i = interior->landings.begin(); i != interior->landings.end(); ++i) {
 		if (i->for_elevator || i->shape != SHAPE_U) continue; // not U-shaped stairs
 		point center;
@@ -2428,6 +2428,13 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		sign.z1() -= 2.5*wall_thickness; // set sign height
 		objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
 		set_floor_text_for_sign(objs.back(), i->floor, oss);
+
+		// if this is the top landing, we need to add a floor sign on the ceiling above it for the top floor
+		if (i->is_at_top && !i->roof_access) {
+			sign.translate_dim(2, window_vspacing); // move up one floor
+			objs.emplace_back(sign, TYPE_SIGN, 0, i->dim, !i->dir, (RO_FLAG_NOCOLL | RO_FLAG_HANGING), 1.0, SHAPE_CUBE, DK_BLUE); // no room_id
+			set_floor_text_for_sign(objs.back(), (i->floor + 1), oss);
+		}
 	} // for i
 
 	// add elevator lights, and signs on each floor; must be done before setting buttons_start
