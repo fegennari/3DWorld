@@ -1488,7 +1488,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		if (!line_int_cube_get_t(pos, pos2, *i, tmin0)) continue;
 		if (i->contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the elevator when standing inside it
 		vector3d const n(get_normal_for_ray_cube_int_xy((pos + tmin0*(pos2 - pos)), *i, tolerance)); // should always return a valid normal
-		if (/*i->is_open &&*/ n[i->dim] == (i->dir ? 1.0 : -1.0)) {walls_blocked = 1; continue;} // skip elevator opening, even if not currently open
+		if (n[i->dim] == (i->dir ? 1.0 : -1.0)) {walls_blocked = 1; continue;} // skip elevator opening, even if not currently open
 		tmin = tmin0; normal = n; target = *i;
 	}
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {

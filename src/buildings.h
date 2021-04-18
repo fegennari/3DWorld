@@ -594,8 +594,8 @@ struct elevator_t : public cube_t {
 	unsigned room_id, car_obj_id, light_obj_id, button_id_start, button_id_end;
 	float target_zval;
 
-	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool open_, bool at_edge_) :
-		cube_t(c), dim(dim_), dir(dir_), is_open(open_), at_edge(at_edge_), was_called(0), room_id(rid),
+	elevator_t(cube_t const &c, unsigned rid, bool dim_, bool dir_, bool at_edge_) :
+		cube_t(c), dim(dim_), dir(dir_), is_open(0), at_edge(at_edge_), was_called(0), room_id(rid),
 		car_obj_id(0), light_obj_id(0), button_id_start(0), button_id_end(0), target_zval(0.0)
 	{assert(is_strictly_normalized());}
 	float get_wall_thickness () const {return 0.02*get_sz_dim(!dim);}
