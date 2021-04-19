@@ -1319,7 +1319,7 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(), 1, 1));
 	float open_z1(e.z1()), open_z2(e.z2());
 
-	if (e.is_open) { // only draw the doors as open for the floor the elevator car is on
+	if (e.open_amt > 0.0) { // only draw the doors as open for the floor the elevator car is on
 		assert(e.car_obj_id < objs.size());
 		room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
 		float const thickness(elevator_fc_thick_scale*car.dz());
@@ -1327,15 +1327,15 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e) {
 		assert(open_z1 < open_z2);
 	}
 	for (unsigned d = 0; d < 2; ++d) { // left/right doors, untextured for now
-		unsigned const skip_faces((e.is_open ? 0 : EF_Z12) | ~get_face_mask(!e.dim, !d)); // skip top and bottom if closed
+		unsigned const skip_faces(((e.open_amt > 0.0) ? 0 : EF_Z12) | ~get_face_mask(!e.dim, !d)); // skip top and bottom if fully closed
 		cube_t door(e);
 		door.d[e.dim][!e.dir] = door.d[e.dim][e.dir] + (e.dir ? -1.0f : 1.0f)*spacing; // set correct thickness
 		door.expand_in_dim(e.dim, -0.2*spacing); // shrink slightly to make thinner
 		door.d[!e.dim][d] = e.d[!e.dim][!d] + (d ? 1.0f : -1.0f)*closed_door_width; // this section is always closed
 
-		if (e.is_open) { // only draw the doors as open for the floor the elevator car is on
+		if (e.open_amt > 0.0) { // only draw the doors as open for the floor the elevator car is on
 			cube_t open_door(door);
-			open_door.d[!e.dim][d] = e.d[!e.dim][!d] + (d ? 1.0f : -1.0f)*open_door_width;
+			open_door.d[!e.dim][d] += (d ? 1.0f : -1.0f)*(open_door_width - closed_door_width)*e.open_amt;
 			open_door.z1() = door.z2() = open_z1; open_door.z2() = open_z2;
 			mat.add_cube_to_verts(open_door, GRAY, all_zeros, skip_faces); // open part
 			if (door.dz() > 0.0) {mat.add_cube_to_verts(door, GRAY, all_zeros, skip_faces);} // bottom part

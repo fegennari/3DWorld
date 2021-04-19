@@ -502,27 +502,40 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 
 bool building_interior_t::update_elevators(building_t const &building, point const &player_pos, float floor_thickness) { // Note: player_pos is in building space
 	float const z_space(0.05*floor_thickness); // to prevent z-fighting
+	float const delta_open_amt(min(1.0f, 2.0f*fticks/TICKS_PER_SECOND)); // 0.5s for full open
 	static int prev_move_dir(2); // starts at not-moving
 	vector<room_object_t> &objs(room_geom->objs);
-	bool was_updated(0);
+	bool was_updated(0), update_ddd(0);
 
 	// Note: the player can only be in one elevator at a time, but they can push the call button for one elevator and get into another, so we have to check all elevators
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) { // find containing elevator (optimization + need to know z-range of elevator shaft)
-		if (!e->was_called) continue; // not called, skip
+		if (!e->was_called) { // stopped on a floor
+			if (e->open_amt > 0.0 && e->open_amt < 1.0) { // partially open - continue to open fully
+				e->open_amt = min((e->open_amt + delta_open_amt), 1.0f);
+				update_ddd  = 1; // regen verts for open door
+			}
+			continue;
+		}
 		assert(e->car_obj_id < objs.size());
 		room_object_t &obj(objs[e->car_obj_id]); // elevator car for this elevator
 		assert(obj.type == TYPE_ELEVATOR && obj.room_id == (e - elevators.begin())); // sanity check
+
+		if (e->open_amt > 0.0 && e->target_zval != obj.z1()) { // doors not yet closed, and not at target zval
+			e->open_amt = max((e->open_amt - delta_open_amt), 0.0f);
+			update_ddd  = 1; // regen verts for open door
+			continue;
+		}
 		bool const move_dir(e->target_zval > obj.z1()); // 0=down, 1=up
 		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
 		float dist(min(0.5f*CAMERA_RADIUS, 0.04f*obj.dz()*fticks)*(move_dir ? 1.0 : -1.0)); // clamp to half camera radius to avoid falling through the floor for low framerates
 		if (e->was_called && fabs(e->target_zval - obj.z1()) < fabs(dist)) {dist = (e->target_zval - obj.z1());} // move to position
 		else if (move_dir) {min_eq(dist, (e->z2() - obj.z2() - z_space));} // going up
 		else               {max_eq(dist, (e->z1() - obj.z1() + z_space));} // going down
-		update_dynamic_draw_data(); // clear dynamic material vertex data (for all elevators) and recreate their VBOs
+		update_ddd = 1;
 
 		if (fabs(dist) < 0.001*z_space) { // no movement, at target_zval or top/bottom of elevator shaft (check with a tolerance)
+			max_eq(e->open_amt, delta_open_amt); // begin to open if not already open
 			e->was_called = 0;
-			e->is_open    = 1;
 			obj.flags    |= RO_FLAG_OPEN;
 			bool was_updated(0);
 
@@ -558,6 +571,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 		prev_move_dir = move_dir;
 		was_updated   = 1;
 	} // for e
+	if (update_ddd) {update_dynamic_draw_data();} // clear dynamic material vertex data (for all elevators) and recreate their VBOs
 	if (was_updated) return 1;
 	prev_move_dir = 2;
 	return 0;

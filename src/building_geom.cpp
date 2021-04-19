@@ -539,7 +539,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
 		if (obj_z < e->z1() || obj_z > e->z2()) continue; // wrong part/floor
 
-		if (room_geom && (e->is_open || e->contains_pt(point(pos.x, pos.y, obj_z)))) { // elevator is open, can enter | already inside elevator
+		if (room_geom && (e->open_amt > 0.75 || e->contains_pt(point(pos.x, pos.y, obj_z)))) { // elevator is mostly open, can enter || already inside elevator
 			assert(e->car_obj_id < room_geom->objs.size());
 			room_object_t &obj(room_geom->objs[e->car_obj_id]); // elevator car for this elevator
 

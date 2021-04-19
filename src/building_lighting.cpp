@@ -119,7 +119,7 @@ unsigned elevator_t::get_coll_cubes(cube_t cubes[5]) const {
 		cube_t &side(cubes[d+1]);
 		side.d[!dim][d] = side.d[!dim][!d] + (d ? 1.0 : -1.0)*wwidth; // sides
 	}
-	if (is_open) { // open
+	if (open_amt > 0.0) { // open at least partially
 		for (unsigned d = 0; d < 2; ++d) {
 			cube_t &front(cubes[d+3]);
 			front.d[ dim][!dir] = front.d[dim][dir] + (dir ? -1.0 : 1.0)*wwidth; // front side parts
@@ -704,7 +704,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			assert(car.contains_pt(lpos));
 			cube_t clip_cube(car); // light is constrained to the elevator car
 			clip_cube.expand_in_dim(!e.dim, 0.1*room_xy_expand); // expand sides to include walls adjacent to elevator (enough to account for FP error)
-			if (e.is_open) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
+			if (e.open_amt > 0.0) {clip_cube.d[e.dim][e.dir] += (e.dir ? 1.0 : -1.0)*light_radius;} // allow light to extend outside open elevator door
 			clipped_bc.intersect_with_cube(clip_cube); // Note: clipped_bc is likely contained in clip_cube and could be replaced with it
 			dynamic_shadows |= e.was_called; // make sure to update shadows if elevator is moving
 		}

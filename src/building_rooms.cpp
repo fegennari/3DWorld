@@ -2596,7 +2596,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		elevator_car.z1() += elevator_car_z1_add; // to prevent z-fighting when looking at the building from the bottom
 		elevator_car.z2()  = elevator_car.z1() + window_vspacing; // currently at the bottom floor
 		i->car_obj_id = objs.size();
-		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, ((i->is_open ? RO_FLAG_OPEN : 0) | RO_FLAG_DYNAMIC));
+		objs.emplace_back(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, RO_FLAG_DYNAMIC);
 		objs.back().drawer_flags = (uint16_t)calc_num_floors(*i, window_vspacing, floor_thickness); // store the number of floors in drawer_flags; used for drawing
 	}
 }
