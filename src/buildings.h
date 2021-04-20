@@ -340,11 +340,12 @@ struct bldg_obj_type_t {
 	bool player_coll=0, ai_coll=0, pickup=0, attached=0, is_model=0;
 	uint8_t lg_sm=0; // 0=neither (model), 1=large item, 2=small item, 3=split into large and small
 	float value=0.0, weight=0.0;
+	unsigned capacity=0; // for consumable/usable objects
 	std::string name;
 
 	bldg_obj_type_t() {}
-	bldg_obj_type_t(bool pc, bool ac, bool pu, bool at, bool im, uint8_t ls, float v, float w, std::string const &n) :
-		player_coll(pc), ai_coll(ac), pickup(pu), attached(at), is_model(im), lg_sm(ls), value(v), weight(w), name(n) {}
+	bldg_obj_type_t(bool pc, bool ac, bool pu, bool at, bool im, uint8_t ls, float v, float w, std::string const &n, unsigned cap=0) :
+		player_coll(pc), ai_coll(ac), pickup(pu), attached(at), is_model(im), lg_sm(ls), value(v), weight(w), capacity(cap), name(n) {}
 };
 
 struct room_object_t : public cube_t {

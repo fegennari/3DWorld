@@ -16,7 +16,6 @@ float const OBJ_GRAVITY    = 0.0003;
 float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
-unsigned const SPRAYCAN_MARKER_CAPACITY = 10000; // use a large number for now
 
 bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), city_action_key(0);
 int can_pickup_bldg_obj(0);
@@ -762,9 +761,9 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DRAIN     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "drain pipe");
 	bldg_obj_types[TYPE_MONEY     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 20.0,  0.0,   "pile of money"); // $20 bills
 	bldg_obj_types[TYPE_PHONE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 200.0, 0.1,   "cell phone");
-	bldg_obj_types[TYPE_TPROLL    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.10,  0.1,   "toilet paper roll");
-	bldg_obj_types[TYPE_SPRAYCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0,   1.0,   "spray paint");
-	bldg_obj_types[TYPE_MARKER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.25,  0.05,  "marker");
+	bldg_obj_types[TYPE_TPROLL    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.10,  0.1,   "toilet paper roll", 200);
+	bldg_obj_types[TYPE_SPRAYCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0,   1.0,   "spray paint",      5000);
+	bldg_obj_types[TYPE_MARKER    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.25,  0.05,  "marker",          10000);
 	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 2, 1.0,   0.05,  "button");
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -934,7 +933,7 @@ public:
 			bool const prev_was_interactive(!carried.empty() && carried.back().is_interactive()), cur_is_interactive(obj.is_interactive());
 			carried.push_back(obj);
 			if (prev_was_interactive && !cur_is_interactive) {swap(carried[carried.size()-2], carried.back());} // move the prev interactive object to the back
-			last_item_use_count = 0;
+			if (bldg_obj_types[obj.type].capacity > 0) {last_item_use_count = 0;} // limited use object, reset use count
 			oss << ": value $";
 			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
 			else {oss << value;}
@@ -975,17 +974,21 @@ public:
 	}
 	void mark_last_item_used() {
 		assert(!carried.empty());
-		carried.back().flags |= RO_FLAG_USED;
-		++last_item_use_count;
-		if (last_item_use_count >= SPRAYCAN_MARKER_CAPACITY) {remove_last_item(carried.back());} // remove after too many
+		room_object_t &obj(carried.back());
+		obj.flags |= RO_FLAG_USED;
+		unsigned const capacity(bldg_obj_types[obj.type].capacity);
+
+		if (capacity > 0) {
+			++last_item_use_count;
+			if (last_item_use_count >= capacity) {remove_last_item(obj);} // remove after too many uses
+		}
 	}
 	void remove_last_item(room_object_t &obj) {
 		assert(!carried.empty());
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
 		assert(cur_value >= 0.0 && cur_weight >= 0.0); // is this okay if there's FP rounding error?
-		carried.pop_back();
-		last_item_use_count = 0;
+		carried.pop_back(); // Note: invalidates obj
 	}
 	void collect_items() {
 		has_key = 0; // key only good for current building
@@ -1000,8 +1003,8 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		bool const has_throwable(!carried.empty() && carried.back().is_interactive()); // ball, spraypaint, or marker
-		if (has_throwable) {player_held_object = carried.back();} // deep copy last pickup object if throwable
+		bool const has_usable(!carried.empty() && carried.back().is_interactive()); // ball, spraypaint, or marker
+		if (has_usable) {player_held_object = carried.back();} // deep copy last pickup object if throwable
 
 		if (display_framerate) { // controlled by framerate toggle
 			float const aspect_ratio((float)window_width/(float)window_height);
@@ -1010,9 +1013,10 @@ public:
 				std::ostringstream oss;
 				oss << "Cur $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs  Best $" << best_value;
 				
-				if (has_throwable) {
+				if (has_usable) {
+					unsigned const capacity(bldg_obj_types[player_held_object.type].capacity);
 					oss << "  [" << get_taken_obj_type(carried.back()).name << "]"; // print the name of the throwable object
-					if (last_item_use_count > 0) {oss << " (" << (SPRAYCAN_MARKER_CAPACITY - last_item_use_count) << "/" << SPRAYCAN_MARKER_CAPACITY << ")";} // print use/capacity
+					if (capacity > 0) {oss << " (" << (capacity - last_item_use_count) << "/" << capacity << ")";} // print use/capacity
 				}
 				draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
 			}
