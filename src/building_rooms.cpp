@@ -744,12 +744,12 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
 	if (!is_house && (have_toilet || have_sink)) { // office with at least a toilet or sink - replace carpet with tile
-		float const new_zval(zval + 0.05*wall_thickness);
+		float const new_zval(zval + 0.0012*floor_spacing);
 		cube_t floor(room_bounds);
 		set_cube_zvals(floor, zval, new_zval);
 		objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
 		objs_start = objs.size(); // exclude this from collision checks
-		zval = new_zval; // move the effective floor up
+		zval       = new_zval; // move the effective floor up
 	}
 	if (have_toilet && room.is_office && min(place_area.dx(), place_area.dy()) > 1.5*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.0*floor_spacing) {
 		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor)) return 1; // large enough, try to divide into bathroom stalls
