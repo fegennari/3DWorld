@@ -1010,8 +1010,9 @@ private:
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
 	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const;
-	bool apply_toilet_paper(point const &pos, vector3d const &dir) const;
+	bool apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) const;
 	void register_button_event(room_object_t const &button);
+	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
 	void add_blood_decal(point const &pos) const;
 public:
 	// ray queries

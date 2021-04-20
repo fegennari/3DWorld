@@ -25,7 +25,7 @@ room_object_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 quad_batch_draw paint_qbd[2][2], blood_qbd, tp_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
-building_t const *paint_bldg(nullptr);
+building_t const *paint_bldg(nullptr), *tp_bldg(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode, animate2, camera_surf_collide;
@@ -1381,7 +1381,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	}
 	else if (obj.can_use()) { // active with either use_object or fire key
 		if (obj.type == TYPE_TPROLL) {
-			if (!apply_toilet_paper(player_pos, cview_dir)) return 0;
+			if (!apply_toilet_paper(player_pos, cview_dir, 0.5*obj.dz())) return 0;
 		}
 		else { // spraypaint or marker
 			if (!apply_paint(player_pos, cview_dir, obj.color, obj.type)) return 0;
@@ -1566,25 +1566,43 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	return 1;
 }
 
-bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir) const {
-	// TODO
-	return 0;
+bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) const {
+	if (!interior) return 0; // error?
+	cube_t cur_bcube;
+	cur_bcube.set_from_sphere(pos, radius);
+	if (!bcube.contains_cube_xy(cur_bcube)) return 0; // not contained/too close to walls
+	float const floor_spacing(get_window_vspace());
+
+	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // blood can only be placed on floors
+		if (pos.z < i->z2() || pos.z > (i->z2() + floor_spacing) || !i->contains_cube_xy(cur_bcube)) continue; // wrong floor, or not contained
+		zval = (i->z2() + 0.0015*floor_spacing); // slightly above rugs (0.0015 vs. 0.001) and flooring (0.0015 vs. 0.0012)
+		return 1;
+	}
+	return 0; // no suitable floor found
+}
+
+bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) const {
+	// for now, just drop a square of TP on the floor; could do better; should the TP roll shrink in size as this is done?
+	static point last_tp_pos;
+	if (dist_xy_less_than(pos, last_tp_pos, 1.5*half_width)) return 0; // too close to prev pos
+	last_tp_pos = pos;
+	float zval(pos.z);
+	if (!get_zval_of_floor(pos, half_width, zval)) return 0; // no suitable floor found
+	if (this != tp_bldg) {tp_qbd.clear(); tp_bldg = this;} // TP switches to this building
+	vector3d d1(dir.x, dir.y, 0.0);
+	if (d1 == zero_vector) {d1 = plus_x;} else {d1.normalize();}
+	vector3d d2(cross_product(d1, plus_z));
+	if (d2 == zero_vector) {d2 = plus_y;} else {d2.normalize();}
+	tp_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
+	return 1;
 }
 
 void building_t::add_blood_decal(point const &pos) const {
-	if (!interior) return; // error?
-	float const floor_spacing(get_window_vspace()), radius(get_scaled_player_radius());
-	cube_t player_bcube;
-	player_bcube.set_from_sphere(pos, radius);
-	if (!bcube.contains_cube_xy(player_bcube)) return; // not contained/too close to walls
-
-	for (auto i = interior->floors.begin(); i != interior->floors.end(); ++i) { // blood can only be placed on floors
-		if (pos.z < i->z2() || pos.z > (i->z2() + floor_spacing) || !i->contains_cube_xy(player_bcube)) continue; // wrong floor, or not contained
-		float const zval(i->z2() + 0.0015*floor_spacing); // slightly above rugs (0.0015 vs. 0.001)
-		tex_range_t const tex_range(tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2)); // 2x2 texture atlas
-		blood_qbd.add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, WHITE, plus_z, tex_range); // Note: never cleared
-		break; // there can be only one
-	} // for i
+	float const radius(get_scaled_player_radius());
+	float zval(pos.z);
+	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
+	tex_range_t const tex_range(tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2)); // 2x2 texture atlas
+	blood_qbd.add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, WHITE, plus_z, tex_range); // Note: never cleared
 }
 
 bool have_paint_for_building(bool exterior) {
