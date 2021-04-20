@@ -565,7 +565,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			if (j->flags & RO_FLAG_IN_ELEV) {j->translate_dim(2, dist);} // interior panel button, translate in Z
 		}
 		if ((int)move_dir != prev_move_dir && obj.contains_pt(player_pos)) { // moving, and player is in the elevator
-			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.2); // play this sound quietly when the elevator starts moving or changes direction
+			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.75); // play this sound when the elevator starts moving or changes direction
 			register_building_sound(player_pos, 0.4);
 		}
 		prev_move_dir = move_dir;
