@@ -2338,7 +2338,7 @@ class city_road_gen_t : public road_gen_base_t {
 					orients[TURN_LEFT ] = stoplight_ns::conn_left [orient_in];
 					orients[TURN_RIGHT] = stoplight_ns::conn_right[orient_in];
 
-					// TODO: use dest_seg.car_count to estimate traffic and route around
+					// use dest_seg.car_count to estimate traffic and route around?
 					if (car.dest_valid && car.cur_city != CONN_CITY_IX) { // Note: don't need to update dest logic on connector roads since there are no choices to make
 						point const dest_pos(car_rn.get_car_dest_isec_center(car, road_networks, global_rn));
 						vector3d const dest_dir(dest_pos - car.get_center());
@@ -3061,8 +3061,8 @@ void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_source
 	check_gl_error(430);
 
 	// Note: slow to recreate shadow maps every frame, but most lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
-	// TODO: Do we want to gradually fade in new shadow maps and fade out old ones? But how do we track which lights are associated with old shadow maps?
-	//       Tracking positions won't work for car headlights because they move. We don't have object pointers to track either. And what about lights that are no longer in our list?
+	// Do we want to gradually fade in new shadow maps and fade out old ones? But how do we track which lights are associated with old shadow maps?
+	// Tracking positions won't work for car headlights because they move. We don't have object pointers to track either. And what about lights that are no longer in our list?
 	for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {
 		if (i->has_no_shadows()) continue; // shadows not enabled for this light
 		if (!i->is_very_directional()) continue; // not a spotlight
