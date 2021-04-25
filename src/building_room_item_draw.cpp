@@ -665,12 +665,14 @@ public:
 	water_draw_t() : mat(rgeom_mat_t(tid_nm_pair_t(FOAM_TEX))), tex_off(0.0) {}
 
 	void add_water_for_sink(room_object_t const &obj) {
+		if (!(obj.flags & RO_FLAG_IS_ACTIVE)) return; // not turned on
+		bool const is_cube(obj.type == TYPE_KSINK || obj.type == TYPE_BRSINK);
 		float const dz(obj.dz());
 		cube_t c;
 		point pos(obj.get_cube_center());
-		pos[obj.dim] += (obj.dir ? -1.0 : 1.0)*0.095*obj.get_sz_dim(obj.dim); // move a bit toward the back of the sink
-		c.set_from_sphere(pos, 0.0055*dz);
-		set_cube_zvals(c, (obj.z1() + 0.6*dz), (obj.z1() + 0.925*dz));
+		pos[obj.dim] += (obj.dir ? -1.0 : 1.0)*(is_cube ? 0.25 : 0.095)*obj.get_sz_dim(obj.dim); // move toward the back of the sink
+		c.set_from_sphere(pos, (is_cube ? 0.02 : 0.0055)*dz);
+		set_cube_zvals(c, (obj.z1() + (is_cube ? 0.7 : 0.6)*dz), (obj.z1() + (is_cube ? 1.3 : 0.925)*dz));
 		unsigned const verts_start(mat.itri_verts.size());
 		mat.add_vcylin_to_verts(c, colorRGBA(WHITE, 0.5), 0, 0, 0, 0, 1.0, 1.0, 0.2);
 		for (auto i = mat.itri_verts.begin() + verts_start; i != mat.itri_verts.end(); ++i) {i->t[1] *= 1.2; i->t[1] += tex_off;}
@@ -772,13 +774,10 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0);
 		if (is_emissive) {s.set_color_e(BLACK);}
-		
-		if (player_in_building && !shadow_only && (obj.flags & RO_FLAG_IS_ACTIVE)) { // sink, tub, etc.
-			if (obj.type == TYPE_SINK) {water_draw.add_water_for_sink(obj);}
-		}
+		if (player_in_building && !shadow_only && obj.type == TYPE_SINK) {water_draw.add_water_for_sink(obj);}
 		obj_drawn = 1;
 	} // for i
-	if (!shadow_only && !reflection_pass && player_in_building) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects
+	if (player_in_building && !shadow_only && !reflection_pass) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects
 		for (auto i = model_objs.begin(); i != model_objs.end(); ++i) {
 			point obj_center(i->get_cube_center());
 			if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
@@ -793,6 +792,14 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
+
+	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on
+		auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto i = objs.begin(); i != objs_end; ++i) {
+			if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) {water_draw.add_water_for_sink(*i);} // TYPE_SINK is handled above
+		}
+	}
 	water_draw.draw_and_clear(s);
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid()) {
