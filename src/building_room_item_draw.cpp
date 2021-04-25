@@ -579,17 +579,23 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 
 void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 	//highres_timer_t timer(string("Gen Room Geom Dynamic ") + (building.is_house ? "house" : "office"));
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if (!i->is_visible() || !i->is_dynamic()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
-		switch (i->type) {
-		case TYPE_ELEVATOR: add_elevator(*i, 2.0/obj_scale); break;
-		case TYPE_LG_BALL:  add_lg_ball (*i); break;
-		default: assert(0); // not a supported dynamic object type
-		}
-	} // for i
+	
+	if (building.is_house) { // currently, only houses have dynamic objects (balls)
+		auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
+
+		for (auto i = objs.begin(); i != objs_end; ++i) {
+			if (!i->is_visible() || !i->is_dynamic()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
+			switch (i->type) {
+			case TYPE_LG_BALL: add_lg_ball(*i); break;
+			default: assert(0); // not a supported dynamic object type
+			}
+		} // for i
+	}
 	for (auto e = building.interior->elevators.begin(); e != building.interior->elevators.end(); ++e) {
-		add_elevator_doors(*e); // add dynamic elevator doors
+		assert(e->car_obj_id < objs.size());
 		assert(e->button_id_start < e->button_id_end && e->button_id_end <= objs.size());
+		add_elevator_doors(*e); // add dynamic elevator doors
+		add_elevator(objs[e->car_obj_id], 2.0/obj_scale); // draw elevator car for this elevator
 
 		for (auto j = objs.begin() + e->button_id_start; j != objs.begin() + e->button_id_end; ++j) {
 			if (j->type == TYPE_BLOCKER) continue; // button was removed?
