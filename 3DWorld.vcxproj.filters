@@ -1398,6 +1398,9 @@
     <None Include="shaders\double_vision.frag">
       <Filter>Shaders\frag\Fullscreen</Filter>
     </None>
+    <None Include="shaders\bcc_noise.part.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

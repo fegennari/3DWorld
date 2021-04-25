@@ -1,3 +1,4 @@
+//#include <bcc_noise.part.frag>
 uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, nm_tex2, nm_tex3, nm_tex4, nm_tex5, nm_tex6, normal_tex, shadow_tex, caustic_tex;
 uniform float ts2, ts3, ts4, ts5, ts6; // texture scales
 uniform float cs2, cs3, cs4, cs5, cs6; // color scales
@@ -104,8 +105,24 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 			// apply underwater caustics texture (Note: matches shallow water wave normal map, but not deep water wave normal map)
 			float cweight = ds_scale*wave_amplitude*caustics_weight*min(8.0*(water_plane_z - vertex.z), 0.5);
 			float ntime   = 2.0*abs(fract(0.005*wave_time) - 0.5);
+#if 0 // compute caustics using noise - softer/slower
+			vec2 uv = tc2 * 8.0; // Normalized pixel coordinates (from 0 to 1 on largest axis)
+			vec3 X = vec3(uv, mod(ntime, 578.0) * 0.8660254037844386); // Initial input point
+			vec4 noiseResult = bccNoiseDerivatives_ImproveXYPlanes(X); // Evaluate noise once
+#if 0
+			noiseResult = bccNoiseDerivatives_ImproveXYPlanes(X - noiseResult.xyz / 16.0); // Evaluate noise again with the derivative warping the domain
+			float value = noiseResult.w;
+#else // imitate the effect by fitting a curve instead of calling noise again
+			float p        = asin(noiseResult.w);
+			float derivMag = length(noiseResult.xyz);
+			float sinScale = derivMag / cos(p);
+			float value    = sin(p - sinScale * derivMag / 20.0);
+#endif
+			color.rgb  *= mix(1.0, value, cweight);
+#else // compute caustics using two noise texture lookups
 			vec3  cval    = 4.0*mix(texture(caustic_tex, tc2).rgb, texture(caustic_tex, (tc2 + vec2(0.3, 0.6))).rgb, ntime);
 			color.rgb    *= mix(vec3(1.0), cval, cweight);
+#endif
 		}
 #endif // WATER_CAUSTICS
 		// apply underwater attenuation
