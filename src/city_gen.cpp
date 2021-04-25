@@ -1122,8 +1122,8 @@ class city_road_gen_t : public road_gen_base_t {
 			unsigned start_ix(0);
 
 			for (auto i = parking_lot_groups.begin(); i != parking_lot_groups.end(); start_ix = i->ix, ++i) {
-				if (!i->intersects(c)) continue;
-				for (unsigned b = start_ix; b < i->ix; ++b) {if (parking_lots[b].intersects(c)) return 1;}
+				if (!i->intersects_xy(c)) continue;
+				for (unsigned b = start_ix; b < i->ix; ++b) {if (parking_lots[b].intersects_xy(c)) return 1;}
 			}
 			return 0;
 		}
