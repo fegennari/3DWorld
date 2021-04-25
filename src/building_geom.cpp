@@ -543,7 +543,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			assert(e->car_obj_id < room_geom->objs.size());
 			room_object_t &obj(room_geom->objs[e->car_obj_id]); // elevator car for this elevator
 
-			if ((obj_z - radius) > obj.z1() && (obj_z + radius) < obj.z2()) { // same floor as elevator car - can enter it; otherwise can't enter elevator shaft
+			if (obj_z > obj.z1() && obj_z < obj.z2()) { // same floor as elevator car - can enter it; otherwise can't enter elevator shaft
 				cube_t cubes[5];
 				unsigned const num_cubes(e->get_coll_cubes(cubes));
 				for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= sphere_cube_int_update_pos(pos, radius, cubes[n], p_last, 1, 1, cnorm);} // skip_z=1
