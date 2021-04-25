@@ -19,7 +19,7 @@ l 0.8 0.72 0.73 0.64 1.0 snow2.jpg 1 # set default for dinosaur bones
 # O <filename> <group_cobjs_level> <recalc_normals> <write_file>
 reflective 1
 # Note: recalc_normals makes bones and railings look smoother, but causes texture coord artifacts on corners of walls and arches
-t 1.2 0.6 0.5  s 1 2  M 0  m 0.05  O ../models/museum/museumhallRD.obj 3 1 0
+t 1.2 0.6 0.5  s 1 2  M 0  m 0.05  O ../models/museum/museumhallRD.model3d 3 1 0
 reflective 0
 end
 Z 4  -2.0  -2.0  0.0
