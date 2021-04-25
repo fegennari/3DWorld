@@ -12,7 +12,7 @@
 #include "fast_atof.h"
 
 
-extern bool use_obj_file_bump_grayscale;
+extern bool use_obj_file_bump_grayscale, model_calc_tan_vect;
 extern float model_auto_tc_scale, model_mat_lod_thresh;
 extern model3ds all_models;
 
@@ -806,7 +806,7 @@ bool write_model3d_file(string const &base_fn, model3d &cur_model) {
 	assert(base_fn.size() > 4);
 	string out_fn(base_fn.begin(), base_fn.end()-4); // strip off the '.obj'
 	out_fn += ".model3d";
-	cur_model.calc_tangent_vectors(); // tangent vectors are needed for writing
+	if (model_calc_tan_vect) {cur_model.calc_tangent_vectors();} // tangent vectors are needed for writing
 				
 	if (!cur_model.write_to_disk(out_fn)) {
 		cerr << "Error writing model3d file " << out_fn << endl;
