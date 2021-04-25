@@ -1322,8 +1322,8 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e) {
 	if (e.open_amt > 0.0) { // only draw the doors as open for the floor the elevator car is on
 		assert(e.car_obj_id < objs.size());
 		room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
-		float const thickness(elevator_fc_thick_scale*car.dz());
-		open_z1 = car.z1() + thickness; open_z2 = car.z2() - thickness;
+		float const z_shrink(0.8*elevator_fc_thick_scale*car.dz()); // shrink slightly to avoid clipping through the ceiling and floor
+		open_z1 = car.z1() + z_shrink; open_z2 = car.z2() - z_shrink;
 		assert(open_z1 < open_z2);
 	}
 	for (unsigned d = 0; d < 2; ++d) { // left/right doors, untextured for now
