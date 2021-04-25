@@ -240,7 +240,7 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 			return;
 		}
 	}
-	blocks.push_back(geom_block_t(indices.size(), num, bc));
+	blocks.emplace_back(indices.size(), num, bc);
 	copy(ixs.begin(), ixs.end(), back_inserter(indices)); // make leaf
 }
 
@@ -329,6 +329,11 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) { // N
 	}
 #endif
 	finalized = 1;
+	finalize_lod_blocks(npts);
+}
+
+template<typename T> void indexed_vntc_vect_t<T>::finalize_lod_blocks(unsigned npts) {
+
 	assert((num_verts() % npts) == 0); // triangles or quads
 	assert(blocks.empty() && lod_blocks.empty());
 
@@ -510,8 +515,7 @@ template<typename T> void indexed_vntc_vect_t<T>::clear() {
 	
 	vntc_vect_t<T>::clear();
 	indices.clear();
-	blocks.clear();
-	lod_blocks.clear();
+	clear_blocks();
 	need_normalize = 0;
 }
 
@@ -773,9 +777,10 @@ template<typename T> void indexed_vntc_vect_t<T>::write(ostream &out) const {
 	write_vector(out, indices);
 }
 
-template<typename T> void indexed_vntc_vect_t<T>::read(istream &in) {
+template<typename T> void indexed_vntc_vect_t<T>::read(istream &in, unsigned npts) {
 	vntc_vect_t<T>::read(in);
 	read_vector(in, indices);
+	finalize_lod_blocks(npts);
 }
 
 
@@ -924,6 +929,8 @@ template<typename T> void vntc_vect_block_t<T>::merge_into_single_vector() {
 		vector_add_to(i->indices, dest.indices); // merge indices
 	}
 	dest.calc_bounding_volumes(); // can be optimized
+	dest.clear_blocks(); // no longer valid
+	//dest.finalize_lod_blocks(npts); // is this needed? it doesn't really make sense to merge blocks and then re-split, so I guess not
 	this->resize(1); // remove all but the first block
 }
 
@@ -934,11 +941,11 @@ template<typename T> bool vntc_vect_block_t<T>::write(ostream &out) const {
 	return 1;
 }
 
-template<typename T> bool vntc_vect_block_t<T>::read(istream &in) {
+template<typename T> bool vntc_vect_block_t<T>::read(istream &in, unsigned npts) {
 
 	this->clear();
 	this->resize(read_uint(in));
-	for (auto i = begin(); i != end(); ++i) {i->read(in);}
+	for (auto i = begin(); i != end(); ++i) {i->read(in, npts);}
 	if (merge_model_objects) {merge_into_single_vector();} // model was split per object, and we don't want that; merge into a single vector
 	return 1;
 }

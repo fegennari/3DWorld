@@ -300,10 +300,12 @@ public:
 	void optimize(unsigned npts);
 	void gen_lod_blocks(unsigned npts);
 	void finalize(unsigned npts);
+	void finalize_lod_blocks(unsigned npts);
 	void simplify(vector<unsigned> &out, float target) const;
 	void simplify_meshoptimizer(vector<unsigned> &out, float target) const;
 	void simplify_indices(float reduce_target);
 	void clear();
+	void clear_blocks() {blocks.clear(); lod_blocks.clear();}
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
@@ -314,7 +316,7 @@ public:
 	unsigned get_gpu_mem() const {return (vntc_vect_t<T>::get_gpu_mem() + (this->ivbo_valid() ? indices.size()*sizeof(unsigned) : 0));}
 	void invert_tcy();
 	void write(ostream &out) const;
-	void read(istream &in);
+	void read(istream &in, unsigned npts);
 	bool indexing_enabled() const {return !indices.empty();}
 	void mark_need_normalize() {need_normalize = 1;}
 };
@@ -340,7 +342,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void simplify_indices(float reduce_target);
 	void merge_into_single_vector();
 	bool write(ostream &out) const;
-	bool read(istream &in);
+	bool read(istream &in, unsigned npts);
 };
 
 
@@ -365,8 +367,8 @@ template<typename T> struct geometry_t {
 	void get_stats(model3d_stats_t &stats) const;
 	void calc_area(float &area, unsigned &ntris);
 	void simplify_indices(float reduce_target);
-	bool write(ostream &out) const {return (triangles.write(out) && quads.write(out));}
-	bool read(istream &in)         {return (triangles.read (in ) && quads.read (in ));}
+	bool write(ostream &out) const {return (triangles.write(out)  && quads.write(out)) ;}
+	bool read(istream &in)         {return (triangles.read(in, 3) && quads.read(in, 4));}
 };
 
 
