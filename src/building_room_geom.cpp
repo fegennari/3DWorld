@@ -1283,7 +1283,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { 
 	cube_t const panel(get_elevator_car_panel(c));
 	get_material(tid_nm_pair_t(), 0, 1).add_cube_to_verts(panel, DK_GRAY, all_zeros, ~get_face_mask(c.dim, c.dir));
 	// add floor numbers to either the panel (or the buttons themselves?)
-	unsigned const num_floors(c.drawer_flags);
+	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
 	assert(num_floors > 1);
 	float const button_spacing(panel.dz()/(num_floors + 1)); // add extra spacing on bottom and top of panel
 	float const panel_width(panel.get_sz_dim(!c.dim)), text_height(min(0.5f*panel_width, 0.8f*button_spacing));
@@ -1298,11 +1298,15 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { 
 	normal [ c.dim] = -dir_sign; // opposite dir from front of elevator
 	static vector<vert_tc_t> verts;
 	static ostringstream oss; // reused across buttons
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(FONT_TEXTURE_ID), 0, 1)); // dynamic=1
-	color_wrapper const cw(BLACK);
+	tid_nm_pair_t tp(FONT_TEXTURE_ID), lit_tp(tp);
+	lit_tp.emissive = 1.0;
+	get_material(tp, 0, 1); // make sure it's allocated
+	rgeom_mat_t &mat(get_material(tp, 0, 1)); // dynamic=1
+	color_wrapper const cw(BLACK), lit_cw(colorRGBA(1.0, 0.9, 0.5));
 	norm_comp const nc(normal);
 
 	for (unsigned f = 0; f < num_floors; ++f) {
+		bool const is_lit(f == cur_floor);
 		text_pos.z = panel.z1() + (f + 1)*button_spacing - 0.5*text_height;
 		verts.clear();
 		oss.str("");
@@ -1310,7 +1314,8 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { 
 		gen_text_verts(verts, text_pos, oss.str(), 1000.0*text_height, col_dir, plus_z, 1); // use_quads=1
 		assert(!verts.empty());
 		if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
-		for (auto i = verts.begin(); i != verts.end(); ++i) {mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], cw);}
+		rgeom_mat_t &cur_mat(is_lit ? get_material(lit_tp, 0, 1) : mat);
+		for (auto i = verts.begin(); i != verts.end(); ++i) {cur_mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], (is_lit ? lit_cw : cw));}
 	} // for f
 }
 

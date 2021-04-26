@@ -403,7 +403,7 @@ bool check_ball_kick(room_object_t &ball, vector3d &velocity, point &new_center,
 
 void building_t::update_player_interact_objects(point const &player_pos, unsigned building_ix, int first_ped_ix) {
 	assert(interior);
-	interior->update_elevators(*this, player_pos, get_floor_thickness());
+	interior->update_elevators(*this, player_pos);
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
 	float const fc_thick(0.5*get_floor_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
@@ -499,8 +499,8 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 	}
 }
 
-bool building_interior_t::update_elevators(building_t const &building, point const &player_pos, float floor_thickness) { // Note: player_pos is in building space
-	float const z_space(0.05*floor_thickness); // to prevent z-fighting
+bool building_interior_t::update_elevators(building_t const &building, point const &player_pos) { // Note: player_pos is in building space
+	float const z_space(0.05*building.get_floor_thickness()); // to prevent z-fighting
 	float const delta_open_amt(min(1.0f, 2.0f*fticks/TICKS_PER_SECOND)); // 0.5s for full open
 	static int prev_move_dir(2); // starts at not-moving
 	vector<room_object_t> &objs(room_geom->objs);
@@ -550,6 +550,7 @@ bool building_interior_t::update_elevators(building_t const &building, point con
 			break;
 		}
 		obj.translate_dim(2, dist); // translate in Z
+		obj.item_flags = uint16_t(floor((obj.zc() - e->z1())/building.get_window_vspace())); // set current floor
 		assert(e->light_obj_id < objs.size());
 		room_object_t &light(objs[e->light_obj_id]); // light for this elevator
 
