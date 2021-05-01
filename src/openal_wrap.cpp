@@ -54,6 +54,7 @@ public:
 	openal_buffer &get_buffer(unsigned id) {return sounds.get_buffer(id);}
 	void add_delayed_sound(sound_params_t const &params, unsigned id, int delay_time) {delayed_sounds.push_back(delayed_sound_t(params, id, delay_time));}
 	string const &get_name(unsigned id) const {assert(id < sound_names.size()); return sound_names[id];}
+	bool is_playing_sound(unsigned sid) const {return (sources.is_playing_sound(sid) || looping_sources.is_playing_sound(sid));}
 
 	unsigned add_new_sound(string const &fn) {
 		unsigned const ix(sounds.add_file_buffer(fn));
@@ -326,7 +327,7 @@ void openal_source::free_source() {
 	}
 }
 
-void openal_source::setup(openal_buffer const &buffer, point const &pos, float gain, float pitch,
+void openal_source::setup(openal_buffer const &buffer, point const &pos, unsigned sound_id, float gain, float pitch,
 	bool looping, bool rel_to_listener, vector3d const &vel)
 {
 	assert(is_valid() && buffer.is_valid());
@@ -337,11 +338,11 @@ void openal_source::setup(openal_buffer const &buffer, point const &pos, float g
 	alSourcei (source, AL_LOOPING,  looping);
 	alSourcei (source, AL_SOURCE_RELATIVE, rel_to_listener);
 	set_buffer_ix(buffer.get_buffer_ix());
-	params = sound_params_t(pos, gain, pitch, rel_to_listener);
+	params = sound_params_t(pos, sound_id, gain, pitch, rel_to_listener);
 }
 
 void openal_source::set_gain(float gain) {
-	alSourcef (source, AL_GAIN, gain);
+	alSourcef(source, AL_GAIN, gain);
 }
 
 void openal_source::set_buffer_ix(unsigned buffer_ix) {alSourcei(source, AL_BUFFER, buffer_ix);}
@@ -424,7 +425,7 @@ openal_source &source_manager_t::get_oldest_source() { // round robin
 openal_source &source_manager_t::get_inactive_source() {
 	for (unsigned i = 0; i < sources.size(); ++i) {
 		if (!sources[i].is_active()) {
-			if (next_source == i) next_source++; // move past this source
+			if (next_source == i) {next_source++;} // move past this source
 			return sources[i];
 		}
 	}
@@ -432,14 +433,21 @@ openal_source &source_manager_t::get_inactive_source() {
 }
 
 void source_manager_t::clear() {
-	for (unsigned i = 0; i < sources.size(); ++i) {sources[i].free_source();}
+	for (auto i = sources.begin(); i != sources.end(); ++i) {i->free_source();}
 	sources.clear();
 	next_source = 0;
 }
 
+bool source_manager_t::is_playing_sound(unsigned sid) const {
+	for (auto i = sources.begin(); i != sources.end(); ++i) { // loop over every source and check if it's currently playing this sound
+		if (i->is_playing_sound(sid)) return 1;
+	}
+	return 0;
+}
+
 bool source_manager_t::check_for_active_sound(point const &pos, float radius, float min_gain) const {
-	for (unsigned i = 0; i < sources.size(); ++i) {
-		if (sources[i].check_for_active_sound(pos, radius, min_gain)) return 1;
+	for (auto i = sources.begin(); i != sources.end(); ++i) {
+		if (i->check_for_active_sound(pos, radius, min_gain)) return 1;
 	}
 	return 0;
 }
@@ -474,15 +482,15 @@ void set_openal_listener_as_player() {
 
 
 // non-blocking
-void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener, vector3d const &vel) {
+void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener, vector3d const &vel, bool skip_if_already_playing) {
 
 	//RESET_TIME;
 	if (disable_sound) return;
 	point const listener(get_camera_pos());
 	float const dist(distance_to_camera(pos));
-	bool const close(dist < CAMERA_RADIUS);
-	if (!close && world_mode == WMODE_GROUND && id != SOUND_DROWN && id != SOUND_SPLASH1 && id != SOUND_SPLASH2 && id != SOUND_WATER &&
-		(is_underwater(pos) || is_underwater(listener))) return;
+	bool const close(dist < CAMERA_RADIUS), is_underwater_sound(id == SOUND_DROWN || id == SOUND_SPLASH1 || id == SOUND_SPLASH2 || id == SOUND_WATER);
+	if (!close && !is_underwater_sound && world_mode == WMODE_GROUND && (is_underwater(pos) || is_underwater(listener))) return; // can't hear sounds that are under water/when under water
+	if (skip_if_already_playing && sound_manager.is_playing_sound(id)) return; // this sound is already playing; is it possible to update the position and gain?
 #if 0
 	openal_source &source(sources.get_inactive_source());
 	if (!close && source.is_playing()) return; // already playing - don't stop it
@@ -500,7 +508,7 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 	}
 	if (source.is_active()) {source.stop();} // stop if already playing
 	set_openal_listener_as_player();
-	source.setup(sound_manager.get_buffer(id), pos, gain, pitch, 0, rel_to_listener, vel); // not looping
+	source.setup(sound_manager.get_buffer(id), pos, id, gain, pitch, 0, rel_to_listener, vel); // not looping
 	source.play();
 	//PRINT_TIME("Play Sound");
 }
@@ -515,8 +523,7 @@ void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, f
 	}
 	else {
 		assert(delay > 0.0);
-		sound_params_t params(pos, gain, pitch, rel_to_listener);
-		sound_manager.add_delayed_sound(params, id, round_fp(delay*TICKS_PER_SECOND)); // round to the nearest tick
+		sound_manager.add_delayed_sound(sound_params_t(pos, id, gain, pitch, rel_to_listener), id, round_fp(delay*TICKS_PER_SECOND)); // round to the nearest tick
 	}
 }
 

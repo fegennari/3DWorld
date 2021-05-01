@@ -31,10 +31,11 @@ struct sound_params_t {
 
 	point pos;
 	float gain, pitch;
+	int sound_id;
 	bool rel_to_listener;
 
-	sound_params_t(point const &P=all_zeros, float g=1.0, float p=1.0, bool r=0)
-		: pos(P), gain(g), pitch(p), rel_to_listener(r) {}
+	sound_params_t() : gain(1.0), pitch(1.0), sound_id(-1), rel_to_listener(0) {}
+	sound_params_t(point const &P, unsigned sid, float g, float p, bool r) : pos(P), gain(g), pitch(p), sound_id(sid), rel_to_listener(r) {}
 	float get_loudness() const;
 	bool read_from_file(FILE *fp);
 	void write_to_cobj_file(std::ostream &out) const;
@@ -103,11 +104,12 @@ public:
 	bool is_valid  () const {return (source > 0);}
 	bool is_playing() const;
 	bool is_active () const;
+	bool is_playing_sound(unsigned sid) const {return ((int)sid == params.sound_id && is_playing());}
 	float get_loudness() const {return (is_active() ? params.get_loudness() : 0.0);}
 	
 	void alloc();
 	void free_source();
-	void setup(openal_buffer const &buffer, point const &pos, float gain=1.0, float pitch=1.0,
+	void setup(openal_buffer const &buffer, point const &pos, unsigned sound_id, float gain=1.0, float pitch=1.0,
 		bool looping=0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
 	void set_gain(float gain);
 	void set_buffer(openal_buffer const &buffer) {set_buffer_ix(buffer.get_buffer_ix());}
@@ -144,6 +146,7 @@ public:
 	void stop_source  (unsigned id) const {get_source(id).stop  ();}
 	void pause_source (unsigned id) const {get_source(id).pause ();}
 	void rewind_source(unsigned id) const {get_source(id).rewind();}
+	bool is_playing_sound(unsigned sid) const;
 	bool check_for_active_sound(point const &pos, float radius, float min_gain=0.0) const;
 };
 
@@ -172,7 +175,7 @@ void add_placed_sound(std::string const &fn, sound_params_t const &params, senso
 void write_placed_sounds_to_cobj_file(std::ostream &out);
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
-void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0, vector3d const &vel=zero_vector);
+void gen_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0, vector3d const &vel=zero_vector, bool skip_if_already_playing=0);
 void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain=1.0, float pitch=1.0, bool rel_to_listener=0); // no vel
 void gen_delayed_from_player_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0);
 void proc_delayed_and_placed_sounds();
