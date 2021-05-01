@@ -765,6 +765,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	bool const is_rotated(building.is_rotated());
 	oc.set_exclude_bix(building_ix);
 	bool obj_drawn(0);
+	water_sound_manager_t water_sound_manager(camera_bs);
 
 	// draw object models
 	for (auto i = obj_model_insts.begin(); i != obj_model_insts.end(); ++i) {
@@ -773,6 +774,8 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		point obj_center(obj.get_cube_center());
 		if (is_rotated) {building.do_xy_rotate(building_center, obj_center);}
 		if (!shadow_only && !dist_less_than(camera_bs, obj_center, 100.0*obj.dz())) continue; // too far away (obj.max_len()?)
+		bool const is_sink(player_in_building && !shadow_only && obj.type == TYPE_SINK);
+		if (is_sink) {water_sound_manager.register_running_water(obj, building);}
 		if (!(is_rotated ? building.is_rot_cube_visible(obj, xlate) : camera_pdu.cube_visible(obj + xlate))) continue; // VFC
 		if ((display_mode & 0x08) && building.check_obj_occluded(obj, camera_bs, oc, reflection_pass)) continue;
 		bool const is_emissive(obj.type == TYPE_LAMP && obj.is_lit());
@@ -780,7 +783,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0);
 		if (is_emissive) {s.set_color_e(BLACK);}
-		if (player_in_building && !shadow_only && obj.type == TYPE_SINK) {water_draw.add_water_for_sink(obj);}
+		if (is_sink) {water_draw.add_water_for_sink(obj);}
 		obj_drawn = 1;
 	} // for i
 	if (player_in_building && !shadow_only && !reflection_pass) { // these models aren't drawn in the shadow or reflection passes; no emissive or rotated objects
@@ -803,9 +806,12 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) {water_draw.add_water_for_sink(*i);} // TYPE_SINK is handled above
+			if (i->type != TYPE_KSINK && i->type != TYPE_BRSINK) continue; // TYPE_SINK is handled above
+			water_sound_manager.register_running_water(*i, building);
+			water_draw.add_water_for_sink(*i);
 		}
 	}
+	water_sound_manager.finalize();
 	water_draw.draw_and_clear(s);
 
 	if (player_in_building && !shadow_only && player_held_object.is_valid()) {

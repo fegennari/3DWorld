@@ -1072,6 +1072,16 @@ struct ped_draw_vars_t {
 		: building(b), oc(oc_), s(s_), xlate(x), bix(bix_), shadow_only(so), reflection_pass(rp) {}
 };
 
+class water_sound_manager_t {
+	point const camera_bs;
+	point closest;
+	float dmin_sq;
+public:
+	water_sound_manager_t(point const &camera_bs_) : camera_bs(camera_bs_), dmin_sq(0.0) {}
+	void register_running_water(room_object_t const &obj, building_t const &building);
+	void finalize();
+};
+
 inline void clip_low_high_tc(float &t0, float &t1) {
 	if (fabs(t0 - t1) < 0.5) {t0 = t1 = 0.0;} // too small to have a window
 	else {t0 = round_fp(t0); t1 = round_fp(t1);} // Note: round() is much faster than nearbyint(), and round_fp() is faster than round()

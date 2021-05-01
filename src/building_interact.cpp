@@ -43,11 +43,13 @@ bool player_has_room_key();
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
-void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0) { // Note: pos is in camera space
-	float const dist(p2p_dist(get_camera_pos(), pos)), dscale(10.0*CAMERA_RADIUS); // distance at which volume is halved
+// Note: pos is in camera space
+void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, float gain_scale=1.0, bool skip_if_already_playing=0) {
+	float const dist(p2p_dist(get_camera_pos(), pos)), dscale(10.0*CAMERA_RADIUS*gain_scale); // distance at which volume is halved
 	gain *= dscale/(dist + dscale);
+	if (gain < 0.025) return; // too soft to hear
 #pragma omp critical(gen_sound)
-	gen_sound(id, pos, gain, pitch);
+	gen_sound(id, pos, gain, pitch, 0, zero_vector, skip_if_already_playing);
 }
 void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float pitch=1.0) {
 	gen_sound_thread_safe(id, get_camera_pos(), gain, pitch);
@@ -286,7 +288,6 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			if (!(obj.flags & RO_FLAG_IS_ACTIVE) && obj.type == TYPE_TUB) {gen_sound_thread_safe(SOUND_SINK, local_center);} // play sound when turning the tub on
 			if (obj.is_sink_type()) {obj.flags ^= RO_FLAG_IS_ACTIVE;} // toggle active bit, only for sinks for now
 			sound_scale = 0.4;
-			// TODO: play sound in a loop until water is turned off?
 		}
 		else if (obj.is_light_type()) {
 			toggle_light_object(obj);
@@ -1693,6 +1694,21 @@ void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool
 	next_time     = tfticks + double(rgen.rand_uniform(2.5, 5.0))*TICKS_PER_SECOND; // next sound of this type can play between 2.5 and 5.0s in the future
 	gen_sound_thread_safe((SOUND_ZOMBIE1 + sound_id), (sound_pos_bs + get_camera_coord_space_xlate()));
 	if (alert_other_zombies) {register_building_sound(sound_pos_bs, 0.4);}
+}
+
+void water_sound_manager_t::register_running_water(room_object_t const &obj, building_t const &building) {
+	if (!(obj.flags & RO_FLAG_IS_ACTIVE)) return; // not turned on
+	if (fabs(obj.z2() - camera_bs.z) > building.get_window_vspace()) return; // on the wrong floor
+	point const pos(obj.get_cube_center());
+	float const dsq(p2p_dist_sq(pos, camera_bs));
+	if (dmin_sq == 0.0 || dsq < dmin_sq) {closest = pos; dmin_sq = dsq;}
+}
+void water_sound_manager_t::finalize() {
+	if (dmin_sq == 0.0) return; // no water found
+	static point prev_closest;
+	bool const skip_if_already_playing(closest == prev_closest); // don't reset sound loop unless it moves to a different sink
+	prev_closest = closest;
+	gen_sound_thread_safe(SOUND_SINK, closest, 1.0, 1.0, 0.06, 1); // fast distance falloff; will loop at the end if needed
 }
 
 // gameplay logic
