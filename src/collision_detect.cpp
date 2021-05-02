@@ -1742,7 +1742,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		camera_in_air = 0;
 		player_clip_to_scene(pos);
 	}
-	remove_coll_object(camera_coll_id);
+	if (world_mode == WMODE_GROUND) {remove_coll_object(camera_coll_id);}
 	camera_coll_id = -1;
 	camera_obj.pos = pos;
 	camera_obj.velocity.assign(0.0, 0.0, -1.0);
@@ -1813,7 +1813,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	}
 	point pos2(pos);
 	pos2.z += 0.5*camera_zh;
-	add_camera_cobj(pos2);
+	if (world_mode == WMODE_GROUND) {add_camera_cobj(pos2);}
 }
 
 
