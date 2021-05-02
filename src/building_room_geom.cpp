@@ -1300,7 +1300,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { 
 	static ostringstream oss; // reused across buttons
 	tid_nm_pair_t tp(FONT_TEXTURE_ID), lit_tp(tp);
 	lit_tp.emissive = 1.0;
-	get_material(tp, 0, 1); // make sure it's allocated
+	get_material(lit_tp, 0, 1); // make sure it's allocated
 	rgeom_mat_t &mat(get_material(tp, 0, 1)); // dynamic=1
 	color_wrapper const cw(BLACK), lit_cw(colorRGBA(1.0, 0.9, 0.5));
 	norm_comp const nc(normal);
