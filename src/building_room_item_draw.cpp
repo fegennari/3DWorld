@@ -423,7 +423,7 @@ rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool i
 	return (dynamic ? mats_dynamic : (small ? mats_small : (transparent ? mats_alpha : mats_static))).get_material(tex, inc_shadows);
 }
 rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dynamic, bool small) {
-	tid_nm_pair_t tex;
+	tid_nm_pair_t tex(-1, 1.0, inc_shadows);
 	tex.set_specular(0.8, 60.0);
 	return get_material(tex, inc_shadows, dynamic, small);
 }
@@ -503,7 +503,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 
 void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add) {
 	float const tscale(2.0/obj_scale);
-	get_material(tid_nm_pair_t(), 0, 0, 1); // must ensure book covers are drawn before the text so that alpha blending works properly, so add the untextured cover material first
+	get_untextured_material(0, 0, 1); // must ensure book covers are drawn before the text so that alpha blending works properly, so add the untextured cover material first
 
 	for (auto i = objs_to_add.begin(); i != objs_to_add.end(); ++i) {
 		if (!i->is_visible() || i->is_dynamic()) continue; // skip invisible and dynamic objects
@@ -562,7 +562,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 		}
 		if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
 		obj_model_insts.emplace_back((i - objs.begin()), dir);
-		//get_material(tid_nm_pair_t()).add_cube_to_verts_untextured(*i, WHITE); // for debugging of model bcubes
+		//get_untextured_material().add_cube_to_verts_untextured(*i, WHITE); // for debugging of model bcubes
 	} // for i
 }
 
