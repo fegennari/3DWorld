@@ -731,6 +731,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	if (mats_dynamic.empty()) {create_dynamic_vbos(building);} // create dynamic materials if needed (no limit)
 	if (mats_doors  .empty()) {create_door_vbos   (building);} // create door    materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
+	assert(s.is_setup());
 	mats_static .draw(s, shadow_only, reflection_pass);
 	mats_lights .draw(s, shadow_only, reflection_pass);
 	mats_dynamic.draw(s, shadow_only, reflection_pass);

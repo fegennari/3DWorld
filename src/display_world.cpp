@@ -760,6 +760,7 @@ void display() {
 		init   = 1;
 		fticks = 1.0;
 		time0  = timer1;
+		//in_loading_screen = (world_mode == WMODE_INF_TERRAIN); // only in tiled terrain mode for now (for slow city/buildings scene)
 	}
 	else if (animate && !DETERMINISTIC_TIME) {
 		double ftick(0.0);
@@ -830,6 +831,7 @@ void display() {
 #endif
 
 	if (world_mode == WMODE_UNIVERSE) {
+		in_loading_screen = 0; // if we got here, loading is done
 		display_universe(); // infinite universe
 	}
 	else {
@@ -947,6 +949,7 @@ void display() {
 			// send data to GPU
 			setup_object_render_data();
 			check_gl_error(101);
+			in_loading_screen = 0; // if we got here, loading is done
 
 			// create shadow map
 			if (combined_gu) {do_look_at();}
@@ -1065,7 +1068,6 @@ void display() {
 	swap_buffers_and_redraw();
 	check_gl_error(11);
 	if (TIMETEST) PRINT_TIME("Y");
-	in_loading_screen = 0; // if we got to the end of display(), loading is done
 }
 
 
@@ -1236,6 +1238,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (TIMETEST) PRINT_TIME("3.2");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
 	pre_draw_tiled_terrain();
+	in_loading_screen = 0; // if we got here, loading is done
 	if (TIMETEST) PRINT_TIME("3.26");
 	render_tt_models(0, 0); // opaque pass; draws city buildings, cars, etc.
 
