@@ -2271,9 +2271,10 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.16*door_width), dir_sign(c.dir ? 1.0 : -1.0);
 	door_width = (door_spacing - 2.0*side_border); // recalculate actual value
 	float lo(front.d[!c.dim][0]);
+	bool const any_doors_open(c.drawer_flags > 0);
 	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
-	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 0)); // unshadowed
-	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed
+	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), any_doors_open)); // only shadowed if a door is open
+	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed (but seems to create shadows anyway because material is shared with a shadowed object)
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
@@ -2281,30 +2282,39 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	door0.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
 	door0.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
 	door0.expand_in_dim(2, -tb_border  ); // shrink in Z
-	cube_t handle(door0);
-	handle.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
-	handle.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
-	handle.expand_in_dim(2, -0.4*door0.dz()); // shrink in Z
+	cube_t handle0(door0);
+	handle0.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
+	handle0.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
+	handle0.expand_in_dim(2, -0.4*door0.dz()); // shrink in Z
 	
 	for (unsigned n = 0; n < num_doors; ++n) {
-		bool const handle_side(n & 1); // alternate
-		cube_t door(door0);
+		bool const is_open(c.drawer_flags & (1 << n)), handle_side(n & 1); // alternate handle side
+		cube_t door(door0), handle(handle0);
 		float const hi(lo + door_spacing);
 		door.d[!c.dim][0] = lo;
 		door.d[!c.dim][1] = hi;
 		door.expand_in_dim(!c.dim, -side_border); // shrink in XY
 
-		if (c.drawer_flags & (1 << n)) { // make this door open
+		if (is_open) { // make this door open
 			door.d[ c.dim][c.dir] += dir_sign*(door_width - door_thick); // expand out to full width
 			door.d[!c.dim][!handle_side] -= (handle_side ? -1.0 : 1.0)*(door_width - door_thick); // shrink to correct thickness
-			// TODO - here we really need to draw a cutout and the actual interior; we also need to rotate the handle properly
+			// TODO - here we really need to draw a cutout and the actual interior
 		}
 		door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
-		lo = hi;
+		lo = hi; // advance to next door
 		// add door handle
 		float const hwidth(0.04*door.dz()), near_side(0.1*door_width), far_side(door_width - near_side - hwidth);
-		handle.d[!c.dim][0] = door.d[!c.dim][0] + (handle_side ? near_side : far_side);
-		handle.d[!c.dim][1] = door.d[!c.dim][1] - (handle_side ? far_side : near_side);
+
+		if (is_open) { // rotate 90 degrees
+			handle.d[!c.dim][!handle_side] = door.d[!c.dim][handle_side];
+			handle.d[!c.dim][ handle_side] = door.d[!c.dim][handle_side] + (handle_side ? 1.0 : -1.0)*handle_thick; // expand out a bit
+			handle.d[ c.dim][0] = door.d[c.dim][0] + (!c.dir ? near_side : far_side);
+			handle.d[ c.dim][1] = door.d[c.dim][1] - (!c.dir ? far_side : near_side);
+		}
+		else {
+			handle.d[!c.dim][0] = door.d[!c.dim][0] + (handle_side ? near_side : far_side);
+			handle.d[!c.dim][1] = door.d[!c.dim][1] - (handle_side ? far_side : near_side);
+		}
 		handle_mat.add_cube_to_verts_untextured(handle, handle_color, door_skip_faces); // same skip_faces
 	} // for n
 }
