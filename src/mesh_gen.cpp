@@ -832,7 +832,7 @@ float get_exact_zval(float xval_in, float yval_in) {
 	if (world_mode == WMODE_INF_TERRAIN && mh_filename_tt != nullptr) {
 		// using a heightmap texture, but it hasn't been loaded yet; this is where we get on the first frame of the loading screen
 		// heightmap texture is 0-255, so use an intermediate value as the default/guess; this value works well for the heigtmap scene
-		return (144*get_mh_texture_mult() + get_mh_texture_add());
+		return (140*get_mh_texture_mult() + get_mh_texture_add());
 	}
 	float zval(eval_mesh_sin_terms_scaled(xval, yval, 1.0));
 	apply_glaciate(zval);
