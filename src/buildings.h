@@ -809,6 +809,7 @@ struct building_t : public building_geom_t {
 	unsigned get_real_num_parts() const {return (is_house ? min(2U, unsigned(parts.size() - has_chimney)) : parts.size());}
 	void gen_rotation(rand_gen_t &rgen);
 	void maybe_inv_rotate_point(point &p) const {if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), p);}} // inverse rotate - negate the sine term
+	void maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const;
 	void set_z_range(float z1, float z2);
 	bool check_part_contains_pt_xy(cube_t const &part, point const &pt, vector<point> &points) const;
 	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;

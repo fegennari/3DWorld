@@ -217,11 +217,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	bool is_obj(0);
 	vector3d in_dir(in_dir_in);
 	point closest_to(closest_to_in);
-	
-	if (is_rotated()) {
-		do_xy_rotate_normal_inv(in_dir);
-		do_xy_rotate_inv(bcube.get_cube_center(), closest_to);
-	}
+	maybe_inv_rotate_pos_dir(closest_to, in_dir);
+
 	if (!player_in_closet) { // if the player is in the closet, only the closet door can be opened
 		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 			if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
@@ -1117,10 +1114,13 @@ bool building_t::player_pickup_object(point const &at_pos, vector3d const &in_di
 	return interior->room_geom->player_pickup_object(*this, at_pos, in_dir);
 }
 bool building_room_geom_t::player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir) {
+	point at_pos_rot(at_pos);
+	vector3d in_dir_rot(in_dir);
+	building.maybe_inv_rotate_pos_dir(at_pos_rot, in_dir_rot);
 	float drawer_range(2.5*CAMERA_RADIUS), obj_dist(0.0);
-	int const obj_id(find_nearest_pickup_object(building, at_pos, in_dir, 3.0*CAMERA_RADIUS, obj_dist));
+	int const obj_id(find_nearest_pickup_object(building, at_pos_rot, in_dir_rot, 3.0*CAMERA_RADIUS, obj_dist));
 	if (obj_id >= 0) {min_eq(drawer_range, obj_dist);} // only include drawers that are closer than the pickup object
-	if (open_nearest_drawer(building, at_pos, in_dir, 2.5*CAMERA_RADIUS, 1)) return 1; // try objects in drawers; pickup_item=1
+	if (open_nearest_drawer(building, at_pos_rot, in_dir_rot, 2.5*CAMERA_RADIUS, 1)) return 1; // try objects in drawers; pickup_item=1
 	if (obj_id < 0) return 0; // no object to pick up
 	room_object_t &obj(get_room_object_by_index(obj_id));
 
@@ -1169,6 +1169,13 @@ bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> 
 		if (i->z1() == obj.z2() && i->intersects_xy(obj))                        return 1; // zval has to match exactly
 	}
 	return 0;
+}
+
+void building_t::maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const {
+	if (is_rotated()) {
+		do_xy_rotate_inv(bcube.get_cube_center(), pos);
+		do_xy_rotate_normal_inv(dir);
+	}
 }
 
 int building_room_geom_t::find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, float &obj_dist) const {
