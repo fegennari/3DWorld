@@ -210,12 +210,12 @@ class building_indir_light_mgr_t {
 		lighting_updated = 1;
 
 		if (USE_BKG_THREAD) { // start a thread to compute cur_light for building b
-			rt_thread = std::thread(&building_indir_light_mgr_t::cast_light_ray, this, b);
+			rt_thread = std::thread(&building_indir_light_mgr_t::cast_light_rays, this, b);
 			needs_to_join = 1;
 		}
 		else {
 			timer_t timer("Ray Cast Building Light");
-			cast_light_ray(b);
+			cast_light_rays(b);
 		}
 	}
 	void calc_reflect_ray(point &pos, point const &cpos, vector3d &dir, vector3d const &cnorm, rand_gen_t &rgen, float tolerance) const {
@@ -227,7 +227,7 @@ class building_indir_light_mgr_t {
 		if (dot_product(dir, cnorm) < 0.0) {dir.negate();} // make sure it points away from the surface (is this needed?)
 		pos = cpos + tolerance*dir; // move slightly away from the surface
 	}
-	void cast_light_ray(building_t const &b) {
+	void cast_light_rays(building_t const &b) {
 		// Note: modifies lmgr, but otherwise thread safe
 		unsigned const num_rt_threads(NUM_THREADS - (USE_BKG_THREAD ? 1 : 0)); // reserve a thread for the main thread if running in the background
 		vector<room_object_t> const &objs(b.interior->room_geom->objs);
@@ -239,8 +239,8 @@ class building_indir_light_mgr_t {
 		float const tolerance(1.0E-5*b.bcube.get_max_extent()), light_zval(ro.z1() - 0.01*ro.dz()); // set slightly below bottom of light
 		float const surface_area(ro.dx()*ro.dy() + 2.0f*(ro.dx() + ro.dy())*ro.dz()); // bottom + 4 sides (top is occluded), 0.0003 for houses
 		float weight(100.0f*(surface_area/0.0003f)/LOCAL_RAYS); // normalize to the number of rays
-		if (b.has_pri_hall()) {weight *= 0.8;} // floorplan is open and well lit, indir lighting value seems too high
-		if (b.is_house) {weight *= 2.0;} // houses have dimmer lights and seem to work better with more indir
+		if (b.has_pri_hall())     {weight *= 0.8 ;} // floorplan is open and well lit, indir lighting value seems too high
+		if (b.is_house)           {weight *= 2.0 ;} // houses have dimmer lights and seem to work better with more indir
 		if (ro.type == TYPE_LAMP) {weight *= 0.33;} // lamps are less bright
 		unsigned const NUM_PRI_SPLITS = 16;
 		int const num_rays(LOCAL_RAYS/NUM_PRI_SPLITS);
@@ -261,7 +261,7 @@ class building_indir_light_mgr_t {
 			init_cpos = origin; // init value
 			if (!b.ray_cast_interior(origin, pri_dir, bvh, init_cpos, init_cnorm, ccolor)) continue;
 			colorRGBA const init_color(lcolor.modulate_with(ccolor));
-			if (init_color.get_luminance() < 0.1) continue; // done
+			if (init_color.get_weighted_luminance() < 0.1) continue; // done
 
 			for (unsigned splits = 0; splits < NUM_PRI_SPLITS; ++splits) {
 				point pos(origin);
@@ -279,7 +279,7 @@ class building_indir_light_mgr_t {
 					}
 					if (!hit) break; // done
 					cur_color = cur_color.modulate_with(ccolor);
-					if (cur_color.get_luminance() < 0.1) break; // done
+					if (cur_color.get_weighted_luminance() < 0.1) break; // done
 					calc_reflect_ray(pos, cpos, dir, cnorm, rgen, tolerance);
 				} // for bounce
 			} // for splits
