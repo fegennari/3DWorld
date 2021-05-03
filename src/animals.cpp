@@ -212,13 +212,9 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 				if (!j->is_enabled()) continue;
 				if (i == j) continue; // skip self
 				float const dxy_sq(p2p_dist_xy_sq(i->pos, j->pos)); // Note: ignores zval
-
-				if (dxy_sq < sep_dist_sq) { // separation
-					vector3d const delta(i->pos - j->pos), sep_force(delta/dxy_sq); // force decreases with distance
-					tot_force += sep_force*sep_strength;
-				}
-				if (dxy_sq < cohesion_dist_sq) {avg_pos += j->pos;      ++pcount;}
-				if (dxy_sq < align_dist_sq   ) {avg_vel += j->velocity; ++vcount;}
+				if (dxy_sq < sep_dist_sq     ) {tot_force += (i->pos - j->pos)*(sep_strength/dxy_sq);} // separation force decreases with distance
+				if (dxy_sq < cohesion_dist_sq) {avg_pos   += j->pos;      ++pcount;}
+				if (dxy_sq < align_dist_sq   ) {avg_vel   += j->velocity; ++vcount;}
 			} // for j
 		} // for adj_ix
 		if (pcount > 0) {tot_force += (avg_pos/pcount - i->pos)*cohesion_strength;} // cohesion
