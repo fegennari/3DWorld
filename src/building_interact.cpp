@@ -1708,7 +1708,7 @@ void water_sound_manager_t::finalize() {
 	static point prev_closest;
 	bool const skip_if_already_playing(closest == prev_closest); // don't reset sound loop unless it moves to a different sink
 	prev_closest = closest;
-	gen_sound_thread_safe(SOUND_SINK, closest, 1.0, 1.0, 0.06, 1); // fast distance falloff; will loop at the end if needed
+	gen_sound_thread_safe(SOUND_SINK, closest, 1.0, 1.0, 0.06, skip_if_already_playing); // fast distance falloff; will loop at the end if needed
 }
 
 // gameplay logic
