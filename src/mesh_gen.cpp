@@ -56,7 +56,7 @@ extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, custom_glaciate_exp, MESH_HEIGHT, XY_SCENE_SIZE;
 extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
 extern point mesh_origin, surface_pos;
-extern char *mh_filename, *mesh_file;
+extern char *mh_filename, *mh_filename_tt, *mesh_file;
 
 
 void glaciate();
@@ -828,6 +828,11 @@ float get_exact_zval(float xval_in, float yval_in) {
 		float zval(get_tiled_terrain_height_tex(xval, yval));
 		if (using_hmap_with_detail()) {zval += HMAP_DETAIL_MAG*eval_mesh_sin_terms_scaled(xval, yval, HMAP_DETAIL_SCALE);} // Note: agrees with tile_t::create_zvals()
 		return zval;
+	}
+	if (world_mode == WMODE_INF_TERRAIN && mh_filename_tt != nullptr) {
+		// using a heightmap texture, but it hasn't been loaded yet; this is where we get on the first frame of the loading screen
+		// heightmap texture is 0-255, so use an intermediate value as the default/guess; this value works well for the heigtmap scene
+		return (144*get_mh_texture_mult() + get_mh_texture_add());
 	}
 	float zval(eval_mesh_sin_terms_scaled(xval, yval, 1.0));
 	apply_glaciate(zval);
