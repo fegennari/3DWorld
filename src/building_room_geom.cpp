@@ -1461,7 +1461,6 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	axis[c.dim] = 1.0; // along book width
 	tilt_angle *= (c.dim ? -1.0 : 1.0);
 	bool has_cover(0);
-	bool const draw_cover_lg(draw_cover_as_small || inc_sm), draw_cover_sm(draw_cover_as_small || inc_lg);
 	colorRGBA const color(apply_light_color(c));
 	// skip top face, bottom face if not tilted, thickness dim if upright
 	unsigned const sides_mask(upright ? get_skip_mask_for_xy(tdim) : EF_Z2), spine_mask(~get_face_mask(c.dim, !c.dir));

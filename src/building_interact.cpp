@@ -1480,7 +1480,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	bool walls_blocked(0);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || i->type == TYPE_MIRROR)) || (is_floor && i->type == TYPE_RUG || i->type == TYPE_FLOORING)) {
+ 		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || i->type == TYPE_MIRROR)) || (is_floor && (i->type == TYPE_RUG || i->type == TYPE_FLOORING))) {
 			if (line_int_cube_get_t(pos, pos2, *i, tmin)) {target = *i;} // Note: return value is ignored, we only need to update tmin and target; normal should be unchanged
 		}
 		else if (i->type == TYPE_CLOSET && line_int_cube_get_t(pos, pos2, *i, tmin)) {
@@ -1514,9 +1514,9 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	for (auto i = interior->stairwells.begin(); i != interior->stairwells.end(); ++i) {
 		if (i->shape == SHAPE_STRAIGHT) continue; // no walls, skip
 		// expand by wall half-width; see building_t::add_stairs_and_elevators()
-		float const step_len_pos(i->get_sz_dim(i->dim)/i->get_num_stairs()), wall_hw(0.15*step_len_pos);
+		float const step_len_pos(i->get_sz_dim(i->dim)/i->get_num_stairs());
 		cube_t c(*i);
-		c.expand_by_xy(0.15*step_len_pos);
+		c.expand_by_xy(0.15*step_len_pos); // wall half width
 		float tmin0(tmin);
 		if (!line_int_cube_get_t(pos, pos2, c, tmin0)) continue;
 		if (c.contains_pt(pos)) {walls_blocked = 1; continue;} // can't spraypaint the outside of the stairs when standing inside them
