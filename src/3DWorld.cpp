@@ -109,7 +109,7 @@ double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros), cube_map_center(all_zeros);
 string user_text, cobjs_out_fn, sphere_materials_fn, hmap_out_fn, skybox_cube_map_name, coll_damage_name;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
-colorRGBA bkg_color, flower_color(ALPHA0);
+colorRGBA flower_color(ALPHA0);
 set<unsigned char> keys, keyset;
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 vector<cube_t> smoke_bounds;

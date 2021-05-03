@@ -40,7 +40,7 @@ unsigned enabled_lights(0), cur_display_iter(0); // 8 bit flags for enabled_ligh
 float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
 double tfticks(0.0), sim_ticks(0.0);
 upos_point_type cur_origin(all_zeros);
-colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY), sunlight_color(SUN_LT_C);
+colorRGBA bkg_color(LT_BLUE), cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY), sunlight_color(SUN_LT_C);
 string lighting_update_text;
 
 
@@ -54,7 +54,7 @@ extern float def_atmosphere, def_vegetation, clip_plane_z, ambient_scale, sunlig
 extern double camera_zh;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
-extern colorRGBA sun_color, bkg_color;
+extern colorRGBA sun_color;
 extern water_params_t water_params;
 extern lightning_t l_strike;
 extern vector<camera_filter> cfilters;
@@ -185,9 +185,7 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
 		float rad, t, dist;
 
 		if (line_intersect_sphere(p1, v12, spos, outer_radius, rad, dist, t)) {
-			if (rad < sun_radius) {
-				color = sun_color;	
-			}
+			if (rad < sun_radius) {color = sun_color;}
 			else {
 				float blend_const(1.0 - (rad - sun_radius)/(outer_radius - sun_radius)); // 1.0 = full sun, 0.0 = no sun
 				blend_color(color, sun_color, color, blend_const*blend_const, 0);
@@ -195,10 +193,7 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
 		}
 	}
 	if (combined_gu) return color;
-
-	if (light_factor < 0.6 && line_intersect_sphere(p1, v12, get_moon_pos(), moon_radius)) {
-		color = texture_color(MOON_TEX);
-	}
+	if (light_factor < 0.6 && line_intersect_sphere(p1, v12, get_moon_pos(), moon_radius)) {color = texture_color(MOON_TEX);}
 	return color;
 }
 
@@ -736,18 +731,25 @@ void maybe_update_loading_screen(const char *str) {
 	check_gl_error(567);
 }
 
+void begin_loading_screen() {
+	static bool showed_loading_screen(0);
+	if (showed_loading_screen) return; // already showed screen
+	showed_loading_screen = 1;
+	config_bkg_color_and_clear(1);
+	bind_vao(0); // set to default VAO
+	draw_text(PURPLE, 0.0, 0.008, -0.02, "Loading...", 2.5);
+	swap_buffers_and_redraw();
+	in_loading_screen = (world_mode == WMODE_INF_TERRAIN); // only in tiled terrain mode for now (for slow city/buildings scene)
+}
+
 void display() {
 
 	check_gl_error(0);
 
 	if (start_maximized) {
 		toggle_fullscreen();
-		config_bkg_color_and_clear(1);
-		bind_vao(0); // set to default VAO
-		draw_text(PURPLE, 0.0, 0.008, -0.02, "Loading...", 2.5);
-		swap_buffers_and_redraw();
-		start_maximized   = 0;
-		in_loading_screen = (world_mode == WMODE_INF_TERRAIN); // only in tiled terrain mode for now (for slow city/buildings scene)
+		begin_loading_screen();
+		start_maximized = 0;
 		return;
 	}
 	RESET_TIME;
@@ -760,7 +762,7 @@ void display() {
 		init   = 1;
 		fticks = 1.0;
 		time0  = timer1;
-		//in_loading_screen = (world_mode == WMODE_INF_TERRAIN); // only in tiled terrain mode for now (for slow city/buildings scene)
+		begin_loading_screen(); // for the !start_maximized case
 	}
 	else if (animate && !DETERMINISTIC_TIME) {
 		double ftick(0.0);
