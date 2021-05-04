@@ -255,6 +255,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "num_tries") {
 		if (!read_uint(fp, global_building_params.num_tries)) {buildings_file_err(str, error);}
 	}
+	else if (str == "rand_seed") {
+		if (!read_uint(fp, global_building_params.buildings_rand_seed)) {buildings_file_err(str, error);}
+	}
 	else if (str == "max_shadow_maps") {
 		if (!read_uint(fp, global_building_params.max_shadow_maps)) {buildings_file_err(str, error);}
 	}

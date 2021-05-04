@@ -7,6 +7,7 @@ include buildings.txt
 buildings infinite_buildings     1
 buildings add_city_interiors     0
 buildings gen_building_interiors 1
+#buildings rand_seed              456
 buildings interior_view_dist_scale 0.5 # player speed is very high, this makes moving at max speed a bit less laggy
 start_in_inf_terrain 1
 
