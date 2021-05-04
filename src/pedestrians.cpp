@@ -1142,13 +1142,14 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, ped_draw_vars_t cons
 	if (enable_animations) {pdv.s.add_uniform_int("animation_id", 0);} // make sure to leave animations disabled so that they don't apply to buildings
 }
 
-void ped_manager_t::get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const {
+void ped_manager_t::get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes, bool moving_only) const {
 	if (first_ped_ix < 0) return; // no peds
 	assert((unsigned)first_ped_ix < peds_b.size());
 	assert(peds_b[first_ped_ix].dest_bldg == bix); // consistency check
 
 	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
 		if (p->dest_bldg != bix) break; // done with this building
+		if (moving_only && p->is_waiting_or_stopped()) continue;
 		if (!p->destroyed) {bcubes.push_back(p->get_bcube());}
 	}
 }

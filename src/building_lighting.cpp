@@ -741,7 +741,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				dynamic_shadows = 1; // camera shadow
 			}
 			else if (animate2 && enable_building_people_ai()) { // check moving people
-				if (ped_ix >= 0 && ped_bcubes.empty()) {get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes);} // get cubes on first light
+				if (ped_ix >= 0 && ped_bcubes.empty()) {get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes, 1);} // get cubes on first light; moving_only=1
 
 				for (auto c = ped_bcubes.begin(); c != ped_bcubes.end(); ++c) {
 					if (lpos_rot.z > c->z2() && c->intersects(clipped_bc) && dist_less_than(lpos_rot, c->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}

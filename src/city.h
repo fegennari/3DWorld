@@ -699,6 +699,7 @@ struct pedestrian_t : public waiting_obj_t {
 	bool target_valid() const {return (target_pos != all_zeros);}
 	//bool on_stairs   () const {return (fabs(pos.z - target_pos.z) > 0.01*radius);} // walking on a slope; allow for some floating-point error
 	bool on_stairs   () const {return is_on_stairs;}
+	bool is_waiting_or_stopped() const {return (speed == 0.0 || waiting_start > 0);}
 	void set_velocity(vector3d const &v) {vel = v*(speed/v.mag());} // normalize to original velocity
 	void move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir);
 	void stop();
@@ -826,7 +827,7 @@ public:
 	void get_peds_crossing_roads(ped_city_vect_t &pcv) const;
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv);
-	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const;
+	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes, bool moving_only) const;
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 	void free_context() {ped_model_loader.free_context();}

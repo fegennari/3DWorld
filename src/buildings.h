@@ -1148,7 +1148,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 void enable_animations_for_shader(shader_t &s);
 void setup_city_lights(vector3d const &xlate);
 void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv); // from city_gen.cpp
-void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes); // from city_gen.cpp
+void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes, bool moving_only=0); // from city_gen.cpp
 void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 vector3d get_nom_car_size();

@@ -3186,7 +3186,7 @@ public:
 	void draw_roads(int trans_op_mask, vector3d const &xlate) {road_gen.draw(trans_op_mask, xlate, enable_lights(), 0);} // shadow_only=0
 	void draw_cars_in_garages(vector3d const &xlate, bool shadow_only) {car_manager.draw(1, xlate, 1, shadow_only, 0, 1);} // opaque + garages pass
 	void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {ped_manager.draw_peds_in_building(first_ped_ix, pdv);}
-	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) const {ped_manager.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes);}
+	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes, bool moving_only) const {ped_manager.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes, moving_only);}
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {ped_manager.register_person_hit(person_ix, obj, velocity);}
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {ped_manager.draw_player_model(s, xlate, shadow_only);}
 
@@ -3238,7 +3238,7 @@ void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_ro
 void setup_city_lights(vector3d const &xlate) {city_gen.setup_city_lights(xlate);}
 
 void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv) {city_gen.draw_peds_in_building(first_ped_ix, pdv);}
-void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes) {city_gen.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes);}
+void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes, bool moving_only) {city_gen.get_ped_bcubes_for_building(first_ped_ix, bix, bcubes, moving_only);}
 void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {city_gen.register_person_hit(person_ix, obj, velocity);}
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only) {city_gen.draw_player_model(s, xlate, shadow_only);}
 
