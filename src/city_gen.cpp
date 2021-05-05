@@ -538,9 +538,10 @@ public:
 		unsigned &cx1, unsigned &cy1, unsigned &cx2, unsigned &cy2)
 	{
 		assert(num_samples > 0);
-		assert((wmax + 2*border) < xsize && (hmax + 2*border) < ysize); // otherwise the city can't fit in the map
+		if ((wmax + 2*border) >= xsize || (hmax + 2*border) >= ysize) return 0; // city can't fit in the map
 		unsigned const num_iters(100*num_samples); // upper bound
-		unsigned xend(xsize - wmax - 2*border + 1), yend(ysize - hmax - 2*border + 1); // max rect LLC, inclusive
+		unsigned const xend(xsize - wmax - 2*border + 1), yend(ysize - hmax - 2*border + 1); // max rect LLC, inclusive
+		assert(xend > 0 && yend > 0);
 		unsigned num_cands(0);
 		float best_diff(0.0);
 
