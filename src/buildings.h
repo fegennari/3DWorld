@@ -766,7 +766,7 @@ struct building_t : public building_geom_t {
 	unsigned mat_ix;
 	uint8_t hallway_dim, real_num_parts, roof_type; // main hallway dim: 0=x, 1=y, 2=none
 	int8_t open_door_ix, basement_part_ix;
-	bool is_house, has_chimney, has_garage, has_shed, has_courtyard, has_complex_floorplan, has_helipad;
+	bool is_house, has_chimney, has_garage, has_shed, has_courtyard, has_complex_floorplan, has_helipad, has_ac;
 	colorRGBA side_color, roof_color, detail_color, door_color, wall_color;
 	cube_t bcube, pri_hall, driveway;
 	vect_cube_t parts, fences;
@@ -780,10 +780,10 @@ struct building_t : public building_geom_t {
 	friend class building_indir_light_mgr_t;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), open_door_ix(-1), basement_part_ix(-1),
-		is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0), side_color(WHITE), roof_color(WHITE),
-		detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0) {}
+		is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0), has_ac(0),
+		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0) {}
 	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), open_door_ix(-1),
-		basement_part_ix(-1), is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0),
+		basement_part_ix(-1), is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0), has_ac(0),
 		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0) {}
 	static float get_scaled_player_radius();
 	static float get_min_front_clearance() {return 2.05f*get_scaled_player_radius();} // slightly larger than the player diameter
@@ -933,6 +933,7 @@ private:
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	void cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const;
 	cube_t get_part_containing_pt(point const &pt) const;
+	bool is_cube_close_to_exterior_doorway(cube_t const &c, float dmin=0.0, bool inc_open=0) const;
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0, bool inc_open=0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad=0.0) const;
 	bool check_cube_intersect_walls(cube_t const &c) const;

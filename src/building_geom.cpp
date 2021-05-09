@@ -1430,6 +1430,26 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_CCAP); // tag as chimney cap
 		has_chimney = 1;
 	}
+	if (rgen.rand_bool()) { // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
+		float const depth(door_height*rgen.rand_uniform(0.26, 0.35)), width(1.5*depth), height(door_height*rgen.rand_uniform(0.32, 0.36)); // constant width to keep the texture square
+		unsigned const ac_part_ix(two_parts ? rgen.rand_bool() : 0);
+		cube_t const &ac_part(parts[ac_part_ix]);
+		bool const ac_dim(rgen.rand_bool()), ac_dir(rgen.rand_bool());
+
+		if (ac_part.get_sz_dim(!ac_dim) > 4.0*width) {
+			float const place_pos(rgen.rand_uniform(ac_part.d[!ac_dim][0]+width, ac_part.d[!ac_dim][1]-width));
+			roof_obj_t ac(ROOF_OBJ_AC);
+			ac.d[ac_dim][!ac_dir] = ac_part.d[ac_dim][ ac_dir] + (ac_dir ? 1.0 : -1.0)*0.1*depth; // place slightly away from the exterior wall
+			ac.d[ac_dim][ ac_dir] = ac     .d[ac_dim][!ac_dir] + (ac_dir ? 1.0 : -1.0)*depth;
+			set_wall_width(ac, place_pos, 0.5*width, !ac_dim);
+			set_cube_zvals(ac, ac_part.z1(), (ac_part.z1() + height));
+			
+			if (!(two_parts && ac.intersects(parts[1-ac_part_ix])) && !is_cube_close_to_exterior_doorway(ac, width, 1)) {
+				details.push_back(ac);
+				has_ac = 1;
+			}
+		}
+	}
 	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
 	add_roof_to_bcube();
 	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
@@ -2066,11 +2086,15 @@ bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t co
 	float const min_dist(max(width, dmin)); // if dmin==0, use door width (so that door has space to open)
 	return (c.d[dim][0] < door.d[dim][1]+min_dist && c.d[dim][1] > door.d[dim][0]-min_dist); // within min_dist
 }
-bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // Note: inc_open only applies to interior doors
-	// Note: we want to test this for things like stairs, but exterior doors likely haven't been allocated at this point, so we have to check for that during door placement
+bool building_t::is_cube_close_to_exterior_doorway(cube_t const &c, float dmin, bool inc_open) const {
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // test exterior doors
 		if (is_cube_close_to_door(c, dmin, inc_open, i->get_bcube(), 2)) return 1; // check both dirs
 	}
+	return 0;
+}
+bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // Note: inc_open only applies to interior doors
+	// Note: we want to test this for things like stairs, but exterior doors likely haven't been allocated at this point, so we have to check for that during door placement
+	if (is_cube_close_to_exterior_doorway(c, dmin, inc_open)) return 1;
 	return (interior ? interior->is_cube_close_to_doorway(c, room, dmin, inc_open) : 0); // test interior doors
 }
 bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // ignores zvals
