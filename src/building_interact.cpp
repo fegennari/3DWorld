@@ -706,7 +706,7 @@ void setup_bldg_obj_types() {
 	static bool was_setup(0);
 	if (was_setup) return; // nothing to do
 	was_setup = 1;
-	// player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name
+	// player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	//                                                pc ac pu at im ls value  weight  name
 	bldg_obj_types[TYPE_TABLE     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 1, 70.0,  40.0,  "table");
 	bldg_obj_types[TYPE_CHAIR     ] = bldg_obj_type_t(0, 1, 1, 0, 0, 1, 50.0,  25.0,  "chair"); // skip player collisions because they can be in the way and block the path in some rooms
@@ -780,7 +780,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DRYER     ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 300.0, 160.0, "dryer");
 	// keys are special because they're potentially either a small object or an object model (in a drawer)
 	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key");
-	//                                                pc ac pu at im ls value  weight  name
+	//                                                pc ac pu at im ls value  weight  name [capacity]
 }
 
 bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
@@ -968,7 +968,7 @@ public:
 		if (carried.empty()) return 0; // no carried item
 		obj = carried.back(); // deep copy
 		if (!obj.has_dstate()) {return obj.can_use();} // not a droppable/throwable item(ball); only spraypaint or markers can be used
-		remove_last_item(obj); // drop the item - remove it from our inventory
+		remove_last_item(); // drop the item - remove it from our inventory
 		return 1;
 	}
 	void mark_last_item_used() {
@@ -979,11 +979,12 @@ public:
 
 		if (capacity > 0) {
 			++last_item_use_count;
-			if (last_item_use_count >= capacity) {remove_last_item(obj);} // remove after too many uses
+			if (last_item_use_count >= capacity) {remove_last_item();} // remove after too many uses
 		}
 	}
-	void remove_last_item(room_object_t &obj) {
+	void remove_last_item() {
 		assert(!carried.empty());
+		room_object_t &obj(carried.back());
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
 		assert(cur_value >= 0.0 && cur_weight >= 0.0); // is this okay if there's FP rounding error?

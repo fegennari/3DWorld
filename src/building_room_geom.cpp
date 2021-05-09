@@ -1457,7 +1457,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	shrink[c.dim] = shrink[upright ? 2 : !c.dim] = -indent;
 	pages.expand_by(shrink);
 	spine.d[c.dim][c.dir] = pages.d[c.dim][!c.dir];
-	vector3d axis, about(c.get_urc());
+	vector3d axis, tilt_about(c.get_urc()), zrot_about(c.get_cube_center());
 	axis[c.dim] = 1.0; // along book width
 	tilt_angle *= (c.dim ? -1.0 : 1.0);
 	bool has_cover(0);
@@ -1474,8 +1474,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		rgeom_mat_t &mat(get_untextured_material(0, 0, draw_cover_as_small)); // unshadowed, since shadows are too small to have much effect
 		unsigned const qv_start(mat.quad_verts.size());
 		mat.add_cube_to_verts_untextured(c, color, (extra_skip_faces | ~(sides_mask | spine_mask))); // untextured
-		rotate_verts(mat.quad_verts, axis,   tilt_angle,  about, qv_start);
-		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, about, qv_start);
+		rotate_verts(mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
+		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
 	}
 	if (draw_cover_as_small || inc_sm) { // draw small faces: insides of covers, edges, and pages
 		rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, since shadows are too small to have much effect
@@ -1484,8 +1484,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		mat.add_cube_to_verts_untextured(top,   color, (extra_skip_faces | (upright ? EF_Z1 : 0) | ~get_face_mask(tdim, 1))); // untextured, skip top face, skip bottom face if upright
 		mat.add_cube_to_verts_untextured(spine, color, (skip_faces | spine_mask)); // untextured, skip back of spine (drawn as lg geom)
 		mat.add_cube_to_verts_untextured(pages, apply_light_color(c, WHITE), (skip_faces | spine_mask)); // untextured
-		rotate_verts(mat.quad_verts, axis,   tilt_angle,  about, qv_start);
-		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, about, qv_start);
+		rotate_verts(mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
+		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
 	}
 	if (ADD_BOOK_COVERS && inc_sm && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
 		vector3d expand;
@@ -1499,8 +1499,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		rgeom_mat_t &cover_mat(get_material(tid_nm_pair_t(picture_tid, 0.0), 0, 0, 1));
 		unsigned const qv_start(cover_mat.quad_verts.size());
 		cover_mat.add_cube_to_verts(cover, WHITE, zero_vector, get_face_mask(tdim, tdir), swap_xy, ldir, !cdir); // no shadows, small=1
-		rotate_verts(cover_mat.quad_verts, axis,   tilt_angle,  about, qv_start);
-		rotate_verts(cover_mat.quad_verts, plus_z, z_rot_angle, about, qv_start);
+		rotate_verts(cover_mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
+		rotate_verts(cover_mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
 		has_cover = 1;
 	} // end cover image
 	bool const add_spine_title(c.obj_id & 7); // 7/8 of the time
@@ -1537,8 +1537,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 			}
 			add_book_title(title, title_area_fc, mat, text_color, c.dim, !c.dim, 2, !c.dir, !top_dir, 0); // {columns, lines, normal}
 		}
-		rotate_verts(mat.quad_verts, axis,   tilt_angle,  about, qv_start);
-		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, about, qv_start);
+		rotate_verts(mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
+		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
 	} // end pages
 }
 
