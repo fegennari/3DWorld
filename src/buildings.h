@@ -817,6 +817,7 @@ struct building_t : public building_geom_t {
 	vect_cube_t::const_iterator get_real_parts_end_inc_sec() const {return (get_real_parts_end() + has_sec_bldg());}
 	cube_t const &get_sec_bldg() const {assert(has_sec_bldg()); assert(real_num_parts < parts.size()); return parts[real_num_parts];}
 	void end_add_parts() {assert(parts.size() < 256); real_num_parts = uint8_t(parts.size());}
+	cube_t get_coll_bcube() const;
 
 	bool check_sphere_coll(point const &pos, float radius, bool xy_only, vector<point> &points, vector3d *cnorm=nullptr) const {
 		point pos2(pos);

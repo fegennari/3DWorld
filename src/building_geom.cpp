@@ -137,12 +137,24 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 	return 0;
 }
 
+cube_t building_t::get_coll_bcube() const {
+	if (!is_house || (!has_ac && !has_driveway())) return bcube;
+	cube_t cc(bcube);
+	if (has_ac) {cc.expand_by_xy(0.35*get_window_vspace());} // conservative
+	if (has_driveway()) {cc.union_with_cube(driveway);}
+	return cc;
+}
+
 // Note: used for the player
 bool building_t::check_sphere_coll(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, vector3d const &xlate,
 	float radius, bool xy_only, vector<point> &points, vector3d *cnorm_ptr, bool check_interior) const
 {
 	if (!is_valid()) return 0; // invalid building
-	if (radius > 0.0 && !(xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, bcube) : sphere_cube_intersect((pos - xlate), radius, bcube))) return 0;
+	
+	if (radius > 0.0) {
+		cube_t const cc(get_coll_bcube());
+		if (!(xy_only ? sphere_cube_intersect_xy((pos - xlate), radius, cc) : sphere_cube_intersect((pos - xlate), radius, cc))) return 0;
+	}
 	float const xy_radius(radius*global_building_params.player_coll_radius_scale);
 	point pos2(pos), p_last2(p_last), center;
 	bool had_coll(0), is_interior(0);
