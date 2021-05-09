@@ -356,6 +356,7 @@ void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
 }
 
 void rgeom_mat_t::upload_draw_and_clear(shader_t &s) {
+	if (empty()) return; // nothing to do
 	create_vbo_inner();
 	draw(s, 0, 0);
 	clear();
@@ -387,6 +388,9 @@ void building_materials_t::create_vbos(building_t const &building) {
 }
 void building_materials_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
 	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only, reflection_pass);}
+}
+void building_materials_t::upload_draw_and_clear(shader_t &s) {
+	for (iterator m = begin(); m != end(); ++m) {m->upload_draw_and_clear(s);}
 }
 
 void building_room_geom_t::add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
@@ -659,6 +663,16 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	else if (c.type == TYPE_TPROLL) {
 		//add_tproll_to_material(c_rot, mat); // apply get_player_cview_rot_matrix()?
 		mat.add_vcylin_to_verts(c, c.color, 0, 1); // simpler approach using a vertical cylinder, but there's no tube/hole
+	}
+	else if (c.type == TYPE_BOOK) {
+		static building_room_geom_t tmp_rgeom;
+		float const z_rot_angle(-(atan2(cview_dir.y, cview_dir.x) + PI_TWO));
+		tmp_rgeom.add_book(c, 1, 1, 0.0, 0, 0, z_rot_angle);
+		enable_blend(); // needed for book text
+		tmp_rgeom.mats_static.upload_draw_and_clear(s);
+		tmp_rgeom.mats_small .upload_draw_and_clear(s);
+		disable_blend();
+		return;
 	}
 	else {assert(0);}
 	mat.upload_draw_and_clear(s);

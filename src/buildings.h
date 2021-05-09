@@ -381,7 +381,7 @@ struct room_object_t : public cube_t {
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
-	bool can_use        () const {return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL);} // excludes dynamic objects
+	bool can_use        () const {return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL || type == TYPE_BOOK);} // excludes dynamic objects
 	bool is_interactive () const {return (has_dstate() || can_use());}
 	unsigned get_bottle_type() const {return (obj_id % NUM_BOTTLE_TYPES);}
 	unsigned get_orient () const {return (2*dim + dir);}
@@ -458,6 +458,7 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos(building_t const &building);
 	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
+	void upload_draw_and_clear(shader_t &s);
 };
 
 struct obj_model_inst_t {
@@ -481,7 +482,7 @@ struct building_room_geom_t {
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
 
-	building_room_geom_t(point const &tex_origin_) : has_elevators(0), has_pictures(0), lights_changed(0), materials_invalid(0), modified_by_player(0),
+	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), lights_changed(0), materials_invalid(0), modified_by_player(0),
 		num_pic_tids(0), obj_scale(1.0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
 	bool empty() const {return objs.empty();}
 	void clear();
@@ -515,8 +516,9 @@ struct building_room_geom_t {
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);
 	void add_picture(room_object_t const &c);
-	void add_book_title(std::string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color, unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir);
-	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0);
+	void add_book_title(std::string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
+		unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir);
+	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0, float z_rot_angle=0.0);
 	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0, point const *const use_this_tex_origin=0);
 	void add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);

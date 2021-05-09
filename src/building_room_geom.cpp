@@ -1440,10 +1440,11 @@ void building_room_geom_t::add_book_title(string const &title, cube_t const &tit
 	} // for i
 }
 
-void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle, unsigned extra_skip_faces, bool no_title) {
+void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle, unsigned extra_skip_faces, bool no_title, float z_rot_angle) {
 	bool const from_drawer(c.flags & RO_FLAG_WAS_EXP), draw_cover_as_small(from_drawer); // books taken from drawers are always drawn as small objects
 	if (draw_cover_as_small && !inc_sm) return; // nothing to draw
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
+	bool const is_held(z_rot_angle != 0.0); // held by the player, and need to draw the bottom
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
 	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
@@ -1463,11 +1464,10 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool has_cover(0);
 	colorRGBA const color(apply_light_color(c));
 	// skip top face, bottom face if not tilted, thickness dim if upright
-	unsigned const sides_mask(upright ? get_skip_mask_for_xy(tdim) : EF_Z2), spine_mask(~get_face_mask(c.dim, !c.dir));
+	unsigned const sides_mask(upright ? get_skip_mask_for_xy(tdim) : (is_held ? EF_Z12 : EF_Z2)), spine_mask(~get_face_mask(c.dim, !c.dir)); // masks of faces to draw
 	unsigned const skip_faces(extra_skip_faces | ((tilt_angle == 0.0) ? EF_Z1 : 0) | sides_mask);
-	float z_rot_angle(0.0);
 
-	if (!from_drawer && !upright && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
+	if (z_rot_angle == 0.0 && !from_drawer && !upright && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
 		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
 	}
 	if (draw_cover_as_small || inc_lg) { // draw large faces: outside faces of covers and spine

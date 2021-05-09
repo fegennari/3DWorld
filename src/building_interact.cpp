@@ -931,6 +931,16 @@ public:
 			cur_weight += weight;
 			bool const prev_was_interactive(!carried.empty() && carried.back().is_interactive()), cur_is_interactive(obj.is_interactive());
 			carried.push_back(obj);
+
+			if (obj.type == TYPE_BOOK) { // clear dim and dir for books
+				room_object_t &co(carried.back());
+				if (co.dim) { // swap aspect ratio
+					float const dx(co.dx()), dy(co.dy());
+					co.x2() = co.x1() + dy;
+					co.y2() = co.y1() + dx;
+				}
+				co.dim = co.dir = 0;
+			}
 			if (prev_was_interactive && !cur_is_interactive) {swap(carried[carried.size()-2], carried.back());} // move the prev interactive object to the back
 			if (bldg_obj_types[obj.type].capacity > 0) {last_item_use_count = 0;} // limited use object, reset use count
 			oss << ": value $";
@@ -1397,9 +1407,15 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		if (obj.type == TYPE_TPROLL) {
 			if (!apply_toilet_paper(player_pos, cview_dir, 0.5*obj.dz())) return 0;
 		}
-		else { // spraypaint or marker
+		else if (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER) { // spraypaint or marker
 			if (!apply_paint(player_pos, cview_dir, obj.color, obj.type)) return 0;
 		}
+		else if (obj.type == TYPE_BOOK) {
+			//if (!interior->room_geom->add_room_object(obj, *this)) return 0; // TODO
+			//player_inventory.remove_last_item(); // used
+			return 1;
+		}
+		else {assert(0);}
 		player_inventory.mark_last_item_used();
 	}
 	else {assert(0);}
