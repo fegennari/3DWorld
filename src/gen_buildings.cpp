@@ -2677,7 +2677,8 @@ public:
 			}
 			return check_road_seg_sphere_coll(ge, pos, p_last, xlate, radius, xy_only, cnorm);
 		}
-		cube_t bcube; bcube.set_from_sphere((pos - xlate), radius);
+		float const expand_val(3.0*radius); // use a larger value to handle things outside the building bcube such as AC units
+		cube_t bcube; bcube.set_from_sphere((pos - xlate), expand_val);
 		if (!range.intersects_xy(bcube)) return 0; // outside buildings bcube
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
