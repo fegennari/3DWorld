@@ -1442,6 +1442,15 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_CCAP); // tag as chimney cap
 		has_chimney = 1;
 	}
+	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
+	add_roof_to_bcube();
+	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
+	door_color = (rgen.rand_bool() ? LT_BROWN : WHITE);
+	// white, white, white, white, pink, peach, lt green, lt blue
+	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
+	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
+	if (rgen.rand_bool()) {add_solar_panels(rgen);} // maybe add solar panels
+
 	if (rgen.rand_bool()) { // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
 		float const depth(door_height*rgen.rand_uniform(0.26, 0.35)), width(1.5*depth), height(door_height*rgen.rand_uniform(0.32, 0.36)); // constant width to keep the texture square
 		unsigned const ac_part_ix(two_parts ? rgen.rand_bool() : 0);
@@ -1455,21 +1464,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			ac.d[ac_dim][ ac_dir] = ac     .d[ac_dim][!ac_dir] + (ac_dir ? 1.0 : -1.0)*depth;
 			set_wall_width(ac, place_pos, 0.5*width, !ac_dim);
 			set_cube_zvals(ac, ac_part.z1(), (ac_part.z1() + height));
-			
+
 			if (!(two_parts && ac.intersects(parts[1-ac_part_ix])) && !is_cube_close_to_exterior_doorway(ac, width, 1)) {
 				details.push_back(ac);
 				has_ac = 1;
 			}
 		}
 	}
-	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
-	add_roof_to_bcube();
-	gen_grayscale_detail_color(rgen, 0.4, 0.8); // for roof
-	door_color = (rgen.rand_bool() ? LT_BROWN : WHITE);
-	// white, white, white, white, pink, peach, lt green, lt blue
-	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
-	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
-	if (rgen.rand_bool()) {add_solar_panels(rgen);} // maybe add solar panels
 }
 
 void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses only
