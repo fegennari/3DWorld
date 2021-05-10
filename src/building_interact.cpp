@@ -718,7 +718,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_PICTURE   ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 100.0, 1.0,   "picture"); // should be random value
 	bldg_obj_types[TYPE_WBOARD    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 50.0,  25.0,  "whiteboard");
 	bldg_obj_types[TYPE_BOOK      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 10.0,  1.0,   "book");
-	bldg_obj_types[TYPE_BCASE     ] = bldg_obj_type_t(1, 1, 0, 1, 0, 3, 150.0, 100.0, "bookcase"); // Note: can't pick up until bookcase can be expanded and books taken off
+	bldg_obj_types[TYPE_BCASE     ] = bldg_obj_type_t(1, 1, 1, 1, 0, 3, 150.0, 100.0, "bookcase"); // Note: can't pick up until bookcase can be expanded and books taken off
 	bldg_obj_types[TYPE_TCAN      ] = bldg_obj_type_t(0, 1, 1, 0, 0, 2, 12.0,  2.0,   "trashcan"); // skip player collisions because they can be in the way and block the path in some rooms
 	bldg_obj_types[TYPE_DESK      ] = bldg_obj_type_t(1, 1, 0, 0, 0, 1, 100.0, 80.0,  "desk");
 	bldg_obj_types[TYPE_BED       ] = bldg_obj_type_t(1, 1, 1, 0, 0, 1, 300.0, 200.0, "bed");
@@ -1128,8 +1128,9 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	point at_pos_rot(at_pos);
 	vector3d in_dir_rot(in_dir);
 	building.maybe_inv_rotate_pos_dir(at_pos_rot, in_dir_rot);
+	float const range(3.0*CAMERA_RADIUS);
 	float drawer_range(2.5*CAMERA_RADIUS), obj_dist(0.0);
-	int const obj_id(find_nearest_pickup_object(building, at_pos_rot, in_dir_rot, 3.0*CAMERA_RADIUS, obj_dist));
+	int const obj_id(find_nearest_pickup_object(building, at_pos_rot, in_dir_rot, range, obj_dist));
 	if (obj_id >= 0) {min_eq(drawer_range, obj_dist);} // only include drawers that are closer than the pickup object
 	if (open_nearest_drawer(building, at_pos_rot, in_dir_rot, 2.5*CAMERA_RADIUS, 1)) return 1; // try objects in drawers; pickup_item=1
 	if (obj_id < 0) return 0; // no object to pick up
@@ -1142,6 +1143,30 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		// if we picked up an object, assume the VBOs have already been updated; otherwise we need to update them to expand this object
 		if (!picked_up) {create_small_static_vbos(building);} // assumes expanded objects are all "small"
 		return picked_up;
+	}
+	if (obj.type == TYPE_BCASE) {
+		static vector<room_object_t> books;
+		books.clear();
+		get_bookcase_books(obj, books);
+		int closest_obj_id(-1);
+		float dmin_sq(0.0);
+		point const p2(at_pos + in_dir*range);
+
+		for (auto i = books.begin(); i != books.end(); ++i) {
+			point p1c(at_pos), p2c(p2);
+			if (!do_line_clip(p1c, p2c, i->d))  continue; // test ray intersection vs. bcube
+			float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
+			if (dmin_sq > 0.0 && dsq > dmin_sq) continue; // not the closest
+			closest_obj_id = (i - books.begin()); // valid pickup object
+			dmin_sq = dsq; // this object is the closest
+		} // for i
+		if (dmin_sq == 0.0) return 0; // no book to pick up
+		room_object_t &book(books[closest_obj_id]);
+		if (!register_player_object_pickup(book, at_pos)) return 0;
+		obj.set_combined_flags(obj.get_combined_flags() | (1<<(book.item_flags&31))); // set flag bit to remove this book from the bookcase
+		player_inventory.add_item(book);
+		update_draw_state_for_room_object(book, building);
+		return 1;
 	}
 	if (!register_player_object_pickup(obj, at_pos)) return 0;
 	remove_object(obj_id, building);

@@ -365,6 +365,8 @@ struct room_object_t : public cube_t {
 		cube_t(c), dim(dim_), dir(dir_), room_id(rid), obj_id(0), drawer_flags(0), item_flags(0), type(type_), shape(shape_), flags(f), light_amt(light), color(color_)
 	{check_normalized();}
 	void check_normalized() const;
+	unsigned get_combined_flags() const {return (((unsigned)drawer_flags << 16) + (unsigned)item_flags);} // treat {drawer_flags, item_flags} as a single 32-bit flags
+	void set_combined_flags(unsigned v) {drawer_flags = (v >> 16); item_flags = (v & 0xFFFF);}
 	bool is_valid   () const {return  (type != TYPE_NONE);}
 	bool is_lit     () const {return  (flags & RO_FLAG_LIT);}
 	bool has_stairs () const {return  (flags & (RO_FLAG_TOS | RO_FLAG_RSTAIRS));}
@@ -519,7 +521,8 @@ struct building_room_geom_t {
 	void add_book_title(std::string const &title, cube_t const &title_area, rgeom_mat_t &mat, colorRGBA const &color,
 		unsigned hdim, unsigned tdim, unsigned wdim, bool cdir, bool ldir, bool wdir);
 	void add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle=0.0, unsigned extra_skip_faces=0, bool no_title=0, float z_rot_angle=0.0);
-	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0, point const *const use_this_tex_origin=0);
+	void add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves=0, float sides_scale=1.0,
+		point const *const use_this_tex_origin=nullptr, vector<room_object_t> *books=nullptr);
 	void add_wine_rack(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale);
 	void add_desk(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm);
 	void add_reception_desk(room_object_t const &c, float tscale);
@@ -567,7 +570,7 @@ struct building_room_geom_t {
 	static void draw_interactive_player_obj(room_object_t const &c, shader_t &s);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
-	void expand_bookcase(room_object_t const &c);
+	void get_bookcase_books(room_object_t const &c, vector<room_object_t> &books) {add_bookcase(c, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
 	void expand_closet(room_object_t const &c);
 	void expand_wine_rack(room_object_t const &c);
 	void expand_object(room_object_t &c);

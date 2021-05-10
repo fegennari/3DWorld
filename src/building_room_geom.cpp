@@ -1542,7 +1542,9 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	} // end pages
 }
 
-void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale, point const *const use_this_tex_origin) {
+void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale,
+	point const *const use_this_tex_origin, vector<room_object_t> *books)
+{
 	colorRGBA const color(apply_wood_light_color(c));
 	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
@@ -1571,6 +1573,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	c.set_rand_gen_state(rgen);
 	unsigned const num_shelves(3 + ((17*c.room_id + int(1000.0*fabs(c.z1())))%3)); // 3-5, randomly selected by room ID and floor
 	float const shelf_dz(middle.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
+	unsigned const skip_book_flags(c.get_combined_flags());
 	cube_t shelves[5];
 	
 	for (unsigned i = 0; i < num_shelves; ++i) {
@@ -1581,7 +1584,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);} // Note: mat reference may be invalidated by adding books
 	}
 	// add books
-	for (unsigned i = 0; i < num_shelves; ++i) {
+	for (unsigned i = 0, book_ix = 0; i < num_shelves; ++i) {
 		if (rgen.rand_float() < 0.2) continue; // no books on this shelf
 		cube_t const &shelf(shelves[i]);
 		unsigned const num_spaces(22 + (rgen.rand()%11)); // 22-32 books per shelf
@@ -1627,20 +1630,23 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 				book.z2() = book.z1() + height;
 				assert(pos < right_pos);
 			}
-			assert(book.is_strictly_normalized());
 			colorRGBA const &book_color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 			bool const backwards((rgen.rand()%10) == 0), book_dir(c.dir ^ backwards ^ 1); // spine facing out 90% of the time
-			room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, SHAPE_CUBE, book_color);
-			obj.obj_id = c.obj_id + 123*i + 1367*n;
-			add_book(obj, inc_lg, inc_sm, tilt_angle, skip_faces, backwards); // detailed book, no title if backwards
+
+			if (!(skip_book_flags & (1<<(book_ix&31)))) { // may have more than 32 books, and will wrap in that case
+				assert(book.is_strictly_normalized());
+				room_object_t obj(book, TYPE_BOOK, c.room_id, c.dim, book_dir, c.flags, c.light_amt, SHAPE_CUBE, book_color);
+				obj.obj_id     = c.obj_id + 123*i + 1367*n;
+				obj.item_flags = (uint16_t)book_ix;
+				if (inc_lg || inc_sm) {add_book(obj, inc_lg, inc_sm, tilt_angle, skip_faces, backwards);} // detailed book, no title if backwards
+				if (books) {books->push_back(obj);}
+			}
+			++book_ix;
 			pos += width;
 			last_book_pos = pos;
 			prev_tilted   = (tilt_angle != 0.0); // don't tilt two books in a row
 		} // for n
 	} // for i
-}
-void building_room_geom_t::expand_bookcase(room_object_t const &c) {
-	// WRITE, if needed
 }
 
 void add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &objects) {
