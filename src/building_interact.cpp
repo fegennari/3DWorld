@@ -1412,38 +1412,51 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	return 1;
 }
 
+void play_obj_fall_sound(room_object_t const &obj, point const &player_pos) {
+	gen_sound_thread_safe(SOUND_OBJ_FALL, (get_camera_pos() + (obj.get_cube_center() - player_pos)));
+	register_building_sound_for_obj(obj, player_pos);
+}
+
 bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	assert(has_room_geom());
 	room_object_t obj;
 	if (!player_inventory.try_use_last_item(obj)) return 0;
+	static double last_use_time(0.0);
 
 	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it; only activated with use_object/'E' key
+		if ((tfticks - last_use_time) < 0.5*TICKS_PER_SECOND) return 0; // half second delay
 		float const cradius(get_scaled_player_radius());
-		point const obj_bot_center(obj.xc(), obj.yc(), obj.z1());
 		point dest(player_pos + (1.2f*(cradius + obj.get_radius()))*cview_dir);
 		dest.z -= 0.5*cradius; // slightly below the player's face
-		obj.translate(dest - obj_bot_center);
+		obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 		obj.flags |= RO_FLAG_DYNAMIC; // make it dynamic, assuming it will be dropped/thrown
 		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
-		gen_sound_thread_safe(SOUND_OBJ_FALL, (get_camera_pos() + (dest - player_pos)));
-		register_building_sound_for_obj(obj, player_pos);
+		play_obj_fall_sound(obj, player_pos);
 	}
 	else if (obj.can_use()) { // active with either use_object or fire key
 		if (obj.type == TYPE_TPROLL) {
 			if (!apply_toilet_paper(player_pos, cview_dir, 0.5*obj.dz())) return 0;
+			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER) { // spraypaint or marker
 			if (!apply_paint(player_pos, cview_dir, obj.color, obj.type)) return 0;
+			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_BOOK) {
-			//if (!interior->room_geom->add_room_object(obj, *this)) return 0; // TODO
-			//player_inventory.remove_last_item(); // used
-			return 1;
+			if ((tfticks - last_use_time) < 0.5*TICKS_PER_SECOND) return 0; // half second delay
+			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
+			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
+			if (!get_zval_of_floor(dest, half_width, dest.z)) return 0; // no suitable floor found
+			obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
+			obj.flags |= RO_FLAG_TAKEN1;
+			if (!interior->room_geom->add_room_object(obj, *this)) return 0;
+			player_inventory.remove_last_item(); // used
+			play_obj_fall_sound(obj, player_pos);
 		}
 		else {assert(0);}
-		player_inventory.mark_last_item_used();
 	}
 	else {assert(0);}
+	last_use_time = tfticks;
 	return 1;
 }
 

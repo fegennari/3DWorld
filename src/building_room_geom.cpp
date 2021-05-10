@@ -1447,6 +1447,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool const is_held(z_rot_angle != 0.0); // held by the player, and need to draw the bottom
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
+	bool const shadowed(c.flags & RO_FLAG_TAKEN1); // only shadowed if dropped by the player, since otherwise shadows are too small to have much effect
 	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
 	float const thickness(c.get_sz_dim(tdim)), width(c.get_sz_dim(c.dim)), cov_thickness(0.125*thickness), indent(0.02*width);
 	cube_t bot(c), top(c), spine(c), pages(c), cover(c);
@@ -1471,14 +1472,14 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
 	}
 	if (draw_cover_as_small || inc_lg) { // draw large faces: outside faces of covers and spine
-		rgeom_mat_t &mat(get_untextured_material(0, 0, draw_cover_as_small)); // unshadowed, since shadows are too small to have much effect
+		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, draw_cover_as_small));
 		unsigned const qv_start(mat.quad_verts.size());
 		mat.add_cube_to_verts_untextured(c, color, (extra_skip_faces | ~(sides_mask | spine_mask))); // untextured
 		rotate_verts(mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
 	}
 	if (draw_cover_as_small || inc_sm) { // draw small faces: insides of covers, edges, and pages
-		rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, since shadows are too small to have much effect
+		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, 1));
 		unsigned const qv_start(mat.quad_verts.size());
 		mat.add_cube_to_verts_untextured(bot,   color, (extra_skip_faces | EF_Z1 | ~get_face_mask(tdim, 0))); // untextured, skip bottom face
 		mat.add_cube_to_verts_untextured(top,   color, (extra_skip_faces | (upright ? EF_Z1 : 0) | ~get_face_mask(tdim, 1))); // untextured, skip top face, skip bottom face if upright
