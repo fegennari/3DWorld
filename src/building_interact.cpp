@@ -1257,7 +1257,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE)          continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED   && (i->flags & RO_FLAG_TAKEN3))     continue; // can only take pillow, sheets, and mattress - not the frame
 			if (i->type == TYPE_SHELVES && (i->flags & RO_FLAG_EXPANDED)) continue; // shelves are already expanded, can no longer select this object
-			if (i->drawer_flags)                                          continue; // can't take if any drawers are open (applies to nightstand)
+			if ((i->type == TYPE_NIGHTSTAND || i->type == TYPE_DRESSER || i->type == TYPE_DESK) && i->drawer_flags) continue; // can't take if any drawers are open
 			if (object_has_something_on_it(*i,       obj_vect))           continue; // can't remove a table, etc. that has something on it
 			if (object_has_something_on_it(*i, other_obj_vect))           continue; // check the other one as well
 			if (building.check_for_wall_ceil_floor_int(at_pos, p1c))      continue; // skip if it's on the other side of a wall, ceiling, or floor
