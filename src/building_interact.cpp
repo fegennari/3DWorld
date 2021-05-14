@@ -1432,7 +1432,8 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	}
 	else if (obj.can_use()) { // active with either use_object or fire key
 		if (obj.type == TYPE_TPROLL) {
-			if (!apply_toilet_paper(player_pos, cview_dir, 0.5*obj.dz())) return 0;
+			point const dest(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
+			if (!apply_toilet_paper(dest, cview_dir, 0.5*obj.dz())) return 0;
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_SPRAYCAN || obj.type == TYPE_MARKER) { // spraypaint or marker
@@ -1443,7 +1444,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			if ((tfticks - last_use_time) < 0.5*TICKS_PER_SECOND) return 0; // half second delay
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
 			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
-			if (!get_zval_of_floor(dest, half_width, dest.z)) return 0; // no suitable floor found
+			if (!get_zval_for_obj_placement(dest, half_width, dest.z)) return 0; // no suitable placement found
 			obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 			obj.flags |= RO_FLAG_TAKEN1;
 			if (!interior->room_geom->add_room_object(obj, *this)) return 0;
@@ -1644,6 +1645,26 @@ bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) 
 	}
 	return 0; // no suitable floor found
 }
+bool building_t::get_zval_for_obj_placement(point const &pos, float radius, float &zval) const {
+	float const start_zval(pos.z);
+	if (!get_zval_of_floor(pos, radius, zval)) return 0; // if there's no floor, then there's probably no object to place on either
+	if (!has_room_geom()) return 1; // probably can't get here
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+		if (i->type != TYPE_TABLE && i->type != TYPE_DESK && i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND &&
+			i->type != TYPE_COUNTER && i->type != TYPE_KSINK && i->type != TYPE_BRSINK && /*i->type != TYPE_BED &&*/
+			i->type != TYPE_BOX && i->type != TYPE_KEYBOARD && i->type != TYPE_BOOK) continue; // can't place on this object type
+		if (i->z2() < zval || i->z2() > start_zval) continue; // below the floor or above the object's starting position
+		if (!i->contains_pt_xy(pos)) continue; // center of mass not contained
+		if (i->shape == SHAPE_CYLIN) {
+			if (!dist_xy_less_than(pos, i->get_cube_center(), i->get_radius())) continue; // round table
+		}
+		else {assert(i->shape != SHAPE_SPHERE);} // SHAPE_CUBE, SHAPE_TALL, SHAPE_SHORT are okay; others don't make sense
+		zval = i->z2() + 0.0005*get_window_vspace(); // place on top of this object, with a tiny bias to prevent z-fighting
+	} // for i
+	return 1;
+}
 
 bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) const {
 	// for now, just drop a square of TP on the floor; could do better; should the TP roll shrink in size as this is done?
@@ -1651,7 +1672,7 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	if (dist_xy_less_than(pos, last_tp_pos, 1.5*half_width)) return 0; // too close to prev pos
 	last_tp_pos = pos;
 	float zval(pos.z);
-	if (!get_zval_of_floor(pos, half_width, zval)) return 0; // no suitable floor found
+	if (!get_zval_for_obj_placement(pos, half_width, zval)) return 0; // no suitable placement found
 	if (this != tp_bldg) {tp_qbd.clear(); tp_bldg = this;} // TP switches to this building
 	vector3d d1(dir.x, dir.y, 0.0);
 	if (d1 == zero_vector) {d1 = plus_x;} else {d1.normalize();}

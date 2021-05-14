@@ -1026,6 +1026,7 @@ private:
 	bool apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) const;
 	void register_button_event(room_object_t const &button);
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
+	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval) const;
 	void add_blood_decal(point const &pos) const;
 public:
 	// ray queries
