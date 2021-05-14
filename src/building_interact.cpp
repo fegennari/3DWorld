@@ -88,11 +88,10 @@ bool building_t::toggle_room_light(point const &closest_to) { // Note: called by
 }
 
 void building_t::toggle_light_object(room_object_t const &light) {
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	bool updated(0);
 
-	for (auto i = objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
 		if (i->is_light_type() && i->room_id == light.room_id && i->z1() == light.z1()) { // Note: closet light should have a different z1 that should not match the room lights
 			i->toggle_lit_state(); // Note: doesn't update indir lighting
 			if (i->type == TYPE_LAMP) continue; // lamps don't affect room object ambient lighting, and don't require regenerating the vertex data, so skip the step below
@@ -110,12 +109,11 @@ void building_t::toggle_light_object(room_object_t const &light) {
 bool building_t::set_room_light_state_to(room_t const &room, float zval, bool make_on) { // called by AI people
 	if (!has_room_geom()) return 0; // error?
 	if (room.is_hallway)  return 0; // don't toggle lights for hallways, which can have more than one light
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	float const window_vspacing(get_window_vspace());
 	bool updated(0);
 
-	for (auto i = objs.begin(); i != objs_end; ++i) {
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_LIGHT) continue; // not a light (excludes lamps)
 		if (i->flags & (RO_FLAG_IN_CLOSET | RO_FLAG_IN_ELEV)) continue; // skip lights in closets or elevators, these can only be toggled by the player
 		if (i->z1() < zval || i->z1() > (zval + window_vspacing) || !room.contains_cube_xy(*i)) continue; // light is on the wrong floor or in the wrong room
@@ -128,12 +126,11 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state) {
 	assert(has_room_geom());
 	float const light_intensity(get_room(room_id).light_intensity);
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	float const obj_zmin(light_z2 - get_window_vspace()); // get_floor_thickness()?
 	bool was_updated(0);
 
-	for (auto i = objs.begin(); i != objs_end; ++i) {
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->room_id != room_id || i->z1() < obj_zmin || i->z1() > light_z2) continue; // wrong room or floor
 		if (i->is_obj_model_type()) continue; // light_amt currently does not apply to 3D models; should it?
 
@@ -1536,12 +1533,11 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		}
 	}
 	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
 	bool walls_blocked(0);
 
-	for (auto i = objs.begin(); i != objs_end; ++i) {
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
  		if ((is_wall && (i->type == TYPE_PICTURE || i->type == TYPE_WBOARD || i->type == TYPE_MIRROR)) || (is_floor && (i->type == TYPE_RUG || i->type == TYPE_FLOORING))) {
 			if (line_int_cube_get_t(pos, pos2, *i, tmin)) {target = *i;} // Note: return value is ignored, we only need to update tmin and target; normal should be unchanged
 		}

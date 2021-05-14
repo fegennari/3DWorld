@@ -103,11 +103,10 @@ bool building_t::find_mirror_in_room(unsigned room_id, vector3d const &xlate, bo
 	assert(interior);
 	point camera_bs(camera_pdu.pos - xlate);
 	maybe_inv_rotate_point(camera_bs); // rotate camera pos into building space
-	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	float const camera_z1(camera_bs.z - CAMERA_RADIUS), camera_z2(camera_bs.z + CAMERA_RADIUS);
 
-	for (auto i = objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
+	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // see if that room contains a mirror
 		if (i->room_id != room_id || i->type != TYPE_MIRROR) continue; // wrong room, or not a mirror
 		if (i->z1() > camera_z2   || i->z2() < camera_z1)    continue; // wrong floor
 		// Note: we could probably return 0 rather than continuing after this point, but that may change if rooms with multiple mirrors are enabled
