@@ -1661,15 +1661,16 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_TABLE && i->type != TYPE_DESK && i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND &&
 			i->type != TYPE_COUNTER && i->type != TYPE_KSINK && i->type != TYPE_BRSINK && i->type != TYPE_BED &&
-			i->type != TYPE_BOX && i->type != TYPE_KEYBOARD && i->type != TYPE_BOOK) continue; // can't place on this object type
+			i->type != TYPE_BOX && i->type != TYPE_CRATE && i->type != TYPE_KEYBOARD && i->type != TYPE_BOOK) continue; // can't place on this object type
 		if (!i->contains_pt_xy(pos)) continue; // center of mass not contained
 		cube_t c(*i);
 
 		if (i->type == TYPE_BED) {
-			cube_t cubes[6];
+			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 			get_bed_cubes(*i, cubes);
+			if (!cubes[3].contains_pt_xy(pos)) continue; // check again
+			if (cubes[1].contains_pt_xy_exp(pos, radius) || cubes[2].contains_pt_xy_exp(pos, radius)) continue; // intersects the head or foot, skip
 			c = cubes[3]; // mattress
-			if (!c.contains_pt_xy(pos)) continue; // check again
 		}
 		if (c.z2() < zval || c.z2() > start_zval) continue; // below the floor or above the object's starting position
 
