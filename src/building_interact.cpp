@@ -1180,7 +1180,8 @@ void building_t::register_player_enter_building() const {
 	// nothing to do yet
 }
 void building_t::register_player_exit_building() const {
-	player_inventory.collect_items();
+	// only collect items in gameplay mode where there's a risk the player can lose them; otherwise, let the player carry items between buildings
+	if (in_building_gameplay_mode()) {player_inventory.collect_items();}
 }
 
 bool has_cube_line_coll(point const &p1, point const &p2, vect_cube_t const &cubes) {
