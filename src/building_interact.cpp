@@ -1659,15 +1659,24 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (i->type != TYPE_TABLE && i->type != TYPE_DESK && i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND &&
-			i->type != TYPE_COUNTER && i->type != TYPE_KSINK && i->type != TYPE_BRSINK && /*i->type != TYPE_BED &&*/
+			i->type != TYPE_COUNTER && i->type != TYPE_KSINK && i->type != TYPE_BRSINK && i->type != TYPE_BED &&
 			i->type != TYPE_BOX && i->type != TYPE_KEYBOARD && i->type != TYPE_BOOK) continue; // can't place on this object type
-		if (i->z2() < zval || i->z2() > start_zval) continue; // below the floor or above the object's starting position
 		if (!i->contains_pt_xy(pos)) continue; // center of mass not contained
+		cube_t c(*i);
+
+		if (i->type == TYPE_BED) {
+			cube_t cubes[6];
+			get_bed_cubes(*i, cubes);
+			c = cubes[3]; // mattress
+			if (!c.contains_pt_xy(pos)) continue; // check again
+		}
+		if (c.z2() < zval || c.z2() > start_zval) continue; // below the floor or above the object's starting position
+
 		if (i->shape == SHAPE_CYLIN) {
 			if (!dist_xy_less_than(pos, i->get_cube_center(), i->get_radius())) continue; // round table
 		}
 		else {assert(i->shape != SHAPE_SPHERE);} // SHAPE_CUBE, SHAPE_TALL, SHAPE_SHORT are okay; others don't make sense
-		zval = i->z2() + 0.0005*get_window_vspace(); // place on top of this object, with a tiny bias to prevent z-fighting
+		zval = c.z2() + 0.0005*get_window_vspace(); // place on top of this object, with a tiny bias to prevent z-fighting
 	} // for i
 	return 1;
 }
