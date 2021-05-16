@@ -1474,7 +1474,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	unsigned const sides_mask(upright ? get_skip_mask_for_xy(tdim) : (is_held ? EF_Z12 : EF_Z2)), spine_mask(~get_face_mask(c.dim, !c.dir)); // masks of faces to draw
 	unsigned const skip_faces(extra_skip_faces | ((tilt_angle == 0.0) ? EF_Z1 : 0) | sides_mask);
 
-	if (z_rot_angle == 0.0 && !from_drawer && !upright && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
+	if (z_rot_angle == 0.0 && (c.flags & RO_FLAG_RAND_ROT) && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
 		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
 	}
 	if (draw_cover_as_small || inc_lg) { // draw large faces: outside faces of covers and spine

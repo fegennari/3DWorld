@@ -949,6 +949,7 @@ public:
 					co.y2() = co.y1() + dx;
 				}
 				co.dim = co.dir = 0;
+				co.flags &= ~RO_FLAG_RAND_ROT; // remove the rotate bit
 			}
 			if (prev_was_interactive && !cur_is_interactive) {swap(carried[carried.size()-2], carried.back());} // move the prev interactive object to the back
 			if (bldg_obj_types[obj.type].capacity > 0) {last_item_use_count = 0;} // limited use object, reset use count

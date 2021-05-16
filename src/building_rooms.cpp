@@ -1448,7 +1448,7 @@ void building_t::place_book_on_obj(rand_gen_t rgen, room_object_t const &place_o
 	book.z2() += book_sz*rgen.rand_uniform(0.1, 0.3);
 	colorRGBA const color(book_colors[rgen.rand() % NUM_BOOK_COLORS]);
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CUBE, color); // Note: invalidates place_on reference
+	objs.emplace_back(book, TYPE_BOOK, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CUBE, color); // Note: invalidates place_on reference
 	set_obj_id(objs);
 }
 
