@@ -2072,6 +2072,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
+	add_extra_obj_slots();
 	add_wall_and_door_trim();
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
 	add_exterior_door_signs(rgen);
@@ -2083,6 +2084,19 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	for (unsigned i = 0; i < 3; ++i) {wood_color[i] = luminance*WOOD_COLOR[i]*rgen.rand_uniform(0.9, 1.1);}
 	wood_color.set_valid_color();
 	max_eq(wood_color.R, max(wood_color.G, wood_color.B)); // make sure wood isn't blue or green tinted
+}
+
+void building_t::add_extra_obj_slots() {
+	assert(interior);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	unsigned num_slots(0);
+	for (auto i = objs.begin(); i != objs.end(); ++i) {num_slots += (i->type == TYPE_BLOCKER);}
+	if (num_slots >= 20) return;
+	// make sure there are at least 20 blockers that will create free slots when placing books from bookcases
+	float const v(0.01*get_wall_thickness()); // some tiny number
+	point const llc(bcube.get_llc());
+	cube_t const c(llc, llc+vector3d(v, v, v));
+	for (unsigned n = num_slots; n < 20; ++n) {objs.emplace_back(c, TYPE_BLOCKER, 0, 0, 0, (RO_FLAG_INVIS | RO_FLAG_NOCOLL));}
 }
 
 void building_t::add_wall_and_door_trim() { // and window trim
