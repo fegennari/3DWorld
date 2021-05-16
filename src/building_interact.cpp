@@ -1457,9 +1457,19 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			if ((tfticks - last_use_time) < 0.5*TICKS_PER_SECOND) return 0; // half second delay
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
 			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
-			if (!get_zval_for_obj_placement(dest, half_width, dest.z)) return 0; // no suitable placement found
-			obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
+			if (!get_zval_for_obj_placement(dest, half_width, dest.z, 0)) return 0; // no suitable placement found; add_z_bias=0
+			// orient based on the player's primary direction
+			bool const place_dim(fabs(cview_dir.y) < fabs(cview_dir.x));
+
+			if (obj.dim != place_dim) {
+				float const dx(obj.dx()), dy(obj.dy());
+				obj.x2() = obj.x1() + dy;
+				obj.y2() = obj.y1() + dx;
+			}
+			obj.dim    = place_dim;
+			obj.dir    = ((cview_dir[!place_dim] > 0) ^ place_dim);
 			obj.flags |= RO_FLAG_TAKEN1;
+			obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 			if (!interior->room_geom->add_room_object(obj, *this)) return 0;
 			player_inventory.remove_last_item(); // used
 			play_obj_fall_sound(obj, player_pos);
@@ -1658,7 +1668,7 @@ bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) 
 	}
 	return 0; // no suitable floor found
 }
-bool building_t::get_zval_for_obj_placement(point const &pos, float radius, float &zval) const {
+bool building_t::get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const {
 	float const start_zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return 0; // if there's no floor, then there's probably no object to place on either
 	if (!has_room_geom()) return 1; // probably can't get here
@@ -1684,7 +1694,8 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 			if (!dist_xy_less_than(pos, i->get_cube_center(), i->get_radius())) continue; // round table
 		}
 		else {assert(i->shape != SHAPE_SPHERE);} // SHAPE_CUBE, SHAPE_TALL, SHAPE_SHORT are okay; others don't make sense
-		zval = c.z2() + 0.0005*get_window_vspace(); // place on top of this object, with a tiny bias to prevent z-fighting
+		zval = c.z2(); // place on top of this object
+		if (add_z_bias) {zval += 0.0005*get_window_vspace();} // add a tiny bias to prevent z-fighting
 	} // for i
 	return 1;
 }
@@ -1695,7 +1706,7 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	if (dist_xy_less_than(pos, last_tp_pos, 1.5*half_width)) return 0; // too close to prev pos
 	last_tp_pos = pos;
 	float zval(pos.z);
-	if (!get_zval_for_obj_placement(pos, half_width, zval)) return 0; // no suitable placement found
+	if (!get_zval_for_obj_placement(pos, half_width, zval, 1)) return 0; // no suitable placement found; add_z_bias=1
 	if (this != tp_bldg) {tp_qbd.clear(); tp_bldg = this;} // TP switches to this building
 	vector3d d1(dir.x, dir.y, 0.0);
 	if (d1 == zero_vector) {d1 = plus_x;} else {d1.normalize();}
