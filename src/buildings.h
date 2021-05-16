@@ -312,7 +312,7 @@ unsigned const RO_FLAG_OPEN    = 0x20; // open, for elevators, closet doors, and
 unsigned const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 unsigned const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
-unsigned const RO_FLAG_EMISSIVE= 0x0100; // for signs and lights
+unsigned const RO_FLAG_EMISSIVE= 0x0100; // for signs, lights, and phones
 unsigned const RO_FLAG_HANGING = 0x0200; // for signs and blinds
 unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door trim
 unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim

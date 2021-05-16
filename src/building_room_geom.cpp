@@ -571,8 +571,14 @@ void building_room_geom_t::add_money(room_object_t const &c) { // is_small=1
 
 void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1));
-	mat.add_cube_to_verts(c, apply_light_color(c),        zero_vector,  EF_Z12); // sides, no shadows
-	mat.add_cube_to_verts(c, apply_light_color(c, BLACK), zero_vector, ~EF_Z2 ); // top,   no shadows
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector,  EF_Z12); // sides, no shadows
+
+	if (c.flags & RO_FLAG_EMISSIVE) { // top, no shadows, lit
+		tid_nm_pair_t tp;
+		tp.emissive = 1.0; // lit
+		get_material(tp, 0, 0, 1).add_cube_to_verts(c, apply_light_color(c, colorRGBA(0.9, 0.9, 1.0)), zero_vector, ~EF_Z2); // blue-white
+	}
+	else {mat.add_cube_to_verts(c, apply_light_color(c, BLACK), zero_vector, ~EF_Z2);} // top, no shadows, unlit
 }
 
 void add_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat) {
