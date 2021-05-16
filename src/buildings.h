@@ -393,6 +393,7 @@ struct room_object_t : public cube_t {
 	static bool enable_pictures();
 	int get_rug_tid() const;
 	int get_picture_tid() const;
+	int get_tv_tid() const;
 	int get_comp_monitor_tid() const;
 	int get_sheet_tid() const;
 	int get_paper_tid() const;

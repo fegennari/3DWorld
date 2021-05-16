@@ -242,7 +242,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 				else if (i->is_light_type()) {keep = 1;} // room light or lamp
-				else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE) {keep = 1;}
+				else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_TV || i->type == TYPE_MONITOR) {keep = 1;}
 				// open books?
 			}
 			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
@@ -311,6 +311,12 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		else if (obj.type == TYPE_MWAVE) { // beeps
 			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
 			sound_scale = 0.6;
+		}
+		else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
+			if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
+			else {++obj.obj_id;} // toggle on/off, and also change the picture
+			interior->room_geom->clear_static_vbos(); // need to regen object data
+			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
 		}
 		else if (obj.type == TYPE_BUTTON) {
 			if (!(obj.flags & RO_FLAG_IS_ACTIVE)) { // if not already active

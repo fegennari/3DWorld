@@ -76,7 +76,8 @@ bool room_object_t::enable_pictures() {return !global_building_params.picture_ti
 int select_tid_from_list(vector<unsigned> const &tids, unsigned ix) {return (tids.empty() ? -1 : tids[ix % tids.size()]);}
 int room_object_t::get_rug_tid         () const {return select_tid_from_list(global_building_params.rug_tids,     obj_id);}
 int room_object_t::get_picture_tid     () const {return select_tid_from_list(global_building_params.picture_tids, obj_id);}
-int room_object_t::get_comp_monitor_tid() const {return select_tid_from_list(global_building_params.desktop_tids, obj_id);}
+int room_object_t::get_tv_tid          () const {return select_tid_from_list(global_building_params.picture_tids, obj_id/2);} // divide by 2 because even obj_id is turned off
+int room_object_t::get_comp_monitor_tid() const {return select_tid_from_list(global_building_params.desktop_tids, obj_id/2);} // divide by 2 because even obj_id is turned off
 int room_object_t::get_sheet_tid       () const {return select_tid_from_list(global_building_params.sheet_tids,   obj_id);}
 int room_object_t::get_paper_tid       () const {return select_tid_from_list(global_building_params.paper_tids,   obj_id);}
 

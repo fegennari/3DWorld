@@ -2352,7 +2352,7 @@ void building_room_geom_t::add_tv_picture(room_object_t const &c) {
 	screen.z1() += 0.09*c.dz();
 	screen.z2() -= 0.04*c.dz();
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
-	tid_nm_pair_t tex(((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_picture_tid()), 0.0); // computer monitor vs. TV
+	tid_nm_pair_t tex(((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_tv_tid()), 0.0); // computer monitor vs. TV
 	tex.emissive = 1.0;
 	get_material(tex).add_cube_to_verts(screen, WHITE, c.get_llc(), skip_faces, !c.dim, !(c.dim ^ c.dir));
 }
