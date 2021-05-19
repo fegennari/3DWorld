@@ -385,6 +385,7 @@ struct room_object_t : public cube_t {
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
 	bool can_use        () const {return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL || type == TYPE_BOOK);} // excludes dynamic objects
 	bool is_interactive () const {return (has_dstate() || can_use());}
+	bool can_place_onto () const;
 	unsigned get_bottle_type() const {return (obj_id % NUM_BOTTLE_TYPES);}
 	unsigned get_orient () const {return (2*dim + dir);}
 	float get_radius() const;
@@ -585,6 +586,7 @@ struct building_room_geom_t {
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building);
 	room_object_t &get_room_object_by_index(unsigned obj_id);
 	int find_avail_obj_slot() const;
+	void add_expanded_object(room_object_t const &obj);
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
 	void update_dynamic_draw_data() {mats_dynamic.clear();}
 	void create_static_vbos(building_t const &building);

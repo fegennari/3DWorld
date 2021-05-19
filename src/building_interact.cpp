@@ -1410,15 +1410,27 @@ int building_room_geom_t::find_avail_obj_slot() const {
 	}
 	return -1; // no slot found
 }
-
+void building_room_geom_t::add_expanded_object(room_object_t const &obj) {
+	for (auto i = expanded_objs.begin(); i != expanded_objs.end(); ++i) {
+		if (i->type == TYPE_BLOCKER) {*i = obj; return;} // found a slot - done
+	}
+	expanded_objs.push_back(obj); // not found - in this case we can add a new object
+}
 bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id, vector3d const &velocity) {
 	assert(obj.type != TYPE_LIGHT && get_room_obj_type(obj).pickup); // currently must be a pickup object, and not a light
-	int const obj_id(find_avail_obj_slot());
-	if (obj_id < 0) return 0; // no slot found
-	room_object_t &added_obj(get_room_object_by_index(obj_id));
-	added_obj = obj; // overwrite with new object
-	if (set_obj_id) {added_obj.obj_id = (uint16_t)(obj.has_dstate() ? allocate_dynamic_state() : obj_id);}
-	if (velocity != zero_vector) {get_dstate(added_obj).velocity = velocity;}
+
+	if (!set_obj_id && (obj.flags & RO_FLAG_WAS_EXP)) { // if object was expanded, and it's not a dynamic object, use an expanded slot (books, etc.)
+		assert(velocity == zero_vector);
+		add_expanded_object(obj);
+	}
+	else {
+		int const obj_id(find_avail_obj_slot());
+		if (obj_id < 0) return 0; // no slot found
+		room_object_t &added_obj(get_room_object_by_index(obj_id));
+		added_obj = obj; // overwrite with new object
+		if (set_obj_id) {added_obj.obj_id = (uint16_t)(obj.has_dstate() ? allocate_dynamic_state() : obj_id);}
+		if (velocity != zero_vector) {get_dstate(added_obj).velocity = velocity;}
+	}
 	update_draw_state_for_room_object(obj, building);
 	return 1;
 }
@@ -1655,6 +1667,11 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	return 1;
 }
 
+bool room_object_t::can_place_onto() const {
+	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
+		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK);
+}
+
 bool building_t::get_zval_of_floor(point const &pos, float radius, float &zval) const {
 	if (!interior) return 0; // error?
 	cube_t cur_bcube;
@@ -1673,12 +1690,11 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	float const start_zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return 0; // if there's no floor, then there's probably no object to place on either
 	if (!has_room_geom()) return 1; // probably can't get here
+	float const z_bias(add_z_bias ? 0.0005*get_window_vspace() : 0.0); // maybe add a tiny bias to prevent z-fighting
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-		if (i->type != TYPE_TABLE && i->type != TYPE_DESK && i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND &&
-			i->type != TYPE_COUNTER && i->type != TYPE_KSINK && i->type != TYPE_BRSINK && i->type != TYPE_BED &&
-			i->type != TYPE_BOX && i->type != TYPE_CRATE && i->type != TYPE_KEYBOARD && i->type != TYPE_BOOK) continue; // can't place on this object type
+		if (!i->can_place_onto())    continue; // can't place on this object type
 		if (!i->contains_pt_xy(pos)) continue; // center of mass not contained
 		cube_t c(*i);
 
@@ -1695,9 +1711,12 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 			if (!dist_xy_less_than(pos, i->get_cube_center(), i->get_radius())) continue; // round table
 		}
 		else {assert(i->shape != SHAPE_SPHERE);} // SHAPE_CUBE, SHAPE_TALL, SHAPE_SHORT are okay; others don't make sense
-		zval = c.z2(); // place on top of this object
-		if (add_z_bias) {zval += 0.0005*get_window_vspace();} // add a tiny bias to prevent z-fighting
+		zval = c.z2() + z_bias; // place on top of this object
 	} // for i
+	for (auto i = interior->room_geom->expanded_objs.begin(); i != interior->room_geom->expanded_objs.end(); ++i) { // check books, etc.
+		if (!i->can_place_onto() || !i->contains_pt_xy(pos) || i->z2() < zval || i->z2() > start_zval) continue; // not a valid placement
+		zval = i->z2() + z_bias; // place on top of this object
+	}
 	return 1;
 }
 

@@ -2072,7 +2072,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
-	add_extra_obj_slots();
+	//add_extra_obj_slots(); // Note: was needed for books on bookcases, but now we're using expanded_objs, so this is no longer needed (except maybe for balls on shelves?)
 	add_wall_and_door_trim();
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
 	add_exterior_door_signs(rgen);

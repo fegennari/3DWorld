@@ -498,9 +498,9 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16
 	mats_small .clear();
 	mats_plants.clear();
-	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
-	add_small_static_objs_to_verts(objs);
+	model_objs .clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(expanded_objs);
+	add_small_static_objs_to_verts(objs);
 	mats_small .create_vbos(building);
 	mats_plants.create_vbos(building);
 }
