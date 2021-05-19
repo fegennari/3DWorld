@@ -1447,10 +1447,10 @@ void building_room_geom_t::add_book_title(string const &title, cube_t const &tit
 }
 
 void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle, unsigned extra_skip_faces, bool no_title, float z_rot_angle) {
-	bool const from_drawer(c.flags & RO_FLAG_WAS_EXP), draw_cover_as_small(from_drawer); // books in drawers or dropped by the player are always drawn as small objects
+	bool const is_held(z_rot_angle != 0.0); // held by the player, and need to draw the bottom
+	bool const from_drawer((c.flags & RO_FLAG_WAS_EXP) && !is_held), draw_cover_as_small(from_drawer); // books in drawers are always drawn as small objects
 	if (draw_cover_as_small && !inc_sm) return; // nothing to draw
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
-	bool const is_held(z_rot_angle != 0.0); // held by the player, and need to draw the bottom
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
 	bool const shadowed(c.flags & RO_FLAG_TAKEN1); // only shadowed if dropped by the player, since otherwise shadows are too small to have much effect

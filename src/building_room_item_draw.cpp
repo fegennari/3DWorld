@@ -666,9 +666,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	else if (c.type == TYPE_BOOK) {
 		static building_room_geom_t tmp_rgeom;
 		float const z_rot_angle(-(atan2(cview_dir.y, cview_dir.x) + PI_TWO));
-		room_object_t c2(c);
-		c2.flags &= ~RO_FLAG_WAS_EXP; // unset expanded flag so that the title and cover are drawn in separate passes so that alpha blending works
-		tmp_rgeom.add_book(c2, 1, 1, 0.0, 0, 0, z_rot_angle);
+		tmp_rgeom.add_book(c, 1, 1, 0.0, 0, 0, z_rot_angle);
 		enable_blend(); // needed for book text
 		tmp_rgeom.mats_static.upload_draw_and_clear(s);
 		tmp_rgeom.mats_small .upload_draw_and_clear(s);
