@@ -1469,7 +1469,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			}
 			obj.dim    = place_dim;
 			obj.dir    = ((cview_dir[!place_dim] > 0) ^ place_dim);
-			obj.flags |= RO_FLAG_TAKEN1;
+			obj.flags |= (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP);
 			obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 			if (!interior->room_geom->add_room_object(obj, *this)) return 0;
 			player_inventory.remove_last_item(); // used

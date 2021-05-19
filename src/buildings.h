@@ -326,7 +326,7 @@ unsigned const RO_FLAG_TAKEN2  = 0x020000; // no bed sheets
 unsigned const RO_FLAG_TAKEN3  = 0x040000; // no bed mattress
 unsigned const RO_FLAG_TAKEN4  = 0x080000; // for future use
 unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves and closets
-unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves, closets, and drawers
+unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves, closets, and drawers, and books
 unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs
 unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
 // object flags, fourth byte

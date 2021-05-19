@@ -1447,7 +1447,7 @@ void building_room_geom_t::add_book_title(string const &title, cube_t const &tit
 }
 
 void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle, unsigned extra_skip_faces, bool no_title, float z_rot_angle) {
-	bool const from_drawer(c.flags & RO_FLAG_WAS_EXP), draw_cover_as_small(from_drawer); // books taken from drawers are always drawn as small objects
+	bool const from_drawer(c.flags & RO_FLAG_WAS_EXP), draw_cover_as_small(from_drawer); // books in drawers or dropped by the player are always drawn as small objects
 	if (draw_cover_as_small && !inc_sm) return; // nothing to draw
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
 	bool const is_held(z_rot_angle != 0.0); // held by the player, and need to draw the bottom
@@ -1546,7 +1546,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		}
 		rotate_verts(mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
-	} // end pages
+	} // end titles
 }
 
 void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale,
