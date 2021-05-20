@@ -1453,7 +1453,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
-	bool const shadowed((c.flags & RO_FLAG_TAKEN1) && !is_held); // only shadowed if dropped by the player, since otherwise shadows are too small to have much effect; skip held objects (don't work)
+	bool const was_dropped(c.flags & RO_FLAG_TAKEN1); // or held
+	bool const shadowed(was_dropped && !is_held); // only shadowed if dropped by the player, since otherwise shadows are too small to have much effect; skip held objects (don't work)
 	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
 	float const thickness(c.get_sz_dim(tdim)), width(c.get_sz_dim(c.dim)), cov_thickness(0.125*thickness), indent(0.02*width);
 	cube_t bot(c), top(c), spine(c), pages(c), cover(c);
@@ -1487,7 +1488,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	if (draw_cover_as_small || inc_sm) { // draw small faces: insides of covers, edges, and pages
 		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, 1));
 		unsigned const qv_start(mat.quad_verts.size());
-		mat.add_cube_to_verts_untextured(bot,   color, (extra_skip_faces | EF_Z1 | ~get_face_mask(tdim, 0))); // untextured, skip bottom face
+		mat.add_cube_to_verts_untextured(bot,   color, (extra_skip_faces | (was_dropped ? 0 : (EF_Z1 | ~get_face_mask(tdim, 0))))); // untextured, skip bottom face if not dropped
 		mat.add_cube_to_verts_untextured(top,   color, (extra_skip_faces | (upright ? EF_Z1 : 0) | ~get_face_mask(tdim, 1))); // untextured, skip top face, skip bottom face if upright
 		mat.add_cube_to_verts_untextured(spine, color, (skip_faces | spine_mask)); // untextured, skip back of spine (drawn as lg geom)
 		mat.add_cube_to_verts_untextured(pages, apply_light_color(c, WHITE), (skip_faces | spine_mask)); // untextured
