@@ -1448,12 +1448,12 @@ void building_room_geom_t::add_book_title(string const &title, cube_t const &tit
 
 void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle, unsigned extra_skip_faces, bool no_title, float z_rot_angle) {
 	bool const is_held(z_rot_angle != 0.0); // held by the player, and need to draw the bottom
-	bool const from_drawer((c.flags & RO_FLAG_WAS_EXP) && !is_held), draw_cover_as_small(from_drawer); // books in drawers are always drawn as small objects
+	bool const draw_cover_as_small((c.flags & RO_FLAG_WAS_EXP) || is_held); // books in drawers, held, or dropped are always drawn as small objects
 	if (draw_cover_as_small && !inc_sm) return; // nothing to draw
 	bool const upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
-	bool const shadowed(c.flags & RO_FLAG_TAKEN1); // only shadowed if dropped by the player, since otherwise shadows are too small to have much effect
+	bool const shadowed((c.flags & RO_FLAG_TAKEN1) && !is_held); // only shadowed if dropped by the player, since otherwise shadows are too small to have much effect; skip held objects (don't work)
 	unsigned const tdim(upright ? !c.dim : 2), hdim(upright ? 2 : !c.dim); // thickness dim, height dim (c.dim is width dim)
 	float const thickness(c.get_sz_dim(tdim)), width(c.get_sz_dim(c.dim)), cov_thickness(0.125*thickness), indent(0.02*width);
 	cube_t bot(c), top(c), spine(c), pages(c), cover(c);

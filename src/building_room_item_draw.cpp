@@ -668,8 +668,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		float const z_rot_angle(-(atan2(cview_dir.y, cview_dir.x) + PI_TWO));
 		tmp_rgeom.add_book(c, 1, 1, 0.0, 0, 0, z_rot_angle);
 		enable_blend(); // needed for book text
-		tmp_rgeom.mats_static.upload_draw_and_clear(s);
-		tmp_rgeom.mats_small .upload_draw_and_clear(s);
+		tmp_rgeom.mats_small.upload_draw_and_clear(s);
 		disable_blend();
 		return;
 	}
