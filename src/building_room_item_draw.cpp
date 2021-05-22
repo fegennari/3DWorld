@@ -35,7 +35,7 @@ void rgeom_mat_t::add_cube_to_verts(cube_t const &c, colorRGBA const &color, poi
 	v.set_c4(color);
 
 	// Note: stolen from draw_cube() with tex coord logic, back face culling, etc. removed
-	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions, drawn as {Z, X, Y}
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max

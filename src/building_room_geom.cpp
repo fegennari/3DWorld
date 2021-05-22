@@ -656,28 +656,35 @@ void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because boxes are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, 1)); // is_small=1
-	unsigned const verts_start(mat.quad_verts.size());
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z1); // skip bottom face (even for stacked box?)
-	assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
+	bool const is_open(c.flags & RO_FLAG_OPEN);
 	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: we don't use all parts of the texture
-	mat.quad_verts[verts_start+0].set_tc(x1, y2); // z (top)
-	mat.quad_verts[verts_start+1].set_tc(x2, y2);
-	mat.quad_verts[verts_start+2].set_tc(x2, y3);
-	mat.quad_verts[verts_start+3].set_tc(x1, y3);
 
-	for (unsigned d = 0; d < 2; ++d) { // for each end
-		unsigned const ix_shift((1 + 2*d)*c.dim); // needed to make sure the up icon actually faces up
-		unsigned ix(verts_start + 4*d + 4);
+	for (unsigned side = 0; side < (1 + is_open); ++side) { // {outside, inside}
+		unsigned const verts_start(mat.quad_verts.size());
+		// skip bottom face (even for stacked box?), top face if open; draw inverted for inside pass
+		cube_t box(c);
+		if (side == 1) {box.expand_by(-0.001*box.get_size());} // slight shrink of inside of box to prevent z-fighting
+		mat.add_cube_to_verts(box, apply_light_color(c), zero_vector, (is_open ? EF_Z2 : EF_Z1), 0, 0, 0, (side == 1));
+		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
+		mat.quad_verts[verts_start+0].set_tc(x1, y2); // z (top or inside bottom)
+		mat.quad_verts[verts_start+1].set_tc(x2, y2);
+		mat.quad_verts[verts_start+2].set_tc(x2, y3);
+		mat.quad_verts[verts_start+3].set_tc(x1, y3);
 
-		for (unsigned e = 0; e < 2; ++e) { // x, y
-			bool const f(c.dim ^ bool(e));
-			mat.quad_verts[ix+((0+ix_shift)&3)].set_tc(x2, (f ? y1 : y2));
-			mat.quad_verts[ix+((1+ix_shift)&3)].set_tc(x3, (f ? y1 : y2));
-			mat.quad_verts[ix+((2+ix_shift)&3)].set_tc(x3, (f ? y2 : y3));
-			mat.quad_verts[ix+((3+ix_shift)&3)].set_tc(x2, (f ? y2 : y3));
-			ix += 8; // skip the other face
-		} // for e
-	} // for d
+		for (unsigned d = 0; d < 2; ++d) { // for each end
+			unsigned const ix_shift((1 + 2*d)*c.dim); // needed to make sure the up icon actually faces up
+			unsigned ix(verts_start + 4*d + 4);
+
+			for (unsigned e = 0; e < 2; ++e) { // x, y
+				bool const f(c.dim ^ bool(e));
+				mat.quad_verts[ix+((0+ix_shift)&3)].set_tc(x2, (f ? y1 : y2));
+				mat.quad_verts[ix+((1+ix_shift)&3)].set_tc(x3, (f ? y1 : y2));
+				mat.quad_verts[ix+((2+ix_shift)&3)].set_tc(x3, (f ? y2 : y3));
+				mat.quad_verts[ix+((3+ix_shift)&3)].set_tc(x2, (f ? y2 : y3));
+				ix += 8; // skip the other face
+			} // for e
+		} // for d
+	} // for side
 }
 
 void building_room_geom_t::add_paint_can(room_object_t const &c) {
@@ -1017,13 +1024,14 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 		glass.z2()  = glass_top;
 		glass.z1() += 0.002*sz.z; // to prevent z-fighting
 		glass.z2() -= 0.002*sz.z; // to prevent z-fighting
+		if (c.flags & RO_FLAG_OPEN) {} // TODO: draw door as open
 		glass.d[d][!dirs[d]] = glass. d[d][ dirs[d]]; // remove overlap with frame
 		glass.d[d][ dirs[d]] = fxy[d].d[d][!dirs[d]];
 		glass.expand_in_dim( d, -0.01*frame_width); // to prevent z-fighting
 		glass.expand_in_dim(!d, -0.20*frame_width);
 		glass_mat.add_cube_to_verts(glass, glass_color, zero_vector, 0, 0, 0, 0, 1); // inside surface, inverted
 		glass_mat.add_cube_to_verts(glass, glass_color, zero_vector, (EF_Z1 | (d ? EF_Y12 : EF_X12))); // outside surface
-	}
+	} // for d
 }
 
 void building_room_geom_t::add_bottle(room_object_t const &c) {
@@ -1477,6 +1485,11 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 
 	if (z_rot_angle == 0.0 && (c.flags & RO_FLAG_RAND_ROT) && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
 		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
+	}
+	if (c.flags & RO_FLAG_OPEN) {
+		assert(!upright);
+		assert(!is_held);
+		// TODO: draw book as open
 	}
 	if (draw_cover_as_small || inc_lg) { // draw large faces: outside faces of covers and spine
 		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, draw_cover_as_small));
