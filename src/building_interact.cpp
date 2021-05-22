@@ -243,7 +243,9 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 				else if (i->is_light_type()) {keep = 1;} // room light or lamp
 				else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_TV || i->type == TYPE_MONITOR) {keep = 1;}
-				// open books?
+				else if (i->type == TYPE_BLINDS && (i->flags & RO_FLAG_HANGING)) {keep = 1;} // hanging/horizontal blinds only for now, since we don't know the width of vertical blinds
+				//else if (i->type == TYPE_BOX && !(i->flags ^= RO_FLAG_OPEN)) {keep = 1;} // box can only be opened once
+				// open TYPE_BOOK/TYPE_SHOWER?
 			}
 			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 			if (!keep) continue;
@@ -273,6 +275,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
 		point const center(obj.xc(), obj.yc(), closest_to.z), local_center(local_to_camera_space(center)); // generate sound from the player height
 		float sound_scale(0.5); // for building sound level
+		bool update_draw_data(0);
 
 		if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
 			gen_sound_thread_safe(SOUND_FLUSH, local_center);
@@ -290,21 +293,21 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		else if (obj.type == TYPE_TPROLL) {
 			if (!(obj.flags & RO_FLAG_HANGING)) {
 				gen_sound_thread_safe(SOUND_FOOTSTEP, local_center, 0.5, 1.5); // could be better
-				interior->room_geom->clear_static_small_vbos(); // need to regen object data
 				obj.flags |= RO_FLAG_HANGING; // pull down the roll
+				update_draw_data = 1;
 			}
 			sound_scale = 0.0; // no sound
 		}
 		else if (obj.type == TYPE_PICTURE) { // tilt the picture
 			obj.flags |= RO_FLAG_RAND_ROT;
 			++obj.item_flags; // choose a different random rotation
-			interior->room_geom->update_draw_state_for_room_object(obj, *this);
+			update_draw_data = 1;
 			gen_sound_thread_safe(SOUND_SLIDING, local_center, 0.25, 2.0); // higher pitch
 			sound_scale = 0.0; // no sound
 		}
 		else if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
 			office_chair_rot_rate += 0.1;
-			obj.flags |= RO_FLAG_ROTATING;
+			obj.flags |= RO_FLAG_ROTATING; // Note: this is a model, no need to regen vertex data
 			gen_sound_thread_safe(SOUND_SQUEAK, local_center, 0.25, 0.5); // lower pitch
 			sound_scale = 0.2;
 		}
@@ -315,27 +318,44 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
 			if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
 			else {++obj.obj_id;} // toggle on/off, and also change the picture
-			interior->room_geom->clear_static_vbos(); // need to regen object data
+			update_draw_data = 1;
 			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
 		}
 		else if (obj.type == TYPE_BUTTON) {
 			if (!(obj.flags & RO_FLAG_IS_ACTIVE)) { // if not already active
 				register_button_event(obj);
-				interior->room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change
+				interior->room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change; don't have to set modified_by_player
 				obj.flags |= RO_FLAG_IS_ACTIVE;
 			}
 		}
-		else {
+		else if (obj.type == TYPE_BLINDS) { // see building_t::add_window_blinds()
+			float const window_v_border(0.94*get_window_v_border()); // border_mult=0.94 to account for the frame
+			float const window_height(floor_spacing*(1.0 - 2.0*window_v_border)), blinds_height(obj.dz());
+			assert(window_height > 0.0);
+			bool const mostly_open(blinds_height < 0.5*window_height);
+			if (mostly_open) {obj.z1() = obj.z2() - floor_spacing*(1.0 - window_v_border) + 0.05*floor_spacing;} // close the blinds
+			else             {obj.z1() = obj.z2() - (1.8*get_wall_thickness() + 0.05*floor_spacing);} // open the blinds
+			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.5);
+			sound_scale      = 0.3;
+			update_draw_data = 1;
+		}
+		else if (obj.type == TYPE_BOOK || obj.type == TYPE_BOX) {
+			obj.flags ^= RO_FLAG_OPEN; // toggle open/close; no sound
+			sound_scale      = 0.0; // no sound
+			update_draw_data = 1;
+		}
+		else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL || obj.type == TYPE_SHOWER) {
 			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
-			interior->room_geom->clear_static_vbos(); // need to regen object data
+			update_draw_data = 1;
 		
 			if (obj.type == TYPE_CLOSET) {
 				interior->room_geom->expand_object(obj); // expand any boxes so that the player can pick them up
-				//interior->room_geom->clear_static_small_vbos(); // no longer needed since closet interior is always drawn
 				sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 			}
 			play_door_open_close_sound(center, obj.is_open(), pitch);
 		}
+		else {assert(0);} // unhandled type
+		if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this);}
 		if (sound_scale > 0.0) {register_building_sound(center, sound_scale);}
 	}
 	else { // interior door
@@ -739,7 +759,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 3, 120.0, 110.0, "dresser"); // Note: can't pick up until drawers can be opened and items removed from them
 	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 60.0,  45.0,  "nightstand");
 	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
-	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 3, 0.0,   0.0,   "closet"); // closets can't be picked up, but they can block a pickup
+	bldg_obj_types[TYPE_CLOSET    ] = bldg_obj_type_t(1, 1, 1, 1, 0, 1, 0.0,   0.0,   "closet"); // closets can't be picked up, but they can block a pickup; marked as large because small objects are not modified
 	bldg_obj_types[TYPE_WALL_TRIM ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "wall trim");
 	bldg_obj_types[TYPE_RAILING   ] = bldg_obj_type_t(1, 0, 0, 1, 0, 2, 0.0,   0.0,   "railing");
 	bldg_obj_types[TYPE_CRATE     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 10.0,  12.0,  "crate"); // should be random value
