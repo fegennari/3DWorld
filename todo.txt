@@ -14,5 +14,8 @@ Cities:
 - Secondary Building roads
 
 Building interaction/gameplay ideas:
-- More throwable/dropable object types
-- Kitchen cabinet doors can be opened
+* Player can open:
+    * books
+    * boxes
+    * shower doors
+* Player can use cell phones
