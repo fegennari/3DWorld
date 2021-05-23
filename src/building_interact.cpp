@@ -1311,6 +1311,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				get_bed_cubes(*i, cubes);
 				obj_bcube = cubes[3]; // check mattress only, since we can only take the mattress, sheets, and pillows
 			}
+			else if (i->is_obj_model_type()) {obj_bcube.expand_by(-0.1*i->get_size());} // since models don't fill their bcubes, shrink them a bit when doing a ray query
 			point p1c(at_pos), p2c(p2);
 			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
 			float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
