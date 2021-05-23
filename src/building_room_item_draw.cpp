@@ -387,7 +387,18 @@ void building_materials_t::create_vbos(building_t const &building) {
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
 }
 void building_materials_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
-	for (iterator m = begin(); m != end(); ++m) {m->draw(s, shadow_only, reflection_pass);}
+	iterator text_mats_start(end());
+
+	// first pass, draw regular materials (excluding text)
+	for (iterator m = begin(); m != end(); ++m) {
+		if (m->tex.tid == FONT_TEXTURE_ID) {
+			if (text_mats_start == end()) {text_mats_start = m;}
+			break; // skip in this pass
+		}
+		m->draw(s, shadow_only, reflection_pass);
+	}
+	// second pass, draw text (if it exists) so that alpha blending works
+	for (auto m = text_mats_start; m != end(); ++m) {m->draw(s, shadow_only, reflection_pass);}
 }
 void building_materials_t::upload_draw_and_clear(shader_t &s) {
 	for (iterator m = begin(); m != end(); ++m) {m->upload_draw_and_clear(s);}
