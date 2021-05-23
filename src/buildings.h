@@ -600,7 +600,7 @@ struct building_room_geom_t {
 		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
-};
+}; // building_room_geom_t
 
 struct elevator_t : public cube_t {
 	bool dim, dir, at_edge, was_called; // door dim/dir

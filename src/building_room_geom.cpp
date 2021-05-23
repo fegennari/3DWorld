@@ -765,15 +765,11 @@ void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsig
 			set_cube_zvals(C, S.z2(), (S.z2() + shelf_clearance*sz_scale*rgen.rand_uniform(0.4, 0.98)));
 			C.expand_by_xy(sz);
 			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-			C.color = gen_box_color(rgen);
-			C.dim   = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
-
-			if (is_house || rgen.rand_bool()) {C.type = TYPE_BOX; objects.push_back(C);}
-			else {
-				C.obj_id = rgen.rand(); // used to select crate texture
-				C.type   = TYPE_CRATE;
-				objects.push_back(C);
-			}
+			C.color  = gen_box_color(rgen);
+			C.dim    = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
+			C.obj_id = rgen.rand(); // used to select crate texture and box contents
+			C.type   = ((is_house || rgen.rand_bool()) ? TYPE_BOX : TYPE_CRATE);
+			objects.push_back(C);
 			cubes.push_back(C);
 		} // for n
 		// add computers; what about monitors?
