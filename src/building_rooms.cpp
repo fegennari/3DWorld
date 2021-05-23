@@ -818,38 +818,45 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 		}
 	}
 	if (is_house && !is_basement && (floor > 0 || rgen.rand_bool())) { // try to add a shower; 50% chance if on first floor; not in basements (due to drawing artifacts)
-		float const shower_height(0.8*floor_spacing), shower_dx(rgen.rand_uniform(0.4, 0.5)*floor_spacing), shower_dy(rgen.rand_uniform(0.4, 0.5)*floor_spacing);
+		float const shower_height(0.8*floor_spacing);
+		float shower_dx(rgen.rand_uniform(0.4, 0.5)*floor_spacing), shower_dy(rgen.rand_uniform(0.4, 0.5)*floor_spacing);
+		bool hdim(shower_dx < shower_dy); // larger dim, ust match handle/door drawing code
 		unsigned const first_corner(rgen.rand() & 3);
 		//cube_t const part(get_part_for_room(room));
-		bool is_ext_wall[2][2] = {0};
+		bool placed_shower(0), is_ext_wall[2][2] = {0};
 		
 		if (!is_basement && has_windows()) { // precompute which walls are exterior, {dim}x{dir}; basement walls are not considered exterior because there are no windows
 			for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);}
 		}
-		for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
-			unsigned const corner_ix((first_corner + n)&3);
-			bool const xdir(corner_ix&1), ydir(corner_ix>>1), dirs[2] = {xdir, ydir};
-			point const corner(room_bounds.d[0][xdir], room_bounds.d[1][ydir], zval); // flush against the wall
-			cube_t c(corner, corner);
-			c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*shower_dx;
-			c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*shower_dy;
-			c.z2() += shower_height; // set height
-			bool is_bad(0);
+		for (unsigned ar = 0; ar < 2; ++ar) { // try both aspect ratios/door sides
+			for (unsigned n = 0; n < 4; ++n) { // try 4 room corners
+				unsigned const corner_ix((first_corner + n)&3);
+				bool const xdir(corner_ix&1), ydir(corner_ix>>1), dirs[2] = {xdir, ydir};
+				point const corner(room_bounds.d[0][xdir], room_bounds.d[1][ydir], zval); // flush against the wall
+				cube_t c(corner, corner);
+				c.d[0][!xdir] += (xdir ? -1.0 : 1.0)*shower_dx;
+				c.d[1][!ydir] += (ydir ? -1.0 : 1.0)*shower_dy;
+				c.z2() += shower_height; // set height
+				bool is_bad(0);
 
-			for (unsigned d = 0; d < 2; ++d) { // check for window intersection
-				// Update: exterior walls aren't drawn in the correct order for glass alpha blend, so skip any exterior walls
-				if (is_ext_wall[!d][dirs[!d]] /*&& is_val_inside_window(part, d, c.d[d][!dirs[d]], get_hspacing_for_part(part, d), get_window_h_border())*/) {is_bad = 1; break;}
-			}
-			if (is_bad) continue;
-			cube_t c2(c); // used for placement tests
-			c2.d[0][!xdir] += (xdir ? -1.0 : 1.0)*0.25*shower_dx;
-			c2.d[1][!ydir] += (ydir ? -1.0 : 1.0)*0.25*shower_dy;
-			if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
-			objs.emplace_back(c,  TYPE_SHOWER,  room_id, xdir, ydir, 0, tot_light_amt);
-			objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
-			placed_obj = 1;
-			break; // done
-		} // for n
+				for (unsigned d = 0; d < 2; ++d) { // check for window intersection
+					// Update: exterior walls aren't drawn in the correct order for glass alpha blend, so skip any exterior walls
+					if (is_ext_wall[!d][dirs[!d]] /*&& is_val_inside_window(part, d, c.d[d][!dirs[d]], get_hspacing_for_part(part, d), get_window_h_border())*/) {is_bad = 1; break;}
+				}
+				if (is_bad) continue;
+				cube_t c2(c); // used for placement tests; extend out by door width on the side that opens, and a small amount on the other side
+				c2.d[0][!xdir] += (xdir ? -1.0 : 1.0)*((!hdim) ? 1.1*shower_dy : 0.2*shower_dx);
+				c2.d[1][!ydir] += (ydir ? -1.0 : 1.0)*(  hdim  ? 1.1*shower_dx : 0.2*shower_dy);
+				if (overlaps_other_room_obj(c2, objs_start) || is_cube_close_to_doorway(c2, room, 0.0, 1)) continue; // bad placement
+				objs.emplace_back(c,  TYPE_SHOWER,  room_id, xdir, ydir, 0, tot_light_amt);
+				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
+				placed_obj = placed_shower = 1;
+				break; // done
+			} // for n
+			if (placed_shower) break; // done
+			swap(shower_dx, shower_dy); // try the other aspect ratio
+			hdim ^= 1;
+		} // for ar
 	}
 	if (is_house) { // place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
 		cube_t place_area_tub(room_bounds);

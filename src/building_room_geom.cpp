@@ -1006,7 +1006,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	metal_mat.add_cylin_to_verts(base_pos,  head_pos, 0.02*radius, 0.10*radius, metal_color, 0, 1); // draw top/wide end only
 	metal_mat.add_cylin_to_verts(start_pos, end_pos,  0.02*radius, 0.02*radius, metal_color, 0, 0); // no ends
 	// add door handle
-	bool const hdim(c.dx() < c.dy()), hdir(dirs[hdim]); // large dim
+	bool const hdim(c.dx() < c.dy()), hdir(dirs[hdim]); // larger dim
 	float const frame_width(fc.dx()), door_width(sz[!hdim]);
 
 	if (!c.is_open()) { // only draw handle if the door is closed; the math to figure out where the handle goes on the open door is complex
