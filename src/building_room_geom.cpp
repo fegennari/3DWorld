@@ -231,11 +231,11 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 4: // book
 	{
-		float const length(rgen.rand_uniform(0.6, 0.9)*min(sz[0], sz[1])), width(rgen.rand_uniform(0.6, 1.0)*length);
+		float const length(rgen.rand_uniform(0.6, 0.9)*min(sz.x, sz.y)), width(rgen.rand_uniform(0.6, 1.0)*length);
 		obj = room_object_t(drawer, TYPE_BOOK, c.room_id, !c.dim, (c.dir ^ c.dim));
 		obj.obj_id = rgen.rand();
 		obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
-		obj.z2()   = (obj.z1() + rgen.rand_uniform(0.1, 0.35)*sz.z);
+		obj.z2()   = (obj.z1() + min(0.3f*width, rgen.rand_uniform(0.1, 0.35)*sz.z));
 		set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
 		break;
 	}
@@ -251,7 +251,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	case 6: // bottle
 	{
 		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
-		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, min(sz[0], sz[1]))), diameter(length*rgen.rand_uniform(0.26, 0.34));
+		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(length*rgen.rand_uniform(0.26, 0.34));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
 		obj.set_as_bottle(rgen.rand());
 		obj.z2() = (obj.z1() + diameter);
@@ -287,7 +287,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	case 9: // spray paint can
 	{
 		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
-		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz[0], sz[1]))), diameter(0.34*length);
+		float const length(rgen.rand_uniform(0.8, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(0.34*length);
 		obj = room_object_t(drawer, TYPE_SPRAYCAN, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN, spcan_colors[rgen.rand() % NUM_SPCAN_COLORS]);
 		obj.z2() = (obj.z1() + diameter);
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
@@ -296,7 +296,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	case 10: // empty
 		break;
 	}
-	obj.flags    |= RO_FLAG_WAS_EXP;
+	obj.flags    |= (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL);
 	obj.light_amt = c.light_amt;
 	return obj;
 }
