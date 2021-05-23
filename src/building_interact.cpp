@@ -350,7 +350,6 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			update_draw_data = 1;
 		}
 		else if (obj.type == TYPE_BOX) {
-			add_box_contents(obj);
 			gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);
 			obj.flags       |= RO_FLAG_OPEN; // mark as open
 			sound_scale      = 0.2;
@@ -369,6 +368,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		else {assert(0);} // unhandled type
 		if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this);}
 		if (sound_scale > 0.0) {register_building_sound(center, sound_scale);}
+		if (obj.type == TYPE_BOX) {add_box_contents(obj);} // must be done last to avoid reference invalidation
 	}
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
@@ -430,7 +430,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 	obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
 	obj.z2()   = (obj.z1() + min(0.3f*width, rgen.rand_uniform(0.1, 0.2)*sz.z));
 	set_rand_pos_for_sz(obj, dim, length, width, rgen);
-	interior->room_geom->expanded_objs.push_back(obj);
+	interior->room_geom->expanded_objs.push_back(obj); // Note: may invalidate the reference to box
 	interior->room_geom->update_draw_state_for_room_object(obj, *this);
 }
 
