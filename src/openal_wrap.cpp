@@ -148,6 +148,7 @@ public:
 		add_new_sound("squeak.wav"     ); // SOUND_SQUEAK
 		add_new_sound("beep.wav"       ); // SOUND_BEEP
 		add_new_sound("flowingwater.wav");// SOUND_SINK
+		add_new_sound("metal_door.wav" ); // SOUND_METAL_DOOR
 		cout << endl;
 
 		// create sources

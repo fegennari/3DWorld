@@ -243,9 +243,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 				else if (i->is_light_type()) {keep = 1;} // room light or lamp
 				else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_TV || i->type == TYPE_MONITOR) {keep = 1;}
-				else if (i->type == TYPE_BLINDS) {keep = 1;}
-				else if (i->type == TYPE_BOX && !(i->flags & RO_FLAG_OPEN)) {keep = 1;} // box can only be opened once
-				// open TYPE_BOOK/TYPE_SHOWER?
+				else if (i->type == TYPE_BLINDS || i->type == TYPE_SHOWER /*|| i->type == TYPE_BOOK*/) {keep = 1;}
+				else if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once
 			}
 			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 			if (!keep) continue;
@@ -301,9 +300,9 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		else if (obj.type == TYPE_PICTURE) { // tilt the picture
 			obj.flags |= RO_FLAG_RAND_ROT;
 			++obj.item_flags; // choose a different random rotation
-			update_draw_data = 1;
 			gen_sound_thread_safe(SOUND_SLIDING, local_center, 0.25, 2.0); // higher pitch
-			sound_scale = 0.0; // no sound
+			sound_scale      = 0.0; // no sound
+			update_draw_data = 1;
 		}
 		else if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
 			office_chair_rot_rate += 0.1;
@@ -318,8 +317,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
 			if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
 			else {++obj.obj_id;} // toggle on/off, and also change the picture
-			update_draw_data = 1;
 			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
+			update_draw_data = 1;
 		}
 		else if (obj.type == TYPE_BUTTON) {
 			if (!(obj.flags & RO_FLAG_IS_ACTIVE)) { // if not already active
@@ -339,6 +338,12 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			sound_scale      = 0.0; // no sound
 			update_draw_data = 1;
 		}
+		else if (obj.type == TYPE_SHOWER) { // shower door
+			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+			gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));
+			sound_scale      = 0.35;
+			update_draw_data = 1;
+		}
 		else if (obj.type == TYPE_BOX) {
 			obj.flags       |= RO_FLAG_OPEN; // mark as open
 			sound_scale      = 0.0; // no sound
@@ -347,13 +352,13 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		}
 		else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL || obj.type == TYPE_SHOWER) {
 			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
-			update_draw_data = 1;
 		
 			if (obj.type == TYPE_CLOSET) {
 				interior->room_geom->expand_object(obj); // expand any boxes so that the player can pick them up
 				sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 			}
 			play_door_open_close_sound(center, obj.is_open(), pitch);
+			update_draw_data = 1;
 		}
 		else {assert(0);} // unhandled type
 		if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this);}
@@ -364,8 +369,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		if (door.is_closed_and_locked() && !player_can_unlock_door()) return 0; // locked
 		if (door.locked && !player_has_room_key()) {door.locked = 0;} // don't lock door when closing, to prevent the player from locking themselves in a room
 		toggle_door_state(door_ix, 1, 1, closest_to.z); // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
+		//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	}
-	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	return 1;
 }
 

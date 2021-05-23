@@ -1009,14 +1009,18 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	// add door handle
 	bool const hdim(c.dx() < c.dy()), hdir(dirs[hdim]); // large dim
 	float const frame_width(fc.dx()), door_width(sz[!hdim]);
-	cube_t handle(c);
-	handle.d[ hdim][ hdir] = c.d[hdim][!hdir]     - (hdir ? -1.0 : 1.0)*(0.19*frame_width + 0.02*sz[hdir]); // place on the glass but slightly offset
-	handle.d[ hdim][!hdir] = handle.d[hdim][hdir] + (hdir ? -1.0 : 1.0)*1.0*frame_width;
-	handle.d[!hdim][0] += 0.20*door_width;
-	handle.d[!hdim][1] -= 0.77*door_width;
-	handle.z1() += 0.48*sz.z;
-	handle.z2() -= 0.42*sz.z;
-	metal_mat.add_cube_to_verts(handle, metal_color, zero_vector, 0); // draw all faces
+
+	if (!c.is_open()) { // only draw handle if the door is closed; the math to figure out where the handle goes on the open door is complex
+		bool const hside(!dirs[!hdim]);
+		cube_t handle(c);
+		handle.d[ hdim][ hdir] = c.d[hdim][!hdir]     - (hdir ? -1.0 : 1.0)*(0.19*frame_width + 0.02*sz[hdir]); // place on the glass but slightly offset
+		handle.d[ hdim][!hdir] = handle.d[hdim][hdir] + (hdir ? -1.0 : 1.0)*1.0*frame_width;
+		handle.d[!hdim][ hside] += (hside ? -1.0 : 1.0)*0.20*door_width;
+		handle.d[!hdim][!hside] -= (hside ? -1.0 : 1.0)*0.77*door_width;
+		handle.z1() += 0.48*sz.z;
+		handle.z2() -= 0.42*sz.z;
+		metal_mat.add_cube_to_verts(handle, metal_color); // draw all faces
+	}
 	// add drain
 	cube_t drain;
 	drain.set_from_point(bottom.get_cube_center());
@@ -1027,17 +1031,35 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	colorRGBA const glass_color(apply_light_color(c, colorRGBA(1.0, 1.0, 1.0, 0.25)));
 	rgeom_mat_t &glass_mat(get_untextured_material(0, 0, 0, 1)); // no shadows; transparent=1
 
-	for (unsigned d = 0; d < 2; ++d) {
-		cube_t glass(fc);
+	for (unsigned d = 0; d < 2; ++d) { // for each dim
+		bool const dir(dirs[d]);
+		cube_t glass(fc); // start from the frame at the corner
 		glass.z1()  = glass_bot;
 		glass.z2()  = glass_top;
 		glass.z1() += 0.002*sz.z; // to prevent z-fighting
 		glass.z2() -= 0.002*sz.z; // to prevent z-fighting
-		if (c.flags & RO_FLAG_OPEN) {} // TODO: draw door as open
-		glass.d[d][!dirs[d]] = glass. d[d][ dirs[d]]; // remove overlap with frame
-		glass.d[d][ dirs[d]] = fxy[d].d[d][!dirs[d]];
+		glass.d[d][!dir] = glass. d[d][ dir]; // corner point; remove overlap with frame
+		glass.d[d][ dir] = fxy[d].d[d][!dir]; // edge near the wall
 		glass.expand_in_dim( d, -0.01*frame_width); // to prevent z-fighting
-		glass.expand_in_dim(!d, -0.20*frame_width);
+		glass.expand_in_dim(!d, -0.20*frame_width); // set thickness
+
+		if (bool(d) != hdim && c.is_open()) { // draw open door
+			bool const odir(dirs[!d]);
+			float const width(glass.get_sz_dim(d)), thickness(glass.get_sz_dim(!d)), delta(width - thickness);
+			glass.d[ d][! dir] -= ( dir ? -1.0 : 1.0)*delta; // shrink width to thickness
+			glass.d[!d][!odir] += (odir ? -1.0 : 1.0)*delta; // expand thickness to width
+			// draw frame part of door
+			float const door_frame_width(0.4*frame_width);
+			cube_t top(glass), bot(glass), side(glass);
+			set_cube_zvals(top, (glass.z2() + 0.01*door_frame_width), (glass.z2() + door_frame_width)); // prevent z-fighting
+			set_cube_zvals(bot, (glass.z1() - door_frame_width), (glass.z1() - 0.01*door_frame_width));
+			side.d[!d][!odir] = top.d[!d][!odir] = bot.d[!d][!odir] = glass.d[!d][!odir] + (odir ? -1.0 : 1.0)*door_frame_width;
+			side.d[!d][ odir] = glass.d[!d][!odir]; // flush with glass on this end
+			rgeom_mat_t &metal_mat2(get_metal_material(1)); // get the metal material again, in case the reference was invaldiated
+			metal_mat2.add_cube_to_verts(top,  metal_color); // draw all faces
+			metal_mat2.add_cube_to_verts(bot,  metal_color); // draw all faces
+			metal_mat2.add_cube_to_verts(side, metal_color, all_zeros, EF_Z12); // skip top and bottom faces
+		}
 		glass_mat.add_cube_to_verts(glass, glass_color, zero_vector, 0, 0, 0, 0, 1); // inside surface, inverted
 		glass_mat.add_cube_to_verts(glass, glass_color, zero_vector, (EF_Z1 | (d ? EF_Y12 : EF_X12))); // outside surface
 	} // for d
