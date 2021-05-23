@@ -416,8 +416,8 @@ void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) 
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
 	vect_cube_t &cubes(get_temp_cubes());
 	room_object_t C(c);
-	C.flags |= RO_FLAG_WAS_EXP;
-	C.type   = TYPE_BOX;
+	C.flags = RO_FLAG_WAS_EXP; // Note: also clears open flag
+	C.type  = TYPE_BOX;
 	vector3d sz;
 	point center;
 
@@ -430,9 +430,10 @@ void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) 
 		set_cube_zvals(C, interior.z1(), (interior.z1() + box_sz*rgen.rand_uniform(0.8, 1.5)));
 		C.expand_by_xy(sz);
 		if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-		C.color = gen_box_color(rgen);
-		C.dim   = rgen.rand_bool();
-		C.dir   = rgen.rand_bool();
+		C.color  = gen_box_color(rgen);
+		C.dim    = rgen.rand_bool();
+		C.dir    = rgen.rand_bool();
+		C.obj_id = n+1; // make it unique so that contents are unique
 		objects.push_back(C);
 		cubes.push_back(C);
 	} // for n
@@ -536,17 +537,18 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color)); // ceiling trim, missing end caps; exterior only
 			} // for d
 		} // for is_side
-	} // end inc_sm
-	if (inc_sm /*&& draw_interior*/) { // Note: now always drawn to avoid recreating all small objects when the player opens/closes a closet door
-		// Note: only for the closets the player has manually opened
+		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door; only for the closets the player has manually opened
 		if (!(c.flags & RO_FLAG_EXPANDED)) { // add boxes if not expanded
 			vector<room_object_t> &objects(get_temp_objects());
 			add_closet_objects(c, objects);
 			add_small_static_objs_to_verts(objects);
 		}
-	}
+	} // end inc_sm
 }
-void building_room_geom_t::expand_closet(room_object_t const &c) {add_closet_objects(c, expanded_objs);}
+void building_room_geom_t::expand_closet(room_object_t const &c) {
+	add_closet_objects(c, expanded_objs);
+	clear_static_small_vbos(); // is this needed?
+}
 
 void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=1
 	get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(c, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
