@@ -1300,6 +1300,7 @@ bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> 
 		if (*i == obj)               continue; // skip self (bcube check)
 		if (obj.type == TYPE_WINE_RACK && obj.contains_pt(i->get_cube_center())) return 1; // check for wine bottles left in wine rack
 		if (i->z1() == obj.z2() && i->intersects_xy(obj))                        return 1; // zval has to match exactly
+		if (obj.type == TYPE_BOX && obj.is_open() && obj.contains_cube(*i))      return 1; // open box with an object inside
 	}
 	return 0;
 }
