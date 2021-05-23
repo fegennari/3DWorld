@@ -2371,7 +2371,7 @@ void building_t::add_window_blinds(cube_t const &window, bool dim, bool dir, uns
 		for (unsigned d = 0; d < 2; ++d) { // left, right
 			cube_t c2(c);
 			c2.d[!dim][!d] = center - (d ? -1.0 : 1.0)*shift_val;
-			objs.emplace_back(c2, TYPE_BLINDS, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // always fully lit
+			objs.emplace_back(c2, TYPE_BLINDS, room_id, dim, dir, (RO_FLAG_NOCOLL | (d ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI)), 1.0); // always fully lit
 		}
 	}
 	else {

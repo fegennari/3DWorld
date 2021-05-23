@@ -314,8 +314,8 @@ unsigned const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
 unsigned const RO_FLAG_EMISSIVE= 0x0100; // for signs, lights, and phones
 unsigned const RO_FLAG_HANGING = 0x0200; // for signs and blinds
-unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door trim
-unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim
+unsigned const RO_FLAG_ADJ_LO  = 0x0400; // for kitchen counters/closets/door trim/blinds
+unsigned const RO_FLAG_ADJ_HI  = 0x0800; // for kitchen counters/closets/door trim/blinds
 unsigned const RO_FLAG_ADJ_BOT = 0x1000; // for door trim
 unsigned const RO_FLAG_ADJ_TOP = 0x2000; // for door trim
 unsigned const RO_FLAG_IS_HOUSE= 0x4000; // used for mirror reflections and shelves
@@ -883,6 +883,7 @@ struct building_t : public building_geom_t {
 	bool toggle_room_light(point const &closest_to);
 	void toggle_light_object(room_object_t const &light);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in);
+	bool adjust_blinds_state(unsigned obj_ix);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);

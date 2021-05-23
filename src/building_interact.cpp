@@ -243,8 +243,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 				else if (i->is_light_type()) {keep = 1;} // room light or lamp
 				else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_TV || i->type == TYPE_MONITOR) {keep = 1;}
-				else if (i->type == TYPE_BLINDS && (i->flags & RO_FLAG_HANGING)) {keep = 1;} // hanging/horizontal blinds only for now, since we don't know the width of vertical blinds
-				//else if (i->type == TYPE_BOX && !(i->flags ^= RO_FLAG_OPEN)) {keep = 1;} // box can only be opened once
+				else if (i->type == TYPE_BLINDS) {keep = 1;}
+				else if (i->type == TYPE_BOX && !(i->flags & RO_FLAG_OPEN)) {keep = 1;} // box can only be opened once
 				// open TYPE_BOOK/TYPE_SHOWER?
 			}
 			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
@@ -329,20 +329,21 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			}
 		}
 		else if (obj.type == TYPE_BLINDS) { // see building_t::add_window_blinds()
-			float const window_v_border(0.94*get_window_v_border()); // border_mult=0.94 to account for the frame
-			float const window_height(floor_spacing*(1.0 - 2.0*window_v_border)), blinds_height(obj.dz());
-			assert(window_height > 0.0);
-			bool const mostly_open(blinds_height < 0.5*window_height);
-			if (mostly_open) {obj.z1() = obj.z2() - floor_spacing*(1.0 - window_v_border) + 0.05*floor_spacing;} // close the blinds
-			else             {obj.z1() = obj.z2() - (1.8*get_wall_thickness() + 0.05*floor_spacing);} // open the blinds
+			if (!adjust_blinds_state(obj_ix)) return 0;
 			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.5);
 			sound_scale      = 0.3;
 			update_draw_data = 1;
 		}
-		else if (obj.type == TYPE_BOOK || obj.type == TYPE_BOX) {
-			obj.flags ^= RO_FLAG_OPEN; // toggle open/close; no sound
+		else if (obj.type == TYPE_BOOK) {
+			obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
 			sound_scale      = 0.0; // no sound
 			update_draw_data = 1;
+		}
+		else if (obj.type == TYPE_BOX) {
+			obj.flags       |= RO_FLAG_OPEN; // mark as open
+			sound_scale      = 0.0; // no sound
+			update_draw_data = 1;
+			//interior->room_geom->expanded_objs; // TODO: add contained item
 		}
 		else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL || obj.type == TYPE_SHOWER) {
 			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
@@ -365,6 +366,43 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		toggle_door_state(door_ix, 1, 1, closest_to.z); // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
 	}
 	//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
+	return 1;
+}
+
+bool building_t::adjust_blinds_state(unsigned obj_ix) {
+	auto &objs(interior->room_geom->objs);
+	auto &obj(objs[obj_ix]);
+
+	if (obj.flags & RO_FLAG_HANGING) { // hanging horizontal blinds
+		float const floor_spacing(get_window_vspace()), window_v_border(0.94*get_window_v_border()); // border_mult=0.94 to account for the frame
+		float const window_height(floor_spacing*(1.0 - 2.0*window_v_border)), blinds_height(obj.dz());
+		assert(window_height > 0.0);
+		bool const mostly_open(blinds_height < 0.5*window_height);
+		if (mostly_open) {obj.z1() = obj.z2() - floor_spacing*(1.0 - window_v_border) + 0.05*floor_spacing;} // close the blinds fully
+		else             {obj.z1() = obj.z2() - (1.8*get_wall_thickness() + 0.05*floor_spacing);} // open the blinds
+	}
+	else { // vertical blinds - in pairs
+		assert(obj.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)); // should have had one of these flags set
+		bool const move_dir(obj.flags & RO_FLAG_ADJ_HI);
+		unsigned other_blinds_ix(0);
+
+		if (move_dir) { // this is the left side blind, the other side is to the right in the next slot
+			assert(obj_ix+1 < objs.size());
+			other_blinds_ix = obj_ix + 1;
+		}
+		else { // this is the right side blind, the other side is to the left in the previous slot
+			assert(obj_ix > 0);
+			other_blinds_ix = obj_ix - 1;
+		}
+		if (objs[other_blinds_ix].type != TYPE_BLINDS) {assert(0); return 0;} // was taken, etc.
+		float const fixed_end(obj.d[!obj.dim][!move_dir]), width(obj.get_sz_dim(!obj.dim));
+		float const window_center(0.5*(fixed_end + objs[other_blinds_ix].d[!obj.dim][move_dir])); // center of the span of the pair of left/right blinds
+		bool const mostly_open(width < 0.5*fabs(fixed_end - window_center));
+		float &move_edge(obj.d[!obj.dim][move_dir]);
+		if (mostly_open) {move_edge = window_center;} // close the blinds fully
+		else             {move_edge = 0.2*window_center + 0.8*fixed_end;} // open the blinds
+	}
+	assert(obj.is_strictly_normalized());
 	return 1;
 }
 
@@ -774,7 +812,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_COMPUTER  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 500.0, 20.0,  "computer");
 	bldg_obj_types[TYPE_MWAVE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 100.0, 50.0,  "microwave oven");
 	bldg_obj_types[TYPE_PAPER     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.0,   "sheet of paper"); // will have a random value that's often 0
-	bldg_obj_types[TYPE_BLINDS    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 0.0,   0.0,   "window blinds");
+	bldg_obj_types[TYPE_BLINDS    ] = bldg_obj_type_t(0, 0, 0, 0, 0, 1, 50.0,  7.0,   "window blinds");
 	bldg_obj_types[TYPE_PEN       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.10,  0.02,  "pen");
 	bldg_obj_types[TYPE_PENCIL    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.10,  0.02,  "pencil");
 	bldg_obj_types[TYPE_PAINTCAN  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 12.0,  8.0,   "paint can");
@@ -825,6 +863,9 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 25.0, 5.0, "plant"); // first item to take
 	}
 	if (obj.type == TYPE_COMPUTER && (obj.flags & RO_FLAG_WAS_EXP)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 100.0, 20.0, "old computer");}
+	if (obj.type == TYPE_BOX   && (obj.flags & RO_FLAG_OPEN)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0, 0.05, "opened box"  );}
+	if (obj.type == TYPE_CRATE && (obj.flags & RO_FLAG_OPEN)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0, 0.5,  "opened crate");}
+
 	if (obj.type == TYPE_LG_BALL) {
 		bldg_obj_type_t type(get_room_obj_type(obj));
 		type.name = ((obj.item_flags & 1) ? "basketball" : "soccer ball"); // use a more specific type name; all other fields are shared across balls
