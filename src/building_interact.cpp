@@ -228,42 +228,46 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		} // for i
 	}
 	if (interior->room_geom) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
-		vector<room_object_t> &objs(interior->room_geom->objs);
-		auto objs_end(interior->room_geom->get_stairs_start()); // skip stairs and elevators
+		vector<room_object_t> &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
 		point const query_ray_end(closest_to + dmax*in_dir);
 
-		// TODO: also check interior->room_geom->expanded_objs
-		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player
-			bool keep(0);
-			if (i->type == TYPE_CLOSET && i->is_small_closet() && in_dir.z < 0.5) {keep = 1;} // closet with small door, door can be opened; not looking up at the light
-			else if (!player_in_closet) {
-				if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
-				else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE)  {keep = 1;} // cube bathroom stall can be opened
-				else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
-				else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
-				else if (i->is_light_type()) {keep = 1;} // room light or lamp
-				else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_TV || i->type == TYPE_MONITOR) {keep = 1;}
-				else if (i->type == TYPE_BLINDS || i->type == TYPE_SHOWER /*|| i->type == TYPE_BOOK*/) {keep = 1;}
-				else if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once
-			}
-			else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
-			if (!keep) continue;
-			point center;
+		for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
+			auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
+			unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
+			auto objs_end((vect_id == 1) ? expanded_objs.end() : interior->room_geom->get_stairs_start()); // skip stairs and elevators
 
-			if (i->type == TYPE_CLOSET) {
-				center = i->get_cube_center();
-				center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
-			}
-			else {center = i->closest_pt(closest_to);}
-			if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
-			float const dist_sq(p2p_dist_sq(closest_to, center));
-			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq) continue; // not the closest
-			if (!i->closest_dist_less_than(closest_to, dmax)) continue; // too far
-			if (in_dir != zero_vector && !i->line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
-			closest_dist_sq = dist_sq; obj_ix = (i - objs.begin());
-			is_obj = 1;
-		} // for i
+			for (auto i = obj_vect.begin(); i != objs_end; ++i) {
+				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player
+				bool keep(0);
+				if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
+				else if (i->type == TYPE_CLOSET && i->is_small_closet() && in_dir.z < 0.5) {keep = 1;} // closet with small door, door can be opened; not looking up at the light
+				else if (!player_in_closet) {
+					if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
+					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE)  {keep = 1;} // cube bathroom stall can be opened
+					else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
+					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
+					else if (i->is_light_type()) {keep = 1;} // room light or lamp
+					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_TV || i->type == TYPE_MONITOR) {keep = 1;}
+					else if (i->type == TYPE_BLINDS || i->type == TYPE_SHOWER /*|| i->type == TYPE_BOOK*/) {keep = 1;}
+				}
+				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
+				if (!keep) continue;
+				point center;
+
+				if (i->type == TYPE_CLOSET) {
+					center = i->get_cube_center();
+					center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
+				}
+				else {center = i->closest_pt(closest_to);}
+				if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
+				float const dist_sq((i->type == TYPE_CLOSET) ? dmax*dmax : p2p_dist_sq(closest_to, center)); // use dmax for closets to prioritize objects inside closets
+				if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq) continue; // not the closest
+				if (!i->closest_dist_less_than(closest_to, dmax)) continue; // too far
+				if (in_dir != zero_vector && !i->line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
+				closest_dist_sq = dist_sq; obj_ix = (i - obj_vect.begin()) + obj_id_offset;
+				is_obj = 1;
+			} // for i
+		} // for vect_id
 		if (!player_in_closet) {
 			float const drawer_dist((closest_dist_sq == 0.0) ? 2.5*CAMERA_RADIUS : sqrt(closest_dist_sq));
 			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist, 0)) return 0; // drawer is closer - open or close it
@@ -271,7 +275,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		if (closest_dist_sq == 0.0) return 0; // no door or object found
 	}
 	if (is_obj) { // closet, toilet, bathroom stall, office chair, or toilet paper roll
-		auto &obj(interior->room_geom->objs[obj_ix]);
+		auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
 		point const center(obj.xc(), obj.yc(), closest_to.z), local_center(local_to_camera_space(center)); // generate sound from the player height
 		float sound_scale(0.5); // for building sound level
@@ -377,8 +381,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 }
 
 bool building_t::adjust_blinds_state(unsigned obj_ix) {
-	auto &objs(interior->room_geom->objs);
-	auto &obj(objs[obj_ix]);
+	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 
 	if (obj.flags & RO_FLAG_HANGING) { // hanging horizontal blinds
 		float const floor_spacing(get_window_vspace()), window_v_border(0.94*get_window_v_border()); // border_mult=0.94 to account for the frame
@@ -394,16 +397,16 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 		unsigned other_blinds_ix(0);
 
 		if (move_dir) { // this is the left side blind, the other side is to the right in the next slot
-			assert(obj_ix+1 < objs.size());
 			other_blinds_ix = obj_ix + 1;
 		}
 		else { // this is the right side blind, the other side is to the left in the previous slot
 			assert(obj_ix > 0);
 			other_blinds_ix = obj_ix - 1;
 		}
-		if (objs[other_blinds_ix].type != TYPE_BLINDS) {assert(0); return 0;} // was taken, etc.
+		auto &other_blinds(interior->room_geom->get_room_object_by_index(other_blinds_ix));
+		if (other_blinds.type != TYPE_BLINDS) {assert(0); return 0;} // was taken, etc.
 		float const fixed_end(obj.d[!obj.dim][!move_dir]), width(obj.get_sz_dim(!obj.dim));
-		float const window_center(0.5*(fixed_end + objs[other_blinds_ix].d[!obj.dim][move_dir])); // center of the span of the pair of left/right blinds
+		float const window_center(0.5*(fixed_end + other_blinds.d[!obj.dim][move_dir])); // center of the span of the pair of left/right blinds
 		bool const mostly_open(width < 0.5*fabs(fixed_end - window_center));
 		float &move_edge(obj.d[!obj.dim][move_dir]);
 		if (mostly_open) {move_edge = window_center;} // close the blinds fully
@@ -1318,11 +1321,11 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 	point const p2(at_pos + in_dir*range);
 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
-		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
-		auto const &other_obj_vect((vect_id == 1) ? objs : expanded_objs);
-		unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0); // treat {objs + expanded_objs} as a single contiguous range
+		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs), &other_obj_vect((vect_id == 1) ? objs : expanded_objs);
+		unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
+		auto objs_end((vect_id == 1) ? expanded_objs.end() : get_stairs_start()); // skip stairs and elevators
 
-		for (auto i = obj_vect.begin(); i != obj_vect.end(); ++i) {
+		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
 			assert(i->type < NUM_ROBJ_TYPES);
 			if (!bldg_obj_types[i->type].pickup) continue; // this object type can't be picked up
 			cube_t obj_bcube(*i);
