@@ -232,6 +232,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		auto objs_end(interior->room_geom->get_stairs_start()); // skip stairs and elevators
 		point const query_ray_end(closest_to + dmax*in_dir);
 
+		// TODO: also check interior->room_geom->expanded_objs
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player
 			bool keep(0);
@@ -345,10 +346,11 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			update_draw_data = 1;
 		}
 		else if (obj.type == TYPE_BOX) {
+			add_box_contents(obj);
+			gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);
 			obj.flags       |= RO_FLAG_OPEN; // mark as open
-			sound_scale      = 0.0; // no sound
+			sound_scale      = 0.2;
 			update_draw_data = 1;
-			//interior->room_geom->expanded_objs; // TODO: add contained item
 		}
 		else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL || obj.type == TYPE_SHOWER) {
 			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
@@ -405,10 +407,28 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 		bool const mostly_open(width < 0.5*fabs(fixed_end - window_center));
 		float &move_edge(obj.d[!obj.dim][move_dir]);
 		if (mostly_open) {move_edge = window_center;} // close the blinds fully
-		else             {move_edge = 0.2*window_center + 0.8*fixed_end;} // open the blinds
+		else             {move_edge = 0.25*window_center + 0.75*fixed_end;} // open the blinds
 	}
 	assert(obj.is_strictly_normalized());
 	return 1;
+}
+
+void building_t::add_box_contents(room_object_t const &box) {
+	// TODO: add random types of contained items (book, bottles, ball, paint can, spraypaint, toilet paper, etc.
+	rand_gen_t rgen;
+	box.set_rand_gen_state(rgen);
+	cube_t c(box);
+	c.expand_by(-0.001*box.get_size()); // shrink to interior area
+	vector3d const sz(c.get_size());
+	bool const dim(sz.x < sz.y); // long dim
+	float const length(rgen.rand_uniform(0.7, 0.95)*sz[dim]), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
+	room_object_t obj(c, TYPE_BOOK, box.room_id, !dim, rgen.rand_bool(), (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL));
+	obj.obj_id = rgen.rand();
+	obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
+	obj.z2()   = (obj.z1() + min(0.3f*width, rgen.rand_uniform(0.1, 0.2)*sz.z));
+	set_rand_pos_for_sz(obj, dim, length, width, rgen);
+	interior->room_geom->expanded_objs.push_back(obj);
+	interior->room_geom->update_draw_state_for_room_object(obj, *this);
 }
 
 void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval) { // called by the player or AI

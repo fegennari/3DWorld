@@ -180,6 +180,8 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 }
 
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen) {
+	assert(c.get_sz_dim( dim) >= length);
+	assert(c.get_sz_dim(!dim) >= width );
 	c.d[ dim][0] = rgen.rand_uniform(c.d[ dim][0], (c.d[ dim][1] - length));
 	c.d[ dim][1] = c.d[ dim][0] + length;
 	c.d[!dim][0] = rgen.rand_uniform(c.d[!dim][0], (c.d[!dim][1] - width));
@@ -656,10 +658,9 @@ void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because boxes are small, but because they're only added to windowless rooms and can't be easily seen from outside a building
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, 1)); // is_small=1
-	bool const is_open(c.flags & RO_FLAG_OPEN);
 	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: we don't use all parts of the texture
 	unsigned verts_start(mat.quad_verts.size());
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, (is_open ? EF_Z2 : EF_Z1)); // skip bottom face (even for stacked box?)
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, (c.is_open() ? EF_Z2 : EF_Z1)); // skip bottom face (even for stacked box?)
 	assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
 	mat.quad_verts[verts_start+0].set_tc(x1, y2); // z (top or inside bottom)
 	mat.quad_verts[verts_start+1].set_tc(x2, y2);
@@ -679,7 +680,7 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 			ix += 8; // skip the other face
 		} // for e
 	} // for d
-	if (is_open) { // draw the inside of the box
+	if (c.is_open()) { // draw the inside of the box
 		verts_start = mat.quad_verts.size(); // update
 		cube_t box(c);
 		box.expand_by(-0.001*c.get_size()); // slight shrink of inside of box to prevent z-fighting
@@ -1517,7 +1518,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	if (z_rot_angle == 0.0 && (c.flags & RO_FLAG_RAND_ROT) && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
 		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
 	}
-	if (c.flags & RO_FLAG_OPEN) {
+	if (c.is_open()) {
 		assert(!upright);
 		assert(!is_held);
 		// TODO: draw book as open

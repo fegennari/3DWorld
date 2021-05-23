@@ -884,6 +884,7 @@ struct building_t : public building_geom_t {
 	void toggle_light_object(room_object_t const &light);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in);
 	bool adjust_blinds_state(unsigned obj_ix);
+	void add_box_contents(room_object_t const &box);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval);
 	bool set_room_light_state_to(room_t const &room, float zval, bool make_on);
 	void set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state);
@@ -1131,6 +1132,7 @@ void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]);
 void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only);
 cube_t get_elevator_car_panel(room_object_t const &c);
+void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_stack_t const &door, cube_t const &room);
 bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs);

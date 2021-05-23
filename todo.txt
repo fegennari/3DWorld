@@ -16,6 +16,6 @@ Cities:
 Building interaction/gameplay ideas:
 * Player can open:
     * books
-    * boxes
     * shower doors
+* Opened boxes contain items
 * Player can use cell phones
