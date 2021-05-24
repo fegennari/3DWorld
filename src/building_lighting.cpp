@@ -11,7 +11,7 @@
 bool const USE_BKG_THREAD = 1;
 
 extern bool toggle_door_open_state;
-extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2;
+extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
 extern double camera_zh;
@@ -741,8 +741,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 				dynamic_shadows = 1; // camera shadow
 			}
 			else if (animate2 && enable_building_people_ai()) { // check moving people
-				if (ped_ix >= 0 && ped_bcubes.empty()) {get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes, 1);} // get cubes on first light; moving_only=1
-
+				if (ped_ix >= 0 && ped_bcubes.empty()) {
+					// update shadows for stopped people every 60 frames to handle the case where they come into the camera's view while waiting for a long time
+					bool const moving_only(((frame_counter + i->obj_id) % 60) != 0);
+					get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes, moving_only); // get cubes on first light
+				}
 				for (auto c = ped_bcubes.begin(); c != ped_bcubes.end(); ++c) {
 					if (lpos_rot.z > c->z2() && c->intersects(clipped_bc) && dist_less_than(lpos_rot, c->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
 				}
