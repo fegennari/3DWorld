@@ -184,6 +184,7 @@ public:
 		return point(pt.x, pt.y, zval);
 	}
 	static bool find_valid_pt_in_room(vect_cube_t const &avoid, float radius, float height, float zval, cube_t const &room, rand_gen_t &rgen, point &pos) {
+		if (avoid.empty()) return 1; // no colliders, any point is valid, choose the center
 		cube_t place_area(room);
 		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
 		if (!place_area.is_strictly_normalized()) return 0; // should generally not be true
@@ -1030,7 +1031,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 			person.wait_for(1.0); // stop for 1 second, then try again
 			return AI_WAITING;
 		}
-		state.is_first_path = 0;
+		if (has_room_geom()) {state.is_first_path = 0;} // treat the path as the first path until room geom is generated
 		state.next_path_pt(person, stay_on_one_floor, 1);
 		return AI_BEGIN_PATH;
 	}
