@@ -1009,15 +1009,29 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 	bool const hdim(c.dx() < c.dy()), hdir(dirs[hdim]); // larger dim
 	float const frame_width(fc.dx()), door_width(sz[!hdim]);
 
-	if (!c.is_open()) { // only draw handle if the door is closed; the math to figure out where the handle goes on the open door is complex
+	if (1 || !c.is_open()) { // only draw handle if the door is closed; the math to figure out where the handle goes on the open door is complex
 		bool const hside(!dirs[!hdim]);
+		float const wall_dist(0.77*door_width), handle_thickness(0.8*frame_width), hdir_sign(hdir ? -1.0 : 1.0), wall_pos(c.d[hdim][!hdir]);
 		cube_t handle(c);
-		handle.d[ hdim][ hdir] = c.d[hdim][!hdir]     - (hdir ? -1.0 : 1.0)*(0.19*frame_width + 0.02*sz[hdir]); // place on the glass but slightly offset
-		handle.d[ hdim][!hdir] = handle.d[hdim][hdir] + (hdir ? -1.0 : 1.0)*1.0*frame_width;
-		handle.d[!hdim][ hside] += (hside ? -1.0 : 1.0)*0.20*door_width;
-		handle.d[!hdim][!hside] -= (hside ? -1.0 : 1.0)*0.77*door_width;
 		handle.z1() += 0.48*sz.z;
 		handle.z2() -= 0.42*sz.z;
+
+		if (c.is_open()) { // move it into the open position; the math for this is pretty complex, so it's somewhat of a trial-and error with the constants
+			bool const odir(dirs[hdim]);
+			float const odir_sign(odir ? -1.0 : 1.0), hside_sign(hside ? 1.0 : -1.0), inner_extend(wall_pos + odir_sign*(wall_dist - 2.0*frame_width));
+			float const open_glass_pos(c.d[!hdim][!hside] + hside_sign*0.39*frame_width);
+			handle.d[!hdim][ hside] = open_glass_pos;
+			handle.d[!hdim][!hside] = open_glass_pos + hside_sign*handle_thickness; // outer edge
+			handle.d[ hdim][!odir ] = inner_extend;
+			handle.d[ hdim][ odir ] = inner_extend + odir_sign*0.03*door_width;
+		}
+		else { // closed
+			float const hside_sign(hside ? -1.0 : 1.0), glass_pos(wall_pos - hdir_sign*(0.19*frame_width + 0.02*sz[hdir])); // place on the glass but slightly offset
+			handle.d[ hdim][ hdir ]  = glass_pos;
+			handle.d[ hdim][!hdir ]  = glass_pos + hdir_sign*handle_thickness; // outer edge
+			handle.d[!hdim][ hside] += hside_sign*0.20*door_width;
+			handle.d[!hdim][!hside] -= hside_sign*wall_dist;
+		}
 		metal_mat.add_cube_to_verts(handle, metal_color); // draw all faces
 	}
 	// add drain
