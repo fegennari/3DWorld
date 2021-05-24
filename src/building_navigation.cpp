@@ -165,7 +165,7 @@ public:
 	}
 	bool is_fully_connected() const {return (count_connected_components() == 1);}
 
-	bool is_valid_pos(vect_cube_t const &avoid, point const &pos, float radius, float height) const { // Note: assumes zvals are already checked
+	static bool is_valid_pos(vect_cube_t const &avoid, point const &pos, float radius, float height) { // Note: assumes zvals are already checked
 		cube_t c(pos, pos);
 		c.expand_by_xy(radius);
 
@@ -183,21 +183,25 @@ public:
 		vector2d const &pt(node.conn_rooms.front().pt[up_or_down]); // Note: all conn_rooms should be the same value
 		return point(pt.x, pt.y, zval);
 	}
+	static bool find_valid_pt_in_room(vect_cube_t const &avoid, float radius, float height, float zval, cube_t const &room, rand_gen_t &rgen, point &pos) {
+		cube_t place_area(room);
+		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
+		if (!place_area.is_strictly_normalized()) return 0; // should generally not be true
+		point orig_pos(pos);
+
+		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
+			if (is_valid_pos(avoid, pos, radius, height)) return 1; // success
+			choose_pt_xy_in_room(pos, place_area, rgen); // choose a random new point in the room
+		}
+		pos = orig_pos; // use orig value as failed point
+		return 0;
+	}
 	point find_valid_room_dest(vect_cube_t const &avoid, float radius, float height, float zval, unsigned node_ix, bool up_or_down, bool &not_room_center, rand_gen_t &rgen) const {
 		node_t const &node(get_node(node_ix));
 		if (node.is_stairs) {return get_stairs_entrance_pt(zval, node_ix, up_or_down);}
-		cube_t place_area(node.bcube);
-		place_area.expand_by_xy(-2.0*radius); // shrink by twice the radius
-		point const center(get_cube_center_zval(node.bcube, zval));
-		if (!place_area.is_strictly_normalized()) return center; // should generally not be true
-		not_room_center = 1;
-		point pos(center); // first candidate is the center of the room
-
-		for (unsigned n = 0; n < 100; ++n) { // 100 random tries to find a valid dest_pos
-			if (is_valid_pos(avoid, pos, radius, height)) return pos; // success
-			choose_pt_xy_in_room(pos, place_area, rgen); // choose a random new point in the room
-		}
-		return center; // failed, return room center
+		point pos(get_cube_center_zval(node.bcube, zval)); // first candidate is the center of the room
+		if (find_valid_pt_in_room(avoid, radius, height, zval, node.bcube, rgen, pos)) {not_room_center = 1;} // success
+		return pos;
 	}
 
 	static bool check_line_int_xy(vect_cube_t const &c, point const &p1, point const &p2) {
@@ -666,8 +670,12 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		return 1;
 	} // for n
 	if (loc.room_ix >= 0 && state.is_first_path) { // how about a different location in the same room? this will at least get the person unstuck from an object
-		point const room_center(get_center_of_room(loc.room_ix));
-		person.target_pos.x = room_center.x; person.target_pos.y = room_center.y;
+		point dest_pos(get_center_of_room(loc.room_ix));
+		float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
+		static vect_cube_t avoid; // reuse across frames/people
+		get_avoid_cubes(person.pos.z, height, radius, avoid, 0); // following_player=0
+		interior->nav_graph->find_valid_pt_in_room(avoid, radius, height, person.pos.z, get_room(loc.room_ix), rgen, dest_pos); // if center is not valid, choose a valid point
+		person.target_pos.x = dest_pos.x; person.target_pos.y = dest_pos.y;
 		state.goal_type = GOAL_TYPE_ROOM;
 		return 1;
 	}
@@ -722,6 +730,10 @@ cube_t get_stairs_plus_step_up(stairwell_t const &stairs) {
 	return stairs_ext;
 }
 
+void building_t::get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player) const {
+	assert(interior);
+	interior->get_avoid_cubes(avoid, (zval - radius), (zval + (height - radius)), get_floor_thickness(), following_player);
+}
 bool building_t::find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool is_moving_target, bool following_player, vector<point> &path) const {
 
 	assert(interior && interior->nav_graph);
@@ -733,7 +745,7 @@ bool building_t::find_route_to_point(pedestrian_t const &person, float radius, b
 	assert((unsigned)loc1.room_ix < interior->rooms.size() && (unsigned)loc2.room_ix < interior->rooms.size());
 	float const floor_spacing(get_window_vspace()), height(0.7*floor_spacing), z2_add(height - radius); // approximate, since we're not tracking actual heights
 	static vect_cube_t avoid; // reuse across frames/people
-	interior->get_avoid_cubes(avoid, (from.z - radius), (from.z + z2_add), get_floor_thickness(), following_player);
+	get_avoid_cubes(from.z, height, radius, avoid, following_player);
 
 	if (loc1.same_room_floor(loc2)) { // same room/floor (not checking stairs_ix)
 		assert(from.z == to.z);
