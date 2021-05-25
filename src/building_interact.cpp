@@ -1129,14 +1129,15 @@ public:
 				}
 				draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
 			}
-			if (in_building_gameplay_mode()) { // display sound meter
+			if (in_building_gameplay_mode()) {
 				float const lvl(min(cur_building_sound_level, 1.0f));
 				unsigned const num_bars(round_fp(20.0*lvl));
 
-				if (num_bars > 0) {
+				if (num_bars > 0) { // display sound meter
 					colorRGBA const color(lvl, (1.0 - lvl), 0.0, 1.0); // green => yellow => orange => red
-					draw_text(color, -0.005*aspect_ratio, -0.01, -0.02, std::string(num_bars, '#'));
+					draw_text(color, -0.005*aspect_ratio, -0.010, -0.02, std::string(num_bars, '#'));
 				}
+				if (player_is_hiding) {draw_text(LT_BLUE, -0.001*aspect_ratio, -0.009, -0.02, "[Hiding]");}
 			}
 		}
 		if (in_building_gameplay_mode()) {
