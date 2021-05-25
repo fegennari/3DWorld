@@ -26,7 +26,7 @@ vector<sphere_t> cur_sounds; // radius = sound volume
 quad_batch_draw paint_qbd[2][2], blood_qbd, tp_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
 building_t const *paint_bldg(nullptr), *tp_bldg(nullptr);
 
-extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on;
+extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on, player_is_hiding;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode, animate2, camera_surf_collide;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;

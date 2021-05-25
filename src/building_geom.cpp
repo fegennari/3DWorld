@@ -7,7 +7,7 @@
 
 cube_t grass_exclude1, grass_exclude2;
 
-extern bool draw_building_interiors, player_near_toilet;
+extern bool draw_building_interiors, player_near_toilet, player_is_hiding;
 extern int player_in_closet;
 extern float grass_width, CAMERA_RADIUS;
 extern double camera_zh;
@@ -429,7 +429,12 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			}
 			else if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
 				had_coll |= (bool)check_closet_collision(*c, pos, p_last, xy_radius, cnorm);
-				if (c->contains_pt(pos)) {player_in_closet = (interior->room_geom->closet_light_is_on(*c) ? 3 : (c->is_open() ? 1 : 2));}
+				
+				if (c->contains_pt(pos)) {
+					player_in_closet |= RO_FLAG_IN_CLOSET;
+					if (interior->room_geom->closet_light_is_on(*c)) {player_in_closet |= RO_FLAG_LIT;}
+					if (c->is_open()) {player_in_closet |= RO_FLAG_OPEN;} else {player_is_hiding = 1;} // player is hiding if the closet door is closed
+				}
 			}
 			else if (c->type == TYPE_STALL && c->is_open()) { // collision test with sides only
 				if (sphere_cube_intersect(pos, xy_radius, *c)) {

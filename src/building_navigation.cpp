@@ -15,7 +15,8 @@ float const RETREAT_TIME      = 4.0f*TICKS_PER_SECOND; // 4s
 int cpbl_update_frame(0);
 building_dest_t cur_player_building_loc, prev_player_building_loc;
 
-extern int frame_counter, display_mode, player_in_closet, animate2;
+extern bool player_is_hiding;
+extern int frame_counter, display_mode, animate2;
 extern float fticks;
 extern double camera_zh;
 extern building_params_t global_building_params;
@@ -865,7 +866,7 @@ bool can_ai_follow_player(pedestrian_t const &person) {
 	if (!ai_follow_player()) return 0; // disabled
 	if (!cur_player_building_loc.is_valid()) return 0; // no target
 	if (cur_player_building_loc.building_ix != (int)person.dest_bldg) return 0; // wrong building
-	if (player_in_closet >= 2)     return 0; // ignore player if in the closet with the door closed
+	if (player_is_hiding) return 0; // ignore player if in the closet, bathroom stall, or shower with the door closed
 	if (person.retreat_time > 0.0) return 0; // ignore the player if retreating
 	return 1;
 }

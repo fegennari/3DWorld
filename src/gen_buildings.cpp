@@ -20,8 +20,8 @@ bool const DRAW_EXT_REFLECTIONS  = 1;
 float const WIND_LIGHT_ON_RAND      = 0.08;
 float const BASEMENT_ENTRANCE_SCALE = 0.33;
 
-bool camera_in_building(0), player_in_basement(0), interior_shadow_maps(0);
-int player_in_closet(0); // 0=not in closet, 1=in open closet, 2=in closed closet with light off, 3=in closet closet with light on
+bool camera_in_building(0), player_in_basement(0), interior_shadow_maps(0), player_is_hiding(0);
+int player_in_closet(0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_FLAG_LIT (closet light is on), RO_FLAG_OPEN (closet door is open)
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
 
@@ -241,13 +241,14 @@ public:
 };
 indir_tex_mgr_t indir_tex_mgr;
 
+bool player_in_dark_closet() {return (player_in_closet && !(player_in_closet & (RO_FLAG_OPEN | RO_FLAG_LIT)));}
 
 struct building_lights_manager_t : public city_lights_manager_t {
 	void setup_building_lights(vector3d const &xlate) {
 		//timer_t timer("Building Dlights Setup");
 		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
-		if (player_in_closet != 2) {add_building_interior_lights(xlate, lights_bcube);} // no room lights if player is hiding in a closed closet with light off (prevents light leakage)
+		if (!player_in_dark_closet()) {add_building_interior_lights(xlate, lights_bcube);} // no room lights if player is hiding in a closed closet with light off (prevents light leakage)
 		if (flashlight_on) {add_player_flashlight(0.12);} // add player flashlight, even when outside of building so that flashlight can shine through windows
 		clamp_to_max_lights(xlate, dl_sources);
 		tighten_light_bcube_bounds(dl_sources); // clip bcube to tight bounds around lights for better dlights texture utilization (possible optimization)
@@ -261,9 +262,11 @@ building_lights_manager_t building_lights_manager;
 
 
 void set_interior_lighting(shader_t &s, bool have_indir) {
-	if (have_indir || player_in_closet == 2) { // using indir lighting, or player in a closed closet with the light off
+	bool const in_dark_closet(player_in_closet && !(player_in_closet & (RO_FLAG_OPEN | RO_FLAG_LIT)));
+
+	if (have_indir || player_in_dark_closet()) { // using indir lighting, or player in a closed closet with the light off
 		s.add_uniform_float("diffuse_scale",       0.0); // no diffuse from sun/moon
-		s.add_uniform_float("ambient_scale",       ((player_in_closet == 2) ? 0.1 : 0.0)); // no ambient for indir; slight ambient for closet closet with light off
+		s.add_uniform_float("ambient_scale",       (player_in_dark_closet() ? 0.1 : 0.0)); // no ambient for indir; slight ambient for closet closet with light off
 		s.add_uniform_float("hemi_lighting_scale", 0.0); // disable hemispherical lighting (should we set hemi_lighting=0 in the shader?)
 	}
 	else {
@@ -288,7 +291,7 @@ void reset_interior_lighting_and_end_shader(shader_t &s) {
 }
 void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen) {
 	float const pcf_scale = 0.2;
-	bool const have_indir(enable_indir && indir_tex_mgr.enabled() && player_in_closet < 2); // disable indir if the player is in a closed closet
+	bool const have_indir(enable_indir && indir_tex_mgr.enabled() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN))); // disable indir if the player is in a closed closet
 	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
 	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
@@ -3135,6 +3138,7 @@ void draw_building_lights(vector3d const &xlate) {
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm, bool check_interior, bool exclude_city) {
 	player_in_closet = 0; // reset for this call
+	player_is_hiding = 0;
 	// we generally won't intersect more than one of these categories, so we can return true without checking all cases
 	return ((!exclude_city && building_creator_city.check_sphere_coll(pos, p_int, radius, xy_only, cnorm, check_interior)) ||
 		                           building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm, check_interior) ||
