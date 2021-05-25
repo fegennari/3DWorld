@@ -1029,7 +1029,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 			float const hside_sign(hside ? -1.0 : 1.0), glass_pos(wall_pos - hdir_sign*(0.19*frame_width + 0.02*sz[hdir])); // place on the glass but slightly offset
 			handle.d[ hdim][ hdir ]  = glass_pos;
 			handle.d[ hdim][!hdir ]  = glass_pos + hdir_sign*handle_thickness; // outer edge
-			handle.d[!hdim][ hside] += hside_sign*0.20*door_width;
+			handle.d[!hdim][ hside] += hside_sign*0.20*door_width; // distance to outer wall/corner
 			handle.d[!hdim][!hside] -= hside_sign*wall_dist;
 		}
 		metal_mat.add_cube_to_verts(handle, metal_color); // draw all faces

@@ -445,13 +445,20 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 					for (unsigned d = 0; d < 2; ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
 				}
 			}
-			// TODO: player in shower
+			else if (c->type == TYPE_SHOWER && c->is_open()) { // collision test with side only
+				if (sphere_cube_intersect(pos, xy_radius, *c)) {
+					bool const door_dim(c->dx() < c->dy()), side_dir(door_dim ? c->dir : c->dim); // {c.dim, c.dir} => {dir_x, dir_y}
+					cube_t side(*c);
+					side.d[!door_dim][!side_dir] -= (side_dir ? -1.0 : 1.0)*0.95*c->get_sz_dim(!door_dim); // shrink to just the outer glass wall of the shower
+					had_coll |= sphere_cube_int_update_pos(pos, xy_radius, side, p_last, 1, 0, cnorm);
+				}
+			}
 			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm)) { // assume it's a cube; skip_z=0
 				if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
 				had_coll = 1;
 			}
-			// Note: currently the player can't close the bathroom stall while inside it, so this isn't a hiding spot yet
-			if (c->type == TYPE_STALL && !c->is_open() && c->contains_pt(pos)) {player_is_hiding = 1;} // player is hiding in the bathroom stall
+			// Note: currently the player can't close the bathroom stall or shower while inside it, so this isn't a hiding spot yet
+			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {player_is_hiding = 1;} // player is hiding in the stall/shower
 		} // for c
 	}
 	for (auto i = ped_bcubes.begin(); i != ped_bcubes.end(); ++i) {
