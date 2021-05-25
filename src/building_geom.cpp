@@ -445,10 +445,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 					for (unsigned d = 0; d < 2; ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
 				}
 			}
+			// TODO: player in shower
 			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm)) { // assume it's a cube; skip_z=0
 				if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
 				had_coll = 1;
 			}
+			// Note: currently the player can't close the bathroom stall while inside it, so this isn't a hiding spot yet
+			if (c->type == TYPE_STALL && !c->is_open() && c->contains_pt(pos)) {player_is_hiding = 1;} // player is hiding in the bathroom stall
 		} // for c
 	}
 	for (auto i = ped_bcubes.begin(); i != ped_bcubes.end(); ++i) {
