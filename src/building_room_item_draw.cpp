@@ -857,9 +857,11 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	if (!shadow_only) {draw_building_interior_paint(3, &building);} // draw both interior and exterior
 	if (player_in_building && !shadow_only) {draw_building_interior_decals(&building);} // for blood decals, only drawn for current building
 	
-	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters
+	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
+		glDepthMask(GL_FALSE); // disable depth writing
 		mats_alpha.draw(s, shadow_only, reflection_pass);
+		glDepthMask(GL_TRUE);
 		disable_blend();
 		vbo_wrap_t::post_render();
 	}
