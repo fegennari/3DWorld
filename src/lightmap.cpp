@@ -1140,10 +1140,8 @@ bool dls_cell::check_add_light(unsigned ix) const {
 
 void dls_cell::add_light_range(unsigned six, unsigned eix, unsigned char &enabled_flag) {
 	if (!enabled_flag) {sz = 0; enabled_flag = 1;} // clear if marked as disabled, then enable
-	
-	for (unsigned ix = six; ix < eix; ++ix) {
-		if (sz+1 < MAX_LSRC) {lsrc[sz++] = ix;}
-	}
+	min_eq(eix, MAX_LSRC-sz+six);
+	for (unsigned ix = six; ix < eix; ++ix) {lsrc[sz++] = ix;}
 }
 
 
@@ -1228,14 +1226,14 @@ void add_dynamic_lights_ground(float &dlight_add_thresh) {
 		calc_spotlight_pdu(ls, pdu);
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
-			int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
+			int const cmp_val(rsq - (y-ycent)*(y-ycent)), offset(y*gbx);
 
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
 				if (line_light) {
 					float const px(get_xval(x << DL_GRID_BS)), py(get_yval(y << DL_GRID_BS)), lx(lpos2.x - lpos.x), ly(lpos2.y - lpos.y);
 					float const cp_mag(lx*(lpos.y - py) - ly*(lpos.x - px));
 					if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) continue;
-				} else if (((x-xcent)*(x-xcent) + y_sq) > rsq) continue; // skip
+				} else if ((x-xcent)*(x-xcent) > cmp_val) continue; // skip
 
 				if (pdu.valid) {
 					float const px(get_xval(x << DL_GRID_BS)), py(get_yval(y << DL_GRID_BS));
@@ -1271,7 +1269,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 		point const &lpos(ls.get_pos());
 		unsigned const start_ix(ix);
 
-		for (++ix; ix < ndl; ++ix) {
+		for (++ix; ix < ndl; ++ix) { // determine range of stacked lights with the same X/Y value
 			light_source const &ls2(dl_sources[ix]);
 			if (ls2.get_pos().x != lpos.x || ls2.get_pos().y != lpos.y || ls2.get_radius() != ls.get_radius()) break;
 		}
@@ -1281,7 +1279,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 		if (ls.is_very_directional() && (ls.get_dir().x != 0.0 || ls.get_dir().y != 0.0)) {
 			bcube.expand_by(vector3d(grid_dx, grid_dy, 0.0)); // add one grid unit for spotlights not pointed up/down
 		}
-		int bnds[2][2];
+		int bnds[2][2] = {};
 
 		for (unsigned e = 0; e < 2; ++e) {
 			bnds[0][e] = max(0, min((int)gbx-1, int((bcube.d[0][e] - scene_llc.x)*grid_dx_inv)));
@@ -1289,28 +1287,26 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 		}
 		int const radius(ls.get_radius()*max(grid_dx_inv, grid_dy_inv) + 2), rsq(radius*radius);
 
-		if (ix - start_ix == 1) {
+		if (ix - start_ix == 1) { // single light case
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
-				int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
+				int const cmp_val(rsq - (y-ycent)*(y-ycent)), offset(y*gbx);
 
 				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-					if (((x-xcent)*(x-xcent) + y_sq) > rsq) continue; // skip
-					ldynamic[offset + x].add_light(start_ix, ldynamic_enabled[offset + x]);
-				} // for x
+					if ((x-xcent)*(x-xcent) <= cmp_val) {ldynamic[offset + x].add_light(start_ix, ldynamic_enabled[offset + x]);}
+				}
 			} // for y
 		}
-		else {
+		else { // stacked lights case (buildings)
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) { // add lights to ldynamic
-				int const y_sq((y-ycent)*(y-ycent)), offset(y*gbx);
+				int const cmp_val(rsq - (y-ycent)*(y-ycent)), offset(y*gbx);
 
 				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-					if (((x-xcent)*(x-xcent) + y_sq) > rsq) continue; // skip
-					ldynamic[offset + x].add_light_range(start_ix, ix, ldynamic_enabled[offset + x]);
-				} // for x
+					if ((x-xcent)*(x-xcent) <= cmp_val) {ldynamic[offset + x].add_light_range(start_ix, ix, ldynamic_enabled[offset + x]);}
+				}
 			} // for y
 		}
 	} // for ix (light index)
-	//PRINT_TIME("Dynamic Light Add");
+	//PRINT_TIME("Dynamic Light Add"); // 0.33ms
 }
 
 

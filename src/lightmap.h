@@ -286,11 +286,11 @@ public:
 };
 
 
-unsigned const MAX_LSRC = 256; // max of 255 lights per bin
+unsigned const MAX_LSRC = 255; // max of 255 lights per bin
 
 class dls_cell {
 
-	unsigned short lsrc[MAX_LSRC] = {0};
+	unsigned short lsrc[MAX_LSRC+1] = {0};
 	unsigned sz;
 
 public:
@@ -299,7 +299,7 @@ public:
 	
 	void add_light(unsigned ix, unsigned char &enabled_flag) {
 		if (!enabled_flag) {sz = 0; enabled_flag = 1;} // clear if marked as disabled, then enable
-		if (sz+1 < MAX_LSRC) {lsrc[sz++] = ix;}
+		if (sz < MAX_LSRC) {lsrc[sz++] = ix;}
 	}
 	void add_light_range(unsigned six, unsigned eix, unsigned char &enabled_flag);
 	bool check_add_light(unsigned ix) const;
