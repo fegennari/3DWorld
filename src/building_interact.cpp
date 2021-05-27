@@ -211,7 +211,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace());
 	float closest_dist_sq(0.0);
 	unsigned door_ix(0), obj_ix(0);
-	bool is_obj(0);
+	bool found_item(0), is_obj(0);
 	vector3d in_dir(in_dir_in);
 	point closest_to(closest_to_in);
 	maybe_inv_rotate_pos_dir(closest_to, in_dir);
@@ -221,10 +221,11 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
 			point const center(i->get_cube_center());
 			float const dist_sq(p2p_dist_sq(closest_to, center));
-			if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq) continue; // not the closest
+			if (found_item && dist_sq >= closest_dist_sq) continue; // not the closest
 			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, dmax)) continue; // door is not in the correct direction or too far away, skip
 			closest_dist_sq = dist_sq;
-			door_ix = (i - interior->doors.begin());
+			door_ix    = (i - interior->doors.begin());
+			found_item = 1;
 		} // for i
 	}
 	if (interior->room_geom) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
@@ -261,18 +262,19 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else {center = i->closest_pt(closest_to);}
 				if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
 				float const dist_sq((i->type == TYPE_CLOSET) ? dmax*dmax : p2p_dist_sq(closest_to, center)); // use dmax for closets to prioritize objects inside closets
-				if (closest_dist_sq != 0.0 && dist_sq >= closest_dist_sq) continue; // not the closest
+				if (found_item && dist_sq >= closest_dist_sq)     continue; // not the closest
 				if (!i->closest_dist_less_than(closest_to, dmax)) continue; // too far
 				if (in_dir != zero_vector && !i->line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
-				closest_dist_sq = dist_sq; obj_ix = (i - obj_vect.begin()) + obj_id_offset;
-				is_obj = 1;
+				closest_dist_sq = dist_sq;
+				obj_ix = (i - obj_vect.begin()) + obj_id_offset;
+				is_obj = found_item = 1;
 			} // for i
 		} // for vect_id
 		if (!player_in_closet) {
-			float const drawer_dist((closest_dist_sq == 0.0) ? 2.5*CAMERA_RADIUS : sqrt(closest_dist_sq));
+			float const drawer_dist(found_item ? sqrt(closest_dist_sq) : 2.5*CAMERA_RADIUS);
 			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist, 0)) return 0; // drawer is closer - open or close it
 		}
-		if (closest_dist_sq == 0.0) return 0; // no door or object found
+		if (!found_item) return 0; // no door or object found
 	}
 	if (is_obj) { // closet, toilet, bathroom stall, office chair, or toilet paper roll
 		auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));

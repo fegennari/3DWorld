@@ -436,28 +436,27 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 					if (c->is_open()) {player_in_closet |= RO_FLAG_OPEN;} else {player_is_hiding = 1;} // player is hiding if the closet door is closed
 				}
 			}
-			else if (c->type == TYPE_STALL && c->is_open()) { // collision test with sides only
-				if (sphere_cube_intersect(pos, xy_radius, *c)) {
-					float const width(c->get_sz_dim(!c->dim));
-					cube_t sides[2] = {*c, *c};
-					sides[0].d[!c->dim][1] -= 0.95*width;
-					sides[1].d[!c->dim][0] += 0.95*width;
-					for (unsigned d = 0; d < 2; ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
-				}
+			else if (c->type == TYPE_STALL && ((c->is_open() && sphere_cube_intersect(pos, xy_radius, *c)) || c->contains_pt(pos))) {
+				// stall is open and intersecting player, or player is inside stall; perform collision test with sides only
+				float const width(c->get_sz_dim(!c->dim));
+				cube_t sides[3] = {*c, *c, *c};
+				sides[0].d[!c->dim][1] -= 0.95*width;
+				sides[1].d[!c->dim][0] += 0.95*width;
+				if (!c->is_open()) {sides[2].d[c->dim][c->dir] += (c->dir ? -1.0 : 1.0)*0.975*c->get_sz_dim(c->dim);} // check collision with closed door
+				for (unsigned d = 0; d < (c->is_open() ? 2U : 3U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
 			}
-			else if (c->type == TYPE_SHOWER && c->is_open()) { // collision test with side only
-				if (sphere_cube_intersect(pos, xy_radius, *c)) {
-					bool const door_dim(c->dx() < c->dy()), side_dir(door_dim ? c->dir : c->dim); // {c.dim, c.dir} => {dir_x, dir_y}
-					cube_t side(*c);
-					side.d[!door_dim][!side_dir] -= (side_dir ? -1.0 : 1.0)*0.95*c->get_sz_dim(!door_dim); // shrink to just the outer glass wall of the shower
-					had_coll |= sphere_cube_int_update_pos(pos, xy_radius, side, p_last, 1, 0, cnorm);
-				}
+			else if (c->type == TYPE_SHOWER && ((c->is_open() && sphere_cube_intersect(pos, xy_radius, *c)) || c->contains_pt(pos))) {
+				// shower is open and intersecting player, or player is inside shower; perform collision test with side only
+				bool const door_dim(c->dx() < c->dy()), door_dir(door_dim ? c->dim : c->dir), side_dir(door_dim ? c->dir : c->dim); // {c.dim, c.dir} => {dir_x, dir_y}
+				cube_t sides[2] = {*c, *c};
+				sides[0].d[!door_dim][!side_dir] -= (side_dir ? -1.0 : 1.0)*0.95*c->get_sz_dim(!door_dim); // shrink to just the outer glass wall of the shower
+				if (!c->is_open()) {sides[1].d[door_dim][!door_dir] += (door_dir ? 1.0 : -1.0)*0.95*c->get_sz_dim(door_dim);} // check collision with closed door
+				for (unsigned d = 0; d < (c->is_open() ? 1U : 2U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
 			}
 			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm)) { // assume it's a cube; skip_z=0
 				if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
 				had_coll = 1;
 			}
-			// Note: currently the player can't close the bathroom stall or shower while inside it, so this isn't a hiding spot yet
 			if ((c->type == TYPE_STALL || c->type == TYPE_SHOWER) && !c->is_open() && c->contains_pt(pos)) {player_is_hiding = 1;} // player is hiding in the stall/shower
 		} // for c
 	}
