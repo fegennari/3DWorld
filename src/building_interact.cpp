@@ -419,29 +419,47 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 }
 
 void building_t::add_box_contents(room_object_t const &box) {
-	// TODO: add random types of contained items (book, bottles, ball, paint can, spraypaint, toilet paper, etc.
 	rand_gen_t rgen;
 	box.set_rand_gen_state(rgen);
 	cube_t c(box);
 	c.expand_by(-0.001*box.get_size()); // shrink to interior area
 	vector3d const sz(c.get_size());
 	bool const dim(sz.x < sz.y); // long dim
-	unsigned const room_id(box.room_id), num_books(1 + (rgen.rand()&3)); // 1-4 books
-	float cur_zval(c.z1());
+	unsigned const obj_type(/*rgen.rand()%6*/0); // {book, bottles, ball, paint can, spraypaint, toilet paper}
 
-	// Note: the code below may invalidate the reference to box, so we can't use it after this point
-	for (unsigned n = 0; n < num_books; ++n) {
-		float const length(rgen.rand_uniform(0.7, 0.95)*sz[dim]), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
-		room_object_t obj(c, TYPE_BOOK, room_id, !dim, rgen.rand_bool(), (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL));
-		obj.obj_id = rgen.rand();
-		obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
-		set_cube_zvals(obj, cur_zval, (cur_zval + min(0.3f*width, rgen.rand_uniform(0.1, 0.2)*sz.z)));
-		if (obj.z2() > c.z2()) break; // book doesn't fit - the stack is too tall
-		set_rand_pos_for_sz(obj, dim, length, width, rgen);
-		interior->room_geom->expanded_objs.push_back(obj);
-		interior->room_geom->update_draw_state_for_room_object(obj, *this);
-		cur_zval = obj.z2();
-	} // for n
+	if (obj_type == 0) { // books
+		unsigned const room_id(box.room_id), num_books(1 + (rgen.rand()&3)); // 1-4 books
+		float cur_zval(c.z1());
+
+		// Note: the code below may invalidate the reference to box, so we can't use it after this point
+		for (unsigned n = 0; n < num_books; ++n) {
+			float const length(rgen.rand_uniform(0.7, 0.95)*sz[dim]), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
+			room_object_t obj(c, TYPE_BOOK, room_id, !dim, rgen.rand_bool(), (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL));
+			obj.obj_id = rgen.rand();
+			obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
+			set_cube_zvals(obj, cur_zval, (cur_zval + min(0.3f*width, rgen.rand_uniform(0.1, 0.2)*sz.z)));
+			if (obj.z2() > c.z2()) break; // book doesn't fit - the stack is too tall
+			set_rand_pos_for_sz(obj, dim, length, width, rgen);
+			interior->room_geom->expanded_objs.push_back(obj);
+			interior->room_geom->update_draw_state_for_room_object(obj, *this);
+			cur_zval = obj.z2();
+		} // for n
+	}
+	else if (obj_type == 1) { // bottles
+		// TODO
+	}
+	else if (obj_type == 2) { // ball
+		// TODO
+	}
+	else if (obj_type == 3) { // paint can
+		// TODO
+	}
+	else if (obj_type == 4) { // spraypaint
+		// TODO
+	}
+	else if (obj_type == 5) { // toilet paper
+		// TODO
+	}
 }
 
 void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval) { // called by the player or AI
