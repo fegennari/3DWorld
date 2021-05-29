@@ -934,6 +934,7 @@ struct building_t : public building_geom_t {
 		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
 	void invalidate_nav_graph();
 	point local_to_camera_space(point const &pos) const;
+	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
 private:
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t &rgen);
@@ -1020,7 +1021,6 @@ private:
 	void add_interior_door_for_floor(door_t &door);
 	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir);
 	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side);
-	void play_door_open_close_sound(point const &pos, bool open, float pitch=1.0) const;
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - bcube.z1())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
@@ -1132,6 +1132,8 @@ void get_table_cubes (room_object_t const &c, cube_t cubes[5], bool is_desk);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]);
 void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only);
+float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors);
+void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors);
 cube_t get_elevator_car_panel(room_object_t const &c);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);

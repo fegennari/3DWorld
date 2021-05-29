@@ -2254,7 +2254,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 			front.d[c.dim][!c.dir] += dir_sign*0.94*depth;
 			get_material(marble_tex, 1).add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
 		}
-		if (c.type == TYPE_KSINK && width > 3.5*depth) { // kitchen sink - add dishwasher
+		else if (c.type == TYPE_KSINK && width > 3.5*depth) { // kitchen sink - add dishwasher if wide enough
 			bool const side((c.flags & RO_FLAG_ADJ_LO) ? 1 : ((c.flags & RO_FLAG_ADJ_HI) ? 0 : (c.obj_id & 1))); // left/right of the sink
 			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir));
 			colorRGBA const dw_color(apply_light_color(c, LT_GRAY));
@@ -2288,7 +2288,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		//cabinet.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
 		cabinet.d[c.dim][c.dir] -= dir_sign*overhang; // add front overhang
 
-		if (!cabinet_gap.is_all_zeros()) { // split cabinet into two parts to avoid the dishwasher
+		if (!cabinet_gap.is_all_zeros()) { // split cabinet under kitchen sink into two parts to avoid the dishwasher
 			room_object_t left_part(cabinet);
 			left_part.d[!c.dim][1] = cabinet_gap.d[!c.dim][0];
 			cabinet  .d[!c.dim][0] = cabinet_gap.d[!c.dim][1];
@@ -2320,25 +2320,54 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 	}
 }
 
-void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
-	assert(c.is_strictly_normalized());
-	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
-	get_wood_material(tscale).add_cube_to_verts(c, apply_wood_light_color(c), tex_origin, skip_faces);
-	// add cabinet doors
+float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors) {
 	float const cab_depth(c.get_sz_dim(c.dim)), door_height(0.8*c.dz()), door_thick(0.05*door_height);
 	cube_t front(c);
 	if (c.flags & RO_FLAG_ADJ_LO) {front.d[!c.dim][0] += cab_depth;} // exclude L-joins of cabinets from having doors; assumes all cabinets are the same depth
 	if (c.flags & RO_FLAG_ADJ_HI) {front.d[!c.dim][1] -= cab_depth;}
-	float const handle_thick(0.75*door_thick), cab_width(front.get_sz_dim(!c.dim));
-	if (cab_width < 0.0) return; // this seems to happen on occasion; maybe it's a bug, or maybe the random size parameters can lead to bad values; either way, skip it
+	float const cab_width(front.get_sz_dim(!c.dim));
+	if (cab_width < 0.0) return 0.0; // this seems to happen on occasion; maybe it's a bug, or maybe the random size parameters can lead to bad values; either way, skip it
 	float door_width(0.75*door_height), door_spacing(1.2*door_width);
 	unsigned const num_doors(floor(cab_width/door_spacing));
-	if (num_doors == 0) return; // is this possible?
+	if (num_doors == 0) return 0.0; // is this possible?
 	assert(num_doors < 1000); // sanity check
 	door_spacing = cab_width/num_doors;
 	float const tb_border(0.5f*(c.dz() - door_height)), side_border(0.16*door_width), dir_sign(c.dir ? 1.0 : -1.0);
 	door_width = (door_spacing - 2.0*side_border); // recalculate actual value
 	float lo(front.d[!c.dim][0]);
+	cube_t door0(c);
+	door0.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
+	door0.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
+	door0.expand_in_dim(2, -tb_border); // shrink in Z
+	doors.clear();
+	doors.resize(num_doors, door0);
+
+	for (unsigned n = 0; n < num_doors; ++n) {
+		cube_t &door(doors[n]);
+		float const hi(lo + door_spacing);
+		door.d[!c.dim][0] = lo;
+		door.d[!c.dim][1] = hi;
+		door.expand_in_dim(!c.dim, -side_border); // shrink in XY
+		lo = hi; // advance to next door
+	} // for n
+	return door_width;
+}
+void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors) {
+	if (c.type == TYPE_CABINET) {get_cabinet_doors(c, doors); return;}
+	room_object_t cabinet(c); // start with counter
+	cabinet.z2() -= 0.05*c.dz(); // remove counter top
+	cabinet.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.05*c.get_sz_dim(c.dim); // add front overhang
+	get_cabinet_doors(cabinet, doors);
+}
+
+void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
+	assert(c.is_strictly_normalized());
+	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
+	get_wood_material(tscale).add_cube_to_verts(c, apply_wood_light_color(c), tex_origin, skip_faces);
+	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
+	vect_cube_t doors;
+	float const door_width(get_cabinet_doors(c, doors));
+	if (doors.empty()) return; // no doors
 	bool const any_doors_open(c.drawer_flags > 0);
 	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale, any_doors_open), any_doors_open)); // only shadowed if a door is open
@@ -2346,22 +2375,12 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
-	cube_t door0(c);
-	door0.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
-	door0.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
-	door0.expand_in_dim(2, -tb_border  ); // shrink in Z
-	cube_t handle0(door0);
-	handle0.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
-	handle0.d[ c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
-	handle0.expand_in_dim(2, -0.4*door0.dz()); // shrink in Z
-	
-	for (unsigned n = 0; n < num_doors; ++n) {
+	float const dir_sign(c.dir ? 1.0 : -1.0), door_thick(doors[0].get_sz_dim(c.dim)), handle_thick(0.75*door_thick);
+	float const hwidth(0.04*doors[0].dz()), near_side(0.1*door_width), far_side(door_width - near_side - hwidth);
+
+	for (unsigned n = 0; n < doors.size(); ++n) {
 		bool const is_open(c.drawer_flags & (1 << n)), handle_side(n & 1); // alternate handle side
-		cube_t door(door0), handle(handle0);
-		float const hi(lo + door_spacing);
-		door.d[!c.dim][0] = lo;
-		door.d[!c.dim][1] = hi;
-		door.expand_in_dim(!c.dim, -side_border); // shrink in XY
+		cube_t &door(doors[n]);
 
 		if (is_open) { // make this door open
 			door.d[ c.dim][c.dir] += dir_sign*(door_width - door_thick); // expand out to full width
@@ -2369,9 +2388,11 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 			// TODO - here we really need to draw a cutout and the actual interior
 		}
 		door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
-		lo = hi; // advance to next door
 		// add door handle
-		float const hwidth(0.04*door.dz()), near_side(0.1*door_width), far_side(door_width - near_side - hwidth);
+		cube_t handle(door);
+		handle.d[c.dim][!c.dir]  = door.d[c.dim][c.dir];
+		handle.d[c.dim][ c.dir] += dir_sign*handle_thick; // expand out a bit
+		handle.expand_in_dim(2, -0.4*door.dz()); // shrink in Z
 
 		if (is_open) { // rotate 90 degrees
 			handle.d[!c.dim][!handle_side] = door.d[!c.dim][handle_side];

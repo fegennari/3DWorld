@@ -364,7 +364,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				interior->room_geom->expand_object(obj); // expand any boxes so that the player can pick them up
 				sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 			}
-			play_door_open_close_sound(center, obj.is_open(), pitch);
+			play_door_open_close_sound(center, obj.is_open(), 1.0, pitch);
 			update_draw_data = 1;
 		}
 		else {assert(0);} // unhandled type
@@ -466,8 +466,8 @@ point building_t::local_to_camera_space(point const &pos) const {
 	return (pos_rot + get_camera_coord_space_xlate()); // convert to camera space
 }
 
-void building_t::play_door_open_close_sound(point const &pos, bool open, float pitch) const {
-	gen_sound_thread_safe((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_to_camera_space(pos), 1.0, pitch);
+void building_t::play_door_open_close_sound(point const &pos, bool open, float gain, float pitch) const {
+	gen_sound_thread_safe((open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), local_to_camera_space(pos), gain, pitch);
 }
 
 // dynamic objects: elevators and balls
@@ -1388,9 +1388,11 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	point const p2(at_pos + in_dir*range);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
-		if (i->type != TYPE_DRESSER && i->type != TYPE_NIGHTSTAND && i->type != TYPE_DESK) continue; // what about kitchen cabinets?
+		if (!(i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK || // drawers that can be opened or items picked up from
+			(!pickup_item && (i->type == TYPE_COUNTER || i->type == TYPE_CABINET || i->type == TYPE_KSINK)))) continue; // doors that can be opened (no item pickup)
+		if (i->type == TYPE_KSINK && i->get_sz_dim(!i->dim) > 3.5*i->get_sz_dim(i->dim)) continue; // TODO: how to handle diswasher next to sink? need to split cabinets
 		cube_t bcube(*i);
-		bcube.d[i->dim][i->dir] += 0.75*(i->dir ? 1.0 : -1.0)*i->get_sz_dim(i->dim); // expand outward to include open drawers
+		bcube.d[i->dim][i->dir] += 0.75*(i->dir ? 1.0 : -1.0)*i->get_sz_dim(i->dim); // expand outward to include open drawers/doors
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, bcube.d)) continue; // test ray intersection vs. bcube
 		float const dsq(p2p_dist_sq(at_pos, p1c)); // use closest intersection point
@@ -1402,20 +1404,24 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	if (closest_obj_id < 0) return 0; // no object
 	room_object_t &obj(objs[closest_obj_id]);
 	room_object_t drawers_part;
+	vect_cube_t drawers; // or doors
+	bool const has_doors(obj.type == TYPE_COUNTER || obj.type == TYPE_CABINET);
 
 	// Note: this is a messy solution and must match the drawing code, but it's unclear how else we can get the location of the drawers
-	if (obj.type == TYPE_DESK) {
-		if (!(obj.room_id & 3)) return 0; // no drawers for this desk
-		drawers_part = get_desk_drawers_part(obj);
-		bool const side(obj.obj_id & 1);
-		drawers_part.d[!obj.dim][side] -= (side ? 1.0 : -1.0)*0.85*get_tc_leg_width(obj, 0.06);
-	}
+	if (has_doors) {get_cabinet_or_counter_doors(obj, drawers);}
 	else {
-		drawers_part = get_dresser_middle(obj);
-		drawers_part.expand_in_dim(!obj.dim, -0.5*get_tc_leg_width(obj, 0.10));
+		if (obj.type == TYPE_DESK) {
+			if (!(obj.room_id & 3)) return 0; // no drawers for this desk
+			drawers_part = get_desk_drawers_part(obj);
+			bool const side(obj.obj_id & 1);
+			drawers_part.d[!obj.dim][side] -= (side ? 1.0 : -1.0)*0.85*get_tc_leg_width(obj, 0.06);
+		}
+		else {
+			drawers_part = get_dresser_middle(obj);
+			drawers_part.expand_in_dim(!obj.dim, -0.5*get_tc_leg_width(obj, 0.10));
+		}
+		get_drawer_cubes(drawers_part, drawers, 0); // front_only=0
 	}
-	vect_cube_t drawers;
-	get_drawer_cubes(drawers_part, drawers, 0); // front_only=0
 	dmin_sq        = 0.0;
 	closest_obj_id = -1;
 
@@ -1426,8 +1432,8 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		if (dmin_sq == 0.0 || dsq < dmin_sq) {closest_obj_id = (i - drawers.begin()); dmin_sq = dsq;} // update if closest
 	}
 	if (closest_obj_id < 0) return 0; // no drawer
-
-	if (pickup_item) { // pick up item in drawer rather than opening drawer
+	
+	if (pickup_item && !has_doors) { // pick up item in drawer rather than opening drawer; no pickup items behind doors yet
 		if (!(obj.drawer_flags & (1U << closest_obj_id))) return 0; // drawer is not open
 		// Note: drawer cube passed in is not shrunk to the interior part, but that should be okay because we're not doing a line test against that object
 		room_object_t const item(get_item_in_drawer(obj, drawers[closest_obj_id], closest_obj_id));
@@ -1440,9 +1446,10 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	else { // open or close the drawer
 		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
 		point const drawer_center(drawers[closest_obj_id].get_cube_center());
-		gen_sound_thread_safe(SOUND_SLIDING, building.local_to_camera_space(drawer_center), 0.5);
+		if (has_doors) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}
+		else {gen_sound_thread_safe(SOUND_SLIDING, building.local_to_camera_space(drawer_center), 0.5);}
 		register_building_sound(drawer_center, 0.4);
-		create_small_static_vbos(building);
+		if (has_doors) {update_draw_state_for_room_object(obj, building);} else {create_small_static_vbos(building);} // only need to update small objects for drawers
 		//modified_by_player = 1; // ???
 	}
 	return 1;
