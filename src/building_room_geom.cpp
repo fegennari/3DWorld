@@ -662,7 +662,8 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_box_tid(), get_texture_by_name("interiors/box_normal.jpg", 1), 0.0, 0.0), 1, 0, 1)); // is_small=1
 	float const sz(2048), x1(12/sz), x2(576/sz), x3(1458/sz), y1(1-1667/sz), y2(1-1263/sz), y3(1-535/sz); //, x4(2032/sz), y4(1-128/sz); // Note: we don't use all parts of the texture
 	unsigned verts_start(mat.quad_verts.size());
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, (c.is_open() ? EF_Z2 : EF_Z1)); // skip bottom face (even for stacked box?)
+	colorRGBA const color(apply_light_color(c));
+	mat.add_cube_to_verts(c, color, zero_vector, (c.is_open() ? EF_Z2 : EF_Z1)); // skip bottom face (even for stacked box?)
 	assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no -z)
 	mat.quad_verts[verts_start+0].set_tc(x1, y2); // z (top or inside bottom)
 	mat.quad_verts[verts_start+1].set_tc(x2, y2);
@@ -682,19 +683,46 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 			ix += 8; // skip the other face
 		} // for e
 	} // for d
-	if (c.is_open()) { // draw the inside of the box
+	if (c.is_open()) {
+		// draw the inside of the box
 		verts_start = mat.quad_verts.size(); // update
 		cube_t box(c);
 		box.expand_by(-0.001*c.get_size()); // slight shrink of inside of box to prevent z-fighting
-		mat.add_cube_to_verts(box, apply_light_color(c), zero_vector, EF_Z2, 0, 0, 0, 1); // skip top face; draw inverted
+		mat.add_cube_to_verts(box, color, zero_vector, EF_Z2, 0, 0, 0, 1); // skip top face; draw inverted
 		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no +z)
+		float const ts[4] = {x2, x3, x3, x2}, tt[4] = {y1, y1, y2, y2};
 
 		for (unsigned side = 0; side < 5; ++side) { // make all sides use a subset of the texture that has no markings
 			unsigned ix(verts_start + 4*side);
-			mat.quad_verts[ix+0].set_tc(x2, y1);
-			mat.quad_verts[ix+1].set_tc(x3, y1);
-			mat.quad_verts[ix+2].set_tc(x3, y2);
-			mat.quad_verts[ix+3].set_tc(x2, y2);
+			for (unsigned n = 0; n < 4; ++n) {mat.quad_verts[ix+n].set_tc(ts[n], tt[n]);}
+		}
+		if (!(c.flags & RO_FLAG_WAS_EXP)) { // draw open box flaps, but not if box is in drawer/shelf/closet because there may not be space for flaps
+			vector3d const box_sz(c.get_size());
+			float const flap_len(0.485*min(box_sz.x, box_sz.y)); // same length in both dims; slightly less than half-width because this is the base of the triangle
+			color_wrapper const cw(color);
+			unsigned const up_verts[2][4] = {{0,1,0,2}, {3,2,1,3}}; // vertex indices on upward pointing outside flap edges
+
+			for (unsigned d = 0; d < 2; ++d) { // x/y
+				for (unsigned e = 0; e < 2; ++e) { // side dir
+					unsigned const side_ix(2*d+e);
+					bool const against_wall(c.flags & (RO_FLAG_ADJ_LO << side_ix)); // encoded in adj flags
+					cube_t C(c);
+					C.d[d][!e] = C.d[d][e];
+					C.d[d][ e] = C.d[d][e] + (e ? 1.0 : -1.0)*(against_wall ? 0.05 : 1.0)*flap_len;
+					float const zbot(C.z2()), dz(against_wall ? flap_len : 0.25*min(flap_len, box_sz.z)); // tilted somewhat upward; pointing up if against wall
+					point const pts[4] = {point(C.x1(), C.y1(), zbot), point(C.x2(), C.y1(), zbot), point(C.x2(), C.y2(), zbot), point(C.x1(), C.y2(), zbot)};
+					norm_comp const normal(get_poly_norm(pts));
+					unsigned const ix(mat.quad_verts.size());
+					for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(pts[n], normal, ts[n], tt[n], cw);}
+					for (unsigned n = 0; n < 2; ++n) {mat.quad_verts[ix + up_verts[n][side_ix]].v.z += dz;}
+					
+					// add bottom surface with inverted normal in reverse order
+					for (unsigned n = 0; n < 4; ++n) {
+						mat.quad_verts.push_back(mat.quad_verts[ix+3-n]);
+						mat.quad_verts.back().invert_normal();
+					}
+				} // for e
+			} // for d
 		}
 	}
 }

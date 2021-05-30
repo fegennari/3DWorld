@@ -718,7 +718,8 @@ bool building_t::place_obj_along_wall(room_object type, room_t const &room, floa
 		cube_t c3(c); // used for collision tests
 		c3.d[dim][!dir] += (dir ? -1.0 : 1.0)*obj_clearance; // smaller clearance value (without player diameter)
 		if (is_cube_close_to_doorway(c3, room, 0.0, 0)) continue; // bad placement
-		objs.emplace_back(c, type, room_id, dim, !dir, 0, tot_light_amt, shape, color);
+		unsigned const flags((type == TYPE_BOX) ? (RO_FLAG_ADJ_LO << orient) : 0); // set wall edge bit for boxes (what about other dim bit if place in room corner?)
+		objs.emplace_back(c, type, room_id, dim, !dir, flags, tot_light_amt, shape, color);
 		set_obj_id(objs);
 		if (front_clearance > 0.0) {objs.emplace_back(c2, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS);} // add blocker cube to ensure no other object overlaps this space
 		return 1; // done
@@ -1360,7 +1361,15 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 		if (bad_placement) continue;
 		if (is_cube_close_to_doorway(crate, room, 0.0, 1) || interior->is_blocked_by_stairs_or_elevator(crate)) continue;
-		objs.emplace_back(crate, (rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX), room_id, rgen.rand_bool(), 0, 0, tot_light_amt, SHAPE_CUBE, gen_box_color(rgen)); // crate or box
+		cube_t c2(crate);
+		c2.expand_by(vector3d(0.5*c2.dx(), 0.5*c2.dy(), 0.0)); // approx extents of flaps if open
+		unsigned flags(0);
+		
+		for (unsigned d = 0; d < 4; ++d) { // determine which sides are against a wall
+			bool const dim(d>>1), dir(d&1);
+			if ((c2.d[dim][dir] < room_bounds.d[dim][dir]) ^ dir) {flags |= (RO_FLAG_ADJ_LO << d);}
+		}
+		objs.emplace_back(crate, (rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX), room_id, rgen.rand_bool(), 0, flags, tot_light_amt, SHAPE_CUBE, gen_box_color(rgen)); // crate or box
 		set_obj_id(objs); // used to select texture
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
