@@ -241,7 +241,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player
 				bool keep(0);
 				if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
-				else if (i->type == TYPE_CLOSET && i->is_small_closet() && in_dir.z < 0.5) {keep = 1;} // closet with small door, door can be opened; not looking up at the light
+				else if (i->type == TYPE_CLOSET && in_dir.z < 0.5) {keep = 1;} // closet door can be opened; not looking up at the light
 				else if (!player_in_closet) {
 					if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
 					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE)  {keep = 1;} // cube bathroom stall can be opened
@@ -364,7 +364,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				interior->room_geom->expand_object(obj); // expand any boxes so that the player can pick them up
 				sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
 			}
-			play_door_open_close_sound(center, obj.is_open(), 1.0, pitch);
+			if (obj.is_small_closet()) {play_door_open_close_sound(center, obj.is_open(), 1.0, pitch);}
+			else {gen_sound_thread_safe_at_player(SOUND_SLIDING);}
 			update_draw_data = 1;
 		}
 		else {assert(0);} // unhandled type
