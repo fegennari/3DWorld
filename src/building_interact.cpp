@@ -422,7 +422,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 	rand_gen_t rgen;
 	box.set_rand_gen_state(rgen);
 	cube_t c(box);
-	c.expand_by(-0.001*box.get_size()); // shrink to interior area
+	c.expand_by(-0.01*box.get_size()); // shrink to interior area
 	vector3d const sz(c.get_size());
 	bool const dim(sz.x < sz.y); // long dim
 	unsigned const obj_type(/*rgen.rand()%6*/0); // {book, bottles, ball, paint can, spraypaint, toilet paper}
@@ -433,7 +433,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 
 		// Note: the code below may invalidate the reference to box, so we can't use it after this point
 		for (unsigned n = 0; n < num_books; ++n) {
-			float const length(rgen.rand_uniform(0.7, 0.95)*sz[dim]), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
+			float const length(rgen.rand_uniform(0.7, 0.95)*min(sz[dim], 2.0f*sz[!dim])), width(min(rgen.rand_uniform(0.6, 1.0)*length, 0.95f*sz[!dim]));
 			room_object_t obj(c, TYPE_BOOK, room_id, !dim, rgen.rand_bool(), (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL));
 			obj.obj_id = rgen.rand();
 			obj.color  = book_colors[rgen.rand() % NUM_BOOK_COLORS];
