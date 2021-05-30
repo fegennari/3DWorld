@@ -471,6 +471,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		} // for d
 		cube_t const &doors(cubes[4]);
 		point const llc(doors.get_llc());
+		float const out_sign(c.dir ? 1.0 : -1.0);
 
 		if (use_small_door) { // small house closet door
 			tid_nm_pair_t const tp(get_int_door_tid(), 0.0);
@@ -478,7 +479,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			if (open) {
 				float const door_width(doors.get_sz_dim(!c.dim)), door_thickness(doors.get_sz_dim(c.dim));
 				cube_t door(doors);
-				door.d[ c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*door_width;
+				door.d[ c.dim][c.dir] += out_sign*door_width;
 				door.d[!c.dim][1    ] -= (door_width - door_thickness);
 				get_material(tp, 1)       .add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy(!c.dim), c.dim, !c.dir); // draw front and back faces
 				get_untextured_material(1).add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy( c.dim)); // draw edges untextured
@@ -490,13 +491,13 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		}
 		else { // 4 panel folding door
 			float const doors_width(doors.get_sz_dim(!c.dim)), door_thickness(doors.get_sz_dim(c.dim));
-			float const door_spacing(0.25*doors_width), door_gap(0.01*door_spacing), out_sign(c.dir ? 1.0 : -1.0);
+			float const door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
 			int const tid(get_rect_panel_tid());
 			float tx(1.0/doors_width), ty(0.25/doors.dz());
 			if (!c.dim) {swap(tx, ty);} // swap so that ty is always in Z
 			tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
 			rgeom_mat_t &door_mat(get_material(door_tex, 1));
-			bool const doors_fold = 0; // else doors slide
+			bool const doors_fold(c.flags & RO_FLAG_HANGING); // else doors slide
 
 			if (doors_fold && open) { // draw open bifold doors open on both
 				// Note: this doesn't always look correct because doors can intersect other objects such as lights and dressers, and they have no edge quads
@@ -514,8 +515,9 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 					out_pt  [!c.dim] = side_pos + open_sign*open_amt;
 					inner_pt[!c.dim] = side_pos + 2*open_sign*open_amt;
 					// outside faces
-					point const pts1o[4] = {point(side_pt.x, side_pt.y, z1), point(out_pt.x,   out_pt.y,   z1), point(out_pt.x,   out_pt.y,   z2), point(side_pt.x, side_pt.y, z2)};
-					point const pts2o[4] = {point(out_pt.x,  out_pt.y,  z1), point(inner_pt.x, inner_pt.y, z1), point(inner_pt.x, inner_pt.y, z2), point(out_pt.x,  out_pt.y,  z2)};
+					point pts1o[4] = {point(side_pt.x, side_pt.y, z1), point(out_pt.x,   out_pt.y,   z1), point(out_pt.x,   out_pt.y,   z2), point(side_pt.x, side_pt.y, z2)};
+					point pts2o[4] = {point(out_pt.x,  out_pt.y,  z1), point(inner_pt.x, inner_pt.y, z1), point(inner_pt.x, inner_pt.y, z2), point(out_pt.x,  out_pt.y,  z2)};
+					if (!c.dim) {std::reverse(pts1o, pts1o+4); std::reverse(pts2o, pts2o+4);} // reverse the winding order
 					add_quad_to_mat(door_mat, pts1o, ts, tt, cw);
 					add_quad_to_mat(door_mat, pts2o, ts, tt, cw);
 					// inside faces
@@ -527,6 +529,9 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 					}
 					add_quad_to_mat(door_mat, pts1i, ts, tt, cw);
 					add_quad_to_mat(door_mat, pts2i, ts, tt, cw);
+					point edge[4] = {pts2i[2], pts2i[1], pts2o[2], pts2o[1]}; // the 4 inner points for the two sides of the door; independent of reverse
+					float const tc_zeros[4] = {0,0,0,0};
+					add_quad_to_mat(door_mat, edge, tc_zeros, tc_zeros, cw); // Note: edge is at an odd angle, not perpendicular to the door; is this good enough?
 				} // for side
 			}
 			else { // draw closet door in 4 cube panels
