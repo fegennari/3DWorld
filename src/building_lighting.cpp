@@ -167,6 +167,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 		if (c->type  == TYPE_ELEVATOR) continue; // elevator cars/internals can move so should not contribute to lighting
 		if (c->type  == TYPE_BLOCKER || c->type == TYPE_COLLIDER) continue; // blockers and colliders are not drawn
 		if (c->type  == TYPE_WALL_TRIM || c->type == TYPE_BOOK)   continue; // too small to count (optimization)
+		if (c->type  == TYPE_CRACK) continue; // not reflected
 		
 		if (c->type == TYPE_CLOSET && c->is_open()) {
 			cube_t cubes[5];

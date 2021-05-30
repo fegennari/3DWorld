@@ -2495,6 +2495,10 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 	get_material(tex, 0).add_cube_to_verts(window, c.color, c.get_llc(), skip_faces); // no apply_light_color()
 }
 
+void building_room_geom_t::add_crack(room_object_t const &c) { // in window, TV, or computer monitor
+	// TODO: draw set of radial lines out from the center in white with alpha < 1.0
+}
+
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1));
 	colorRGBA const color(apply_light_color(c));
@@ -2610,6 +2614,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_PHONE:    return color*0.5; // 50% case color, 50% black
 	case TYPE_TPROLL:   return (WHITE*0.75  + GRAY*0.25);
 	case TYPE_SPRAYCAN: return (DK_GRAY*0.5 + color*0.5);
+	case TYPE_CRACK:    return ALPHA0; // transparent
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(get_model_color());} // handle models
