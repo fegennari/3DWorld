@@ -446,14 +446,20 @@ void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) 
 	objects.push_back(hanger_rod);
 }
 
+void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], float const tt[4], color_wrapper const &cw) {
+	norm_comp normal(get_poly_norm(pts));
+	for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(pts[n], normal, ts[n], tt[n], cw);}
+}
+
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
-	bool const use_small_door(c.is_small_closet()), draw_interior(c.is_open() || player_in_closet);
+	bool const open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes);
 
 	if (inc_lg) { // draw closet walls and doors
 		rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
-		unsigned const skip_faces(~get_face_mask(c.dim, !c.dir) | EF_Z12); // skip top, bottom, and face that's against the wall
+		bool const draw_back_faces(player_in_closet || open);
+		unsigned const skip_faces((draw_back_faces ? 0 : ~get_face_mask(c.dim, !c.dir)) | EF_Z12); // skip top, bottom, and face that's against the wall
 
 		for (unsigned d = 0; d < 2; ++d) {
 			bool const adj_room_wall(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
@@ -469,7 +475,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		if (use_small_door) { // small house closet door
 			tid_nm_pair_t const tp(get_int_door_tid(), 0.0);
 
-			if (c.is_open()) {
+			if (open) {
 				float const door_width(doors.get_sz_dim(!c.dim)), door_thickness(doors.get_sz_dim(c.dim));
 				cube_t door(doors);
 				door.d[ c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*door_width;
@@ -483,19 +489,58 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			}
 		}
 		else { // 4 panel folding door
-			assert(!c.is_open()); // not yet handled
-			float const doors_width(doors.get_sz_dim(!c.dim)), door_spacing(0.25*doors_width), door_gap(0.01*door_spacing);
+			float const doors_width(doors.get_sz_dim(!c.dim)), door_thickness(doors.get_sz_dim(c.dim));
+			float const door_spacing(0.25*doors_width), door_gap(0.01*door_spacing), out_sign(c.dir ? 1.0 : -1.0);
 			int const tid(get_rect_panel_tid());
 			float tx(1.0/doors_width), ty(0.25/doors.dz());
 			if (!c.dim) {swap(tx, ty);} // swap so that ty is always in Z
 			tid_nm_pair_t const door_tex(tid, get_normal_map_for_bldg_tid(tid), tx, ty); // 4x1 panels
 			rgeom_mat_t &door_mat(get_material(door_tex, 1));
+			bool const doors_fold = 0; // else doors slide
 
-			for (unsigned n = 0; n < 4; ++n) { // draw closet door in 4 parts
-				cube_t door(doors);
-				door.d[!c.dim][0] = doors.d[!c.dim][0] + n    *door_spacing + door_gap; // left edge
-				door.d[!c.dim][1] = doors.d[!c.dim][0] + (n+1)*door_spacing - door_gap; // right edge
-				door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
+			if (doors_fold && open) { // draw open bifold doors open on both
+				// Note: this doesn't always look correct because doors can intersect other objects such as lights and dressers, and they have no edge quads
+				float const panel_len(0.25*doors.get_sz_dim(!c.dim) - 2.0*door_gap), open_amt(0.5*panel_len), extend(sqrt(panel_len*panel_len - open_amt*open_amt));
+				float const nom_pos(doors.d[c.dim][!c.dir]), front_pos(nom_pos + out_sign*extend), z1(doors.z1()), z2(doors.z2());
+				float const ts[4] = {0.0, 0.25, 0.25, 0.0}, tt[4] = {0.0, 0.0, 0.25, 0.25};
+				color_wrapper const cw(WHITE);
+				point side_pt, out_pt, inner_pt; // left side door points in this order from left to right, forming a V-shape pointing outward
+				side_pt[c.dim] = inner_pt[c.dim] = nom_pos;
+				out_pt [c.dim] = front_pos;
+
+				for (unsigned side = 0; side < 2; ++side) {
+					float const open_sign(side ? -1.0 : 1.0), side_pos(doors.d[!c.dim][side]);
+					side_pt [!c.dim] = side_pos;
+					out_pt  [!c.dim] = side_pos + open_sign*open_amt;
+					inner_pt[!c.dim] = side_pos + 2*open_sign*open_amt;
+					// outside faces
+					point const pts1o[4] = {point(side_pt.x, side_pt.y, z1), point(out_pt.x,   out_pt.y,   z1), point(out_pt.x,   out_pt.y,   z2), point(side_pt.x, side_pt.y, z2)};
+					point const pts2o[4] = {point(out_pt.x,  out_pt.y,  z1), point(inner_pt.x, inner_pt.y, z1), point(inner_pt.x, inner_pt.y, z2), point(out_pt.x,  out_pt.y,  z2)};
+					add_quad_to_mat(door_mat, pts1o, ts, tt, cw);
+					add_quad_to_mat(door_mat, pts2o, ts, tt, cw);
+					// inside faces
+					point pts1i[4], pts2i[4];
+					
+					for (unsigned n = 0; n < 4; ++n) { // create inside surfaces of doors with inverted winding order and normal
+						pts1i[n] = pts1o[3-n]; pts1i[n][c.dim] += open_sign*door_thickness;
+						pts2i[n] = pts2o[3-n]; pts2i[n][c.dim] += open_sign*door_thickness;
+					}
+					add_quad_to_mat(door_mat, pts1i, ts, tt, cw);
+					add_quad_to_mat(door_mat, pts2i, ts, tt, cw);
+				} // for side
+			}
+			else { // draw closet door in 4 cube panels
+				float const mid_gap(doors_fold ? door_gap : 0.0), gaps[5] = {door_gap, mid_gap, door_gap, mid_gap, door_gap};
+				unsigned const open_n[4] = {0, 0, 3, 3};
+
+				for (unsigned n = 0; n < 4; ++n) {
+					unsigned const N(open ? open_n[n] : n);
+					cube_t door(doors);
+					door.d[!c.dim][0] = doors.d[!c.dim][0] +  N   *door_spacing + gaps[N  ]; // left  edge
+					door.d[!c.dim][1] = doors.d[!c.dim][0] + (N+1)*door_spacing - gaps[N+1]; // right edge
+					if (!doors_fold && (n == 1 || n == 2)) {door.translate_dim(c.dim, -1.1*out_sign*door_thickness);} // inset the inner sliding doors
+					door_mat.add_cube_to_verts(door, WHITE, llc, skip_faces);
+				}
 			}
 		}
 	} // end inc_lg
@@ -711,9 +756,8 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 					C.d[d][ e] = C.d[d][e] + (e ? 1.0 : -1.0)*(against_wall ? 0.05 : 1.0)*flap_len;
 					float const zbot(C.z2()), dz(against_wall ? flap_len : 0.25*min(flap_len, box_sz.z)); // tilted somewhat upward; pointing up if against wall
 					point const pts[4] = {point(C.x1(), C.y1(), zbot), point(C.x2(), C.y1(), zbot), point(C.x2(), C.y2(), zbot), point(C.x1(), C.y2(), zbot)};
-					norm_comp const normal(get_poly_norm(pts));
 					unsigned const ix(mat.quad_verts.size());
-					for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(pts[n], normal, ts[n], tt[n], cw);}
+					add_quad_to_mat(mat, pts, ts, tt, cw);
 					for (unsigned n = 0; n < 2; ++n) {mat.quad_verts[ix + up_verts[n][side_ix]].v.z += dz;}
 					
 					// add bottom surface with inverted normal in reverse order
