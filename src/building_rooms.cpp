@@ -538,18 +538,16 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
 			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color); // closet door is always white; sides should match interior walls
 			set_obj_id(objs);
-			room_object_t const &closet(objs.back());
-
-			if (closet.is_small_closet()) {
-				point const lpos(closet.xc(), closet.yc(), closet.z2());
-				cube_t light(lpos);
-				light.z1() -= 0.02*window_vspacing;
-				light.expand_by_xy(0.04*window_vspacing);
-				colorRGBA const color(1.0, 1.0, 0.9); // yellow-ish
-				objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 0.0, SHAPE_CYLIN, color); // dir=0 (unused)
-				objs.back().obj_id = light_ix_assign.get_next_ix();
-			}
 			placed_closet = 1; // done
+			// add a light inside the closet
+			room_object_t const &closet(objs.back());
+			point const lpos(closet.xc(), closet.yc(), closet.z2());
+			cube_t light(lpos);
+			light.z1() -= 0.02*window_vspacing;
+			light.expand_by_xy((closet.is_small_closet() ? 0.04 : 0.06)*window_vspacing);
+			colorRGBA const color(1.0, 1.0, 0.9); // yellow-ish
+			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 0.0, SHAPE_CYLIN, color); // dir=0 (unused)
+			objs.back().obj_id = light_ix_assign.get_next_ix();
 		} // for d
 	} // for n
 	// dresser
