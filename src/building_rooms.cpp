@@ -494,6 +494,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	bool is_ext_wall[2][2] = {0}; // precompute which walls are exterior, {dim}x{dir}
 	for (unsigned d = 0; d < 4; ++d) {is_ext_wall[d>>1][d&1] = (classify_room_wall(room, zval, (d>>1), (d&1), 0) == ROOM_WALL_EXT);} // check is_basement?
 	bool placed_closet(0);
+	unsigned closet_obj_id(0);
 
 	for (unsigned n = 0; n < 4 && !placed_closet; ++n) { // try 4 room corners
 		unsigned const corner_ix((first_corner + n)&3);
@@ -536,6 +537,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			unsigned flags(0);
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
+			closet_obj_id = objs.size();
 			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color); // closet door is always white; sides should match interior walls
 			set_obj_id(objs);
 			placed_closet = 1; // done
@@ -560,6 +562,26 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	vector3d const ns_sz_scale(ns_depth/ns_height, ns_width/ns_height, 1.0);
 	place_obj_along_wall(TYPE_NIGHTSTAND, room, ns_height, ns_sz_scale, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0, pref_orient);
 
+	if (placed_closet) { // determine if there's space for the closet doors to fold outward
+		room_object_t &closet(objs[closet_obj_id]);
+
+		if (closet.get_sz_dim(!closet.dim) < 1.8*closet.dz()) { // only for medium sized closets
+			bool const dim(closet.dim), dir(closet.dir);
+			cube_t doors_area(closet);
+			doors_area.d[dim][!dir]  = closet.d[dim][dir]; // flush with the front of the closet
+			doors_area.d[dim][ dir] += (dir ? 1.0 : -1.0)*0.25*closet.get_sz_dim(!dim); // extend outward by a quarter the closet width
+			bool can_fold((room_bounds.d[dim][dir] < doors_area.d[dim][dir]) ^ dir); // should be true, unless closet is very wide and room is very narrow
+
+			for (auto i = objs.begin()+objs_start; i != objs.end() && can_fold; ++i) {
+				if (i->type == TYPE_CLOSET || i->type == TYPE_LIGHT) continue; // skip the closet and its light
+				can_fold &= !i->intersects(doors_area);
+			}
+			if (can_fold) { // mark as folding
+				closet.flags |= RO_FLAG_HANGING;
+				objs.emplace_back(doors_area, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS); // prevent adding bookcases/trashcans/balls intersecting open closet doors
+			}
+		}
+	}
 	// try to place a lamp on a dresser or nightstand that was added to this room
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP) && (rgen.rand()&3) != 0) {
 		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_LAMP)); // L, W, H
