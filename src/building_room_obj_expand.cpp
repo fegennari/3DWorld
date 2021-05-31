@@ -50,6 +50,8 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 		objects.push_back(C);
 		cubes.push_back(C);
 	} // for n
+	// TODO: computer and keyboard
+
 	if (!c.is_small_closet() && rgen.rand_bool()) { // maybe add a lamp in the closet if it's large
 		float const height(0.25*window_vspacing), width(height*get_lamp_width_scale()), radius(0.5*width);
 

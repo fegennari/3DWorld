@@ -15,8 +15,7 @@ Cities:
 * Generate heightmap from surrounding terrain on the fly when needed for cities
 
 Building interaction/gameplay ideas:
-* Player can open books
-* More closet items: computer, keyboard, ball
+* More closet items: computer, keyboard
 * Player can use cell phones
 * Throw ball at window, TV, or monitor leaves a crack
 * Light switches

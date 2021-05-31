@@ -1294,9 +1294,8 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
 	}
 	if (c.is_open()) {
-		assert(!upright);
-		assert(!is_held);
-		// TODO: draw book as open
+		assert(!upright && !is_held);
+		// draw book as open?
 	}
 	if (draw_cover_as_small || inc_lg) { // draw large faces: outside faces of covers and spine
 		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, draw_cover_as_small));
