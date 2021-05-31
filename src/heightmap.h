@@ -19,6 +19,10 @@ class heightmap_t : public texture_t {
 
 	unsigned get_pixel_ix(unsigned x, unsigned y) const;
 
+	void run_erosion (vector<float> &vals);
+	void run_city_gen(vector<float> &vals);
+	void to_floats   (vector<float> &vals) const;
+	void from_floats (vector<float> const &vals);
 public:
 	heightmap_t() {}
 	heightmap_t(char t, char f, int w, int h, std::string const &n, bool inv) :
@@ -109,6 +113,7 @@ class terrain_hmap_manager_t : public tex_mod_map_manager_t {
 
 public:
 	void load(char const *const fn, bool invert_y=0);
+	void post_load();
 	bool maybe_load(char const *const fn, bool invert_y=0);
 	void write_png(std::string const &fn) const;
 	bool clamp_xy(int &x, int &y, float fract_x=0.0, float fract_y=0.0, bool allow_wrap=1) const;

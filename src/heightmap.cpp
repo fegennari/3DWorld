@@ -7,6 +7,7 @@
 #include "inlines.h"
 #include "file_utils.h"
 #include "sinf.h"
+#include "mesh.h"
 
 using namespace std;
 
@@ -106,27 +107,20 @@ void heightmap_t::modify_heightmap_value(unsigned x, unsigned y, int val, bool v
 	}
 }
 
-
-float get_mh_texture_mult();
-float get_mh_texture_add ();
-
 void heightmap_t::postprocess_height() {
 
-	if (erosion_iters_tt == 0 && !have_cities()) return; // no erosion or cities
+	if (erosion_iters_tt == 0 && !have_cities()) return; // no erosion or cities => no need to update height values
 	timer_t timer("Postprocess Height");
 	assert(is_allocated());
 	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
-	vector<float> vals(num_pixels());
-	assert(!vals.empty());
-	float const val_mult(get_mh_texture_mult()), val_div(1.0/val_mult), val_add(get_mh_texture_add());
+	vector<float> vals;
+	to_floats(vals);
+	run_erosion(vals);
+	run_city_gen(vals);
+	from_floats(vals);
+}
 
-#pragma omp parallel for schedule(static,64)
-	for (int i = 0; i < (int)vals.size(); ++i) { // convert from pixel to heightmap value; max value is 255.0
-		float &v(vals[i]);
-		if (ncolors == 2) {v = (data[i<<1]/256.0 + data[(i<<1)+1]);} // 16-bit
-		else {v = data[i];} // 8-bit
-		v = val_mult*v + val_add;
-	}
+void heightmap_t::run_erosion(vector<float> &vals) {
 	if (erosion_iters_tt > 0) {
 		float min_zval(vals.front());
 		for (auto i = vals.begin(); i != vals.end(); ++i) {min_eq(min_zval, *i);}
@@ -157,10 +151,29 @@ void heightmap_t::postprocess_height() {
 			}
 		}
 		else {
-			apply_erosion(&vals.front(), width, height, min_zval, erosion_iters_tt);
+			apply_erosion(vals.data(), width, height, min_zval, erosion_iters_tt);
 		}
 	}
-	gen_cities(&vals.front(), width, height);
+}
+
+void heightmap_t::run_city_gen(vector<float> &vals) {gen_cities(vals.data(), width, height);}
+
+void heightmap_t::to_floats(vector<float> &vals) const {
+	float const val_mult(get_mh_texture_mult()), val_add(get_mh_texture_add());
+	vals.resize(num_pixels());
+	assert(!vals.empty()); // must have been allocated
+
+#pragma omp parallel for schedule(static,64)
+	for (int i = 0; i < (int)vals.size(); ++i) { // convert from pixel to heightmap value; max value is 255.0
+		float &v(vals[i]);
+		if (ncolors == 2) {v = (data[i<<1]/256.0 + data[(i<<1)+1]);} // 16-bit
+		else {v = data[i];} // 8-bit
+		v = val_mult*v + val_add;
+	}
+}
+
+void heightmap_t::from_floats(vector<float> const &vals) {
+	float const val_div(1.0/get_mh_texture_mult()), val_add(get_mh_texture_add());
 
 #pragma omp parallel for schedule(static,64)
 	for (int i = 0; i < (int)vals.size(); ++i) { // convert from heightmap value to pixel
@@ -302,12 +315,16 @@ void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
 
 	assert(fn != nullptr);
 	cout << "Loading terrain heightmap file " << fn << endl;
-	RESET_TIME;
+	timer_t timer("Heightmap Load");
 	assert(!hmap.is_allocated()); // can only call once
 	hmap = heightmap_t(0, 7, 0, 0, fn, invert_y);
 	hmap.load(-1, 0, 1, 1);
-	PRINT_TIME("Heightmap Load");
-	hmap.postprocess_height(); // apply erosion, etc. directly after loading, before applying mod brushes
+	timer.end();
+	hmap.postprocess_height(); // apply erosion, etc. directly after loading/generating, before applying mod brushes
+	post_load();
+}
+
+void terrain_hmap_manager_t::post_load() {
 	if (!hmap_out_fn.empty()) {write_png(hmap_out_fn);}
 }
 

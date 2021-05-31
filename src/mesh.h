@@ -147,6 +147,8 @@ inline int get_ypos_clamp(float yval) {return max(0, min(MESH_Y_SIZE-1, get_ypos
 inline int get_xpos_round_down(float xval) {return int((xval + X_SCENE_SIZE)*DX_VAL_INV);}
 inline int get_ypos_round_down(float yval) {return int((yval + Y_SCENE_SIZE)*DY_VAL_INV);}
 
+float get_mh_texture_mult();
+float get_mh_texture_add ();
 
 inline float get_dim_val(int val, unsigned dim) {
 	switch (dim) {
