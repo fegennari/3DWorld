@@ -908,7 +908,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_WASHER    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 300.0, 150.0, "washer");
 	bldg_obj_types[TYPE_DRYER     ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 300.0, 160.0, "dryer");
 	// keys are special because they're potentially either a small object or an object model (in a drawer)
-	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key");
+	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key"); // drawn as an object, not a model
 	//                                                pc ac pu at im ls value  weight  name [capacity]
 }
 

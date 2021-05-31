@@ -387,18 +387,16 @@ void building_materials_t::create_vbos(building_t const &building) {
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
 }
 void building_materials_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
-	iterator text_mats_start(end());
+	static vector<iterator> text_mats;
+	text_mats.clear();
 
 	// first pass, draw regular materials (excluding text)
 	for (iterator m = begin(); m != end(); ++m) {
-		if (m->tex.tid == FONT_TEXTURE_ID) {
-			if (text_mats_start == end()) {text_mats_start = m;}
-			break; // skip in this pass
-		}
-		m->draw(s, shadow_only, reflection_pass);
+		if (m->tex.tid == FONT_TEXTURE_ID) {text_mats.push_back(m);} // skip in this pass
+		else {m->draw(s, shadow_only, reflection_pass);}
 	}
 	// second pass, draw text (if it exists) so that alpha blending works
-	for (auto m = text_mats_start; m != end(); ++m) {m->draw(s, shadow_only, reflection_pass);}
+	for (auto m = text_mats.begin(); m != text_mats.end(); ++m) {(*m)->draw(s, shadow_only, reflection_pass);}
 }
 void building_materials_t::upload_draw_and_clear(shader_t &s) {
 	for (iterator m = begin(); m != end(); ++m) {m->upload_draw_and_clear(s);}
@@ -796,7 +794,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	}
 	disable_blend();
 	vbo_wrap_t::post_render();
-	bool const disable_cull_face(0/*!obj_model_insts.empty() || !model_objs.empty()*/); // better but slower?
+	bool const disable_cull_face(0); // better but slower?
 	if (disable_cull_face) {glDisable(GL_CULL_FACE);}
 	point const camera_bs(camera_pdu.pos - xlate), building_center(building.bcube.get_cube_center());
 	bool const is_rotated(building.is_rotated());
