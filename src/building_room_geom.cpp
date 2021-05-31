@@ -442,6 +442,23 @@ void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) 
 		objects.push_back(C);
 		cubes.push_back(C);
 	} // for n
+	if (!c.is_small_closet() && rgen.rand_bool()) { // maybe add a lamp in the closet if it's large
+		float const height(0.25*window_vspacing), width(height*get_lamp_width_scale()), radius(0.5*width);
+
+		if (width > 0.0 && width < 0.9*min(interior.dx(), interior.dy())) { // check if lamp model is valid and lamp fits in closet
+			point center(0.0, 0.0, interior.z1());
+
+			for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts to place a lamp
+				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(interior.d[d][0]+radius, interior.d[d][1]-radius);}
+				cube_t lamp(get_cube_height_radius(center, radius, height));
+			
+				if (!has_bcube_int(lamp, cubes)) { // check for intersection with boxes
+					objects.emplace_back(lamp, TYPE_LAMP, c.room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP), 0.0, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]);
+					break;
+				}
+			} // for n
+		}
+	}
 	// add hanger rod
 	float const hr_radius(0.015*window_vspacing);
 	room_object_t hanger_rod(interior, TYPE_HANGER_ROD, c.room_id, c.dim, c.dir, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR));
