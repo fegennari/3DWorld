@@ -201,21 +201,22 @@ public:
 	void flatten_region(cube_t const &cube) {
 		// Note: to be applied before tiles are generated so that they don't need to be invalidated
 		// Note: assumes unscaled mesh (mesh_scale == 1)
-		point const center(cube.get_cube_center());
 		int const x1(floor((cube.x1() + X_SCENE_SIZE)*DX_VAL_INV)), y1(floor((cube.y1() + Y_SCENE_SIZE)*DY_VAL_INV));
 		int const x2(ceil ((cube.x2() + X_SCENE_SIZE)*DX_VAL_INV)), y2(ceil ((cube.y2() + Y_SCENE_SIZE)*DY_VAL_INV));
+		int cx1(x1), cy1(y1), cx2(x2+1), cy2(y2+1); // Note: cx2 and cy2 are one past the end; this is needed for proper mirror clamping and empty range early termination optimization
+		if (!clamp_xy(cx1, cy1, 0.0, 0.0, 0) || !clamp_xy(cx2, cy2, 0.0, 0.0, 0)) return; // off the texture, skip
+		assert(cx1 >= 0 && cy1 >= 0 && cx1 <= cx2 && cy1 <= cy2);
+		if (cx1 == cy1 || cx2 == cy2) return; // empty range optimization
+		point const center(cube.get_cube_center());
 		float xc((center.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5), yc((center.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5); // convert from real to index space
 		int const xlo(floor(xc)), ylo(floor(yc)), xhi(ceil(xc)), yhi(ceil(yc));
 		float const xv(xc - xlo), yv(yc - ylo); // use cubic_interpolate()?
 		int const height_val(yv*(xv*get_clamped_pixel_value(xhi, yhi, 0) + (1.0f-xv)*get_clamped_pixel_value(xlo, yhi, 0)) +
 			          (1.0f-yv)*(xv*get_clamped_pixel_value(xhi, ylo, 0) + (1.0f-xv)*get_clamped_pixel_value(xlo, ylo, 0))); // linear interpolation
-		int cx1(x1), cy1(y1), cx2(x2), cy2(y2);
-		if (!clamp_xy(cx1, cy1, 0.0, 0.0, 0) || !clamp_xy(cx2, cy2, 0.0, 0.0, 0)) return; // off the texture, skip
-		assert(cx1 >= 0 && cy1 >= 0 && cx1 <= cx2 && cy1 <= cy2);
 		tex_mod_map_manager_t::mod_elem_t elem(cx1, cy1, height_val);
 
-		for (elem.y = cy1; elem.y <= cy2; ++elem.y) {
-			for (elem.x = cx1; elem.x <= cx2; ++elem.x) {modify_height(elem, 0);} // not wrapped
+		for (elem.y = cy1; elem.y < cy2; ++elem.y) {
+			for (elem.x = cx1; elem.x < cx2; ++elem.x) {modify_height(elem, 0);} // not wrapped
 		}
 	}
 	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x, float fract_y, bool allow_wrap=1) {

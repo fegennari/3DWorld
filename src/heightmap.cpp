@@ -305,7 +305,6 @@ bool tex_mod_map_manager_t::write_mod(string const &fn) const {
 }
 
 bool terrain_hmap_manager_t::clamp_xy(int &x, int &y, float fract_x, float fract_y, bool allow_wrap) const {
-
 	x = round_fp(mesh_scale*(x + fract_x));
 	y = round_fp(mesh_scale*(y + fract_y));
 	return clamp_no_scale(x, y, allow_wrap);
