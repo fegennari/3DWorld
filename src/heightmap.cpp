@@ -21,7 +21,6 @@ extern string hmap_out_fn;
 
 
 void adjust_brush_weight(float &delta, float dval, int shape) {
-
 	if      (shape == BSHAPE_LINEAR   ) {delta *= 1.0f - dval;} // linear
 	else if (shape == BSHAPE_QUADRATIC) {delta *= 1.0f - dval*dval;} // quadratic
 	else if (shape == BSHAPE_COSINE   ) {delta *= COSF(0.5f*PI*dval);} // cosine
@@ -36,7 +35,7 @@ void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm, int
 	float const step_delta(1.0/num_steps), r_inv(1.0/max(1U, radius));
 	bool const is_delta(!is_flatten_brush());
 
-	#pragma omp parallel for schedule(dynamic,1) // only ~1.8x faster
+#pragma omp parallel for schedule(dynamic,1) // only ~1.8x faster
 	for (int yp = y - (int)radius; yp <= y + (int)radius; yp += step_sz) {
 		for (int xp = x - (int)radius; xp <= x + (int)radius; xp += step_sz) {
 			for (unsigned sy = 0; sy < num_steps; ++sy) {
@@ -48,24 +47,21 @@ void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm, int
 					adjust_brush_weight(mod_delta, dval, shape);
 					assert(tmmm);
 					tmmm->modify_height_value(xp, yp, round_fp(mod_delta), is_delta, dx, dy);
-				}
-			}
-		}
-	}
+				} // for sx
+			} // for sy
+		} // for xp
+	} // for yp
 }
 
 
 unsigned heightmap_t::get_pixel_ix(unsigned x, unsigned y) const {
-
 	assert(is_allocated());
 	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
 	assert(x < (unsigned)width && y < (unsigned)height);
 	return (width*y + x);
 }
 
-
 unsigned heightmap_t::get_pixel_value(unsigned x, unsigned y) const {
-
 	unsigned const ix(get_pixel_ix(x, y));
 	if (ncolors == 1) {return data[ix];}
 	return *((unsigned short *)(data + (ix<<1)));
@@ -304,7 +300,7 @@ bool terrain_hmap_manager_t::clamp_no_scale(int &x, int &y, bool allow_wrap) con
 
 void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
 
-	assert(fn != NULL);
+	assert(fn != nullptr);
 	cout << "Loading terrain heightmap file " << fn << endl;
 	RESET_TIME;
 	assert(!hmap.is_allocated()); // can only call once
@@ -316,7 +312,6 @@ void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
 }
 
 bool terrain_hmap_manager_t::maybe_load(char const *const fn, bool invert_y) {
-
 	if (fn == NULL || enabled()) return 0;
 	load(fn, invert_y);
 	return 1;

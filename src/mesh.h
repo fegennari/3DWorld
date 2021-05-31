@@ -168,11 +168,9 @@ inline int get_dim_pos(float val, unsigned dim) {
 	return 0;
 }
 
-
 inline point get_xyz_pos(int x, int y, int z) {
 	return point(get_xval(x), get_yval(y), get_zval(z));
 }
-
 inline point get_mesh_xyz_pos(int x, int y) { // Note: not bounds checked
 	return point(get_xval(x), get_yval(y), mesh_height[y][x]);
 }

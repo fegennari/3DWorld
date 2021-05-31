@@ -374,14 +374,12 @@ void write_map_mode_heightmap_image() {
 		vector<float> heights(texture.num_pixels());
 		float min_z(FLT_MAX), max_z(-FLT_MAX);
 		mesh_xy_grid_cache_t height_gen;
-		setup_height_gen(height_gen, xstart, ystart, DX_VAL, DY_VAL, width, height, 1);
+		setup_height_gen(height_gen, xstart, ystart, DX_VAL, DY_VAL, width, height, 1); // cache_values=1
 
 	#pragma omp parallel for schedule(static,1)
 		for (int i = 0; i < height; ++i) {
 			int const off(width*(height - i - 1)); // invert yval
-			for (int j = 0; j < width; ++j) {
-				heights[off + j] = get_mesh_height(height_gen, xstart, ystart, DX_VAL, DY_VAL, i, j);
-			}
+			for (int j = 0; j < width; ++j) {heights[off + j] = get_mesh_height(height_gen, xstart, ystart, DX_VAL, DY_VAL, i, j);}
 		}
 		for (unsigned i = 0; i < heights.size(); ++i) {
 			min_eq(min_z, heights[i]);
