@@ -427,6 +427,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 	vector3d const sz(c.get_size());
 	bool const dim(sz.x < sz.y); // long dim
 	float const base_height(0.2*get_window_vspace());
+	bool was_added(0);
 
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts at placing valid item(s) in this box
 		unsigned const obj_type(/*rgen.rand()%6*/0); // {book, bottles, ball, paint can, spraypaint, toilet paper}
@@ -445,8 +446,8 @@ void building_t::add_box_contents(room_object_t const &box) {
 				if (obj.z2() > c.z2()) break; // book doesn't fit - the stack is too tall
 				set_rand_pos_for_sz(obj, dim, length, width, rgen);
 				interior->room_geom->expanded_objs.push_back(obj);
-				interior->room_geom->update_draw_state_for_room_object(obj, *this);
-				cur_zval = obj.z2();
+				was_added = 1;
+				cur_zval  = obj.z2();
 			} // for n
 			break; // done
 		}
@@ -466,6 +467,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 			// TODO: ~0.4*base_height
 		}
 	} // for n
+	if (was_added) {interior->room_geom->clear_static_small_vbos();}
 }
 
 void building_t::toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval) { // called by the player or AI
@@ -587,7 +589,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 			if (velocity == zero_vector) { // stopped
 				c->flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
 				interior->update_dynamic_draw_data(); // remove from dynamic objects
-				interior->room_geom->clear_static_small_vbos(); // add to static objects
+				interior->room_geom->clear_static_small_vbos(); // add to small static objects
 			}
 			else { // move based on velocity
 				new_center += velocity*fticks_stable;
