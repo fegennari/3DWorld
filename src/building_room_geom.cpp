@@ -403,11 +403,12 @@ cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) 
 	if (!cubes[1].is_all_zeros()) {interior.d[!c.dim][0] = cubes[1].d[!c.dim][1];} // left  side (if wall exists)
 	if (!cubes[3].is_all_zeros()) {interior.d[!c.dim][1] = cubes[3].d[!c.dim][0];} // right side (if wall exists)
 	interior.d[ c.dim][c.dir] = cubes[2].d[c.dim][!c.dir]; // set to inside of front wall
+	interior.expand_by_xy(-0.02*interior.min_len()); // shrink slightly to clip off the area taken by the wall trim where objects shouldn't be placed
 	assert(interior.is_strictly_normalized());
 	return interior;
 }
 void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) {
-	cube_t ccubes[5]; // unused
+	cube_t ccubes[5]; // only used to get interior space
 	get_closet_cubes(c, ccubes);
 	cube_t const interior(get_closet_interior_space(c, ccubes));
 	float const depth(interior.get_sz_dim(c.dim)), box_sz(0.25*depth), window_vspacing(c.dz()*(1.0 + FLOOR_THICK_VAL_HOUSE));
@@ -416,7 +417,7 @@ void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) 
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
 	vect_cube_t &cubes(get_temp_cubes());
 	room_object_t C(c);
-	C.flags = RO_FLAG_WAS_EXP; // Note: also clears open flag
+	C.flags = (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP); // Note: also clears open flag
 	C.type  = TYPE_BOX;
 	vector3d sz;
 	point center;
@@ -424,7 +425,7 @@ void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) 
 	for (unsigned n = 0; n < num_boxes; ++n) {
 		for (unsigned d = 0; d < 2; ++d) {
 			sz    [d] = box_sz*rgen.rand_uniform(0.5, 1.0); // x,y half width
-			center[d] = rgen.rand_uniform(interior.d[d][0]+sz[d], interior.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
+			center[d] = rgen.rand_uniform(interior.d[d][0]+sz[d], interior.d[d][1]-sz[d]); // randomly placed within the bounds of the closet
 		}
 		C.set_from_point(center);
 		set_cube_zvals(C, interior.z1(), (interior.z1() + box_sz*rgen.rand_uniform(0.8, 1.5)));
