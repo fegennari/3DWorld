@@ -675,13 +675,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		else {add_pen_pencil_marker_to_material(c_rot, mat);}
 	}
 	else if (c.type == TYPE_TPROLL) { // apply get_player_cview_rot_matrix()?
-		cube_t hole(c);
-		hole.expand_by_xy(-0.3*c.dx());
-		cube_t tube(hole);
-		hole.expand_in_dim(2, 0.001*c.dz()); // expand slightly to avoid z-fighting
-		mat.add_vcylin_to_verts(tube, LT_BROWN, 0, 0, 1); // tube, sides only, two sided (only need inside)
-		mat.add_vcylin_to_verts(hole, ALPHA0,   1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // hole - top/bottom surface only to mask off the outer part of the roll
-		mat.add_vcylin_to_verts(c,    c.color,  1, 1); // paper roll
+		add_vert_tproll_to_material(c, mat);
 	}
 	else if (c.type == TYPE_BOOK) {
 		static building_room_geom_t tmp_rgeom;

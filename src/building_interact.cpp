@@ -297,7 +297,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			sound_scale = 0.0; // sound has already been registered above
 		}
 		else if (obj.type == TYPE_TPROLL) {
-			if (!(obj.flags & RO_FLAG_HANGING)) {
+			if (!(obj.flags & (RO_FLAG_HANGING | RO_FLAG_WAS_EXP))) {
 				gen_sound_thread_safe(SOUND_FOOTSTEP, local_center, 0.5, 1.5); // could be better
 				obj.flags |= RO_FLAG_HANGING; // pull down the roll
 				update_draw_data = 1;
@@ -1450,7 +1450,7 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	bool const is_light(obj.type == TYPE_LIGHT);
 
 	if (obj.type == TYPE_PICTURE && !(obj.flags & RO_FLAG_TAKEN1)) {obj.flags |= RO_FLAG_TAKEN1;} // take picture, leave frame
-	else if (obj.type == TYPE_TPROLL && !(obj.flags & RO_FLAG_TAKEN1)) {obj.flags |= RO_FLAG_TAKEN1;} // take toilet paper roll, leave holder
+	else if (obj.type == TYPE_TPROLL && !(obj.flags & (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP))) {obj.flags |= RO_FLAG_TAKEN1;} // take toilet paper roll, leave holder; not for expanded TP rolls
 	else if (obj.type == TYPE_BED) {
 		if      (obj.flags & RO_FLAG_TAKEN2) {obj.flags |= RO_FLAG_TAKEN3;} // take mattress
 		else if (obj.flags & RO_FLAG_TAKEN1) {obj.flags |= RO_FLAG_TAKEN2;} // take sheets

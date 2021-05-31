@@ -479,7 +479,20 @@ void add_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 	square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
 	mat.add_cube_to_verts(square, tp_color, zero_vector, ~get_skip_mask_for_xy(c.dim)); // only draw front/back faces
 }
+void building_room_geom_t::add_vert_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat) {
+	cube_t hole(c);
+	hole.expand_by_xy(-0.3*c.dx());
+	cube_t tube(hole);
+	hole.expand_in_dim(2, 0.001*c.dz()); // expand slightly to avoid z-fighting
+	mat.add_vcylin_to_verts(tube, apply_light_color(c, LT_BROWN), 0, 0, 1); // tube, sides only, two sided (only need inside)
+	mat.add_vcylin_to_verts(hole, ALPHA0, 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // hole - top/bottom surface only to mask off the outer part of the roll
+	mat.add_vcylin_to_verts(c, apply_light_color(c),  1, 1); // paper roll
+}
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
+	if (c.flags & RO_FLAG_WAS_EXP) { // bare TP roll from a box
+		add_vert_tproll_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
+		return;
+	}
 	float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), length(c.get_sz_dim(!c.dim));
 	if (!(c.flags & RO_FLAG_TAKEN1)) {add_tproll_to_material(c, get_untextured_material(1, 0, 1));} // draw the roll if not taken
 	// draw the holder attached to the wall
