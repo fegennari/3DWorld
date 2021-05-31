@@ -1127,7 +1127,7 @@ inline float get_tc_leg_width(cube_t const &c, float width) {return 0.5f*width*(
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 cube_t get_building_lights_bcube();
-void get_closet_cubes(room_object_t const &c, cube_t cubes[5]);
+void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
 void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5], bool is_desk);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);

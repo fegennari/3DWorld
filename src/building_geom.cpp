@@ -329,7 +329,7 @@ unsigned check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, po
 }
 unsigned check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5];
-	get_closet_cubes(c, cubes); // get cubes for walls and door; required to handle collision with closet interior
+	get_closet_cubes(c, cubes, 1); // get cubes for walls and door; required to handle collision with closet interior; for_collision=1
 	return check_cubes_collision(cubes, (c.is_open() ? 4U : 5U), pos, p_last, radius, cnorm); // only check for door collision if closet door is closed
 }
 unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {

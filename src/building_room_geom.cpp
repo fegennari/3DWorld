@@ -374,10 +374,12 @@ tid_nm_pair_t get_scaled_wall_tex(tid_nm_pair_t const &wall_tex) {
 }
 
 // cubes: front left, left side, front right, right side, door
-void get_closet_cubes(room_object_t const &c, cube_t cubes[5]) {
+void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision) {
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
-	bool const use_small_door(c.is_small_closet());
-	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : 0.05*width), wall_shift(width - wall_width), wall_thick(WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*height);
+	bool const use_small_door(c.is_small_closet()), doors_fold(!use_small_door && (c.flags & RO_FLAG_HANGING));
+	// small closets: door does not collide when open; large closets: edges of door still collide even when open
+	float const wall_width(use_small_door ? 0.5*(width - 0.5*height) : ((for_collision && c.is_open()) ? (doors_fold ? 0.2 : 0.25) : 0.05)*width);
+	float const wall_thick(WALL_THICK_VAL*(1.0f - FLOOR_THICK_VAL_HOUSE)*height), wall_shift(width - wall_width);
 	assert(wall_shift > 0.0);
 	cube_t doors(c), walls[2] = {c, c}; // left, right
 	walls[0].d[!c.dim][1] -= wall_shift;
@@ -385,13 +387,13 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5]) {
 
 	for (unsigned d = 0; d < 2; ++d) {
 		cube_t front(walls[d]), side(walls[d]);
-		front.d[c.dim][!c.dir] = side.d[c.dim][c.dir] = front.d[c.dim][c.dir] - (c.dir ? 1.0 : -1.0)*wall_thick;
+		front.d[c.dim][!c.dir] = side.d[c.dim][c.dir] = front.d[c.dim][c.dir] - (c.dir ? 1.0 : -1.0)*wall_thick; // set front wall/door thickness
 
 		if (!(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO))) { // only need to draw side wall when not adjacent to room wall
 			side.d[!c.dim][!d] += (d ? 1.0f : -1.0f)*(wall_width - wall_thick);
-			cubes[2*d+1] = side;
+			cubes[2*d+1] = side; // left or right side
 		}
-		cubes[2*d] = front;
+		cubes[2*d] = front; // front left or front right
 		doors.d[!c.dim][d] = walls[d].d[!c.dim][!d]; // clip door to space between walls
 	} // for d
 	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*wall_thick; // shift in slightly
@@ -502,7 +504,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 			if (doors_fold && open) { // draw open bifold doors open on both
 				// Note: this doesn't always look correct because doors can intersect other objects such as lights and dressers, and they have no edge quads
-				float const panel_len(0.25*doors.get_sz_dim(!c.dim) - 2.0*door_gap), open_amt(0.5*panel_len), extend(sqrt(panel_len*panel_len - open_amt*open_amt));
+				float const panel_len(0.2*doors.get_sz_dim(!c.dim) - 2.0*door_gap), open_amt(0.5*panel_len), extend(sqrt(panel_len*panel_len - open_amt*open_amt));
 				float const nom_pos(doors.d[c.dim][!c.dir]), front_pos(nom_pos + out_sign*extend), z1(doors.z1()), z2(doors.z2());
 				float const ts[4] = {0.0, 0.25, 0.25, 0.0}, tt[4] = {0.0, 0.0, 0.25, 0.25};
 				color_wrapper const cw(WHITE);
