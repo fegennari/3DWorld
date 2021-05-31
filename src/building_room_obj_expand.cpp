@@ -453,6 +453,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 			}
 		}
 		else if (obj_type == 2) { // ball - only 1
+			if (!is_house) continue; // balls in houses only, not office buildings
 			float const radius(0.048*floor_spacing);
 			if (c.min_len() < radius) continue; // can't fit any of this item
 			point const center(c.xc(), c.yc(), (c.z1() + radius));
