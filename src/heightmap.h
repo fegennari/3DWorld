@@ -31,6 +31,7 @@ public:
 	float get_heightmap_value(unsigned x, unsigned y) const;
 	void modify_heightmap_value(unsigned x, unsigned y, int val, bool val_is_delta);
 	void postprocess_height();
+	void proc_gen();
 };
 
 
@@ -113,6 +114,7 @@ class terrain_hmap_manager_t : public tex_mod_map_manager_t {
 
 public:
 	void load(char const *const fn, bool invert_y=0);
+	void proc_gen_heightmap(unsigned size);
 	void post_load();
 	bool maybe_load(char const *const fn, bool invert_y=0);
 	void write_png(std::string const &fn) const;

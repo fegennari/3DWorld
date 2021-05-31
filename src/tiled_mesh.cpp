@@ -59,7 +59,7 @@ vector<clear_area_t> tile_smaps_to_clear;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp, tt_triplanar_tex, use_grass_tess;
 extern bool use_instanced_pine_trees, enable_tt_model_reflect, water_is_lava, tt_fire_button_down, flashlight_on, camera_in_building, player_in_basement;
-extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt, num_rnd_grass_blocks;
+extern unsigned grass_density, max_unique_trees, shadow_map_sz, num_birds_per_tile, num_fish_per_tile, erosion_iters_tt, num_rnd_grass_blocks, tiled_terrain_gen_heightmap_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees, window_width, window_height;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode, auto_time_adv, draw_model;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, cloud_height_offset, clouds_per_tile;
@@ -2112,6 +2112,11 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {
 		read_default_hmap_modmap();
 		force_onto_surface_mesh(surface_pos); // move camera onto newly loaded terrain so that the first drawn frame is correct
+	}
+	else if (tiled_terrain_gen_heightmap_sz > 0) {
+		terrain_hmap_manager.proc_gen_heightmap(tiled_terrain_gen_heightmap_sz);
+		read_default_hmap_modmap();
+		// since the heightmap values should be the same as single point queries, we don't need to re-calculate the player's zval
 	}
 	if (!buildings_valid) {
 		gen_buildings();

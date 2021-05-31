@@ -12,7 +12,7 @@ Cities:
 - Interiors for non-rectangular buildings
 - Larger spacing between office building floors
 - Secondary Building roads
-* Generate heightmap from surrounding terrain on the fly when needed for cities
+* Generate heightmap from surrounding terrain on the fly when needed for cities - fix borders
 
 Building interaction/gameplay ideas:
 * More closet items: computer, keyboard

@@ -117,9 +117,33 @@ void heightmap_t::postprocess_height() {
 	assert(is_allocated());
 	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
 	vector<float> vals;
-	to_floats(vals);
-	run_erosion(vals);
+	to_floats   (vals);
+	run_erosion (vals);
 	run_city_gen(vals);
+	from_floats (vals);
+}
+
+void heightmap_t::proc_gen() {
+	set_16_bit_grayscale();
+	alloc();
+	vector<float> vals(num_pixels());
+	float const x0(-0.5*DX_VAL*width), y0(-0.5*DY_VAL*height); // centered on (0,0); should we use the camera location instead?
+	mesh_xy_grid_cache_t height_gen;
+	bool const results_avail(height_gen.build_arrays(x0, y0, DX_VAL, DY_VAL, width, height, 1)); // cache_values=1
+	height_gen.enable_glaciate();
+
+	// run this using GPU compute?
+#pragma omp parallel for schedule(static,1)
+	for (int i = 0; i < height; ++i) {
+		int const off(width*i);
+		for (int j = 0; j < width; ++j) {vals[off + j] = height_gen.eval_index(j, i);}
+	}
+	run_erosion (vals);
+	run_city_gen(vals);
+	float min_z(0), max_z(0);
+	get_heightmap_z_range(vals, min_z, max_z);
+	float const dz(max(TOLERANCE, (max_z - min_z))); // prevent divide-by-zero
+	set_mesh_height_scales_for_zval_range(min_z, dz/255.0);
 	from_floats(vals);
 }
 
@@ -323,6 +347,16 @@ void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
 	hmap.load(-1, 0, 1, 1);
 	timer.end();
 	hmap.postprocess_height(); // apply erosion, etc. directly after loading/generating, before applying mod brushes
+	post_load();
+}
+
+void terrain_hmap_manager_t::proc_gen_heightmap(unsigned size) {
+	if (hmap.is_allocated()) return; // already done
+	assert(size > 0);
+	timer_t timer("Generate Heightmap");
+	hmap = heightmap_t(0, 8, size, size, "@tt_heightmap", 0);
+	hmap.proc_gen();
+	timer.end();
 	post_load();
 }
 

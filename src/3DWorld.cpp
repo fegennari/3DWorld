@@ -93,7 +93,7 @@ int enable_fsource(0), run_forward(0), advanced(0), dynamic_mesh_scroll(0);
 int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0), num_dynam_parts(100), snow_coverage_resolution(2), num_birds_per_tile(2), num_fish_per_tile(15);
-unsigned erosion_iters(0), erosion_iters_tt(0), video_framerate(60), num_video_threads(0), skybox_tid(0);
+unsigned erosion_iters(0), erosion_iters_tt(0), video_framerate(60), num_video_threads(0), skybox_tid(0), tiled_terrain_gen_heightmap_sz(0);
 float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP), system_max_orbit(1.0), sky_occlude_scale(0.0), tree_slope_thresh(5.0), mouse_sensitivity(1.0), tt_grass_scale_factor(1.0);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0), biome_x_offset(0.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), dodgeball_metalness(1.0), ray_step_size_mult(1.0);
@@ -1754,6 +1754,7 @@ int load_config(string const &config_file) {
 	kwmu.add("dlight_grid_bitshift", DL_GRID_BS);
 	kwmu.add("video_framerate", video_framerate);
 	kwmu.add("num_video_threads", num_video_threads);
+	kwmu.add("tiled_terrain_gen_heightmap_sz", tiled_terrain_gen_heightmap_sz);
 
 	kw_to_val_map_t<float> kwmf(error);
 	kwmf.add("gravity", base_gravity);
@@ -2127,6 +2128,7 @@ int load_config(string const &config_file) {
 		if (error) {cout << "Parse error in config file." << endl; break;}
 	} // while read
 	if (universe_only && disable_universe) {cout << "Error: universe_only and disable_universe are mutually exclusive" << endl; error = 1;}
+	if (mh_filename_tt != nullptr && tiled_terrain_gen_heightmap_sz > 0) {cout << "Error: can't specify both mh_filename_tiled_terrain and tiled_terrain_gen_heightmap_sz" << endl; error = 1;}
 	checked_fclose(fp);
 	temperature    = init_temperature;
 	num_dodgeballs = max(num_dodgeballs, 1); // have to have at least 1
