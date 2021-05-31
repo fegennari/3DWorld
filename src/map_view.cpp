@@ -356,6 +356,16 @@ void teleport_to_map_location() {
 }
 
 
+void get_heightmap_z_range(vector<float> const &heights, float &min_z, float &max_z) {
+	min_z =  FLT_MAX;
+	max_z = -FLT_MAX;
+
+	for (unsigned i = 0; i < heights.size(); ++i) {
+		min_eq(min_z, heights[i]);
+		max_eq(max_z, heights[i]);
+	}
+}
+
 void write_map_mode_heightmap_image() {
 
 	float const window_ar((float(window_width)*window_height)/(float(window_height)*window_width));
@@ -372,7 +382,6 @@ void write_map_mode_heightmap_image() {
 	{ // open a scope
 		timer_t timer("Heightmap Gen");
 		vector<float> heights(texture.num_pixels());
-		float min_z(FLT_MAX), max_z(-FLT_MAX);
 		mesh_xy_grid_cache_t height_gen;
 		setup_height_gen(height_gen, xstart, ystart, DX_VAL, DY_VAL, width, height, 1); // cache_values=1
 
@@ -381,11 +390,9 @@ void write_map_mode_heightmap_image() {
 			int const off(width*(height - i - 1)); // invert yval
 			for (int j = 0; j < width; ++j) {heights[off + j] = get_mesh_height(height_gen, xstart, ystart, DX_VAL, DY_VAL, i, j);}
 		}
-		for (unsigned i = 0; i < heights.size(); ++i) {
-			min_eq(min_z, heights[i]);
-			max_eq(max_z, heights[i]);
-		}
-		float const dz(max_z - min_z), height_scale(255.0/dz);
+		float min_z(0), max_z(0);
+		get_heightmap_z_range(heights, min_z, max_z);
+		float const dz(max(TOLERANCE, (max_z - min_z))), height_scale(255.0/dz); // prevent divide-by-zero
 		cout << "zval range: " << min_z << " to " << max_z << " total: " << dz << " scale: " << dz/(get_heightmap_scale()*mesh_height_scale) << endl;
 		for (unsigned i = 0; i < heights.size(); ++i) {texture.write_pixel_16_bits(i, (heights[i] - min_z)*height_scale);}
 	}

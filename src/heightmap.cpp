@@ -20,6 +20,9 @@ extern int display_mode;
 extern float mesh_scale, dxdy;
 extern string hmap_out_fn;
 
+void get_heightmap_z_range(vector<float> const &heights, float &min_z, float &max_z);
+void set_mesh_height_scales_for_zval_range(float min_z, float dz);
+
 
 void adjust_brush_weight(float &delta, float dval, int shape) {
 	if      (shape == BSHAPE_LINEAR   ) {delta *= 1.0f - dval;} // linear
@@ -312,7 +315,6 @@ bool terrain_hmap_manager_t::clamp_no_scale(int &x, int &y, bool allow_wrap) con
 }
 
 void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
-
 	assert(fn != nullptr);
 	cout << "Loading terrain heightmap file " << fn << endl;
 	timer_t timer("Heightmap Load");

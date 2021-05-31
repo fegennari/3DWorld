@@ -124,6 +124,13 @@ float get_mh_texture_mult() {return READ_MESH_H_SCALE*mesh_height_scale*mesh_fil
 float get_mh_texture_add () {return mesh_file_tz*mesh_scale_z_inv;}
 float get_heightmap_scale() {return 256.0*READ_MESH_H_SCALE;}
 
+void set_mesh_height_scales_for_zval_range(float min_z, float dz) {
+	assert(dz > 0.0);
+	// undo the transform: v = (h - min_z)/dz by applying h = get_mh_texture_mult()*v + get_mh_texture_add(); h = M*v + A; M = dz, A = min_z
+	mesh_file_scale = dz/(READ_MESH_H_SCALE*mesh_height_scale*mesh_scale_z_inv);
+	mesh_file_tz    = min_z/mesh_scale_z_inv;
+}
+
 
 // Note: only works for 8-bit heightmaps (higher precision textures are truncated)
 bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
