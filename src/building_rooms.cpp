@@ -1387,7 +1387,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			if ((c2.d[dim][dir] < room_bounds.d[dim][dir]) ^ dir) {flags |= (RO_FLAG_ADJ_LO << d);}
 		}
 		objs.emplace_back(crate, (rgen.rand_bool() ? TYPE_CRATE : TYPE_BOX), room_id, rgen.rand_bool(), 0, flags, tot_light_amt, SHAPE_CUBE, gen_box_color(rgen)); // crate or box
-		set_obj_id(objs); // used to select texture
+		set_obj_id(objs); // used to select texture and box contents
 		if (++num_placed == num_crates) break; // we're done
 	} // for n
 	return 1; // it's always a storage room, even if it's empty
