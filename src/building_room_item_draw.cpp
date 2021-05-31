@@ -565,21 +565,26 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 void building_room_geom_t::create_obj_model_insts(building_t const &building) { // handle drawing of 3D models
 	//highres_timer_t timer("Gen Room Model Insts");
 	obj_model_insts.clear();
-	auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
 
-	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!i->is_visible() || !i->is_obj_model_type()) continue;
-		vector3d dir(i->get_dir());
+	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
+		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
+		unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
+		auto objs_end((vect_id == 1) ? expanded_objs.end() : get_std_objs_end()); // skip buttons/stairs/elevators
 
-		if (i->flags & RO_FLAG_RAND_ROT) {
-			float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
-			vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
-			dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
-		}
-		if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
-		obj_model_insts.emplace_back((i - objs.begin()), dir);
-		//get_untextured_material().add_cube_to_verts_untextured(*i, WHITE); // for debugging of model bcubes
-	} // for i
+		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
+			if (!i->is_visible() || !i->is_obj_model_type()) continue;
+			vector3d dir(i->get_dir());
+
+			if (i->flags & RO_FLAG_RAND_ROT) {
+				float const angle(123.4*i->x1() + 456.7*i->y1() + 567.8*i->z1()); // random rotation angle based on position
+				vector3d const rand_dir(vector3d(sin(angle), cos(angle), 0.0).get_norm());
+				dir = ((dot_product(rand_dir, dir) < 0.0) ? -rand_dir : rand_dir); // random, but facing in the correct general direction
+			}
+			if (building.is_rotated()) {building.do_xy_rotate_normal(dir);}
+			obj_model_insts.emplace_back((i - obj_vect.begin() + obj_id_offset), dir);
+			//get_untextured_material().add_cube_to_verts_untextured(*i, WHITE); // for debugging of model bcubes
+		} // for i
+	} // for vect_id
 }
 
 void building_room_geom_t::create_lights_vbos(building_t const &building) {
