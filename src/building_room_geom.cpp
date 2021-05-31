@@ -463,14 +463,14 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 
 	if (inc_lg) { // draw closet walls and doors
 		rgeom_mat_t &wall_mat(get_material(get_scaled_wall_tex(wall_tex), 1));
-		bool const draw_back_faces(player_in_closet || open);
-		unsigned const skip_faces((draw_back_faces ? 0 : ~get_face_mask(c.dim, !c.dir)) | EF_Z12); // skip top, bottom, and face that's against the wall
+		// need to draw the face that's against the wall for the shadow pass if the closet light is on, if the player is in the closet, or if the doors are open
+		unsigned const skip_faces(EF_Z12); // skip top and bottom
 
 		for (unsigned d = 0; d < 2; ++d) {
 			bool const adj_room_wall(c.flags & (d ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 			unsigned const extra_skip_faces(adj_room_wall ? ~get_face_mask(!c.dim, d) : 0); // adjacent to room wall, skip that face
 			// only need to draw side wall when not adjacent to room wall; skip front face of side wall
-			if (!adj_room_wall) {wall_mat.add_cube_to_verts(cubes[2*d+1], c.color, tex_origin, (skip_faces | extra_skip_faces | ~get_face_mask(c.dim, c.dir)));}
+			if (!adj_room_wall) {wall_mat.add_cube_to_verts(cubes[2*d+1], c.color, tex_origin, (skip_faces | extra_skip_faces | get_skip_mask_for_xy(c.dim)));}
 			unsigned const front_wall_skip_flags((draw_interior ? EF_Z12 : skip_faces) | extra_skip_faces);
 			wall_mat.add_cube_to_verts(cubes[2*d], c.color, tex_origin, front_wall_skip_flags); // Note: c.color should be wall color
 		} // for d
