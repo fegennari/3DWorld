@@ -25,6 +25,8 @@ unsigned get_num_screenshot_tids();
 void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir, bool use_quads=0);
 string const &gen_book_title(unsigned rand_id, string *author, unsigned split_len);
 
+float get_lamp_width_scale();
+
 unsigned get_face_mask(unsigned dim, bool dir) {return ~(1 << (2*(2-dim) + dir));} // skip_faces: 1=Z1, 2=Z2, 4=Y1, 8=Y2, 16=X1, 32=X2
 unsigned get_skip_mask_for_xy(bool dim) {return (dim ? EF_Y12 : EF_X12);}
 tid_nm_pair_t get_tex_auto_nm(int tid, float tscale=1.0, bool shadowed=1) {return tid_nm_pair_t(tid, get_normal_map_for_bldg_tid(tid), tscale, tscale, 0.0, 0.0, shadowed);}

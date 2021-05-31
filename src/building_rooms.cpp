@@ -58,12 +58,6 @@ float get_radius_for_square_model(unsigned model_id) {
 	vector3d const chair_sz(building_obj_model_loader.get_model_world_space_size(model_id));
 	return 0.5f*(chair_sz.x + chair_sz.y)/chair_sz.z; // assume square and take average of xsize and ysize
 }
-template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height) { // T can be float or vector3d
-	cube_t c(center);
-	c.expand_by_xy(radius);
-	c.z2() += height;
-	return c;
-}
 void set_obj_id(vector<room_object_t> &objs) {objs.back().obj_id = (uint16_t)objs.size();}
 
 bool building_t::add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
@@ -473,6 +467,11 @@ bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &roo
 	return (!overlaps_other_room_obj(c, objs_start) && !is_cube_close_to_doorway(c, room, 0.0, 1));
 }
 
+float get_lamp_width_scale() {
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_LAMP)); // L, W, H
+	return ((sz == zero_vector) ? 0.0 : 0.5f*(sz.x + sz.y)/sz.z);
+}
+
 bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval,
 	unsigned room_id, float tot_light_amt, unsigned objs_start, bool room_is_lit, light_ix_assign_t &light_ix_assign)
 {
@@ -585,8 +584,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	}
 	// try to place a lamp on a dresser or nightstand that was added to this room
 	if (building_obj_model_loader.is_model_valid(OBJ_MODEL_LAMP) && (rgen.rand()&3) != 0) {
-		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_LAMP)); // L, W, H
-		float const height(0.25*window_vspacing), width(height*0.5f*(sz.x + sz.y)/sz.z);
+		float const height(0.25*window_vspacing), width(height*get_lamp_width_scale());
 		point pillow_center(bed.get_cube_center());
 		pillow_center[bed.dim] += (bed.dir ? 1.0 : -1.0)*0.5*bed.get_sz_dim(bed.dim); // adjust from bed center to near the pillow(s)
 		int obj_id(-1);
@@ -611,11 +609,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 				if (dmin == 0.0 || dist < dmin) {shift_val = cand_shift; dmin = dist;}
 			}
 			lamp.translate_dim(!obj.dim, shift_val);
-			unsigned const NUM_COLORS = 6;
-			colorRGBA const colors[NUM_COLORS] = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
 			unsigned flags(RO_FLAG_NOCOLL); // no collisions, as an optimization since the player and AI can't get onto the dresser/nightstand anyway
 			if (rgen.rand_bool() && !room_is_lit) {flags |= RO_FLAG_LIT;} // 50% chance of being lit if the room is dark (Note: don't let room_is_lit affect rgen)
-			objs.emplace_back(lamp, TYPE_LAMP, room_id, obj.dim, obj.dir, flags, tot_light_amt, SHAPE_CYLIN, colors[rgen.rand()%NUM_COLORS]); // Note: invalidates obj ref
+			objs.emplace_back(lamp, TYPE_LAMP, room_id, obj.dim, obj.dir, flags, tot_light_amt, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]); // Note: invalidates obj ref
 		}
 	}
 	if (rgen.rand_float() < global_building_params.ball_prob) { // maybe add a ball to the room
