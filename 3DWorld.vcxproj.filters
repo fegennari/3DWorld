@@ -435,6 +435,9 @@
     <ClCompile Include="src\building_room_item_draw.cpp">
       <Filter>Source Files\City</Filter>
     </ClCompile>
+    <ClCompile Include="src\building_room_obj_expand.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">

@@ -603,6 +603,11 @@ struct building_room_geom_t {
 		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
+private:
+	static void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects);
+	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
+	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects);
+	static void add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &objects);
 }; // building_room_geom_t
 
 struct elevator_t : public cube_t {
