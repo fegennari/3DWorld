@@ -543,7 +543,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			placed_closet = 1; // done
 			// add a light inside the closet
 			room_object_t const &closet(objs.back());
-			point const lpos(closet.xc(), closet.yc(), closet.z2());
+			point lpos(closet.xc(), closet.yc(), closet.z2());
+			lpos[dim] += 0.05*c.get_sz_dim(dim)*(dir ? -1.0 : 1.0); // move slightly toward the front of the closet
 			cube_t light(lpos);
 			light.z1() -= 0.02*window_vspacing;
 			light.expand_by_xy((closet.is_small_closet() ? 0.04 : 0.06)*window_vspacing);

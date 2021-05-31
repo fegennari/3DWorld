@@ -445,7 +445,7 @@ void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) 
 	room_object_t hanger_rod(interior, TYPE_HANGER_ROD, c.room_id, c.dim, c.dir, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR));
 	hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 	hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
-	set_wall_width(hanger_rod, c.get_center_dim(c.dim), hr_radius, c.dim);
+	set_wall_width(hanger_rod, (0.45*c.d[c.dim][c.dir] + 0.55*c.d[c.dim][!c.dir]), hr_radius, c.dim); // move slightly toward the back
 	objects.push_back(hanger_rod);
 }
 
