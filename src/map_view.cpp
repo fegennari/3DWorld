@@ -367,7 +367,7 @@ void write_map_mode_heightmap_image() {
 
 	string const fn("heightmap.png");
 	texture_t texture(0, 6, width, height, 0, 2, 0, fn); // two bytes per pixel grayscale
-	texture.is_16_bit_gray = 1;
+	texture.set_16_bit_grayscale();
 	texture.alloc();
 	{ // open a scope
 		timer_t timer("Heightmap Gen");

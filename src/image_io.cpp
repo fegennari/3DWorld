@@ -217,7 +217,7 @@ bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &
 
 	if (allow_two_byte_grayscale && ncolors == 1 && img_ncolors == 2) { // Note: not officially part of the BMP spec, but we allow it since we write in this format
 		ncolors        = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
-		is_16_bit_gray = 1;
+		is_16_bit_gray = 1; // AKA set_16_bit_grayscale()
 	}
 	if (ncolors == 1) { // read and discard color index table, and just use index values as grayscale values
 		char color_table[1024];
@@ -504,6 +504,10 @@ int texture_t::write_to_jpg(string const &fn) const {
 }
 
 
+void texture_t::set_16_bit_grayscale() {
+	ncolors        = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
+	is_16_bit_gray = 1;
+}
 void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
 
 #ifdef ENABLE_PNG
@@ -539,8 +543,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	ncolors = png_ncolors;
 
 	if (allow_two_byte_grayscale && ncolors == 1 && bit_depth == 16) {
-		ncolors        = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
-		is_16_bit_gray = 1;
+		set_16_bit_grayscale();
 		png_set_swap(png_ptr); // change big endian to little endian
 	}
 	else {
@@ -650,8 +653,7 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 	assert((int)w == width && (int)h == height);
 	
 	if (allow_two_byte_grayscale && (ncolors == 0 || ncolors == 1) && bit_depth == 16) { // 16-bit grayscale
-		ncolors        = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
-		is_16_bit_gray = 1;
+		set_16_bit_grayscale();
 		tmsize_t const sl_size(TIFFScanlineSize(tif));
 		assert(sl_size == 2*width);
         tdata_t buf = _TIFFmalloc(sl_size);

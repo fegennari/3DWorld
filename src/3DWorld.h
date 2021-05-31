@@ -1000,6 +1000,7 @@ public:
 		alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw), name(n), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	bool is_inverted_y_type() const {return (defer_load_type == DEFER_TYPE_DDS);}
 	void set_existing_tid(unsigned tid_, colorRGBA const &color_) {tid = tid_; color = color_;}
+	void set_16_bit_grayscale();
 	void init();
 	void do_gl_init(bool free_after_upload=0);
 	void upload_cube_map_face(unsigned ix);
