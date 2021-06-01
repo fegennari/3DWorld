@@ -480,9 +480,11 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
 	float const fc_thick(0.5*get_floor_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	static float last_sound_tfticks(0);
-	static point last_sound_pt(all_zeros);
+	static point last_sound_pt(all_zeros), last_player_pos(all_zeros);
 	vect_cube_t ped_bcubes;
 	if (first_ped_ix >= 0) {get_ped_bcubes_for_building(first_ped_ix, building_ix, ped_bcubes);}
+	bool const player_is_moving(player_pos != last_player_pos);
+	last_player_pos = player_pos;
 
 	for (auto c = interior->room_geom->objs.begin(); c != interior->room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
@@ -495,7 +497,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 		bool const was_dynamic(c->is_dynamic());
 		bool on_floor(0);
 		point new_center(center);
-		bool kicked(camera_surf_collide && check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius)); // check the player
+		bool kicked(camera_surf_collide && player_is_moving && check_ball_kick(*c, velocity, new_center, player_pos, player_z1, player_z2, player_radius)); // check the player
 		bool const is_moving_fast(velocity.mag() > 0.5*KICK_VELOCITY);
 
 		for (auto p = ped_bcubes.begin(); p != ped_bcubes.end(); ++p) { // check building AI people
