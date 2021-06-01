@@ -14,7 +14,6 @@ Cities:
 - Secondary Building roads
 
 Building interaction/gameplay ideas:
-* More closet items: computer, keyboard
 * Player can use cell phones
 * Throw ball at window, TV, or monitor leaves a crack
 * Light switches

@@ -19,17 +19,37 @@ cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) 
 	return interior;
 }
 
+void add_cube_obj_to_closet(room_object_t const &c, cube_t const &interior, vector<room_object_t> &objects, vect_cube_t &cubes,
+	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags)
+{
+	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
+		point center;
+		for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(interior.d[d][0]+sz[d], interior.d[d][1]-sz[d]);}
+		cube_t obj;
+		obj.set_from_point(center);
+		set_cube_zvals(obj, interior.z1(), (interior.z1() + sz.z));
+		obj.expand_by_xy(sz);
+
+		if (!has_bcube_int(obj, cubes)) { // check for intersection with boxes
+			objects.emplace_back(obj, obj_type, c.room_id, c.dim, c.dir, flags, c.light_amt);
+			cubes.push_back(obj);
+			break;
+		}
+	} // for n
+}
+
 void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<room_object_t> &objects) {
 	cube_t ccubes[5]; // only used to get interior space
 	get_closet_cubes(c, ccubes);
 	cube_t const interior(get_closet_interior_space(c, ccubes));
 	float const depth(interior.get_sz_dim(c.dim)), box_sz(0.25*depth), window_vspacing(c.dz()*(1.0 + FLOOR_THICK_VAL_HOUSE));
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
 	vect_cube_t &cubes(get_temp_cubes());
 	room_object_t C(c);
-	C.flags = (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP); // Note: also clears open flag
+	C.flags = flags; // Note: also clears open flag
 	C.type  = TYPE_BOX;
 	vector3d sz;
 	point center;
@@ -50,23 +70,34 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 		objects.push_back(C);
 		cubes.push_back(C);
 	} // for n
-	// TODO: computer and keyboard
+	if (!c.is_small_closet()) { // larger closets have more random items
+		if (rgen.rand_bool()) { // maybe add a lamp in the closet
+			float const height(0.25*window_vspacing), width(height*get_lamp_width_scale()), radius(0.5*width);
 
-	if (!c.is_small_closet() && rgen.rand_bool()) { // maybe add a lamp in the closet if it's large
-		float const height(0.25*window_vspacing), width(height*get_lamp_width_scale()), radius(0.5*width);
+			if (width > 0.0 && width < 0.9*min(interior.dx(), interior.dy())) { // check if lamp model is valid and lamp fits in closet
+				center.assign(0.0, 0.0, interior.z1());
 
-		if (width > 0.0 && width < 0.9*min(interior.dx(), interior.dy())) { // check if lamp model is valid and lamp fits in closet
-			point center(0.0, 0.0, interior.z1());
+				for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
+					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(interior.d[d][0]+radius, interior.d[d][1]-radius);}
+					cube_t lamp(get_cube_height_radius(center, radius, height));
 
-			for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts to place a lamp
-				for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(interior.d[d][0]+radius, interior.d[d][1]-radius);}
-				cube_t lamp(get_cube_height_radius(center, radius, height));
-
-				if (!has_bcube_int(lamp, cubes)) { // check for intersection with boxes
-					objects.emplace_back(lamp, TYPE_LAMP, c.room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP), 0.0, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]);
-					break;
-				}
-			} // for n
+					if (!has_bcube_int(lamp, cubes)) { // check for intersection with boxes
+						objects.emplace_back(lamp, TYPE_LAMP, c.room_id, 0, 0, flags, c.light_amt, SHAPE_CYLIN, lamp_colors[rgen.rand()%NUM_LAMP_COLORS]);
+						cubes.push_back(lamp);
+						break;
+					}
+				} // for n
+			}
+		}
+		if (rgen.rand_bool()) { // maybe add a computer in the closet
+			float const height(0.21*window_vspacing*rgen.rand_uniform(1.0, 1.2)), cheight(0.75*height), cwidth(0.44*cheight), cdepth(0.9*cheight);
+			sz[c.dim] = 0.5*cdepth; sz[!c.dim] = 0.5*cwidth; sz.z = cheight;
+			add_cube_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_COMPUTER, flags);
+		}
+		if (rgen.rand_bool()) { // maybe add a keyboard in the closet
+			float const kbd_hwidth(0.12*window_vspacing), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
+			sz[c.dim] = 0.5*kbd_depth; sz[!c.dim] = kbd_hwidth; sz.z = kbd_height;
+			add_cube_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_KEYBOARD, flags);
 		}
 	}
 	// add hanger rod
