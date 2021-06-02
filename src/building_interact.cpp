@@ -1087,6 +1087,9 @@ public:
 		room_object_t &obj(carried.back());
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
+		cur_value   = 0.01*round_fp(100.0*cur_value ); // round to nearest cent
+		cur_weight  = 0.01*round_fp(100.0*cur_weight); // round to nearest 0.01 lb
+		assert(cur_value > -0.01 && cur_weight > -0.01); // sanity check for math
 		max_eq(cur_value,  0.0f); // handle FP rounding error
 		max_eq(cur_weight, 0.0f);
 		carried.pop_back(); // Note: invalidates obj
