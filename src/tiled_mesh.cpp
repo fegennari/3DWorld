@@ -206,7 +206,7 @@ public:
 		int cx1(x1), cy1(y1), cx2(x2+1), cy2(y2+1); // Note: cx2 and cy2 are one past the end; this is needed for proper mirror clamping and empty range early termination optimization
 		if (!clamp_xy(cx1, cy1, 0.0, 0.0, 0) || !clamp_xy(cx2, cy2, 0.0, 0.0, 0)) return; // off the texture, skip
 		assert(cx1 >= 0 && cy1 >= 0 && cx1 <= cx2 && cy1 <= cy2);
-		if (cx1 == cy1 || cx2 == cy2) return; // empty range optimization
+		if (cx1 == cx2 || cy1 == cy2) return; // empty range optimization
 		point const center(cube.get_cube_center());
 		float xc((center.x + X_SCENE_SIZE)*DX_VAL_INV + 0.5), yc((center.y + Y_SCENE_SIZE)*DY_VAL_INV + 0.5); // convert from real to index space
 		int const xlo(floor(xc)), ylo(floor(yc)), xhi(ceil(xc)), yhi(ceil(yc));
