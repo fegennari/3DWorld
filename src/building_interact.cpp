@@ -1533,12 +1533,14 @@ void play_obj_fall_sound(room_object_t const &obj, point const &player_pos) {
 
 bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	assert(has_room_geom());
+	static bool delay_use(0);
+	static double last_use_time(0.0);
+	if (delay_use && (tfticks - last_use_time) < 0.5*TICKS_PER_SECOND) return 0; // half second delay on prev item use or switch
+	delay_use = 0;
 	room_object_t obj;
 	if (!player_inventory.try_use_last_item(obj)) return 0;
-	static double last_use_time(0.0);
 
 	if (obj.has_dstate()) { // it's a dynamic object (ball), throw it; only activated with use_object/'E' key
-		if ((tfticks - last_use_time) < 0.5*TICKS_PER_SECOND) return 0; // half second delay
 		float const cradius(get_scaled_player_radius());
 		point dest(player_pos + (1.2f*(cradius + obj.get_radius()))*cview_dir);
 		dest.z -= 0.5*cradius; // slightly below the player's face
@@ -1546,6 +1548,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		obj.flags |= RO_FLAG_DYNAMIC; // make it dynamic, assuming it will be dropped/thrown
 		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
 		play_obj_fall_sound(obj, player_pos);
+		delay_use = 1;
 	}
 	else if (obj.can_use()) { // active with either use_object or fire key
 		if (obj.type == TYPE_TPROLL) {
@@ -1558,7 +1561,6 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_BOOK) {
-			if ((tfticks - last_use_time) < 0.5*TICKS_PER_SECOND) return 0; // half second delay
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
 			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
 			if (!get_zval_for_obj_placement(dest, half_width, dest.z, 0)) return 0; // no suitable placement found; add_z_bias=0
@@ -1577,6 +1579,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			if (!interior->room_geom->add_room_object(obj, *this)) return 0;
 			player_inventory.remove_last_item(); // used
 			play_obj_fall_sound(obj, player_pos);
+			delay_use = 1;
 		}
 		else {assert(0);}
 	}
