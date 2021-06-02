@@ -2097,11 +2097,19 @@ void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors) {
 
 void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
 	assert(c.is_strictly_normalized());
-	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
-	get_wood_material(tscale).add_cube_to_verts(c, apply_wood_light_color(c), tex_origin, skip_faces);
-	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
 	vect_cube_t doors;
 	float const door_width(get_cabinet_doors(c, doors));
+	rgeom_mat_t &wood_mat(get_wood_material(tscale));
+
+	/*for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes - requires drawing cabinet interior first
+		if (!(c.drawer_flags & (1 << n))) continue; // not open
+		cube_t hole(doors[n]);
+		hole.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.95*hole.get_sz_dim(c.dim); // shrink to near zero thickness
+		wood_mat.add_cube_to_verts(hole, ALPHA0, tex_origin, get_face_mask(c.dim, c.dir);
+	}*/
+	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
+	wood_mat.add_cube_to_verts(c, apply_wood_light_color(c), tex_origin, skip_faces);
+	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
 	if (doors.empty()) return; // no doors
 	bool const any_doors_open(c.drawer_flags > 0);
 	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
@@ -2117,10 +2125,14 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 		bool const is_open(c.drawer_flags & (1 << n)), handle_side(n & 1); // alternate handle side
 		cube_t &door(doors[n]);
 
-		if (is_open) { // make this door open
+		if (is_open) {
+			// here we really need to draw a cutout and the actual interior, but drawing a black square is better than nothing
+			cube_t hole(door);
+			hole.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.95*door.get_sz_dim(c.dim); // shrink to near zero thickness
+			door_mat.add_cube_to_verts(hole, BLACK, tex_origin, get_face_mask(c.dim, c.dir)); // draw the front faceonly
+			// make this door open
 			door.d[ c.dim][c.dir] += dir_sign*(door_width - door_thick); // expand out to full width
 			door.d[!c.dim][!handle_side] -= (handle_side ? -1.0 : 1.0)*(door_width - door_thick); // shrink to correct thickness
-			// TODO - here we really need to draw a cutout and the actual interior
 		}
 		door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
 		// add door handle
