@@ -473,13 +473,13 @@ void building_t::add_box_contents(room_object_t const &box) {
 				cur_zval = obj.z2();
 			} // for n
 		}
-		else if (obj_type == 1) { // bottles
+		else if (obj_type == 1) { // bottles; not comsumable, as this would make things too easy for the player
 			float const height(base_height*rgen.rand_uniform(0.4, 0.7)), radius(base_height*rgen.rand_uniform(0.07, 0.11));
 			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
 			unsigned const bottle_id(rgen.rand()); // same type for all bottles
 
 			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
-				objs.emplace_back(*i, TYPE_BOTTLE, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
+				objs.emplace_back(*i, TYPE_BOTTLE, room_id, 0, 0, (flags | RO_FLAG_NO_CONS), light_amt, SHAPE_CYLIN);
 				objs.back().set_as_bottle(bottle_id, 3); // 0-3; excludes poison
 			}
 		}
