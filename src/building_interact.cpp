@@ -1087,7 +1087,8 @@ public:
 		room_object_t &obj(carried.back());
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
-		assert(cur_value >= 0.0 && cur_weight >= 0.0); // is this okay if there's FP rounding error?
+		max_eq(cur_value,  0.0f); // handle FP rounding error
+		max_eq(cur_weight, 0.0f);
 		carried.pop_back(); // Note: invalidates obj
 	}
 	void collect_items() {
