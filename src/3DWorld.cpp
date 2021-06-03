@@ -172,7 +172,8 @@ void write_map_mode_heightmap_image();
 void apply_grass_scale();
 void take_screenshot_texture();
 void teleport_to_map_location();
-void building_gameplay_action_key(int mode);
+void building_gameplay_action_key(int mode, bool mouse_wheel);
+void building_gameplay_switch_item(bool dir);
 float get_player_building_speed_mult();
 
 
@@ -568,8 +569,8 @@ void update_sound_loops() {
 }
 
 
-void switch_weapon(bool prev) {
-	if (world_mode == WMODE_UNIVERSE) {player_ship().switch_weapon(prev);} else {switch_player_weapon(prev ? -1 : 1);}
+void switch_weapon(bool prev, bool mouse_wheel) {
+	if (world_mode == WMODE_UNIVERSE) {player_ship().switch_weapon(prev);} else {switch_player_weapon((prev ? -1 : 1), mouse_wheel);}
 }
 
 // *** Begin glut callback functions ***
@@ -615,11 +616,11 @@ void mouseButton(int button, int state, int x, int y) {
 	if (state == 0) { // use mouse scroll wheel to switch weapons and zoom in/out in map mode
 		if (button == 3) { // mouse wheel up
 			if (map_mode) {map_zoom /= 1.2;}
-			else {switch_weapon(0);}
+			else {switch_weapon(0, 1);}
 		}
 		else if (button == 4) { // mouse wheel down
 			if (map_mode) {map_zoom *= 1.2;}
-			else {switch_weapon(1);}
+			else {switch_weapon(1, 1);}
 		}
 	}
 }
@@ -939,10 +940,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		advance_camera(MOVE_RIGHT); break;
 
 	case 'q': // previous weapon
-		switch_weapon(1);
+		switch_weapon(1, 0);
 		break;
 	case 'e': // next weapon
-		switch_weapon(0);
+		switch_weapon(0, 0);
 		break;
 	case 'W': // switch weapon mode
 		switch_weapon_mode();
@@ -1044,7 +1045,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'E': // reset leaf colors / building gameplay use object
-		if (world_mode == WMODE_INF_TERRAIN && have_buildings()) {building_gameplay_action_key(2); break;} // use building object
+		if (world_mode == WMODE_INF_TERRAIN && have_buildings()) {building_gameplay_action_key(2, 0); break;} // use building object
 		leaf_color_coherence = 0.5;
 		tree_color_coherence = 0.2;
 		leaf_base_color.R    = 0.2;

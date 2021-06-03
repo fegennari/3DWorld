@@ -951,6 +951,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10);
 		clear(); // respawn
 	}
+	bool have_interactive_item() const {return (!carried.empty() && carried.back().is_interactive());}
 public:
 	player_inventory_t() : best_value(0.0), has_key(0) {clear();}
 
@@ -977,6 +978,15 @@ public:
 		print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);
 		return 0;
+	}
+	void switch_item(bool dir) { // Note: current item is always carried.back()
+		// FIXME: last_item_use_count needs to be tracked per-item
+		if (!have_interactive_item()) return;
+		auto start(carried.begin());
+		for (; start != carried.end() && !start->is_interactive(); ++start) {}
+		assert(start != carried.end());
+		if (dir) {std::rotate(start, start+1,         carried.end());}
+		else     {std::rotate(start, carried.end()-1, carried.end());}
 	}
 	void add_item(room_object_t const &obj) {
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
@@ -1012,7 +1022,7 @@ public:
 			float const value(get_obj_value(obj)), weight(get_obj_weight(obj));
 			cur_value  += value;
 			cur_weight += weight;
-			bool const prev_was_interactive(!carried.empty() && carried.back().is_interactive()), cur_is_interactive(obj.is_interactive());
+			bool const prev_was_interactive(have_interactive_item()), cur_is_interactive(obj.is_interactive());
 			carried.push_back(obj);
 
 			if (obj.type == TYPE_BOOK) { // clear dim and dir for books
@@ -1031,7 +1041,9 @@ public:
 				co.dim = co.dir = 0;
 				co.flags &= ~RO_FLAG_RAND_ROT; // remove the rotate bit
 			}
-			if (prev_was_interactive && !cur_is_interactive) {swap(carried[carried.size()-2], carried.back());} // move the prev interactive object to the back
+			if (prev_was_interactive && !cur_is_interactive) {
+				std::rotate(carried.begin(), carried.end()-1, carried.end()); // move the prev interactive object to the back and our new item to the front
+			}
 			if (bldg_obj_types[obj.type].capacity > 0) {last_item_use_count = 0;} // limited use object, reset use count
 			oss << ": value $";
 			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
@@ -1084,7 +1096,7 @@ public:
 	}
 	void remove_last_item() {
 		assert(!carried.empty());
-		room_object_t &obj(carried.back());
+		room_object_t const &obj(carried.back());
 		cur_value  -= get_obj_value (obj);
 		cur_weight -= get_obj_weight(obj);
 		cur_value   = 0.01*round_fp(100.0*cur_value ); // round to nearest cent
@@ -1107,8 +1119,8 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		bool const has_usable(!carried.empty() && carried.back().is_interactive()); // ball, spraypaint, or marker
-		if (has_usable) {player_held_object = carried.back();} // deep copy last pickup object if throwable
+		bool const has_usable(have_interactive_item()); // ball, spraypaint, marker, etc.
+		if (has_usable) {player_held_object = carried.back();} // deep copy last pickup object if usable
 
 		if (display_framerate) { // controlled by framerate toggle
 			float const aspect_ratio((float)window_width/(float)window_height);
@@ -1119,7 +1131,7 @@ public:
 				
 				if (has_usable) {
 					unsigned const capacity(bldg_obj_types[player_held_object.type].capacity);
-					oss << "  [" << get_taken_obj_type(carried.back()).name << "]"; // print the name of the throwable object
+					oss << "  [" << get_taken_obj_type(player_held_object).name << "]"; // print the name of the throwable object
 					if (capacity > 0) {oss << " (" << (capacity - last_item_use_count) << "/" << capacity << ")";} // print use/capacity
 				}
 				draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
@@ -1968,10 +1980,11 @@ int register_ai_player_coll(bool &has_key, float height) {
 	return 0;
 }
 
-void building_gameplay_action_key(int mode) {
+void building_gameplay_action_key(int mode, bool mouse_wheel) {
 	if (camera_in_building) { // building interior action
+		if (mouse_wheel && mode <= 1) {player_inventory.switch_item(mode);}
 		// show crosshair on first pickup because it's too difficult to pick up objects without it
-		if      (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
+		else if (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
 		else if (mode == 2) {use_last_pickup_object = 1;} // 'E'
 		else                {toggle_door_open_state = 1;} // 'q'
 	}

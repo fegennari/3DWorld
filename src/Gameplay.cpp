@@ -1563,7 +1563,7 @@ bool try_use_translocator(int player_id) {
 }
 
 
-void switch_player_weapon(int val) {
+void switch_player_weapon(int val, bool mouse_wheel) {
 
 	if (game_mode && (game_mode == 1 || world_mode == WMODE_GROUND)) {
 		if (sstates != NULL) {
@@ -1571,7 +1571,7 @@ void switch_player_weapon(int val) {
 			last_inventory_frame = frame_counter;
 		}
 	}
-	else if (world_mode == WMODE_INF_TERRAIN) {change_inf_terrain_fire_mode(val);}
+	else if (world_mode == WMODE_INF_TERRAIN) {change_inf_terrain_fire_mode(val, mouse_wheel);}
 	else if (world_mode == WMODE_GROUND && create_voxel_landscape) {change_voxel_editing_mode(val);}
 	else if (spraypaint_mode) {change_spraypaint_color(val);}
 	else if (spheres_mode   ) {change_sphere_material (val, 0);}

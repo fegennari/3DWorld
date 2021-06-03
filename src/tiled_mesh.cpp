@@ -86,7 +86,7 @@ void draw_distant_mesh_bottom(float terrain_zmin);
 bool no_grass_under_buildings();
 bool check_buildings_no_grass(point const &pos);
 colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
-void building_gameplay_action_key(int mode);
+void building_gameplay_action_key(int mode, bool mouse_wheel);
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -3691,10 +3691,10 @@ bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
 	return line_intersect_tiled_mesh_get_tile(v1, v2, p_int, tile);
 }
 
-void change_inf_terrain_fire_mode(int val) {
+void change_inf_terrain_fire_mode(int val, bool mouse_wheel) {
 
 	if (have_buildings()) { // no terrain editing when there are buildings as this doesn't work properly
-		building_gameplay_action_key((val > 0) ? 1 : 0); // use this for gameplay instead
+		building_gameplay_action_key(((val > 0) ? 1 : 0), mouse_wheel); // use this for gameplay instead
 		return;
 	}
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_FIRE_MODES + val) % NUM_FIRE_MODES;
