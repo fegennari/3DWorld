@@ -978,13 +978,14 @@ public:
 	bool can_unlock_door() const {
 		if (has_key) return 1;
 		print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
-		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0);
+		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
 		return 0;
 	}
 	void switch_item(bool dir) { // Note: current item is always carried.back()
 		if (carried.size() <= 1) return; // no other item to switch to
 		if (dir) {std::rotate(carried.begin(), carried.begin()+1, carried.end());}
 		else     {std::rotate(carried.begin(), carried.end  ()-1, carried.end());}
+		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 	}
 	void add_item(room_object_t const &obj) {
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
