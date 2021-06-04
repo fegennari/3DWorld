@@ -939,9 +939,13 @@ void show_weight_limit_message() {
 }
 
 class player_inventory_t { // manages player inventory, health, and other stats
-	vector<room_object_t> carried; // interactive items the player is currently carrying
+	struct carried_item_t : public room_object_t {
+		unsigned use_count;
+		carried_item_t() : use_count(0) {}
+		carried_item_t(room_object_t const &o) : room_object_t(o), use_count(0) {}
+	};
+	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
-	unsigned last_item_use_count;
 	bool prev_in_building, has_key;
 
 	void register_player_death(unsigned sound_id, std::string const &why) {
@@ -959,7 +963,6 @@ public:
 		cur_value     = cur_weight = tot_value = tot_weight = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
-		last_item_use_count = 0;
 		prev_in_building = has_key = 0;
 		carried.clear();
 	}
@@ -979,7 +982,6 @@ public:
 		return 0;
 	}
 	void switch_item(bool dir) { // Note: current item is always carried.back()
-		// FIXME: last_item_use_count needs to be tracked per-item
 		if (carried.size() <= 1) return; // no other item to switch to
 		if (dir) {std::rotate(carried.begin(), carried.begin()+1, carried.end());}
 		else     {std::rotate(carried.begin(), carried.end  ()-1, carried.end());}
@@ -1018,6 +1020,7 @@ public:
 			float const value(get_obj_value(obj)), weight(get_obj_weight(obj));
 			cur_value  += value;
 			cur_weight += weight;
+			
 			if (obj.is_interactive()) {
 				carried.push_back(obj);
 
@@ -1038,7 +1041,6 @@ public:
 					co.flags &= ~RO_FLAG_RAND_ROT; // remove the rotate bit
 				}
 			}
-			if (bldg_obj_types[obj.type].capacity > 0) {last_item_use_count = 0;} // limited use object, reset use count
 			oss << ": value $";
 			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
 			else {oss << value;}
@@ -1079,13 +1081,13 @@ public:
 	}
 	void mark_last_item_used() {
 		assert(!carried.empty());
-		room_object_t &obj(carried.back());
+		carried_item_t &obj(carried.back());
 		obj.flags |= RO_FLAG_USED;
 		unsigned const capacity(bldg_obj_types[obj.type].capacity);
 
 		if (capacity > 0) {
-			++last_item_use_count;
-			if (last_item_use_count >= capacity) {remove_last_item();} // remove after too many uses
+			++obj.use_count;
+			if (obj.use_count >= capacity) {remove_last_item();} // remove after too many uses
 		}
 	}
 	void remove_last_item() {
@@ -1108,7 +1110,6 @@ public:
 		tot_value  += cur_value;  cur_value  = 0.0;
 		tot_weight += cur_weight; cur_weight = 0.0;
 		carried.clear();
-		last_item_use_count = 0;
 		oss << "Total value $" << tot_value << " Total weight " << tot_weight << " lbs";
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
@@ -1125,7 +1126,7 @@ public:
 				if (!carried.empty()) {
 					unsigned const capacity(bldg_obj_types[player_held_object.type].capacity);
 					oss << "  [" << get_taken_obj_type(player_held_object).name << "]"; // print the name of the throwable object
-					if (capacity > 0) {oss << " (" << (capacity - last_item_use_count) << "/" << capacity << ")";} // print use/capacity
+					if (capacity > 0) {oss << " (" << (capacity - carried.back().use_count) << "/" << capacity << ")";} // print use/capacity
 				}
 				draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
 			}
