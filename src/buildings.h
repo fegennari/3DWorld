@@ -388,7 +388,7 @@ struct room_object_t : public cube_t {
 	bool can_use        () const {return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL || type == TYPE_BOOK);} // excludes dynamic objects
 	bool is_interactive () const {return (has_dstate() || can_use());}
 	bool can_place_onto () const;
-	unsigned get_bottle_type() const {return (obj_id % NUM_BOTTLE_TYPES);}
+	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
 	float get_radius() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}

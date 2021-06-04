@@ -842,7 +842,7 @@ void building_room_geom_t::add_shower(room_object_t const &c, float tscale) {
 }
 
 void building_room_geom_t::add_bottle(room_object_t const &c) {
-	// obj_id: bits 1-2 for type, bits 6-7 for emptiness, bit 6 for cap color
+	// obj_id: bits 1-3 for type, bits 6-7 for emptiness, bit 6 for cap color
 	// for now, no texture, but could use a bottle label texture for the central cylinder
 	unsigned const bottle_ndiv = 16; // use smaller ndiv to reduce vertex count
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
