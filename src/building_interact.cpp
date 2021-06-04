@@ -939,7 +939,7 @@ void show_weight_limit_message() {
 }
 
 class player_inventory_t { // manages player inventory, health, and other stats
-	vector<room_object_t> carried; // not sure if we need to track carried inside the house and/or total carried
+	vector<room_object_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
 	unsigned last_item_use_count;
 	bool prev_in_building, has_key;
@@ -951,7 +951,6 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		print_text_onscreen(("You Have Died" + why), RED, 2.0, 2*TICKS_PER_SECOND, 10);
 		clear(); // respawn
 	}
-	bool have_interactive_item() const {return (!carried.empty() && carried.back().is_interactive());}
 public:
 	player_inventory_t() : best_value(0.0), has_key(0) {clear();}
 
@@ -981,12 +980,9 @@ public:
 	}
 	void switch_item(bool dir) { // Note: current item is always carried.back()
 		// FIXME: last_item_use_count needs to be tracked per-item
-		if (!have_interactive_item()) return;
-		auto start(carried.begin());
-		for (; start != carried.end() && !start->is_interactive(); ++start) {}
-		assert(start != carried.end());
-		if (dir) {std::rotate(start, start+1,         carried.end());}
-		else     {std::rotate(start, carried.end()-1, carried.end());}
+		if (carried.size() <= 1) return; // no other item to switch to
+		if (dir) {std::rotate(carried.begin(), carried.begin()+1, carried.end());}
+		else     {std::rotate(carried.begin(), carried.end  ()-1, carried.end());}
 	}
 	void add_item(room_object_t const &obj) {
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
@@ -1022,27 +1018,25 @@ public:
 			float const value(get_obj_value(obj)), weight(get_obj_weight(obj));
 			cur_value  += value;
 			cur_weight += weight;
-			bool const prev_was_interactive(have_interactive_item()), cur_is_interactive(obj.is_interactive());
-			carried.push_back(obj);
+			if (obj.is_interactive()) {
+				carried.push_back(obj);
 
-			if (obj.type == TYPE_BOOK) { // clear dim and dir for books
-				room_object_t &co(carried.back());
-				float const dx(co.dx()), dy(co.dy()), dz(co.dz());
+				if (obj.type == TYPE_BOOK) { // clear dim and dir for books
+					room_object_t &co(carried.back());
+					float const dx(co.dx()), dy(co.dy()), dz(co.dz());
 
-				if (dz > min(dx, dy)) { // upright book from a bookcase, put it on its side facing the player
-					co.x2() = co.x1() + dz;
-					co.y2() = co.y1() + max(dx, dy);
-					co.z2() = co.z1() + min(dx, dy);
+					if (dz > min(dx, dy)) { // upright book from a bookcase, put it on its side facing the player
+						co.x2() = co.x1() + dz;
+						co.y2() = co.y1() + max(dx, dy);
+						co.z2() = co.z1() + min(dx, dy);
+					}
+					else if (co.dim) { // swap aspect ratio to make dim=0
+						co.x2() = co.x1() + dy;
+						co.y2() = co.y1() + dx;
+					}
+					co.dim = co.dir = 0;
+					co.flags &= ~RO_FLAG_RAND_ROT; // remove the rotate bit
 				}
-				else if (co.dim) { // swap aspect ratio to make dim=0
-					co.x2() = co.x1() + dy;
-					co.y2() = co.y1() + dx;
-				}
-				co.dim = co.dir = 0;
-				co.flags &= ~RO_FLAG_RAND_ROT; // remove the rotate bit
-			}
-			if (prev_was_interactive && !cur_is_interactive) {
-				std::rotate(carried.begin(), carried.end()-1, carried.end()); // move the prev interactive object to the back and our new item to the front
 			}
 			if (bldg_obj_types[obj.type].capacity > 0) {last_item_use_count = 0;} // limited use object, reset use count
 			oss << ": value $";
@@ -1077,9 +1071,9 @@ public:
 		return 1; // success
 	}
 	bool try_use_last_item(room_object_t &obj) {
-		if (carried.empty()) return 0; // no carried item
+		if (carried.empty()) return 0; // no interactive carried item
 		obj = carried.back(); // deep copy
-		if (!obj.has_dstate()) {return obj.can_use();} // not a droppable/throwable item(ball); only spraypaint or markers can be used
+		if (!obj.has_dstate()) {return obj.can_use();} // not a droppable/throwable item(ball); should always return 1
 		remove_last_item(); // drop the item - remove it from our inventory
 		return 1;
 	}
@@ -1113,14 +1107,13 @@ public:
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
 		tot_value  += cur_value;  cur_value  = 0.0;
 		tot_weight += cur_weight; cur_weight = 0.0;
-		carried.clear(); // or add to collected?
+		carried.clear();
 		last_item_use_count = 0;
 		oss << "Total value $" << tot_value << " Total weight " << tot_weight << " lbs";
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		bool const has_usable(have_interactive_item()); // ball, spraypaint, marker, etc.
-		if (has_usable) {player_held_object = carried.back();} // deep copy last pickup object if usable
+		if (!carried.empty()) {player_held_object = carried.back();} // deep copy last pickup object if usable
 
 		if (display_framerate) { // controlled by framerate toggle
 			float const aspect_ratio((float)window_width/(float)window_height);
@@ -1129,7 +1122,7 @@ public:
 				std::ostringstream oss;
 				oss << "Cur $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs  Best $" << best_value;
 				
-				if (has_usable) {
+				if (!carried.empty()) {
 					unsigned const capacity(bldg_obj_types[player_held_object.type].capacity);
 					oss << "  [" << get_taken_obj_type(player_held_object).name << "]"; // print the name of the throwable object
 					if (capacity > 0) {oss << " (" << (capacity - last_item_use_count) << "/" << capacity << ")";} // print use/capacity
