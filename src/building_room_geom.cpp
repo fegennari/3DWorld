@@ -2174,6 +2174,24 @@ void building_room_geom_t::add_crack(room_object_t const &c) { // in window, TV,
 	// TODO: draw set of radial lines out from the center in white with alpha < 1.0
 }
 
+void building_room_geom_t::add_switch(room_object_t const &c) { // light switch, etc.
+	rgeom_mat_t &mat(get_untextured_material(0, 0, 1)); // unshadowed, small
+	colorRGBA const color(apply_light_color(c));
+	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)); // skip face that's against the wall
+	vector3d const sz(c.get_size());
+	cube_t plate(c), rocker(c);
+	plate .d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.9*sz[c.dim];
+	rocker.d[c.dim][ c.dir]  = plate.d[c.dim][!c.dir]; // flush with face
+	rocker.expand_in_dim(!c.dim, -0.20*sz[!c.dim]); // shrink horizontally
+	rocker.expand_in_dim(2,      -0.25*sz[!c.dim]); // shrink vertically
+	mat.add_cube_to_verts(plate, color, zero_vector, skip_faces);
+	unsigned const qv_start(mat.quad_verts.size());
+	mat.add_cube_to_verts(rocker, color, zero_vector, skip_faces);
+	vector3d rot_axis(zero_vector);
+	rot_axis[!c.dir] = (c.dim ? 1.0 : -1.0);
+	rotate_verts(mat.quad_verts, rot_axis, 0.1*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center
+}
+
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1));
 	colorRGBA const color(apply_light_color(c));

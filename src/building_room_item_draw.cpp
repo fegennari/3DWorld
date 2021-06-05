@@ -529,7 +529,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_BED:       add_bed      (*i, 0, 1, tscale); break;
 		case TYPE_DESK:      add_desk     (*i, tscale, 0, 1); break;
 		case TYPE_DRESSER: case TYPE_NIGHTSTAND: add_dresser(*i, tscale, 0, 1); break;
-		case TYPE_TCAN:      add_trashcan(*i); break;
+		case TYPE_TCAN:      add_trashcan (*i); break;
 		case TYPE_SIGN:      add_sign     (*i, 0, 1); break;
 		case TYPE_WALL_TRIM: add_wall_trim(*i); break;
 		case TYPE_CLOSET:    add_closet   (*i, tid_nm_pair_t(), 0, 1); break; // add closet wall trim and interior objects, don't need wall_tex
@@ -549,11 +549,12 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_HANGER_ROD:add_hanger_rod(*i); break;
 		case TYPE_DRAIN:     add_drain_pipe(*i); break;
 		case TYPE_KEY: if (has_key_3d_model()) {model_objs.push_back(*i);} else {add_key(*i);} break; // draw or add as 3D model
-		case TYPE_MONEY:     add_money(*i); break;
-		case TYPE_PHONE:     add_phone(*i); break;
+		case TYPE_MONEY:     add_money (*i); break;
+		case TYPE_PHONE:     add_phone (*i); break;
 		case TYPE_TPROLL:    add_tproll(*i); break;
 		case TYPE_SPRAYCAN:  add_spraycan(*i); break;
-		case TYPE_CRACK:     add_crack(*i); break;
+		case TYPE_CRACK:     add_crack (*i); break;
+		case TYPE_SWITCH:    add_switch(*i); break;
 		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects
 		default: break;
 		}
