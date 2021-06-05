@@ -2189,7 +2189,8 @@ void building_room_geom_t::add_switch(room_object_t const &c) { // light switch,
 	mat.add_cube_to_verts(rocker, color, zero_vector, skip_faces);
 	vector3d rot_axis(zero_vector);
 	rot_axis[!c.dir] = (c.dim ? 1.0 : -1.0);
-	rotate_verts(mat.quad_verts, rot_axis, 0.1*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center
+	float const angle((c.is_open() ? -1.0 : 1.0)*0.1*PI);
+	rotate_verts(mat.quad_verts, rot_axis, angle, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center
 }
 
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
