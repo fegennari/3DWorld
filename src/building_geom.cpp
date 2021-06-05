@@ -353,6 +353,29 @@ unsigned check_chair_collision(room_object_t const &c, point &pos, point const &
 	get_chair_cubes(c, cubes);
 	return check_cubes_collision(cubes, 3, pos, p_last, radius, cnorm);
 }
+// Note: these next two are intended to be called when maybe_inside_room_object() returns true
+bool check_stall_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	float const width(c.get_sz_dim(!c.dim));
+	cube_t sides[3] = {c, c, c};
+	sides[0].d[!c.dim][1] -= 0.95*width;
+	sides[1].d[!c.dim][0] += 0.95*width;
+	if (!c.is_open()) {sides[2].d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.975*c.get_sz_dim(c.dim);} // check collision with closed door
+	bool had_coll(0);
+	for (unsigned d = 0; d < (c.is_open() ? 2U : 3U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, radius, sides[d], p_last, 1, 0, cnorm);}
+	return had_coll;
+}
+bool check_shower_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
+	bool const door_dim(c.dx() < c.dy()), door_dir(door_dim ? c.dim : c.dir), side_dir(door_dim ? c.dir : c.dim); // {c.dim, c.dir} => {dir_x, dir_y}
+	cube_t sides[2] = {c, c};
+	sides[0].d[!door_dim][!side_dir] -= (side_dir ? -1.0 : 1.0)*0.95*c.get_sz_dim(!door_dim); // shrink to just the outer glass wall of the shower
+	if (!c.is_open()) {sides[1].d[door_dim][!door_dir] += (door_dir ? 1.0 : -1.0)*0.95*c.get_sz_dim(door_dim);} // check collision with closed door
+	bool had_coll(0);
+	for (unsigned d = 0; d < (c.is_open() ? 1U : 2U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, radius, sides[d], p_last, 1, 0, cnorm);}
+	return had_coll;
+}
+bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
+	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
+}
 
 // Note: used for the player; pos and p_last are already in rotated coordinate space
 // default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
@@ -436,22 +459,13 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 					if (c->is_open()) {player_in_closet |= RO_FLAG_OPEN;} else {player_is_hiding = 1;} // player is hiding if the closet door is closed
 				}
 			}
-			else if (c->type == TYPE_STALL && ((c->is_open() && sphere_cube_intersect(pos, xy_radius, *c)) || c->contains_pt(pos))) {
+			else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, pos, xy_radius)) {
 				// stall is open and intersecting player, or player is inside stall; perform collision test with sides only
-				float const width(c->get_sz_dim(!c->dim));
-				cube_t sides[3] = {*c, *c, *c};
-				sides[0].d[!c->dim][1] -= 0.95*width;
-				sides[1].d[!c->dim][0] += 0.95*width;
-				if (!c->is_open()) {sides[2].d[c->dim][c->dir] += (c->dir ? -1.0 : 1.0)*0.975*c->get_sz_dim(c->dim);} // check collision with closed door
-				for (unsigned d = 0; d < (c->is_open() ? 2U : 3U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
+				had_coll |= check_stall_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
-			else if (c->type == TYPE_SHOWER && ((c->is_open() && sphere_cube_intersect(pos, xy_radius, *c)) || c->contains_pt(pos))) {
+			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, xy_radius)) {
 				// shower is open and intersecting player, or player is inside shower; perform collision test with side only
-				bool const door_dim(c->dx() < c->dy()), door_dir(door_dim ? c->dim : c->dir), side_dir(door_dim ? c->dir : c->dim); // {c.dim, c.dir} => {dir_x, dir_y}
-				cube_t sides[2] = {*c, *c};
-				sides[0].d[!door_dim][!side_dir] -= (side_dir ? -1.0 : 1.0)*0.95*c->get_sz_dim(!door_dim); // shrink to just the outer glass wall of the shower
-				if (!c->is_open()) {sides[1].d[door_dim][!door_dir] += (door_dir ? 1.0 : -1.0)*0.95*c->get_sz_dim(door_dim);} // check collision with closed door
-				for (unsigned d = 0; d < (c->is_open() ? 1U : 2U); ++d) {had_coll |= sphere_cube_int_update_pos(pos, xy_radius, sides[d], p_last, 1, 0, cnorm);}
+				had_coll |= check_shower_collision(*c, pos, p_last, xy_radius, cnorm);
 			}
 			else if (sphere_cube_int_update_pos(pos, xy_radius, c_extended, p_last, 1, 0, cnorm)) { // assume it's a cube; skip_z=0
 				if (c->type == TYPE_TOILET || c->type == TYPE_URINAL) {player_near_toilet = 1;}
@@ -505,11 +519,13 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 
 	// Note: no collision check with expanded_objs
 	for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with
-		// ignore blockers and railings, but include pictures
-		if (c == self || (c->no_coll() && c->type != TYPE_PICTURE) || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING) continue;
+		// ignore blockers and railings, but allow more than c->no_coll()
+		if (c == self || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING || c->type == TYPE_PAPER || c->type == TYPE_PEN || c->type == TYPE_PENCIL ||
+			c->type == TYPE_BOTTLE || c->type == TYPE_FLOORING || c->type == TYPE_SIGN || c->type == TYPE_WBOARD || c->type == TYPE_WALL_TRIM ||
+			c->type == TYPE_DRAIN || c->type == TYPE_CRACK || c->type == TYPE_SWITCH) continue;
 		if (!sphere_cube_intersect(pos, radius, *c)) continue; // no intersection (optimization)
 		unsigned coll_ret(0);
-		// Note: add special handling for things like elevators, cubicles, and bathroom stalls? right now these are only in office buildings, where there are no dynamic objects
+		// add special handling for things like elevators, cubicles, and bathroom stalls? right now these are only in office buildings, where there are no dynamic objects
 
 		if (c->shape == SHAPE_CYLIN) { // vertical cylinder (including table)
 			float const cradius(c->get_radius());
@@ -531,17 +547,20 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			coll_ret |= 1;
 		}
 		else { // assume it's a cube
-			// closets, beds, tables, desks, and chairs are special because they're common collision objects and they're not filled cubes
+			// some object types are special because they're common collision objects and they're not filled cubes
 			if      (c->type == TYPE_CLOSET) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, &cnorm);} // special case to handle closet interiors
 			else if (c->type == TYPE_BED  )  {coll_ret |= check_bed_collision   (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_TABLE)  {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm, 0);}
 			else if (c->type == TYPE_DESK )  {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm, 1);}
 			else if (c->type == TYPE_CHAIR)  {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}
 			else {coll_ret |= (unsigned)sphere_cube_int_update_pos(pos, radius, *c, p_last, 1, 0, &cnorm);} // skip_z=0
 		}
 		if (coll_ret) { // collision with this object - set hardness
-			if      (c->type == TYPE_COUCH) {hardness = 0.6;} // couches are soft
-			else if (c->type == TYPE_RUG  ) {hardness = 0.8;} // rug is somewhat soft (Note: rugs aren't collidable yet anyway)
+			if      (c->type == TYPE_COUCH ) {hardness = 0.6;} // couches are soft
+			else if (c->type == TYPE_RUG   ) {hardness = 0.8;} // rug is somewhat soft
+			else if (c->type == TYPE_BLINDS) {hardness = 0.6;} // blinds are soft
 			else if (c->type == TYPE_BED && (coll_ret & 24)) {hardness = 0.5;} // pillow/mattress collision is very soft
 			else {hardness = 1.0;}
 			obj_ix   = (c - room_geom->objs.begin()); // may be overwritten, will be the last collided object

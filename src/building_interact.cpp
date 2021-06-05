@@ -566,7 +566,6 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 					auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 
 					if (obj.type == TYPE_PICTURE || obj.type == TYPE_OFF_CHAIR || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON) {
-						// Note: buttons aren't collidable with yet, but they're also not added to buildings that contain balls
 						// TODO: add TYPE_CRACK if collision is with the front of a TV or computer monitor?
 						interact_with_object(obj_ix, center.z);
 					}
