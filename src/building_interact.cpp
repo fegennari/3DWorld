@@ -276,102 +276,8 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		}
 		if (!found_item) return 0; // no door or object found
 	}
-	if (is_obj) { // closet, toilet, bathroom stall, office chair, or toilet paper roll
-		auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
-		float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
-		point const center(obj.xc(), obj.yc(), closest_to.z), local_center(local_to_camera_space(center)); // generate sound from the player height
-		float sound_scale(0.5); // for building sound level
-		bool update_draw_data(0);
-
-		if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
-			gen_sound_thread_safe(SOUND_FLUSH, local_center);
-			sound_scale = 0.5;
-		}
-		else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
-			if (!(obj.flags & RO_FLAG_IS_ACTIVE) && obj.type == TYPE_TUB) {gen_sound_thread_safe(SOUND_SINK, local_center);} // play sound when turning the tub on
-			if (obj.is_sink_type()) {obj.flags ^= RO_FLAG_IS_ACTIVE;} // toggle active bit, only for sinks for now
-			sound_scale = 0.4;
-		}
-		else if (obj.is_light_type()) {
-			toggle_light_object(obj);
-			sound_scale = 0.0; // sound has already been registered above
-		}
-		else if (obj.type == TYPE_TPROLL) {
-			if (!(obj.flags & (RO_FLAG_HANGING | RO_FLAG_WAS_EXP))) {
-				gen_sound_thread_safe(SOUND_FOOTSTEP, local_center, 0.5, 1.5); // could be better
-				obj.flags |= RO_FLAG_HANGING; // pull down the roll
-				update_draw_data = 1;
-			}
-			sound_scale = 0.0; // no sound
-		}
-		else if (obj.type == TYPE_PICTURE) { // tilt the picture
-			obj.flags |= RO_FLAG_RAND_ROT;
-			++obj.item_flags; // choose a different random rotation
-			gen_sound_thread_safe(SOUND_SLIDING, local_center, 0.25, 2.0); // higher pitch
-			sound_scale      = 0.0; // no sound
-			update_draw_data = 1;
-		}
-		else if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
-			office_chair_rot_rate += 0.1;
-			obj.flags |= RO_FLAG_ROTATING; // Note: this is a model, no need to regen vertex data
-			gen_sound_thread_safe(SOUND_SQUEAK, local_center, 0.25, 0.5); // lower pitch
-			sound_scale = 0.2;
-		}
-		else if (obj.type == TYPE_MWAVE) { // beeps
-			gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
-			sound_scale = 0.6;
-		}
-		else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
-			if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
-			else {++obj.obj_id;} // toggle on/off, and also change the picture
-			gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
-			update_draw_data = 1;
-		}
-		else if (obj.type == TYPE_BUTTON) {
-			if (!(obj.flags & RO_FLAG_IS_ACTIVE)) { // if not already active
-				register_button_event(obj);
-				interior->room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change; don't have to set modified_by_player
-				obj.flags |= RO_FLAG_IS_ACTIVE;
-			}
-		}
-		else if (obj.type == TYPE_BLINDS) { // see building_t::add_window_blinds()
-			if (!adjust_blinds_state(obj_ix)) return 0;
-			gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.5);
-			sound_scale      = 0.3;
-			update_draw_data = 1;
-		}
-		else if (obj.type == TYPE_BOOK) {
-			obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
-			sound_scale      = 0.0; // no sound
-			update_draw_data = 1;
-		}
-		else if (obj.type == TYPE_SHOWER) { // shower door
-			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
-			gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));
-			sound_scale      = 0.35;
-			update_draw_data = 1;
-		}
-		else if (obj.type == TYPE_BOX) {
-			gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);
-			obj.flags       |= RO_FLAG_OPEN; // mark as open
-			sound_scale      = 0.2;
-			update_draw_data = 1;
-		}
-		else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL || obj.type == TYPE_SHOWER) {
-			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
-		
-			if (obj.type == TYPE_CLOSET) {
-				interior->room_geom->expand_object(obj); // expand any boxes so that the player can pick them up
-				sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
-			}
-			if (obj.is_small_closet()) {play_door_open_close_sound(center, obj.is_open(), 1.0, pitch);}
-			else {gen_sound_thread_safe_at_player(SOUND_SLIDING);}
-			update_draw_data = 1;
-		}
-		else {assert(0);} // unhandled type
-		if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this);}
-		if (sound_scale > 0.0) {register_building_sound(center, sound_scale);}
-		if (obj.type == TYPE_BOX) {add_box_contents(obj);} // must be done last to avoid reference invalidation
+	if (is_obj) { // interactive object
+		if (!interact_with_object(obj_ix, closest_to.z)) return 0; // generate sound from the player height
 	}
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
@@ -380,6 +286,105 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		toggle_door_state(door_ix, 1, 1, closest_to.z); // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
 		//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
 	}
+	return 1;
+}
+
+bool building_t::interact_with_object(unsigned obj_ix, float sound_zval) {
+	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
+	float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
+	point const sound_origin(obj.xc(), obj.yc(), sound_zval), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
+	float sound_scale(0.5); // for building sound level
+	bool update_draw_data(0);
+
+	if (obj.type == TYPE_TOILET || obj.type == TYPE_URINAL) { // toilet/urinal can be flushed, but otherwise is not modified
+		gen_sound_thread_safe(SOUND_FLUSH, local_center);
+		sound_scale = 0.5;
+	}
+	else if (obj.is_sink_type() || obj.type == TYPE_TUB) { // sink or tub
+		if (!(obj.flags & RO_FLAG_IS_ACTIVE) && obj.type == TYPE_TUB) {gen_sound_thread_safe(SOUND_SINK, local_center);} // play sound when turning the tub on
+		if (obj.is_sink_type()) {obj.flags ^= RO_FLAG_IS_ACTIVE;} // toggle active bit, only for sinks for now
+		sound_scale = 0.4;
+	}
+	else if (obj.is_light_type()) {
+		toggle_light_object(obj);
+		sound_scale = 0.0; // sound has already been registered above
+	}
+	else if (obj.type == TYPE_TPROLL) {
+		if (!(obj.flags & (RO_FLAG_HANGING | RO_FLAG_WAS_EXP))) {
+			gen_sound_thread_safe(SOUND_FOOTSTEP, local_center, 0.5, 1.5); // could be better
+			obj.flags |= RO_FLAG_HANGING; // pull down the roll
+			update_draw_data = 1;
+		}
+		sound_scale = 0.0; // no sound
+	}
+	else if (obj.type == TYPE_PICTURE) { // tilt the picture
+		obj.flags |= RO_FLAG_RAND_ROT;
+		++obj.item_flags; // choose a different random rotation
+		gen_sound_thread_safe(SOUND_SLIDING, local_center, 0.25, 2.0); // higher pitch
+		sound_scale      = 0.0; // no sound
+		update_draw_data = 1;
+	}
+	else if (obj.type == TYPE_OFF_CHAIR) { // handle rotate of office chair
+		office_chair_rot_rate += 0.1;
+		obj.flags |= RO_FLAG_ROTATING; // Note: this is a model, no need to regen vertex data
+		gen_sound_thread_safe(SOUND_SQUEAK, local_center, 0.25, 0.5); // lower pitch
+		sound_scale = 0.2;
+	}
+	else if (obj.type == TYPE_MWAVE) { // beeps
+		gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
+		sound_scale = 0.6;
+	}
+	else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
+		if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
+		else {++obj.obj_id;} // toggle on/off, and also change the picture
+		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
+		update_draw_data = 1;
+	}
+	else if (obj.type == TYPE_BUTTON) {
+		if (!(obj.flags & RO_FLAG_IS_ACTIVE)) { // if not already active
+			register_button_event(obj);
+			interior->room_geom->clear_static_small_vbos(); // need to regen object data due to lit state change; don't have to set modified_by_player
+			obj.flags |= RO_FLAG_IS_ACTIVE;
+		}
+	}
+	else if (obj.type == TYPE_BLINDS) { // see building_t::add_window_blinds()
+		if (!adjust_blinds_state(obj_ix)) return 0;
+		gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.5);
+		sound_scale      = 0.3;
+		update_draw_data = 1;
+	}
+	else if (obj.type == TYPE_BOOK) {
+		obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
+		sound_scale      = 0.0; // no sound
+		update_draw_data = 1;
+	}
+	else if (obj.type == TYPE_SHOWER) { // shower door
+		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+		gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));
+		sound_scale      = 0.35;
+		update_draw_data = 1;
+	}
+	else if (obj.type == TYPE_BOX) {
+		gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);
+		obj.flags       |= RO_FLAG_OPEN; // mark as open
+		sound_scale      = 0.2;
+		update_draw_data = 1;
+	}
+	else if (obj.type == TYPE_CLOSET || obj.type == TYPE_STALL || obj.type == TYPE_SHOWER) {
+		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+
+		if (obj.type == TYPE_CLOSET) {
+			interior->room_geom->expand_object(obj); // expand any boxes so that the player can pick them up
+			sound_scale = 0.25; // closets are quieter, to allow players to more easily hide
+		}
+		if (obj.is_small_closet()) {play_door_open_close_sound(sound_origin, obj.is_open(), 1.0, pitch);}
+		else {gen_sound_thread_safe_at_player(SOUND_SLIDING);}
+		update_draw_data = 1;
+	}
+	else {assert(0);} // unhandled type
+	if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this);}
+	if (sound_scale > 0.0) {register_building_sound(sound_origin, sound_scale);}
+	if (obj.type == TYPE_BOX) {add_box_contents(obj);} // must be done last to avoid reference invalidation
 	return 1;
 }
 
@@ -548,20 +553,30 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 		}
 		if (new_center != center) { // check for collisions and move to new location
 			vector3d cnorm;
+			int obj_ix(-1);
 			float hardness(0.0);
 
-			if (interior->check_sphere_coll(*this, new_center, center, radius, c, &cnorm, hardness)) {
+			if (interior->check_sphere_coll(*this, new_center, center, radius, c, cnorm, hardness, obj_ix)) {
 				if (cnorm == plus_z) { // collision with the floor or the top surface of something
 					if (fabs(velocity.z) < 0.25*OBJ_GRAVITY*fticks) {velocity.z = 0.0;} // zero velocity z component if near zero to reduce instability
 				}
 				apply_object_bounce(*this, velocity, cnorm, new_center, hardness, on_floor);
-				// add TYPE_CRACK if collision is with the front of a TV or computer monitor?
+				
+				if (obj_ix >= 0) { // collided with a room object
+					auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
+
+					if (obj.type == TYPE_PICTURE || obj.type == TYPE_OFF_CHAIR || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON) {
+						// Note: buttons aren't collidable with yet, but they're also not added to buildings that contain balls
+						// TODO: add TYPE_CRACK if collision is with the front of a TV or computer monitor?
+						interact_with_object(obj_ix, center.z);
+					}
+				}
 			}
 			point const prev_new_center(new_center);
 			
 			if (move_sphere_to_valid_part(new_center, center, radius) && new_center != prev_new_center) { // collision with exterior wall
 				apply_object_bounce(*this, velocity, (new_center - prev_new_center).get_norm(), new_center, 1.0, on_floor); // hardness=1.0
-				// TODO: add TYPE_CRACK if collides with a window?
+				// add TYPE_CRACK if collides with a window?
 			}
 			if (new_center != center) {apply_roll_to_matrix(dstate.rot_matrix, new_center, center, plus_z, radius, (on_floor ? 0.0 : 0.01), (on_floor ? 1.0 : 0.2));}
 			if (!was_dynamic) {interior->room_geom->clear_static_small_vbos();} // static => dynamic transition, need to remove from static object vertex data

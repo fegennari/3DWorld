@@ -733,7 +733,7 @@ struct building_interior_t {
 	void finalize();
 	bool update_elevators(building_t const &building, point const &player_pos);
 	bool check_sphere_coll(building_t const &building, point &pos, point const &p_last, float radius,
-		vector<room_object_t>::const_iterator self, vector3d *cnorm, float &hardness) const;
+		vector<room_object_t>::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const;
 	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 		float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
@@ -893,6 +893,7 @@ struct building_t : public building_geom_t {
 	bool toggle_room_light(point const &closest_to);
 	void toggle_light_object(room_object_t const &light);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in);
+	bool interact_with_object(unsigned obj_ix, float sound_zval);
 	bool adjust_blinds_state(unsigned obj_ix);
 	void add_box_contents(room_object_t const &box);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval);
