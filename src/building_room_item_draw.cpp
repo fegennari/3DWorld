@@ -600,7 +600,7 @@ void building_room_geom_t::create_lights_vbos(building_t const &building) {
 void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 	//highres_timer_t timer(string("Gen Room Geom Dynamic ") + (building.is_house ? "house" : "office"));
 	
-	if (building.is_house) { // currently, only houses have dynamic objects (balls)
+	if (!obj_dstate.empty()) { // we have an object with dynamic state
 		auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
