@@ -7,7 +7,7 @@
 
 cube_t grass_exclude1, grass_exclude2;
 
-extern bool draw_building_interiors, player_near_toilet, player_is_hiding;
+extern bool draw_building_interiors, player_near_toilet, player_is_hiding, player_in_elevator;
 extern int player_in_closet;
 extern float grass_width, CAMERA_RADIUS;
 extern double camera_zh;
@@ -423,8 +423,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 
 			if (c->type == TYPE_ELEVATOR) { // special handling for elevators
 				if (!c->contains_pt_xy(pos)) continue;
-				if      (obj_z >= c->z2()) {max_eq(pos.z, (c->z2() + radius)); had_coll = 1;} // standing on the roof of the elevator
-				else if (obj_z >= c->z1()) {max_eq(pos.z, (c->z1() + radius)); had_coll = 1;} // inside the elevator
+				if      (obj_z >= c->z2()) {max_eq(pos.z, (c->z2() + radius)); had_coll = player_in_elevator = 1;} // standing on the roof of the elevator
+				else if (obj_z >= c->z1()) {max_eq(pos.z, (c->z1() + radius)); had_coll = player_in_elevator = 1;} // inside the elevator
 				continue;
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on

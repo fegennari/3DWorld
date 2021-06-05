@@ -26,7 +26,7 @@ building_params_t global_building_params;
 building_t const *player_building(nullptr);
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, toggle_door_open_state;
-extern bool teleport_to_screenshot, enable_dlight_bcubes;
+extern bool teleport_to_screenshot, enable_dlight_bcubes, player_in_elevator;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks, FAR_CLIP;
@@ -3137,8 +3137,9 @@ void draw_building_lights(vector3d const &xlate) {
 	//building_creator.draw_building_lights(xlate); // only city buildings for now
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm, bool check_interior, bool exclude_city) {
-	player_in_closet = 0; // reset for this call
-	player_is_hiding = 0;
+	player_in_closet   = 0; // reset for this call
+	player_is_hiding   = 0;
+	player_in_elevator = 0;
 	// we generally won't intersect more than one of these categories, so we can return true without checking all cases
 	return ((!exclude_city && building_creator_city.check_sphere_coll(pos, p_int, radius, xy_only, cnorm, check_interior)) ||
 		                           building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm, check_interior) ||

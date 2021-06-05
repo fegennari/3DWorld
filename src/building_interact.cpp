@@ -17,7 +17,7 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 
-bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), city_action_key(0);
+bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_in_elevator(0), city_action_key(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 room_object_t player_held_object;
@@ -1557,6 +1557,7 @@ void play_obj_fall_sound(room_object_t const &obj, point const &player_pos) {
 }
 
 bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
+	if (player_in_elevator) return 0; // can't use items in elevators
 	assert(has_room_geom());
 	static bool delay_use(0);
 	static double last_use_time(0.0);
