@@ -2183,8 +2183,8 @@ void building_room_geom_t::add_switch(room_object_t const &c) { // light switch,
 	unsigned const skip_faces(~get_face_mask(c.dim, c.dir)), front_face_mask(get_face_mask(c.dim, !c.dir)); // skip face that's against the wall
 	vector3d const sz(c.get_size());
 	cube_t plate(c), rocker(c);
-	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.75*sz[c.dim]; // front face of plate
-	set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.25*sz[c.dim], c.dim);
+	plate.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.70*sz[c.dim]; // front face of plate
+	set_wall_width(rocker, plate.d[c.dim][!c.dir], 0.15*sz[c.dim], c.dim);
 	rocker.expand_in_dim(!c.dim, -0.27*sz[!c.dim]); // shrink horizontally
 	rocker.expand_in_dim(2,      -0.39*sz[!c.dim]); // shrink vertically
 	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/light_switch.jpg"), 0.0, 0), 0, 0, 1));
@@ -2195,7 +2195,7 @@ void building_room_geom_t::add_switch(room_object_t const &c) { // light switch,
 	mat.add_cube_to_verts(rocker, c.color, zero_vector, (skip_faces | EF_Z1)); // skip bottom face
 	vector3d rot_axis(zero_vector);
 	rot_axis[!c.dim] = ((c.dir ^ c.is_open()) ? 1.0 : -1.0);
-	rotate_verts(mat.quad_verts, rot_axis, 0.025*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
+	rotate_verts(mat.quad_verts, rot_axis, 0.015*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
 }
 
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
