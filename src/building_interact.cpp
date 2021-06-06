@@ -981,7 +981,7 @@ void show_weight_limit_message() {
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
-	bool prev_in_building, has_key;
+	bool prev_in_building, has_key, has_phone;
 
 	void register_player_death(unsigned sound_id, std::string const &why) {
 		point const xlate(get_camera_coord_space_xlate());
@@ -991,14 +991,14 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		clear(); // respawn
 	}
 public:
-	player_inventory_t() : best_value(0.0), has_key(0) {clear();}
+	player_inventory_t() : best_value(0.0) {clear();}
 
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
 		cur_value     = cur_weight = tot_value = tot_weight = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
-		prev_in_building = has_key = 0;
+		prev_in_building = has_key = has_phone = 0;
 		carried.clear();
 	}
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
@@ -1076,6 +1076,7 @@ public:
 					co.dim = co.dir = 0;
 					co.flags &= ~RO_FLAG_RAND_ROT; // remove the rotate bit
 				}
+				else if (obj.type == TYPE_PHONE) {has_phone = 1;}
 			}
 			oss << ": value $";
 			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
@@ -1139,7 +1140,7 @@ public:
 		carried.pop_back(); // Note: invalidates obj
 	}
 	void collect_items() {
-		has_key = 0; // key only good for current building
+		has_key = has_phone = 0; // key only good for current building
 		if (carried.empty() && cur_weight == 0.0 && cur_value == 0.0) return; // nothing to add
 		std::ostringstream oss;
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
@@ -1225,6 +1226,10 @@ public:
 			}
 		}
 		player_near_toilet = 0;
+
+		if (has_phone) {
+			// TODO: add some chance that the phone rings and alerts zombies unless the player turns it off
+		}
 	}
 };
 
