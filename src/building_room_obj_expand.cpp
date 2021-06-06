@@ -19,8 +19,8 @@ cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) 
 	return interior;
 }
 
-void add_cube_obj_to_closet(room_object_t const &c, cube_t const &interior, vector<room_object_t> &objects, vect_cube_t &cubes,
-	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags)
+void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vector<room_object_t> &objects, vect_cube_t &cubes,
+	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags, room_obj_shape shape=SHAPE_CUBE)
 {
 	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
 		point center;
@@ -31,7 +31,7 @@ void add_cube_obj_to_closet(room_object_t const &c, cube_t const &interior, vect
 		obj.expand_by_xy(sz);
 
 		if (!has_bcube_int(obj, cubes)) { // check for intersection with boxes
-			objects.emplace_back(obj, obj_type, c.room_id, c.dim, c.dir, flags, c.light_amt);
+			objects.emplace_back(obj, obj_type, c.room_id, c.dim, c.dir, flags, c.light_amt, shape);
 			cubes.push_back(obj);
 			break;
 		}
@@ -92,12 +92,17 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 		if (rgen.rand_bool()) { // maybe add a computer in the closet
 			float const height(0.21*window_vspacing*rgen.rand_uniform(1.0, 1.2)), cheight(0.75*height), cwidth(0.44*cheight), cdepth(0.9*cheight);
 			sz[c.dim] = 0.5*cdepth; sz[!c.dim] = 0.5*cwidth; sz.z = cheight;
-			add_cube_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_COMPUTER, flags);
+			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_COMPUTER, flags);
 		}
 		if (rgen.rand_bool()) { // maybe add a keyboard in the closet
 			float const kbd_hwidth(0.12*window_vspacing), kbd_depth(0.6*kbd_hwidth), kbd_height(0.06*kbd_hwidth);
 			sz[c.dim] = 0.5*kbd_depth; sz[!c.dim] = kbd_hwidth; sz.z = kbd_height;
-			add_cube_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_KEYBOARD, flags);
+			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_KEYBOARD, flags);
+		}
+		if (rgen.rand_bool()) { // maybe add a paint can in the closet
+			float const height(0.64*0.2*window_vspacing), radius(0.28*0.2*window_vspacing);
+			sz.assign(radius, radius, height);
+			add_obj_to_closet(c, interior, objects, cubes, rgen, sz, TYPE_PAINTCAN, flags, SHAPE_CYLIN);
 		}
 	}
 	// add hanger rod
