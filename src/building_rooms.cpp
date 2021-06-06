@@ -1723,7 +1723,7 @@ void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, f
 		cube_t c;
 		c.d[dim][ dir] = room_bounds.d[dim][dir]; // flush with wall
 		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.2*wall_thickness;
-		c.z1() = zval + 0.4*floor_spacing;
+		c.z1() = zval + 0.38*floor_spacing;
 		c.z2() = c.z1() + switch_height;
 
 		for (unsigned Side = 0; Side < 2; ++Side) { // try both sides of the doorway
