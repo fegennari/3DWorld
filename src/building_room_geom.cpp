@@ -684,18 +684,20 @@ void building_room_geom_t::expand_shelves(room_object_t const &c) {
 	get_shelf_objects(c, shelves, num_shelves, expanded_objs);
 }
 
-void building_room_geom_t::add_keyboard(room_object_t const &c) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/keyboard.jpg"), 0.0), 1, 0, 1)); // shadows, small
+void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1, 0, is_small)); // shadows
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir); // top face only
-	get_untextured_material(0, 0, 1).add_cube_to_verts(c, apply_light_color(c, BKGRAY), zero_vector, EF_Z12); // sides, no shadows, small
+	get_untextured_material(1, 0, is_small).add_cube_to_verts(c, apply_light_color(c, sides_color), zero_vector, EF_Z12); // sides, no shadows, small
 }
-
 void building_room_geom_t::add_obj_with_front_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
 	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name(texture_name), 0.0), 1, 0, is_small)); // shadows
 	unsigned const front_mask(get_face_mask(c.dim, c.dir));
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, front_mask, !c.dim, (c.dim ^ c.dir ^ 1), 0); // front face only
 	get_untextured_material(1, 0, is_small).add_cube_to_verts(c, apply_light_color(c, sides_color), zero_vector, ~front_mask); // sides, shadows
 }
+
+void building_room_geom_t::add_keyboard(room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/keyboard.jpg",  BKGRAY, 1);} // is_small=1
+void building_room_geom_t::add_laptop  (room_object_t const &c) {add_obj_with_top_texture  (c, "interiors/laptop.jpg",    BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_computer(room_object_t const &c) {add_obj_with_front_texture(c, "interiors/computer.jpg",  BKGRAY, 1);} // is_small=1
 void building_room_geom_t::add_mwave   (room_object_t const &c) {add_obj_with_front_texture(c, "interiors/microwave.jpg", GRAY,   0);} // is_small=0
 
@@ -2191,6 +2193,10 @@ void building_room_geom_t::add_switch(room_object_t const &c) { // light switch,
 	rotate_verts(mat.quad_verts, rot_axis, 0.025*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
 }
 
+void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
+	// TODO: bottom truncated cone with top trunaced cone or spherical section?
+}
+
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 	rgeom_mat_t &mat(get_untextured_material(1));
 	colorRGBA const color(apply_light_color(c));
@@ -2304,6 +2310,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_HANGER_ROD:return get_textured_wood_color();
 	case TYPE_MONEY:    return texture_color(get_money_tid());
 	case TYPE_PHONE:    return color*0.5; // 50% case color, 50% black
+	case TYPE_LAPTOP:   return BKGRAY; // black-gray case, ignore logo colors
 	case TYPE_TPROLL:   return (WHITE*0.75  + GRAY*0.25);
 	case TYPE_SPRAYCAN: return (DK_GRAY*0.5 + color*0.5);
 	case TYPE_CRACK:    return ALPHA0; // transparent

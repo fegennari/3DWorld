@@ -876,6 +876,8 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 2, 1.0,   0.05,  "button");
 	bldg_obj_types[TYPE_CRACK     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "crack");
 	bldg_obj_types[TYPE_SWITCH    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "switch");
+	bldg_obj_types[TYPE_PLATE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 6.0,   0.2,   "plate");
+	bldg_obj_types[TYPE_LAPTOP    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 6.0,   0.2,   "plate");
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
 	bldg_obj_types[TYPE_SINK      ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 80.0,  55.0,  "sink");
