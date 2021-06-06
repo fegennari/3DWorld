@@ -1713,7 +1713,6 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 
 void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor) {
 	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
-	//if (doorways.empty()) return; // no doors
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const switch_height(1.8*wall_thickness), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
@@ -2049,8 +2048,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			rgen.rand_mix();
 
 			if (r->no_geom) {
+				if (is_house && has_light) {add_light_switch_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor);} // shed, garage, or hallway
+
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
-					if (has_light) {add_light_switch_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor);}
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());} // 50% of the time; not all rugs will be placed
 				}
