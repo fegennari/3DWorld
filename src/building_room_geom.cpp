@@ -2185,11 +2185,10 @@ void building_room_geom_t::add_switch(room_object_t const &c) { // light switch,
 	rocker.expand_in_dim(2,      -0.25*sz[!c.dim]); // shrink vertically
 	mat.add_cube_to_verts(plate,  c.color, zero_vector, skip_faces); // Note: always fully lit to match wall
 	unsigned const qv_start(mat.quad_verts.size());
-	mat.add_cube_to_verts(rocker, c.color, zero_vector, skip_faces);
+	mat.add_cube_to_verts(rocker, c.color, zero_vector, (skip_faces | EF_Z1)); // skip bottom face
 	vector3d rot_axis(zero_vector);
-	rot_axis[!c.dim] = (c.dir ? 1.0 : -1.0);
-	float const angle((c.is_open() ? -1.0 : 1.0)*0.025*PI);
-	rotate_verts(mat.quad_verts, rot_axis, angle, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center
+	rot_axis[!c.dim] = ((c.dir ^ c.is_open()) ? 1.0 : -1.0);
+	rotate_verts(mat.quad_verts, rot_axis, 0.025*PI, plate.get_cube_center(), qv_start); // rotate rocker slightly about base plate center; could be optimized by caching
 }
 
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
