@@ -39,7 +39,8 @@ bool building_t::overlaps_other_room_obj(cube_t const &c, unsigned objs_start) c
 	assert(objs_start <= objs.size());
 
 	for (auto i = objs.begin()+objs_start; i != objs.end(); ++i) {
-		if (!i->no_coll() && i->intersects(c)) return 1;
+		// Note: light switches don't collide with the player or AI, but they collide with other placed objects
+		if ((!i->no_coll() || i->type == TYPE_SWITCH) && i->intersects(c)) return 1;
 	}
 	return 0;
 }
@@ -137,12 +138,27 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 	}
 }
 
+vect_door_stack_t &building_t::get_doorways_for_room(room_t const &room, float zval) const { // interior doorways
+	// find interior doorways connected to this room
+	float const wall_thickness(get_wall_thickness());
+	cube_t room_exp(room);
+	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
+	set_cube_zvals(room_exp, zval, (zval + get_window_vspace())); // clip to z-range of this floor (optimization)
+	static vect_door_stack_t doorways; // reuse across rooms
+	doorways.clear();
+
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
+		if (i->intersects(room_exp)) {doorways.push_back(*i);}
+	}
+	return doorways;
+}
+
 void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj) {
 	unsigned const NUM_COLORS = 6;
 	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
 	float const floor_spacing(get_window_vspace()), radius(0.02f*(3 + rr)*floor_spacing), height(0.55f*(3 + rar)*radius); // radius={0.06, 0.08, 0.10} x AR={1.65, 2.2, 2.75}
-	cube_t room_bounds(get_walkable_room_bounds(room)), room_exp(room);
+	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-1.1*radius); // leave a slight gap between trashcan and wall
 	if (!room_bounds.is_strictly_normalized()) return; // no space for trashcan (likely can't happen)
 	int const floor_ix(int((zval - room.z1())/floor_spacing));
@@ -150,21 +166,13 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	point center;
 	center.z = zval + 0.001*floor_spacing; // slightly above the floor to avoid z-fighting
 	unsigned skip_wall(4); // start at an invalid value
-	// find interior doorways connected to this room
-	float const wall_thickness(get_wall_thickness());
-	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
-	set_cube_zvals(room_exp, zval, (zval + floor_spacing)); // clip to z-range of this floor (optimization)
+	vect_door_stack_t const &doorways(get_doorways_for_room(room, zval));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t avoid;
-	static vect_cube_t doorways; // reuse across rooms
-	doorways.clear();
 
 	if (!objs.empty() && objs[objs_start].type == TYPE_TABLE) { // make sure there's enough space for the player to walk around the table
 		avoid = objs[objs_start];
 		avoid.expand_by_xy(get_min_front_clearance());
-	}
-	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
-		if (i->intersects(room_exp)) {doorways.push_back(*i);}
 	}
 	if (check_last_obj) {
 		assert(!objs.empty());
@@ -1146,7 +1154,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height);
 		float const min_clearance(get_min_front_clearance()), front_clearance(max(0.6f*height, min_clearance));
 		cube_t cabinet_area(room_bounds);
-		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area
+		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area; this is needed to prevent z-fighting with exterior walls
 		vector<room_object_t> &objs(interior->room_geom->objs);
 		unsigned const counters_start(objs.size());
 		cube_t c;
@@ -1675,7 +1683,7 @@ void building_t::add_plants_to_room(rand_gen_t rgen, room_t const &room, float z
 }
 
 void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned max_num) {
-	if (max_num == 0) return;
+	if (max_num == 0) return; // why did we call this?
 	float const window_vspacing(get_window_vspace());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
@@ -1687,6 +1695,42 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 		sz *= 1.5; // make larger than storage room boxes
 		place_obj_along_wall(TYPE_BOX, room, sz.z, sz, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.0, 4, 0, gen_box_color(rgen));
 	} // for n
+}
+
+void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
+	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const switch_height(1.8*wall_thickness), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
+	cube_t const room_bounds(get_walkable_room_bounds(room));
+	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
+	if (doorways.size() > 1 && rgen.rand_bool()) {std::reverse(doorways.begin(), doorways.end());} // random permute if more than 2 doorways?
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	bool const first_side(rgen.rand_bool());
+
+	for (auto i = doorways.begin(); i != doorways.end(); ++i) {
+		// check for windows if (get_real_num_parts() > 1)? is it actually possible for doors to be within far_spacing of a window?
+		bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
+		float const door_width(i->get_sz_dim(!dim)), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to the side of the door when open
+		cube_t c;
+		c.d[dim][ dir] = room_bounds.d[dim][dir]; // flush with wall
+		c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.2*wall_thickness;
+		c.z1() = zval + 0.4*floor_spacing;
+		c.z2() = c.z1() + switch_height;
+
+		for (unsigned Side = 0; Side < 2; ++Side) { // try both sides of the doorway
+			bool const side(bool(Side) ^ first_side);
+
+			for (unsigned nf = 0; nf < 2; ++nf) { // {near, far}
+				float const spacing(nf ? far_spacing : near_spacing), wall_pos(i->d[!dim][side] + (side ? 1.0 : -1.0)*spacing);
+				if (wall_pos < room_bounds.d[!dim][0] + min_wall_spacing || wall_pos > room_bounds.d[!dim][1] - min_wall_spacing) continue; // to close to the adjacent wall
+				set_wall_width(c, wall_pos, switch_hwidth, !dim);
+				if (overlaps_other_room_obj(c, objs_start))        continue;
+				if (is_cube_close_to_doorway(c, room, 0.0, 1))     continue; // inc_open=1, to avoid placing the light switch behind an open door
+				if (interior->is_blocked_by_stairs_or_elevator(c)) continue; // check stairs and elevators
+				objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall
+				return; // done, only need to add one
+			} // for nf
+		} // for side
+	} // for i
 }
 
 void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement) {
@@ -2086,6 +2130,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
+			add_light_switch_to_room(rgen, *r, room_center.z, room_id, objs_start);
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement));

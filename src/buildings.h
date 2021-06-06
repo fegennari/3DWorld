@@ -695,6 +695,7 @@ struct door_t : public door_stack_t {
 	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0) : door_stack_t(c, dim_, dir, os), open(open_), locked(0) {}
 	bool is_closed_and_locked() const {return (!open && locked);}
 };
+typedef vector<door_stack_t> vect_door_stack_t;
 typedef vector<door_t> vect_door_t;
 
 enum {ROOF_OBJ_BLOCK=0, ROOF_OBJ_ANT, ROOF_OBJ_WALL, ROOF_OBJ_ECAP, ROOF_OBJ_AC, ROOF_OBJ_SCAP};
@@ -973,6 +974,7 @@ private:
 	bool room_has_stairs_or_elevator(room_t const &room, float zval) const;
 	bool is_room_office_bathroom(room_t const &room, float zval, unsigned floor) const;
 	int gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1, bool ignore_chairs=0) const;
+	vect_door_stack_t &get_doorways_for_room(room_t const &room, float zval) const;
 	bool add_chair(rand_gen_t &rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id, point const &place_pos,
 		colorRGBA const &chair_color, bool dim, bool dir, float tot_light_amt, bool office_chair_model);
 	unsigned add_table_and_chairs(rand_gen_t rgen, cube_t const &room, vect_cube_t const &blockers, unsigned room_id,
@@ -1004,6 +1006,7 @@ private:
 	bool hang_pictures_in_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
 	void add_plants_to_room  (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num);
 	void add_boxes_to_room   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned max_num);
+	void add_light_switch_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
 	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
 	bool can_be_bathroom(room_t const &room) const;
