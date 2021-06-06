@@ -1706,10 +1706,12 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 }
 
 void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start) {
+	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
+	// what about exterior doors, should they be included as well?
+	if (doorways.empty()) return; // no doors
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float const switch_height(1.8*wall_thickness), switch_hwidth(0.5*wall_thickness), min_wall_spacing(switch_hwidth + 2.0*wall_thickness);
 	cube_t const room_bounds(get_walkable_room_bounds(room));
-	vect_door_stack_t &doorways(get_doorways_for_room(room, zval)); // place light switch next to a door
 	if (doorways.size() > 1 && rgen.rand_bool()) {std::reverse(doorways.begin(), doorways.end());} // random permute if more than 2 doorways?
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	bool const first_side(rgen.rand_bool());
@@ -1917,7 +1919,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			room_center.z = z + fc_thick; // floor height
 			// top floor may have stairs connecting to upper stack
 			bool const top_floor(f+1 == num_floors), check_stairs((!is_house || has_basement()) && parts.size() > 1 && top_floor && r->z2() < bcube.z2()); // z2 check may not be effective
-			bool is_lit(0), light_dim(room_dim), has_stairs(r->has_stairs), top_of_stairs(has_stairs && top_floor);
+			bool is_lit(0), has_light(1), light_dim(room_dim), has_stairs(r->has_stairs), top_of_stairs(has_stairs && top_floor);
 
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
 				// check for stairwells connecting stacked parts (is this still needed?); check for roof access stairs and set top_of_stairs=0
@@ -2004,7 +2006,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					} // for y
 				}
 				else { // normal room with a single light
-					if (check_stairs && has_bcube_int_stairs_exp(light, interior->stairwells, fc_thick, 1)) {is_lit = 0;} // disable if blocked by stairs
+					if (check_stairs && has_bcube_int_stairs_exp(light, interior->stairwells, fc_thick, 1)) {is_lit = has_light = 0;} // disable if blocked by stairs
 					else {
 						light_obj_ix = objs.size();
 						objs.emplace_back(light, TYPE_LIGHT, room_id, light_dim, 0, flags, light_amt, light_shape, color); // dir=0 (unused)
@@ -2018,7 +2020,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			rgen.rand_mix();
 
 			if (r->no_geom) {
-				if (is_house && r->is_hallway) { // allow pictures and rugs in the hallways of houses
+				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
+					if (has_light) {add_light_switch_to_room(rgen, *r, room_center.z, room_id, objs.size());}
 					hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
 					if (rgen.rand_bool()) {add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size());} // 50% of the time; not all rugs will be placed
 				}
@@ -2138,7 +2141,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				unsigned const num(is_house ? (rgen.rand() % ((is_living || is_dining) ? 3 : 2)) : ((rgen.rand()%((f == 0) ? 4 : 10)) == 0));
 				if (num > 0) {add_plants_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, num);}
 			}
-			add_light_switch_to_room(rgen, *r, room_center.z, room_id, objs_start);
+			if (has_light) {add_light_switch_to_room(rgen, *r, room_center.z, room_id, objs_start);} // add a light switch if this room has a light
 			// pictures and whiteboards must not be placed behind anything, excluding trashcans; so we add them here
 			bool const can_hang((is_house || !(is_bathroom || is_kitchen || no_whiteboard)) && !is_storage); // no whiteboards in office bathrooms or kitchens
 			bool const was_hung(can_hang && hang_pictures_in_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement));
