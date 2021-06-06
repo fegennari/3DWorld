@@ -402,7 +402,7 @@ struct room_object_t : public cube_t {
 	int get_sheet_tid() const;
 	int get_paper_tid() const;
 	int get_model_id () const {return ((type == TYPE_MONITOR) ? OBJ_MODEL_TV : (type + OBJ_MODEL_TOILET - TYPE_TOILET));} // monitor has same model as TV
-	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1);
+	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0);
 	colorRGBA get_color() const;
 	colorRGBA get_model_color() const;
 	vector3d get_dir() const {vector3d v(zero_vector); v[dim] = (dir ? 1.0 : -1.0); return v;}

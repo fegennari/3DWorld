@@ -441,10 +441,11 @@ rgeom_mat_t &building_room_geom_t::get_metal_material(bool inc_shadows, bool dyn
 	return get_material(tex, inc_shadows, dynamic, small);
 }
 
-void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type) {
+void room_object_t::set_as_bottle(unsigned rand_id, unsigned max_type, bool no_empty) {
 	assert(max_type > 0 && max_type < NUM_BOTTLE_TYPES);
 	obj_id = (uint16_t)rand_id;
 	while (get_bottle_type() > max_type) {obj_id += 13;} // cycle with a prime number until a valid type is selected
+	if (no_empty) {obj_id &= 127;} // strip off second empty bit
 	color  = bottle_params[get_bottle_type()].color;
 }
 

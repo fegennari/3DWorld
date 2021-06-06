@@ -217,7 +217,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			float const bottle_height(z_step*rgen.rand_uniform(0.4, 0.7)), bottle_radius(z_step*rgen.rand_uniform(0.07, 0.11));
 			if (min(c_sz.x, c_sz.y) < 5.0*bottle_radius) continue; // shelf not wide/deep enough to add this bottle
 			gen_xy_pos_for_round_obj(C, S, bottle_radius, bottle_height, 2.0*bottle_radius, rgen);
-			C.set_as_bottle(rgen.rand() & 127); // no empty bottles - don't set 7th bit
+			C.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 1); // all bottle types, no_empty=1
 			add_if_not_intersecting(C, objects, cubes);
 		}
 		// add paint cans
@@ -373,7 +373,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		bool const dim(c.dim ^ rgen.rand_bool() ^ 1); // random orient
 		float const length(rgen.rand_uniform(0.7, 0.9)*min(1.8f*sz.z, min(sz.x, sz.y))), diameter(length*rgen.rand_uniform(0.26, 0.34));
 		obj = room_object_t(drawer, TYPE_BOTTLE, c.room_id, dim, rgen.rand_bool(), 0, 1.0, SHAPE_CYLIN);
-		obj.set_as_bottle(rgen.rand());
+		obj.set_as_bottle(rgen.rand()); // can be empty
 		obj.z2() = (obj.z1() + diameter);
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
@@ -480,7 +480,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 
 			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
 				objs.emplace_back(*i, TYPE_BOTTLE, room_id, 0, 0, (flags | RO_FLAG_NO_CONS), light_amt, SHAPE_CYLIN);
-				objs.back().set_as_bottle(bottle_id, 3); // 0-3; excludes poison
+				objs.back().set_as_bottle(bottle_id, 3, 1); // 0-3; excludes poison; no_empty=1
 			}
 		}
 		else if (obj_type == 2) { // ball - only 1
