@@ -140,14 +140,15 @@ void building_t::shorten_chairs_in_region(cube_t const &region, unsigned objs_st
 
 vect_door_stack_t &building_t::get_doorways_for_room(room_t const &room, float zval) const { // interior doorways
 	// find interior doorways connected to this room
-	float const wall_thickness(get_wall_thickness());
+	float const floor_thickness(get_floor_thickness());
 	cube_t room_exp(room);
-	room_exp.expand_by(wall_thickness, wall_thickness, -wall_thickness); // expand in XY and shrink in Z
-	set_cube_zvals(room_exp, zval, (zval + get_window_vspace())); // clip to z-range of this floor (optimization)
+	room_exp.expand_by_xy(get_wall_thickness());
+	set_cube_zvals(room_exp, (zval + floor_thickness), (zval + get_window_vspace() - floor_thickness)); // clip to z-range of this floor
 	static vect_door_stack_t doorways; // reuse across rooms
 	doorways.clear();
 
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
+		if (i->on_stairs) continue; // skip basement door
 		if (i->intersects(room_exp)) {doorways.push_back(*i);}
 	}
 	return doorways;
