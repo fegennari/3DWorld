@@ -18,7 +18,7 @@ extern float office_chair_rot_rate;
 extern point pre_smap_player_pos;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
-extern room_object_t player_held_object;
+extern carried_item_t player_held_object;
 
 unsigned get_num_screenshot_tids();
 
@@ -662,7 +662,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	rotate_dir_about_z(inst.dir, office_chair_rot_rate);
 }
 
-/*static*/ void building_room_geom_t::draw_interactive_player_obj(room_object_t const &c, shader_t &s) {
+/*static*/ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s) {
 	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO is recreated every time
 
 	if (c.type == TYPE_SPRAYCAN || c.type == TYPE_MARKER) {
@@ -678,7 +678,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		else {add_pen_pencil_marker_to_material(c_rot, mat);}
 	}
 	else if (c.type == TYPE_TPROLL) { // apply get_player_cview_rot_matrix()?
-		add_vert_tproll_to_material(c, mat);
+		add_vert_tproll_to_material(c, mat, c.get_remaining_capacity_ratio());
 	}
 	else if (c.type == TYPE_BOOK) {
 		static building_room_geom_t tmp_rgeom;

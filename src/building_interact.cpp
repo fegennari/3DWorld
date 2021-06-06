@@ -20,7 +20,7 @@ float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_in_elevator(0), city_action_key(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
-room_object_t player_held_object;
+carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 quad_batch_draw paint_qbd[2][2], blood_qbd, tp_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
@@ -897,6 +897,12 @@ void setup_bldg_obj_types() {
 	//                                                pc ac pu at im ls value  weight  name [capacity]
 }
 
+float carried_item_t::get_remaining_capacity_ratio() const {
+	assert(type >= 0 && type < NUM_ROBJ_TYPES);
+	unsigned const capacity(bldg_obj_types[type].capacity);
+	return ((capacity == 0) ? 1.0 : (1.0 - float(use_count)/float(capacity))); // Note: zero capacity is unlimited and ratio returned is always 1.0
+}
+
 bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
 	assert(obj.type < NUM_ROBJ_TYPES);
 	return bldg_obj_types[obj.type];
@@ -973,11 +979,6 @@ void show_weight_limit_message() {
 }
 
 class player_inventory_t { // manages player inventory, health, and other stats
-	struct carried_item_t : public room_object_t {
-		unsigned use_count;
-		carried_item_t() : use_count(0) {}
-		carried_item_t(room_object_t const &o) : room_object_t(o), use_count(0) {}
-	};
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
 	bool prev_in_building, has_key;
@@ -2040,7 +2041,7 @@ void building_gameplay_next_frame() {
 		}
 		cur_sounds.erase(o, cur_sounds.end());
 	}
-	player_held_object = room_object_t();
+	player_held_object = carried_item_t();
 	player_inventory.next_frame();
 	// reset state for next frame
 	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease

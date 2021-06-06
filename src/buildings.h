@@ -409,6 +409,13 @@ struct room_object_t : public cube_t {
 	void set_rand_gen_state(rand_gen_t &rgen) const {rgen.set_state(obj_id+1, room_id+1);}
 };
 
+struct carried_item_t : public room_object_t {
+	unsigned use_count;
+	carried_item_t() : use_count(0) {}
+	carried_item_t(room_object_t const &o) : room_object_t(o), use_count(0) {}
+	float get_remaining_capacity_ratio() const;
+};
+
 struct room_obj_dstate_t { // state used for dynamic room objects
 	vector3d velocity;
 	xform_matrix rot_matrix;
@@ -576,8 +583,8 @@ struct building_room_geom_t {
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void add_lg_ball(room_object_t const &c);
-	static void draw_lg_ball_in_building   (room_object_t const &c, shader_t &s);
-	static void draw_interactive_player_obj(room_object_t const &c, shader_t &s);
+	static void draw_lg_ball_in_building   (room_object_t  const &c, shader_t &s);
+	static void draw_interactive_player_obj(carried_item_t const &c, shader_t &s);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
 	void get_bookcase_books(room_object_t const &c, vector<room_object_t> &books) {add_bookcase(c, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
@@ -613,7 +620,7 @@ private:
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects);
 	static void add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &objects);
-	static void add_vert_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat);
+	static void add_vert_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0);
 }; // building_room_geom_t
 
 struct elevator_t : public cube_t {
