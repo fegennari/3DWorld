@@ -1700,7 +1700,7 @@ void building_t::add_boxes_to_room(rand_gen_t rgen, room_t const &room, float zv
 	if (max_num == 0) return; // why did we call this?
 	float const window_vspacing(get_window_vspace());
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
+	place_area.expand_by(-0.25*get_wall_thickness()); // shrink to leave a small gap
 	unsigned const num(rgen.rand() % (max_num+1));
 
 	for (unsigned n = 0; n < num; ++n) {
