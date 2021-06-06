@@ -61,7 +61,7 @@ float get_radius_for_room_light(room_object_t const &obj);
 void register_building_sound(point const &pos, float volume);
 
 // Note: called by the player; closest_to is in building space, not camera space
-bool building_t::toggle_room_light(point const &closest_to, int room_id) {
+bool building_t::toggle_room_light(point const &closest_to, bool sound_from_closest_to, int room_id) {
 	if (!has_room_geom()) return 0; // error?
 
 	if (room_id < 0) { // caller has not provided a valid room_id, so determine it now
@@ -87,11 +87,12 @@ bool building_t::toggle_room_light(point const &closest_to, int room_id) {
 		if (closest_dist_sq == 0.0 || dist_sq < closest_dist_sq) {closest_dist_sq = dist_sq; closest_light = int(i - objs.begin());}
 	} // for i
 	if (closest_light < 0) return 0;
-	toggle_light_object(objs[closest_light]);
+	room_object_t const &light(objs[closest_light]);
+	toggle_light_object(light, (sound_from_closest_to ? closest_to : light.get_cube_center()));
 	return 1;
 }
 
-void building_t::toggle_light_object(room_object_t const &light) {
+void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) {
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	bool updated(0);
 
@@ -104,9 +105,8 @@ void building_t::toggle_light_object(room_object_t const &light) {
 		}
 	} // for i
 	if (updated) {interior->room_geom->clear_and_recreate_lights();} // recreate light geom with correct emissive properties
-	point const light_pos(light.get_cube_center());
-	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(light_pos));
-	register_building_sound(light_pos, 0.1);
+	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(sound_pos));
+	register_building_sound(sound_pos, 0.1);
 	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
 }
 
@@ -310,7 +310,7 @@ bool building_t::interact_with_object(unsigned obj_ix, float sound_zval) {
 		sound_scale = 0.4;
 	}
 	else if (obj.is_light_type()) {
-		toggle_light_object(obj);
+		toggle_light_object(obj, obj.get_cube_center());
 		sound_scale = 0.0; // sound has already been registered above
 	}
 	else if (obj.type == TYPE_TPROLL) {
@@ -353,7 +353,7 @@ bool building_t::interact_with_object(unsigned obj_ix, float sound_zval) {
 	}
 	else if (obj.type == TYPE_SWITCH) {
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
-		toggle_room_light(obj.get_cube_center(), obj.room_id); // should select the correct light(s) for the room containing the switch
+		toggle_room_light(obj.get_cube_center(), 1, obj.room_id); // should select the correct light(s) for the room containing the switch
 		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
 		sound_scale      = 0.1;
 		update_draw_data = 1;

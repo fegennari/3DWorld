@@ -891,8 +891,8 @@ struct building_t : public building_geom_t {
 	void get_ext_wall_verts_no_sec(building_draw_t &bdraw) const;
 	void write_basement_entrance_depth_pass(shader_t &s) const;
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
-	bool toggle_room_light(point const &closest_to, int room_id=-1);
-	void toggle_light_object(room_object_t const &light);
+	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1);
+	void toggle_light_object(room_object_t const &light, point const &sound_pos);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in);
 	bool interact_with_object(unsigned obj_ix, float sound_zval);
 	bool adjust_blinds_state(unsigned obj_ix);
