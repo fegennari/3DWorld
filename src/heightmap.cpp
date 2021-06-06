@@ -129,7 +129,7 @@ void heightmap_t::proc_gen() {
 	vector<float> vals(num_pixels());
 	float const x0(-0.5*DX_VAL*width), y0(-0.5*DY_VAL*height); // centered on (0,0); should we use the camera location instead?
 	mesh_xy_grid_cache_t height_gen;
-	bool const results_avail(height_gen.build_arrays(x0, y0, DX_VAL, DY_VAL, width, height, 1)); // cache_values=1
+	height_gen.build_arrays(x0, y0, DX_VAL, DY_VAL, width, height, 1); // cache_values=1; return value is ignored
 	height_gen.enable_glaciate();
 
 	// run this using GPU compute?

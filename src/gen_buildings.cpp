@@ -262,8 +262,6 @@ building_lights_manager_t building_lights_manager;
 
 
 void set_interior_lighting(shader_t &s, bool have_indir) {
-	bool const in_dark_closet(player_in_closet && !(player_in_closet & (RO_FLAG_OPEN | RO_FLAG_LIT)));
-
 	if (have_indir || player_in_dark_closet()) { // using indir lighting, or player in a closed closet with the light off
 		s.add_uniform_float("diffuse_scale",       0.0); // no diffuse from sun/moon
 		s.add_uniform_float("ambient_scale",       (player_in_dark_closet() ? 0.1 : 0.0)); // no ambient for indir; slight ambient for closet closet with light off
