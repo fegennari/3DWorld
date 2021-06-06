@@ -529,27 +529,33 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 			}
 		}
 		else if (was_dynamic) { // not colliding, but is moving
-			point const test_pt(center.x, center.y, (center.z - radius - 0.1*fc_thick));
+			float const max_timestep(0.1); // in ticks (40 per second)
+			unsigned const num_steps(max(1, round_fp(fticks_stable/max_timestep)));
+			float const step_sz(fticks_stable/num_steps);
 
-			for (auto f = interior->floors.begin(); f != interior->floors.end(); ++f) {
-				if (f->contains_pt(test_pt)) {on_floor = 1; break;}
-			}
-			if (on_floor) { // moving on the floor, apply surface friction
-				velocity *= (1.0f - min(1.0f, OBJ_DECELERATE*fticks));
-				if (velocity.mag() < MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
-			}
-			else { // in the air - apply gravity
-				velocity.z -= OBJ_GRAVITY*fticks_stable; // apply gravitational acceleration
-				max_eq(velocity.z, -TERM_VELOCITY);
-			}
-			if (velocity == zero_vector) { // stopped
-				c->flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
-				interior->update_dynamic_draw_data(); // remove from dynamic objects
-				interior->room_geom->clear_static_small_vbos(); // add to small static objects
-			}
-			else { // move based on velocity
-				new_center += velocity*fticks_stable;
-			}
+			for (unsigned step = 0; step < num_steps; ++step) {
+				point const test_pt(new_center.x, new_center.y, (new_center.z - radius - 0.1*fc_thick));
+				on_floor = 0; // reset for this iteration
+
+				for (auto f = interior->floors.begin(); f != interior->floors.end(); ++f) {
+					if (f->contains_pt(test_pt)) {on_floor = 1; break;}
+				}
+				if (on_floor) { // moving on the floor, apply surface friction
+					velocity *= (1.0f - min(1.0f, OBJ_DECELERATE*step_sz));
+					if (velocity.mag_sq() < MIN_VELOCITY*MIN_VELOCITY) {velocity = zero_vector;} // zero velocity if stopped
+				}
+				else { // in the air - apply gravity
+					velocity.z -= OBJ_GRAVITY*step_sz; // apply gravitational acceleration
+					max_eq(velocity.z, -TERM_VELOCITY);
+				}
+				if (velocity == zero_vector) { // stopped
+					c->flags &= ~RO_FLAG_DYNAMIC; // clear dynamic flag
+					interior->update_dynamic_draw_data(); // remove from dynamic objects and schedule an update
+					interior->room_geom->clear_static_small_vbos(); // add to small static objects
+					break; // done
+				}
+				new_center += velocity*step_sz; // move based on velocity
+			} // for step
 		}
 		if (new_center != center) { // check for collisions and move to new location
 			vector3d cnorm;
