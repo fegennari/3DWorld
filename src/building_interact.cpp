@@ -60,15 +60,19 @@ void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float pitch=1.
 float get_radius_for_room_light(room_object_t const &obj);
 void register_building_sound(point const &pos, float volume);
 
-bool building_t::toggle_room_light(point const &closest_to) { // Note: called by the player; closest_to is in building space, not camera space
+// Note: called by the player; closest_to is in building space, not camera space
+bool building_t::toggle_room_light(point const &closest_to, int room_id) {
 	if (!has_room_geom()) return 0; // error?
+
+	if (room_id < 0) { // caller has not provided a valid room_id, so determine it now
+		point query_pt(closest_to);
+		if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
+		room_id = get_room_containing_pt(query_pt);
+		if (room_id < 0) return 0; // closest_to is not contained in a room of this building
+	}
+	room_t const &room(get_room(room_id));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
-	point query_pt(closest_to);
-	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
-	int const room_id(get_room_containing_pt(query_pt));
-	if (room_id < 0) return 0; // closest_to is not contained in a room of this building
-	room_t const &room(get_room(room_id));
 	float closest_dist_sq(0.0);
 	int closest_light(-1);
 
@@ -249,7 +253,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 					else if (i->is_light_type()) {keep = 1;} // room light or lamp
 					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_TV || i->type == TYPE_MONITOR) {keep = 1;}
-					else if (i->type == TYPE_BLINDS || i->type == TYPE_SHOWER /*|| i->type == TYPE_BOOK*/) {keep = 1;}
+					else if (i->type == TYPE_BLINDS || i->type == TYPE_SHOWER || i->type == TYPE_SWITCH /*|| i->type == TYPE_BOOK*/) {keep = 1;}
 				}
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
@@ -347,6 +351,13 @@ bool building_t::interact_with_object(unsigned obj_ix, float sound_zval) {
 			obj.flags |= RO_FLAG_IS_ACTIVE;
 		}
 	}
+	else if (obj.type == TYPE_SWITCH) {
+		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
+		toggle_room_light(obj.get_cube_center(), obj.room_id); // should select the correct light(s) for the room containing the switch
+		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
+		sound_scale      = 0.1;
+		update_draw_data = 1;
+	}
 	else if (obj.type == TYPE_BLINDS) { // see building_t::add_window_blinds()
 		if (!adjust_blinds_state(obj_ix)) return 0;
 		gen_sound_thread_safe_at_player(SOUND_SLIDING, 0.5);
@@ -354,7 +365,7 @@ bool building_t::interact_with_object(unsigned obj_ix, float sound_zval) {
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_BOOK) {
-		obj.flags       ^= RO_FLAG_OPEN; // toggle open/close
+		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
 		sound_scale      = 0.0; // no sound
 		update_draw_data = 1;
 	}
@@ -571,7 +582,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 				if (obj_ix >= 0) { // collided with a room object
 					auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 
-					if (obj.type == TYPE_PICTURE || obj.type == TYPE_OFF_CHAIR || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON) {
+					if (obj.type == TYPE_PICTURE || obj.type == TYPE_OFF_CHAIR || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH) {
 						// TODO: add TYPE_CRACK if collision is with the front of a TV or computer monitor?
 						interact_with_object(obj_ix, center.z);
 					}
