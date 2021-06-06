@@ -1198,7 +1198,15 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 			unsigned const cabinet_id(objs.size());
 			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, 0, tot_light_amt);
-			if (add_backsplash) {objs.back().item_flags |= 1;} // flag back as having a backsplash
+			
+			if (add_backsplash) {
+				objs.back().item_flags |= 1; // flag back as having a backsplash
+				cube_t bs(c);
+				bs.z1()  = c.z2();
+				bs.z2() += 0.33*c.dz();
+				bs.d[dim][!dir] -= (dir ? -1.0 : 1.0)*0.99*depth; // matches building_room_geom_t::add_counter()
+				objs.emplace_back(bs, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS); // add blocker to avoid placing light switches here
+			}
 			// add upper cabinets, always (for now); should we remove cabinets in front of windows?
 			cube_t c2(c);
 			set_cube_zvals(c2, zval+0.66*vspace, cabinet_area.z2()); // up to the ceiling
