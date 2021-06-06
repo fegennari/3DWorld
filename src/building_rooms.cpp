@@ -559,6 +559,11 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			colorRGBA const color(1.0, 1.0, 0.9); // yellow-ish
 			objs.emplace_back(light, TYPE_LIGHT, room_id, dim, 0, (RO_FLAG_NOCOLL | RO_FLAG_IN_CLOSET), 0.0, SHAPE_CYLIN, color); // dir=0 (unused)
 			objs.back().obj_id = light_ix_assign.get_next_ix();
+
+			if (closet.is_small_closet()) { // add a blocker in front of the closet to avoid placing furniture that blocks the door from opening
+				c.d[dim][!dir] += dir_sign*doorway_width;
+				objs.emplace_back(c, TYPE_BLOCKER, room_id, dim, 0, RO_FLAG_INVIS);
+			}
 		} // for d
 	} // for n
 	// dresser
