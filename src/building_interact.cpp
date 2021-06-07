@@ -1338,9 +1338,9 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2)
 }
 
 bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> const &objs) {
-	// only these types can have objects on them (what about TYPE_SHELF?)
-	if (obj.type != TYPE_TABLE && obj.type != TYPE_DESK && obj.type != TYPE_COUNTER && obj.type != TYPE_DRESSER &&
-		obj.type != TYPE_NIGHTSTAND && obj.type != TYPE_BOX && obj.type != TYPE_CRATE && obj.type != TYPE_WINE_RACK) return 0;
+	// only these types can have objects placed on them (what about TYPE_SHELF?)
+	if (obj.type != TYPE_TABLE && obj.type != TYPE_DESK && obj.type != TYPE_COUNTER && obj.type != TYPE_DRESSER && obj.type != TYPE_NIGHTSTAND &&
+		obj.type != TYPE_BOX && obj.type != TYPE_CRATE && obj.type != TYPE_WINE_RACK && obj.type != TYPE_BOOK) return 0;
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (i->type == TYPE_BLOCKER) continue; // ignore blockers (from removed objects)
