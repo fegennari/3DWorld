@@ -14,7 +14,6 @@ Cities:
 - Secondary Building roads
 
 Building interaction/gameplay ideas:
-* Place laptops on desks and tables
 * Player can use cell phones and they sometimes ring
 * Throw ball at window, TV, or monitor leaves a crack
 * Plates on tables?
