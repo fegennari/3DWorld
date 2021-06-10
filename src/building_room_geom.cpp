@@ -1953,26 +1953,57 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	}
 }
 
+bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {
+	if (c.type != TYPE_KSINK) return 0; // error?
+	float const dz(c.dz()), depth(c.get_sz_dim(c.dim)), width(c.get_sz_dim(!c.dim)), dir_sign(c.dir ? 1.0 : -1.0);
+	if (width <= 3.5*depth) return 0; // too small to fit a dishwasher
+	dishwasher = c;
+	bool const side((c.flags & RO_FLAG_ADJ_LO) ? 1 : ((c.flags & RO_FLAG_ADJ_HI) ? 0 : (c.obj_id & 1))); // left/right of the sink
+	dishwasher.z1() += 0.05*dz;
+	dishwasher.z2() -= 0.05*dz;
+	dishwasher.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir] - dir_sign*0.1*depth;
+	dishwasher.d[ c.dim][ c.dir] += dir_sign*0.05*depth; // front
+	dishwasher.d[!c.dim][!side ]  = c.get_center_dim(!c.dim) + (side ? 1.0 : -1.0)*0.66*depth;
+	dishwasher.d[!c.dim][ side ]  = dishwasher.d[!c.dim][!side] + (side ? 1.0 : -1.0)*1.05*depth;
+	return 1;
+}
+room_object_t split_cabinet_at_dishwasher(room_object_t &cabinet, cube_t const &dishwasher) { // Note: modifies cabinet
+	room_object_t left_part(cabinet);
+	left_part.d[!cabinet.dim][1] = dishwasher.d[!cabinet.dim][0];
+	cabinet  .d[!cabinet.dim][0] = dishwasher.d[!cabinet.dim][1];
+	left_part.flags &= ~RO_FLAG_ADJ_HI;
+	cabinet  .flags &= ~RO_FLAG_ADJ_LO;
+	cabinet.drawer_flags >>= 4; // left half has first 4 door bits (16 doors), right half has the remaining door bits
+	return left_part;
+}
+cube_t get_sink_cube(room_object_t const &c) {
+	assert(c.type == TYPE_KSINK || c.type == TYPE_BRSINK);
+	float const dz(c.dz()), sdepth(0.8*c.get_sz_dim(c.dim)), swidth(min(1.4f*sdepth, 0.75f*c.get_sz_dim(!c.dim)));
+	vector3d const center(c.get_cube_center());
+	cube_t sink(center, center);
+	set_cube_zvals(sink, (c.z2() - 0.3*dz), (c.z2() - 0.05*dz));
+	sink.expand_in_dim( c.dim, 0.5*sdepth);
+	sink.expand_in_dim(!c.dim, 0.5*swidth);
+	return sink;
+}
+
 void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { // for kitchens
 	float const dz(c.dz()), depth(c.get_sz_dim(c.dim)), dir_sign(c.dir ? 1.0 : -1.0);
-	cube_t top(c), cabinet_gap;
+	cube_t top(c), dishwasher;
 	top.z1() += 0.95*dz;
 	tid_nm_pair_t const marble_tex(get_counter_tid(), 2.5*tscale);
 	rgeom_mat_t &top_mat(get_material(marble_tex, 1));
 	colorRGBA const top_color(apply_light_color(c, WHITE));
 
 	if (c.type == TYPE_KSINK || c.type == TYPE_BRSINK) { // counter with kitchen or bathroom sink
-		float const sdepth(0.8*depth), width(c.get_sz_dim(!c.dim)), swidth(min(1.4f*sdepth, 0.75f*width));
-		vector3d const center(c.get_cube_center());
-		vector3d faucet_pos(center);
+		float const sdepth(0.8*depth);
+		vector3d faucet_pos(c.get_cube_center());
 		faucet_pos[c.dim] -= dir_sign*0.56*sdepth;
-		cube_t sink(center, center), faucet1(faucet_pos, faucet_pos);
-		set_cube_zvals(sink,   (top.z1() - 0.25*dz), top.z1());
+		cube_t const sink(get_sink_cube(c));
+		cube_t faucet1(faucet_pos, faucet_pos);
 		set_cube_zvals(faucet1, top.z2(), (top.z2() + 0.30*dz));
-		sink.expand_in_dim( c.dim, 0.5*sdepth);
-		sink.expand_in_dim(!c.dim, 0.5*swidth);
 		faucet1.expand_in_dim( c.dim, 0.04*sdepth);
-		faucet1.expand_in_dim(!c.dim, 0.05*swidth);
+		faucet1.expand_in_dim(!c.dim, 0.07*sdepth);
 		cube_t faucet2(faucet1);
 		faucet2.z1()  = faucet1.z2();
 		faucet2.z2() += 0.035*dz;
@@ -1994,17 +2025,9 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 			front.d[c.dim][!c.dir] += dir_sign*0.94*depth;
 			get_material(marble_tex, 1).add_cube_to_verts(front, top_color, tex_origin, EF_Z2); // front surface, no top face; same as top_mat
 		}
-		else if (c.type == TYPE_KSINK && width > 3.5*depth) { // kitchen sink - add dishwasher if wide enough
-			bool const side((c.flags & RO_FLAG_ADJ_LO) ? 1 : ((c.flags & RO_FLAG_ADJ_HI) ? 0 : (c.obj_id & 1))); // left/right of the sink
+		else if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // kitchen sink - add dishwasher if wide enough
 			unsigned const dw_skip_faces(~get_face_mask(c.dim, !c.dir));
 			colorRGBA const dw_color(apply_light_color(c, LT_GRAY));
-			cube_t dishwasher(c);
-			dishwasher.z1() += 0.05*dz;
-			dishwasher.z2() -= 0.05*dz;
-			dishwasher.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir] - dir_sign*0.1*depth;
-			dishwasher.d[ c.dim][ c.dir] += dir_sign*0.05*depth; // front
-			dishwasher.d[!c.dim][!side ]  = sink.d[!c.dim][side] + (side ? 1.0 : -1.0)*0.1*depth;
-			dishwasher.d[!c.dim][ side ]  = dishwasher.d[!c.dim][!side] + (side ? 1.0 : -1.0)*1.05*depth;
 			metal_mat.add_cube_to_verts_untextured(dishwasher, dw_color, dw_skip_faces);
 			cube_t dishwasher_back(dishwasher), handle(dishwasher);
 			dishwasher_back.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // flush with the cabinet
@@ -2015,7 +2038,6 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 			handle.d[c.dim][ c.dir]  = handle.d[c.dim][!c.dir] = dishwasher.d[c.dim][c.dir];
 			handle.d[c.dim][ c.dir] += dir_sign*0.04*depth; // front
 			metal_mat.add_ortho_cylin_to_verts(handle, sink_color, !c.dim, 1, 1); // add handle as a cylinder in the proper dim with both ends
-			cabinet_gap = dishwasher;
 		}
 	}
 	else { // regular counter top
@@ -2027,16 +2049,7 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		cabinet.z2() = top.z1();
 		//cabinet.expand_in_dim(!c.dim, -overhang); // add side overhang: disable to allow cabinets to be flush with objects
 		cabinet.d[c.dim][c.dir] -= dir_sign*overhang; // add front overhang
-
-		if (!cabinet_gap.is_all_zeros()) { // split cabinet under kitchen sink into two parts to avoid the dishwasher
-			room_object_t left_part(cabinet);
-			left_part.d[!c.dim][1] = cabinet_gap.d[!c.dim][0];
-			cabinet  .d[!c.dim][0] = cabinet_gap.d[!c.dim][1];
-			left_part.flags &= ~RO_FLAG_ADJ_HI;
-			cabinet  .flags &= ~RO_FLAG_ADJ_LO;
-			cabinet.drawer_flags >>= 8; // left half has first 8 door bits, right half has second 8 door bits
-			add_cabinet(left_part, tscale);
-		}
+		if (!dishwasher.is_all_zeros()) {add_cabinet(split_cabinet_at_dishwasher(cabinet, dishwasher), tscale);}
 		add_cabinet(cabinet, tscale); // draw the wood part
 	}
 	if (c.item_flags) { // add backsplash, 50% chance of tile vs. matching marble
@@ -2079,30 +2092,36 @@ float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors) {
 	door0.d[ c.dim][!c.dir]  = door0.d[c.dim][c.dir];
 	door0.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
 	door0.expand_in_dim(2, -tb_border); // shrink in Z
-	doors.clear();
-	doors.resize(num_doors, door0);
 
 	for (unsigned n = 0; n < num_doors; ++n) {
-		cube_t &door(doors[n]);
+		cube_t door(door0);
 		float const hi(lo + door_spacing);
 		door.d[!c.dim][0] = lo;
 		door.d[!c.dim][1] = hi;
 		door.expand_in_dim(!c.dim, -side_border); // shrink in XY
+		doors.push_back(door);
 		lo = hi; // advance to next door
 	} // for n
 	return door_width;
 }
 void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors) {
+	doors.clear();
 	if (c.type == TYPE_CABINET) {get_cabinet_doors(c, doors); return;}
-	room_object_t cabinet(c); // start with counter
+	room_object_t cabinet(c), dishwasher; // start with counter
 	cabinet.z2() -= 0.05*c.dz(); // remove counter top
 	cabinet.d[c.dim][c.dir] -= (c.dir ? 1.0 : -1.0)*0.05*c.get_sz_dim(c.dim); // add front overhang
+	
+	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) {
+		get_cabinet_doors(split_cabinet_at_dishwasher(cabinet, dishwasher), doors);
+		doors.resize(16); // hack to force right side cabinet doors to use the correct set of drawer_flags bits
+	}
 	get_cabinet_doors(cabinet, doors);
 }
 
 void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { // for kitchens
 	assert(c.is_strictly_normalized());
-	vect_cube_t doors;
+	static vect_cube_t doors;
+	doors.clear();
 	float const door_width(get_cabinet_doors(c, doors));
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
 

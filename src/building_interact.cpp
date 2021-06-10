@@ -37,6 +37,7 @@ extern building_dest_t cur_player_building_loc;
 void place_player_at_xy(float xval, float yval);
 room_object_t get_dresser_middle(room_object_t const &c);
 room_object_t get_desk_drawers_part(room_object_t const &c);
+cube_t get_sink_cube(room_object_t const &c);
 bool player_can_unlock_door();
 void show_key_icon();
 bool player_has_room_key();
@@ -257,18 +258,20 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				}
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;
+				cube_t obj_bc(*i);
+				if (i->type == TYPE_KSINK || i->type == TYPE_BRSINK) {obj_bc = get_sink_cube(*i);} // the sink itself is actually smaller
 				point center;
 
 				if (i->type == TYPE_CLOSET) {
 					center = i->get_cube_center();
 					center[i->dim] = i->d[i->dim][i->dir]; // use center of door, not center of closet
 				}
-				else {center = i->closest_pt(closest_to);}
+				else {center = obj_bc.closest_pt(closest_to);}
 				if (fabs(center.z - closest_to.z) > 0.7*floor_spacing) continue; // wrong floor
 				float const dist_sq((i->type == TYPE_CLOSET) ? dmax*dmax : p2p_dist_sq(closest_to, center)); // use dmax for closets to prioritize objects inside closets
-				if (found_item && dist_sq >= closest_dist_sq)     continue; // not the closest
-				if (!i->closest_dist_less_than(closest_to, dmax)) continue; // too far
-				if (in_dir != zero_vector && !i->line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
+				if (found_item && dist_sq >= closest_dist_sq)          continue; // not the closest
+				if (!obj_bc.closest_dist_less_than(closest_to, dmax))  continue; // too far
+				if (in_dir != zero_vector && !obj_bc.line_intersects(closest_to, query_ray_end)) continue; // player is not pointing at this object
 				closest_dist_sq = dist_sq;
 				obj_ix = (i - obj_vect.begin()) + obj_id_offset;
 				is_obj = found_item = 1;
@@ -1423,7 +1426,6 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
 		if (!(i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK || // drawers that can be opened or items picked up from
 			(!pickup_item && (i->type == TYPE_COUNTER || i->type == TYPE_CABINET || i->type == TYPE_KSINK)))) continue; // doors that can be opened (no item pickup)
-		if (i->type == TYPE_KSINK && i->get_sz_dim(!i->dim) > 3.5*i->get_sz_dim(i->dim)) continue; // TODO: how to handle diswasher next to sink? need to split cabinets
 		cube_t bcube(*i);
 		bcube.d[i->dim][i->dir] += 0.75*(i->dir ? 1.0 : -1.0)*i->get_sz_dim(i->dim); // expand outward to include open drawers/doors
 		point p1c(at_pos), p2c(p2);
@@ -1438,7 +1440,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	room_object_t &obj(objs[closest_obj_id]);
 	room_object_t drawers_part;
 	vect_cube_t drawers; // or doors
-	bool const has_doors(obj.type == TYPE_COUNTER || obj.type == TYPE_CABINET);
+	bool const has_doors(obj.type == TYPE_COUNTER || obj.type == TYPE_CABINET || obj.type == TYPE_KSINK);
 
 	// Note: this is a messy solution and must match the drawing code, but it's unclear how else we can get the location of the drawers
 	if (has_doors) {get_cabinet_or_counter_doors(obj, drawers);}
