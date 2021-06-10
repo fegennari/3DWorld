@@ -1229,7 +1229,7 @@ public:
 		player_near_toilet = 0;
 
 		if (has_phone) {
-			// TODO: add some chance that the phone rings and alerts zombies unless the player turns it off
+			// TODO: add some chance that the phone rings and alerts zombies unless the player turns it off; play SOUND_PHONE_RING
 		}
 	}
 };

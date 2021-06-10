@@ -2199,7 +2199,7 @@ void building_room_geom_t::add_switch(room_object_t const &c) { // light switch,
 }
 
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
-	// TODO: bottom truncated cone with top trunaced cone or spherical section?
+	// TODO: bottom truncated cone with top truncated cone or spherical section?
 }
 
 void building_room_geom_t::add_tub_outer(room_object_t const &c) {
