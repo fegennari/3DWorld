@@ -690,6 +690,9 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		disable_blend();
 		return;
 	}
+	else if (c.type == TYPE_PHONE) {
+		mat.add_cube_to_verts(c, BLACK);
+	}
 	else {assert(0);}
 	if (c.type == TYPE_TPROLL) {enable_blend();}
 	mat.upload_draw_and_clear(s);
