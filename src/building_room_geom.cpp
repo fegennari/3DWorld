@@ -1973,7 +1973,7 @@ room_object_t split_cabinet_at_dishwasher(room_object_t &cabinet, cube_t const &
 	cabinet  .d[!cabinet.dim][0] = dishwasher.d[!cabinet.dim][1];
 	left_part.flags &= ~RO_FLAG_ADJ_HI;
 	cabinet  .flags &= ~RO_FLAG_ADJ_LO;
-	cabinet.drawer_flags >>= 4; // left half has first 4 door bits (16 doors), right half has the remaining door bits
+	cabinet.drawer_flags >>= 8; // left half has first 8 door bits, right half has last 8 door bits
 	return left_part;
 }
 cube_t get_sink_cube(room_object_t const &c) {
@@ -2113,7 +2113,7 @@ void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors) {
 	
 	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) {
 		get_cabinet_doors(split_cabinet_at_dishwasher(cabinet, dishwasher), doors);
-		doors.resize(16); // hack to force right side cabinet doors to use the correct set of drawer_flags bits
+		doors.resize(8); // hack to force right side cabinet doors to use the correct set of second 8 drawer_flags bits
 	}
 	get_cabinet_doors(cabinet, doors);
 }
