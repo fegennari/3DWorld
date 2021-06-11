@@ -60,6 +60,7 @@ void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float pitch=1.
 
 float get_radius_for_room_light(room_object_t const &obj);
 void register_building_sound(point const &pos, float volume);
+void register_building_sound_at_player(float volume);
 
 // Note: called by the player; closest_to is in building space, not camera space
 bool building_t::toggle_room_light(point const &closest_to, bool sound_from_closest_to, int room_id) {
@@ -982,10 +983,53 @@ void show_weight_limit_message() {
 	print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
 }
 
+class phone_ringer_t {
+	bool is_enabled = 0, is_ringing = 0;
+	double stop_ring_time = 0.0, next_ring_time = 0.0, next_cycle_time = 0.0;
+	rand_gen_t rgen;
+
+	void schedule_next_ring() {next_ring_time = tfticks + rgen.rand_uniform(20.0, 30.0)*TICKS_PER_SECOND;}
+public:
+	void next_frame() {
+		if (!is_enabled || !camera_in_building) {} // do nothing
+		else if (is_ringing) {
+			if (tfticks > stop_ring_time) {is_ringing = 0; schedule_next_ring();} // stop automatically
+			else if (tfticks > next_cycle_time) { // start a new ring cycle
+				gen_sound_thread_safe_at_player(SOUND_PHONE_RING, 1.0);
+				register_building_sound_at_player(1.0);
+				next_cycle_time += 4.2*TICKS_PER_SECOND; // 4.2s between rings
+			}
+		}
+		else if (tfticks > next_ring_time) { // start a new ring cycle
+			is_ringing      = 1;
+			stop_ring_time  = tfticks + rgen.rand_uniform(12.0, 24.0)*TICKS_PER_SECOND; // 10-20s into the future
+			next_cycle_time = tfticks; // cycle begins now
+		}
+	}
+	void enable() {
+		if (is_enabled) return; // already enabled
+		is_enabled = 1;
+		is_ringing = 0;
+		schedule_next_ring();
+	}
+	void disable() {
+		is_enabled = is_ringing = 0;
+	}
+	void player_disable() {
+		if (!is_ringing) return; // nothing to do
+		is_ringing     = 0;
+		stop_ring_time = tfticks; // now
+		schedule_next_ring();
+		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
+	}
+};
+
+phone_ringer_t phone_ringer;
+
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
-	bool prev_in_building, has_key, has_phone;
+	bool prev_in_building, has_key;
 
 	void register_player_death(unsigned sound_id, std::string const &why) {
 		point const xlate(get_camera_coord_space_xlate());
@@ -1002,7 +1046,8 @@ public:
 		cur_value     = cur_weight = tot_value = tot_weight = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
-		prev_in_building = has_key = has_phone = 0;
+		prev_in_building = has_key = 0;
+		phone_ringer.disable();
 		carried.clear();
 	}
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
@@ -1080,7 +1125,7 @@ public:
 					co.dim = co.dir = 0;
 					co.flags &= ~RO_FLAG_RAND_ROT; // remove the rotate bit
 				}
-				else if (obj.type == TYPE_PHONE) {has_phone = 1;}
+				else if (obj.type == TYPE_PHONE) {phone_ringer.enable();}
 			}
 			oss << ": value $";
 			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
@@ -1144,7 +1189,8 @@ public:
 		carried.pop_back(); // Note: invalidates obj
 	}
 	void collect_items() {
-		has_key = has_phone = 0; // key only good for current building
+		has_key = 0; // key only good for current building
+		phone_ringer.disable();
 		if (carried.empty() && cur_weight == 0.0 && cur_value == 0.0) return; // nothing to add
 		std::ostringstream oss;
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
@@ -1190,6 +1236,7 @@ public:
 	}
 	void next_frame() {
 		show_stats();
+		phone_ringer.next_frame(); // even if not in gameplay mode?
 		if (!in_building_gameplay_mode()) return;
 		// handle player fall damage logic
 		point const camera_pos(get_camera_pos());
@@ -1203,7 +1250,7 @@ public:
 			if (player_is_dead()) {register_player_death(SOUND_SQUISH, " of a fall"); return;} // dead
 			gen_sound_thread_safe_at_player(SOUND_SQUISH, 0.5);
 			add_camera_filter(colorRGBA(RED, 0.25), 4, -1, CAM_FILT_DAMAGE); // 4 ticks of red damage
-			register_building_sound((camera_pos - get_camera_coord_space_xlate()), 1.0);
+			register_building_sound_at_player(1.0);
 		}
 		prev_player_zval = player_zval;
 		// handle death events
@@ -1216,8 +1263,8 @@ public:
 			if (bladder > 0.9) {gen_sound_thread_safe_at_player(SOUND_GASP);} // urinate
 			if (bladder > 0.0) { // toilet flush
 #pragma omp critical(gen_sound)
-				gen_delayed_sound(1.0, SOUND_FLUSH, get_camera_pos()); // delay by 1s
-				register_building_sound((camera_pos - get_camera_coord_space_xlate()), 0.5);
+				gen_delayed_sound(1.0, SOUND_FLUSH, camera_pos); // delay by 1s
+				register_building_sound_at_player(0.5);
 			}
 			bladder = 0.0;
 		}
@@ -1230,10 +1277,6 @@ public:
 			}
 		}
 		player_near_toilet = 0;
-
-		if (has_phone) {
-			// TODO: add some chance that the phone rings and alerts zombies unless the player turns it off; play SOUND_PHONE_RING
-		}
 	}
 };
 
@@ -1635,6 +1678,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			play_obj_fall_sound(obj, player_pos);
 			delay_use = 1;
 		}
+		else if (obj.type == TYPE_PHONE) {phone_ringer.player_disable();}
 		else {assert(0);}
 	}
 	else {assert(0);}
@@ -1947,6 +1991,9 @@ void register_building_sound(point const &pos, float volume) {
 		}
 		cur_building_sound_level += volume;
 	}
+}
+void register_building_sound_at_player(float volume) {
+	register_building_sound((get_camera_pos() - get_camera_coord_space_xlate()), 1.0);
 }
 
 bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing) {
