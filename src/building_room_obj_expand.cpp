@@ -386,7 +386,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 7: // money
 	{
-		float const length(0.5*sz.z), width(2.35*length);
+		float const length(0.135*c.dz()), width(2.35*length);
 
 		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
 			obj = room_object_t(drawer, TYPE_MONEY, c.room_id, c.dim, c.dir);
@@ -398,14 +398,14 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	case 8: // phone
 	{
 		bool const dim(c.dim ^ rgen.rand_bool()); // random orient
-		float const length(1.1*sz.z), width(0.45*length);
+		float const length(0.3*c.dz()), width(0.45*length);
 
 		if (length < 0.9*sz[dim] && width < 0.9*sz[!dim]) { // if it can fit
 			unsigned const NUM_PHONE_COLORS = 7; // for the case
 			colorRGBA const phone_colors[NUM_PHONE_COLORS] = {WHITE, GRAY, DK_GRAY, GRAY_BLACK, BLUE, RED, PINK};
 			obj = room_object_t(drawer, TYPE_PHONE, c.room_id, dim, c.dir);
 			obj.color = phone_colors[rgen.rand() % NUM_PHONE_COLORS];
-			obj.z2()  = (obj.z1() + 0.06*length);
+			obj.z2()  = (obj.z1() + 0.045*length);
 			set_rand_pos_for_sz(obj, dim, length, width, rgen);
 		}
 		break;
