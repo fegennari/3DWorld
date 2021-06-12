@@ -14,6 +14,6 @@ Cities:
 - Secondary Building roads
 
 Building interaction/gameplay ideas:
-* Player can use cell phones and they sometimes ring
+* Player can use cell phones
 * Throw ball at window, TV, or monitor leaves a crack
 * Plates on tables?

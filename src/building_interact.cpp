@@ -988,7 +988,7 @@ class phone_ringer_t {
 	double stop_ring_time = 0.0, next_ring_time = 0.0, next_cycle_time = 0.0;
 	rand_gen_t rgen;
 
-	void schedule_next_ring() {next_ring_time = tfticks + rgen.rand_uniform(20.0, 30.0)*TICKS_PER_SECOND;}
+	void schedule_next_ring() {next_ring_time = tfticks + rgen.rand_uniform(30.0, 120.0)*TICKS_PER_SECOND;} // 30s to 2min
 public:
 	bool is_phone_ringing() const {return is_ringing;}
 
