@@ -691,12 +691,18 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		return;
 	}
 	else if (c.type == TYPE_PHONE) {
-		mat.add_cube_to_verts(c, BLACK);
+		if (c.flags & RO_FLAG_EMISSIVE) { // phone screen is on
+			mat.tex.emissive = 1;
+			mat.add_cube_to_verts(c, colorRGBA(0.5, 0.5, 1.0)); // blue-white
+		}
+		else {mat.add_cube_to_verts(c, BLACK);}
+		rotate_verts(mat.quad_verts, plus_z, -atan2(cview_dir.y, cview_dir.x), c.get_cube_center(), 0); // rotate all quad verts about Z axis
 	}
 	else {assert(0);}
 	if (c.type == TYPE_TPROLL) {enable_blend();}
 	mat.upload_draw_and_clear(s);
 	if (c.type == TYPE_TPROLL) {disable_blend();}
+	if (c.type == TYPE_PHONE ) {mat.tex.emissive = 0;} // clear for next frame
 }
 
 class water_draw_t {

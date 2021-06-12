@@ -461,7 +461,7 @@ void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 	if (c.flags & RO_FLAG_EMISSIVE) { // top, no shadows, lit
 		tid_nm_pair_t tp;
 		tp.emissive = 1.0; // lit
-		get_material(tp, 0, 0, 1).add_cube_to_verts(c, apply_light_color(c, colorRGBA(0.9, 0.9, 1.0)), zero_vector, ~EF_Z2); // blue-white
+		get_material(tp, 0, 0, 1).add_cube_to_verts(c, colorRGBA(0.5, 0.5, 1.0), zero_vector, ~EF_Z2); // blue-white
 	}
 	else {mat.add_cube_to_verts(c, apply_light_color(c, BLACK), zero_vector, ~EF_Z2);} // top, no shadows, unlit
 }

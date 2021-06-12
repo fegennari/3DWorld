@@ -990,6 +990,8 @@ class phone_ringer_t {
 
 	void schedule_next_ring() {next_ring_time = tfticks + rgen.rand_uniform(20.0, 30.0)*TICKS_PER_SECOND;}
 public:
+	bool is_phone_ringing() const {return is_ringing;}
+
 	void next_frame() {
 		if (!is_enabled || !camera_in_building) {} // do nothing
 		else if (is_ringing) {
@@ -1201,8 +1203,10 @@ public:
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
 	void show_stats() const {
-		if (!carried.empty()) {player_held_object = carried.back();} // deep copy last pickup object if usable
-
+		if (!carried.empty()) {
+			player_held_object = carried.back(); // deep copy last pickup object if usable
+			if (player_held_object.type == TYPE_PHONE && phone_ringer.is_phone_ringing()) {player_held_object.flags |= RO_FLAG_EMISSIVE;} // make phone screen glow
+		}
 		if (display_framerate) { // controlled by framerate toggle
 			float const aspect_ratio((float)window_width/(float)window_height);
 
