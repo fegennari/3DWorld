@@ -1110,9 +1110,9 @@ public:
 			
 			if (obj.is_interactive()) {
 				carried.push_back(obj);
+				room_object_t &co(carried.back());
 
 				if (obj.type == TYPE_BOOK) { // clear dim and dir for books
-					room_object_t &co(carried.back());
 					float const dx(co.dx()), dy(co.dy()), dz(co.dz());
 
 					if (dz > min(dx, dy)) { // upright book from a bookcase, put it on its side facing the player
@@ -1127,7 +1127,15 @@ public:
 					co.dim = co.dir = 0;
 					co.flags &= ~RO_FLAG_RAND_ROT; // remove the rotate bit
 				}
-				else if (obj.type == TYPE_PHONE) {phone_ringer.enable();}
+				else if (obj.type == TYPE_PHONE) {
+					if (co.dim) { // swap aspect ratio to make dim=0
+						float const dx(co.dx()), dy(co.dy()), dz(co.dz());
+						co.x2() = co.x1() + dy;
+						co.y2() = co.y1() + dx;
+					}
+					co.dim = co.dir = 0; // clear dim and dir
+					phone_ringer.enable();
+				}
 			}
 			oss << ": value $";
 			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents

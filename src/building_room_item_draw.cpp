@@ -21,6 +21,7 @@ extern building_t const *player_building;
 extern carried_item_t player_held_object;
 
 unsigned get_num_screenshot_tids();
+tid_nm_pair_t get_phone_ring_tex();
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -664,7 +665,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 }
 
 /*static*/ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s) {
-	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO is recreated every time
+	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time
 
 	if (c.type == TYPE_SPRAYCAN || c.type == TYPE_MARKER) {
 		room_object_t c_rot(c);
@@ -691,18 +692,24 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		return;
 	}
 	else if (c.type == TYPE_PHONE) {
-		if (c.flags & RO_FLAG_EMISSIVE) { // phone screen is on
-			mat.tex.emissive = 1;
-			mat.add_cube_to_verts(c, colorRGBA(0.5, 0.5, 1.0)); // blue-white
+		float const z_rot_angle(-atan2(cview_dir.y, cview_dir.x));
+		unsigned skip_faces(0);
+
+		if (c.flags & RO_FLAG_EMISSIVE) { // phone is ringing
+			static rgeom_mat_t screen_mat;
+			screen_mat.tex = get_phone_ring_tex();
+			screen_mat.add_cube_to_verts(c, WHITE, all_zeros, ~EF_Z2, 0, 1); // mirror_x=1
+			rotate_verts(screen_mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
+			screen_mat.upload_draw_and_clear(s);
 		}
-		else {mat.add_cube_to_verts(c, BLACK);}
-		rotate_verts(mat.quad_verts, plus_z, -atan2(cview_dir.y, cview_dir.x), c.get_cube_center(), 0); // rotate all quad verts about Z axis
+		else {mat.add_cube_to_verts(c, BLACK, all_zeros, ~EF_Z2);} // screen drawn as black
+		mat.add_cube_to_verts(c, c.color, all_zeros, EF_Z2);
+		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
 	}
 	else {assert(0);}
 	if (c.type == TYPE_TPROLL) {enable_blend();}
 	mat.upload_draw_and_clear(s);
 	if (c.type == TYPE_TPROLL) {disable_blend();}
-	if (c.type == TYPE_PHONE ) {mat.tex.emissive = 0;} // clear for next frame
 }
 
 class water_draw_t {

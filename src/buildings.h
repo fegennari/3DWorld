@@ -444,7 +444,7 @@ public:
 	unsigned num_qverts, num_itverts, num_ixs; // for drawing
 	bool en_shadows;
 
-	rgeom_mat_t(tid_nm_pair_t const &tex_) : rgeom_storage_t(tex_), ivbo(0), num_qverts(0), num_itverts(0), num_ixs(0), en_shadows(0) {}
+	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_), ivbo(0), num_qverts(0), num_itverts(0), num_ixs(0), en_shadows(0) {}
 	//~rgeom_mat_t() {assert(vbo.vbo == 0); assert(ivbo == 0);} // VBOs should be freed before destruction
 	unsigned get_tot_vert_count() const {return (num_qverts + num_itverts);}
 	void enable_shadows() {en_shadows = 1;}

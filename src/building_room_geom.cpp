@@ -454,14 +454,17 @@ void building_room_geom_t::add_money(room_object_t const &c) { // is_small=1
 	for (auto i = mat.quad_verts.begin() + verts_start; i != mat.quad_verts.end(); ++i) {i->t[0] = i->t[1] = 0.0;} // set tex coords to 0 for sides to use border texture color
 }
 
+tid_nm_pair_t get_phone_ring_tex() {
+	tid_nm_pair_t tp(get_texture_by_name("interiors/phone_ring_screen.jpg", 0, 0, 0, 0.0, 0), 0.0); // disable texture compression since it looks bad
+	tp.emissive = 1.0; // lit
+	return tp;
+}
 void building_room_geom_t::add_phone(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(0, 0, 1));
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector,  EF_Z12); // sides, no shadows
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, EF_Z12); // sides, no shadows
 
-	if (c.flags & RO_FLAG_EMISSIVE) { // top, no shadows, lit
-		tid_nm_pair_t tp;
-		tp.emissive = 1.0; // lit
-		get_material(tp, 0, 0, 1).add_cube_to_verts(c, colorRGBA(0.5, 0.5, 1.0), zero_vector, ~EF_Z2); // blue-white
+	if (c.flags & RO_FLAG_EMISSIVE) { // ringing: top, no shadows, lit
+		get_material(get_phone_ring_tex(), 0, 0, 1).add_cube_to_verts(c, WHITE, zero_vector, ~EF_Z2, c.dim, (c.dim ^ c.dir ^ 1), c.dir);
 	}
 	else {mat.add_cube_to_verts(c, apply_light_color(c, BLACK), zero_vector, ~EF_Z2);} // top, no shadows, unlit
 }
