@@ -1396,6 +1396,7 @@ void building_t::register_player_enter_building() const {
 void building_t::register_player_exit_building() const {
 	// only collect items in gameplay mode where there's a risk the player can lose them; otherwise, let the player carry items between buildings
 	if (in_building_gameplay_mode()) {player_inventory.collect_items();}
+	phone_manager.disable(); // phones won't ring when taken out of their building, since the player can't switch to them anyway
 }
 
 bool has_cube_line_coll(point const &p1, point const &p2, vect_cube_t const &cubes) {
