@@ -253,7 +253,7 @@ class rgeom_alloc_t {
 public:
 	void alloc(rgeom_storage_t &s) { // attempt to use free_list entry to reuse existing capacity
 		if (free_list.empty()) return; // no pre-alloc
-		//cout << TXT(free_list.size()) << TXT(free_list.back().get_tot_vert_capacity()) << endl;
+		//cout << TXT(free_list.size()) << TXT(free_list.back().get_tot_vert_capacity()) << endl; // total mem usage is 913/1045
 
 		// try to find a free list element with the same tex so that we balance out material memory usage/capacity better
 		for (unsigned i = 0; i < free_list.size(); ++i) {
@@ -495,6 +495,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//timer_t timer2("Create VBOs"); // < 2ms
 	mats_static.create_vbos(building);
 	mats_alpha .create_vbos(building);
+	//cout << "static: " << rgeom_alloc.get_mem_usage() << endl; // start=78MB, peak=193MB
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
