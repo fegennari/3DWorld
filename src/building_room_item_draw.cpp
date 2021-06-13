@@ -271,6 +271,11 @@ public:
 		free_list.push_back(rgeom_storage_t(s.tex)); // record tex of incoming element
 		s.swap_vectors(free_list.back()); // transfer existing capacity to free list; clear capacity from s
 	}
+	unsigned get_mem_usage() const {
+		unsigned mem(free_list.size()*sizeof(rgeom_storage_t));
+		for (auto i = free_list.begin(); i != free_list.end(); ++i) {mem += i->get_mem_usage();}
+		return mem;
+	}
 };
 
 rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all buildings; not thread safe

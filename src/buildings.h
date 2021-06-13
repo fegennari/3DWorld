@@ -434,6 +434,7 @@ struct rgeom_storage_t {
 	void swap_vectors(rgeom_storage_t &s);
 	void swap(rgeom_storage_t &s);
 	unsigned get_tot_vert_capacity() const {return (quad_verts.capacity() + itri_verts.capacity());}
+	unsigned get_mem_usage() const {return (get_cont_mem_usage(quad_verts) + get_cont_mem_usage(itri_verts) + get_cont_mem_usage(indices));}
 };
 
 class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_draw_t::draw_block_t
