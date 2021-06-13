@@ -199,7 +199,7 @@ float def_tex_aniso(2.0);
 unsigned char *landscape0 = NULL;
 
 
-extern bool mesh_difuse_tex_comp, water_is_lava, invert_bump_maps;
+extern bool mesh_difuse_tex_comp, water_is_lava, invert_bump_maps, no_store_model_textures_in_memory;
 extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, dl_bc_tid, reflection_tid, room_mirror_ref_tid, depth_tid, empty_smap_tid;
 extern unsigned frame_buffer_RGB_tid, skybox_tid, skybox_cube_tid, univ_reflection_tid;
 extern int world_mode, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
@@ -396,7 +396,8 @@ bool select_texture(int id) {
 	bool const no_tex(id < 0);
 	if (no_tex) {id = WHITE_TEX;} //glBindTexture(GL_TEXTURE_2D, 0); // bind to none
 	assert((unsigned)id < textures.size());
-	check_init_texture(id, 0); // free_after_upload=0
+	bool const free_after_upload(no_store_model_textures_in_memory && id >= NUM_PREDEF_TEXTURES); // free textures loaded by name only
+	check_init_texture(id, free_after_upload);
 	textures[id].bind_gl();
 	return !no_tex;
 }
