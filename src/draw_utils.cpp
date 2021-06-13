@@ -784,6 +784,16 @@ template class vbo_block_manager_t<vert_norm_tc_color>;
 template class vbo_block_manager_t<vert_norm_tc>;
 template class vbo_block_manager_t<vert_norm_comp_tc>;
 
+template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset) {
+	assert((size % 6) == 0); // must be in groups of 2 tris = 1 quad
+	unsigned const num_quads(size/6), start(ixs.size());
+	ixs.resize(start + size);
+
+	// Note: quad is split along a different axis from GL quads, so interpolation is different
+	for (unsigned q = 0; q < num_quads; ++q) {
+		for (unsigned i = 0; i < 6; ++i) {ixs[start + 6*q + i] = ix_offset + 4*q + quad_to_tris_ixs[i];}
+	}
+}
 
 class quad_ix_buffer_t {
 
@@ -792,17 +802,10 @@ class quad_ix_buffer_t {
 
 	template< typename T > static void ensure_quad_ixs(unsigned &ivbo, unsigned size) {
 		if (ivbo != 0) return; // vbo already valid
-		assert((size % 6) == 0); // must be in groups of 2 tris = 1 quad
-		unsigned const num_quads(size/6);
-		vector<T> ixs(size);
-
-		// Note: quad is split along a different axis from GL quads, so interpolation is different
-		for (unsigned q = 0; q < num_quads; ++q) {
-			for (unsigned i = 0; i < 6; ++i) {ixs[6*q+i] = 4*q + quad_to_tris_ixs[i];}
-		}
+		vector<T> ixs;
+		gen_quad_ixs(ixs, size, 0); // ix_offset=0
 		create_vbo_and_upload(ivbo, ixs, 1);
 	}
-
 public:
 	quad_ix_buffer_t() : ivbo_16(0), ivbo_32(0), size_16(0), size_32(0) {}
 	
