@@ -438,15 +438,13 @@ struct rgeom_storage_t {
 
 class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_draw_t::draw_block_t
 
-	vbo_wrap_t vbo;
-	unsigned ivbo;
+	indexed_vbo_manager_t vbo_mgr;
 public:
-	unsigned num_qverts, num_itverts, num_ixs; // for drawing
+	unsigned num_verts, num_ixs; // for drawing
 	bool en_shadows;
 
-	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_), ivbo(0), num_qverts(0), num_itverts(0), num_ixs(0), en_shadows(0) {}
-	//~rgeom_mat_t() {assert(vbo.vbo == 0); assert(ivbo == 0);} // VBOs should be freed before destruction
-	unsigned get_tot_vert_count() const {return (num_qverts + num_itverts);}
+	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_), num_verts(0), num_ixs(0), en_shadows(0) {}
+	//~rgeom_mat_t() {assert(vbo_mgr.vbo == 0); assert(vbo_mgr.ivbo == 0);} // VBOs should be freed before destruction
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
 	void add_cube_to_verts(cube_t const &c, colorRGBA const &color, point const &tex_origin=all_zeros,

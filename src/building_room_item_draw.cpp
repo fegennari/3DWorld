@@ -291,10 +291,9 @@ void rgeom_storage_t::swap(rgeom_storage_t &s) {
 }
 
 void rgeom_mat_t::clear() {
-	vbo.clear();
-	delete_and_zero_vbo(ivbo);
+	vbo_mgr.clear_vbos();
 	rgeom_storage_t::clear();
-	num_qverts = num_itverts = num_ixs = 0;
+	num_verts = num_ixs = 0;
 }
 
 void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &building) {
@@ -318,42 +317,28 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 }
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
-	num_qverts  = quad_verts.size();
-	num_itverts = itri_verts.size();
-	num_ixs     = indices.size();
-	unsigned qsz(num_qverts*sizeof(vertex_t)), itsz(num_itverts*sizeof(vertex_t));
-	vbo.vbo = ::create_vbo();
-	check_bind_vbo(vbo.vbo);
-	upload_vbo_data(nullptr, get_tot_vert_count()*sizeof(vertex_t));
-	upload_vbo_sub_data(quad_verts.data(), 0, qsz);
-	upload_vbo_sub_data(itri_verts.data(), qsz, itsz);
+	unsigned qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t));
+	num_verts = quad_verts.size() + itri_verts.size();
+	vbo_mgr.vbo = ::create_vbo();
+	check_bind_vbo(vbo_mgr.vbo);
+	upload_vbo_data(nullptr, num_verts*sizeof(vertex_t));
+	upload_vbo_sub_data(itri_verts.data(), 0, itsz);
+	upload_vbo_sub_data(quad_verts.data(), itsz, qsz);
 	bind_vbo(0);
-
-	if (!indices.empty()) { // we have some indexed quads
-		for (auto i = indices.begin(); i != indices.end(); ++i) {*i += num_qverts;} // shift indices to match the new vertex location
-		create_vbo_and_upload(ivbo, indices, 1, 1);
-	}
+	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
+	create_vbo_and_upload(vbo_mgr.ivbo, indices, 1, 1);
+	num_ixs = indices.size();
 }
 
 void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows (also applies to bathroom windows, which don't produce shadows)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
-	assert(vbo.vbo_valid());
-	assert(num_qverts > 0 || num_itverts > 0);
+	assert(num_verts > 0);
 	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
-	vbo.pre_render();
+	vbo_mgr.pre_render();
 	vertex_t::set_vbo_arrays();
-	if (num_qverts > 0) {draw_quads_as_tris(num_qverts);}
-
-	if (num_itverts > 0) { // index quads, used for cylinders and spheres
-		assert(ivbo > 0);
-		bind_vbo(ivbo, 1);
-		//glDisable(GL_CULL_FACE); // two sided lighting requires fewer verts (no duplicates), but must be set in the shader
-		glDrawRangeElements(GL_TRIANGLES, num_qverts, (num_qverts + num_itverts), num_ixs, GL_UNSIGNED_INT, nullptr);
-		//glEnable(GL_CULL_FACE);
-		bind_vbo(0, 1);
-	}
+	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
 	if (!shadow_only) {tex.unset_gl(s);}
 }
 
@@ -370,7 +355,7 @@ void building_materials_t::clear() {
 }
 unsigned building_materials_t::count_all_verts() const {
 	unsigned num_verts(0);
-	for (const_iterator m = begin(); m != end(); ++m) {num_verts += m->get_tot_vert_count();}
+	for (const_iterator m = begin(); m != end(); ++m) {num_verts += m->num_verts;}
 	return num_verts;
 }
 rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows) {
@@ -808,7 +793,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		}
 	}
 	disable_blend();
-	vbo_wrap_t::post_render();
+	indexed_vbo_manager_t::post_render();
 	bool const disable_cull_face(0); // better but slower?
 	if (disable_cull_face) {glDisable(GL_CULL_FACE);}
 	point const camera_bs(camera_pdu.pos - xlate), building_center(building.bcube.get_cube_center());
@@ -882,7 +867,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		mats_alpha.draw(s, shadow_only, reflection_pass);
 		glDepthMask(GL_TRUE);
 		disable_blend();
-		vbo_wrap_t::post_render();
+		indexed_vbo_manager_t::post_render();
 	}
 }
 
