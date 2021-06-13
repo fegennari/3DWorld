@@ -273,7 +273,7 @@ public:
 	unsigned count_shadow_maps() const;
 
 	unsigned get_tree_mem() const { // only accounts for top-level class memory + palm verts
-		return (pine_trees.capacity()*sizeof(small_tree) + decid_trees.capacity()*sizeof(tree) + pine_trees.palm_vbo_mem);
+		return (get_cont_mem_usage(pine_trees) + get_cont_mem_usage(decid_trees) + pine_trees.palm_vbo_mem);
 	}
 	void clear();
 	void clear_flowers() {flowers.clear();}

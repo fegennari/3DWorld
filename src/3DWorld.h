@@ -1173,6 +1173,8 @@ struct text_drawer_t {
 	void draw() const;
 };
 
+template<typename T> unsigned get_cont_mem_usage(vector<T> const &v) {return v.capacity()*sizeof(T);}
+
 
 // colors
 colorRGBA const RED      (1.0,  0.0,  0.0,  1.0);

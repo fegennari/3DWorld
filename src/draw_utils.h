@@ -42,7 +42,7 @@ public:
 	void add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid);
 	void draw() const;
 	void draw_and_clear() {draw(); clear();}
-	size_t get_mem() const {return (points.capacity() + lines.capacity())*sizeof(vert_norm_color);}
+	size_t get_mem() const {return (get_cont_mem_usage(points) + get_cont_mem_usage(lines));}
 	bool empty() const {return (points.empty() && lines.empty());}
 };
 
