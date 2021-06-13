@@ -438,7 +438,7 @@ struct rgeom_storage_t {
 
 class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_draw_t::draw_block_t
 
-	indexed_vbo_manager_t vbo_mgr;
+	indexed_vao_manager_with_shadow_t vao_mgr;
 public:
 	unsigned num_verts, num_ixs; // for drawing
 	bool en_shadows;

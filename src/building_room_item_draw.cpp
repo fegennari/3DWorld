@@ -291,7 +291,7 @@ void rgeom_storage_t::swap(rgeom_storage_t &s) {
 }
 
 void rgeom_mat_t::clear() {
-	vbo_mgr.clear_vbos();
+	vao_mgr.clear_vbos();
 	rgeom_storage_t::clear();
 	num_verts = num_ixs = 0;
 }
@@ -319,14 +319,14 @@ void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
 	unsigned qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t));
 	num_verts = quad_verts.size() + itri_verts.size();
-	vbo_mgr.vbo = ::create_vbo();
-	check_bind_vbo(vbo_mgr.vbo);
+	vao_mgr.vbo = ::create_vbo();
+	check_bind_vbo(vao_mgr.vbo);
 	upload_vbo_data(nullptr, num_verts*sizeof(vertex_t));
 	upload_vbo_sub_data(itri_verts.data(), 0, itsz);
 	upload_vbo_sub_data(quad_verts.data(), itsz, qsz);
 	bind_vbo(0);
 	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
-	create_vbo_and_upload(vbo_mgr.ivbo, indices, 1, 1);
+	create_vbo_and_upload(vao_mgr.ivbo, indices, 1, 1);
 	num_ixs = indices.size();
 }
 
@@ -336,8 +336,8 @@ void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	assert(num_verts > 0);
 	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
-	vbo_mgr.pre_render();
-	vertex_t::set_vbo_arrays();
+	vao_mgr.create_and_upload(vector<vertex_t>(), vector<unsigned>(), shadow_only, 0, 1); // pass empty vectors because data is already uploaded; dynamic_level=0, setup_pointers=1
+	vao_mgr.pre_render(shadow_only);
 	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
 	if (!shadow_only) {tex.unset_gl(s);}
 }
@@ -374,6 +374,7 @@ void building_materials_t::create_vbos(building_t const &building) {
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
 }
 void building_materials_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
+	//highres_timer_t timer("Draw Materials"); // 0.0168
 	static vector<iterator> text_mats;
 	text_mats.clear();
 
@@ -793,7 +794,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		}
 	}
 	disable_blend();
-	indexed_vbo_manager_t::post_render();
+	indexed_vao_manager_with_shadow_t::post_render();
 	bool const disable_cull_face(0); // better but slower?
 	if (disable_cull_face) {glDisable(GL_CULL_FACE);}
 	point const camera_bs(camera_pdu.pos - xlate), building_center(building.bcube.get_cube_center());
@@ -867,7 +868,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		mats_alpha.draw(s, shadow_only, reflection_pass);
 		glDepthMask(GL_TRUE);
 		disable_blend();
-		indexed_vbo_manager_t::post_render();
+		indexed_vao_manager_with_shadow_t::post_render();
 	}
 }
 
