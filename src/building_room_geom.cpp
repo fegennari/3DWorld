@@ -426,10 +426,6 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 		}
 	} // end inc_sm
 }
-void building_room_geom_t::expand_closet(room_object_t const &c) {
-	add_closet_objects(c, expanded_objs);
-	clear_static_small_vbos(); // is this needed?
-}
 
 void building_room_geom_t::add_hanger_rod(room_object_t const &c) { // is_small=1
 	get_wood_material(1.0, 1, 0, 1).add_ortho_cylin_to_verts(c, LT_GRAY, !c.dim, 0, 0, 0, 0, 1.0, 1.0, 0.25, 1.0, 0, 16, 0.0, 1); // 16 sides, swap_txy=1
@@ -687,11 +683,6 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	vector<room_object_t> &objects(get_temp_objects());
 	get_shelf_objects(c, shelves, num_shelves, objects);
 	add_small_static_objs_to_verts(objects);
-}
-void building_room_geom_t::expand_shelves(room_object_t const &c) {
-	cube_t shelves[4]; // max number of shelves
-	unsigned const num_shelves(get_shelves_for_object(c, shelves));
-	get_shelf_objects(c, shelves, num_shelves, expanded_objs);
 }
 
 void building_room_geom_t::add_obj_with_top_texture(room_object_t const &c, string const &texture_name, colorRGBA const &sides_color, bool is_small) {
@@ -1517,9 +1508,6 @@ void building_room_geom_t::add_wine_rack(room_object_t const &c, bool inc_lg, bo
 		add_wine_rack_bottles(c, objects);
 		add_small_static_objs_to_verts(objects);
 	}
-}
-void building_room_geom_t::expand_wine_rack(room_object_t const &c) {
-	add_wine_rack_bottles(c, expanded_objs);
 }
 
 room_object_t get_desk_drawers_part(room_object_t const &c) {

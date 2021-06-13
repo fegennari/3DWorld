@@ -632,17 +632,6 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 	mats_doors.create_vbos(building);
 }
 
-void building_room_geom_t::expand_object(room_object_t &c) {
-	if (c.flags & RO_FLAG_EXPANDED) return; // already expanded
-	switch (c.type) {
-	case TYPE_CLOSET:    expand_closet   (c); break;
-	case TYPE_SHELVES:   expand_shelves  (c); break;
-	case TYPE_WINE_RACK: expand_wine_rack(c); break;
-	default: assert(0); // not a supported expand type
-	}
-	c.flags |= RO_FLAG_EXPANDED; // flag as expanded
-}
-
 void rotate_dir_about_z(vector3d &dir, float rate) { // Note: assumes dir is normalized
 	if (rate == 0.0) return;
 	assert(dir.z == 0.0); // dir must be in XY plane

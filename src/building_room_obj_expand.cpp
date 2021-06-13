@@ -115,6 +115,11 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 	objects.push_back(hanger_rod);
 }
 
+void building_room_geom_t::expand_closet(room_object_t const &c) {
+	add_closet_objects(c, expanded_objs);
+	clear_static_small_vbos(); // is this needed?
+}
+
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
 	unsigned const num_shelves(2 + (c.room_id % 3)); // 2-4 shelves
 	float const thickness(0.02*c.dz()), bracket_thickness(0.8*thickness), z_step(c.dz()/(num_shelves + 1)); // include a space at the bottom
@@ -275,6 +280,12 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	} // for s
 }
 
+void building_room_geom_t::expand_shelves(room_object_t const &c) {
+	cube_t shelves[4]; // max number of shelves
+	unsigned const num_shelves(get_shelves_for_object(c, shelves));
+	get_shelf_objects(c, shelves, num_shelves, expanded_objs);
+}
+
 void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &objects) {
 	float const height(c.dz()), width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), shelf_thick(0.1*depth);
 	unsigned const num_rows(max(1, round_fp(2.0*height/depth))), num_cols(max(1, round_fp(2.0*width/depth)));
@@ -301,6 +312,10 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vector<
 		}
 		bottle.translate_dim(!c.dim, col_step); // translate in !dim
 	} // for i
+}
+
+void building_room_geom_t::expand_wine_rack(room_object_t const &c) {
+	add_wine_rack_bottles(c, expanded_objs);
 }
 
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen) {
@@ -527,5 +542,16 @@ void building_t::add_box_contents(room_object_t const &box) {
 		interior->room_geom->clear_static_small_vbos();
 		break; // if we got here, something was placed in the box
 	} // for n
+}
+
+void building_room_geom_t::expand_object(room_object_t &c) {
+	if (c.flags & RO_FLAG_EXPANDED) return; // already expanded
+	switch (c.type) {
+	case TYPE_CLOSET:    expand_closet   (c); break;
+	case TYPE_SHELVES:   expand_shelves  (c); break;
+	case TYPE_WINE_RACK: expand_wine_rack(c); break;
+	default: assert(0); // not a supported expand type
+	}
+	c.flags |= RO_FLAG_EXPANDED; // flag as expanded
 }
 
