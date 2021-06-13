@@ -428,7 +428,7 @@ class building_draw_t {
 		};
 		// Note: not easy to use vao_manager_t due to upload done before active shader + shadow vs. geometry pass, but we can use vao_wrap_t's directly
 		vbo_wrap_t vbo;
-		vao_wrap_t vao, svao; // regular + shadow
+		vao_wrap_t vao, svao; // regular + shadow; do we need a vao_manager_with_shadow_t?
 		vector<vert_ix_pair> pos_by_tile; // {quads, tris}
 		unsigned tri_vbo_off;
 		unsigned start_num_verts[2] = {0}; // for quads and triangles
@@ -467,7 +467,7 @@ class building_draw_t {
 				bool const use_texture(!shadow_only && (!quad_verts.empty() || !tri_verts.empty()));
 				if (use_texture) {tex.set_gl(s);} // Note: colors are not disabled here
 				if (!quad_verts.empty()) {draw_quad_verts_as_tris(quad_verts, 0, 1, 1);}
-				if (!tri_verts .empty()) {draw_verts(tri_verts,  GL_TRIANGLES, 0, 1);}
+				if (!tri_verts .empty()) {draw_verts(tri_verts, GL_TRIANGLES, 0, 1);}
 				if (use_texture) {tex.unset_gl(s);}
 				enable_use_temp_vbo = 0;
 			}
