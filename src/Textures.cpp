@@ -208,7 +208,6 @@ extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation, fticks;
 extern char *mesh_diffuse_tex_fn;
 
 
-void force_upload_all_textures();
 void gen_smoke_texture();
 void gen_plasma_texture();
 void gen_disintegrate_texture();
@@ -304,7 +303,6 @@ void load_textures() {
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_tius);
 	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &max_ctius);
 	cout << "max TIUs: " << max_tius << ", max combined TIUs: " << max_ctius << endl;
-	//force_upload_all_textures();
 }
 
 
@@ -392,15 +390,6 @@ unsigned load_cube_map_texture(string const &name) {
 
 
 void check_init_texture(int id, bool free_after_upload) {textures[id].check_init(free_after_upload);}
-
-void force_upload_all_textures() {
-
-	RESET_TIME;
-	for (unsigned i = 0; i < textures.size(); ++i) {check_init_texture(i, 0);} // free_after_upload=0
-	PRINT_TIME("All Texture Upload"); // 2.2s
-	// bind none at end?
-}
-
 
 bool select_texture(int id) {
 
