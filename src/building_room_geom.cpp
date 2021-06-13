@@ -2129,39 +2129,45 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	assert(c.is_strictly_normalized());
 	static vect_cube_t doors;
 	doors.clear();
-	float const door_width(get_cabinet_doors(c, doors));
+	float const door_width(get_cabinet_doors(c, doors)), dir_sign(c.dir ? 1.0 : -1.0);
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
+	bool const any_doors_open(c.drawer_flags > 0);
+	colorRGBA const cabinet_color(apply_wood_light_color(c));
 
-	/*for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes - requires drawing cabinet interior first
-		if (!(c.drawer_flags & (1 << n))) continue; // not open
-		cube_t hole(doors[n]);
-		hole.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.95*hole.get_sz_dim(c.dim); // shrink to near zero thickness
-		wood_mat.add_cube_to_verts(hole, ALPHA0, tex_origin, get_face_mask(c.dim, c.dir);
-	}*/
+	if (any_doors_open) {
+		cube_t interior(c);
+		interior.expand_by(-0.01*c.get_size());
+		wood_mat.add_cube_to_verts(interior, cabinet_color*0.5, tex_origin, ~get_face_mask(c.dim, c.dir), 0, 0, 0, 1); // darker; skip front face; inverted
+		
+		for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes
+			if (!(c.drawer_flags & (1 << n))) continue; // not open
+			cube_t hole(doors[n]), frame(hole);
+			float const door_thickness(frame.get_sz_dim(c.dim));
+			hole .d[c.dim][ c.dir] -= dir_sign*0.95*hole.get_sz_dim(c.dim); // shrink to near zero thickness
+			frame.d[c.dim][ c.dir]  = frame.d[c.dim][!c.dir];
+			frame.d[c.dim][!c.dir] -= dir_sign*door_thickness; // move inward by door thickness
+			wood_mat.add_cube_to_verts(frame, cabinet_color, tex_origin, get_skip_mask_for_xy(c.dim), 0, 0, 0, 1); // skip front/back face; inverted
+			wood_mat.add_cube_to_verts(hole, ALPHA0, tex_origin, get_face_mask(c.dim, c.dir));
+		}
+	}
 	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
-	wood_mat.add_cube_to_verts(c, apply_wood_light_color(c), tex_origin, skip_faces);
+	wood_mat.add_cube_to_verts(c, cabinet_color, tex_origin, skip_faces);
 	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
 	if (doors.empty()) return; // no doors
-	bool const any_doors_open(c.drawer_flags > 0);
 	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
 	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale, any_doors_open), any_doors_open)); // only shadowed if a door is open
 	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
 	unsigned const door_skip_faces(~get_face_mask(c.dim, !c.dir));
-	float const dir_sign(c.dir ? 1.0 : -1.0), door_thick(doors[0].get_sz_dim(c.dim)), handle_thick(0.75*door_thick);
+	float const door_thick(doors[0].get_sz_dim(c.dim)), handle_thick(0.75*door_thick);
 	float const hwidth(0.04*doors[0].dz()), near_side(0.1*door_width), far_side(door_width - near_side - hwidth);
 
 	for (unsigned n = 0; n < doors.size(); ++n) {
 		bool const is_open(c.drawer_flags & (1 << n)), handle_side(n & 1); // alternate handle side
 		cube_t &door(doors[n]);
 
-		if (is_open) {
-			// here we really need to draw a cutout and the actual interior, but drawing a black square is better than nothing
-			cube_t hole(door);
-			hole.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.95*door.get_sz_dim(c.dim); // shrink to near zero thickness
-			door_mat.add_cube_to_verts(hole, BLACK, tex_origin, get_face_mask(c.dim, c.dir)); // draw the front faceonly
-			// make this door open
+		if (is_open) { // make this door open
 			door.d[ c.dim][c.dir] += dir_sign*(door_width - door_thick); // expand out to full width
 			door.d[!c.dim][!handle_side] -= (handle_side ? -1.0 : 1.0)*(door_width - door_thick); // shrink to correct thickness
 		}
