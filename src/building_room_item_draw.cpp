@@ -257,14 +257,12 @@ public:
 
 		// try to find a free list element with the same tex so that we balance out material memory usage/capacity better
 		for (unsigned i = 0; i < free_list.size(); ++i) {
-			if (free_list[i].tex.tid != s.tex.tid) continue;
+			if (!free_list[i].tex.is_compatible(s.tex)) continue;
 			s.swap_vectors(free_list[i]); // transfer existing capacity from free list
 			free_list[i].swap(free_list.back());
 			free_list.pop_back();
 			return; // done
 		}
-		//s.swap(free_list.back());
-		//free_list.pop_back();
 	}
 	void free(rgeom_storage_t &s) {
 		s.clear(); // in case the caller didn't clear it
@@ -276,6 +274,7 @@ public:
 		for (auto i = free_list.begin(); i != free_list.end(); ++i) {mem += i->get_mem_usage();}
 		return mem;
 	}
+	unsigned size() const {return free_list.size();}
 };
 
 rgeom_alloc_t rgeom_alloc; // static allocator with free list, shared across all buildings; not thread safe
@@ -495,7 +494,7 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 	//timer_t timer2("Create VBOs"); // < 2ms
 	mats_static.create_vbos(building);
 	mats_alpha .create_vbos(building);
-	//cout << "static: " << rgeom_alloc.get_mem_usage() << endl; // start=78MB, peak=193MB
+	//cout << "static: size: " << rgeom_alloc.size() << " mem: " << rgeom_alloc.get_mem_usage() << endl; // start=78MB, peak=193MB
 }
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {

@@ -120,11 +120,11 @@ struct tid_nm_pair_t { // size=28
 		tid(tid_), nm_tid(nm_tid_), tscale_x(tx), tscale_y(ty), txoff(xo), tyoff(yo), emissive(0.0), spec_mag(0), shininess(0), shadowed(shadowed_) {}
 	void set_specular(float mag, float shine) {spec_mag = (unsigned char)(CLIP_TO_01(mag)*255.0f); shininess = (unsigned char)max(1, min(255, round_fp(shine)));}
 	bool enabled() const {return (tid >= 0 || nm_tid >= 0);}
-	
-	bool operator==(tid_nm_pair_t const &t) const {
-		return (tid == t.tid && nm_tid == t.nm_tid && tscale_x == t.tscale_x && tscale_y == t.tscale_y && txoff == t.txoff &&
-			tyoff == t.tyoff && emissive == t.emissive && spec_mag == t.spec_mag && shininess == t.shininess && shadowed == t.shadowed);
+
+	bool is_compatible(tid_nm_pair_t const &t) const {
+		return (tid == t.tid && nm_tid == t.nm_tid && emissive == t.emissive && spec_mag == t.spec_mag && shininess == t.shininess && shadowed == t.shadowed);
 	}
+	bool operator==(tid_nm_pair_t const &t) const {return (is_compatible(t) && tscale_x == t.tscale_x && tscale_y == t.tscale_y && txoff == t.txoff && tyoff == t.tyoff);}
 	bool operator!=(tid_nm_pair_t const &t) const {return !operator==(t);}
 	int get_nm_tid() const {return ((nm_tid < 0) ? FLAT_NMAP_TEX : nm_tid);}
 	colorRGBA get_avg_color() const {return texture_color(tid);}
