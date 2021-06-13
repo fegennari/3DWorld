@@ -21,7 +21,7 @@ extern building_t const *player_building;
 extern carried_item_t player_held_object;
 
 unsigned get_num_screenshot_tids();
-tid_nm_pair_t get_phone_ring_tex();
+tid_nm_pair_t get_phone_tex(room_object_t const &c);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
@@ -695,9 +695,9 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		float const z_rot_angle(-atan2(cview_dir.y, cview_dir.x));
 		unsigned skip_faces(0);
 
-		if (c.flags & RO_FLAG_EMISSIVE) { // phone is ringing
+		if (c.flags & (RO_FLAG_EMISSIVE | RO_FLAG_OPEN)) { // phone is ringing or locked screen
 			static rgeom_mat_t screen_mat;
-			screen_mat.tex = get_phone_ring_tex();
+			screen_mat.tex = get_phone_tex(c);
 			screen_mat.add_cube_to_verts(c, WHITE, all_zeros, ~EF_Z2, 0, 1); // mirror_x=1
 			rotate_verts(screen_mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
 			screen_mat.upload_draw_and_clear(s);

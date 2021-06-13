@@ -983,14 +983,15 @@ void show_weight_limit_message() {
 	print_text_onscreen(oss.str(), RED, 1.0, 1.5*TICKS_PER_SECOND, 0);
 }
 
-class phone_ringer_t {
-	bool is_enabled = 0, is_ringing = 0;
-	double stop_ring_time = 0.0, next_ring_time = 0.0, next_cycle_time = 0.0;
+class phone_manager_t {
+	bool is_enabled=0, is_ringing = 0, is_on=0;
+	double stop_ring_time=0.0, next_ring_time=0.0, next_cycle_time=0.0, auto_off_time=0.0, next_button_time=0.0;
 	rand_gen_t rgen;
 
 	void schedule_next_ring() {next_ring_time = tfticks + rgen.rand_uniform(30.0, 120.0)*TICKS_PER_SECOND;} // 30s to 2min
 public:
 	bool is_phone_ringing() const {return is_ringing;}
+	bool is_phone_on     () const {return is_on     ;}
 
 	void next_frame() {
 		if (!is_enabled || !camera_in_building) {} // do nothing
@@ -1002,31 +1003,42 @@ public:
 				next_cycle_time += 4.2*TICKS_PER_SECOND; // 4.2s between rings
 			}
 		}
-		else if (tfticks > next_ring_time) { // start a new ring cycle
-			is_ringing      = 1;
-			stop_ring_time  = tfticks + rgen.rand_uniform(12.0, 24.0)*TICKS_PER_SECOND; // 10-20s into the future
-			next_cycle_time = tfticks; // cycle begins now
+		else {
+			if (tfticks > next_ring_time) { // start a new ring cycle
+				is_ringing      = 1;
+				stop_ring_time  = tfticks + rgen.rand_uniform(12.0, 24.0)*TICKS_PER_SECOND; // 10-20s into the future
+				next_cycle_time = tfticks; // cycle begins now
+			}
+			if (is_on && tfticks > auto_off_time) {is_on = 0;} // auto off
 		}
 	}
 	void enable() {
 		if (is_enabled) return; // already enabled
 		is_enabled = 1;
-		is_ringing = 0;
+		is_ringing = is_on = 0;
 		schedule_next_ring();
 	}
 	void disable() {
-		is_enabled = is_ringing = 0;
+		is_enabled = is_ringing = is_on = 0;
 	}
-	void player_disable() {
-		if (!is_ringing) return; // nothing to do
-		is_ringing     = 0;
-		stop_ring_time = tfticks; // now
-		schedule_next_ring();
+	void player_action() {
+		if (tfticks < next_button_time) return; // skip if pressed immediately after the last press (switch debouncer)
+		next_button_time = tfticks + 0.25*TICKS_PER_SECOND;
+
+		if (is_ringing) { // switch off
+			is_ringing     = is_on = 0;
+			stop_ring_time = tfticks; // now
+			schedule_next_ring();
+		}
+		else {
+			is_on ^= 1;
+			if (is_on) {auto_off_time = tfticks + 4.0*TICKS_PER_SECOND;} // 4s auto off delay
+		}
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
 	}
 };
 
-phone_ringer_t phone_ringer;
+phone_manager_t phone_manager;
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
@@ -1049,7 +1061,7 @@ public:
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
 		prev_in_building = has_key = 0;
-		phone_ringer.disable();
+		phone_manager.disable();
 		carried.clear();
 	}
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
@@ -1134,7 +1146,7 @@ public:
 						co.y2() = co.y1() + dx;
 					}
 					co.dim = co.dir = 0; // clear dim and dir
-					phone_ringer.enable();
+					phone_manager.enable();
 				}
 			}
 			oss << ": value $";
@@ -1200,7 +1212,7 @@ public:
 	}
 	void collect_items() {
 		has_key = 0; // key only good for current building
-		phone_ringer.disable();
+		phone_manager.disable();
 		if (carried.empty() && cur_weight == 0.0 && cur_value == 0.0) return; // nothing to add
 		std::ostringstream oss;
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
@@ -1213,7 +1225,11 @@ public:
 	void show_stats() const {
 		if (!carried.empty()) {
 			player_held_object = carried.back(); // deep copy last pickup object if usable
-			if (player_held_object.type == TYPE_PHONE && phone_ringer.is_phone_ringing()) {player_held_object.flags |= RO_FLAG_EMISSIVE;} // make phone screen glow
+			
+			if (player_held_object.type == TYPE_PHONE) {
+				if (phone_manager.is_phone_ringing()) {player_held_object.flags |= RO_FLAG_EMISSIVE;} // show ring screen
+				else if (phone_manager.is_phone_on()) {player_held_object.flags |= RO_FLAG_OPEN    ;} // show lock screen
+			}
 		}
 		if (display_framerate) { // controlled by framerate toggle
 			float const aspect_ratio((float)window_width/(float)window_height);
@@ -1248,7 +1264,7 @@ public:
 	}
 	void next_frame() {
 		show_stats();
-		phone_ringer.next_frame(); // even if not in gameplay mode?
+		phone_manager.next_frame(); // even if not in gameplay mode?
 		if (!in_building_gameplay_mode()) return;
 		// handle player fall damage logic
 		point const camera_pos(get_camera_pos());
@@ -1690,7 +1706,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			play_obj_fall_sound(obj, player_pos);
 			delay_use = 1;
 		}
-		else if (obj.type == TYPE_PHONE) {phone_ringer.player_disable();}
+		else if (obj.type == TYPE_PHONE) {phone_manager.player_action();}
 		else {assert(0);}
 	}
 	else {assert(0);}
