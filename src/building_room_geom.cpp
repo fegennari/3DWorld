@@ -493,7 +493,7 @@ void building_room_geom_t::add_vert_tproll_to_material(room_object_t const &c, r
 	if (sz_ratio == 0.0) return; // empty, tube only, don't need to draw the rest of the roll
 	cube_t roll(c);
 	if (sz_ratio < 1.0) {roll.expand_by_xy(-0.3*(1.0 - sz_ratio)*c.dx());} // partially used
-	hole.expand_in_dim(2, 0.001*c.dz()); // expand slightly to avoid z-fighting
+	hole.expand_in_dim(2, 0.0025*c.dz()); // expand slightly to avoid z-fighting
 	mat.add_vcylin_to_verts(hole, ALPHA0, 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // hole - top/bottom surface only to mask off the outer part of the roll
 	mat.add_vcylin_to_verts(roll, apply_light_color(c),  1, 1); // paper roll
 }
@@ -590,7 +590,8 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 		// draw the inside of the box
 		verts_start = mat.quad_verts.size(); // update
 		cube_t box(c);
-		box.expand_by(-0.001*c.get_size()); // slight shrink of inside of box to prevent z-fighting
+		box.expand_by_xy(-0.001*c.get_size()); // slight shrink of inside of box to prevent z-fighting
+		box.z1() += 0.01*c.dz(); // shrink a bit more in Z
 		mat.add_cube_to_verts(box, color, zero_vector, EF_Z2, 0, 0, 0, 1); // skip top face; draw inverted
 		assert(mat.quad_verts.size() == verts_start + 20); // there should be 5 quads (+z -x +x -y +y) / 20 verts (no +z)
 		float const ts[4] = {x2, x3, x3, x2}, tt[4] = {y1, y1, y2, y2};
@@ -609,7 +610,7 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 				for (unsigned e = 0; e < 2; ++e) { // side dir
 					unsigned const side_ix(2*d+e);
 					bool const against_wall(c.flags & (RO_FLAG_ADJ_LO << side_ix)); // encoded in adj flags
-					cube_t C(c);
+					cube_t C(box);
 					C.d[d][!e] = C.d[d][e];
 					C.d[d][ e] = C.d[d][e] + (e ? 1.0 : -1.0)*(against_wall ? 0.05 : 1.0)*flap_len;
 					float const zbot(C.z2()), dz(against_wall ? flap_len : 0.25*min(flap_len, box_sz.z)); // tilted somewhat upward; pointing up if against wall
