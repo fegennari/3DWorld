@@ -2007,7 +2007,15 @@ void building_room_geom_t::add_counter(room_object_t const &c, float tscale) { /
 		subtract_cube_from_cube(top, sink, cubes);
 		for (auto i = cubes.begin(); i != cubes.end(); ++i) {top_mat.add_cube_to_verts(*i, top_color, tex_origin);} // should always be 4 cubes
 		colorRGBA const sink_color(apply_light_color(c, GRAY));
-		get_metal_material(0).add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
+		rgeom_mat_t &basin_mat(get_metal_material(0));
+		basin_mat.add_cube_to_verts(sink, sink_color, tex_origin, EF_Z2, 0, 0, 0, 1); // basin: inverted, skip top face, unshadowed
+		
+		if (c.drawer_flags > 0) { // draw outside of sink basin if any drawers are open
+			cube_t sink_outer(sink);
+			sink_outer.expand_by_xy(0.01*dz); // expand by sink basin thickness
+			sink_outer.z1() -= 0.1*dz;
+			basin_mat.add_cube_to_verts(sink_outer, sink_color, tex_origin, (~get_face_mask(c.dim, !c.dir) | EF_Z2)); // skip back and top
+		}
 		rgeom_mat_t &metal_mat(get_metal_material(1)); // shadowed, specular metal (specular doesn't do much because it's flat, but may make more of a diff using a cylinder later)
 		metal_mat.add_cube_to_verts_untextured(faucet1, sink_color, EF_Z12); // vertical part of faucet, skip top and bottom faces
 		metal_mat.add_cube_to_verts_untextured(faucet2, sink_color, 0); // horizontal part of faucet, draw all faces
