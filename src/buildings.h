@@ -641,12 +641,11 @@ struct elevator_t : public cube_t {
 	void call_elevator(float targ_z) {target_zval = targ_z; was_called = 1;}
 };
 
-unsigned const NUM_RTYPE_SLOTS = 5; // enough for houses
+unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses
 
 struct room_t : public cube_t {
 	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg, interior;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
-	//uint8_t sides_with_doors; // is this useful/needed?
 	uint8_t part_id, num_lights;
 	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first floor because some rooms can have variable per-floor assignment
 	uint64_t lit_by_floor;
