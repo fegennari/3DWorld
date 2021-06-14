@@ -2121,25 +2121,32 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	rgeom_mat_t &wood_mat(get_wood_material(tscale));
 	bool const any_doors_open(c.drawer_flags > 0);
 	colorRGBA const cabinet_color(apply_wood_light_color(c));
+	unsigned skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
 
 	if (any_doors_open) {
+		unsigned const skip_front_face(~get_face_mask(c.dim, c.dir));
 		float const wall_thickness(0.04*c.dz());
+		vect_cube_t &cubes(get_temp_cubes());
+		cubes.push_back(c); // start with entire cabinet
 		cube_t interior(c);
 		interior.expand_by(-wall_thickness);
-		wood_mat.add_cube_to_verts(interior, cabinet_color*0.5, tex_origin, ~get_face_mask(c.dim, c.dir), 0, 0, 0, 1); // darker; skip front face; inverted
-		
+		wood_mat.add_cube_to_verts(interior, cabinet_color*0.5, tex_origin, skip_front_face, 0, 0, 0, 1); // darker interior; skip front face; inverted
+
 		for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes
 			if (!(c.drawer_flags & (1 << n))) continue; // not open
 			cube_t hole(doors[n]), frame(hole);
-			hole .d[c.dim][ c.dir] -= dir_sign*0.95*hole.get_sz_dim(c.dim); // shrink to near zero thickness
+			hole.expand_in_dim(c.dim, c.get_sz_dim(c.dim)); // expand so that it cuts entirely through the cabinet
 			frame.d[c.dim][ c.dir]  = frame.d[c.dim][!c.dir];
 			frame.d[c.dim][!c.dir] -= dir_sign*wall_thickness; // move inward by door thickness
 			wood_mat.add_cube_to_verts(frame, cabinet_color, tex_origin, get_skip_mask_for_xy(c.dim), 0, 0, 0, 1); // skip front/back face; inverted
-			wood_mat.add_cube_to_verts(hole, ALPHA0, tex_origin, get_face_mask(c.dim, c.dir));
-		}
+			subtract_cube_from_cubes(hole, cubes, nullptr, 1); // clip_in_z=1
+		} // for n
+		// draw front faces with holes cut in them for open doors
+		for (auto i = cubes.begin(); i != cubes.end(); ++i) {wood_mat.add_cube_to_verts(*i, cabinet_color, tex_origin, ~skip_front_face);}
+		skip_faces |= skip_front_face; // front face drawn above, don't draw it again below
 	}
-	unsigned const skip_faces((c.type == TYPE_COUNTER) ? EF_Z12 : EF_Z2); // skip top face (can't skip back in case it's against a window)
-	wood_mat.add_cube_to_verts(c, cabinet_color, tex_origin, skip_faces);
+	wood_mat.add_cube_to_verts(c, cabinet_color, tex_origin, skip_faces); // draw wood exterior
+
 	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
 	if (doors.empty()) return; // no doors
 	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated

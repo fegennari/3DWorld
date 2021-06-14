@@ -134,7 +134,6 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 }
 
 void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on cabinets, counters, and kitchen sinks
-	return; // TODO: disable for now, until we figure out how to draw these before the transparent cutout for the doors
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	vect_cube_t &cubes(get_temp_cubes());
@@ -144,7 +143,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	vector3d const c_sz(interior.get_size());
 	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 
-	if (c.type == TYPE_COUNTER || c.type == TYPE_KSINK) {
+	if ((c.type == TYPE_COUNTER || c.type == TYPE_KSINK) && rgen.rand_bool()) {
 		float const tcan_height(c_sz.z*rgen.rand_uniform(0.4, 0.7)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*min(c_sz.x, c_sz.y)));
 		cube_t tcan;
 		gen_xy_pos_for_round_obj(tcan, interior, tcan_radius, tcan_height, 1.1*tcan_radius, rgen, 1); // place_at_z1=1
