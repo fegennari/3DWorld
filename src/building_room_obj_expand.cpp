@@ -8,6 +8,7 @@
 
 float get_lamp_width_scale();
 vect_cube_t &get_temp_cubes();
+bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 
 void add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &objects, vect_cube_t &cubes) {
 	if (!has_bcube_int(obj, cubes)) {objects.push_back(obj); cubes.push_back(obj);}
@@ -137,11 +138,17 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	vect_cube_t &cubes(get_temp_cubes());
-	float const wall_thickness(0.04*c.dz()), tot_light_amt(0.5);
-	cube_t interior(c);
+	float const wall_thickness(0.04*c.dz()), tot_light_amt(0.0);
+	cube_t interior(c), dishwasher;
 	interior.expand_by(-wall_thickness);
 	vector3d const c_sz(interior.get_size());
-	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+	
+	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) { // avoid placing objects that overlap the dishwasher
+		dishwasher.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // extend to the back of the cabinet
+		dishwasher.expand_by_xy(wall_thickness);
+		cubes.push_back(dishwasher);
+	}
+	unsigned const start_num_cubes(cubes.size()), flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 
 	if ((c.type == TYPE_COUNTER || c.type == TYPE_KSINK) && rgen.rand_bool()) {
 		float const tcan_height(c_sz.z*rgen.rand_uniform(0.4, 0.7)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*min(c_sz.x, c_sz.y)));
@@ -163,7 +170,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		add_if_not_intersecting(obj, expanded_objs, cubes);
 	}
 	// TODO: TYPE_BOX?, TYPE_PAINTCAN? TYPE_PLATE?
-	if (!cubes.empty()) {clear_static_small_vbos();} // some object was added
+	if (cubes.size() > start_num_cubes) {clear_static_small_vbos();} // some object was added
 }
 
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
