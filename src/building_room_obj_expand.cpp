@@ -115,9 +115,8 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 	objects.push_back(hanger_rod);
 }
 
-void building_room_geom_t::expand_closet(room_object_t const &c) {
-	add_closet_objects(c, expanded_objs);
-	clear_static_small_vbos(); // is this needed?
+void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on cabinets, counters, and kitchen sinks
+	// TODO
 }
 
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
@@ -312,10 +311,6 @@ void building_room_geom_t::add_wine_rack_bottles(room_object_t const &c, vector<
 		}
 		bottle.translate_dim(!c.dim, col_step); // translate in !dim
 	} // for i
-}
-
-void building_room_geom_t::expand_wine_rack(room_object_t const &c) {
-	add_wine_rack_bottles(c, expanded_objs);
 }
 
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen) {
@@ -550,6 +545,7 @@ void building_room_geom_t::expand_object(room_object_t &c) {
 	case TYPE_CLOSET:    expand_closet   (c); break;
 	case TYPE_SHELVES:   expand_shelves  (c); break;
 	case TYPE_WINE_RACK: expand_wine_rack(c); break;
+	case TYPE_CABINET: case TYPE_COUNTER: case TYPE_KSINK: expand_cabinet(c); break;
 	default: assert(0); // not a supported expand type
 	}
 	c.flags |= RO_FLAG_EXPANDED; // flag as expanded

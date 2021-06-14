@@ -587,8 +587,9 @@ struct building_room_geom_t {
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
 	void get_bookcase_books(room_object_t const &c, vector<room_object_t> &books) {add_bookcase(c, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
-	void expand_closet(room_object_t const &c);
-	void expand_wine_rack(room_object_t const &c);
+	void expand_closet(room_object_t const &c) {add_closet_objects(c, expanded_objs);}
+	void expand_cabinet(room_object_t const &c);
+	void expand_wine_rack(room_object_t const &c) {add_wine_rack_bottles(c, expanded_objs);}
 	void expand_object(room_object_t &c);
 	static room_object_t get_item_in_drawer(room_object_t const &c, cube_t const &drawer, unsigned drawer_ix);
 	// other functions

@@ -418,7 +418,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 				add_wall_trim(room_object_t(trim, TYPE_WALL_TRIM, c.room_id, trim_dim, trim_dir, 0, 1.0, SHAPE_ANGLED, trim_color)); // ceiling trim, missing end caps; exterior only
 			} // for d
 		} // for is_side
-		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door; only for the closets the player has manually opened
+		// Note: always drawn to avoid recreating all small objects when the player opens/closes a closet door, and so that objects can be seen through the cracks in the doors
 		if (!(c.flags & RO_FLAG_EXPANDED)) { // add boxes if not expanded
 			vector<room_object_t> &objects(get_temp_objects());
 			add_closet_objects(c, objects);

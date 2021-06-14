@@ -1556,7 +1556,14 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		if (has_doors) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}
 		else {gen_sound_thread_safe(SOUND_SLIDING, building.local_to_camera_space(drawer_center), 0.5);}
 		register_building_sound(drawer_center, 0.4);
-		if (has_doors) {update_draw_state_for_room_object(obj, building);} else {create_small_static_vbos(building);} // only need to update small objects for drawers
+		
+		if (has_doors) {
+			expand_object(obj); // expand any items in the cabinet so that the player can pick them up
+			update_draw_state_for_room_object(obj, building);
+		}
+		else {
+			create_small_static_vbos(building); // only need to update small objects for drawers
+		}
 	}
 	return 1;
 }
