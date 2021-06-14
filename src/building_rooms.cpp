@@ -155,8 +155,6 @@ vect_door_stack_t &building_t::get_doorways_for_room(room_t const &room, float z
 }
 
 void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj) {
-	unsigned const NUM_COLORS = 6;
-	colorRGBA const colors[NUM_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 	int const rr(rgen.rand()%3), rar(rgen.rand()%3); // three sizes/ARs
 	float const floor_spacing(get_window_vspace()), radius(0.02f*(3 + rr)*floor_spacing), height(0.55f*(3 + rar)*radius); // radius={0.06, 0.08, 0.10} x AR={1.65, 2.2, 2.75}
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -200,7 +198,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 		cube_t const c(get_cube_height_radius(center, radius, height));
 		if (!avoid.is_all_zeros() && c.intersects_xy(avoid)) continue; // bad placement
 		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? SHAPE_CYLIN : SHAPE_CUBE), colors[rgen.rand()%NUM_COLORS]);
+		objs.emplace_back(c, TYPE_TCAN, room_id, dim, dir, 0, tot_light_amt, (cylin ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
 		return; // done
 	} // for n
 }
@@ -1204,6 +1202,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			}
 			unsigned const cabinet_id(objs.size());
 			objs.emplace_back(c, (is_sink ? TYPE_KSINK : TYPE_COUNTER), room_id, dim, !dir, 0, tot_light_amt);
+			set_obj_id(objs);
 			
 			if (add_backsplash) {
 				objs.back().item_flags |= 1; // flag back as having a backsplash
@@ -1216,7 +1215,11 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			// add upper cabinets, always (for now); should we remove cabinets in front of windows?
 			cube_t c2(c);
 			set_cube_zvals(c2, zval+0.66*vspace, cabinet_area.z2()); // up to the ceiling
-			if (!has_bcube_int_no_adj(c2, blockers)) {objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt);} // no collision detection
+			
+			if (!has_bcube_int_no_adj(c2, blockers)) {
+				objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // no collision detection
+				set_obj_id(objs);
+			}
 			blockers.push_back(c); // add to blockers so that later counters don't intersect this one
 
 			if (!is_sink && !placed_mwave && c.get_sz_dim(!dim) > 0.5*vspace && rgen.rand_bool()) { // place a microwave on a counter 50% of the time

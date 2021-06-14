@@ -9,6 +9,24 @@
 float get_lamp_width_scale();
 vect_cube_t &get_temp_cubes();
 
+void add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &objects, vect_cube_t &cubes) {
+	if (!has_bcube_int(obj, cubes)) {objects.push_back(obj); cubes.push_back(obj);}
+}
+void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen) {
+	point center;
+	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
+	C.set_from_point(center);
+	set_cube_zvals(C, S.z2(), S.z2()+height);
+	C.expand_by_xy(sz);
+}
+void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0) {
+	point center;
+	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + spacing), (S.d[d][1] - spacing));} // place at least spacing from edge
+	C.set_from_sphere(center, radius);
+	float const place_z(place_at_z1 ? S.z1() : S.z2());
+	set_cube_zvals(C, place_z, place_z+height);
+}
+
 cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) {
 	cube_t interior(c);
 	if (!cubes[1].is_all_zeros()) {interior.d[!c.dim][0] = cubes[1].d[!c.dim][1];} // left  side (if wall exists)
@@ -116,7 +134,37 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 }
 
 void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on cabinets, counters, and kitchen sinks
-	// TODO
+	return; // TODO: disable for now, until we figure out how to draw these before the transparent cutout for the doors
+	rand_gen_t rgen;
+	c.set_rand_gen_state(rgen);
+	vect_cube_t &cubes(get_temp_cubes());
+	float const wall_thickness(0.04*c.dz()), tot_light_amt(0.5);
+	cube_t interior(c);
+	interior.expand_by(-wall_thickness);
+	vector3d const c_sz(interior.get_size());
+	unsigned const flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
+
+	if (c.type == TYPE_COUNTER || c.type == TYPE_KSINK) {
+		float const tcan_height(c_sz.z*rgen.rand_uniform(0.4, 0.7)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*min(c_sz.x, c_sz.y)));
+		cube_t tcan;
+		gen_xy_pos_for_round_obj(tcan, interior, tcan_radius, tcan_height, 1.1*tcan_radius, rgen, 1); // place_at_z1=1
+		room_object_t obj(tcan, TYPE_TCAN, c.room_id, c.dim, c.dir, flags, tot_light_amt, (rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
+		add_if_not_intersecting(obj, expanded_objs, cubes);
+	}
+	// add bottles
+	unsigned const num_bottles(rgen.rand() % 9); // 0-8
+
+	for (unsigned n = 0; n < num_bottles; ++n) {
+		float const sz_scale(0.7*c_sz.z), bottle_height(sz_scale*rgen.rand_uniform(0.4, 0.7)), bottle_radius(sz_scale*rgen.rand_uniform(0.07, 0.11));
+		if (min(c_sz.x, c_sz.y) < 3.0*bottle_radius) continue; // cabinet not wide/deep enough to add this bottle
+		cube_t bottle;
+		gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
+		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, tot_light_amt, SHAPE_CYLIN); // vertical
+		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 1); // all bottle types, no_empty=1
+		add_if_not_intersecting(obj, expanded_objs, cubes);
+	}
+	// TODO: TYPE_BOX?, TYPE_PAINTCAN? TYPE_PLATE?
+	if (!cubes.empty()) {clear_static_small_vbos();} // some object was added
 }
 
 unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cube_t shelves[4]) {
@@ -131,22 +179,6 @@ unsigned building_room_geom_t::get_shelves_for_object(room_object_t const &c, cu
 		shelves[s] = shelf; // record for later use
 	}
 	return num_shelves;
-}
-void add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &objects, vect_cube_t &cubes) {
-	if (!has_bcube_int(obj, cubes)) {objects.push_back(obj); cubes.push_back(obj);}
-}
-void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen) {
-	point center;
-	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
-	C.set_from_point(center);
-	set_cube_zvals(C, S.z2(), S.z2()+height);
-	C.expand_by_xy(sz);
-}
-void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen) {
-	point center;
-	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + spacing), (S.d[d][1] - spacing));} // place at least spacing from edge
-	C.set_from_sphere(center, radius);
-	set_cube_zvals(C, S.z2(), S.z2()+height);
 }
 
 void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects) {

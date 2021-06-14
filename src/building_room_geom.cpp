@@ -2123,17 +2123,17 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	colorRGBA const cabinet_color(apply_wood_light_color(c));
 
 	if (any_doors_open) {
+		float const wall_thickness(0.04*c.dz());
 		cube_t interior(c);
-		interior.expand_by(-0.01*c.get_size());
+		interior.expand_by(-wall_thickness);
 		wood_mat.add_cube_to_verts(interior, cabinet_color*0.5, tex_origin, ~get_face_mask(c.dim, c.dir), 0, 0, 0, 1); // darker; skip front face; inverted
 		
 		for (unsigned n = 0; n < doors.size(); ++n) { // draw open doors as holes
 			if (!(c.drawer_flags & (1 << n))) continue; // not open
 			cube_t hole(doors[n]), frame(hole);
-			float const door_thickness(frame.get_sz_dim(c.dim));
 			hole .d[c.dim][ c.dir] -= dir_sign*0.95*hole.get_sz_dim(c.dim); // shrink to near zero thickness
 			frame.d[c.dim][ c.dir]  = frame.d[c.dim][!c.dir];
-			frame.d[c.dim][!c.dir] -= dir_sign*door_thickness; // move inward by door thickness
+			frame.d[c.dim][!c.dir] -= dir_sign*wall_thickness; // move inward by door thickness
 			wood_mat.add_cube_to_verts(frame, cabinet_color, tex_origin, get_skip_mask_for_xy(c.dim), 0, 0, 0, 1); // skip front/back face; inverted
 			wood_mat.add_cube_to_verts(hole, ALPHA0, tex_origin, get_face_mask(c.dim, c.dir));
 		}

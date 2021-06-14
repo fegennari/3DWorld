@@ -25,6 +25,7 @@ unsigned const NUM_BOOK_COLORS  = 16;
 unsigned const NUM_PAPER_COLORS = 6;
 unsigned const NUM_SPCAN_COLORS = 10;
 unsigned const NUM_LAMP_COLORS  = 6;
+unsigned const NUM_TCAN_COLORS  = 6;
 colorRGBA const book_colors [NUM_BOOK_COLORS ] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 colorRGBA const spcan_colors[NUM_SPCAN_COLORS] = {WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
 colorRGBA const lamp_colors[NUM_LAMP_COLORS]   = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
@@ -33,6 +34,7 @@ colorRGBA const paper_colors[NUM_PAPER_COLORS] = {WHITE, WHITE, WHITE, cream, cr
 colorRGBA const pen_colors   [4] = {WHITE, BLACK, colorRGBA(0.2, 0.4, 1.0), RED};
 colorRGBA const pencil_colors[2] = {colorRGBA(1.0, 0.75, 0.25), colorRGBA(1.0, 0.5, 0.1)};
 colorRGBA const marker_colors[8] = {BLACK, RED, BLACK, BLUE, BLACK, GREEN, RED, PURPLE};
+colorRGBA const tcan_colors[NUM_TCAN_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
 
@@ -311,7 +313,7 @@ unsigned const RO_FLAG_TOS     = 0x02; // at top of stairs
 unsigned const RO_FLAG_RSTAIRS = 0x04; // in a room with stairs
 unsigned const RO_FLAG_INVIS   = 0x08; // invisible
 unsigned const RO_FLAG_NOCOLL  = 0x10; // no collision detection
-unsigned const RO_FLAG_OPEN    = 0x20; // open, for elevators, closet doors, and bathroom stalls
+unsigned const RO_FLAG_OPEN    = 0x20; // open, for elevators, closet doors, bathroom stalls, and phones
 unsigned const RO_FLAG_NODYNAM = 0x40; // for light shadow maps
 unsigned const RO_FLAG_INTERIOR= 0x80; // applies to containing room
 // object flags, second byte
@@ -329,7 +331,7 @@ unsigned const RO_FLAG_TAKEN2  = 0x020000; // no bed sheets
 unsigned const RO_FLAG_TAKEN3  = 0x040000; // no bed mattress
 unsigned const RO_FLAG_TAKEN4  = 0x080000; // for future use
 unsigned const RO_FLAG_EXPANDED= 0x100000; // for shelves and closets
-unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves, closets, and drawers, and books
+unsigned const RO_FLAG_WAS_EXP = 0x200000; // for objects in/on shelves, closets, and drawers, cabinets, and books
 unsigned const RO_FLAG_ROTATING= 0x400000; // for office chairs
 unsigned const RO_FLAG_IN_CLOSET=0x800000; // for closet lights
 // object flags, fourth byte
