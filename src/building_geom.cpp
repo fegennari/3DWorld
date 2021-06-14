@@ -1257,11 +1257,17 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[ dim][ dir ] += dist2; // move away from bcube edge
 				c.d[!dim][!dir2] -= 0.001*dist1; // adjust slightly so it's not exactly adjacent to the house and won't be considered internal face removal logic
 				c.d[ dim][ !dir] -= 0.001*dist2;
+				bool const add_porch_slab = 1;
+
+				if (add_porch_slab) {
+					driveway = c; // added as driveway
+					driveway.z2() = driveway.z1() + 0.02*door_height;
+				}
 				c.z1() += height; // move up
 				c.z2()  = c.z1() + 0.05*parts[1].dz();
 				parts.push_back(c); // porch roof
 				c.z2() = c.z1();
-				c.z1() = pre_shrunk_p1.z1(); // support pillar
+				c.z1() = (add_porch_slab ? driveway.z2() : pre_shrunk_p1.z1()); // support pillar
 				c.d[!dim][!dir2] = c.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*width;
 				c.d[ dim][!dir ] = c.d[ dim][ dir] + (dir  ? -1.0 : 1.0)*width;
 				skip_last_roof = 1;
