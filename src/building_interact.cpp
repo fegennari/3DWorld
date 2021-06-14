@@ -1496,10 +1496,11 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	point const p2(at_pos + in_dir*range);
 
 	for (auto i = objs.begin(); i != objs.end(); ++i) {
+		bool const is_counter_type(i->type == TYPE_COUNTER || i->type == TYPE_CABINET || i->type == TYPE_KSINK);
 		if (!(i->type == TYPE_DRESSER || i->type == TYPE_NIGHTSTAND || i->type == TYPE_DESK || // drawers that can be opened or items picked up from
-			(!pickup_item && (i->type == TYPE_COUNTER || i->type == TYPE_CABINET || i->type == TYPE_KSINK)))) continue; // doors that can be opened (no item pickup)
+			(!pickup_item && is_counter_type))) continue; // doors that can be opened (no item pickup)
 		cube_t bcube(*i);
-		bcube.d[i->dim][i->dir] += 0.75*(i->dir ? 1.0 : -1.0)*i->get_sz_dim(i->dim); // expand outward to include open drawers/doors
+		if (!is_counter_type) {bcube.d[i->dim][i->dir] += 0.75*(i->dir ? 1.0 : -1.0)*i->get_sz_dim(i->dim);} // expand outward to include open drawers
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, bcube.d)) continue; // test ray intersection vs. bcube
 		float const dsq(p2p_dist_sq(at_pos, p1c)); // use closest intersection point
