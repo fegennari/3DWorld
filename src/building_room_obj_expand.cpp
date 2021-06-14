@@ -137,6 +137,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on cabinets, counters, and kitchen sinks
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
+	rgen.rand_mix();
 	vect_cube_t &cubes(get_temp_cubes());
 	float const wall_thickness(0.04*c.dz()), tot_light_amt(0.0);
 	cube_t interior(c), dishwasher;
@@ -151,17 +152,17 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	unsigned const start_num_cubes(cubes.size()), flags(RO_FLAG_NOCOLL | RO_FLAG_INTERIOR | RO_FLAG_WAS_EXP);
 
 	if ((c.type == TYPE_COUNTER || c.type == TYPE_KSINK) && rgen.rand_bool()) {
-		float const tcan_height(c_sz.z*rgen.rand_uniform(0.4, 0.7)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*min(c_sz.x, c_sz.y)));
+		float const tcan_height(c_sz.z*rgen.rand_uniform(0.35, 0.55)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*min(c_sz.x, c_sz.y)));
 		cube_t tcan;
 		gen_xy_pos_for_round_obj(tcan, interior, tcan_radius, tcan_height, 1.1*tcan_radius, rgen, 1); // place_at_z1=1
 		room_object_t obj(tcan, TYPE_TCAN, c.room_id, c.dim, c.dir, flags, tot_light_amt, (rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
 		add_if_not_intersecting(obj, expanded_objs, cubes);
 	}
 	// add bottles
-	unsigned const num_bottles(rgen.rand() % 9); // 0-8
+	unsigned const max_bottles(3 + 2*round_fp(c_sz[!c.dim]/c_sz.z)), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
 
 	for (unsigned n = 0; n < num_bottles; ++n) {
-		float const sz_scale(0.7*c_sz.z), bottle_height(sz_scale*rgen.rand_uniform(0.4, 0.7)), bottle_radius(sz_scale*rgen.rand_uniform(0.07, 0.11));
+		float const sz_scale(0.7*c_sz.z), bottle_height(sz_scale*rgen.rand_uniform(0.4, 0.65)), bottle_radius(sz_scale*rgen.rand_uniform(0.07, 0.1));
 		if (min(c_sz.x, c_sz.y) < 3.0*bottle_radius) continue; // cabinet not wide/deep enough to add this bottle
 		cube_t bottle;
 		gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
