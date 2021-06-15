@@ -14,4 +14,4 @@
   pngwtran.c
   pngwutil.c
   Generating Code...
-  libpng.vcxproj -> D:\Frank\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\.\Win32_LIB_Release\libpng.lib
+  libpng.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release\libpng.lib

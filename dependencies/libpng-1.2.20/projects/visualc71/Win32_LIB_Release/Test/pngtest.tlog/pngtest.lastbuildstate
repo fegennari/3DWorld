@@ -1,2 +1,2 @@
-#TargetFrameworkVersion=v4.0:PlatformToolSet=v140:EnableManagedIncrementalBuild=false:VCToolArchitecture=Native32Bit:WindowsTargetPlatformVersion=8.1
-LIB Release|Win32|D:\Frank\Desktop\Frank\CS184\3DWorld\libpng-1.2.20\projects\visualc71\|
+PlatformToolSet=v142:VCToolArchitecture=Native32Bit:VCToolsVersion=14.29.30037:TargetPlatformVersion=10.0.17763.0:
+LIB Release|Win32|E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libpng-1.2.20\projects\visualc71\|
