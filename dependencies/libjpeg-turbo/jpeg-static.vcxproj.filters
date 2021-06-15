@@ -1,0 +1,174 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcapimin.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcapistd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jccoefct.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jccolor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcdctmgr.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jchuff.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcicc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcinit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcmainct.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcmarker.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcmaster.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcomapi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcparam.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcphuff.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcprepct.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcsample.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jctrans.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdapimin.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdapistd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdatadst.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdatasrc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdcoefct.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdcolor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jddctmgr.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdhuff.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdicc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdinput.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdmainct.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdmarker.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdmaster.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdmerge.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdphuff.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdpostct.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdsample.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdtrans.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jerror.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jfdctflt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jfdctfst.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jfdctint.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jidctflt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jidctfst.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jidctint.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jidctred.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jquant1.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jquant2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jutils.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jmemmgr.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jmemnobs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jaricom.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jcarith.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\jdarith.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\simd.dir\$(Configuration)\jsimd_none.obj">
+      <Filter>Object Libraries</Filter>
+    </Object>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Object Libraries">
+      <UniqueIdentifier>{CCE6814B-FCCE-3524-8A05-0CDCEFB2B0DA}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{99BAC066-57D0-36E6-B051-D0D455DA3B5C}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

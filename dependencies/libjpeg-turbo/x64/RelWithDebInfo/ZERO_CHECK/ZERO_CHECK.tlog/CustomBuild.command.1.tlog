@@ -1,0 +1,10 @@
+^E:\FRANK\DESKTOP\FRANK\CS184\3DWORLD_GIT\DEPENDENCIES\LIBJPEG-TURBO\CMAKEFILES\20F6E5EFF935ECB293794D855B3A5BC8\GENERATE.STAMP.RULE
+setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -SE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo -BE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/libjpeg-turbo.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

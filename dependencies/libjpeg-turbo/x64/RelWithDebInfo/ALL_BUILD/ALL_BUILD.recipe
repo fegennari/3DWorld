@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <ProjectOutputs>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\x64\RelWithDebInfo\ZERO_CHECK</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\jpeg62.dll</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\cjpeg.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\cjpeg-static.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\djpeg.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\djpeg-static.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\jcstest.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\jpegtran.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\jpegtran-static.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\md5\RelWithDebInfo\md5cmp.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\rdjpgcom.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\turbojpeg.dll</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\tjbench.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\tjbench-static.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\tjexample.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\tjunittest.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\tjunittest-static.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\RelWithDebInfo\wrjpgcom.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\x64\RelWithDebInfo\ALL_BUILD</FullPath>
+    </ProjectOutput>
+  </ProjectOutputs>
+  <ContentFiles />
+  <SatelliteDlls />
+  <NonRecipeFileRefs />
+</Project>

@@ -1,0 +1,188 @@
+The system is: Windows - 10.0.19042 - AMD64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler:  
+Build flags: 
+Id flags:  
+
+The output was:
+0
+Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Build started 6/14/2021 10:23:05 PM.
+Project "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\3.15.3\CompilerIdC\CompilerIdC.vcxproj" on node 1 (default targets).
+PrepareForBuild:
+  Creating directory "Debug\".
+  Creating directory "Debug\CompilerIdC.tlog\".
+InitializeBuildStatus:
+  Creating "Debug\CompilerIdC.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+ClCompile:
+  E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30037\bin\HostX64\x64\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W0 /Gd /TC /FC /errorReport:queue CMakeCCompilerId.c
+  CMakeCCompilerId.c
+Link:
+  E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30037\bin\HostX64\x64\link.exe /ERRORREPORT:QUEUE /OUT:".\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\CompilerIdC.lib" /MACHINE:X64 Debug\CMakeCCompilerId.obj
+  CompilerIdC.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\3.15.3\CompilerIdC\CompilerIdC.exe
+PostBuildEvent:
+  for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
+  :VCEnd
+  CMAKE_C_COMPILER=E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30037\bin\Hostx64\x64\cl.exe
+FinalizeBuildStatus:
+  Deleting file "Debug\CompilerIdC.tlog\unsuccessfulbuild".
+  Touching "Debug\CompilerIdC.tlog\CompilerIdC.lastbuildstate".
+Done Building Project "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\3.15.3\CompilerIdC\CompilerIdC.vcxproj" (default targets).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.33
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+
+The C compiler identification is MSVC, found in "E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/3.15.3/CompilerIdC/CompilerIdC.exe"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_114de.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  testCCompiler.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_114de.dir\Debug\\" /Fd"cmTC_114de.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\testCCompiler.c"
+  cmTC_114de.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_114de.exe
+
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_8f21b.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CMakeCCompilerABI.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_8f21b.dir\Debug\\" /Fd"cmTC_8f21b.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompilerABI.c"
+  cmTC_8f21b.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_8f21b.exe
+
+
+
+Determining if the include file sys/types.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_830db.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_830db.dir\Debug\\" /Fd"cmTC_830db.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /wd4996 /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_830db.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_830db.exe
+
+
+
+Determining if the include file stdint.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_e4fa5.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_e4fa5.dir\Debug\\" /Fd"cmTC_e4fa5.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /wd4996 /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_e4fa5.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_e4fa5.exe
+
+
+
+Determining if the include file stddef.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_71e80.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_71e80.dir\Debug\\" /Fd"cmTC_71e80.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /wd4996 /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_71e80.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_71e80.exe
+
+
+
+Determining size of size_t passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_c7c5d.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  SIZE_T.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_c7c5d.dir\Debug\\" /Fd"cmTC_c7c5d.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /wd4996 /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CheckTypeSize\SIZE_T.c"
+  cmTC_c7c5d.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_c7c5d.exe
+
+
+
+Determining size of unsigned long passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_40755.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  UNSIGNED_LONG.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_40755.dir\Debug\\" /Fd"cmTC_40755.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /wd4996 /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CheckTypeSize\UNSIGNED_LONG.c"
+  cmTC_40755.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_40755.exe
+
+
+
+Determining if files intrin.h exist passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_15988.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  HAVE_INTRIN_H.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_15988.dir\Debug\\" /Fd"cmTC_15988.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /wd4996 /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CheckIncludeFiles\HAVE_INTRIN_H.c"
+  cmTC_15988.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_15988.exe
+
+
+
+Performing C SOURCE FILE Test INLINE_WORKS succeeded with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_63e2e.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  src.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D INLINE_WORKS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_63e2e.dir\Debug\\" /Fd"cmTC_63e2e.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /wd4996 /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\src.c"
+  cmTC_63e2e.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_63e2e.exe
+
+
+Source file was:
+__forceinline static int foo(void) { return 0; } int main(void) { return foo(); }
+Performing C SOURCE FILE Test HAVE_THREAD_LOCAL succeeded with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/libjpeg-turbo/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_13ab0.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.1+2fd48ab73 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30037 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  src.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D HAVE_THREAD_LOCAL /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_13ab0.dir\Debug\\" /Fd"cmTC_13ab0.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /wd4996 /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\src.c"
+  cmTC_13ab0.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\libjpeg-turbo\CMakeFiles\CMakeTmp\Debug\cmTC_13ab0.exe
+
+
+Source file was:
+__declspec(thread) int i;  int main(void) { i = 0;  return i; }

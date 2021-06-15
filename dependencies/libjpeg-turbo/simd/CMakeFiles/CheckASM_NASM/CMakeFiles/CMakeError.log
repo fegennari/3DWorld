@@ -1,0 +1,16 @@
+Checking whether the ASM_NASM compiler is GNU using "--version" did not match "(GNU assembler)|(GCC)|(Free Software Foundation)":
+Checking whether the ASM_NASM compiler is Clang using "--version" did not match "(clang version)":
+Checking whether the ASM_NASM compiler is AppleClang using "--version" did not match "(Apple LLVM version)":
+Checking whether the ASM_NASM compiler is ARMClang using "--version" did not match "armclang":
+Checking whether the ASM_NASM compiler is HP using "-V" did not match "HP C":
+Checking whether the ASM_NASM compiler is Intel using "--version" did not match "(ICC)":
+Checking whether the ASM_NASM compiler is SunPro using "-V" did not match "Sun C":
+Checking whether the ASM_NASM compiler is XL using "-qversion" did not match "XL C":
+Checking whether the ASM_NASM compiler is MSVC using "-?" did not match "Microsoft":
+Checking whether the ASM_NASM compiler is TI using "-h" did not match "Texas Instruments":
+Checking whether the ASM_NASM compiler is IAR using "" did not match "IAR Assembler":
+Checking whether the ASM_NASM compiler is ARMCC using "" did not match "(ARM Compiler)|(ARM Assembler)":
+Checking whether the ASM_NASM compiler is NASM using "-v" did not match "(NASM version)":
+Checking whether the ASM_NASM compiler is YASM using "--version" did not match "(yasm)":
+Checking whether the ASM_NASM compiler is ADSP using "-version" did not match "Analog Devices":
+Checking whether the ASM_NASM compiler is QCC using "-V" did not match "gcc_nto":
