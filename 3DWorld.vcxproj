@@ -264,7 +264,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>dependencies\jpeg-9a;dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\libjpeg-turbo</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -296,7 +296,7 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>dependencies\jpeg-9a\Release;dependencies\glew-2.0.0\lib\Release\x64;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x64\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\libjpeg-turbo\RelWithDebInfo</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;LIBCMT;LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
@@ -315,7 +315,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>dependencies\jpeg-9a;dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\libjpeg-turbo</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -335,6 +335,7 @@
       <AdditionalOptions>/openmp %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>Default</LanguageStandard>
       <OpenMPSupport>true</OpenMPSupport>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -345,7 +346,7 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;libjpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;glut64.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>dependencies\jpeg-9a\Release;dependencies\glew-2.0.0\lib\Release\x64;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x64\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\libjpeg-turbo\RelWithDebInfo</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
@@ -417,35 +418,36 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>dependencies\jpeg-9a;dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>dependencies\meshoptimizer\src;dependencies\glew-2.0.0\include;Targa;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;dependencies\freealut\include;dependencies\libpng-1.2.20;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\glm;dependencies\freeglut-2.8.1\include\GL;dependencies\gli;src;dependencies\libjpeg-turbo</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <PrecompiledHeaderOutputFile>.\Release/3DWorld.pch</PrecompiledHeaderOutputFile>
       <AssemblerListingLocation>.\Release/</AssemblerListingLocation>
       <ObjectFileName>.\Release/</ObjectFileName>
       <ProgramDataBaseFileName>.\Release/</ProgramDataBaseFileName>
-      <BrowseInformation>true</BrowseInformation>
+      <BrowseInformation>false</BrowseInformation>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <CompileAs>Default</CompileAs>
       <AdditionalOptions>/openmp %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>Default</LanguageStandard>
       <OpenMPSupport>true</OpenMPSupport>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;libjpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;glut64.lib</AdditionalDependencies>
+      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Release/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>dependencies\jpeg-9a\Release;dependencies\glew-2.0.0\lib\Release\x64;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x64\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\libjpeg-turbo\RelWithDebInfo</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <SubSystem>Console</SubSystem>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
