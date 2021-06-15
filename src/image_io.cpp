@@ -713,8 +713,8 @@ void texture_t::deferred_load_and_bind() {
 
 	defer_load();
 
-	switch (defer_load_type) {
 #ifdef ENABLE_DDS
+	switch (defer_load_type) {
 	case DEFER_TYPE_DDS:
 		{
 			//cout << "Loading DDS image " << name << endl;
@@ -749,8 +749,8 @@ void texture_t::deferred_load_and_bind() {
 	default:
 		cerr << "Unhandled texture defer type " << defer_load_type << endl;
 		exit(1);
-#endif
 	}
+#endif
 }
 
 
