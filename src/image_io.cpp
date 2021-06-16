@@ -3,6 +3,7 @@
 // 10/14/13
 #include "targa.h"
 #include "textures.h"
+//#include "profiler.h"
 #include <fstream> // for filebuf
 
 using namespace std;
@@ -121,6 +122,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			}
 		}
 		unsigned const want_alpha_channel(ncolors == 4), want_luminance(ncolors == 1);
+		//highres_timer_t timer("Load " + get_file_extension(name, 0, 1)); // 0.1s bmp, 6.3s jpeg, 4.4s png, 0.3s tga, 0.2s tiff
 
 		switch (format) {
 		case 0: case 1: case 2: case 3: load_raw_bmp(index, allow_diff_width_height, allow_two_byte_grayscale); break; // raw
@@ -134,6 +136,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			cerr << "Unsupported image format: " << format << endl;
 			exit(1);
 		}
+		//timer.end();
 		// defer this check until we actually need to access the data, in case we want to actually do the load on the fly later
 		//assert(is_allocated());
 		assert(is_loaded());
