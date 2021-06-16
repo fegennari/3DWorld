@@ -26,6 +26,7 @@ textures/fabrics
 textures/papers
 dependencies/meshoptimizer/src/*.o
 dependencies/tracy*
+dependencies/libjpeg-turbo-32
 house/snow.wind.map
 TAGS
 *~
