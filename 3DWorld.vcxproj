@@ -180,7 +180,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
+      <AdditionalDependencies>jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>dependencies\jpeg-9a\Release;dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;dependencies\freealut\admin\VisualStudioDotNET\alut\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86</AdditionalLibraryDirectories>
@@ -237,7 +237,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib;Advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib;Advapi32.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>dependencies\jpeg-9a\Release;dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;dependencies\freealut\admin\VisualStudioDotNET\alut\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86</AdditionalLibraryDirectories>
@@ -293,7 +293,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
+      <AdditionalDependencies>jpeg-static.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;tiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\libjpeg-turbo\RelWithDebInfo</AdditionalLibraryDirectories>
@@ -343,7 +343,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;libjpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;glut64.lib</AdditionalDependencies>
+      <AdditionalDependencies>libjpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;glut64.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\libjpeg-turbo\RelWithDebInfo</AdditionalLibraryDirectories>
@@ -393,7 +393,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
+      <AdditionalDependencies>jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Release/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>dependencies\jpeg-9a\Release;dependencies\glew-2.0.0\lib\Release\Win32;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;dependencies\freealut\admin\VisualStudioDotNET\alut\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win32_LIB_Release;dependencies\zlib-1.2.1;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x86</AdditionalLibraryDirectories>
@@ -444,7 +444,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
+      <AdditionalDependencies>jpeg-static.lib;libpng.lib;zlibstat.lib;openal32.lib;alut.lib;glew32.lib;tiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Release/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>dependencies\glew-2.0.0\lib\Release\x64;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win64;dependencies\freealut\admin\VisualStudioDotNET\x64\Debug;dependencies\libpng-1.2.20\projects\visualc71\Win64_LIB_Release;dependencies\zlib-1.2.11\contrib\vstudio\vc14\x64\ZlibStatRelease;dependencies\tiff-4.0.3\libtiff;dependencies\freeglut-2.8.1\lib\x64\Debug;dependencies\libjpeg-turbo\RelWithDebInfo</AdditionalLibraryDirectories>
