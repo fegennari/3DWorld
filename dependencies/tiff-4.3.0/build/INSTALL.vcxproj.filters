@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\f5e5fdbb830a2ce0e20f2281671b46d4\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{B988D9C0-3B9C-395D-BC87-AEB9AEEEBDBF}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

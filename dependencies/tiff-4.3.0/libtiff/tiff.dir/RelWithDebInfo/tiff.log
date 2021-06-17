@@ -1,0 +1,83 @@
+﻿  Building Custom Rule E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/libtiff/CMakeLists.txt
+  tif_aux.c
+  tif_close.c
+  tif_codec.c
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_codec.c(117,9): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  tif_color.c
+  tif_compress.c
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_compress.c(209,9): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  tif_dir.c
+  tif_dirinfo.c
+  tif_dirread.c
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_dirread.c(5748,24): warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  tif_dirwrite.c
+  tif_dumpmode.c
+  tif_error.c
+  tif_extension.c
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_extension.c(105,11): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  tif_fax3.c
+  tif_fax3sm.c
+  tif_flush.c
+  tif_getimage.c
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(82,3): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(93,4): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(98,17): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(111,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(122,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(146,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(156,6): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(162,6): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(171,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(179,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(184,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(189,33): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(198,33): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(207,4): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(305,4): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(355,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(363,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(373,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(387,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(424,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(434,6): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(439,6): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(447,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(457,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(462,5): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(473,4): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(484,4): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c(489,4): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  tif_jbig.c
+  tif_jpeg.c
+  tif_jpeg_12.c
+  tif_lerc.c
+  Generating Code...
+  Compiling...
+  tif_luv.c
+  tif_lzma.c
+  tif_lzw.c
+  tif_next.c
+  tif_ojpeg.c
+  tif_open.c
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_open.c(125,8): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  tif_packbits.c
+  tif_pixarlog.c
+  tif_predict.c
+  tif_print.c
+  tif_read.c
+  tif_strip.c
+  tif_swab.c
+  tif_thunder.c
+  tif_tile.c
+  tif_version.c
+  tif_warning.c
+  tif_webp.c
+  tif_write.c
+  tif_zip.c
+  Generating Code...
+  Compiling...
+  tif_zstd.c
+  tif_win32.c
+  Generating Code...
+     Creating library E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/libtiff/RelWithDebInfo/tiff.lib and object E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/libtiff/RelWithDebInfo/tiff.exp
+  tiff.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\RelWithDebInfo\tiff.dll

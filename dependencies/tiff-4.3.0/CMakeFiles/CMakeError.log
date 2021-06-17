@@ -1,0 +1,455 @@
+Performing C SOURCE FILE Test HAVE_LD_VERSION_SCRIPT failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_93a67.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D HAVE_LD_VERSION_SCRIPT /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_93a67.dir\Debug\\" /Fd"cmTC_93a67.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue  -Wl,--version-script=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/conftest.map "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\src.c"
+cl : command line error D8021: invalid numeric argument '/Wl,--version-script=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/conftest.map' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_93a67.vcxproj]
+
+
+Source file was:
+int main(void){return 0;}
+Determining if the include file strings.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_843b6.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_843b6.dir\Debug\\" /Fd"cmTC_843b6.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'strings.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_843b6.vcxproj]
+
+
+
+Determining if the include file sys/time.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_5fe0c.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_5fe0c.dir\Debug\\" /Fd"cmTC_5fe0c.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'sys/time.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_5fe0c.vcxproj]
+
+
+
+Determining if the include file unistd.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_b3223.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_b3223.dir\Debug\\" /Fd"cmTC_b3223.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'unistd.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_b3223.vcxproj]
+
+
+
+Determining if the getopt exist failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_240ac.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckSymbolExists.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_240ac.dir\Debug\\" /Fd"cmTC_240ac.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckSymbolExists.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckSymbolExists.c(2,10): fatal error C1083: Cannot open include file: 'unistd.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_240ac.vcxproj]
+
+
+File E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <unistd.h>
+#include <stdio.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef getopt
+  return ((int*)(&getopt))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the optarg exist failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_e5113.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckSymbolExists.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_e5113.dir\Debug\\" /Fd"cmTC_e5113.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckSymbolExists.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckSymbolExists.c(2,10): fatal error C1083: Cannot open include file: 'getopt.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_e5113.vcxproj]
+
+
+File E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <getopt.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef optarg
+  return ((int*)(&optarg))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the mmap exist failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_51c2c.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckSymbolExists.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_51c2c.dir\Debug\\" /Fd"cmTC_51c2c.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckSymbolExists.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckSymbolExists.c(2,10): fatal error C1083: Cannot open include file: 'sys/mman.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_51c2c.vcxproj]
+
+
+File E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <sys/mman.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef mmap
+  return ((int*)(&mmap))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the setmode exist failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_b99b9.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckSymbolExists.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_b99b9.dir\Debug\\" /Fd"cmTC_b99b9.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckSymbolExists.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckSymbolExists.c(2,10): fatal error C1083: Cannot open include file: 'unistd.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_b99b9.vcxproj]
+
+
+File E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <unistd.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef setmode
+  return ((int*)(&setmode))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the include file GL/gl.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_f4da0.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_f4da0.dir\Debug\\" /Fd"cmTC_f4da0.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,25): error C2146: syntax error: missing ',' before identifier 'glAccum' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,33): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,58): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,25): error C2146: syntax error: missing ',' before identifier 'glAlphaFunc' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,37): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,63): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,21): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,30): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,30): error C2146: syntax error: missing ',' before identifier 'glAreTexturesResident' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,52): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,109): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,25): error C2146: syntax error: missing ',' before identifier 'glArrayElement' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,40): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,48): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,25): error C2146: syntax error: missing ',' before identifier 'glBegin' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,33): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,45): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,25): error C2146: syntax error: missing ',' before identifier 'glBindTexture' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,39): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,69): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,25): error C2146: syntax error: missing ',' before identifier 'glBitmap' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,34): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,147): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,25): error C2146: syntax error: missing ',' before identifier 'glBlendFunc' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,37): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,68): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,25): error C2146: syntax error: missing ',' before identifier 'glCallList' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,36): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,48): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,25): error C2146: syntax error: missing ',' before identifier 'glCallLists' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,37): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,81): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,25): error C2146: syntax error: missing ',' before identifier 'glClear' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,33): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,49): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,25): error C2146: syntax error: missing ',' before identifier 'glClearAccum' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,38): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,94): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,25): error C2146: syntax error: missing ',' before identifier 'glClearColor' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,38): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,98): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,25): error C2146: syntax error: missing ',' before identifier 'glClearDepth' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,38): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,53): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,25): error C2146: syntax error: missing ',' before identifier 'glClearIndex' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,38): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,48): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,25): error C2146: syntax error: missing ',' before identifier 'glClearStencil' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,40): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,48): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,25): error C2146: syntax error: missing ',' before identifier 'glClipPlane' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,37): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,76): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,25): error C2146: syntax error: missing ',' before identifier 'glColor3b' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,35): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,73): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,25): error C2146: syntax error: missing ',' before identifier 'glColor3bv' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,36): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,52): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,25): error C2146: syntax error: missing ',' before identifier 'glColor3d' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,35): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,79): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1177,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1177,16): fatal error C1003: error count exceeds 100; stopping compilation [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_f4da0.vcxproj]
+
+
+
+Determining if the include file GL/glu.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_650d9.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_650d9.dir\Debug\\" /Fd"cmTC_650d9.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,25): error C2146: syntax error: missing ',' before identifier 'glAccum' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,33): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1157,58): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,25): error C2146: syntax error: missing ',' before identifier 'glAlphaFunc' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,37): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1158,63): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,21): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,30): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,30): error C2146: syntax error: missing ',' before identifier 'glAreTexturesResident' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,52): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1159,109): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,25): error C2146: syntax error: missing ',' before identifier 'glArrayElement' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,40): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1160,48): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,25): error C2146: syntax error: missing ',' before identifier 'glBegin' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,33): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1161,45): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,25): error C2146: syntax error: missing ',' before identifier 'glBindTexture' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,39): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1162,69): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,25): error C2146: syntax error: missing ',' before identifier 'glBitmap' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,34): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1163,147): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,25): error C2146: syntax error: missing ',' before identifier 'glBlendFunc' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,37): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1164,68): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,25): error C2146: syntax error: missing ',' before identifier 'glCallList' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,36): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1165,48): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,25): error C2146: syntax error: missing ',' before identifier 'glCallLists' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,37): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1166,81): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,25): error C2146: syntax error: missing ',' before identifier 'glClear' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,33): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1167,49): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,25): error C2146: syntax error: missing ',' before identifier 'glClearAccum' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,38): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1168,94): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,25): error C2146: syntax error: missing ',' before identifier 'glClearColor' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,38): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1169,98): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,25): error C2146: syntax error: missing ',' before identifier 'glClearDepth' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,38): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1170,53): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,25): error C2146: syntax error: missing ',' before identifier 'glClearIndex' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,38): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1171,48): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,25): error C2146: syntax error: missing ',' before identifier 'glClearStencil' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,40): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1172,48): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,25): error C2146: syntax error: missing ',' before identifier 'glClipPlane' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,37): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1173,76): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,25): error C2146: syntax error: missing ',' before identifier 'glColor3b' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,35): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1174,73): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,25): error C2146: syntax error: missing ',' before identifier 'glColor3bv' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,36): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1175,52): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,25): error C2085: 'APIENTRY': not in formal parameter list [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,25): error C2146: syntax error: missing ',' before identifier 'glColor3d' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,35): error C2143: syntax error: missing ';' before '(' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1176,79): error C2059: syntax error: ')' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1177,16): error C2054: expected '(' to follow 'WINGDIAPI' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.17763.0\um\GL/gl.h(1177,16): fatal error C1003: error count exceeds 100; stopping compilation [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_650d9.vcxproj]
+
+
+
+Determining if the include file GL/glut.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_10ce8.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_10ce8.dir\Debug\\" /Fd"cmTC_10ce8.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'GL/glut.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_10ce8.vcxproj]
+
+
+
+Determining if the include file GLUT/glut.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_6aff6.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_6aff6.dir\Debug\\" /Fd"cmTC_6aff6.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'GLUT/glut.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_6aff6.vcxproj]
+
+
+
+Determining if the include file OpenGL/gl.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_ad59a.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_ad59a.dir\Debug\\" /Fd"cmTC_ad59a.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'OpenGL/gl.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_ad59a.vcxproj]
+
+
+
+Determining if the include file OpenGL/glu.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_4165b.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.10.2+857e5a733 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30038.1 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_4165b.dir\Debug\\" /Fd"cmTC_4165b.dir\Debug\vc142.pdb" /external:env:EXTERNAL_INCLUDE /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'OpenGL/glu.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\CMakeTmp\cmTC_4165b.vcxproj]
+
+
+

@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_aux.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_close.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_codec.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_color.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_compress.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_dir.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_dirinfo.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_dirread.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_dirwrite.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_dumpmode.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_error.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_extension.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_fax3.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_fax3sm.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_flush.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_getimage.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_jbig.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_jpeg.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_jpeg_12.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_lerc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_luv.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_lzma.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_lzw.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_next.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_ojpeg.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_open.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_packbits.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_pixarlog.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_predict.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_print.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_read.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_strip.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_swab.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_thunder.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_tile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_version.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_warning.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_webp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_write.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_zip.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_zstd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tiff.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tiffio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tiffvers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tiffconf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\t4.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_dir.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_predict.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tiffiop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\uvcode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\tif_config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\libtiff\libtiff.def">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{21CB3453-49AF-3A05-B309-7A785ED0ACAB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{EAD86477-56EF-30B1-87BE-F42E2CD78771}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

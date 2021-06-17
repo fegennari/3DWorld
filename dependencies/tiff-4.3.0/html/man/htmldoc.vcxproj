@@ -1,0 +1,233 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{36DFF4A8-D9CA-34E2-A87A-75498FFCB753}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>htmldoc</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\CMakeFiles\b6bea26d15b7e365a07e0d4edcc4737f\htmldoc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -DMANSRCDIR=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/man -DHTMLMANDIR=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man -DINDEXFILE=index.html -DDOCFILES=libtiff.3tiff.html^TIFFbuffer.3tiff.html^TIFFClose.3tiff.html^TIFFcodec.3tiff.html^TIFFcolor.3tiff.html^TIFFDataWidth.3tiff.html^TIFFError.3tiff.html^TIFFFieldDataType.3tiff.html^TIFFFieldName.3tiff.html^TIFFFieldPassCount.3tiff.html^TIFFFieldReadCount.3tiff.html^TIFFFieldTag.3tiff.html^TIFFFieldWriteCount.3tiff.html^TIFFFlush.3tiff.html^TIFFGetField.3tiff.html^TIFFmemory.3tiff.html^TIFFOpen.3tiff.html^TIFFPrintDirectory.3tiff.html^TIFFquery.3tiff.html^TIFFReadDirectory.3tiff.html^TIFFReadEncodedStrip.3tiff.html^TIFFReadEncodedTile.3tiff.html^TIFFReadRawStrip.3tiff.html^TIFFReadRawTile.3tiff.html^TIFFReadRGBAImage.3tiff.html^TIFFReadRGBAStrip.3tiff.html^TIFFReadRGBATile.3tiff.html^TIFFReadScanline.3tiff.html^TIFFReadTile.3tiff.html^TIFFRGBAImage.3tiff.html^TIFFSetDirectory.3tiff.html^TIFFSetField.3tiff.html^TIFFsize.3tiff.html^TIFFstrip.3tiff.html^TIFFswab.3tiff.html^TIFFtile.3tiff.html^TIFFWarning.3tiff.html^TIFFWriteDirectory.3tiff.html^TIFFWriteEncodedStrip.3tiff.html^TIFFWriteEncodedTile.3tiff.html^TIFFWriteRawStrip.3tiff.html^TIFFWriteRawTile.3tiff.html^TIFFWriteScanline.3tiff.html^TIFFWriteTile.3tiff.html^fax2ps.1.html^fax2tiff.1.html^pal2rgb.1.html^ppm2tiff.1.html^raw2tiff.1.html^tiff2bw.1.html^tiff2pdf.1.html^tiff2ps.1.html^tiff2rgba.1.html^tiffcmp.1.html^tiffcp.1.html^tiffcrop.1.html^tiffdither.1.html^tiffdump.1.html^tiffgt.1.html^tiffinfo.1.html^tiffmedian.1.html^tiffset.1.html^tiffsplit.1.html -P E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/HtmlDoc.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeFiles\htmldoc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'"></Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -DMANSRCDIR=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/man -DHTMLMANDIR=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man -DINDEXFILE=index.html -DDOCFILES=libtiff.3tiff.html^TIFFbuffer.3tiff.html^TIFFClose.3tiff.html^TIFFcodec.3tiff.html^TIFFcolor.3tiff.html^TIFFDataWidth.3tiff.html^TIFFError.3tiff.html^TIFFFieldDataType.3tiff.html^TIFFFieldName.3tiff.html^TIFFFieldPassCount.3tiff.html^TIFFFieldReadCount.3tiff.html^TIFFFieldTag.3tiff.html^TIFFFieldWriteCount.3tiff.html^TIFFFlush.3tiff.html^TIFFGetField.3tiff.html^TIFFmemory.3tiff.html^TIFFOpen.3tiff.html^TIFFPrintDirectory.3tiff.html^TIFFquery.3tiff.html^TIFFReadDirectory.3tiff.html^TIFFReadEncodedStrip.3tiff.html^TIFFReadEncodedTile.3tiff.html^TIFFReadRawStrip.3tiff.html^TIFFReadRawTile.3tiff.html^TIFFReadRGBAImage.3tiff.html^TIFFReadRGBAStrip.3tiff.html^TIFFReadRGBATile.3tiff.html^TIFFReadScanline.3tiff.html^TIFFReadTile.3tiff.html^TIFFRGBAImage.3tiff.html^TIFFSetDirectory.3tiff.html^TIFFSetField.3tiff.html^TIFFsize.3tiff.html^TIFFstrip.3tiff.html^TIFFswab.3tiff.html^TIFFtile.3tiff.html^TIFFWarning.3tiff.html^TIFFWriteDirectory.3tiff.html^TIFFWriteEncodedStrip.3tiff.html^TIFFWriteEncodedTile.3tiff.html^TIFFWriteRawStrip.3tiff.html^TIFFWriteRawTile.3tiff.html^TIFFWriteScanline.3tiff.html^TIFFWriteTile.3tiff.html^fax2ps.1.html^fax2tiff.1.html^pal2rgb.1.html^ppm2tiff.1.html^raw2tiff.1.html^tiff2bw.1.html^tiff2pdf.1.html^tiff2ps.1.html^tiff2rgba.1.html^tiffcmp.1.html^tiffcp.1.html^tiffcrop.1.html^tiffdither.1.html^tiffdump.1.html^tiffgt.1.html^tiffinfo.1.html^tiffmedian.1.html^tiffset.1.html^tiffsplit.1.html -P E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/HtmlDoc.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeFiles\htmldoc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'"></Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -DMANSRCDIR=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/man -DHTMLMANDIR=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man -DINDEXFILE=index.html -DDOCFILES=libtiff.3tiff.html^TIFFbuffer.3tiff.html^TIFFClose.3tiff.html^TIFFcodec.3tiff.html^TIFFcolor.3tiff.html^TIFFDataWidth.3tiff.html^TIFFError.3tiff.html^TIFFFieldDataType.3tiff.html^TIFFFieldName.3tiff.html^TIFFFieldPassCount.3tiff.html^TIFFFieldReadCount.3tiff.html^TIFFFieldTag.3tiff.html^TIFFFieldWriteCount.3tiff.html^TIFFFlush.3tiff.html^TIFFGetField.3tiff.html^TIFFmemory.3tiff.html^TIFFOpen.3tiff.html^TIFFPrintDirectory.3tiff.html^TIFFquery.3tiff.html^TIFFReadDirectory.3tiff.html^TIFFReadEncodedStrip.3tiff.html^TIFFReadEncodedTile.3tiff.html^TIFFReadRawStrip.3tiff.html^TIFFReadRawTile.3tiff.html^TIFFReadRGBAImage.3tiff.html^TIFFReadRGBAStrip.3tiff.html^TIFFReadRGBATile.3tiff.html^TIFFReadScanline.3tiff.html^TIFFReadTile.3tiff.html^TIFFRGBAImage.3tiff.html^TIFFSetDirectory.3tiff.html^TIFFSetField.3tiff.html^TIFFsize.3tiff.html^TIFFstrip.3tiff.html^TIFFswab.3tiff.html^TIFFtile.3tiff.html^TIFFWarning.3tiff.html^TIFFWriteDirectory.3tiff.html^TIFFWriteEncodedStrip.3tiff.html^TIFFWriteEncodedTile.3tiff.html^TIFFWriteRawStrip.3tiff.html^TIFFWriteRawTile.3tiff.html^TIFFWriteScanline.3tiff.html^TIFFWriteTile.3tiff.html^fax2ps.1.html^fax2tiff.1.html^pal2rgb.1.html^ppm2tiff.1.html^raw2tiff.1.html^tiff2bw.1.html^tiff2pdf.1.html^tiff2ps.1.html^tiff2rgba.1.html^tiffcmp.1.html^tiffcp.1.html^tiffcrop.1.html^tiffdither.1.html^tiffdump.1.html^tiffgt.1.html^tiffinfo.1.html^tiffmedian.1.html^tiffset.1.html^tiffsplit.1.html -P E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/HtmlDoc.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeFiles\htmldoc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'"></Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -DMANSRCDIR=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/man -DHTMLMANDIR=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man -DINDEXFILE=index.html -DDOCFILES=libtiff.3tiff.html^TIFFbuffer.3tiff.html^TIFFClose.3tiff.html^TIFFcodec.3tiff.html^TIFFcolor.3tiff.html^TIFFDataWidth.3tiff.html^TIFFError.3tiff.html^TIFFFieldDataType.3tiff.html^TIFFFieldName.3tiff.html^TIFFFieldPassCount.3tiff.html^TIFFFieldReadCount.3tiff.html^TIFFFieldTag.3tiff.html^TIFFFieldWriteCount.3tiff.html^TIFFFlush.3tiff.html^TIFFGetField.3tiff.html^TIFFmemory.3tiff.html^TIFFOpen.3tiff.html^TIFFPrintDirectory.3tiff.html^TIFFquery.3tiff.html^TIFFReadDirectory.3tiff.html^TIFFReadEncodedStrip.3tiff.html^TIFFReadEncodedTile.3tiff.html^TIFFReadRawStrip.3tiff.html^TIFFReadRawTile.3tiff.html^TIFFReadRGBAImage.3tiff.html^TIFFReadRGBAStrip.3tiff.html^TIFFReadRGBATile.3tiff.html^TIFFReadScanline.3tiff.html^TIFFReadTile.3tiff.html^TIFFRGBAImage.3tiff.html^TIFFSetDirectory.3tiff.html^TIFFSetField.3tiff.html^TIFFsize.3tiff.html^TIFFstrip.3tiff.html^TIFFswab.3tiff.html^TIFFtile.3tiff.html^TIFFWarning.3tiff.html^TIFFWriteDirectory.3tiff.html^TIFFWriteEncodedStrip.3tiff.html^TIFFWriteEncodedTile.3tiff.html^TIFFWriteRawStrip.3tiff.html^TIFFWriteRawTile.3tiff.html^TIFFWriteScanline.3tiff.html^TIFFWriteTile.3tiff.html^fax2ps.1.html^fax2tiff.1.html^pal2rgb.1.html^ppm2tiff.1.html^raw2tiff.1.html^tiff2bw.1.html^tiff2pdf.1.html^tiff2ps.1.html^tiff2rgba.1.html^tiffcmp.1.html^tiffcp.1.html^tiffcrop.1.html^tiffdither.1.html^tiffdump.1.html^tiffgt.1.html^tiffinfo.1.html^tiffmedian.1.html^tiffset.1.html^tiffsplit.1.html -P E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/HtmlDoc.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeFiles\htmldoc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -SE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0 -BE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0 --check-stamp-file E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -SE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0 -BE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0 --check-stamp-file E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -SE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0 -BE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0 --check-stamp-file E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -SE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0 -BE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0 --check-stamp-file E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/tiff-4.3.0/html/man/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\html\man\CMakeFiles\htmldoc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\tiff-4.3.0\ZERO_CHECK.vcxproj">
+      <Project>{942911F7-0D25-384C-B439-FB284EA06278}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
