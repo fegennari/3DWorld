@@ -641,8 +641,8 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 		cerr << "Error opening tiff file " << name << " for read." << endl;
 		exit(1);
 	}
-	uint32 w(0), h(0);
-	uint16 bit_depth(0), config(0);
+	uint32_t w(0), h(0);
+	uint16_t bit_depth(0), config(0);
 	TIFFGetField(tif, TIFFTAG_IMAGEWIDTH,    &w);
 	TIFFGetField(tif, TIFFTAG_IMAGELENGTH,   &h);
 	TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bit_depth);
@@ -675,7 +675,7 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 	}
 	else {
 		if (ncolors == 0) {ncolors = 4;} // 3?
-		uint32 *raster = (uint32 *)_TIFFmalloc(num_pixels() * sizeof(uint32));
+		uint32_t *raster = (uint32_t *)_TIFFmalloc(num_pixels() * sizeof(uint32_t));
 		assert(raster != NULL);
 
 		if (!TIFFReadRGBAImage(tif, width, height, raster, 0)) {
