@@ -28,6 +28,32 @@ void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float he
 	set_cube_zvals(C, place_z, place_z+height);
 }
 
+void add_boxes_to_space(room_object_t const &c, vector<room_object_t> &objects, cube_t const &bounds, vect_cube_t &cubes, rand_gen_t &rgen,
+	unsigned num_boxes, float xy_scale, float hmin, float hmax, bool allow_crates, unsigned flags)
+{
+	room_object_t C(c);
+	C.flags = flags; // Note: also clears open flag
+	vector3d sz;
+	point center;
+
+	for (unsigned n = 0; n < num_boxes; ++n) {
+		for (unsigned d = 0; d < 2; ++d) {
+			sz    [d] = xy_scale*rgen.rand_uniform(0.5, 1.0); // x,y half width
+			center[d] = rgen.rand_uniform(bounds.d[d][0]+sz[d], bounds.d[d][1]-sz[d]); // randomly placed within the bounds of the closet
+		}
+		C.set_from_point(center);
+		set_cube_zvals(C, bounds.z1(), (bounds.z1() + rgen.rand_uniform(hmin, hmax)));
+		C.expand_by_xy(sz);
+		if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
+		C.color  = gen_box_color(rgen);
+		C.dim    = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
+		C.obj_id = rgen.rand(); // used to select crate texture and box contents
+		C.type   = ((!allow_crates || rgen.rand_bool()) ? (room_object)TYPE_BOX : (room_object)TYPE_CRATE);
+		objects.push_back(C);
+		cubes.push_back(C);
+	} // for n
+}
+
 cube_t get_closet_interior_space(room_object_t const &c, cube_t const cubes[5]) {
 	cube_t interior(c);
 	if (!cubes[1].is_all_zeros()) {interior.d[!c.dim][0] = cubes[1].d[!c.dim][1];} // left  side (if wall exists)
@@ -68,28 +94,10 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 	c.set_rand_gen_state(rgen);
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
 	vect_cube_t &cubes(get_temp_cubes());
-	room_object_t C(c);
-	C.flags = flags; // Note: also clears open flag
-	C.type  = TYPE_BOX;
+	add_boxes_to_space(c, objects, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, flags); // allow_crates=0
 	vector3d sz;
 	point center;
 
-	for (unsigned n = 0; n < num_boxes; ++n) {
-		for (unsigned d = 0; d < 2; ++d) {
-			sz    [d] = box_sz*rgen.rand_uniform(0.5, 1.0); // x,y half width
-			center[d] = rgen.rand_uniform(interior.d[d][0]+sz[d], interior.d[d][1]-sz[d]); // randomly placed within the bounds of the closet
-		}
-		C.set_from_point(center);
-		set_cube_zvals(C, interior.z1(), (interior.z1() + box_sz*rgen.rand_uniform(0.8, 1.5)));
-		C.expand_by_xy(sz);
-		if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-		C.color  = gen_box_color(rgen);
-		C.dim    = rgen.rand_bool();
-		C.dir    = rgen.rand_bool();
-		C.obj_id = n+1; // make it unique so that contents are unique
-		objects.push_back(C);
-		cubes.push_back(C);
-	} // for n
 	if (!c.is_small_closet()) { // larger closets have more random items
 		if (rgen.rand_bool()) { // maybe add a lamp in the closet
 			float const height(0.25*window_vspacing), width(height*get_lamp_width_scale()), radius(0.5*width);
@@ -194,37 +202,20 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	bool const is_house(c.is_house());
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness);
-	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.5 : 1.0);
+	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.5 : 1.0), box_zscale(shelf_clearance*sz_scale);
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
-	vect_cube_t &cubes(get_temp_cubes());
 
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		cube_t const &S(shelves[s]);
+		vect_cube_t &cubes(get_temp_cubes());
 		room_object_t C(c);
 		vector3d sz;
-		cubes.clear();
 		// add crates/boxes
 		unsigned const num_boxes(rgen.rand() % (is_house ? 8 : 13)); // 0-12
-
-		for (unsigned n = 0; n < num_boxes; ++n) {
-			point center;
-
-			for (unsigned d = 0; d < 2; ++d) {
-				sz[d] = 0.5*width*sz_scale*(is_house ? 1.5 : 1.0)*rgen.rand_uniform(0.45, 0.8); // x,y half width
-				center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]); // randomly placed within the bounds of the shelf
-			}
-			C.set_from_point(center);
-			set_cube_zvals(C, S.z2(), (S.z2() + shelf_clearance*sz_scale*rgen.rand_uniform(0.4, 0.98)));
-			C.expand_by_xy(sz);
-			if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
-			C.color  = gen_box_color(rgen);
-			C.dim    = c.dim ^ bool(rgen.rand()&3) ^ 1; // make the box label face outside 75% of the time
-			C.obj_id = rgen.rand(); // used to select crate texture and box contents
-			C.type   = ((is_house || rgen.rand_bool()) ? TYPE_BOX : TYPE_CRATE);
-			objects.push_back(C);
-			cubes.push_back(C);
-		} // for n
+		cube_t bounds(S);
+		bounds.z1() = S.z2(); // place on top of shelf
+		add_boxes_to_space(c, objects, bounds, cubes, rgen, num_boxes, 0.42*width*sz_scale*(is_house ? 1.5 : 1.0), 0.4*box_zscale, 0.98*box_zscale, 1, c.flags); // allow_crates=1
 		// add computers; what about monitors?
 		bool const top_shelf(s+1 == num_shelves);
 		float const h_val(0.21*1.1*dz), cheight(0.75*h_val), cwidth(0.44*cheight), cdepth(0.9*cheight); // fixed AR=0.44 to match the texture
