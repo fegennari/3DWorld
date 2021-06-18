@@ -1558,8 +1558,9 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		else {gen_sound_thread_safe(SOUND_SLIDING, building.local_to_camera_space(drawer_center), 0.5);}
 		register_building_sound(drawer_center, 0.4);
 		
-		if (has_doors) {
-			expand_object(obj); // expand any items in the cabinet so that the player can pick them up
+		if (has_doors) { // expand any items in the cabinet so that the player can pick them up
+			// Note: expanding cabinets by opening a single door will allow the player to take items from anywhere in the cabinet, even if behind a closed door
+			expand_object(obj);
 			update_draw_state_for_room_object(obj, building);
 		}
 		else {

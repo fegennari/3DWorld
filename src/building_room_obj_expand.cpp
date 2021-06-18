@@ -147,7 +147,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	c.set_rand_gen_state(rgen);
 	rgen.rand_mix();
 	vect_cube_t &cubes(get_temp_cubes());
-	float const wall_thickness(0.04*c.dz()), tot_light_amt(0.0);
+	float const wall_thickness(0.04*c.dz()), light_amt(0.0);
 	cube_t interior(c), dishwasher;
 	interior.expand_by(-wall_thickness);
 	vector3d const c_sz(interior.get_size());
@@ -163,22 +163,41 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		float const tcan_height(c_sz.z*rgen.rand_uniform(0.35, 0.55)), tcan_radius(min(tcan_height/rgen.rand_uniform(1.6, 2.8), 0.4f*min(c_sz.x, c_sz.y)));
 		cube_t tcan;
 		gen_xy_pos_for_round_obj(tcan, interior, tcan_radius, tcan_height, 1.1*tcan_radius, rgen, 1); // place_at_z1=1
-		room_object_t obj(tcan, TYPE_TCAN, c.room_id, c.dim, c.dir, flags, tot_light_amt, (rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
+		room_object_t obj(tcan, TYPE_TCAN, c.room_id, c.dim, c.dir, flags, light_amt, (rgen.rand_bool() ? SHAPE_CYLIN : SHAPE_CUBE), tcan_colors[rgen.rand()%NUM_TCAN_COLORS]);
 		add_if_not_intersecting(obj, expanded_objs, cubes);
+	}
+	// add boxes
+	unsigned const num_boxes(rgen.rand()%4); // 0-3
+	float const box_sz(0.3*c.get_sz_dim(c.dim));
+	room_object_t cb(c);
+	cb.light_amt = light_amt;
+	add_boxes_to_space(cb, expanded_objs, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, flags); // allow_crates=0
+	// add paint cans (slightly smaller than normal)
+	float const sz_scale(0.7*c_sz.z), pc_height(0.6*sz_scale), pc_radius(0.24*sz_scale);
+
+	if (3*pc_radius < min(c_sz.x, c_sz.y)) { // have enough space for for paint cans
+		unsigned const num_pcans(rgen.rand()%3); // 0-2
+
+		for (unsigned n = 0; n < num_pcans; ++n) {
+			cube_t pcan;
+			gen_xy_pos_for_round_obj(pcan, interior, pc_radius, pc_height, 1.2*pc_radius, rgen, 1); // place_at_z1=1
+			room_object_t obj(pcan, TYPE_PAINTCAN, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
+			add_if_not_intersecting(obj, expanded_objs, cubes);
+		}
 	}
 	// add bottles
 	unsigned const max_bottles(3 + 2*round_fp(c_sz[!c.dim]/c_sz.z)), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
 
 	for (unsigned n = 0; n < num_bottles; ++n) {
-		float const sz_scale(0.7*c_sz.z), bottle_height(sz_scale*rgen.rand_uniform(0.4, 0.65)), bottle_radius(sz_scale*rgen.rand_uniform(0.07, 0.1));
+		float const bottle_height(sz_scale*rgen.rand_uniform(0.4, 0.65)), bottle_radius(sz_scale*rgen.rand_uniform(0.07, 0.1));
 		if (min(c_sz.x, c_sz.y) < 3.0*bottle_radius) continue; // cabinet not wide/deep enough to add this bottle
 		cube_t bottle;
 		gen_xy_pos_for_round_obj(bottle, interior, bottle_radius, bottle_height, 1.5*bottle_radius, rgen, 1); // place_at_z1=1
-		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, tot_light_amt, SHAPE_CYLIN); // vertical
+		room_object_t obj(bottle, TYPE_BOTTLE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN); // vertical
 		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 1); // all bottle types, no_empty=1
 		add_if_not_intersecting(obj, expanded_objs, cubes);
 	}
-	// TODO: TYPE_BOX?, TYPE_PAINTCAN? TYPE_PLATE?
+	// TYPE_PLATE?
 	if (cubes.size() > start_num_cubes) {clear_static_small_vbos();} // some object was added
 }
 
