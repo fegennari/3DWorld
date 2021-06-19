@@ -789,6 +789,27 @@ void draw_weapon_in_hand(int shooter, shader_t &shader, int reflection_pass) {
 	else {scheduled_weapons.insert(shooter);} // should not be duplicates, but just in case draw_scheduled_weapons() isn't called
 }
 
+void draw_camera_weapon(bool want_has_trans, int reflection_pass) {
+
+	if (!game_mode || (weap_has_transparent(CAMERA_ID) != want_has_trans) || (game_mode == 2 && world_mode != WMODE_GROUND)) return;
+	if (reflection_pass && !camera_pdu.sphere_visible_test(pre_ref_camera_pos, 2.0*CAMERA_RADIUS)) return; // player + weapon not visible in reflection
+	shader_t s;
+	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 0, 0); // no rain/snow
+	draw_weapon_in_hand(CAMERA_ID, s, reflection_pass);
+	s.end_shader();
+
+	if (!want_has_trans && !reflection_pass && sstates[CAMERA_ID].weapon != W_BLADE) {
+		// to make the weapon always in front, draw it again with a custom depth value just in front of the near plane;
+		// doesn't work for cblade due to alpha test or plasma cannon due to alpha blend
+		s.set_vert_shader("pos_only");
+		s.set_frag_shader("write_const_depth");
+		s.begin_shader();
+		s.add_uniform_float("depth_value", 1.1*NEAR_CLIP);
+		draw_weapon_in_hand(CAMERA_ID, s, 0);
+		s.end_shader();
+	}
+}
+
 
 void draw_scheduled_weapons(bool clear_after_draw) {
 	

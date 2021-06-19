@@ -1404,6 +1404,12 @@
     <None Include="shaders\bcc_noise.part.frag">
       <Filter>Shaders\frag</Filter>
     </None>
+    <None Include="shaders\write_const_depth.frag">
+      <Filter>Shaders\frag</Filter>
+    </None>
+    <None Include="shaders\pos_only.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

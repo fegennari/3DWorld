@@ -1172,6 +1172,7 @@
     <None Include="shaders\point_to_quad.geom" />
     <None Include="shaders\postproc_bloom.frag" />
     <None Include="shaders\postproc_bloom_2d.frag" />
+    <None Include="shaders\pos_only.vert" />
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />
     <None Include="shaders\procedural_height_gen.comp" />
@@ -1243,6 +1244,7 @@
     <None Include="shaders\wind.part" />
     <None Include="shaders\window_lights.frag" />
     <None Include="shaders\window_lights.vert" />
+    <None Include="shaders\write_const_depth.frag" />
     <None Include="shaders\write_depth.frag" />
     <None Include="shaders\write_normal.frag" />
     <None Include="shaders\write_normal.vert" />
