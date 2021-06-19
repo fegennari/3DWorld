@@ -94,7 +94,6 @@ struct strip_entry {
 class strip_vect_t : public vector<strip_entry> {
 	float zval;
 	bool z_valid;
-
 public:
 	strip_vect_t() : zval(0.0), z_valid(0) {}
 
@@ -240,9 +239,9 @@ public:
 
 
 struct data_block { // packed voxel_z_pair for read/write
-	coord_type p[3];
-	count_type c;
-	float z;
+	coord_type p[3] = {};
+	count_type c = 0;
+	float z = 0.0;
 
 	void add_to_map(voxel_map &vmap) const {
 		voxel_t v;
@@ -297,9 +296,9 @@ bool voxel_map::read(char const *const fn) {
 	unsigned map_size(0);
 	size_t const sz_read(fread(&map_size, sizeof(unsigned), 1, fp));
 	assert(sz_read == 1);
+	data_block data;
 	
 	for (unsigned i = 0; i < map_size; ++i) {
-		data_block data;
 		size_t const nr(fread(&data, sizeof(data_block), 1, fp));
 		assert(nr == 1);
 		data.add_to_map(*this);
@@ -320,9 +319,9 @@ bool voxel_map::write(char const *const fn) const {
 	unsigned const map_size((unsigned)size()); // should be size_t?
 	size_t const sz_write(fwrite(&map_size, sizeof(map_size), 1, fp));
 	assert(sz_write == 1);
+	data_block data;
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		data_block data;
 		data.set_from_map_iter(i);
 		size_t const nw(fwrite(&data, sizeof(data_block), 1, fp));
 		assert(nw == 1);
