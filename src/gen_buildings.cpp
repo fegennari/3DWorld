@@ -2902,14 +2902,18 @@ public:
 			
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
 				if ((int)b->ix == state.exclude_bix) continue; // excluded
-				if (pdu.cube_visible(*b + state.xlate)) {state.building_ids.push_back(b->ix);}
+				cube_t const c(*b + state.xlate); // check far clipping plane first because that's more likely to reject buildings
+				if (dist_less_than(pdu.pos, c.closest_pt(pdu.pos), pdu.far_) && pdu.cube_visible(c)) {state.building_ids.push_back(b->ix);}
 			}
 		}
 	}
 	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) const { // pts are in building space
+		point const pos_bs(state.pos - state.xlate);
+
 		for (vector<unsigned>::const_iterator b = state.building_ids.begin(); b != state.building_ids.end(); ++b) {
 			if ((int)*b == state.exclude_bix) continue;
 			building_t const &building(get_building(*b));
+			if (get_region(pos_bs, building.bcube.d) & get_region(pts[0], building.bcube.d)) continue; // line outside - early reject optimization
 			bool occluded(1);
 
 			for (unsigned i = 0; i < npts; ++i) {
@@ -3082,7 +3086,7 @@ public:
 void occlusion_checker_noncity_t::set_camera(pos_dir_up const &pdu) {
 	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
 	pos_dir_up near_pdu(pdu);
-	near_pdu.far_ = (X_SCENE_SIZE + Y_SCENE_SIZE); // set far clipping plane to one tile
+	near_pdu.far_ = 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE); // set far clipping plane to half a tile
 	bc.get_occluders(near_pdu, state);
 	//cout << "buildings: " << bc.get_num_buildings() << ", occluders: " << state.building_ids.size() << endl;
 }

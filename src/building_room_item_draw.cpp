@@ -882,6 +882,7 @@ bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsi
 	return 0;
 }
 
+// Note: c is in local building space and viewer_in is in non-rotated building space
 bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t &oc, bool reflection_pass) const {
 	if (!interior) return 0; // could probably make this an assert
 	//highres_timer_t timer("Check Object Occlusion"); // 0.001ms
