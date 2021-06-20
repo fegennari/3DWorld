@@ -2212,7 +2212,14 @@ bool building_interior_t::is_blocked_by_stairs_or_elevator_no_expand(cube_t cons
 	return has_bcube_int(tc, stairwells); // must check zval to exclude stairs and elevators in parts with other z-ranges
 }
 
+struct cube_by_sz { // sort cube by size in dim descending
+	bool dim;
+	cube_by_sz(bool dim_) : dim(dim_) {}
+	bool operator()(cube_t const &a, cube_t const &b) const {return (b.get_sz_dim(dim) < a.get_sz_dim(dim));}
+};
+
 void building_interior_t::finalize() {
+	for (unsigned d = 0; d < 2; ++d) {sort(walls[d].begin(), walls[d].end(), cube_by_sz(!d));} // sort walls longest to shortest to improve occlusion culling time
 	remove_excess_cap(floors);
 	remove_excess_cap(ceilings);
 	remove_excess_cap(rooms);

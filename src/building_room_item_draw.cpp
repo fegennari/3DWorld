@@ -866,10 +866,11 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	}
 }
 
-bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts, vect_cube_t const &cubes, unsigned dim) {
+template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, point const *const pts, unsigned npts, vect_cube_t const &cubes, unsigned dim, float min_sz=0.0) {
 	assert(npts > 0 && dim <= 2);
 
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		if (check_sz && c->get_sz_dim(!dim) < min_sz) break; // too small an occluder; since cubes are sorted by size in this dim, we can exit the loop here
 		if ((pt[dim] < c->d[dim][0]) == (pts[0][dim] < c->d[dim][0])) continue; // skip if cube face does not separate pt from the first point
 		if (!check_line_clip(pt, pts[0], c->d)) continue; // first point does not intersect
 		bool not_occluded(0);
@@ -894,13 +895,13 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	
 	if (!reflection_pass) { // check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
 		for (unsigned d = 0; d < 2; ++d) {
-			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->walls[d], d)) return 1;
+			if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, interior->walls[d], d, c.get_sz_dim(!d))) return 1; // with size check (helps with light bcubes)
 		}
 	}
 	if (reflection_pass || bcube.contains_pt(viewer)) { // viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building)
 		// check floors of this building (and technically also ceilings)
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
-			if (are_pts_occluded_by_any_cubes(viewer, pts, npts, interior->floors, 2)) return 1;
+			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, interior->floors, 2)) return 1;
 		}
 	}
 	else if (camera_in_building) { // player in some other building
@@ -909,7 +910,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		if (player_building != nullptr && player_building->interior) { // check walls of the building the player is in
 			if (player_building != this) { // otherwise player_in_this_building should be true; note that we can get here from building_t::add_room_lights()
 				for (unsigned d = 0; d < 2; ++d) { // check walls of the building the player is in
-					if (are_pts_occluded_by_any_cubes(viewer, pts, npts, player_building->interior->walls[d], d)) return 1;
+					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, player_building->interior->walls[d], d)) return 1;
 				}
 			}
 		}
