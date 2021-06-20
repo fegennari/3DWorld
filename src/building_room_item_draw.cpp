@@ -907,10 +907,10 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		if (is_rotated()) return 0; // not implemented yet - need to rotate viewer and pts into coordinate space of player_building
 
 		if (player_building != nullptr && player_building->interior) { // check walls of the building the player is in
-			assert(player_building != this); // otherwise player_in_this_building should be true
-			
-			for (unsigned d = 0; d < 2; ++d) { // check walls of the building the player is in
-				if (are_pts_occluded_by_any_cubes(viewer, pts, npts, player_building->interior->walls[d], d)) return 1;
+			if (player_building != this) { // otherwise player_in_this_building should be true; note that we can get here from building_t::add_room_lights()
+				for (unsigned d = 0; d < 2; ++d) { // check walls of the building the player is in
+					if (are_pts_occluded_by_any_cubes(viewer, pts, npts, player_building->interior->walls[d], d)) return 1;
+				}
 			}
 		}
 	}
