@@ -918,7 +918,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 			}
 		}
 	}
-	else { // player not in a building
+	else if (viewer.z < bcube.z2()) { // player not in a building and not above this building
 		if (is_rotated()) return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
 		if (oc.is_occluded(c)) return 1; // check other buildings
 	}
