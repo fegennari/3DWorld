@@ -798,9 +798,9 @@ void draw_camera_weapon(bool want_has_trans, int reflection_pass) {
 	draw_weapon_in_hand(CAMERA_ID, s, reflection_pass);
 	s.end_shader();
 
-	if (!want_has_trans && !reflection_pass && sstates[CAMERA_ID].weapon != W_BLADE) {
+	if (!want_has_trans && !reflection_pass) {
 		// to make the weapon always in front, draw it again with a custom depth value just in front of the near plane;
-		// doesn't work for cblade due to alpha test or plasma cannon due to alpha blend
+		// doesn't work for plasma cannon due to alpha blend; alpha test is needed for cblade
 		s.set_vert_shader("pos_only");
 		s.set_frag_shader("write_const_depth");
 		s.begin_shader();
