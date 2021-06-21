@@ -3061,7 +3061,7 @@ void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_source
 	// Note: if using a dynamic (distance-based) sm_size, need to maintain a pool of different sm resolutions somehow
 	check_gl_error(430);
 
-	// Note: slow to recreate shadow maps every frame, but most lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
+	// Note: slow to recreate shadow maps every frame, but most city lights are either dynamic (headlights) or include dynamic shadow casters (cars) and need to be updated every frame anyway
 	// Do we want to gradually fade in new shadow maps and fade out old ones? But how do we track which lights are associated with old shadow maps?
 	// Tracking positions won't work for car headlights because they move. We don't have object pointers to track either. And what about lights that are no longer in our list?
 	for (auto i = light_sources.begin(); i != light_sources.end() && num_used < num_smaps; ++i) {

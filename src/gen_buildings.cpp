@@ -2118,7 +2118,6 @@ public:
 	// reflection_pass: 0 = not reflection pass, 1 = reflection for room with exterior wall, 2 = reflection for room with interior wall, 3 = reflection from mirror in a house
 	static void multi_draw(int shadow_only, int reflection_pass, vector3d const &xlate, vector<building_creator_t *> const &bcs) {
 		if (bcs.empty()) return;
-		building_t const *const prev_player_building(player_building);
 
 		if (shadow_only) {
 			assert(!reflection_pass);
@@ -2126,6 +2125,8 @@ public:
 			multi_draw_shadow(xlate, bcs);
 			return;
 		}
+		building_t const *const prev_player_building(player_building);
+
 		if (!reflection_pass) {
 			interior_shadow_maps = 1; // set state so that above call will know that it was called recursively from here and should draw interior shadow maps
 			enable_dlight_bcubes = 1; // needed around this call so that light bcubes are sent to the GPU

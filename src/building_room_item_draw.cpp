@@ -909,7 +909,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 
 		if (player_building != nullptr && player_building->interior) { // check walls of the building the player is in
 			if (player_building != this) { // otherwise player_in_this_building should be true; note that we can get here from building_t::add_room_lights()
-				for (unsigned d = 0; d < 2; ++d) { // check walls of the building the player is in
+				for (unsigned d = 0; d < 2; ++d) { // check walls of the building the player is in; can't use min_sz due to perspective effect of walls near the camera
 					if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, player_building->interior->walls[d], d)) return 1;
 				}
 			}

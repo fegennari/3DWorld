@@ -594,16 +594,21 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 		if (outdoor_shadows) {draw_outdoor_shadow_pass(lpos, smap_sz);}
 	}
 	else if (world_mode == WMODE_INF_TERRAIN) { // Note: not really a clean case split; should pass this in somehow, or use a different class in tiled terrain mode (cities)
-		render_models(2, 0, 1); // opaque only
+		if (interior_shadow_maps) {
+			draw_buildings(2, 0, zero_vector); // only need to draw buildings
+		}
+		else {
+			render_models(2, 0, 1); // opaque only
 		
-		if (!interior_shadow_maps) { // all of this is here to draw tree shadows in tiled terrain mode, which is not needed for building interiors
-			vector3d const xlate(get_tiled_terrain_model_xlate());
-			camera_pdu.pos += xlate;
-			fgPushMatrix();
-			translate_to(-xlate);
-			draw_tiled_terrain_decid_tree_shadows();
-			fgPopMatrix();
-			camera_pdu.pos -= xlate;
+			if (!interior_shadow_maps) { // all of this is here to draw tree shadows in tiled terrain mode, which is not needed for building interiors
+				vector3d const xlate(get_tiled_terrain_model_xlate());
+				camera_pdu.pos += xlate;
+				fgPushMatrix();
+				translate_to(-xlate);
+				draw_tiled_terrain_decid_tree_shadows();
+				fgPopMatrix();
+				camera_pdu.pos -= xlate;
+			}
 		}
 	}
 	else {assert(0);} // not supported in universe mode
