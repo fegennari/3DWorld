@@ -10,6 +10,8 @@
 
 float const MAX_SMAP_FOV = 0.8; // acos(1.0 - 0.8) = 78 degrees
 
+cube_t smap_light_clip_cube;
+
 extern bool dl_smap_enabled, skip_light_vis_test, enable_dlight_shadows;
 extern int display_mode, camera_coll_id, max_tius;
 extern unsigned shadow_map_sz;
@@ -570,8 +572,10 @@ bool light_source::setup_shadow_map(float falloff, bool dynamic_cobj, bool outdo
 		smap.pdu.draw_frustum();
 		shader.end_shader();
 	}
+	smap_light_clip_cube = custom_bcube;
 	// if matched_smap_id==1, we can skip the shadow map update
 	smap.create_shadow_map_for_light(pos, nullptr, 1, matched_smap_id, force_update); // no bcube, in world space, no texture array (layer=nullptr)
+	smap_light_clip_cube.set_to_zeros();
 	return 1;
 }
 
