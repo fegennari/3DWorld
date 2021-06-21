@@ -630,19 +630,18 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points,
 	bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const
 {
-	if (!check_line_clip(p1-xlate, p2-xlate, bcube.d)) return 0; // no intersection
-	point p1r(p1), p2r(p2);
-	float tmin(0.0), tmax(1.0);
-	unsigned coll(0); // 0=none, 1=side, 2=roof, 3=details
+	point p1r(p1 - xlate), p2r(p2 - xlate); // convert points from camera space to building space
+	if (!check_line_clip(p1r, p2r, bcube.d)) return 0; // no intersection
 
 	if (is_rotated()) {
-		point const center(bcube.get_cube_center() + xlate);
+		point const center(bcube.get_cube_center());
 		do_xy_rotate_inv(center, p1r); // inverse rotate - negate the sine term
 		do_xy_rotate_inv(center, p2r);
 	}
-	p1r -= xlate; p2r -= xlate;
 	float const pzmin(min(p1r.z, p2r.z)), pzmax(max(p1r.z, p2r.z));
 	bool const vert(p1r.x == p2r.x && p1r.y == p2r.y);
+	float tmin(0.0), tmax(1.0);
+	unsigned coll(0); // 0=none, 1=side, 2=roof, 3=details
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
 		if (pzmin > i->z2() || pzmax < i->z1()) continue; // no overlap in z
