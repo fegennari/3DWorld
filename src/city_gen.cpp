@@ -3016,7 +3016,7 @@ void city_lights_manager_t::tighten_light_bcube_bounds(vector<light_source> cons
 
 void city_lights_manager_t::clamp_to_max_lights(vector3d const &xlate, vector<light_source> &lights) {
 	unsigned const max_dlights(min(1024U, city_params.max_lights)); // Note: should be <= the value used in upload_dlights_textures()
-	//cout << "dlights: " << lights.size() << ", bcube: " << lights_bcube.str() << endl;
+	//cout << "dlights: " << lights.size() << ", bcube: " << lights_bcube.str() << endl; // 536/621/889
 
 	if (lights.size() > max_dlights) {
 		if (lights.size() > 4*max_dlights) { // too many lights, reduce light radius for next frame

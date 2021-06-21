@@ -10,6 +10,7 @@
 #include "draw_utils.h" // for point_sprite_drawer_sized
 #include "subdiv.h" // for sd_sphere_d
 #include "tree_3dw.h" // for tree_placer_t
+#include "profiler.h"
 
 using std::string;
 
@@ -245,7 +246,7 @@ bool player_in_dark_closet() {return (player_in_closet && !(player_in_closet & (
 
 struct building_lights_manager_t : public city_lights_manager_t {
 	void setup_building_lights(vector3d const &xlate) {
-		//timer_t timer("Building Dlights Setup");
+		//highres_timer_t timer("Building Dlights Setup"); // 1.9/1.9
 		float const light_radius(0.1*light_radius_scale*get_tile_smap_dist()); // distance from the camera where lights are drawn
 		if (!begin_lights_setup(xlate, light_radius, dl_sources)) return;
 		if (!player_in_dark_closet()) {add_building_interior_lights(xlate, lights_bcube);} // no room lights if player is hiding in a closed closet with light off (prevents light leakage)
@@ -3207,6 +3208,7 @@ void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_
 void end_register_player_in_building();
 
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
+	//highres_timer_t timer("Add building interior lights"); // 0.97/0.37
 	building_creator.add_interior_lights(xlate, lights_bcube);
 	building_creator_city.add_interior_lights(xlate, lights_bcube);
 	building_tiles.add_interior_lights(xlate, lights_bcube);
