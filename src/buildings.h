@@ -70,7 +70,7 @@ struct building_occlusion_state_t {
 	int exclude_bix;
 	point pos;
 	vector3d xlate;
-	vector<unsigned> building_ids;
+	vector<cube_with_ix_t> building_ids;
 	vector<point> temp_points;
 	building_occlusion_state_t() : exclude_bix(-1) {}
 
