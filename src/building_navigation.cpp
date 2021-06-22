@@ -1088,24 +1088,26 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	bool const might_have_closed_door(global_building_params.open_door_prob < 1.0 || (player_in_this_building && has_basement()));
 
 	if (interior->door_state_updated || (global_building_params.ai_opens_doors == 2 && might_have_closed_door)) {
-		// check for any doors that started open or the player has closed;
-		// this can be slow, so we only enable it for buildings where the player changed the door state, or when the AI can open all doors
-		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-			if (i->open) continue; // doors tend to block the player, don't collide with them unless they're closed
-			if (new_pos.z < i->z1() || new_pos.z > i->z2())         continue; // wrong part/floor
-			if (!sphere_cube_intersect(new_pos, person.radius, *i)) continue; // no intersection with door
-			cube_t door(*i);
-			door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
-			if (!door.line_intersects(person.pos, person.target_pos)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
+		if (player_in_this_building || ((person_ix + frame_counter)&3) == 0) { // every 4th frame, unless the player is in this building (optimization)
+			// check for any doors that started open or the player has closed;
+			// this can be slow, so we only enable it for buildings where the player changed the door state, or when the AI can open all doors
+			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
+				if (i->open) continue; // doors tend to block the player, don't collide with them unless they're closed
+				if (new_pos.z < i->z1() || new_pos.z > i->z2())         continue; // wrong part/floor
+				if (!sphere_cube_intersect(new_pos, person.radius, *i)) continue; // no intersection with door
+				cube_t door(*i);
+				door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
+				if (!door.line_intersects(person.pos, person.target_pos)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
 
-			if (global_building_params.ai_opens_doors && (!i->is_closed_and_locked() || person.has_key)) { // can open the door
-				toggle_door_state((i - interior->doors.begin()), player_in_this_building, 0, person.pos.z); // by_player=0
-			}
-			else { // can't open the door
-				person.wait_for(5.0); // wait for 5s and then choose a new desination
-				return AI_WAITING; // cut the path short at this closed door
-			}
-		} // for i
+				if (global_building_params.ai_opens_doors && (!i->is_closed_and_locked() || person.has_key)) { // can open the door
+					toggle_door_state((i - interior->doors.begin()), player_in_this_building, 0, person.pos.z); // by_player=0
+				}
+				else { // can't open the door
+					person.wait_for(5.0); // wait for 5s and then choose a new desination
+					return AI_WAITING; // cut the path short at this closed door
+				}
+			} // for i
+		}
 	}
 	// logic to clip this person to correct room Z-bounds in case something went wrong; remove if/when this is fixed
 	// Note: we probably can't use the room Z bounds here becase the person may be on the stairs connecting two stacked parts
