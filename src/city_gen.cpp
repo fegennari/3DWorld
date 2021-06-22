@@ -2283,7 +2283,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 				if (dist_to_turn < turn_radius) { // turn radius; Note: cars turn around their center points, not their front wheels, which looks odd
 					float const dist_from_turn_start(turn_radius - dist_to_turn);
-					float const dev(turn_radius - sqrt(turn_radius*turn_radius - dist_from_turn_start*dist_from_turn_start));
+					float const dev(turn_radius - sqrt(max((turn_radius*turn_radius - dist_from_turn_start*dist_from_turn_start), 0.0f))); // clamp to 0 to avoid NAN due to FP error
 					float const new_center(car.turn_val + dev*((turn_dir^car.dir^dim) ? 1.0 : -1.0));
 					float const adj(new_center - car_center[!dim]);
 					float const frame_dist(p2p_dist_xy(car_center, prev_center)); // total XY distance the car is allowed to move

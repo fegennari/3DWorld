@@ -1248,7 +1248,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	// Note: it's questionable to update (move) cars between the opaque and transparent pass because the parts will be out of sync;
 	// however, only the headlight flares are drawn in the transparent pass, and it doesn't seem to be a problem, so we allow it
 	if (have_city_models() && frame_counter > 200) { // same frame_counter hack to avoid perf problem as in water color calculation
-	#pragma omp parallel num_threads(3)
+#pragma omp parallel num_threads(3)
 		if (omp_get_thread_num_3dw() == 0) {draw_tiled_terrain(0);} // drawing must be on thread 0
 		else {next_city_frame(1);} // other threads (if threads enabled, else serial)
 	}
