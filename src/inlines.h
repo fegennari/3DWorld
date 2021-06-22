@@ -480,20 +480,12 @@ struct cmp_back_to_front {
 // *********************** FLOATING POINT ************************
 
 
-inline int is_nan(float f) {
-	return ((!(f >= 0.0) && !(f < 0.0)) || f > 1.0E30 || f < -1.0E30);
-}
-
-inline bool is_nan(vector3d const &v) {
-	return (is_nan(v.x) || is_nan(v.y) || is_nan(v.z));
-}
-
-inline void check_fp_val(float val) {
-	assert(val == 0.0 || fabs(val) > TOLERANCE);
+inline bool is_nan(vector3d const &v) { // checks for NaN and inf
+	return (!isfinite(v.x) || !isfinite(v.y) || !isfinite(v.z));
 }
 
 inline void fix_fp_mag(float &v) {
-	if (fabs(v) < TOLERANCE) v = 0.0;
+	if (fabs(v) < TOLERANCE) {v = 0.0;}
 }
 
 

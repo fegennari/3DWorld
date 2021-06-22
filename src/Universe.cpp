@@ -619,7 +619,7 @@ void atten_color(colorRGBA &color, point const &p1, point const &p2, float radiu
 
 	assert(radius > 0.0 && expand > 0.0 && expand != 1.0);
 	float const dist(p2p_dist(p1, p2));
-	assert(!is_nan(dist) && dist > 0.0);
+	assert(isfinite(dist) && dist > 0.0);
 	//assert(dist >= radius && dist <= expand*radius); // might be too strong (failed after running for 10 hours)
 	float const atten(CLIP_TO_01((expand - dist/radius)/(expand - 1.0f)));
 	color *= atten;

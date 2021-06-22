@@ -866,7 +866,7 @@ void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const
 	for (unsigned i = 0; i < 3; ++i) {
 		vout[i] = hv*(-md*blood_v*coll_dir[i] + mv*velocity[i] + vout[i]);
 		if (type == 1 && i < 2) vout[i] *= 0.2; // x and y
-		assert(!is_nan(vout[i]));
+		assert(isfinite(vout[i]));
 	}
 }
 
@@ -2107,7 +2107,7 @@ void gen_glass_shard_from_cube_window(cube_t const &cube, cobj_params const &cp,
 point projectile_test(point const &pos, vector3d const &vcf_, float firing_error, float damage, int shooter,
 	float &range, float intensity, int ignore_cobj, float max_range, vector3d *vcf_used)
 {
-	assert(!is_nan(damage));
+	assert(isfinite(damage));
 	assert(intensity <= 1.0);
 	assert(LASER_REFL_ATTEN < 1.0);
 	int closest(-1), closest_t(0), coll(0), cindex(-1);

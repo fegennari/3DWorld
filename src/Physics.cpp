@@ -833,7 +833,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			}
 			if (flags & FLOATING) {float_downstream(pos, radius);}
 		}
-		assert(!is_nan(tstep));
+		assert(isfinite(tstep));
 		pos.z += tstep*velocity.z;
 		verify_data();
 
