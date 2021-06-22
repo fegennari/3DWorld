@@ -128,7 +128,10 @@ void car_t::on_alternate_turn_dir(rand_gen_t &rgen) {
 }
 
 void car_t::register_adj_car(car_t &c) {
-	if (car_in_front != nullptr && p2p_dist_xy_sq(get_center(), c.get_center()) > p2p_dist_xy_sq(get_center(), car_in_front->get_center())) return; // already found a closer car
+	if (car_in_front != nullptr) {
+		point const center(get_center());
+		if (p2p_dist_xy_sq(center, c.get_center()) > p2p_dist_xy_sq(center, car_in_front->get_center())) return; // already found a closer car
+	}
 	cube_t cube(bcube);
 	cube.d[dim][!dir] = cube.d[dim][dir];
 	cube.d[dim][dir] += (dir ? 1.0 : -1.0)*get_max_lookahead_dist();

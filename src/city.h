@@ -131,8 +131,8 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 	bool in_isect() const {return is_isect(cur_road_type);}
 	unsigned get_isec_type() const {assert(in_isect()); return (cur_road_type - TYPE_ISEC2);}
 	float get_max_speed() const {return ((cur_city == CONN_CITY_IX) ? CONN_ROAD_SPEED_MULT : 1.0)*max_speed;}
-	float get_length() const {return (bcube.d[ dim][1] - bcube.d[ dim][0]);}
-	float get_width () const {return (bcube.d[!dim][1] - bcube.d[!dim][0]);}
+	float get_length() const {return bcube.get_sz_dim( dim);}
+	float get_width () const {return bcube.get_sz_dim(!dim);}
 	bool is_almost_stopped() const {return (cur_speed < 0.1*max_speed);}
 	bool is_stopped () const {return (cur_speed == 0.0);}
 	bool is_parked  () const {return (max_speed == 0.0);}

@@ -77,7 +77,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 	if (!union_plot_bcube.contains_pt_xy(pos) && union_plot_bcube.contains_pt_xy(prev_pos)) {return 0;} // went outside the valid area
 	float const dx(min(fabs(pos.x - plot_bcube.x1()), fabs(pos.x - plot_bcube.x2()))), dy(min(fabs(pos.y - plot_bcube.y1()), fabs(pos.y - plot_bcube.y2())));
 
-	if (dx < max(city_params.road_width, 0.1f*plot_bcube.dx()) && dy < max(city_params.road_width, 0.1f*plot_bcube.dy())) { // near an intersection
+	if (max(dx, dy) < 0.75*city_params.road_width) { // near an intersection - near the road in both dims
 		at_crosswalk = 1; // Note: should only be at crosswalks; but if we actually are corssing the road, this is the correct thing to do
 	}
 	in_the_road = 1;
@@ -424,7 +424,6 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 			}
 			dest_pos.z = pos.z; // same zval
 			return dest_pos;
-			//if (???) {at_crosswalk = 1;}
 		}
 	}
 	return pos; // no dest
@@ -546,7 +545,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			}
 			else if (target_valid()) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
-			float const dmag(dest_dir.mag());
+			float const dmag(dest_dir.xy_mag());
 
 			if (speed > TOLERANCE && dmag > TOLERANCE) { // avoid divide-by-zero
 				dest_dir /= dmag; // normalize
