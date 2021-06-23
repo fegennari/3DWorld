@@ -812,11 +812,12 @@ void ped_manager_t::next_frame() {
 	if (!animate2) return; // nothing to do (only applies to moving peds)
 	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
 
+	// Note: peds and peds_b can be processed in parallel, but that doesn't seem to make a significant difference in framerate
 	if (!peds.empty()) {
-		//timer_t timer("Ped Update"); // ~3.9ms for 10K peds
+		//timer_t timer("Ped Update"); // ~3.8ms for 10K peds
 		// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
-	#pragma omp critical(modify_car_data)
-		{car_manager.extract_car_data(cars_by_city);}
+#pragma omp critical(modify_car_data)
+		car_manager.extract_car_data(cars_by_city);
 
 		if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
 		static bool first_frame(1);
