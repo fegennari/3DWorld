@@ -1178,6 +1178,24 @@ void run_tt_gameplay() {
 }
 
 
+void draw_tiled_terrain_and_transparent_geom(float terrain_zmin, unsigned tt_reflection_tid, bool draw_water, bool camera_above_clouds) {
+	draw_tiled_terrain(0);
+	render_tt_models(0, 1); // transparent pass
+	//if (underwater ) {draw_local_precipitation();}
+	if (draw_water ) {draw_water_plane(water_plane_z, terrain_zmin, tt_reflection_tid);}
+	if (show_lightning) {end_tiled_terrain_lightning();}
+
+	if (!underwater) {
+		maybe_draw_rainbow();
+		draw_tiled_terrain_clouds(0);
+		draw_local_precipitation();
+	}
+	else {
+		draw_underwater_particles(terrain_zmin);
+	}
+	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
+}
+
 void display_inf_terrain() { // infinite terrain mode (Note: uses light params from ground mode)
 
 	static int init_xx(1);
@@ -1239,39 +1257,26 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
-	pre_draw_tiled_terrain();
+	pre_draw_tiled_terrain(); // must be before render_tt_models()
 	in_loading_screen = 0; // if we got here, loading is done
 	if (TIMETEST) PRINT_TIME("3.26");
 	render_tt_models(0, 0); // opaque pass; draws city buildings, cars, etc.
 
-	// threads: 0=draw, 1=roads and cars, 2=pedestrians
+	// threads: 0=draw tiled terrain (2.5ms) + transparent (0.3), 1=update roads and cars (2.3ms), 2=pedestrians (3.8ms) + building AI (0.85ms)
 	// Note: it's questionable to update (move) cars between the opaque and transparent pass because the parts will be out of sync;
 	// however, only the headlight flares are drawn in the transparent pass, and it doesn't seem to be a problem, so we allow it
-	if (have_city_models() && frame_counter > 200) { // same frame_counter hack to avoid perf problem as in water color calculation
+	if (have_city_models() && frame_counter > 100) { // same frame_counter hack to avoid perf problem as in water color calculation
+		//timer_t timer("City Update MT"); // 4.65ms
 #pragma omp parallel num_threads(3)
-		if (omp_get_thread_num_3dw() == 0) {draw_tiled_terrain(0);} // drawing must be on thread 0
+		if (omp_get_thread_num_3dw() == 0) {draw_tiled_terrain_and_transparent_geom(terrain_zmin, tt_reflection_tid, draw_water, camera_above_clouds);} // drawing must be on thread 0
 		else {next_city_frame(1);} // other threads (if threads enabled, else serial)
 	}
 	else { // serial version
+		//timer_t timer("City Update"); // 10.0ms
 		next_city_frame(0);
-		draw_tiled_terrain(0);
+		draw_tiled_terrain_and_transparent_geom(terrain_zmin, tt_reflection_tid, draw_water, camera_above_clouds);
 	}
-	render_tt_models(0, 1); // transparent pass
 	run_tt_gameplay(); // enable limited gameplay elements in tiled terrain mode
-	if (TIMETEST) PRINT_TIME("3.3");
-	//if (underwater ) {draw_local_precipitation();}
-	if (draw_water ) {draw_water_plane(water_plane_z, terrain_zmin, tt_reflection_tid);}
-	if (show_lightning) {end_tiled_terrain_lightning();}
-
-	if (!underwater) {
-		maybe_draw_rainbow();
-		draw_tiled_terrain_clouds(0);
-		draw_local_precipitation();
-	}
-	else {
-		draw_underwater_particles(terrain_zmin);
-	}
-	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
 	draw_game_elements(timer1);
 	draw_teleporters();
 	if (camera_surf_collide) {play_camera_footstep_sound();}
