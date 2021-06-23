@@ -1079,14 +1079,14 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 			car_t const *const car(get_car_at_player(FAR_CLIP)); // no distance limit
 			if (car != nullptr && !car->in_garage()) {dstate.set_label_text(car->label_str(), (car->get_center() + xlate));} // car found
 		}
+		dstate.show_label_text();
+
+		if (city_action_key && !garages_pass && !shadow_only) {
+			car_t const *const car(get_car_at_player(8.0*CAMERA_RADIUS));
+			if (car != nullptr) {print_text_onscreen(car->label_str(), YELLOW, 1.0, 1.5*TICKS_PER_SECOND, 0);}
+		}
 	}
 	if ((trans_op_mask & 2) && !shadow_only) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
-	dstate.show_label_text();
-
-	if (city_action_key && !garages_pass && !shadow_only) {
-		car_t const *const car(get_car_at_player(8.0*CAMERA_RADIUS));
-		if (car != nullptr) {print_text_onscreen(car->label_str(), YELLOW, 1.0, 1.5*TICKS_PER_SECOND, 0);}
-	}
 }
 
 void car_manager_t::draw_helicopters(bool shadow_only) {
