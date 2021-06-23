@@ -2138,7 +2138,7 @@ public:
 			draw_cars_in_garages(xlate, 0); // must be done before drawing buildings because windows write to the depth buffer
 			player_building = nullptr; // reset, may be set below
 		}
-		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish())
+		//timer_t timer("Draw Buildings"); // 0.57ms (2.6ms with glFinish(), 6.3ms with building interiors)
 		point const camera(get_camera_pos()), camera_xlated(camera - xlate);
 		int const use_bmap(global_building_params.has_normal_map);
 		bool const night(is_night(WIND_LIGHT_ON_RAND));

@@ -1261,6 +1261,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	in_loading_screen = 0; // if we got here, loading is done
 	if (TIMETEST) PRINT_TIME("3.26");
 	render_tt_models(0, 0); // opaque pass; draws city buildings, cars, etc.
+	if (TIMETEST) PRINT_TIME("3.27");
 
 	// threads: 0=draw tiled terrain (2.5ms) + transparent (0.3), 1=update roads and cars (2.3ms), 2=pedestrians (3.8ms) + building AI (0.85ms)
 	// Note: it's questionable to update (move) cars between the opaque and transparent pass because the parts will be out of sync;
