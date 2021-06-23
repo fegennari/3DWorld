@@ -675,7 +675,6 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	}
 	else if (c.type == TYPE_PHONE) {
 		float const z_rot_angle(-atan2(cview_dir.y, cview_dir.x));
-		unsigned skip_faces(0);
 
 		if (c.flags & (RO_FLAG_EMISSIVE | RO_FLAG_OPEN)) { // phone is ringing or locked screen
 			static rgeom_mat_t screen_mat;

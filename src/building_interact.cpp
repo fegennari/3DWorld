@@ -1141,7 +1141,7 @@ public:
 				}
 				else if (obj.type == TYPE_PHONE) {
 					if (co.dim) { // swap aspect ratio to make dim=0
-						float const dx(co.dx()), dy(co.dy()), dz(co.dz());
+						float const dx(co.dx()), dy(co.dy());
 						co.x2() = co.x1() + dy;
 						co.y2() = co.y1() + dx;
 					}
