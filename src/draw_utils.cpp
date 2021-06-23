@@ -795,6 +795,10 @@ template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned
 	}
 }
 
+// explicit instantiations
+template void gen_quad_ixs(vector<unsigned> &ixs, unsigned size, unsigned ix_offset);
+template void gen_quad_ixs(vector<unsigned short> &ixs, unsigned size, unsigned ix_offset);
+
 class quad_ix_buffer_t {
 
 	unsigned ivbo_16, ivbo_32;
