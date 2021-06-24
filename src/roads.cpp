@@ -25,7 +25,7 @@ void road_mat_mgr_t::ensure_road_textures() {
 }
 
 void road_mat_mgr_t::set_texture(unsigned type) {
-	assert(type < NUM_RD_TYPES);
+	assert(type < NUM_RD_TIDS);
 	ensure_road_textures();
 	select_texture(tids[type]);
 }
@@ -756,7 +756,7 @@ void road_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool
 }
 
 void road_draw_state_t::draw_unshadowed() {
-	for (unsigned i = 0; i < NUM_RD_TYPES; ++i) { // only unshadowed blocks
+	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) { // only unshadowed blocks
 		road_mat_mgr.set_texture(i);
 		qbd_batched[i].draw_and_clear();
 	}

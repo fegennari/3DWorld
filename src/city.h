@@ -221,7 +221,7 @@ struct helicopter_t {
 class road_mat_mgr_t {
 
 	bool inited;
-	unsigned tids[NUM_RD_TIDS] = {0}, sl_tid;
+	unsigned tids[NUM_RD_TIDS] = {}, sl_tid;
 
 public:
 	road_mat_mgr_t() : inited(0), sl_tid(0) {}
@@ -526,7 +526,7 @@ struct range_pair_t {
 };
 
 class road_draw_state_t : public draw_state_t {
-	quad_batch_draw qbd_batched[NUM_RD_TYPES], qbd_sl, qbd_bridge;
+	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_sl, qbd_bridge;
 	float ar;
 
 	void draw_road_region_int(quad_batch_draw &cache, unsigned type_ix);
@@ -545,7 +545,7 @@ public:
 		if (rp.s == rp.e) return; // empty
 		assert(rp.s <= rp.e);
 		assert(rp.e <= v.size());
-		assert(type_ix < NUM_RD_TYPES);
+		assert(type_ix < NUM_RD_TIDS);
 		colorRGBA const color(road_colors[type_ix]);
 
 		if (cache.empty()) { // generate and cache quads
