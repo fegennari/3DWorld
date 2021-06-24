@@ -1643,6 +1643,7 @@ void model3d::bind_all_used_tids() {
 			has_gloss_maps |= (m->ns_tid >= 0);
 		}
 		needs_alpha_test |= m->get_needs_alpha_test();
+		needs_trans_pass |= m->is_partial_transparent();
 	} // for m
 	calc_tangent_vectors();
 }
@@ -1852,7 +1853,8 @@ void model3d::render_with_xform(shader_t &shader, model3d_xform_t &xf, xform_mat
 void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 	unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate)
 {
-	assert(trans_op_mask > 0 && trans_op_mask <= 3);
+	assert(trans_op_mask > 0 && trans_op_mask <= 3); // 1 bit = draw opaque, 2 bit = draw transparent
+	if (!needs_trans_pass && !(trans_op_mask & 1)) return; // transparent only pass, but no transparent materials
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	
 	if (enable_tt_model_indir && world_mode == WMODE_INF_TERRAIN && !is_shadow_pass) {
@@ -2296,12 +2298,11 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 	bool const enable_cube_map_reflections(enable_any_reflections && enable_all_reflections());
 	// Note: in ground mode, lighting is global, so transforms are included in vpos with use_mvm=1; in TT mode, lighting is relative to each model instance
 	bool const use_mvm(!tt_mode && has_any_transforms()), v(!tt_mode), use_smap(1 || v);
-	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0), use_gloss_map(0);
-	shader_t s;
-	set_fill_mode();
+	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0), use_gloss_map(0), needs_trans_pass(0);
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
+		needs_trans_pass |= m->get_needs_trans_pass();
 		use_spec_map     |= (enable_spec_map() && m->uses_spec_map());
 		use_gloss_map    |= (enable_spec_map() && m->uses_gloss_map());
 		if      (enable_planar_reflections   && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
@@ -2314,6 +2315,10 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 		cerr << "Error: Cannot mix planar reflections and cube map reflections for model3ds" << endl;
 		exit(1); // FIXME: better/earlier error? make this work?
 	}
+	if (!needs_trans_pass && !(trans_op_mask & 1)) return; // transparent only pass, but no transparent materials
+	shader_t s;
+	set_fill_mode();
+
 	if (use_z_prepass && !is_shadow_pass && reflection_pass == 0 && (trans_op_mask & 1)) { // check use_mvm?
 		// faster for scenes with high depth complexity and slow fragment shaders; slower when vertex/transform limited
 		s.set_prefix("#define POS_FROM_EPOS_MULT", 0); // VS - needed to make transformed vertices agree with the normal rendering flow
