@@ -166,9 +166,6 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "tub_model") {
 		if (!add_model(OBJ_MODEL_TUB, fp)) {return read_error(str);}
 	}
-	else if (str == "urinal_model") {
-		if (!add_model(OBJ_MODEL_URINAL, fp)) {return read_error(str);}
-	}
 	else if (str == "fridge_model") {
 		if (!add_model(OBJ_MODEL_FRIDGE, fp)) {return read_error(str);}
 	}
@@ -184,6 +181,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "office_chair_model") {
 		if (!add_model(OBJ_MODEL_OFFICE_CHAIR, fp)) {return read_error(str);}
 	}
+	else if (str == "urinal_model") {
+		if (!add_model(OBJ_MODEL_URINAL, fp)) {return read_error(str);}
+	}
 	else if (str == "lamp_model") {
 		if (!add_model(OBJ_MODEL_LAMP, fp)) {return read_error(str);}
 	}
@@ -195,6 +195,9 @@ bool city_params_t::read_option(FILE *fp) {
 	}
 	else if (str == "key_model") {
 		if (!add_model(OBJ_MODEL_KEY, fp)) {return read_error(str);}
+	}
+	else if (str == "hanger_model") {
+		if (!add_model(OBJ_MODEL_HANGER, fp)) {return read_error(str);}
 	}
 	else {
 		cout << "Unrecognized city keyword in input file: " << str << endl;
