@@ -10,6 +10,10 @@
 extern building_params_t global_building_params;
 
 
+string const model_opt_names[NUM_OBJ_MODELS] =
+{"toilet_model", "sink_model", "tub_model", "fridge_model", "stove_model", "tv_model", ""/*monitor*/, "couch_model", "office_chair_model", "urinal_model",
+"lamp_model", "washer_model", "dryer_model", "key_model", "hanger_model", "fire_hydrant_model"};
+
 bool city_params_t::read_option(FILE *fp) {
 
 	char strc[MAX_CHARS] = {0};
@@ -64,9 +68,6 @@ bool city_params_t::read_option(FILE *fp) {
 	}
 	else if (str == "make_4_way_ints") {
 		if (!read_uint(fp, make_4_way_ints) || make_4_way_ints > 3) {return read_error(str);}
-	}
-	else if (str == "fire_hydrant_model") {
-		if (!add_model(OBJ_MODEL_FHYDRANT, fp)) {return read_error(str);}
 	}
 	// cars
 	else if (str == "num_cars") {
@@ -156,50 +157,12 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "max_benches_per_plot") {
 		if (!read_uint(fp, max_benches_per_plot)) {return read_error(str);}
 	}
-	// building models
-	else if (str == "toilet_model") {
-		if (!add_model(OBJ_MODEL_TOILET, fp)) {return read_error(str);}
-	}
-	else if (str == "sink_model") {
-		if (!add_model(OBJ_MODEL_SINK, fp)) {return read_error(str);}
-	}
-	else if (str == "tub_model") {
-		if (!add_model(OBJ_MODEL_TUB, fp)) {return read_error(str);}
-	}
-	else if (str == "fridge_model") {
-		if (!add_model(OBJ_MODEL_FRIDGE, fp)) {return read_error(str);}
-	}
-	else if (str == "stove_model") {
-		if (!add_model(OBJ_MODEL_STOVE, fp)) {return read_error(str);}
-	}
-	else if (str == "tv_model") {
-		if (!add_model(OBJ_MODEL_TV, fp)) {return read_error(str);}
-	}
-	else if (str == "couch_model") {
-		if (!add_model(OBJ_MODEL_COUCH, fp)) {return read_error(str);}
-	}
-	else if (str == "office_chair_model") {
-		if (!add_model(OBJ_MODEL_OFFICE_CHAIR, fp)) {return read_error(str);}
-	}
-	else if (str == "urinal_model") {
-		if (!add_model(OBJ_MODEL_URINAL, fp)) {return read_error(str);}
-	}
-	else if (str == "lamp_model") {
-		if (!add_model(OBJ_MODEL_LAMP, fp)) {return read_error(str);}
-	}
-	else if (str == "washer_model") {
-		if (!add_model(OBJ_MODEL_WASHER, fp)) {return read_error(str);}
-	}
-	else if (str == "dryer_model") {
-		if (!add_model(OBJ_MODEL_DRYER, fp)) {return read_error(str);}
-	}
-	else if (str == "key_model") {
-		if (!add_model(OBJ_MODEL_KEY, fp)) {return read_error(str);}
-	}
-	else if (str == "hanger_model") {
-		if (!add_model(OBJ_MODEL_HANGER, fp)) {return read_error(str);}
-	}
 	else {
+		for (unsigned i = 0; i < NUM_OBJ_MODELS; ++i) { // check for object models
+			if (str != model_opt_names[i]) continue;
+			if (!add_model(i, fp)) {return read_error(str);}
+			return 1; // done
+		}
 		cout << "Unrecognized city keyword in input file: " << str << endl;
 		return 0;
 	}
