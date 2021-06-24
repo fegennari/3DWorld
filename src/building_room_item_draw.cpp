@@ -922,6 +922,19 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		if (is_rotated()) return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
 		if (oc.is_occluded(c)) return 1; // check other buildings
 	}
+	else if (is_simple_cube()) { // player above this building; check if object is occluded by the roof
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			cube_t roof(*p);
+			roof.z1() = roof.z2() - 0.5*get_floor_thickness();
+			bool not_occluded(0);
+
+			for (unsigned p = 0; p < npts; ++p) {
+				if (!check_line_clip(viewer, pts[p], roof.d)) {not_occluded = 1; break;}
+			}
+			if (!not_occluded) return 1;
+		} // for p
+		return 0;
+	}
 	return 0;
 }
 
