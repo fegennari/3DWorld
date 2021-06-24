@@ -75,7 +75,7 @@ class sd_sphere_vbo_d : public sd_sphere_d, public indexed_vao_manager_t {
 	unsigned draw_setup(unsigned draw_ndiv);
 	unsigned get_index_type_enum()          const {return ((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);}
 	unsigned get_count       (unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (ix_offsets[lod+1] - ix_offsets[lod]);}
-	void const* get_index_ptr(unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (void *const)(ix_offsets[lod]*sizeof(index_type_t));}
+	void const* get_index_ptr(unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (void const *)(ix_offsets[lod]*sizeof(index_type_t));}
 
 public:
 	sd_sphere_vbo_d() : faceted(0) {}

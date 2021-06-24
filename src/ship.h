@@ -775,7 +775,7 @@ public:
 	bool is_decoy()       const {return ((flags & OBJ_FLAGS_DECY) != 0);}
 	bool is_orbiting()    const {return ((flags & OBJ_FLAGS_ORBT) != 0);}
 	bool has_lights()     const {return (num_exp_lights > 0);}
-	bool is_player_ship() const {return (this == (free_obj const *const)(&player_ship()));}
+	bool is_player_ship() const {return (this == (free_obj const *)(&player_ship()));}
 	bool to_be_removed()  const {return (status != 0 && !is_player_ship() && !is_resetting());}
 	bool is_related(free_obj const *fobj)   const {assert(fobj); return (fobj->get_root_parent() == get_root_parent());}
 	bool target_valid(free_obj const *targ) const {return (targ != NULL && targ != this && targ != parent && !is_related(targ) && !targ->invalid());}
