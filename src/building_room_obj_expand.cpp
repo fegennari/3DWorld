@@ -134,12 +134,29 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 		}
 	}
 	// add hanger rod
-	float const hr_radius(0.015*window_vspacing);
+	float const hr_radius(0.007*window_vspacing);
 	room_object_t hanger_rod(interior, TYPE_HANGER_ROD, c.room_id, c.dim, c.dir, (RO_FLAG_NOCOLL | RO_FLAG_INTERIOR));
 	hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 	hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
 	set_wall_width(hanger_rod, (0.45*c.d[c.dim][c.dir] + 0.55*c.d[c.dim][!c.dir]), hr_radius, c.dim); // move slightly toward the back
 	objects.push_back(hanger_rod);
+
+	// add hangers
+	unsigned const num_hangers(rgen.rand() % (c.is_small_closet() ? 5 : 9)); // 0-4/8
+	float const wire_radius(0.25*hr_radius);
+
+	if (num_hangers > 0 && hanger_rod.get_sz_dim(!c.dim) > 10.0*wire_radius) {
+		room_object_t hanger(hanger_rod);
+		hanger.type = TYPE_HANGER;
+		set_cube_zvals(hanger, (hanger_rod.z1() - 0.09*window_vspacing), (hanger_rod.z2() + 2.0*wire_radius));
+		hanger.expand_in_dim(c.dim, 0.09*window_vspacing); // set width
+
+		for (unsigned i = 0; i < num_hangers; ++i) { // since hangers are so narrow, we probably don't need to check for intersections
+			float const pos(rgen.rand_uniform((hanger_rod.d[!c.dim][0] + wire_radius), (hanger_rod.d[!c.dim][1] - wire_radius)));
+			set_wall_width(hanger, pos, wire_radius, !c.dim);
+			objects.push_back(hanger);
+		}
+	}
 }
 
 void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on cabinets, counters, and kitchen sinks

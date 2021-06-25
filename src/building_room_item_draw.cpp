@@ -26,6 +26,7 @@ tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
 
 bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
+bool has_hanger_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HANGER);}
 
 colorRGBA room_object_t::get_model_color() const {return building_obj_model_loader.get_avg_color(get_model_id());}
 
@@ -543,7 +544,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_LG_BALL:   add_lg_ball  (*i); break;
 		case TYPE_HANGER_ROD:add_hanger_rod(*i); break;
 		case TYPE_DRAIN:     add_drain_pipe(*i); break;
-		case TYPE_KEY: if (has_key_3d_model()) {model_objs.push_back(*i);} else {add_key(*i);} break; // draw or add as 3D model
+		case TYPE_KEY:       if (has_key_3d_model()) {model_objs.push_back(*i);} else {add_key(*i);} break; // draw or add as 3D model
 		case TYPE_MONEY:     add_money (*i); break;
 		case TYPE_PHONE:     add_phone (*i); break;
 		case TYPE_TPROLL:    add_tproll(*i); break;
@@ -553,6 +554,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_PLATE:     add_plate (*i); break;
 		case TYPE_LAPTOP:    add_laptop(*i); break;
 		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects
+		case TYPE_HANGER:    if (has_hanger_model()) {model_objs.push_back(*i);} break;
 		default: break;
 		}
 	} // for i
