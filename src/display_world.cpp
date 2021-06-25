@@ -1258,6 +1258,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (TIMETEST) PRINT_TIME("3.2");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
 	pre_draw_tiled_terrain(); // must be before render_tt_models()
+	if (in_loading_screen) {glutSwapBuffers();} // show our cloud background
 	in_loading_screen = 0; // if we got here, loading is done
 	if (TIMETEST) PRINT_TIME("3.26");
 	render_tt_models(0, 0); // opaque pass; draws city buildings, cars, etc.
