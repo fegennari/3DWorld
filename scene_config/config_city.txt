@@ -108,7 +108,7 @@ city lamp_model ../models/interiors/lamp1.model3d  1 2 -1 0  1 1.0 1.0  0 # only
 city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  0 0 -1 90  1 1.0 1.0
 city dryer_model ../models/interiors/dryer/Dryer.model3d  0 0 -1 0  0 1.0 1.0
 city key_model ../models/interiors/singlkey.model3d  0 0 -1 0  2 1.0 1.0 # swap X and Z
-city hanger_model ../models/interiors/clothes_hanger.obj  0 0 0 0  0 1.0 1.0
+city hanger_model ../models/interiors/clothes_hanger.model3d  0 0 0 0  1 1.0 1.0
 
 city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 -1 0  1 1.0 1.0
 
