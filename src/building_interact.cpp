@@ -880,7 +880,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BUTTON    ] = bldg_obj_type_t(0, 0, 1, 1, 0, 2, 1.0,   0.05,  "button");
 	bldg_obj_types[TYPE_CRACK     ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "crack");
 	bldg_obj_types[TYPE_SWITCH    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 2, 0.0,   0.0,   "switch");
-	bldg_obj_types[TYPE_PLATE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 6.0,   0.2,   "plate");
+	bldg_obj_types[TYPE_PLATE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 6.0,   0.25,  "plate");
 	bldg_obj_types[TYPE_LAPTOP    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 600.0, 8.0,   "laptop");
 	// player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models

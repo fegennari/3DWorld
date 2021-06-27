@@ -1510,36 +1510,39 @@ void building_t::place_book_on_obj(rand_gen_t rgen, room_object_t const &place_o
 	set_obj_id(objs);
 }
 
-void building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge) {
+	point center;
+	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + dist_from_edge), (place_on.d[d][1] - dist_from_edge));} // place at dist_from_edge from edge
+	cube_t c;
+	c.set_from_sphere(center, radius);
+	set_cube_zvals(c, place_on.z2(), place_on.z2()+height);
+	return c;
+}
+
+bool building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const window_vspacing(get_window_vspace());
 	float const height(window_vspacing*rgen.rand_uniform(0.075, 0.12)), radius(window_vspacing*rgen.rand_uniform(0.012, 0.018));
-	if (min(place_on.dx(), place_on.dy()) < 6.0*radius) return; // surface is too small to place this bottle
-	point center;
-	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + 2.0*radius), (place_on.d[d][1] - 2.0*radius));} // place at least 2*radius from edge
-	cube_t bottle; // bottle bcube
-	bottle.set_from_sphere(center, radius);
-	set_cube_zvals(bottle, place_on.z2(), place_on.z2()+height);
-	if (!avoid.is_all_zeros() && bottle.intersects(avoid)) return; // only make one attempt
+	if (min(place_on.dx(), place_on.dy()) < 6.0*radius) return 0; // surface is too small to place this bottle
+	cube_t const bottle(place_cylin_object(rgen, place_on, radius, height, 2.0*radius));
+	if (!avoid.is_all_zeros() && bottle.intersects(avoid)) return 0; // only make one attempt
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(bottle, TYPE_BOTTLE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
 	objs.back().set_as_bottle(rgen.rand(), 3); // 0-3; excludes poison
+	return 1;
 }
 
-void building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+bool building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.25, 0.4)*window_vspacing);
 	float const radius(min(rgen.rand_uniform(0.06, 0.08)*window_vspacing, min(place_on.dx(), place_on.dy())/3.0f));
-	point center;
-	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + 1.2*radius), (place_on.d[d][1] - 1.2*radius));} // place at least 1.2*radius from edge
-	cube_t plant; // plant bcube
-	plant.set_from_sphere(center, radius);
-	set_cube_zvals(plant, place_on.z2(), place_on.z2()+height);
-	if (!avoid.is_all_zeros() && plant.intersects(avoid)) return; // only make one attempt
+	cube_t const plant(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
+	if (!avoid.is_all_zeros() && plant.intersects(avoid)) return 0; // only make one attempt
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(plant, TYPE_PLANT, room_id, 0, 0, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_BOT), tot_light_amt, SHAPE_CYLIN, choose_pot_color(rgen));
 	set_obj_id(objs);
+	return 1;
 }
 
-void building_t::place_laptop_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid, bool use_dim_dir) {
+bool building_t::place_laptop_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
 	bool const dim(use_dim_dir ? place_on.dim : rgen.rand_bool()), dir(use_dim_dir ? (place_on.dir^place_on.dim^1) : rgen.rand_bool()); // Note: dir is inverted
@@ -1550,8 +1553,19 @@ void building_t::place_laptop_on_obj(rand_gen_t rgen, room_object_t const &place
 	sz.z     = 0.06*width; // height
 	point const llc(center.x, center.y, place_on.z2());
 	cube_t laptop(llc, (llc + sz));
-	if (!avoid.is_all_zeros() && laptop.intersects(avoid)) return; // only make one attempt
+	if (!avoid.is_all_zeros() && laptop.intersects(avoid)) return 0; // only make one attempt
 	interior->room_geom->objs.emplace_back(laptop, TYPE_LAPTOP, room_id, dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt); // Note: invalidates place_on reference
+	return 1;
+}
+
+bool building_t::place_plate_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+	float const window_vspacing(get_window_vspace()), radius(min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.25f*min(place_on.dx(), place_on.dy())));
+	cube_t const plate(place_cylin_object(rgen, place_on, radius, 0.1*radius, 1.1*radius));
+	if (!avoid.is_all_zeros() && plate.intersects(avoid)) return 0; // only make one attempt
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	objs.emplace_back(plate, TYPE_PLATE, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt, SHAPE_CYLIN);
+	set_obj_id(objs);
+	return 1;
 }
 
 bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
@@ -1804,7 +1818,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	for (unsigned i = objs_start; i < objs_end; ++i) { // can't iterate over objs because we modify it
 		room_object_t const &obj(objs[i]);
 		float book_prob(0.0), bottle_prob(0.0), plant_prob(0.0), laptop_prob(0.0);
-		cube_t book;
+		cube_t avoid;
 
 		if (obj.type == TYPE_TABLE && i == objs_start) { // only first table (not TV table)
 			book_prob   = 0.4*place_book_prob;
@@ -1832,19 +1846,22 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		if (obj.shape == SHAPE_CYLIN) { // find max contained XY rectangle (simpler than testing distance to center vs. radius)
 			for (unsigned d = 0; d < 2; ++d) {surface.expand_in_dim(d, -0.5*(1.0 - SQRTOFTWOINV)*surface.get_sz_dim(d));}
 		}
-		if (book_prob > 0.0 && rgen.rand_float() < book_prob) {
+		if (obj.type == TYPE_TABLE && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING)) { // table in a room for eating, add a plate
+			if (place_plate_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {avoid = objs.back();}
+		}
+		if (avoid.is_all_zeros() && book_prob > 0.0 && rgen.rand_float() < book_prob) { // place book if it's the first item (no plate)
 			placed_book_on_counter |= (obj.type == TYPE_COUNTER);
 			place_book_on_obj(rgen, surface, room_id, tot_light_amt, (obj.type != TYPE_TABLE));
-			book = objs.back();
+			avoid = objs.back();
 		}
 		if (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob) {
-			place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, book);
+			place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, avoid);
 		}
 		else if (laptop_prob > 0.0 && rgen.rand_float() < laptop_prob) {
-			place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, book, (obj.type != TYPE_TABLE));
+			place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE));
 		}
 		else if (!is_basement && plant_prob > 0.0 && rgen.rand_float() < plant_prob) { // don't add both a plant and a bottle; don't add plants in the basement
-			place_plant_on_obj(rgen, surface, room_id, tot_light_amt, book);
+			place_plant_on_obj(rgen, surface, room_id, tot_light_amt, avoid);
 		}
 	} // for i
 }

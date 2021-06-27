@@ -202,6 +202,8 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 			add_if_not_intersecting(obj, expanded_objs, cubes);
 		}
 	}
+	// add plates
+	// TODO
 	// add bottles
 	unsigned const max_bottles(3 + 2*round_fp(c_sz[!c.dim]/c_sz.z)), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
 
