@@ -2235,7 +2235,8 @@ void building_room_geom_t::add_switch(room_object_t const &c) { // light switch,
 
 void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	colorRGBA const color(apply_light_color(c));
-	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plate.png"), 0.0, 0), 0, 0, 1)); // unshadowed, small
+	int const tid((c.room_id & 1) ? get_texture_by_name("interiors/plate.png") : WHITE_TEX);
+	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 1)); // unshadowed, small
 	top_mat.add_vcylin_to_verts(c, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top surface, skip sides
 	get_untextured_material(0, 0, 1).add_vcylin_to_verts(c, color, 0, 0, 0, 0, 0.8, 1.0); // bottom: truncated cone, untextured, unshadowed, sloped sides only
 }
