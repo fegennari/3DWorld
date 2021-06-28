@@ -1413,12 +1413,12 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2)
 	return check_line_intersect_doors(p1, p2);
 }
 
-bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> const &objs) {
+bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> const &objs, vector<room_object_t>::const_iterator objs_end) {
 	// only these types can have objects placed on them (what about TYPE_SHELF?)
 	if (obj.type != TYPE_TABLE && obj.type != TYPE_DESK && obj.type != TYPE_COUNTER && obj.type != TYPE_DRESSER && obj.type != TYPE_NIGHTSTAND &&
 		obj.type != TYPE_BOX && obj.type != TYPE_CRATE && obj.type != TYPE_WINE_RACK && obj.type != TYPE_BOOK) return 0;
 
-	for (auto i = objs.begin(); i != objs.end(); ++i) {
+	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type == TYPE_BLOCKER) continue; // ignore blockers (from removed objects)
 		if (*i == obj)               continue; // skip self (bcube check)
 		if (obj.type == TYPE_WINE_RACK && obj.contains_pt(i->get_cube_center())) return 1; // check for wine bottles left in wine rack
@@ -1444,6 +1444,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs), &other_obj_vect((vect_id == 1) ? objs : expanded_objs);
 		unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
 		auto objs_end((vect_id == 1) ? expanded_objs.end() : get_stairs_start()); // skip stairs and elevators
+		auto other_objs_end((vect_id == 1) ? get_stairs_start() : expanded_objs.end());
 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
 			assert(i->type < NUM_ROBJ_TYPES);
@@ -1480,8 +1481,8 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 			if (i->type == TYPE_BED   && (i->flags & RO_FLAG_TAKEN3))     continue; // can only take pillow, sheets, and mattress - not the frame
 			if (i->type == TYPE_SHELVES && (i->flags & RO_FLAG_EXPANDED)) continue; // shelves are already expanded, can no longer select this object
 			if ((i->type == TYPE_NIGHTSTAND || i->type == TYPE_DRESSER || i->type == TYPE_DESK) && i->drawer_flags) continue; // can't take if any drawers are open
-			if (object_has_something_on_it(*i,       obj_vect))           continue; // can't remove a table, etc. that has something on it
-			if (object_has_something_on_it(*i, other_obj_vect))           continue; // check the other one as well
+			if (object_has_something_on_it(*i,       obj_vect, objs_end)) continue; // can't remove a table, etc. that has something on it
+			if (object_has_something_on_it(*i, other_obj_vect, other_objs_end)) continue; // check the other one as well
 			if (building.check_for_wall_ceil_floor_int(at_pos, p1c))      continue; // skip if it's on the other side of a wall, ceiling, or floor
 			closest_obj_id = (i - obj_vect.begin()) + obj_id_offset; // valid pickup object
 			dmin_sq = dsq; // this object is the closest, even if it can't be picked up
