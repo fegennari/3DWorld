@@ -2715,6 +2715,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		// add walls and railings
 		bool const extend_walls_up(i->is_at_top && !i->roof_access); // space above is open, add a wall so that people can't fall down the stairs
 		float const railing_z2(i->z2() + (i->roof_access ? 0.025*i->dz() : 0.0)); // capture z2 before we change it; move roof access railing up a bit to offset the shrink resize
+		float const railing_side_dz(0.5*stair_dz); // for U-shaped stairs
 		cube_t wall(*i);
 		if (extend_walls_up) {wall.z2() += window_vspacing - floor_thickness;}
 		else {wall.z2() -= 0.5*floor_thickness;} // prevent z-fighting on top floor
@@ -2753,16 +2754,22 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 				if (add_wall || i->roof_access) {
 					railing.translate_dim(!dim, (d ? -1.0 : 1.0)*2.0*wall_hw); // shift railing inside of walls
-					railing.expand_in_dim(dim, -(i->roof_access ? 2.0 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
+					railing.expand_in_dim( dim, -(i->roof_access ? 2.0 : 1.0)*wall_hw); // shrink slightly to avoid clipping through an end wall
 				}
 				if (i->shape == SHAPE_U) { // adjust railing height/angle to match stairs
 					float const z_split(railing.zc());
-					if (bool(d) == side) {railing.z1() = z_split; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
-					else                 {railing.z2() = z_split; flags |= RO_FLAG_ADJ_LO;}
+					if (bool(d) == side) {railing.z1() = z_split + railing_side_dz; flags |= RO_FLAG_ADJ_HI; railing_dir ^= 1;}
+					else                 {railing.z2() = z_split - railing_side_dz; flags |= RO_FLAG_ADJ_LO;}
 				}
 				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color); // collision works like a cube
 			}
 		} // for d
+		if (i->has_railing && i->shape == SHAPE_U) { // add a railing for the back wall of U-shaped stairs
+			cube_t railing(*i);
+			set_wall_width(railing, (i->d[dim][dir] + (dir ? -1.0 : 1.0)*2.0*wall_hw), wall_hw, dim);
+			set_wall_width(railing, (wall.z1() - 0.19*window_vspacing), 1.5*railing_side_dz, 2); // set zvals: small dz to make it normalized
+			objs.emplace_back(railing, TYPE_RAILING, 0, !dim, dir, (RO_FLAG_NOCOLL | RO_FLAG_ADJ_HI | RO_FLAG_ADJ_LO), 1.0, SHAPE_CUBE, railing_color);
+		}
 		if (i->has_railing && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
 			// add railing around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
 			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, RO_FLAG_TOS, 1.0, SHAPE_CUBE, railing_color);
