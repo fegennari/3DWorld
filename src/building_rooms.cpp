@@ -2763,7 +2763,29 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 				objs.emplace_back(railing, TYPE_RAILING, 0, dim, railing_dir, flags, 1.0, SHAPE_CUBE, railing_color); // collision works like a cube
 			}
 		} // for d
-	} // for i
+		if (i->has_railing && (i->stack_conn || (extend_walls_up && i->shape == SHAPE_STRAIGHT))) {
+			// add railing around the top if: straight + top floor with no roof access, connector stairs, or basement stairs
+			room_object_t railing(*i, TYPE_RAILING, 0, !dim, dir, RO_FLAG_TOS, 1.0, SHAPE_CUBE, railing_color);
+			railing.z1()  = railing.z2(); // starts at the floor
+			railing.z2() += window_vspacing - floor_thickness;
+			set_wall_width(railing, (i->d[dim][!dir] + (dir ? -1.0 : 1.0)*wall_hw), wall_hw, dim); // no overlap with stairs cutout
+
+			for (unsigned d = 0; d < 2; ++d) {
+				if (has_side_walls && !i->against_wall[d]) {railing.d[!dim][d] += (d ? -1.0 : 1.0)*2.0*wall_hw;} // shift railing inside of walls
+			}
+			objs.emplace_back(railing);
+			railing.d[dim][dir] = i->d[dim][dir]; // extend to the front of the stairs
+			railing.dim   ^= 1;
+			railing.flags |= RO_FLAG_ADJ_TOP; // flag so that no vertical pole is added
+
+			for (unsigned d = 0; d < 2; ++d) { // sides of stairs
+				railing.dir = bool(d);
+				set_wall_width(railing, i->d[!dim][d], wall_hw, !dim);
+				if (has_side_walls && !i->against_wall[d]) {railing.translate_dim(!dim, (d ? -1.0 : 1.0)*2.0*wall_hw);} // shift railing inside of walls
+				objs.emplace_back(railing);
+			}
+		}
+	} // for i (landings)
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		unsigned const elevator_id(i - interior->elevators.begin()); // used for room_object_t::room_id
 		cube_t elevator_car(*i);

@@ -1004,7 +1004,7 @@ cylinder_3dw get_railing_cylinder(room_object_t const &c) {
 	point p[2];
 
 	for (unsigned d = 0; d < 2; ++d) {
-		p[d].z = c.d[2][d] + height;
+		p[d].z = ((c.flags & RO_FLAG_TOS) ? c.z1() : c.d[2][d]) + height; // top railing is level, otherwise sloped
 		p[d][!c.dim] = center;
 		p[d][ c.dim] = c.d[c.dim][c.dir^bool(d)^1];
 	}
@@ -1012,18 +1012,18 @@ cylinder_3dw get_railing_cylinder(room_object_t const &c) {
 }
 void building_room_geom_t::add_railing(room_object_t const &c) {
 	cylinder_3dw const railing(get_railing_cylinder(c));
-	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI));
+	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS);
 	float const pole_radius(0.75*railing.r1), length(c.get_sz_dim(c.dim)), height(get_railing_height(c));
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
 	tex.set_specular(0.7, 70.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
 	mat.add_cylin_to_verts(railing.p1, railing.p2, railing.r1, railing.r2, c.color, 1, 1); // draw sloped railing with both ends
 
-	if (!is_u_stairs) {
+	if (!is_u_stairs && !(c.flags & RO_FLAG_ADJ_TOP)) {
 		for (unsigned d = 0; d < 2; ++d) { // add the two vertical poles
 			point pt(d ? railing.p2 : railing.p1);
-			pt[c.dim] += (c.dir^bool(d) ? 1.0 : -1.0)*0.01*length; // shift slightly inward toward the center
-			float const hscale(d ? 1.25 : 1.0); // shorten for lower end, which rests on the step
+			if (!is_top_railing) {pt[c.dim] += ((c.dir ^ bool(d)) ? 1.0 : -1.0)*0.01*length;} // shift slightly inward toward the center
+			float const hscale((d && !is_top_railing) ? 1.25 : 1.0); // shorten for lower end, which rests on the step (unless top railing)
 			point const p1(pt - vector3d(0, 0, hscale*height)), p2(pt - vector3d(0, 0, 0.02*(d ? 1.0 : -1.0)*height));
 			mat.add_cylin_to_verts(p1, p2, pole_radius, pole_radius, c.color, 0, 0); // no top or bottom
 		}
