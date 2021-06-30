@@ -10,8 +10,11 @@ float get_lamp_width_scale();
 vect_cube_t &get_temp_cubes();
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher);
 
-void add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &objects, vect_cube_t &cubes) {
-	if (!has_bcube_int(obj, cubes)) {objects.push_back(obj); cubes.push_back(obj);}
+bool add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &objects, vect_cube_t &cubes) {
+	if (has_bcube_int(obj, cubes)) return 0;
+	objects.push_back(obj);
+	cubes.push_back(obj);
+	return 1;
 }
 void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen) {
 	point center;
@@ -203,9 +206,25 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		}
 	}
 	// add plates
-	// TODO
+	unsigned const sz_ratio(round_fp(c_sz[!c.dim]/c_sz.z));
+	unsigned const max_plates(0 + 1*sz_ratio), num_plates(rgen.rand() % max_plates); // wider cabinet has more plates
+	float const plate_radius(min(sz_scale*rgen.rand_uniform(0.30, 0.35), 0.45f*min(c_sz.x, c_sz.y))), plate_height(0.1*plate_radius);
+
+	for (unsigned n = 0; n < num_plates; ++n) {
+		cube_t plate;
+		gen_xy_pos_for_round_obj(plate, interior, plate_radius, plate_height, 1.1*plate_radius, rgen, 1); // place_at_z1=1
+		room_object_t obj(plate, TYPE_PLATE, c.room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
+		if (!add_if_not_intersecting(obj, expanded_objs, cubes)) continue; // can't place the bottom plate
+		unsigned const stack_height(1 + (rgen.rand()%5)); // 1-6
+
+		for (unsigned s = 1; s < stack_height; ++s) {
+			obj.translate_dim(2, plate_height); // shift up in z
+			if (obj.z2() + plate_height > interior.z2()) break; // stack is too high, end it here
+			expanded_objs.push_back(obj);
+		}
+	} // for n
 	// add bottles
-	unsigned const max_bottles(3 + 2*round_fp(c_sz[!c.dim]/c_sz.z)), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
+	unsigned const max_bottles(3 + 2*sz_ratio), num_bottles(rgen.rand() % max_bottles); // wider cabinet has more bottles
 
 	for (unsigned n = 0; n < num_bottles; ++n) {
 		float const bottle_height(sz_scale*rgen.rand_uniform(0.4, 0.65)), bottle_radius(sz_scale*rgen.rand_uniform(0.07, 0.1));
@@ -216,7 +235,6 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 		obj.set_as_bottle(rgen.rand(), NUM_BOTTLE_TYPES-1, 1); // all bottle types, no_empty=1
 		add_if_not_intersecting(obj, expanded_objs, cubes);
 	}
-	// TYPE_PLATE?
 	if (cubes.size() > start_num_cubes) {clear_static_small_vbos();} // some object was added
 }
 
