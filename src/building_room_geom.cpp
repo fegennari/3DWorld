@@ -2239,7 +2239,8 @@ void building_room_geom_t::add_plate(room_object_t const &c) { // is_small=1
 	string const plate_textures[NUM_PLATE_TEXTURES] = {"plates/plate1.png", "plates/plate2.jpg", "plates/plate3.jpg", "plates/plate4.jpg", "plates/plate5.jpg", "plates/plate6.jpg"};
 	int const tid(get_texture_by_name(plate_textures[(c.room_id + stairs_start) % NUM_PLATE_TEXTURES]));
 	rgeom_mat_t &top_mat(get_material(tid_nm_pair_t(tid, 0.0, 0), 0, 0, 1)); // unshadowed, small
-	colorRGBA const color(apply_light_color(c));
+	colorRGBA color(apply_light_color(c));
+	UNROLL_3X(min_eq(color[i_], 0.9f);); // clamp color to 90% max to avoid over saturation
 	top_mat.add_vcylin_to_verts(c, color, 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top surface, skip sides
 	get_untextured_material(0, 0, 1).add_vcylin_to_verts(c, color, 0, 0, 0, 0, 0.8, 1.0); // bottom: truncated cone, untextured, unshadowed, sloped sides only
 }
