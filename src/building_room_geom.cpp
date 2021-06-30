@@ -1012,12 +1012,12 @@ cylinder_3dw get_railing_cylinder(room_object_t const &c) {
 }
 void building_room_geom_t::add_railing(room_object_t const &c) {
 	cylinder_3dw const railing(get_railing_cylinder(c));
-	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS);
+	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)), is_top_railing(c.flags & RO_FLAG_TOS), draw_ends(!(c.flags & RO_FLAG_INTERIOR));
 	float const pole_radius(0.75*railing.r1), length(c.get_sz_dim(c.dim)), height(get_railing_height(c));
 	tid_nm_pair_t tex(-1, 1.0, 1); // shadowed
 	tex.set_specular(0.7, 70.0);
 	rgeom_mat_t &mat(get_material(tex, 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	mat.add_cylin_to_verts(railing.p1, railing.p2, railing.r1, railing.r2, c.color, 1, 1); // draw sloped railing with both ends
+	mat.add_cylin_to_verts(railing.p1, railing.p2, railing.r1, railing.r2, c.color, draw_ends, draw_ends); // draw sloped railing
 
 	if (!is_u_stairs && !(c.flags & RO_FLAG_ADJ_TOP)) {
 		for (unsigned d = 0; d < 2; ++d) { // add the two vertical poles
