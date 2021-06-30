@@ -164,7 +164,7 @@ void building_room_geom_t::expand_cabinet(room_object_t const &c) { // called on
 	c.set_rand_gen_state(rgen);
 	rgen.rand_mix();
 	vect_cube_t &cubes(get_temp_cubes());
-	float const wall_thickness(0.04*c.dz()), light_amt(0.0);
+	float const wall_thickness(0.04*c.dz()), light_amt(0.25*c.light_amt);
 	cube_t interior(c), dishwasher;
 	interior.expand_by(-wall_thickness);
 	vector3d const c_sz(interior.get_size());
