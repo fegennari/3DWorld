@@ -1492,7 +1492,7 @@ colorRGBA choose_pot_color(rand_gen_t &rgen) {
 	return pot_colors[rgen.rand() % num_colors];
 }
 
-void building_t::place_book_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir) {
+void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
 	float const book_sz(0.07*get_window_vspace());
@@ -1519,7 +1519,7 @@ cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius,
 	return c;
 }
 
-bool building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+bool building_t::place_bottle_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const window_vspacing(get_window_vspace());
 	float const height(window_vspacing*rgen.rand_uniform(0.075, 0.12)), radius(window_vspacing*rgen.rand_uniform(0.012, 0.018));
 	if (min(place_on.dx(), place_on.dy()) < 6.0*radius) return 0; // surface is too small to place this bottle
@@ -1531,7 +1531,7 @@ bool building_t::place_bottle_on_obj(rand_gen_t rgen, room_object_t const &place
 	return 1;
 }
 
-bool building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+bool building_t::place_plant_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
 	float const window_vspacing(get_window_vspace()), height(rgen.rand_uniform(0.25, 0.4)*window_vspacing);
 	float const radius(min(rgen.rand_uniform(0.06, 0.08)*window_vspacing, min(place_on.dx(), place_on.dy())/3.0f));
 	cube_t const plant(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
@@ -1542,7 +1542,7 @@ bool building_t::place_plant_on_obj(rand_gen_t rgen, room_object_t const &place_
 	return 1;
 }
 
-bool building_t::place_laptop_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid, bool use_dim_dir) {
+bool building_t::place_laptop_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid, bool use_dim_dir) {
 	point center(place_on.get_cube_center());
 	for (unsigned d = 0; d < 2; ++d) {center[d] += 0.1*place_on.get_sz_dim(d)*rgen.rand_uniform(-1.0, 1.0);} // add a slight random shift
 	bool const dim(use_dim_dir ? place_on.dim : rgen.rand_bool()), dir(use_dim_dir ? (place_on.dir^place_on.dim^1) : rgen.rand_bool()); // Note: dir is inverted
@@ -1558,8 +1558,12 @@ bool building_t::place_laptop_on_obj(rand_gen_t rgen, room_object_t const &place
 	return 1;
 }
 
-bool building_t::place_plate_on_obj(rand_gen_t rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
-	float const window_vspacing(get_window_vspace()), radius(min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.25f*min(place_on.dx(), place_on.dy())));
+float get_plate_radius(rand_gen_t &rgen, room_object_t const &place_on, float window_vspacing) {
+	return min(rgen.rand_uniform(0.05, 0.07)*window_vspacing, 0.25f*min(place_on.dx(), place_on.dy()));
+}
+
+bool building_t::place_plate_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+	float const radius(get_plate_radius(rgen, place_on, get_window_vspace()));
 	cube_t const plate(place_cylin_object(rgen, place_on, radius, 0.1*radius, 1.1*radius));
 	if (!avoid.is_all_zeros() && plate.intersects(avoid)) return 0; // only make one attempt
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1802,6 +1806,38 @@ void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, f
 	} // for ei
 }
 
+bool building_t::place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id) {
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	assert(table_obj_id < objs.size());
+	room_object_t const &table(objs[table_obj_id]);
+	float const radius(get_plate_radius(rgen, table, get_window_vspace())), height(0.1*radius), spacing(1.33*radius);
+	bool added_obj(0);
+
+	for (auto i = (objs.begin() + table_obj_id + 1); i != objs.end(); ++i) {
+		if (i->type != TYPE_CHAIR) break; // done with chairs for this table
+		point const chair_center(i->get_cube_center());
+		point pos;
+
+		if (table.shape == SHAPE_CYLIN) { // circular
+			float const dist(table.get_radius() - spacing);
+			point const table_center(table.get_cube_center());
+			pos = table_center + dist*(chair_center - table_center).get_norm();
+		}
+		else { // rectangular
+			cube_t place_bounds(table);
+			place_bounds.expand_by_xy(-spacing);
+			pos = place_bounds.closest_pt(chair_center);
+		}
+		cube_t plate;
+		plate.set_from_sphere(pos, radius);
+		set_cube_zvals(plate, table.z2(), table.z2()+height); // place on the table
+		objs.emplace_back(plate, TYPE_PLATE, table.room_id, 0, 0, RO_FLAG_NOCOLL, table.light_amt, SHAPE_CYLIN);
+		set_obj_id(objs);
+		added_obj = 1;
+	} // for i
+	return added_obj;
+}
+
 void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement) {
 	if (room.is_hallway) return; // no objects placed in hallways, but there shouldn't be any surfaces either (except for reception desk?)
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1817,6 +1853,9 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	// see if we can place books or bottles on any room object top surfaces
 	for (unsigned i = objs_start; i < objs_end; ++i) { // can't iterate over objs because we modify it
 		room_object_t const &obj(objs[i]);
+		// add place settings to kitchen and dining room tables 50% of the time
+		bool const is_eating_table(obj.type == TYPE_TABLE && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING) && rgen.rand_bool());
+		if (is_eating_table && place_eating_items_on_table(rgen, i)) continue; // no other items to place
 		float book_prob(0.0), bottle_prob(0.0), plant_prob(0.0), laptop_prob(0.0);
 		cube_t avoid;
 
@@ -1846,7 +1885,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		if (obj.shape == SHAPE_CYLIN) { // find max contained XY rectangle (simpler than testing distance to center vs. radius)
 			for (unsigned d = 0; d < 2; ++d) {surface.expand_in_dim(d, -0.5*(1.0 - SQRTOFTWOINV)*surface.get_sz_dim(d));}
 		}
-		if (obj.type == TYPE_TABLE && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING)) { // table in a room for eating, add a plate
+		if (is_eating_table) { // table in a room for eating, add a plate
 			if (place_plate_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {avoid = objs.back();}
 		}
 		if (avoid.is_all_zeros() && book_prob > 0.0 && rgen.rand_float() < book_prob) { // place book if it's the first item (no plate)
@@ -2157,18 +2196,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_living) {r->assign_to(RTYPE_LIVING, f);}
 				}
 			}
-			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
-				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement);
-			}
-			if (is_house) { // place house-specific items
-				if (!is_bathroom && !is_kitchen && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) { // place bookcase 80% of the time, but not in bathrooms or kitchens
-					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
-					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
-				}
-				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
-					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-				}
-			}
 			if (is_house && added_tc && num_chairs > 0 && !is_living && !is_kitchen) { // room with table and chair that's not a kitchen
 				if (f == 0 && !is_basement) { // dining room, must be on the first floor
 					if (light_obj_ix >= 0) { // handle dining room light: extend downward and make it a sphere
@@ -2185,6 +2212,18 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				else if (!added_library && add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) { // add library, at most one
 					r->assign_to(RTYPE_LIBRARY, f);
 					added_library = 1;
+				}
+			}
+			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
+				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement);
+			}
+			if (is_house) { // place house-specific items
+				if (!is_bathroom && !is_kitchen && rgen.rand_float() < (is_basement ? 0.25 : 0.8)) { // place bookcase 80% of the time, but not in bathrooms or kitchens
+					rand_gen_t rgen2(rgen); // copy so that rgen isn't updated in the call below
+					add_bookcase_to_room(rgen2, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement);
+				}
+				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
+					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
 			}
 			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, (unsigned)interior->rooms.size()))) == 0) {
