@@ -491,7 +491,7 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		c.expand_by_xy(wall_width); // to include adjacent doors
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
-		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) {
+		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) { // can we use door_stacks instead and map that to the first door in the stack for door_ix?
 			// if SPLIT_DOOR_PER_FLOOR, we should only add this door if it's on the same floor as our graph but that doesn't work because the graph is shared across all floors,
 			// so instead we'll have to record the door index and check the correct door during path finding; it's not valid to test door open/locked state here
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
@@ -548,6 +548,41 @@ bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, bool front_doo
 		if (front_door_only) return 0; // assumes the first door is the front door
 	}
 	return 0;
+}
+
+// Note: this is somewhat slow; maybe it should be cached across calls? or just build the nav graph and use that?
+bool building_t::are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const {
+	unsigned const num_rooms(interior->rooms.size());
+	assert(room1 < num_rooms && room2 < num_rooms);
+	assert(room_exclude != room1 && room_exclude != room2 && room_exclude < num_rooms);
+	if (room1 == room2) return 1;
+	float const wall_width(get_wall_thickness());
+	vector<uint8_t> seen(num_rooms, 0);
+	vector<unsigned> pend;
+	pend.push_back(room1);
+	seen[room1       ] = 1;
+	seen[room_exclude] = 1; // mark as seen so that we won't visit it
+
+	while (!pend.empty()) { // flood fill - maybe A* is better, but that's a lot of work
+		unsigned const cur(pend.back());
+		pend.pop_back();
+		cube_t room(interior->rooms[cur]);
+		room.expand_by_xy(wall_width); // to include adjacent doors
+
+		for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
+			if (!room.intersects_no_adj(*d)) continue; // door not adjacent to this room
+			cube_t dc(*d);
+			dc.expand_by_xy(wall_width); // to include adjacent rooms
+
+			for (unsigned r = 0; r < num_rooms; ++r) {
+				if (seen[r] || !dc.intersects_no_adj(interior->rooms[r])) continue;
+				if (r == room2) return 1; // found, done
+				pend.push_back(r);
+				seen[r] = 1;
+			}
+		} // for d
+	} // end while()
+	return 0; // room2 not found
 }
 
 // Warning: this may be called from a different thread from the one that uses it for AI updates

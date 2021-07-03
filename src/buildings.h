@@ -927,6 +927,7 @@ struct building_t : public building_geom_t {
 	void update_stats(building_stats_t &s) const;
 	void build_nav_graph() const;
 	unsigned count_connected_room_components();
+	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
 	room_t const &get_room(unsigned room_ix) const {assert(interior && room_ix < interior->rooms.size()); return interior->rooms[room_ix];}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}

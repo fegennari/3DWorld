@@ -445,8 +445,37 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 }
 
 bool building_t::can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const { // check room type and existence of exterior door
-	if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_office) return 0; // no bed/bath in these cases (assumes a house)
-	if (on_first_floor && is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
+	if (!is_house) return 0;
+	if (room.has_stairs || room.has_elevator || room.is_hallway || room.is_office || room.is_sec_bldg) return 0; // no bed/bath in these cases
+	
+	if (on_first_floor) { // run special logic for bedrooms and bathrooms (private rooms) on the first floor of a house
+		if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
+
+		if (room.dz() > 1.5*get_window_vspace()) { // more than one floor
+			// determine if this room is on the shortest path from an exterior door to the stairs; if so, it can't be a bedroom or bathroom;
+			// okay, that's not easy/fast to do, so determine if there is any path from the exterior door to the stairs that doesn't go through this room;
+			// this won't work when there are two paths from the door to the stairs and this room is only on one of the paths, so we could put a BR/BR on both paths
+			int cur_room(-1);
+			vector<unsigned> door_rooms, stairs_rooms;
+
+			for (unsigned i = 0; i < interior->rooms.size(); ++i) {
+				room_t const &r(interior->rooms[i]);
+				if (r == room) {cur_room = i; continue;} // this room; we know it can't have stairs or an exterior door
+				if (r.is_sec_bldg || r.z2() <= ground_floor_z1) continue; // skip basement rooms, garages, and sheds
+				if (r.has_stairs) {stairs_rooms.push_back(i);}
+				if (is_room_adjacent_to_ext_door(r)) {door_rooms.push_back(i);}
+			}
+			assert(cur_room >= 0); // must be found
+			assert(!door_rooms.empty());
+			assert(!stairs_rooms.empty());
+
+			for (auto d = door_rooms.begin(); d != door_rooms.end(); ++d) {
+				for (auto s = stairs_rooms.begin(); s != stairs_rooms.end(); ++s) {
+					if (!are_rooms_connected_without_using_room(*d, *s, cur_room)) return 0;
+				}
+			}
+		}
+	}
 	return 1;
 }
 bool building_t::can_be_bathroom(room_t const &room) const { // Note: assumes caller has checked can_be_bedroom_or_bathroom()
