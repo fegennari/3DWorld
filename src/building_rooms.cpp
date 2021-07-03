@@ -1155,7 +1155,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 	if (is_house) {placed_obj |= place_model_along_wall(OBJ_MODEL_STOVE, TYPE_STOVE, room, 0.46, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 1.0);}
 		
 	if (is_house && placed_obj) { // if we have at least a fridge or stove, try to add countertops
-		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height);
+		float const vspace(get_window_vspace()), height(0.345*vspace), depth(0.74*height), min_hwidth(0.6*height), floor_thickness(get_floor_thickness());
 		float const min_clearance(get_min_front_clearance()), front_clearance(max(0.6f*height, min_clearance));
 		cube_t cabinet_area(room_bounds);
 		cabinet_area.expand_by(-0.05*wall_thickness); // smaller gap than place_area; this is needed to prevent z-fighting with exterior walls
@@ -1163,13 +1163,16 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 		unsigned const counters_start(objs.size());
 		cube_t c;
 		set_cube_zvals(c, zval, zval+height);
-		set_cube_zvals(cabinet_area, zval, zval+vspace-get_floor_thickness());
+		set_cube_zvals(cabinet_area, zval, (zval + vspace - floor_thickness));
 		static vect_cube_t blockers;
 		int const table_blocker_ix(gather_room_placement_blockers(cabinet_area, objs_start, blockers, 1, 1)); // inc_open_doors=1, ignore_chairs=1
 		bool is_sink(1), placed_mwave(0);
 
 		for (unsigned n = 0; n < 50; ++n) { // 50 attempts
 			bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
+			bool const is_ext_wall(classify_room_wall(room, zval, dim, dir, 0) == ROOM_WALL_EXT);
+			// only consider exterior walls in the first 20 attempts to prioritize these so that we don't have splits visible through windows; also places kitchen sinks near windows
+			if (n < 20 && !is_ext_wall) continue;
 			float const center(rgen.rand_uniform(cabinet_area.d[!dim][0]+min_hwidth, cabinet_area.d[!dim][1]-min_hwidth)); // random position
 			float const dir_sign(dir ? -1.0 : 1.0), wall_pos(cabinet_area.d[dim][dir]), front_pos(wall_pos + dir_sign*depth);
 			c.d[ dim][ dir] = wall_pos;
@@ -1191,7 +1194,7 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (bad_place) continue;
 			assert(c.contains_cube(c_min));
 			c.d[dim][!dir] = front_pos; // remove front clearance
-			bool const add_backsplash(classify_room_wall(room, zval, dim, dir, 0) != ROOM_WALL_EXT); // only add to interior walls to avoid windows; assuming not in basement
+			bool const add_backsplash(!is_ext_wall); // only add to interior walls to avoid windows; assuming not in basement
 
 			for (auto i = objs.begin()+counters_start; i != objs.end(); ++i) { // find adjacencies to previously placed counters and flag to avoid placing doors
 				if (i->dim == dim) continue; // not perpendicular
@@ -1212,11 +1215,14 @@ bool building_t::add_kitchen_objs(rand_gen_t rgen, room_t const &room, float zva
 				bs.d[dim][!dir] -= (dir ? -1.0 : 1.0)*0.99*depth; // matches building_room_geom_t::add_counter()
 				objs.emplace_back(bs, TYPE_BLOCKER, room_id, dim, !dir, RO_FLAG_INVIS); // add blocker to avoid placing light switches here
 			}
-			// add upper cabinets, always (for now); should we remove cabinets in front of windows?
+			// add upper cabinets
 			cube_t c2(c);
-			set_cube_zvals(c2, zval+0.66*vspace, cabinet_area.z2()); // up to the ceiling
-			
-			if (!has_bcube_int_no_adj(c2, blockers)) {
+			set_cube_zvals(c2, (zval + 0.65*vspace), cabinet_area.z2()); // up to the ceiling
+
+			if (is_ext_wall) { // possibly against a window
+				max_eq(c2.z1(), (c2.z2() - vspace*get_window_v_border() + 0.5f*floor_thickness)); // increase bottom of cabinet to the top of the window
+			}
+			if (c2.dz() > 0.1*vspace && !has_bcube_int_no_adj(c2, blockers)) { // add if it's not too short and not blocked
 				objs.emplace_back(c2, TYPE_CABINET, room_id, dim, !dir, RO_FLAG_NOCOLL, tot_light_amt); // no collision detection
 				set_obj_id(objs);
 			}
