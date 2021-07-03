@@ -999,9 +999,9 @@ private:
 		float zval, unsigned room_id, float tot_light_amt, bool is_basement);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, float min_bed_space=0.0) const;
-	bool add_bedroom_objs    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt,
-		unsigned objs_start, bool room_is_lit, light_ix_assign_t &light_ix_assign);
-	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt);
+	bool add_bedroom_objs    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, bool is_ground_floor,
+		float tot_light_amt, unsigned objs_start, bool room_is_lit, light_ix_assign_t &light_ix_assign);
+	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_ground_floor);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
 	bool add_tp_roll         (cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos, bool check_valid_pos=0);
 	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor);

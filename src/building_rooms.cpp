@@ -509,12 +509,12 @@ float get_lamp_width_scale() {
 }
 
 bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval,
-	unsigned room_id, float tot_light_amt, unsigned objs_start, bool room_is_lit, light_ix_assign_t &light_ix_assign)
+	unsigned room_id, bool is_ground_floor, float tot_light_amt, unsigned objs_start, bool room_is_lit, light_ix_assign_t &light_ix_assign)
 {
 	if (room.interior) return 0; // bedrooms should have at least one window; if windowless/interior, it can't be a bedroom
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const bed_obj_ix(objs.size()); // if placed, it will be this index
-	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt)) return 0; // it's only a bedroom if there's bed
+	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, is_ground_floor)) return 0; // it's only a bedroom if there's bed
 	assert(bed_obj_ix < objs.size());
 	room_object_t const bed(objs[bed_obj_ix]); // deep copy so that we don't need to worry about invalidating the reference below
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -680,7 +680,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 }
 
 // Note: must be first placed object
-bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt) {
+bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_ground_floor) {
 	unsigned const NUM_COLORS = 8;
 	colorRGBA const colors[NUM_COLORS] = {WHITE, WHITE, WHITE, LT_BLUE, LT_BLUE, PINK, PINK, LT_GREEN}; // color of the sheets
 	cube_t room_bounds(get_walkable_room_bounds(room));
@@ -691,8 +691,15 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	expand[!dim] = -0.3f*vspace; // leave at least some space between the bed and the wall
 	room_bounds.expand_by_xy(expand);
 	float const room_len(room_bounds.get_sz_dim(dim)), room_width(room_bounds.get_sz_dim(!dim));
-	if (room_len < 1.3*vspace || room_width < 0.7*vspace) return 0; // room is too small to fit a bed
-	if (room_len > 4.0*vspace || room_width > 2.5*vspace) return 0; // room is too large to be a bedroom
+	
+	if (is_ground_floor) {
+		if (room_len < 1.3*vspace || room_width < 0.7*vspace) return 0; // room is too small to fit a bed
+		if (room_len > 4.0*vspace || room_width > 2.5*vspace) return 0; // room is too large to be a bedroom
+	}
+	else { // more relaxed constraints
+		if (room_len < 1.1*vspace || room_width < 0.6*vspace) return 0; // room is too small to fit a bed
+		if (room_len > 4.5*vspace || room_width > 3.5*vspace) return 0; // room is too large to be a bedroom
+	}
 	bool const first_head_dir(rgen.rand_bool()), first_wall_dir(rgen.rand_bool());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c;
@@ -2191,7 +2198,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, (f == 0))) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
 				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
-					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, blockers, room_center.z, room_id, tot_light_amt, objs_start, is_lit, light_ix_assign);
+					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, blockers, room_center.z, room_id, (f == 0), tot_light_amt, objs_start, is_lit, light_ix_assign);
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
