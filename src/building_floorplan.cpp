@@ -1302,6 +1302,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
 					float const v1(place_region.d[d][0]), v2(place_region.d[d][1] - stairs_sz);
 					if (v2 <= v1) {too_small = 1; break;}
+					// should we try to start with a corner of the room when is_basement==1?
 					cand.d[d][0] = rgen.rand_uniform(v1, v2); // LLC
 					cand.d[d][1] = cand.d[d][0] + stairs_sz; // URC
 				}

@@ -697,6 +697,10 @@ typedef vector<stairwell_t> vect_stairwell_t;
 
 struct door_stack_t : public cube_t {
 	bool dim, open_dir, on_stairs;
+	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
+	// but only for finding the second room connected to a door, because we still need to iterate over all doors;
+	// unfortunately, it's not easy/cheap to assign these values because the room may not even be added until after the door is placed, so we have to go back and set room1/room2 later
+	//uint8_t room1, room2;
 	door_stack_t() : dim(0), open_dir(0), on_stairs(0) {}
 	door_stack_t(cube_t const &c, bool dim_, bool dir, bool os=0) :
 		cube_t(c), dim(dim_), open_dir(dir), on_stairs(os) {assert(is_strictly_normalized());}
