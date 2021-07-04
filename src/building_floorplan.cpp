@@ -1453,7 +1453,7 @@ bool building_t::clip_part_ceiling_for_stairs(cube_t const &c, vect_cube_t &out,
 	return 1;
 }
 
-void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office, bool is_sec_bldg) {
+unsigned building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lights, bool is_hallway, bool is_office, bool is_sec_bldg) {
 	assert(interior);
 	assert(room.is_strictly_normalized());
 	room_t r(room, part_id, num_lights, is_hallway, is_office, is_sec_bldg);
@@ -1473,7 +1473,9 @@ void building_t::add_room(cube_t const &room, unsigned part_id, unsigned num_lig
 		} // for p
 		if (is_exterior) {r.ext_sides |= (1 << d);}
 	} // for d
+	unsigned const room_id(interior->rooms.size());
 	interior->rooms.push_back(r);
+	return room_id;
 }
 
 void building_t::add_or_extend_elevator(elevator_t const &elevator, bool add) {
