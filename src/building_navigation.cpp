@@ -712,7 +712,7 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		state.goal_type = GOAL_TYPE_ROOM;
 		return 1;
 	} // for n
-	if (!same_floor && loc.room_ix >= 0 && get_room(loc.room_ix).has_stairs) { // how about a different floor of the same room?
+	if (!same_floor && loc.room_ix >= 0 && get_room(loc.room_ix).has_stairs == 255) { // how about a different floor of the same room?
 		cube_t const &room(get_room(loc.room_ix));
 		float const new_z(person.target_pos.z + (rgen.rand_bool() ? -1.0 : 1.0)*floor_spacing); // one floor above or below
 		
@@ -1264,7 +1264,7 @@ building_loc_t building_t::get_building_loc_for_pt(point const &pt) const {
 bool building_t::room_containing_pt_has_stairs(point const &pt) const {
 	int const room_ix(get_room_containing_pt(pt));
 	if (room_ix < 0) return 0; // no room contains this point
-	return get_room(room_ix).has_stairs;
+	return get_room(room_ix).has_stairs; // Note: used for drawing, can be conservative and return true if any floor of this room has stairs
 }
 
 void ped_manager_t::register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity) {

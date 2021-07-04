@@ -881,7 +881,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 			float shrink(stairs.get_sz_dim(dim) - (is_step_dim ? 4.0*doorway_width : 0.9*ewidth)); // set max size of stairs opening
 			stairs.expand_in_dim(dim, -0.5*shrink); // centered in the hallway
 		}
-		room.has_stairs = 1;
+		room.has_stairs = 255; // stairs on all floors
 		stairs_cut      = stairs;
 		stairs_dim      = long_dim;
 	}
@@ -970,7 +970,7 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 					if (interior->landings.empty()) {interior->landings.reserve(num_floors-1);}
 					assert(cutout.is_strictly_normalized());
 					stairs_cut      = cutout;
-					room.has_stairs = 1;
+					room.has_stairs = 255; // stairs on all floors
 					if (use_hallway || !pri_hall.is_all_zeros()) {room.no_geom = 1;} // no geom in an office with stairs for buildings with hallways
 				}
 				break; // success - done
@@ -1250,16 +1250,18 @@ void subtract_cube_from_floor_ceil(cube_t const &c, vect_cube_t &fs) {
 void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part) { // and extend elevators vertically; part is on the bottom
 
 	//highres_timer_t timer("Connect Stairs"); // 72ms (serial)
-	float const window_vspacing(get_window_vspace()), fc_thick(0.5*get_floor_thickness()), wall_thickness(get_wall_thickness());
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const doorway_width(0.5*window_vspacing), stairs_len(4.0*doorway_width);
 	bool const is_basement(has_basement() && part == parts[basement_part_ix]);
 	// use fewer iterations on tiled buildings to reduce the frame spikes when new tiles are generated
 	unsigned const iter_mult_factor(global_building_params.gen_inf_buildings() ? 1 : 10), num_iters(20*iter_mult_factor);
+	unsigned const num_floors(calc_num_floors(part, window_vspacing, floor_thickness));
+	assert(num_floors > 0);
 
 	if (part.z2() < bcube.z2()) { // if this is the top floor, there is nothing above it (but roof geom may get us into this case anyway)
 		bool connected(0);
 
-		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find the part on the top
 			if (*p == part) continue; // skip self
 			if (p->z1() != part.z2()) continue; // *p not on top of part
 			if (!part.intersects_xy(*p)) continue; // no XY overlap
@@ -1362,7 +1364,11 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				subtract_cube_from_floor_ceil(cut_cube, interior->ceilings);
 
 				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-					if (r->intersects(stairwell) && r->contains_cube_xy(stairwell)) {r->has_stairs = 1;} // Note: may be approximate
+					if (r->intersects(stairwell) && r->contains_cube_xy(stairwell)) { // Note: may be approximate
+						if      (part.contains_cube(*r)) {r->has_stairs |= (1U << min(num_floors-1U, 7U));} // bottom of stairs - top floor (clamp to 7 to avoid 8-bit overflow)
+						else if (p->  contains_cube(*r)) {r->has_stairs |= 1;} // top of stairs - bottom floor
+						else {assert(0);}
+					}
 				}
 				connected = 1;
 				break; // success

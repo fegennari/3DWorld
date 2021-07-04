@@ -644,7 +644,8 @@ struct elevator_t : public cube_t {
 unsigned const NUM_RTYPE_SLOTS = 6; // enough for houses
 
 struct room_t : public cube_t {
-	bool has_stairs, has_elevator, no_geom, is_hallway, is_office, is_sec_bldg, interior;
+	uint8_t has_stairs; // per-floor bit mask; always set to 255 for stairs than span the entire room
+	bool has_elevator, no_geom, is_hallway, is_office, is_sec_bldg, interior;
 	uint8_t ext_sides; // sides that have exteriors, and likely windows (bits for x1, x2, y1, y2)
 	uint8_t part_id, num_lights;
 	room_type rtype[NUM_RTYPE_SLOTS]; // this applies to the first floor because some rooms can have variable per-floor assignment
@@ -658,7 +659,8 @@ struct room_t : public cube_t {
 	void assign_to(room_type rt, unsigned floor);
 	room_type get_room_type(unsigned floor) const {return rtype[min(floor, NUM_RTYPE_SLOTS-1U)];}
 	bool has_bathroom() const;
-	bool is_lit_on_floor(unsigned floor) const {return (lit_by_floor & (1ULL << (floor&63)));}
+	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&63)));}
+	bool has_stairs_on_floor(unsigned floor) const {return (has_stairs & (1U << min(floor, 7U)));} // floors >= 7 are treated as the top floor
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_sec_bldg ? 0 : unsigned((zval - z1())/floor_spacing));}
 };
@@ -988,7 +990,7 @@ private:
 	bool overlaps_other_room_obj(cube_t const &c, unsigned objs_start) const;
 	int classify_room_wall(room_t const &room, float zval, bool dim, bool dir, bool ret_sep_if_part_int_part_ext) const;
 	unsigned count_ext_walls_for_room(room_t const &room, float zval) const;
-	bool room_has_stairs_or_elevator(room_t const &room, float zval) const;
+	bool room_has_stairs_or_elevator(room_t const &room, float zval, unsigned floor) const;
 	bool is_room_office_bathroom(room_t const &room, float zval, unsigned floor) const;
 	int gather_room_placement_blockers(cube_t const &room, unsigned objs_start, vect_cube_t &blockers, bool inc_open_doors=1, bool ignore_chairs=0) const;
 	vect_door_stack_t &get_doorways_for_room(room_t const &room, float zval) const;
@@ -1000,12 +1002,12 @@ private:
 	void add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool check_last_obj);
 	bool add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
 	bool add_desk_to_room    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color,
-		float zval, unsigned room_id, float tot_light_amt, bool is_basement);
+		float zval, unsigned room_id, unsigned floor, float tot_light_amt, bool is_basement);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, float min_bed_space=0.0) const;
-	bool add_bedroom_objs    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, bool is_ground_floor,
+	bool add_bedroom_objs    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, unsigned floor,
 		float tot_light_amt, unsigned objs_start, bool room_is_lit, light_ix_assign_t &light_ix_assign);
-	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, bool is_ground_floor);
+	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned floor);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
 	bool add_tp_roll         (cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos, bool check_valid_pos=0);
 	bool divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned floor);
@@ -1028,7 +1030,7 @@ private:
 	void add_light_switch_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor);
 	bool place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
-	bool can_be_bedroom_or_bathroom(room_t const &room, bool on_first_floor) const;
+	bool can_be_bedroom_or_bathroom(room_t const &room, unsigned floor) const;
 	bool can_be_bathroom(room_t const &room) const;
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
