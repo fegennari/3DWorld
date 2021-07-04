@@ -550,19 +550,25 @@ bool building_t::is_room_adjacent_to_ext_door(cube_t const &room, bool front_doo
 	return 0;
 }
 
-// Note: this is somewhat slow; maybe it should be cached across calls? or just build the nav graph and use that?
+// Note: this is somewhat slow, should we build and use the nav graph? maybe not since this is only called for room assiggnment on the first floor of houses
 bool building_t::are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const {
 	unsigned const num_rooms(interior->rooms.size());
 	assert(room1 < num_rooms && room2 < num_rooms);
 	assert(room_exclude != room1 && room_exclude != room2 && room_exclude < num_rooms);
 	if (room1 == room2) return 1;
 	float const wall_width(get_wall_thickness());
-	vector<uint8_t> seen(num_rooms, 0);
+	bool const use_bit_mask(num_rooms <= 64); // almost always true
 	vector<unsigned> pend;
 	pend.push_back(room1);
-	seen[room1       ] = 1;
-	seen[room_exclude] = 1; // mark as seen so that we won't visit it
+	vector<uint8_t> seen;
+	uint64_t seen_mask(0);
 
+	if (use_bit_mask) {seen_mask |= ((1ULL << room1) | (1ULL << room_exclude));}
+	else { // must use seen vector
+		seen.resize(num_rooms, 0);
+		seen[room1       ] = 1;
+		seen[room_exclude] = 1; // mark as seen so that we won't visit it
+	}
 	while (!pend.empty()) { // flood fill - maybe A* is better, but that's a lot of work
 		unsigned const cur(pend.back());
 		pend.pop_back();
@@ -575,10 +581,10 @@ bool building_t::are_rooms_connected_without_using_room(unsigned room1, unsigned
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
 
 			for (unsigned r = 0; r < num_rooms; ++r) {
-				if (seen[r] || !dc.intersects_no_adj(interior->rooms[r])) continue;
+				if ((use_bit_mask ? (seen_mask & (1ULL << r)) : seen[r]) || !dc.intersects_no_adj(interior->rooms[r])) continue;
 				if (r == room2) return 1; // found, done
 				pend.push_back(r);
-				seen[r] = 1;
+				if (use_bit_mask) {seen_mask |= (1ULL << r);} else {seen[r] = 1;}
 			}
 		} // for d
 	} // end while()
