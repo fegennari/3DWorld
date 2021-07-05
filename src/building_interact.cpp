@@ -1233,15 +1233,25 @@ public:
 		max_eq(cur_weight, 0.0f);
 		carried.pop_back(); // Note: invalidates obj
 	}
-	void collect_items() {
-		has_key = 0; // key only good for current building
-		phone_manager.disable();
+	void collect_items(bool keep_interactive) {
+		if (!keep_interactive) {has_key = 0;} // key only good for current building
+		phone_manager.disable(); // phones won't ring when taken out of their building, since the player can't switch to them anyway
 		if (carried.empty() && cur_weight == 0.0 && cur_value == 0.0) return; // nothing to add
+		float keep_value(0.0), keep_weight(0.0);
+
+		if (keep_interactive) { // carried items don't contribute to collected value and weight; their value and weight remain in the inventory after collection
+			for (auto i = carried.begin(); i != carried.end(); ++i) {
+				keep_value  += get_obj_value(*i);
+				keep_weight += get_obj_weight(*i);
+			}
+			cur_value  -= keep_value;
+			cur_weight -= keep_weight;
+		}
+		else {carried.clear();}
 		std::ostringstream oss;
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
-		tot_value  += cur_value;  cur_value  = 0.0;
-		tot_weight += cur_weight; cur_weight = 0.0;
-		carried.clear();
+		tot_value  += cur_value;  cur_value  = keep_value;
+		tot_weight += cur_weight; cur_weight = keep_weight;
 		oss << "Total value $" << tot_value << " Total weight " << tot_weight << " lbs";
 		print_text_onscreen(oss.str(), GREEN, 1.0, 4*TICKS_PER_SECOND, 0);
 	}
@@ -1418,8 +1428,7 @@ void building_t::register_player_enter_building() const {
 }
 void building_t::register_player_exit_building() const {
 	// only collect items in gameplay mode where there's a risk the player can lose them; otherwise, let the player carry items between buildings
-	if (in_building_gameplay_mode()) {player_inventory.collect_items();}
-	phone_manager.disable(); // phones won't ring when taken out of their building, since the player can't switch to them anyway
+	player_inventory.collect_items(!in_building_gameplay_mode());
 }
 
 bool has_cube_line_coll(point const &p1, point const &p2, vect_cube_t const &cubes) {
