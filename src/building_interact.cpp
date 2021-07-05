@@ -605,7 +605,9 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 							}
 						}
 					}
-					if (obj.type == TYPE_PICTURE || obj.type == TYPE_OFF_CHAIR || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH) {
+					if (obj.type == TYPE_PICTURE || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
+						(obj.type == TYPE_OFF_CHAIR && (obj.flags & RO_FLAG_RAND_ROT)))
+					{
 						if (!handled) {interact_with_object(obj_ix, center.z);}
 					}
 				}
