@@ -343,10 +343,12 @@ bool building_t::interact_with_object(unsigned obj_ix, float sound_zval) {
 		sound_scale = 0.6;
 	}
 	else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
-		if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
-		else {++obj.obj_id;} // toggle on/off, and also change the picture
+		if (!(obj.flags & RO_FLAG_BROKEN)) { // no visual effect if broken, but still clicks
+			if (obj.type == TYPE_MONITOR && (obj.obj_id & 1)) {--obj.obj_id;} // toggle on and off, but don't change the desktop
+			else {++obj.obj_id;} // toggle on/off, and also change the picture
+			update_draw_data = 1;
+		}
 		gen_sound_thread_safe(SOUND_CLICK, local_center, 0.4);
-		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_BUTTON) {
 		if (!(obj.flags & RO_FLAG_IS_ACTIVE)) { // if not already active
@@ -592,13 +594,15 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 						vector3d front_dir(all_zeros);
 						front_dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
 						
-						if (dot_product(cnorm, front_dir) > 0.9) { // hit the front of the screen
-							obj.flags |= RO_FLAG_BROKEN;
-							point const sound_origin(obj.xc(), obj.yc(), center.z); // generate sound from the player height
-							gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
-							register_building_sound(sound_origin, 0.7);
-							interior->room_geom->update_draw_state_for_room_object(obj, *this);
-							handled = 1;
+						if (dot_product(cnorm, front_dir) > 0.9) { // hit the front side of the screen
+							if (dist_less_than(center, obj.get_cube_center(), (radius + 0.5*obj.get_sz_dim(obj.dim) + 0.2*obj.dz()))) { // near the screen center
+								obj.flags |= RO_FLAG_BROKEN;
+								point const sound_origin(obj.xc(), obj.yc(), center.z); // generate sound from the player height
+								gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
+								register_building_sound(sound_origin, 0.7);
+								interior->room_geom->update_draw_state_for_room_object(obj, *this);
+								handled = 1;
+							}
 						}
 					}
 					if (obj.type == TYPE_PICTURE || obj.type == TYPE_OFF_CHAIR || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH) {
