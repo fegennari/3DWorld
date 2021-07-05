@@ -667,7 +667,8 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 				interior->walls[wall_dim].push_back(wall);
 				interior->walls[wall_dim].push_back(wall2);
 				float door_lo[2] = {lo_pos, lo_pos}, door_hi[2] = {hi_pos, hi_pos}; // passed to next split step to avoid placing a wall that intersects this doorway
-				bool const do_split(csz[wall_dim] > min_split_len); // split into two smaller rooms
+				// split into two smaller rooms; ensure we can split at least once per dim
+				bool const do_split(csz[wall_dim] > min(min_split_len, max(min_wall_len, 0.9f*bcube.get_sz_dim(wall_dim))));
 
 				if (is_house && is_first_split && csz[!wall_dim] > 1.2*min_split_len) { // wall/hall len is at least enough to place 2-3 rooms
 					// maybe create a hallway: create another split parallel to this one offset a bit and make the room in between a hallway
