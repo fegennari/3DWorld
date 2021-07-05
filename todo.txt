@@ -12,7 +12,3 @@ Cities:
 - Interiors for non-rectangular buildings
 - Larger spacing between office building floors
 - Secondary Building roads
-
-Building interaction/gameplay ideas:
-* Throw ball at window, TV, or monitor leaves a crack
-* Plates on tables?
