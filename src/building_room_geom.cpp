@@ -32,6 +32,7 @@ int get_counter_tid    () {return get_texture_by_name("marble2.jpg");}
 int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.jpg", 1);}
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
 int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");}
+int get_crack_tid      () {return get_texture_by_name("interiors/cracked_glass2.jpg");}
 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
@@ -2211,7 +2212,8 @@ void building_room_geom_t::add_window(room_object_t const &c, float tscale) { //
 }
 
 void building_room_geom_t::add_crack(room_object_t const &c) { // in window, TV, or computer monitor
-	// TODO: draw set of radial lines out from the center in white with alpha < 1.0
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_crack_tid(), 0.0, 0), 0, 0, 1)); // unshadowed, small
+	mat.add_cube_to_verts(c, c.get_color(), all_zeros, get_face_mask(c.dim, c.dir));
 }
 
 void building_room_geom_t::add_switch(room_object_t const &c) { // light switch, etc.
@@ -2252,15 +2254,16 @@ void building_room_geom_t::add_tub_outer(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_tv_picture(room_object_t const &c) {
-	if (c.obj_id & 1) return; // TV is off half the time
+	bool const is_broken(c.flags & RO_FLAG_BROKEN);
+	if ((c.obj_id & 1) && !is_broken) return; // TV is off half the time
 	cube_t screen(c);
 	screen.d[c.dim][c.dir] += (c.dir ? -1.0 : 1.0)*0.35*c.get_sz_dim(c.dim);
 	screen.expand_in_dim(!c.dim, -0.03*c.get_sz_dim(!c.dim)); // shrink the sides in
 	screen.z1() += 0.09*c.dz();
 	screen.z2() -= 0.04*c.dz();
 	unsigned skip_faces(get_face_mask(c.dim, c.dir)); // only the face oriented outward
-	tid_nm_pair_t tex(((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_tv_tid()), 0.0); // computer monitor vs. TV
-	tex.emissive = 1.0;
+	tid_nm_pair_t tex((is_broken ? get_crack_tid() : ((c.shape == SHAPE_SHORT) ? c.get_comp_monitor_tid() : c.get_tv_tid())), 0.0); // computer monitor vs. TV
+	if (!is_broken) {tex.emissive = 1.0;}
 	get_material(tex).add_cube_to_verts(screen, WHITE, c.get_llc(), skip_faces, !c.dim, !(c.dim ^ c.dir));
 }
 

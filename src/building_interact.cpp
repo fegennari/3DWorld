@@ -585,10 +585,24 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 				
 				if (obj_ix >= 0) { // collided with a room object
 					auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
+					bool handled(0);
 
+					// break the glass if not already broken
+					if ((obj.type == TYPE_TV || obj.type == TYPE_MONITOR) && velocity.mag() > 2.0*MIN_VELOCITY && !(obj.flags & RO_FLAG_BROKEN)) {
+						vector3d front_dir(all_zeros);
+						front_dir[obj.dim] = (obj.dir ? 1.0 : -1.0);
+						
+						if (dot_product(cnorm, front_dir) > 0.9) { // hit the front of the screen
+							obj.flags |= RO_FLAG_BROKEN;
+							point const sound_origin(obj.xc(), obj.yc(), center.z); // generate sound from the player height
+							gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
+							register_building_sound(sound_origin, 0.7);
+							interior->room_geom->update_draw_state_for_room_object(obj, *this);
+							handled = 1;
+						}
+					}
 					if (obj.type == TYPE_PICTURE || obj.type == TYPE_OFF_CHAIR || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH) {
-						// TODO: add TYPE_CRACK if collision is with the front of a TV or computer monitor?
-						interact_with_object(obj_ix, center.z);
+						if (!handled) {interact_with_object(obj_ix, center.z);}
 					}
 				}
 			}
