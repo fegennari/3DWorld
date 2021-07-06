@@ -650,35 +650,36 @@ void building_room_geom_t::add_shelves(room_object_t const &c, float tscale) {
 	for (unsigned s = 0; s < num_shelves; ++s) {
 		wood_mat.add_cube_to_verts(shelves[s], shelf_color, c.get_llc(), skip_faces, !c.dim); // make wood grain horizontal
 	}
-	// add support brackets
-	vector3d const c_sz(c.get_size());
-	float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
-	unsigned const num_brackets(2 + round_fp(0.5*length/dz));
-	float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness);
-	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
-	colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
+	if (c.flags & RO_FLAG_INTERIOR) { // add support brackets to interior shelves; skip them if against an exterior wall in case they intersect a window
+		vector3d const c_sz(c.get_size());
+		float const dz(c_sz.z), length(c_sz[!c.dim]), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.8*thickness);
+		unsigned const num_brackets(2 + round_fp(0.5*length/dz));
+		float const b_offset(0.05*dz), b_step((length - 2*b_offset)/(num_brackets-1)), bracket_width(1.8*thickness);
+		rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1)); // shadowed, specular metal; small=1
+		colorRGBA const bracket_color(apply_light_color(c, LT_GRAY));
 
-	for (unsigned s = 0; s < num_shelves; ++s) {
-		cube_t bracket(shelves[s]);
-		bracket.z2()  = bracket.z1(); // below the shelf
-		bracket.z1() -= bracket_thickness;
-		bracket.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.1*width; // shorten slightly
-		bracket.d[!c.dim][1] = bracket.d[!c.dim][0] + bracket_width; // set width
-		bracket.translate_dim(!c.dim, b_offset);
+		for (unsigned s = 0; s < num_shelves; ++s) {
+			cube_t bracket(shelves[s]);
+			bracket.z2()  = bracket.z1(); // below the shelf
+			bracket.z1() -= bracket_thickness;
+			bracket.d[c.dim][!c.dir] -= (c.dir ? -1.0 : 1.0)*0.1*width; // shorten slightly
+			bracket.d[!c.dim][1] = bracket.d[!c.dim][0] + bracket_width; // set width
+			bracket.translate_dim(!c.dim, b_offset);
 
-		for (unsigned b = 0; b < num_brackets; ++b) {
-			metal_mat.add_cube_to_verts_untextured(bracket, bracket_color, (skip_faces | EF_Z2)); // skip top faces, maybe back
+			for (unsigned b = 0; b < num_brackets; ++b) {
+				metal_mat.add_cube_to_verts_untextured(bracket, bracket_color, (skip_faces | EF_Z2)); // skip top faces, maybe back
 
-			if (s == 0) { // add vertical brackets on first shelf
-				cube_t vbracket(bracket);
-				set_cube_zvals(vbracket, c.z1(), c.z2());
-				vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness; // nearly against the wall
-				vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
-				metal_mat.add_cube_to_verts_untextured(vbracket, bracket_color, (skip_faces | EF_Z12)); // skip top/bottom faces, maybe back
-			}
-			bracket.translate_dim(!c.dim, b_step);
-		} // for b
-	} // for s
+				if (s == 0) { // add vertical brackets on first shelf
+					cube_t vbracket(bracket);
+					set_cube_zvals(vbracket, c.z1(), c.z2());
+					vbracket.d[c.dim][ c.dir] = c         .d[c.dim][c.dir] + (c.dir ? -1.0 : 1.0)*0.1*bracket_thickness; // nearly against the wall
+					vbracket.d[c.dim][!c.dir] = shelves[s].d[c.dim][c.dir]; // against the shelf
+					metal_mat.add_cube_to_verts_untextured(vbracket, bracket_color, (skip_faces | EF_Z12)); // skip top/bottom faces, maybe back
+				}
+				bracket.translate_dim(!c.dim, b_step);
+			} // for b
+		} // for s
+	}
 	// add objects to the shelves
 	if (c.flags & RO_FLAG_EXPANDED) return; // shelves have already been expanded, don't need to create contained objects below
 	vector<room_object_t> &objects(get_temp_objects());
