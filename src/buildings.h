@@ -663,6 +663,7 @@ struct room_t : public cube_t {
 	bool has_bathroom() const;
 	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&63)));}
 	bool has_stairs_on_floor(unsigned floor) const {return (has_stairs & (1U << min(floor, 7U)));} // floors >= 7 are treated as the top floor
+	bool is_garage_or_shed() const {return (is_sec_bldg || get_room_type(0) == RTYPE_GARAGE || get_room_type(0) == RTYPE_SHED);}
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_sec_bldg ? 0 : unsigned((zval - z1())/floor_spacing));}
 };
@@ -1214,6 +1215,7 @@ void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bc
 void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 vector3d get_nom_car_size();
+bool car_can_fit(cube_t const &c);
 void draw_cars_in_garages(vector3d const &xlate, bool shadow_only);
 void create_mirror_reflection_if_needed();
 void draw_city_roads(int trans_op_mask, vector3d const &xlate);

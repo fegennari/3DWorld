@@ -1093,3 +1093,8 @@ void car_manager_t::draw_helicopters(bool shadow_only) {
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {dstate.draw_helicopter(*i, shadow_only);}
 }
 
+bool car_can_fit(cube_t const &c) {
+	vector3d const car_sz(get_nom_car_size());
+	return (max(c.dx(), c.dy()) > 1.2f*car_sz.x && min(c.dx(), c.dy()) > 1.2f*car_sz.y && c.dz() > 1.2f*car_sz.z);
+}
+

@@ -1277,8 +1277,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
 				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
 				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
-				vector3d const car_sz(get_nom_car_size());
-				bool const is_garage(max(c.dx(), c.dy()) > 1.2f*car_sz.x && min(c.dx(), c.dy()) > 1.2f*car_sz.y && c.dz() > 1.2f*car_sz.z); // must be able to fit a car
+				bool const is_garage(car_can_fit(c)); // must be able to fit a car
 				(is_garage ? has_garage : has_shed) = 1;
 				// add a door
 				bool const long_dim(c.dx() < c.dy());

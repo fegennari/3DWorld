@@ -1370,6 +1370,7 @@ void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_depth((is_house ? (is_basement ? 0.18 : 0.15) : 0.2)*window_vspacing);
+	bool const is_garage_or_shed(room.is_garage_or_shed());
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const num_crates(4 + (rgen.rand() % (is_house ? (is_basement ? 12 : 5) : 30))); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
@@ -1395,7 +1396,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (rgen.rand_bool()) continue; // only add shelves to 50% of the walls
 			
-			if (room.is_sec_bldg) { // garage or shed - don't place shelves in front of door, but allow them against windows
+			if (is_garage_or_shed) { // garage or shed - don't place shelves in front of door, but allow them against windows
 				cube_t wall(room);
 				wall.d[dim][!dir] = wall.d[dim][dir]; // shrink room to zero width along this wall
 				if (is_room_adjacent_to_ext_door(wall)) continue;
@@ -1412,12 +1413,12 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			crate_bounds.d[dim][dir] = shelves.d[dim][!dir] = shelves.d[dim][dir] + (dir ? -1.0 : 1.0)*shelf_depth; // outer edge of shelves, which is also the crate bounds
 			shelves.expand_in_dim(!dim, -(shelf_depth + 1.0f*wall_thickness)); // shorten shelves
 			if (has_bcube_int(shelves, exclude)) continue; // too close to a doorway
-			unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (room.is_sec_bldg ? 0 : RO_FLAG_INTERIOR));
+			unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR));
 			objs.emplace_back(shelves, TYPE_SHELVES, room_id, dim, dir, shelf_flags, tot_light_amt);
 			set_obj_id(objs);
 		} // for dir
 	} // for dim
-	if (room.is_sec_bldg) return 1; // no chair, crates, or boxes in garages or sheds
+	if (is_garage_or_shed) return 1; // no chair, crates, or boxes in garages or sheds
 
 	// add a random office chair if there's space
 	if (!is_house && min(crate_bounds.dx(), crate_bounds.dy()) > 1.2*window_vspacing && building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
@@ -2177,12 +2178,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			} // end light placement
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
-			bool const is_ground_floor(f == 0 && !is_basement);
+			bool const is_ground_floor(f == 0 && !is_basement), is_garage_or_shed(r->is_garage_or_shed());
 			rgen.rand_mix();
 
-			if (r->no_geom) {
+			if (r->no_geom || is_garage_or_shed) {
 				// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
-				if (r->is_sec_bldg) {add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);} // garage or shed
+				if (is_garage_or_shed) {add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);} // garage or shed
 				if (is_house && has_light) {add_light_switch_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor);} // shed, garage, or hallway
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
