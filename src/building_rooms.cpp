@@ -800,6 +800,14 @@ bool building_t::place_model_along_wall(unsigned model_id, room_object type, roo
 		place_area, objs_start, front_clearance, pref_orient, pref_centered, color, not_at_window);
 }
 
+float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id, float tot_light_amt) {
+	float const new_zval(zval + 0.0012*get_window_vspace());
+	cube_t floor(get_walkable_room_bounds(room));
+	set_cube_zvals(floor, zval, new_zval);
+	interior->room_geom->objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
+	return new_zval;
+}
+
 bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement) {
 	// Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
@@ -810,12 +818,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	vector<room_object_t> &objs(interior->room_geom->objs);
 
 	if (!is_house && (have_toilet || have_sink)) { // office with at least a toilet or sink - replace carpet with tile
-		float const new_zval(zval + 0.0012*floor_spacing);
-		cube_t floor(room_bounds);
-		set_cube_zvals(floor, zval, new_zval);
-		objs.emplace_back(floor, TYPE_FLOORING, room_id, 0, 0, RO_FLAG_NOCOLL, tot_light_amt);
+		zval       = add_flooring(room, zval, room_id, tot_light_amt); // move the effective floor up
 		objs_start = objs.size(); // exclude this from collision checks
-		zval       = new_zval; // move the effective floor up
 	}
 	if (have_toilet && room.is_office && min(place_area.dx(), place_area.dy()) > 1.5*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.0*floor_spacing) {
 		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor)) return 1; // large enough, try to divide into bathroom stalls
@@ -2182,8 +2186,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			rgen.rand_mix();
 
 			if (r->no_geom || is_garage_or_shed) {
-				// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
-				if (is_garage_or_shed) {add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);} // garage or shed
+				if (is_garage_or_shed) {
+					if (r->get_room_type(0) == RTYPE_GARAGE) {room_center.z = add_flooring(*r, room_center.z, room_id, tot_light_amt);}
+					// is there enough clearance between shelves and a car parked in the garage? there seems to be in all the cases I've seen
+					add_storage_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs.size(), is_basement);
+				}
 				if (is_house && has_light) {add_light_switch_to_room(rgen, *r, room_center.z, room_id, objs.size(), is_ground_floor);} // shed, garage, or hallway
 
 				if (is_house && r->is_hallway) { // allow pictures, rugs, and light switches in the hallways of houses
