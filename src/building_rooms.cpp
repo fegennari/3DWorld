@@ -2410,7 +2410,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			continue; // this requires a completely different approach to trim and has not yet been implemented
 		}
 		bool const garage_door(d->type == tquad_with_ix_t::TYPE_GDOOR);
-		if (garage_door) continue; // no trim on garage door, needs different logic
+		if (garage_door && !has_int_garage) continue; // TODO: no trim on detatched garage door, needs different logic
 		cube_t door(d->get_bcube());
 		bool const dim(door.dy() < door.dx());
 		//door.expand_in_dim(!dim, -0.1*door_trim_width); // shrink slightly so that the edge of the wall is contained in the trim

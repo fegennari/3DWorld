@@ -1304,7 +1304,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 					// align to an exact multiple of window period so that bottom floor windows line up with windows on the floors above and no walls are clipped
 					wall_lo = window_spacing*floor(((door_lo - space) - side_lo)/window_spacing) + side_lo;
 					wall_hi = window_spacing*ceil (((door_hi + space) - side_lo)/window_spacing) + side_lo;
-					break; // only need to handle a single door for now
+					break; // TODO: handle multiple doors on this side (for garage door + house door)
 				} // for d
 				if (wall_lo == 0.0 && wall_hi == 0.0) continue; // no door, could be a non-main door (roof access, garage, shed)
 				assert(wall_lo < wall_hi); // there must be a door
@@ -1950,11 +1950,22 @@ public:
 
 	void get_all_garages(vect_cube_t &garages) const {
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
-			if (!b->has_garage || !b->interior) continue; // no garage, or no interior/car not visible
-			assert(b->parts.size() >= 3); // must be at least two parts + garage
-			garages.push_back(b->parts[2]); // place a car here - up to the car manager to decide on the details
-			garages.back().z1() += 0.5*b->get_floor_thickness(); // place car above the floor
-		}
+			if (!b->interior) continue; // no interior/car not visible
+
+			if (b->has_garage) { // exterior/detatched garage
+				assert(b->parts.size() >= 3); // must be at least two parts + garage
+				garages.push_back(b->parts[2]); // place a car here - up to the car manager to decide on the details
+				garages.back().z1() += 0.5*b->get_floor_thickness(); // place car above the floor
+			}
+			else if (b->has_int_garage) { // interior garage
+				for (auto r = b->interior->rooms.begin(); r != b->interior->rooms.end(); ++r) {
+					if (r->get_room_type(0) != RTYPE_GARAGE) continue;
+					garages.push_back(*r); // place a car here - up to the car manager to decide on the details
+					garages.back().z1() += 0.5*b->get_floor_thickness(); // place car above the floor
+					break;
+				}
+			}
+		} // for b
 	}
 	void get_all_helipads(vect_cube_t &helipads) const {
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) {

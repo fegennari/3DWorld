@@ -1147,13 +1147,24 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 		}
 		door.d[ dim][!dir] = door_pos + door_shift*(dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
 		door.d[ dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
-		door.d[!dim][0] = door_center - door_half_width; // left
-		door.d[!dim][1] = door_center + door_half_width; // right
+		door.d[!dim][   0] = door_center - door_half_width; // left
+		door.d[!dim][   1] = door_center + door_half_width; // right
 
 		// we're free to choose the door pos, and have the interior, so we can check if the door is in a good location;
 		// if we get here on the last iteration, just keep the door even if it's an invalid location
 		if (calc_center && interior && !centered) {
-			if (interior->is_blocked_by_stairs_or_elevator(door, door_width)) {
+			bool bad_pos(0);
+
+			if (interior->is_blocked_by_stairs_or_elevator(door, door_width)) {bad_pos = 1;}
+			else {
+				cube_t test_cube(door);
+				test_cube.expand_by_xy(4.0*door_half_width); // must have at least two door widths of space
+
+				for (auto d = doors.begin(); d != doors.end(); ++d) {
+					if (test_cube.intersects(d->get_bcube())) {bad_pos = 1; break;}
+				}
+			}
+			if (bad_pos) {
 				if (can_fail && n == 9) return cube_t(); // last iteration, fail
 				continue; // try a new location
 			}
@@ -1350,6 +1361,23 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_interior(rgen, 0); // before adding door
 
 	if (gen_door) {
+#if 0
+		bool gdim(0), gdir(0);
+		int const garage_room(maybe_assign_interior_garage(gdim, gdir));
+
+		if (garage_room >= 0) { // assigned a garage
+			has_int_garage = 1;
+			assert((unsigned)garage_room < interior->rooms.size());
+			room_t const &garage(interior->rooms[garage_room]);
+			float const wscale(0.9*garage.get_sz_dim(!gdim)/door_height);
+			add_door(place_door(garage, gdim, gdir, door_height, 0.0, 0.0, 0.0, wscale, 0, rgen), garage.part_id, gdim, gdir, 0);
+			doors.back().type = tquad_with_ix_t::TYPE_GDOOR; // make it a garage door
+			driveway = garage;
+			driveway.z2() = garage.z1();
+			driveway.d[gdim][!gdir] = garage.d[gdim][gdir]; // start pos
+			driveway.d[gdim][ gdir] = garage.d[gdim][gdir] + (gdir ? 1.0 : -1.0)*0.4*garage.get_sz_dim(gdim); // extend outward
+		}
+#endif
 		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, rgen));
 
 		if (interior && interior->is_blocked_by_stairs_or_elevator(door, 0.5*door_height)) { // blocked by stairs - switch door to other side/dim
@@ -1365,8 +1393,17 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			for (unsigned n = 0; n < 4; ++n) { // make 4 attempts at generating a valid interior where this door can be placed; this still fails 32 times
 				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, rgen); // keep door_height
 				if (!interior->is_blocked_by_stairs_or_elevator(door, 0.5*door_height)) break; // done
-				if (n+1 < 4) {gen_interior(rgen, 0);} // still invalid, regenerate interior
-			}
+				
+				if (n+1 < 4) { // still invalid, regenerate interior
+					if (has_int_garage) { // must also remove garage, garage door, and driveway
+						assert(doors.size() == 1);
+						has_int_garage = 0;
+						driveway.set_to_zeros();
+						doors.pop_back();
+					}
+					gen_interior(rgen, 0);
+				}
+			} // for n
 		}
 		add_door(door, door_part, door_dim, door_dir, 0);
 		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
