@@ -874,7 +874,8 @@ struct building_t : public building_geom_t {
 	void calc_bcube_from_parts();
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
-	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos, float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen);
+	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
+		float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen) const;
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	void add_solar_panels(rand_gen_t &rgen);
 	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building, bool roof_access=0);

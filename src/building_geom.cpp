@@ -1114,7 +1114,7 @@ void building_t::split_in_xy(cube_t const &seed_cube, rand_gen_t &rgen) {
 bool get_largest_xy_dim(cube_t const &c) {return (c.dy() > c.dx());}
 
 cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center,
-	float door_pos, float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen)
+	float door_pos, float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen) const
 {
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
