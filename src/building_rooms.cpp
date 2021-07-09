@@ -1980,6 +1980,10 @@ bool has_bcube_int_stairs_exp(cube_t const &bcube, vect_stairwell_t const &stair
 	return 0;
 }
 
+unsigned calc_num_floors_room(room_t const &r, float window_vspacing, float floor_thickness) {
+	return (r.is_sec_bldg ? 1 : calc_num_floors(r, window_vspacing, floor_thickness));
+}
+
 // Note: these three floats can be calculated from get_window_vspace(), but it's easier to change the constants if we just pass them in
 void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes, unsigned building_ix) {
 
@@ -1997,7 +2001,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	float const light_thick(0.025*window_vspacing), def_light_size(0.1*window_vspacing);
 	interior->room_geom->obj_scale = window_vspacing; // used to scale room object textures
 	unsigned tot_num_rooms(0), num_bathrooms(0);
-	for (auto r = rooms.begin(); r != rooms.end(); ++r) {tot_num_rooms += calc_num_floors(*r, window_vspacing, floor_thickness);}
+	for (auto r = rooms.begin(); r != rooms.end(); ++r) {tot_num_rooms += calc_num_floors_room(*r, window_vspacing, floor_thickness);}
 	objs.reserve(tot_num_rooms); // placeholder - there will be more than this many
 	float const extra_bathroom_prob((is_house ? 2.0 : 1.0)*0.02*min((int(tot_num_rooms) - 4), 20));
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
@@ -2013,7 +2017,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		for (auto r = rooms.begin(); r != rooms.end(); ++r) {
 			if (r->is_sec_bldg) continue; // garage/shed excluded - not a normal room
 			if (has_basement() && r->part_id == (int)basement_part_ix) continue; // skip the basement
-			unsigned const num_floors(calc_num_floors(*r, window_vspacing, floor_thickness));
+			unsigned const num_floors(calc_num_floors_room(*r, window_vspacing, floor_thickness));
 
 			// find best bathroom with no hard size constraints
 			if (can_be_bedroom_or_bathroom(*r, (num_floors-1))) { // use the top floor for the test since it's less restrictive than the ground floor; will be checked per-floor later
@@ -2027,7 +2031,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		bool const is_basement(has_basement() && r->part_id == (int)basement_part_ix);
 		float const light_amt(is_basement ? 0.0f : window_vspacing*r->get_light_amt()); // exterior light: multiply perimeter/area by window spacing to make unitless; none for basement rooms
 		float const floor_height(r->is_sec_bldg ? r->dz() : window_vspacing); // secondary buildings are always one floor
-		unsigned const num_floors(calc_num_floors(*r, floor_height, floor_thickness)), room_id(r - rooms.begin());
+		unsigned const num_floors(calc_num_floors_room(*r, floor_height, floor_thickness)), room_id(r - rooms.begin());
 		point room_center(r->get_cube_center());
 		// determine light pos and size for this stack of rooms
 		bool const room_dim(r->dx() < r->dy()); // longer room dim
