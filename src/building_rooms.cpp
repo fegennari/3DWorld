@@ -2481,8 +2481,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			} // for f
 		} // for w
 	} // for d
-	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) { // add trim for exterior walls
-		unsigned const num_floors(calc_num_floors(*i, window_vspacing, floor_thickness));
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // add trim for exterior walls
+		bool const is_sec_bldg(i == get_real_parts_end());
+		unsigned const num_floors(is_sec_bldg ? 1 : calc_num_floors(*i, window_vspacing, floor_thickness));
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
@@ -2495,7 +2496,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 					set_cube_zvals(trim, z, z+trim_height); // starts at floor height
 					trim_cubes.clear();
 					trim_cubes.push_back(trim); // start with entire length
-					float const ceil_trim_z2(z + floor_to_ceil_height), ceil_trim_z1(ceil_trim_z2 - trim_height); // ceil height
+					float const room_height(is_sec_bldg ? (i->dz() - floor_thickness) : floor_to_ceil_height);
+					float const ceil_trim_z2(z + room_height), ceil_trim_z1(ceil_trim_z2 - trim_height); // ceil height
 
 					for (auto j = parts.begin(); j != get_real_parts_end(); ++j) { // clip against other parts
 						if (j == i) continue; // skip self
