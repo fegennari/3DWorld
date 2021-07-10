@@ -570,6 +570,7 @@ class building_draw_t {
 public:
 	unsigned cur_tile_id;
 	vect_cube_t temp_cubes, temp_cubes2;
+	vector<float> temp_wall_edges;
 
 	building_draw_t(bool is_city_=0) : cur_camera_pos(zero_vector), is_city(is_city_), cur_tile_id(0) {}
 	void init_draw_frame() {cur_camera_pos = get_camera_pos();} // capture camera pos during non-shadow pass to use for shadow pass
@@ -1287,31 +1288,34 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			unsigned const num_windows(get_num_windows_on_side(i->d[!dim][0], i->d[!dim][1]));
 			if (num_windows <= 1) continue; // no space to split the windows on this wall
-			float const window_spacing(i->get_sz_dim(!dim)/num_windows);
+			float const window_spacing(i->get_sz_dim(!dim)/num_windows), side_lo(i->d[!dim][0]), side_hi(i->d[!dim][1]);
 
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				if (!(dsides & (1 << (2*dim + dir)))) continue; // no door on this side
 				unsigned const dim_mask((1 << dim) + (1 << (3 + 2*dim + (1-dir)))); // enable only this dim but disable the other dir
 				float const wall_pos(i->d[dim][dir]);
-				float wall_lo(0.0), wall_hi(0.0);
+				vector<float> &wall_edges(bdraw.temp_wall_edges);
+				wall_edges.clear();
 
 				for (auto d = doors.begin(); d != doors.end(); ++d) {
 					cube_t const c(d->get_bcube());
 					if ((c.dy() < c.dx()) != dim) continue; // wrong dim
 					if (c.d[dim][0]-toler > wall_pos || c.d[dim][1]+toler < wall_pos) continue; // door not on this wall
-					float side_lo(i->d[!dim][0]), side_hi(i->d[!dim][1]), door_lo(c.d[!dim][0]), door_hi(c.d[!dim][1]);
+					float const door_lo(c.d[!dim][0]), door_hi(c.d[!dim][1]);
 					if (door_lo > side_hi || door_hi < side_lo) continue; // door not on this part
 					// align to an exact multiple of window period so that bottom floor windows line up with windows on the floors above and no walls are clipped
-					wall_lo = window_spacing*floor(((door_lo - space) - side_lo)/window_spacing) + side_lo;
-					wall_hi = window_spacing*ceil (((door_hi + space) - side_lo)/window_spacing) + side_lo;
-					break; // TODO: handle multiple doors on this side (for garage door + house door)
+					if (wall_edges.empty()) {wall_edges.push_back(side_lo); wall_edges.push_back(side_hi);} // first wall, add end points
+					wall_edges.push_back(door_lo - space); // low
+					wall_edges.push_back(door_hi + space); // high
 				} // for d
-				if (wall_lo == 0.0 && wall_hi == 0.0) continue; // no door, could be a non-main door (roof access, garage, shed)
-				assert(wall_lo < wall_hi); // there must be a door
+				if (wall_edges.empty()) continue; // no door, could be a non-main door (roof access, garage, shed) - does the mean there are no windows on this exterior wall?
+				assert(!(wall_edges.size() & 1)); // must be an even number
+				sort(wall_edges.begin(), wall_edges.end());
 
-				for (unsigned e = 0; e < 2; ++e) { // left/right of door
+				for (unsigned e = 0; e < wall_edges.size(); e += 2) { // each pair of points should be the {left, right} edge of a wall section
 					cube_t c(*i);
-					c.d[!dim][e] = (e ? wall_lo : wall_hi); // split the wall here
+					c.d[!dim][0] = window_spacing*ceil ((wall_edges[e  ] - side_lo)/window_spacing) + side_lo; // lo, clamped to whole windows
+					c.d[!dim][1] = window_spacing*floor((wall_edges[e+1] - side_lo)/window_spacing) + side_lo; // hi, clamped to whole windows
 					float const wall_len(c.get_sz_dim(!dim));
 					if (wall_len < 0.5*window_spacing) continue; // wall too small to add here
 					c.z2() = door_ztop;
