@@ -1372,9 +1372,12 @@ void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 }
 
 bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
+	bool const is_garage_or_shed(room.is_garage_or_shed());
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_depth((is_house ? (is_basement ? 0.18 : 0.15) : 0.2)*window_vspacing);
-	bool const is_garage_or_shed(room.is_garage_or_shed());
+	float shelf_shorten(shelf_depth + 1.0f*wall_thickness);
+	// increase shelf shorten for interior garages to account for approx width of exterior door when opened
+	if (room.get_room_type(0) == RTYPE_GARAGE) {max_eq(shelf_shorten, 0.36f*window_vspacing);}
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const num_crates(4 + (rgen.rand() % (is_house ? (is_basement ? 12 : 5) : 30))); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
@@ -1415,7 +1418,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 			cube_t shelves(room_bounds);
 			set_cube_zvals(shelves, zval, ceil_zval-floor_thickness);
 			crate_bounds.d[dim][dir] = shelves.d[dim][!dir] = shelves.d[dim][dir] + (dir ? -1.0 : 1.0)*shelf_depth; // outer edge of shelves, which is also the crate bounds
-			shelves.expand_in_dim(!dim, -(shelf_depth + 1.0f*wall_thickness)); // shorten shelves
+			shelves.expand_in_dim(!dim, -shelf_shorten); // shorten shelves
 			if (has_bcube_int(shelves, exclude)) continue; // too close to a doorway
 			unsigned const shelf_flags((is_house ? RO_FLAG_IS_HOUSE : 0) | (is_garage_or_shed ? 0 : RO_FLAG_INTERIOR));
 			objs.emplace_back(shelves, TYPE_SHELVES, room_id, dim, dir, shelf_flags, tot_light_amt);
