@@ -1372,12 +1372,12 @@ void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 }
 
 bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
-	bool const is_garage_or_shed(room.is_garage_or_shed());
+	bool const is_garage_or_shed(room.is_garage_or_shed()), is_int_garage(room.get_room_type(0) == RTYPE_GARAGE);
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_depth((is_house ? (is_basement ? 0.18 : 0.15) : 0.2)*window_vspacing);
 	float shelf_shorten(shelf_depth + 1.0f*wall_thickness);
 	// increase shelf shorten for interior garages to account for approx width of exterior door when opened
-	if (room.get_room_type(0) == RTYPE_GARAGE) {max_eq(shelf_shorten, 0.36f*window_vspacing);}
+	if (is_int_garage) {max_eq(shelf_shorten, 0.36f*window_vspacing);}
 	cube_t room_bounds(get_walkable_room_bounds(room)), crate_bounds(room_bounds);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	unsigned const num_crates(4 + (rgen.rand() % (is_house ? (is_basement ? 12 : 5) : 30))); // 4-33 for offices, 4-8 for houses, 4-16 for house basements
@@ -1401,7 +1401,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		if (room_bounds.get_sz_dim(dim) < 6.0*shelf_depth) continue; // too narrow to add shelves in this dim
 
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			if (rgen.rand_bool()) continue; // only add shelves to 50% of the walls
+			if (is_int_garage ? ((rgen.rand()%3) == 0) : rgen.rand_bool()) continue; // only add shelves to 50% of the walls, 67% for interior garages
 			
 			if (is_garage_or_shed) { // garage or shed - don't place shelves in front of door, but allow them against windows
 				cube_t wall(room);
