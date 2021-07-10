@@ -2413,7 +2413,6 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			continue; // this requires a completely different approach to trim and has not yet been implemented
 		}
 		bool const garage_door(d->type == tquad_with_ix_t::TYPE_GDOOR);
-		if (garage_door && !has_int_garage) continue; // TODO: no trim on detatched garage door, needs different logic
 		cube_t door(d->get_bcube());
 		bool const dim(door.dy() < door.dx());
 		//door.expand_in_dim(!dim, -0.1*door_trim_width); // shrink slightly so that the edge of the wall is contained in the trim
@@ -2422,6 +2421,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		bool dir(0);
 		unsigned ext_flags(flags);
 		colorRGBA const &ext_trim_color(garage_door ? WHITE : door_color); // garage doors are always white
+		float const trim_width(((garage_door && has_int_garage) ? 1.5 : 1.0)*door_trim_width); // interior garage doors have thicker trim
 
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
 			if (!i->intersects_no_adj(trim)) continue;
@@ -2432,8 +2432,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 			break;
 		}
 		for (unsigned side = 0; side < 2; ++side) { // left/right of door
-			trim.d[!dim][0] = door.d[!dim][side] - (side ? door_trim_width : 0.0);
-			trim.d[!dim][1] = door.d[!dim][side] + (side ? 0.0 : door_trim_width);
+			trim.d[!dim][0] = door.d[!dim][side] - (side ? trim_width : 0.0);
+			trim.d[!dim][1] = door.d[!dim][side] + (side ? 0.0 : trim_width);
 			objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, side, (ext_flags | RO_FLAG_ADJ_BOT | RO_FLAG_ADJ_TOP), 1.0, SHAPE_TALL, ext_trim_color); // abuse tall flag
 		}
 		// add trim at bottom of door for threshold
@@ -2442,7 +2442,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		set_cube_zvals(trim, door.z1()+fc_thick, door.z1()+fc_thick+2.0*trim_thickness); // floor height
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, ext_trim_color);
 
-		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->type == tquad_with_ix_t::TYPE_BDOOR) { // add trim at top of door, houses and office buildings
+		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->type == tquad_with_ix_t::TYPE_BDOOR || garage_door) { // add trim at top of exterior door, houses and office buildings
 			set_cube_zvals(trim, door.z2()-0.03*door.dz(), door.z2()); // ends at top of door texture; see logic in clip_door_to_interior()
 		}
 		if (d->type == tquad_with_ix_t::TYPE_BDOOR) { // different logic for building doors
