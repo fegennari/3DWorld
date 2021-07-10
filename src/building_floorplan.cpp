@@ -838,38 +838,61 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
 }
 
+template<typename T> void ensure_door_opens_outward(cube_t const &room, float expand, vector<T> &doors) {
+	cube_t room_exp(room);
+	room_exp.expand_by_xy(expand);
+
+	for (auto d = doors.begin(); d != doors.end(); ++d) {
+		if (!d->intersects(room_exp)) continue;
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				cube_t wall(room);
+				wall.d[dim][!dir] = wall.d[dim][dir]; // shrink to zero width
+				wall.expand_in_dim(dim, expand); // expand wall outward
+				if (d->intersects(wall)) {d->open_dir = dir;}
+			}
+		}
+	} // for d
+}
+
 int building_t::maybe_assign_interior_garage(bool &dim, bool &dir) {
 	assert(interior != nullptr);
-	if (!is_house || has_sec_bldg() || interior->rooms.size() < 8U) return -1; // no garage for this building
+	unsigned const num_rooms(interior->rooms.size());
+	if (!is_house || has_sec_bldg() || num_rooms < 8U) return -1; // no garage for this building
 
 	if (has_basement()) { // count non-basement rooms
 		unsigned non_basement_rooms(0);
-		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {non_basement_rooms += (!r->z1() < ground_floor_z1);}
+		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {non_basement_rooms += (!(r->z1() < ground_floor_z1));}
 		if (non_basement_rooms < 8) return -1; // not enough non-basement rooms
 	}
 	rand_gen_t rgen;
-	rgen.set_state(mat_ix+1, interior->rooms.size()+1);
+	rgen.set_state(mat_ix+1, num_rooms+1);
+	unsigned const room_start(rgen.rand() % num_rooms);
 
-	// TODO: start at a random room to avoid bias
-	// TODO: what about garage door clipping through open interior doors?
-	for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-		if (r->has_stairs_on_floor(0) || r->is_hallway) continue;
-		if (has_basement() && r->part_id == (int)basement_part_ix) continue; // skip basement rooms
-		if (get_part_for_room(*r).contains_cube_xy_no_adj(*r)) continue; // skip interior rooms
-		if (r->get_room_type(0) != RTYPE_NOTSET) continue; // already assigned
-		cube_t room_interior(*r);
+	for (unsigned rix = 0; rix < num_rooms; ++rix) {
+		unsigned const cur_room((rix + room_start) % num_rooms);
+		room_t &r(interior->rooms[cur_room]);
+		if (r.has_stairs_on_floor(0) || r.is_hallway) continue;
+		if (has_basement() && r.part_id == (int)basement_part_ix) continue; // skip basement rooms
+		if (get_part_for_room(r).contains_cube_xy_no_adj(r)) continue; // skip interior rooms
+		if (r.get_room_type(0) != RTYPE_NOTSET) continue; // already assigned
+		cube_t room_interior(r);
 		room_interior.expand_by_xy(-0.5*get_wall_thickness()); // shrink slightly to allow a bit of extra padding at walls
 		if (!car_can_fit(room_interior)) continue; // too small
-		dim = (r->dx() < r->dy()); // use larger dim
-		float const length(r->get_sz_dim(dim)), width(r->get_sz_dim(!dim));
+		dim = (r.dx() < r.dy()); // use larger dim
+		float const length(r.get_sz_dim(dim)), width(r.get_sz_dim(!dim));
 		if (length > 2.0*width || length < 1.2*width) continue; // aspect ratio too high or too low
 		bool const pref_dir(rgen.rand_bool());
 
 		for (unsigned d = 0; d < 2; ++d) {
 			dir = (bool(d) ^ pref_dir);
-			if (r->d[dim][dir] != bcube.d[dim][dir]) continue; // exterior walls on the building bcube only
-			r->assign_to(RTYPE_GARAGE, 0);
-			return (r - interior->rooms.begin()); // success
+			if (r.d[dim][dir] != bcube.d[dim][dir]) continue; // exterior walls on the building bcube only
+			r.assign_to(RTYPE_GARAGE, 0);
+			float const expand(get_wall_thickness());
+			ensure_door_opens_outward(r, expand, interior->doors);
+			ensure_door_opens_outward(r, expand, interior->door_stacks);
+			return cur_room; // success
 		}
 	} // for r
 	return -1; // failed
