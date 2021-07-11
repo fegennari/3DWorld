@@ -1129,7 +1129,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 {
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
-	float const door_shift(0.01*get_window_vspace());
+	float const door_shift(0.01*get_window_vspace()), base_lo(base.d[!dim][0]), base_hi(base.d[!dim][1]);
 	bool const calc_center(door_center == 0.0); // door not yet calculated
 	bool const centered(door_center_shift == 0.0 || hallway_dim == (uint8_t)dim); // center doors connected to primary hallways
 	cube_t door;
@@ -1139,7 +1139,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 tries to place a valid door
 		if (calc_center) { // add door to first part of house/building
 			float const offset(centered ? 0.5 : rgen.rand_uniform(0.5-door_center_shift, 0.5+door_center_shift));
-			door_center = offset*base.d[!dim][0] + (1.0 - offset)*base.d[!dim][1];
+			door_center = offset*base_lo + (1.0 - offset)*base_hi;
 			door_pos    = base.d[dim][dir];
 		}
 		if (interior && !has_pri_hall() && !opens_up) { // not on a hallway - check distance to interior walls to make sure the door has space to open
@@ -1151,10 +1151,12 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 				if (w->d[ dim][0] > dpos_hi || w->d[ dim][1] < dpos_lo) continue; // not ending at same wall as door
 				if (w->d[!dim][0] > door_hi || w->d[!dim][1] < door_lo) continue; // not intersecting door
 				// Note: since we know that all rooms are wider than the door width, we know that we have space for a door on either side of the wall
+				// move the door so that it doesn't open into the end of the wall, but clamp to the base bounds in case the condition above doesn't hold
 				float const lo_dist(w->d[!dim][0] - door_lo), hi_dist(door_hi - w->d[!dim][1]);
-				if (lo_dist < hi_dist) {door_center += lo_dist;} else {door_center -= hi_dist;} // move the door so that it doesn't open into the end of the wall
+				if (lo_dist < hi_dist) {door_center = min((door_center + lo_dist), (base_hi - door_half_width));}
+				else                   {door_center = max((door_center - hi_dist), (base_lo + door_half_width));}
 				break;
-			}
+			} // for w
 		}
 		door.d[ dim][!dir] = door_pos + door_shift*(dir ? 1.0 : -1.0); // move slightly away from the house to prevent z-fighting
 		door.d[ dim][ dir] = door.d[dim][!dir]; // make zero size in this dim
