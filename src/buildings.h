@@ -663,7 +663,7 @@ struct room_t : public cube_t {
 	bool has_bathroom() const;
 	bool is_lit_on_floor    (unsigned floor) const {return (lit_by_floor & (1ULL << (floor&63)));}
 	bool has_stairs_on_floor(unsigned floor) const {return (has_stairs & (1U << min(floor, 7U)));} // floors >= 7 are treated as the top floor
-	bool is_garage_or_shed() const {return (is_sec_bldg || get_room_type(0) == RTYPE_GARAGE || get_room_type(0) == RTYPE_SHED);}
+	bool is_garage_or_shed  (unsigned floor) const {return (is_sec_bldg || get_room_type(floor) == RTYPE_GARAGE || get_room_type(floor) == RTYPE_SHED);}
 	float get_light_amt() const;
 	unsigned get_floor_containing_zval(float zval, float floor_spacing) const {return (is_sec_bldg ? 0 : unsigned((zval - z1())/floor_spacing));}
 };

@@ -1372,7 +1372,7 @@ void gen_crate_sz(vector3d &sz, rand_gen_t &rgen, float window_vspacing) {
 }
 
 bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
-	bool const is_garage_or_shed(room.is_garage_or_shed()), is_int_garage(room.get_room_type(0) == RTYPE_GARAGE);
+	bool const is_garage_or_shed(room.is_garage_or_shed(0)), is_int_garage(room.get_room_type(0) == RTYPE_GARAGE);
 	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), floor_thickness(get_floor_thickness());
 	float const ceil_zval(zval + window_vspacing - floor_thickness), shelf_depth((is_house ? (is_basement ? 0.18 : 0.15) : 0.2)*window_vspacing);
 	float shelf_shorten(shelf_depth + 1.0f*wall_thickness);
@@ -2189,7 +2189,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			} // end light placement
 			float tot_light_amt(light_amt); // unitless, somewhere around 1.0
 			if (is_lit) {tot_light_amt += r->light_intensity;}
-			bool const is_ground_floor(f == 0 && !is_basement), is_garage_or_shed(r->is_garage_or_shed());
+			bool const is_ground_floor(f == 0 && !is_basement), is_garage_or_shed(r->is_garage_or_shed(f));
 			rgen.rand_mix();
 
 			if (r->no_geom || is_garage_or_shed) {
