@@ -1076,7 +1076,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		clear(); // respawn
 	}
 public:
-	player_inventory_t() : best_value(0.0) {clear();}
+	player_inventory_t() : tot_value(0.0), best_value(0.0) {clear();}
 
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
