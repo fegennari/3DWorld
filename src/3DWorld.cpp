@@ -250,10 +250,7 @@ void quit_3dworld() { // called once at the end for proper cleanup
 		free_scenery_cobjs();
 		delete_matrices();
 	}
-	//_CrtDumpMemoryLeaks();
-	//glutLeaveMainLoop();
 	glutExit();
-	//throw exit_except();
 	exit(0); // quit
 }
 
@@ -275,7 +272,6 @@ void init_window() { // register all glut callbacks
  	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(keyboard2);
 	//glutCloseFunc(quit_3dworld); // can't do this because we don't want to quit when destroying the context
-	//glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS); // doesn't work?
 
 	// init keyboard and mouse callbacks
 	glutIgnoreKeyRepeat(1);
@@ -2225,7 +2221,6 @@ int main(int argc, char** argv) {
  	glutInit(&argc, argv);
 	progress();
  	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
-	//glutInitDisplayString("rgba double depth>=16 samples>=8");
 	glutInitWindowSize(window_width, window_height);
 
 	if (init_core_context) {
@@ -2235,11 +2230,10 @@ int main(int argc, char** argv) {
 			| GLUT_DEBUG
 #endif
 		);
-		//glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
 	}
 	if (enable_timing_profiler) {toggle_timing_profiler();} // enable profiler logging on init without using the 'u' key
 	progress();
-	/*int const cur_window =*/ glutCreateWindow("3D World");
+	glutCreateWindow("3D World");
 	progress();
 	init_openal(argc, argv);
 	progress();
@@ -2250,7 +2244,6 @@ int main(int argc, char** argv) {
 	if (init_core_context) {init_debug_callback();}
 	//glEnable(GL_FRAMEBUFFER_SRGB);
 	cout << ".GL Initialized." << endl;
-	//atexit(&clear_context); // not legal when quit unexpectedly
 	uevent_advance_frame();
 	--frame_counter;
 	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE); // OpenGL 4.5 only
