@@ -1248,7 +1248,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 		cont_part = get_part_containing_pt(only_cont_pt);
 		room_with_stairs = room_containing_pt_has_stairs(only_cont_pt);
 	}
-	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // multiple cubes/parts/levels, excluding chimney
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, excluding chimney/porch/etc.
 		if (is_basement(i)) continue; // skip the basement
 		cube_t draw_part;
 		cube_t const *clamp_cube(nullptr);

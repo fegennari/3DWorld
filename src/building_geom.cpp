@@ -811,14 +811,16 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor
 }
 
 cube_t building_t::get_part_containing_pt(point const &pt) const {
-	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) { // includes garage/shed
+	auto parts_end(get_real_parts_end_inc_sec());
+
+	for (auto i = parts.begin(); i != parts_end; ++i) { // includes garage/shed
 		if (i->contains_pt(pt)) {return *i;}
 	}
 	// we can get here in rare cases due to FP precision problems; find the closest cube to pt, which should be very close
 	float dmin_sq(0.0);
 	cube_t closest;
 
-	for (auto i = parts.begin(); i != (parts.end() - has_chimney); ++i) {
+	for (auto i = parts.begin(); i != parts_end; ++i) {
 		float const dist_sq(p2p_dist(pt, i->closest_pt(pt)));
 		if (dmin_sq == 0.0 || dist_sq < dmin_sq) {dmin_sq = dist_sq; closest = *i;}
 	}
