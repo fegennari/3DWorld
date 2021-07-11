@@ -2160,9 +2160,7 @@ void
 openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
 
 	if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) return; // don't spam stdout with notifications
-	cout << "---------------------opengl-callback-start------------" << endl;
-	cout << "message: "<< message << endl;
-	cout << "type: ";
+	cout << "### OpenGL message: " << message << endl << "type: ";
 	switch (type) {
 	case GL_DEBUG_TYPE_ERROR: cout << "ERROR"; break;
 	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: cout << "DEPRECATED_BEHAVIOR"; break;
@@ -2171,9 +2169,7 @@ openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, G
 	case GL_DEBUG_TYPE_PERFORMANCE: cout << "PERFORMANCE"; break;
 	case GL_DEBUG_TYPE_OTHER: cout << "OTHER"; break;
 	}
-	cout << endl;
-	cout << "id: " << id << endl;
-	cout << "severity: ";
+	cout << " id: " << id << " severity: ";
 	switch (severity) {
 	case GL_DEBUG_SEVERITY_LOW: cout << "LOW"; break;
 	case GL_DEBUG_SEVERITY_MEDIUM: cout << "MEDIUM"; break;
@@ -2182,8 +2178,6 @@ openglCallbackFunction(GLenum source, GLenum type, GLuint id, GLenum severity, G
 	default: cout << hex << severity << dec << " ";
 	}
 	cout << endl;
-	cout << "---------------------opengl-callback-end--------------" << endl;
-	//assert(0);
 }
 
 void init_debug_callback() {
