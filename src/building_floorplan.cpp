@@ -856,46 +856,55 @@ template<typename T> void ensure_door_opens_outward(cube_t const &room, float ex
 	} // for d
 }
 
-int building_t::maybe_assign_interior_garage(bool &dim, bool &dir) {
+int building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	assert(interior != nullptr);
-	unsigned const num_rooms(interior->rooms.size());
+	vector<room_t> &rooms(interior->rooms);
+	unsigned const num_rooms(rooms.size());
 	if (!is_house || has_sec_bldg() || num_rooms < 8U) return -1; // no garage for this building
 
 	if (has_basement()) { // count non-basement rooms
 		unsigned non_basement_rooms(0);
-		for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {non_basement_rooms += (!(r->z1() < ground_floor_z1));}
+		for (auto r = rooms.begin(); r != rooms.end(); ++r) {non_basement_rooms += (!(r->z1() < ground_floor_z1));}
 		if (non_basement_rooms < 8) return -1; // not enough non-basement rooms
 	}
 	rand_gen_t rgen;
 	rgen.set_state(mat_ix+1, num_rooms+1);
 	unsigned const room_start(rgen.rand() % num_rooms);
+	float const wall_thickness(get_wall_thickness());
+	int best_room(-1);
+	float best_score(0.0);
 
 	for (unsigned rix = 0; rix < num_rooms; ++rix) {
 		unsigned const cur_room((rix + room_start) % num_rooms);
-		room_t &r(interior->rooms[cur_room]);
+		room_t &r(rooms[cur_room]);
 		if (r.has_stairs_on_floor(0) || r.is_hallway) continue;
 		if (has_basement() && r.part_id == (int)basement_part_ix) continue; // skip basement rooms
 		if (get_part_for_room(r).contains_cube_xy_no_adj(r)) continue; // skip interior rooms
 		if (r.get_room_type(0) != RTYPE_NOTSET) continue; // already assigned
+		bool const dim(r.dx() < r.dy()); // use larger dim
+		if (r.d[!dim][0] != bcube.d[!dim][0] && r.d[!dim][1] != bcube.d[!dim][1]) continue; // require other dim at either side of the building
 		cube_t room_interior(r);
-		room_interior.expand_by_xy(-0.5*get_wall_thickness()); // shrink slightly to allow a bit of extra padding at walls
+		room_interior.expand_by_xy(-wall_thickness); // shrink slightly to allow a bit of extra padding at walls
 		if (!car_can_fit(room_interior)) continue; // too small
-		dim = (r.dx() < r.dy()); // use larger dim
-		float const length(r.get_sz_dim(dim)), width(r.get_sz_dim(!dim));
-		if (length > 2.0*width || length < 1.2*width) continue; // aspect ratio too high or too low
+		float const length(r.get_sz_dim(dim)), width(r.get_sz_dim(!dim)), ar(length/width);
+		if (ar > 2.5 || ar < 1.2) continue; // aspect ratio too high or too low
 		bool const pref_dir(rgen.rand_bool());
 
 		for (unsigned d = 0; d < 2; ++d) {
-			dir = (bool(d) ^ pref_dir);
+			bool const dir(bool(d) ^ pref_dir);
 			if (r.d[dim][dir] != bcube.d[dim][dir]) continue; // exterior walls on the building bcube only
-			r.assign_to(RTYPE_GARAGE, 0);
-			float const expand(get_wall_thickness());
-			ensure_door_opens_outward(r, expand, interior->doors);
-			ensure_door_opens_outward(r, expand, interior->door_stacks);
-			return cur_room; // success
-		}
+			float const score(-(float)count_num_int_doors(r) - fabs(ar - 1.75f)); // prefer rooms with fewer interior doors, and aspect ratios around 1.75
+			if (best_room == -1 || score > best_score) {best_room = cur_room; best_score = score; gdim = dim; gdir = dir;}
+			break; // no need to try the other dir
+		} // for d
 	} // for r
-	return -1; // failed
+	if (best_room < 0) return -1; // failed
+	assert((unsigned)best_room < rooms.size());
+	room_t &room(rooms[best_room]);
+	room.assign_to(RTYPE_GARAGE, 0);
+	ensure_door_opens_outward(room, wall_thickness, interior->doors);
+	ensure_door_opens_outward(room, wall_thickness, interior->door_stacks);
+	return best_room;
 }
 
 void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
