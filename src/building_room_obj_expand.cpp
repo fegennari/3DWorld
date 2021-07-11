@@ -34,6 +34,7 @@ void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float he
 void add_boxes_to_space(room_object_t const &c, vector<room_object_t> &objects, cube_t const &bounds, vect_cube_t &cubes, rand_gen_t &rgen,
 	unsigned num_boxes, float xy_scale, float hmin, float hmax, bool allow_crates, unsigned flags)
 {
+	float const bounds_sz[2] = {bounds.dx(), bounds.dy()};
 	room_object_t C(c);
 	C.flags = flags; // Note: also clears open flag
 	vector3d sz;
@@ -41,7 +42,7 @@ void add_boxes_to_space(room_object_t const &c, vector<room_object_t> &objects, 
 
 	for (unsigned n = 0; n < num_boxes; ++n) {
 		for (unsigned d = 0; d < 2; ++d) {
-			sz    [d] = xy_scale*rgen.rand_uniform(0.5, 1.0); // x,y half width
+			sz    [d] = min(xy_scale*rgen.rand_uniform(0.5, 1.0), 0.99f*0.5f*bounds_sz[d]); // x,y half width; clamp to slightly smaller than bounds to avoid an assert
 			center[d] = rgen.rand_uniform(bounds.d[d][0]+sz[d], bounds.d[d][1]-sz[d]); // randomly placed within the bounds of the closet
 		}
 		C.set_from_point(center);
@@ -258,7 +259,7 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 	bool const is_house(c.is_house());
 	vector3d const c_sz(c.get_size());
 	float const dz(c_sz.z), width(c_sz[c.dim]), thickness(0.02*dz), bracket_thickness(0.75*thickness);
-	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.5 : 1.0), box_zscale(shelf_clearance*sz_scale);
+	float const z_step(dz/(num_shelves + 1)), shelf_clearance(z_step - thickness - bracket_thickness), sz_scale(is_house ? 0.7 : 1.0), box_zscale(shelf_clearance*sz_scale);
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 
