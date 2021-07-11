@@ -1293,9 +1293,15 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				// add a door
 				bool const long_dim(c.dx() < c.dy());
 				bool door_dir(c.d[long_dim][0] == bcube.d[long_dim][0]); // interior face
-				if (is_garage) {door_dir ^= 1;} // facing away from the house, not toward it
-				float const wscale(is_garage ? 0.9*c.get_sz_dim(!long_dim)/door_height : door_width_scale);
-				add_door(place_door(c, long_dim, door_dir, door_height, 0.0, 0.0, 0.0, wscale, 0, is_garage, rgen), parts.size(), long_dim, door_dir, 0);
+				float wscale(door_width_scale);
+				float const gs_door_height(min(door_height, 0.9f*c.dz())); // clamp to 90% of garage/shed height to make sure there's room for the ceiling trim
+				
+				if (is_garage) {
+					float const shelf_depth(0.15*floor_spacing), garage_width(c.get_sz_dim(!long_dim));
+					wscale    = min(0.9f*garage_width, (garage_width - 2.0f*shelf_depth))/gs_door_height; // avoid clipping through shelves
+					door_dir ^= 1; // facing away from the house, not toward it
+				}
+				add_door(place_door(c, long_dim, door_dir, gs_door_height, 0.0, 0.0, 0.0, wscale, 0, is_garage, rgen), parts.size(), long_dim, door_dir, 0);
 				if (is_garage) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
 				//garage_dim = long_dim;
 
