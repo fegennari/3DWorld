@@ -623,9 +623,9 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			point part_door_open_dir_tp(p->get_cube_center()); // used to determine in which direction doors open; updated base on central hallway
 			
 			if (first_part) { // reserve walls/rooms/doors - take a guess at the correct size
-				unsigned const num_parts(get_real_num_parts()), num_doors_est(4*num_parts + has_basement());
-				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*num_parts);}
-				interior->rooms.reserve(8*num_parts); // two rows of rooms + optional hallway
+				unsigned const num_doors_est(4*real_num_parts + has_basement());
+				for (unsigned d = 0; d < 2; ++d) {interior->walls[d].reserve(8*real_num_parts);}
+				interior->rooms.reserve(8*real_num_parts + has_sec_bldg()); // two rows of rooms + optional hallway
 				interior->door_stacks.reserve(num_doors_est);
 				interior->doors.reserve(num_doors_per_stack*num_doors_est);
 			}
@@ -704,7 +704,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						door_lo[dir] = o_lo_pos;
 						door_hi[dir] = o_hi_pos;
 						part_door_open_dir_tp[wall_dim] = 0.5f*(wall_pos + other_wall_pos); // use the center of the hallway so that doors open into the rooms
-						if (get_real_num_parts() == 1) {bldg_door_open_dir_tp[wall_dim] = part_door_open_dir_tp[wall_dim];} // this is also the test point for the entire building
+						if (real_num_parts == 1) {bldg_door_open_dir_tp[wall_dim] = part_door_open_dir_tp[wall_dim];} // this is also the test point for the entire building
 					}
 				}
 				for (unsigned d = 0; d < 2; ++d) { // still have space to split in other dim, add the two parts to the stack

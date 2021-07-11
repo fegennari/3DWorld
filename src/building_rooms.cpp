@@ -1833,7 +1833,7 @@ void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, f
 		bool done(0);
 
 		for (auto i = cands.begin(); i != cands.end() && !done; ++i) {
-			// check for windows if (get_real_num_parts() > 1)? is it actually possible for doors to be within far_spacing of a window?
+			// check for windows if (real_num_parts > 1)? is it actually possible for doors to be within far_spacing of a window?
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
 			float const door_width(i->get_sz_dim(!dim)), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to the side of the door when open
 			assert(door_width > 0.0);

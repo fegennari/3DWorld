@@ -1433,7 +1433,7 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 }
 
 void building_t::get_ext_wall_verts_no_sec(building_draw_t &bdraw) const { // used for blocking room shadows between parts
-	if (get_real_num_parts() == 1) return; // one part, light can't leak
+	if (real_num_parts == 1) return; // one part, light can't leak
 	building_mat_t const &mat(get_material());
 
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
