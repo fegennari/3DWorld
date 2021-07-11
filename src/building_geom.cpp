@@ -1125,7 +1125,7 @@ bool building_t::is_valid_door_pos(cube_t const &door, float door_width) const {
 }
 
 cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center,
-	float door_pos, float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen) const
+	float door_pos, float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen) const
 {
 	float const door_width(width_scale*door_height), door_half_width(0.5*door_width);
 	if (can_fail && base.get_sz_dim(!dim) < 2.0*door_width) return cube_t(); // part is too small to place a door
@@ -1142,7 +1142,7 @@ cube_t building_t::place_door(cube_t const &base, bool dim, bool dir, float door
 			door_center = offset*base.d[!dim][0] + (1.0 - offset)*base.d[!dim][1];
 			door_pos    = base.d[dim][dir];
 		}
-		if (interior && !has_pri_hall()) { // not on a hallway
+		if (interior && !has_pri_hall() && !opens_up) { // not on a hallway - check distance to interior walls to make sure the door has space to open
 			vect_cube_t const &walls(interior->walls[!dim]); // perpendicular to door
 			float const door_lo(door_center - 1.2*door_half_width), door_hi(door_center + 1.2*door_half_width); // pos along wall with a small expand
 			float const dpos_lo(door_pos    -     door_half_width), dpos_hi(door_pos    +     door_half_width); // expand width of the door
@@ -1293,7 +1293,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				bool door_dir(c.d[long_dim][0] == bcube.d[long_dim][0]); // interior face
 				if (is_garage) {door_dir ^= 1;} // facing away from the house, not toward it
 				float const wscale(is_garage ? 0.9*c.get_sz_dim(!long_dim)/door_height : door_width_scale);
-				add_door(place_door(c, long_dim, door_dir, door_height, 0.0, 0.0, 0.0, wscale, 0, rgen), parts.size(), long_dim, door_dir, 0);
+				add_door(place_door(c, long_dim, door_dir, door_height, 0.0, 0.0, 0.0, wscale, 0, is_garage, rgen), parts.size(), long_dim, door_dir, 0);
 				if (is_garage) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
 				//garage_dim = long_dim;
 
@@ -1359,22 +1359,24 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_interior(rgen, 0); // before adding door
 
 	if (gen_door) {
-		bool gdim(0), gdir(0);
-		int const garage_room(maybe_assign_interior_garage(gdim, gdir));
+		if (rand_num & 24) { // attempt to add an interior garage when legal, 75% of the time
+			bool gdim(0), gdir(0);
+			int const garage_room(maybe_assign_interior_garage(gdim, gdir));
 
-		if (garage_room >= 0) { // assigned a garage
-			has_int_garage = 1;
-			assert((unsigned)garage_room < interior->rooms.size());
-			room_t const &garage(interior->rooms[garage_room]);
-			float const wscale(0.9*garage.get_sz_dim(!gdim)/door_height);
-			add_door(place_door(garage, gdim, gdir, door_height, 0.0, 0.0, 0.0, wscale, 0, rgen), garage.part_id, gdim, gdir, 0);
-			doors.back().type = tquad_with_ix_t::TYPE_GDOOR; // make it a garage door
-			driveway = garage;
-			driveway.z2() = garage.z1();
-			driveway.d[gdim][!gdir] = garage.d[gdim][gdir]; // start pos
-			driveway.d[gdim][ gdir] = garage.d[gdim][gdir] + (gdir ? 1.0 : -1.0)*0.4*garage.get_sz_dim(gdim); // extend outward
+			if (garage_room >= 0) { // assigned a garage
+				has_int_garage = 1;
+				assert((unsigned)garage_room < interior->rooms.size());
+				room_t const &garage(interior->rooms[garage_room]);
+				float const wscale(0.9*garage.get_sz_dim(!gdim)/door_height);
+				add_door(place_door(garage, gdim, gdir, door_height, 0.0, 0.0, 0.0, wscale, 0, 1, rgen), garage.part_id, gdim, gdir, 0); // centered in garage
+				doors.back().type = tquad_with_ix_t::TYPE_GDOOR; // make it a garage door
+				driveway = garage;
+				driveway.z2() = garage.z1();
+				driveway.d[gdim][!gdir] = garage.d[gdim][gdir]; // start pos
+				driveway.d[gdim][ gdir] = garage.d[gdim][gdir] + (gdir ? 1.0 : -1.0)*0.4*garage.get_sz_dim(gdim); // extend outward
+			}
 		}
-		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, rgen));
+		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, 0, rgen));
 
 		if (!is_valid_door_pos(door, 0.5*door_height)) { // blocked by stairs or door - switch door to other side/dim
 			door_dim ^= 1;
@@ -1387,7 +1389,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
 			}
 			for (unsigned n = 0; n < 4; ++n) { // make 4 attempts at generating a valid interior where this door can be placed; this still fails 32 times
-				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, rgen); // keep door_height
+				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, 0, rgen); // keep door_height
 				if (is_valid_door_pos(door, 0.5*door_height)) break; // done
 				
 				if (n+1 < 4) { // still invalid, regenerate interior
@@ -1418,7 +1420,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 					for (unsigned door2_dir = 0; door2_dir < 2 && !added_door; ++door2_dir) {
 						if (door2_dim == door_dim && door_dir == bool(door2_dir) /*&& door2_part == door_part*/) continue; // don't place second door on the same side
 						if (part.d[door2_dim][door2_dir] != bcube.d[door2_dim][door2_dir]) continue; // door on building bcube is always exterior/never interior face between two parts
-						cube_t door2(place_door(part, door2_dim, door2_dir, door_height, 0.0, 0.0, 0.25, door_width_scale, 1, rgen));
+						cube_t door2(place_door(part, door2_dim, door2_dir, door_height, 0.0, 0.0, 0.25, door_width_scale, 1, 0, rgen));
 						if (!is_valid_door_pos(door2, 0.5*door_height)) continue; // bad placement
 						added_door |= add_door(door2, door2_part, door2_dim, door2_dir, 0);
 					} // for door_dir2
@@ -1805,7 +1807,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 
 	if (has_pri_hall()) { // building has primary hallway, place doors at both ends of first part
 		for (unsigned d = 0; d < 2; ++d) {
-			add_door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, 0, rgen), 0, bool(hallway_dim), d, 1);
+			add_door(place_door(parts.front(), bool(hallway_dim), d, door_height, 0.0, 0.0, 0.0, wscale, 0, 0, rgen), 0, bool(hallway_dim), d, 1);
 		}
 		return;
 	}
@@ -1831,7 +1833,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 				if (used[2*dim + dir]) continue; // door already placed on this side
 				used[2*dim + dir] = 1; // mark used
 				bool const allow_fail(!doors.empty() || b+1 != get_real_parts_end()); // allow door placement to fail if we've already placed at least one door of not last part
-				placed = add_door(place_door(*b, dim, dir, door_height, 0.0, 0.0, 0.1, wscale, allow_fail, rgen), part_ix, dim, dir, 1);
+				placed = add_door(place_door(*b, dim, dir, door_height, 0.0, 0.0, 0.1, wscale, allow_fail, 0, rgen), part_ix, dim, dir, 1);
 				break;
 			} // for n
 		} // for b
@@ -1849,7 +1851,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 			for (unsigned n = 0; n < 4; ++n) {
 				bool const dim(n>>1), dir(n&1);
 				if (part.d[dim][dir] == bcube.d[dim][dir] || part.d[dim][!dir] != bcube.d[dim][!dir]) continue; // find a side on the interior
-				placed = add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 1, rgen), part_ix, dim, dir, 1); // centered
+				placed = add_door(place_door(part, dim, dir, door_height, 0.0, 0.0, 0.0, wscale, 1, 0, rgen), part_ix, dim, dir, 1); // centered
 			}
 		} // for b
 	}

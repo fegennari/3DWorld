@@ -875,7 +875,7 @@ struct building_t : public building_geom_t {
 	void adjust_part_zvals_for_floor_spacing(cube_t &c) const;
 	void gen_geometry(int rseed1, int rseed2);
 	cube_t place_door(cube_t const &base, bool dim, bool dir, float door_height, float door_center, float door_pos,
-		float door_center_shift, float width_scale, bool can_fail, rand_gen_t &rgen) const;
+		float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen) const;
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	void add_solar_panels(rand_gen_t &rgen);
 	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building, bool roof_access=0);
@@ -891,7 +891,7 @@ struct building_t : public building_geom_t {
 	float get_hspacing_for_part(cube_t const &part, bool dim) const;
 	bool interior_enabled() const;
 	void gen_interior(rand_gen_t &rgen, bool has_overlapping_cubes);
-	int maybe_assign_interior_garage(bool &dim, bool &dir);
+	int maybe_assign_interior_garage(bool &gdim, bool &gdir);
 	void add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part, cube_t const &hall, unsigned part_ix, unsigned num_floors,
 		unsigned rooms_start, bool use_hallway, bool first_part_this_stack, float window_hspacing[2], float window_border);
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
