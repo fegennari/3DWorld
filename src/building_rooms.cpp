@@ -2218,6 +2218,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			// place room objects
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f));
+			//if (has_chimney && f == 0) {} // TODO: add a fireplace?
 
 			if (is_office_bathroom) { // bathroom is already assigned
 				added_obj = is_bathroom = added_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement); // add bathroom
