@@ -807,6 +807,25 @@ public:
 				else {
 					segs.push_back(wall_seg_t()); // single seg
 				}
+				if (clip_windows && bg.has_chimney) { // remove windows blocked by the chimney; there can be at most one segment
+					assert(bg.parts.size() > 1);
+					cube_t const &chimney(bg.parts.back());
+
+					if (cube.d[n][j] == chimney.d[n][!j]) { // chimney is adjacent to this side
+						unsigned const cdim(clip_d ? d : i);
+						float const c_lo((chimney.d[cdim][0] - llc[cdim])/sz[cdim]), c_hi((chimney.d[cdim][1] - llc[cdim])/sz[cdim]);
+
+						for (auto s = segs.begin(); s != segs.end(); ++s) {
+							float &lo(clip_d ? s->dlo : s->ilo), &hi(clip_d ? s->dhi : s->ihi);
+							if (lo > c_lo || hi < c_hi) continue; // doesn't span the chimney (side should not partially overlap the chimney)
+							wall_seg_t s2(*s);
+							hi = c_lo; // *s becomes lo seg
+							(clip_d ? s2.dlo : s2.ilo) = c_hi; // s2 becomes hi seg
+							segs.push_back(s2);
+							break; // s is invalidated, have to break; there shouldn't be any other segs spanning chimney anyway
+						} // for s
+					}
+				}
 				for (auto s = segs.begin(); s != segs.end(); ++s) {
 					wall_seg_t const &seg(*s);
 					unsigned const ix(verts.size()); // first vertex of this quad

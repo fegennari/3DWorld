@@ -1516,9 +1516,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			c.d[dim][!dir]  = c.d[dim][dir];
 			c.d[dim][ dir] += (dir ? 1.0 : -1.0)*chimney_depth;
 			//c.z1() = c.z1() + floor_spacing;
-			// TODO: remove windows blocked by chimney
 			// TODO: make wider at the bottom
 			// TODO: add fireplace to the first floor room
+			has_chimney = 1; // only used for exterior chimney
 		}
 		else { // chimney inside the bounds of the house
 			c.d[dim][!dir]  = c.d[dim][dir] + (dir ? -1.0 : 1.0)*chimney_depth;
@@ -1535,7 +1535,6 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		tquad.pts[2].assign(c.x2(), c.y2(), c.z2());
 		tquad.pts[3].assign(c.x1(), c.y2(), c.z2());
 		roof_tquads.emplace_back(tquad, (unsigned)tquad_with_ix_t::TYPE_CCAP); // tag as chimney cap
-		has_chimney = 1; // Note: this is no longer used, but it may be useful to have later when placing a fireplace in a room
 	}
 	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
 	add_roof_to_bcube();
