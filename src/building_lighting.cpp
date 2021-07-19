@@ -735,14 +735,15 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if ((display_mode & 0x08) && !clipped_bc.contains_pt(camera_rot) && check_obj_occluded(clipped_bc, camera_bs, oc, 0)) continue; // occlusion culling
 		dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, -plus_z, bwidth); // points down
 
-		if (camera_near_building && !is_lamp) { // check for dynamic shadows
+		// check for dynamic shadows
+		if (camera_surf_collide && camera_in_building && (is_lamp || (lpos_rot.z > camera_bs.z && (camera_on_stairs || lpos_rot.z < (camera_bs.z + window_vspacing)))) &&
+			clipped_bc.contains_pt(camera_rot) && dist_less_than(lpos_rot, camera_bs, dshadow_radius))
+		{
+			dynamic_shadows = 1; // camera shadow; includes lamps (with no zval test)
+		}
+		else if (camera_near_building && !is_lamp) {
 			if (toggle_door_open_state) {
 				dynamic_shadows = 1; // toggling a door state will generally invalidate shadows in the building for that frame
-			}
-			else if (camera_surf_collide && camera_in_building && lpos_rot.z > camera_bs.z && (camera_on_stairs || lpos_rot.z < (camera_bs.z + window_vspacing)) &&
-				clipped_bc.contains_pt(camera_rot) && dist_less_than(lpos_rot, camera_bs, dshadow_radius))
-			{
-				dynamic_shadows = 1; // camera shadow
 			}
 			else if (animate2 && enable_building_people_ai()) { // check moving people
 				if (ped_ix >= 0 && ped_bcubes.empty()) {
@@ -759,7 +760,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					if (lpos_rot.z > j->z2() && j->intersects(clipped_bc) && dist_less_than(lpos_rot, j->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
 				}
 			}
-		} // end dynamic shadows check
+		}
+		// end dynamic shadows check
 		cube_t const clipped_bc_rot(is_rotated() ? get_rotated_bcube(clipped_bc) : clipped_bc);
 		setup_light_for_building_interior(dl_sources.back(), *i, clipped_bc_rot, dynamic_shadows);
 		
