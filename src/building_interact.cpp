@@ -212,6 +212,14 @@ bool check_obj_dir_dist(point const &closest_to, vector3d const &in_dir, cube_t 
 	return (dot_product(in_dir, (vis_pt - closest_to).get_norm()) > 0.5); // door is not in the correct direction, skip
 }
 
+bool can_open_bathroom_stall(room_object_t const &stall, point const &pos, vector3d const &dir) {
+	point door_center;
+	door_center[ stall.dim] = stall.d[stall.dim][!stall.dir];
+	door_center[!stall.dim] = stall.get_center_dim(!stall.dim);
+	door_center.z = pos.z;
+	return (dot_product_ptv(dir, door_center, pos) > 0.0); // facing the stall door
+}
+
 bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in) { // called for the player
 	if (!interior) return 0; // error?
 	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace());
@@ -250,7 +258,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				else if (i->type == TYPE_CLOSET && in_dir.z < 0.5) {keep = 1;} // closet door can be opened; not looking up at the light
 				else if (!player_in_closet) {
 					if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
-					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE)  {keep = 1;} // cube bathroom stall can be opened
+					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall(*i, closest_to, in_dir)) {keep = 1;} // cube bathroom stall can be opened
 					else if (i->type == TYPE_OFF_CHAIR && (i->flags & RO_FLAG_RAND_ROT)) {keep = 1;} // office chair can be rotated
 					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 					else if (i->is_light_type()) {keep = 1;} // room light or lamp
