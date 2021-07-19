@@ -1076,7 +1076,7 @@ class player_inventory_t { // manages player inventory, health, and other stats
 		clear(); // respawn
 	}
 public:
-	player_inventory_t() : tot_value(0.0), best_value(0.0) {clear();}
+	player_inventory_t() {clear_all();}
 
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
@@ -1086,6 +1086,10 @@ public:
 		prev_in_building = has_key = 0;
 		phone_manager.disable();
 		carried.clear();
+	}
+	void clear_all() { // called on game mode init
+		tot_value = best_value = 0.0;
+		clear();
 	}
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
 	bool check_weight_limit(float weight) const {return ((cur_weight + weight) <= global_building_params.player_weight_limit);}
@@ -2196,4 +2200,6 @@ void building_gameplay_next_frame() {
 	can_pickup_bldg_obj = 0;
 	do_room_obj_pickup  = city_action_key = 0;
 }
+
+void enter_building_gameplay_mode() {player_inventory.clear_all();}
 

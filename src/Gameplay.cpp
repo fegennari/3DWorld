@@ -68,6 +68,7 @@ extern char player_name[];
 extern coll_obj_group coll_objects;
 
 bool push_movable_cobj(unsigned index, vector3d &delta, point const &pushed_from);
+void enter_building_gameplay_mode();
 
 
 point &get_sstate_pos(int id) {
@@ -2715,6 +2716,7 @@ void init_game_mode() {
 
 	if (world_mode == WMODE_INF_TERRAIN && game_mode == 2) {
 		print_text_onscreen("Building Gameplay Mode", WHITE, 2.0, MESSAGE_TIME, 4);
+		enter_building_gameplay_mode();
 	}
 	else {
 		string const str(string("Playing ") + ((game_mode == 1) ? "Deathmatch" : "Dodgeball") + " as " + player_name);
