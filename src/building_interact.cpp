@@ -244,15 +244,25 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	}
 	if (interior->room_geom) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
 		vector<room_object_t> &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
+		auto objs_end(interior->room_geom->get_stairs_start());
 		point const query_ray_end(closest_to + dmax*in_dir);
+		cube_t active_area;
 
+		// make a first pass over all the large objects to determinf if the player is inside one; in that case, the player can't reach out and interact with an object outside it
+		for (auto i = objs.begin(); i != objs_end; ++i) {
+			if (i->type != TYPE_STALL && i->type != TYPE_SHOWER && i->type != TYPE_ELEVATOR && !(i->type == TYPE_CLOSET && i->is_open())) continue; // TYPE_CUBICLE?
+			if (!i->contains_pt(closest_to)) continue;
+			active_area = *i;
+			break; // there can be only one - done
+		}
 		for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
 			auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
 			unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
-			auto objs_end((vect_id == 1) ? expanded_objs.end() : interior->room_geom->get_stairs_start()); // skip stairs and elevators
+			auto obj_vect_end((vect_id == 1) ? expanded_objs.end() : objs_end); // skip stairs and elevators
 
-			for (auto i = obj_vect.begin(); i != objs_end; ++i) {
+			for (auto i = obj_vect.begin(); i != obj_vect_end; ++i) {
 				if (cur_player_building_loc.room_ix >= 0 && i->room_id != cur_player_building_loc.room_ix && i->type != TYPE_BUTTON) continue; // not in the same room as the player
+				if (!active_area.is_all_zeros() && !i->intersects(active_area)) continue; // out of reach for the player
 				bool keep(0);
 				if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
 				else if (i->type == TYPE_CLOSET && in_dir.z < 0.5) {keep = 1;} // closet door can be opened; not looking up at the light
