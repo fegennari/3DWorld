@@ -854,7 +854,9 @@ struct building_t : public building_geom_t {
 	bool check_bcube_overlap_xy(building_t const &b, float expand_rel, float expand_abs, vector<point> &points) const;
 	vect_cube_t::const_iterator get_real_parts_end() const {return (parts.begin() + real_num_parts);}
 	vect_cube_t::const_iterator get_real_parts_end_inc_sec() const {return (get_real_parts_end() + has_sec_bldg());}
-	cube_t const &get_sec_bldg() const {assert(has_sec_bldg()); assert(real_num_parts < parts.size()); return parts[real_num_parts];}
+	cube_t const &get_sec_bldg () const {assert(has_sec_bldg()); assert(real_num_parts < parts.size()); return parts[real_num_parts];}
+	cube_t const &get_chimney  () const {assert(has_chimney && parts.size() > 1); return parts.back();}
+	cube_t const &get_fireplace() const {assert(has_chimney && parts.size() > 2); return parts[parts.size()-2];}
 	void end_add_parts() {assert(parts.size() < 256); real_num_parts = uint8_t(parts.size());}
 	cube_t get_coll_bcube() const;
 
@@ -971,6 +973,7 @@ struct building_t : public building_geom_t {
 	point local_to_camera_space(point const &pos) const;
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
 private:
+	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t &rgen);
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
