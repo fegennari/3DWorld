@@ -716,9 +716,11 @@ public:
 	}
 	void draw_and_clear(shader_t &s) {
 		if (mat.empty()) return;
+		glDepthMask(GL_FALSE); // disable depth writing - fixes sky visible through exterior wall, but then not drawn in front of exterior wall
 		enable_blend();
 		mat.upload_draw_and_clear(s);
 		disable_blend();
+		glDepthMask(GL_TRUE); // re-enable depth writing
 		if (animate2) {tex_off += 0.02*fticks;} // animate the texture
 		if (tex_off > 1.0) {tex_off -= 1.0;}
 	}
