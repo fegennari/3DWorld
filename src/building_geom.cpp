@@ -1842,7 +1842,7 @@ float building_t::gen_hipped_roof(cube_t const &top_, float peak_height, float e
 
 void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office buildings
 
-	if (!is_cube()) return; // for now, only cube buildings can have doors; doors can be added to N-gon (non cylinder) buildings later
+	if (!is_simple_cube()) return; // for now, only simple cube buildings can have doors; doors can be added to N-gon (non cylinder) buildings later
 	assert(!parts.empty());
 	float const door_height(1.1*get_door_height()), wscale(0.7); // a bit taller and a lot wider than house doors
 
