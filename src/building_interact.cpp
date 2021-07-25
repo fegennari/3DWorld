@@ -303,7 +303,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 		if (!found_item) return 0; // no door or object found
 	}
 	if (is_obj) { // interactive object
-		if (!interact_with_object(obj_ix, closest_to.z)) return 0; // generate sound from the player height
+		if (!interact_with_object(obj_ix, closest_to, in_dir)) return 0; // generate sound from the player height
 	}
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
@@ -315,10 +315,10 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	return 1;
 }
 
-bool building_t::interact_with_object(unsigned obj_ix, float sound_zval) {
+bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, vector3d const &int_dir) {
 	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 	float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
-	point const sound_origin(obj.xc(), obj.yc(), sound_zval), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
+	point const sound_origin(obj.xc(), obj.yc(), int_pos.z), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
 	float sound_scale(0.5); // for building sound level
 	bool update_draw_data(0);
 
@@ -393,11 +393,17 @@ bool building_t::interact_with_object(unsigned obj_ix, float sound_zval) {
 		sound_scale      = 0.0; // no sound
 		update_draw_data = 1;
 	}
-	else if (obj.type == TYPE_SHOWER) { // shower door
-		obj.flags ^= RO_FLAG_OPEN; // toggle open/close
-		gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));
-		sound_scale      = 0.35;
-		update_draw_data = 1;
+	else if (obj.type == TYPE_SHOWER) { // shower
+		if (can_open_bathroom_stall(obj, int_pos, int_dir)) { // open/close shower door
+			obj.flags ^= RO_FLAG_OPEN; // toggle open/close
+			gen_sound_thread_safe_at_player((obj.is_open() ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_METAL_DOOR));
+			sound_scale      = 0.35;
+			update_draw_data = 1;
+		}
+		else { // turn on shower water
+			gen_sound_thread_safe_at_player(SOUND_SINK);
+			sound_scale = 0.5;
+		}
 	}
 	else if (obj.type == TYPE_BOX) {
 		gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.5);
@@ -626,7 +632,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 					if (obj.type == TYPE_PICTURE || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
 						(obj.type == TYPE_OFF_CHAIR && (obj.flags & RO_FLAG_RAND_ROT)))
 					{
-						if (!handled) {interact_with_object(obj_ix, center.z);}
+						if (!handled) {interact_with_object(obj_ix, center, velocity.get_norm());}
 					}
 				}
 			}
