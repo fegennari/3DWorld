@@ -1208,14 +1208,14 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 	float const center(c.get_center_dim(!dim) + shift);
 	float const chimney_height(rgen.rand_uniform(1.25, 1.5)*chimney_dz - 0.4f*abs(shift)), chimney_depth(0.03f*(sz1 + sz2));
 
-	if (0) { // chimney outside the bounds of the house
+	if (1) { // chimney outside the bounds of the house
 		float const hwidth(0.04*sz1);
 		set_wall_width(c, center, hwidth, !dim); // set chimney width
 		c.d[dim][!dir]  = c.d[dim][dir] + 0.001*(dir ? 1.0 : -1.0)*chimney_depth; // slight shift to avoid Z-fighting
 		c.d[dim][ dir] += (dir ? 1.0 : -1.0)*chimney_depth;
 		// add bottom section, which will be the outside of the fireplace
 		cube_t fplace(c);
-		c.z1() = fplace.z2() = c.z1() + 0.75*get_window_vspace(); // 75% of floor height
+		c.z1() = fplace.z2() = c.z1() + 0.85*get_window_vspace(); // 85% of floor height
 		fplace.expand_in_dim(!dim, max(1.0f*hwidth, 0.6f*chimney_depth)); // widen for fireplace
 		// check if blocked by a door, and skip if it is
 		cube_t test_cube(fplace);

@@ -563,6 +563,7 @@ class building_draw_t {
 		wall_seg_t(float dlo_, float dhi_, float ilo_, float ihi_) : dlo(dlo_), dhi(dhi_), ilo(ilo_), ihi(ihi_) {
 			assert(dlo <= dhi && ilo <= ihi && dlo >= 0.0f && dhi <= 1.0f && ilo >= 0.0f && ihi <= 1.0f); // should be (dlo < dhi && ilo < ihi), but can fail due to FP error
 		}
+		bool is_normalized() const {return (dlo < dhi && ilo < ihi);}
 	};
 	vector<wall_seg_t> segs;
 	vect_cube_t faces;
@@ -812,23 +813,35 @@ public:
 					block.union_with_cube(bg.get_fireplace()); // merge with fireplace
 
 					if (fabs(cube.d[n][j] - block.d[n][!j]) < 0.01*window_vspacing) { // chimney is adjacent to this side, or close enough
-						unsigned const cdim(clip_d ? d : i);
-						float const c_lo((block.d[cdim][0] - llc[cdim])/sz[cdim]), c_hi((block.d[cdim][1] - llc[cdim])/sz[cdim]);
-						// TODO: clamp to an exact window multiple
+						// remove vertical columns of whole windows that overlap the chimney or fireplace
+						unsigned const cdim(clip_d ? d : i); // clip dimension
+						float const ts(tscale[bool(st) ^ clip_d ^ 1]), toff(cdim ? tex.tyoff : tex.txoff); // texture scale and offset for clip dim
+						float t_lo(ts*(cube.d[cdim][0] + tex_vert_off[cdim]) + toff), t_hi(ts*(cube.d[cdim][1] + tex_vert_off[cdim]) + toff);
+						clip_low_high_tc(t_lo, t_hi);
+						float const num_windows(round_fp(t_hi - t_lo)); // window count for this wall; should be an exact integer
 
-						for (auto s = segs.begin(); s != segs.end(); ++s) {
-							float &lo(clip_d ? s->dlo : s->ilo), &hi(clip_d ? s->dhi : s->ihi);
-							if (lo > c_hi || hi < c_lo) continue; // doesn't overlap the chimney (side clipped to door may partially overlap the chimney)
-							wall_seg_t s2(*s);
-							hi = c_lo; // *s becomes lo seg
-							(clip_d ? s2.dlo : s2.ilo) = c_hi; // s2 becomes hi seg
-							segs.push_back(s2);
-							break; // s is invalidated, have to break; there shouldn't be any other segs spanning chimney anyway
-						} // for s
+						if (num_windows > 0) { // we have at least one window
+							float const edge_buffer(0.9*bg.get_window_h_border()/num_windows); // slightly smaller than the space to the sides of a window, in parametric space
+							float c_lo((block.d[cdim][0] - llc[cdim])/sz[cdim]), c_hi((block.d[cdim][1] - llc[cdim])/sz[cdim]); // parametric bounds of chimney
+							c_lo += edge_buffer; c_hi -= edge_buffer; // space to the left and right of the window is allowed to overlap the chimney/fireplace
+							c_lo  = floor(num_windows*c_lo)/num_windows; // round down to an exact window boundary
+							c_hi  = ceil (num_windows*c_hi)/num_windows; // round up   to an exact window boundary
+
+							for (auto s = segs.begin(); s != segs.end(); ++s) {
+								float &lo(clip_d ? s->dlo : s->ilo), &hi(clip_d ? s->dhi : s->ihi);
+								if (lo > c_hi || hi < c_lo) continue; // doesn't overlap the chimney (side clipped to door may partially overlap the chimney)
+								wall_seg_t s2(*s);
+								hi = c_lo; // *s becomes lo seg
+								(clip_d ? s2.dlo : s2.ilo) = c_hi; // s2 becomes hi seg
+								if (s2.is_normalized()) {segs.push_back(s2);} // Note: s->is_normalized() check is done in the segs iteration below
+								break; // s is invalidated, have to break; there shouldn't be any other segs spanning chimney anyway
+							} // for s
+						}
 					}
 				}
 				for (auto s = segs.begin(); s != segs.end(); ++s) {
 					wall_seg_t const &seg(*s);
+					if (!seg.is_normalized()) continue; // zero area or denormalized - skip (can get here due to chimney clipping)
 					unsigned const ix(verts.size()); // first vertex of this quad
 					pt[d] = seg.dlo;
 					pt[i] = (j ? seg.ilo : seg.ihi); // need to orient the vertices differently for each side
