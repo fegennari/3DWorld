@@ -1208,7 +1208,7 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 	float const center(c.get_center_dim(!dim) + shift);
 	float const chimney_height(rgen.rand_uniform(1.25, 1.5)*chimney_dz - 0.4f*abs(shift)), chimney_depth(0.03f*(sz1 + sz2));
 
-	if (1) { // chimney outside the bounds of the house
+	if (rgen.rand()&3) { // chimney outside the bounds of the house, 75% of the time
 		float const hwidth(0.04*sz1);
 		set_wall_width(c, center, hwidth, !dim); // set chimney width
 		c.d[dim][!dir]  = c.d[dim][dir] + 0.001*(dir ? 1.0 : -1.0)*chimney_depth; // slight shift to avoid Z-fighting
@@ -1225,7 +1225,8 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 			if (test_cube.intersects(d->get_bcube())) return 0; // failed to place chimney; is it better to choose a new chimney location in this case?
 		}
 		parts.push_back(fplace);
-		add_cube_top(fplace, roof_tquads, (unsigned)tquad_with_ix_t::TYPE_CCAP); // add top quad
+		add_cube_top(fplace, roof_tquads, (unsigned)tquad_with_ix_t::TYPE_CCAP); // add top quad - should this be sloped?
+		if (rgen.rand_bool()) {c.d[!dim][0] = fplace.d[!dim][0]; c.d[!dim][1] = fplace.d[!dim][1];} // widen chimney to include entire fireplace (for more modern houses)
 		// TODO: add fireplace to the first floor room
 		has_chimney = 1; // only used for exterior chimney
 	}
