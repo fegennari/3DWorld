@@ -12,3 +12,7 @@ Cities:
 - Interiors for non-rectangular buildings
 - Larger spacing between office building floors
 - Secondary Building roads
+
+* Fireplaces
+* Improved city road path finding with more turns
+* Cities with blocks of houses rather than sidewalks and office buildings
