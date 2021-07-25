@@ -883,9 +883,9 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 		point pos;
 		pos.z = room.z1() + fc_thick + window_vspacing*floor_ix;
 		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(room.d[d][0]+radius, room.d[d][1]-radius);} // random XY point inside this room
-		cube_t bcube(pos);
-		bcube.expand_by(radius); // expand more in Z?
-		if (!is_valid_stairs_elevator_placement(bcube, radius)) continue;
+		cube_t person_bcube(pos);
+		person_bcube.expand_by(radius); // expand more in Z?
+		if (!is_valid_stairs_elevator_placement(person_bcube, radius)) continue;
 		bool bad_place(0);
 
 		// Note: people are placed before room geom is generated for all buildings, so this may not work and will have to be handled during room geom placement
@@ -893,7 +893,7 @@ bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const
 			auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 
 			for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
-				if (i->intersects(bcube)) {bad_place = 1; break;}
+				if (i->intersects(person_bcube)) {bad_place = 1; break;}
 			}
 		}
 		if (bad_place) continue;
