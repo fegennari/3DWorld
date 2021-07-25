@@ -1128,7 +1128,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.wall_tex);
 		ext_side_qv_range.start   = bdraw.get_num_verts (mat.wall_tex);
 
-		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, room parts only, no AO
 			colorRGBA const &color(is_basement(i) ? WHITE : wall_color); // basement walls are always white
 			bdraw.add_section(*this, 1, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // XY
 		}
