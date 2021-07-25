@@ -1124,7 +1124,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_roof_dome(point(center.x, center.y, top.z2()), 0.5*dx, 0.5*dy, tex, roof_color*1.5, (roof_type == ROOF_TYPE_ONION));
 		}
 	}
-	if (get_int_ext_walls) {
+	if (get_int_ext_walls /*&& interior*/) { // only needed if building has an interior?
 		ext_side_qv_range.draw_ix = bdraw.get_to_draw_ix(mat.wall_tex);
 		ext_side_qv_range.start   = bdraw.get_num_verts (mat.wall_tex);
 
