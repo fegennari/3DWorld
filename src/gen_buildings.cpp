@@ -1037,7 +1037,15 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
 			if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
-			bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
+			unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
+			
+			if (has_chimney && (i+2 == parts.end())) { // skip inside face of fireplace (optimization); needs to be draw as part of the interior instead
+				if      (i->x1() <= bcube.x1()) {dim_mask |= 16;}
+				else if (i->x2() >= bcube.x2()) {dim_mask |=  8;}
+				else if (i->y1() <= bcube.y1()) {dim_mask |= 64;}
+				else if (i->y2() >= bcube.y2()) {dim_mask |= 32;}
+			}
+			bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, dim_mask, 0, 0, is_house, 0); // XY exterior walls
 			bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
 			// skip the bottom of stacked cubes (not using ground_floor_z1); need to draw the porch roof, so test i->dz()
 			bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1() && i->dz() > 0.5f*get_window_vspace());
