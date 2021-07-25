@@ -1870,15 +1870,29 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 
 			for (unsigned n = 0; n < 4; ++n) {
 				bool const dim(pref_dim ^ bool(n>>1)), dir(pref_dir ^ bool(n&1));
-				if (b->d[dim][dir] != bcube.d[dim][dir]) continue; // find a side on the exterior to ensure door isn't obstructed by a building cube
 				if (used[2*dim + dir]) continue; // door already placed on this side
-				used[2*dim + dir] = 1; // mark used
+
+				if (is_rotated()) { // rotated buildings don't have tight bcubes
+					bool is_valid(1);
+
+					for (auto p2 = parts.begin(); p2 != get_real_parts_end(); ++p2) {
+						if (p2 != b && p2->z1() == b->z1() && b->d[dim][dir] == p2->d[dim][!dir]) {is_valid = 0; break;} // abutting part, not bcube wall, skip
+					}
+					if (!is_valid) continue;
+				}
+				else {
+					if (b->d[dim][dir] != bcube.d[dim][dir]) continue; // find a side on the exterior to ensure door isn't obstructed by a building cube
+				}
 				bool const allow_fail(!doors.empty() || b+1 != get_real_parts_end()); // allow door placement to fail if we've already placed at least one door of not last part
-				placed = add_door(place_door(*b, dim, dir, door_height, 0.0, 0.0, 0.1, wscale, allow_fail, 0, rgen), part_ix, dim, dir, 1);
+				if (!add_door(place_door(*b, dim, dir, door_height, 0.0, 0.0, 0.1, wscale, allow_fail, 0, rgen), part_ix, dim, dir, 1)) continue;
+				used[2*dim + dir] = 1; // mark used
+				placed = 1;
 				break;
 			} // for n
 		} // for b
 	} // for num
+	//assert(!doors.empty()); // must have placed at least one door - too strong for rotated buildings?
+
 	if (has_courtyard) { // add a door opening into the courtyard
 		assert(parts.size() >= 4);
 		unsigned const pref_side(rgen.rand()&3);

@@ -466,9 +466,12 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor) 
 				if (is_room_adjacent_to_ext_door(r)) {door_rooms.push_back(i);}
 			}
 			assert(cur_room >= 0); // must be found
-			assert(!door_rooms.empty());
 			assert(!stairs_rooms.empty());
 
+			if (!is_rotated()) { // too strong for rotated buildings, where door placement can sometimes fail
+				assert(!doors.empty());
+				assert(!door_rooms.empty());
+			}
 			for (auto d = door_rooms.begin(); d != door_rooms.end(); ++d) {
 				for (auto s = stairs_rooms.begin(); s != stairs_rooms.end(); ++s) {
 					if (!are_rooms_connected_without_using_room(*d, *s, cur_room)) return 0;
