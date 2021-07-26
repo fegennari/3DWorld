@@ -489,12 +489,7 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
 	fgMatrixMode(FG_MODELVIEW);
-
-	if (bounds) { // else pdu should have been set by the caller
-		pos_dir_up const old_pdu(pdu);
-		pdu = get_pt_cube_frustum_pdu(lpos, *bounds);
-		do_update |= (pdu.pos != old_pdu.pos || pdu.dir != old_pdu.dir || pdu.angle != old_pdu.angle); // update if bounds/pdu has changed
-	}
+	if (bounds && (do_update || !pdu.valid)) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);} // else pdu should have been set by the caller
 	set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_);
 	texture_matrix = get_texture_matrix(camera_mv_matrix);
 	check_gl_error(201);
