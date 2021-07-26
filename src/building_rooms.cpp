@@ -203,7 +203,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 	} // for n
 }
 
-// Note: no blockers for people
+// Note: no blockers, but does check existing objects
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	cube_t room_bounds(get_walkable_room_bounds(room));
 	room_bounds.expand_by_xy(-0.1*get_wall_thickness());
@@ -744,6 +744,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 	return 0;
 }
 
+// Note: modified blockers rather than using it; fireplace must be the first placed object
 bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt) {
 	// Note: the first part of the code below is run on every first floor room and will duplicate work, so it may be better to factor it out somehow
 	cube_t fireplace(get_fireplace()); // make a copy of the exterior fireplace that will be converted to an interior fireplace
@@ -770,7 +771,7 @@ bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &bl
 	cube_t blocker(fireplace_ext);
 	blocker.d[dim][ dir] = fireplace.d[dim][!dir]; // flush with the front of the fireplace
 	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
-	if (blockers.empty() || blockers.back() != fireplace_ext) {blockers.push_back(fireplace_ext);} // add as a blocker if it's not already there
+	blockers.push_back(fireplace_ext); // add as a blocker if it's not already there
 	return 1;
 }
 
@@ -2028,7 +2029,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	setup_bldg_obj_types(); // initialize object types if not already done
 	//highres_timer_t timer("Gen Room Details");
 	// Note: people move from room to room, so using their current positions for room object generation is both nondeterministic and unnecessary
-	vect_cube_t blockers; // or ped_bcubes
+	vect_cube_t blockers; // used for fireplaces
 	interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
@@ -2250,6 +2251,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			// place room objects
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f)), has_fireplace(0);
+			blockers.clear(); // clear for this new room
 			
 			if (has_chimney && !is_basement && !must_be_bathroom && f == 0) { // handle fireplaces on the first floor
 				has_fireplace = maybe_add_fireplace_to_room(*r, blockers, room_center.z, room_id, tot_light_amt);
