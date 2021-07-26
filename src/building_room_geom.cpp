@@ -941,7 +941,7 @@ void building_room_geom_t::add_pen_pencil_marker(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_flooring(room_object_t const &c, float tscale) {
-	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale), 1).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only
+	get_material(tid_nm_pair_t(MARBLE_TEX, 0.8*tscale)).add_cube_to_verts(c, apply_light_color(c), tex_origin, ~EF_Z2); // top face only, unshadowed
 }
 
 void building_room_geom_t::add_wall_trim(room_object_t const &c) {
