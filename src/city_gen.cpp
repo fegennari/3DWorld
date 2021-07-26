@@ -1656,7 +1656,8 @@ class city_road_gen_t : public road_gen_base_t {
 				if (!check_only) {
 					roads.push_back(road);
 					road_to_city.emplace_back(city1, city2);
-				} // Note: no bridges here, but could add them
+				}
+				// Note: no bridges here, but could add them
 				return hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope]-ROAD_HEIGHT, road.d[2][!slope]-ROAD_HEIGHT, dim, city_params.road_border, 0, 0, check_only);
 			}
 			unsigned const num_segs(ceil(road_len/city_params.conn_road_seg_len));
@@ -2561,6 +2562,7 @@ public:
 		assert(!bcube1.intersects_xy(bcube2));
 		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width);
 		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
+		// TODO: experiment with using A* path finding on the terrain heightmap, with heavy weight for introducing jogs; may complicate bridge and tunnel creation
 
 		for (unsigned d = 0; d < 2; ++d) { // try for single segment
 			if (city_params.make_4_way_ints > 2) continue; // only allow connector roads that have 4-way intersections at both ends (single jog case below)
