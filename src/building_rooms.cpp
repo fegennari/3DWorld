@@ -754,16 +754,16 @@ bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &bl
 	else if (fireplace.y1() <= bcube.y1()) {dim = 1; dir = 0;}
 	else if (fireplace.y2() >= bcube.y2()) {dim = 1; dir = 1;}
 	else {assert(is_rotated()); return 0;} // can fail on rotated buildings?
-	float const depth_signed((dir ? -1.0 : 1.0)*0.8*fireplace.get_sz_dim(dim)), wall_pos(fireplace.d[dim][!dir]);
+	float const depth_signed((dir ? -1.0 : 1.0)*1.0*fireplace.get_sz_dim(dim)), wall_pos(fireplace.d[dim][!dir]);
 	fireplace.d[dim][ dir] = wall_pos; // flush with the house wall
-	fireplace.d[dim][!dir] = wall_pos + 0.67*depth_signed; // extend out into the room
-	fireplace.z2() -= 0.1*fireplace.dz(); // shorten slightly
+	fireplace.d[dim][!dir] = wall_pos + depth_signed; // extend out into the room
+	fireplace.z2() -= 0.15*fireplace.dz(); // shorten slightly
 	cube_t room_exp(room);
 	room_exp.expand_by_xy(0.5*get_wall_thickness()); // allow fireplace to extend slightly into room walls
 	if (!room_exp.contains_cube_xy(fireplace)) return 0; // fireplace not in this room
 	// the code below should be run at most once per building
 	cube_t fireplace_ext(fireplace);
-	fireplace_ext.d[dim][!dir] = fireplace.d[dim][!dir] + 1.0*depth_signed; // extend out into the room even further for clearance
+	fireplace_ext.d[dim][!dir] = fireplace.d[dim][!dir] + 0.5*depth_signed; // extend out into the room even further for clearance
 	if (interior->is_blocked_by_stairs_or_elevator(fireplace_ext)) return 0; // blocked by stairs, don't add (would be more correct to relocate stairs)
 	fireplace.d[dim][dir] = room.d[dim][dir]; // re-align to room to remove any gap between the fireplace and the exterior wall
 	vector<room_object_t> &objs(interior->room_geom->objs);

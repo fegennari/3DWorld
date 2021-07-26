@@ -998,8 +998,26 @@ void building_room_geom_t::add_blinds(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_fireplace(room_object_t const &c, float tscale) {
-	rgeom_mat_t &mat(get_material(tid_nm_pair_t(BRICK2_TEX, 1.0*tscale, 1), 1)); // shadowed
-	mat.add_cube_to_verts(c, apply_light_color(c), c.get_llc(), ~get_face_mask(c.dim, c.dir), !c.dim); // skip back face
+	float const dir_sign(c.dir ? -1.0 : 1.0), depth(c.get_sz_dim(c.dim)), width(c.get_sz_dim(!c.dim)), botz(c.z1() + 0.1*c.dz());
+	float const face_pos(c.d[c.dim][!c.dir] - 0.4*dir_sign*depth); // front face pos
+	cube_t base(c), front(c), bot(c);
+	base .d[c.dim][!c.dir] = front.d[c.dim][c.dir] = face_pos;
+	front.d[c.dim][!c.dir] = face_pos + 0.025*dir_sign*depth; // set front thickness
+	front.expand_in_dim(!c.dim, -0.1*width); // shrink
+	front.z1()  = bot.z2() = botz;
+	front.z2() -= 0.2*c.dz();
+	bot.expand_in_dim(!c.dim, 0.01*width); // expand slightly
+	colorRGBA const color(apply_light_color(c));
+	point const tex_origin(c.get_llc());
+	int const fp_tid(get_texture_by_name("interiors/fireplace.jpg"));
+	rgeom_mat_t &brick_mat(get_material(tid_nm_pair_t(BRICK2_TEX, 1.0*tscale, 1), 1)); // shadowed
+	brick_mat.add_cube_to_verts(base, color, tex_origin, (~get_face_mask(c.dim, c.dir) | EF_Z1), !c.dim); // skip back and bottom faces
+	rgeom_mat_t &front_mat(get_material(tid_nm_pair_t(fp_tid, 0.0, 0), 0)); // unshadowed
+	front_mat.add_cube_to_verts(front, color, tex_origin, get_face_mask(c.dim, !c.dir), !c.dim, (c.dim ^ c.dir)); // front face only
+	rgeom_mat_t &fside_mat(get_material(tid_nm_pair_t(fp_tid, 0.01, 0), 0)); // unshadowed, small TC so that we get only black area
+	fside_mat.add_cube_to_verts(front, color, tex_origin, (get_skip_mask_for_xy(c.dim) | EF_Z1)); // sides only
+	rgeom_mat_t &bot_mat(get_material(tid_nm_pair_t(MARBLE_TEX, 1.5*tscale, 1), 1));
+	bot_mat.add_cube_to_verts(bot, color, tex_origin, (~get_face_mask(c.dim, c.dir) | EF_Z1)); // skip back and bottom faces
 }
 
 float get_railing_height(room_object_t const &c) {
