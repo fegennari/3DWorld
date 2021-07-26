@@ -482,14 +482,19 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 
 	// setup render state
 	assert(smap_sz > 0);
-	bool const do_update(!no_update && (force_update || needs_update(lpos))); // must be called first, because this may indirectly update bounds
+	bool do_update(!no_update && (force_update || needs_update(lpos))); // must be called first, because this may indirectly update bounds
 	xform_matrix camera_mv_matrix; // starts as identity matrix
 	if (!use_world_space) {camera_mv_matrix = fgGetMVM();} // cache the camera modelview matrix before we change it
 	fgPushMatrix();
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
 	fgMatrixMode(FG_MODELVIEW);
-	if (bounds) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);} // else pdu should have been set by the caller
+
+	if (bounds) { // else pdu should have been set by the caller
+		pos_dir_up const old_pdu(pdu);
+		pdu = get_pt_cube_frustum_pdu(lpos, *bounds);
+		do_update |= (pdu.pos != old_pdu.pos || pdu.dir != old_pdu.dir || pdu.angle != old_pdu.angle); // update if bounds/pdu has changed
+	}
 	set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_);
 	texture_matrix = get_texture_matrix(camera_mv_matrix);
 	check_gl_error(201);
