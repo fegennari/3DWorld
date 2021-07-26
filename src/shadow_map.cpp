@@ -404,8 +404,8 @@ pos_dir_up get_pt_cube_frustum_pdu(point const &pos_, cube_t const &bounds) {
 
 	for (unsigned i = 0; i < 8; ++i) {
 		vector3d const delta((corners[i] - pos).get_norm());
-		rx = max(rx, fabs(dot_product(dirs[0], delta)));
-		ry = max(ry, fabs(dot_product(dirs[1], delta)));
+		max_eq(rx, fabs(dot_product(dirs[0], delta)));
+		max_eq(ry, fabs(dot_product(dirs[1], delta)));
 	}
 	float const frustum_skew_val(1.0 + 0.5*bounds.dz()/dist);
 	float const angle(atan2(frustum_skew_val*ry, 1.0f)), aspect(rx/ry);

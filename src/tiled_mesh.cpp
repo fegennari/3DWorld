@@ -965,7 +965,7 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager, bool clean
 	// extend bcube upwards to include any models above the mesh that cast shadows on this tile
 	// FIXME: still not correct for low sun pos - need a more accurate way to determine which models can shadow this tile
 	cube_t const models_bcube(calc_and_return_all_models_bcube());
-	if (models_bcube != all_zeros_cube) {bcube.d[2][1] = max(bcube.d[2][1], models_bcube.d[2][1]);}
+	if (models_bcube != all_zeros_cube) {max_eq(bcube.z2(), models_bcube.z2());}
 	smap_data.create_if_needed(bcube);
 }
 
@@ -2214,7 +2214,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		float const rel_dist(i->second->get_rel_dist_to_camera());
 
 		if (rel_dist <= DRAW_DIST_TILES) {
-			terrain_zmin = min(terrain_zmin, i->second->get_zmin());
+			min_eq(terrain_zmin, i->second->get_zmin());
 			if (!camera_surf_collide) {min_camera_dist = min(min_camera_dist, i->second->get_min_dist_to_pt(cpos, 0, 0));}
 			create_buildings_tile(i->first.x, i->first.y, 0); // create, or re-create if create_buildings_first; should already be flat
 		}
