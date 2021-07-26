@@ -495,9 +495,9 @@ unsigned building_t::count_num_int_doors(room_t const &room) const {
 	return num;
 }
 
-bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, float min_bed_space) const {
+bool building_t::check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space) const {
 	if (min_bed_space > 0.0) {
-		room_object_t const &bed(interior->room_geom->get_room_object_by_index(objs_start));
+		room_object_t const &bed(interior->room_geom->get_room_object_by_index(bed_ix));
 		assert(bed.type == TYPE_BED);
 		cube_t bed_exp(bed);
 		bed_exp.expand_by_xy(min_bed_space);
@@ -551,7 +551,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			if (is_ext_wall[!dim][other_dir] && is_val_inside_window(part, dim, c.d[dim][!dir], window_hspacing, get_window_h_border())) continue; // check for window intersection
 			c.z2() += window_vspacing - floor_thickness;
 			c.d[dim][!dir] += signed_front_clearance; // extra padding in front, to avoid placing too close to bed
-			if (!check_valid_closet_placement(c, room, objs_start, min_bed_space)) continue; // bad placement
+			if (!check_valid_closet_placement(c, room, objs_start, bed_obj_ix, min_bed_space)) continue; // bad placement
 			// good placement, see if we can make the closet larger
 			unsigned const num_steps = 10;
 			float const req_dist(is_ext_wall[!dim][!other_dir] ? (other_dir ? -1.0 : 1.0)*min_dist_to_wall : 0.0); // signed; at least min dist from the opposite wall if it's exterior
@@ -561,14 +561,14 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			for (unsigned s1 = 0; s1 < num_steps; ++s1) { // try increasing width
 				cube_t c2(c);
 				c2.d[!dim][!other_dir] += len_step;
-				if (!check_valid_closet_placement(c2, room, objs_start, min_bed_space)) break; // bad placement
+				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space)) break; // bad placement
 				c = c2; // valid placement, update with larger cube
 			}
 			for (unsigned s2 = 0; s2 < num_steps; ++s2) { // now try increasing depth
 				cube_t c2(c);
 				c2.d[dim][!dir] += depth_step;
 				if (is_ext_wall[!dim][other_dir] && is_val_inside_window(part, dim, (c2.d[dim][!dir] - signed_front_clearance), window_hspacing, get_window_h_border())) break; // bad placement
-				if (!check_valid_closet_placement(c2, room, objs_start, min_bed_space)) break; // bad placement
+				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space)) break; // bad placement
 				c = c2; // valid placement, update with larger cube
 			}
 			c.d[ dim][!dir] -= signed_front_clearance; // subtract off front clearance
@@ -742,6 +742,36 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 		return 1; // done/success
 	} // for n
 	return 0;
+}
+
+bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt) {
+	// Note: the first part of the code below is run on every first floor room and will duplicate work, so it may be better to factor it out somehow
+	cube_t fireplace(get_fireplace()); // make a copy of the exterior fireplace that will be converted to an interior fireplace
+	bool dim(0), dir(0);
+	if      (fireplace.x1() <= bcube.x1()) {dim = 0; dir = 0;} // Note: may not work on rotated buildings
+	else if (fireplace.x2() >= bcube.x2()) {dim = 0; dir = 1;}
+	else if (fireplace.y1() <= bcube.y1()) {dim = 1; dir = 0;}
+	else if (fireplace.y2() >= bcube.y2()) {dim = 1; dir = 1;}
+	else {assert(is_rotated()); return 0;} // can fail on rotated buildings?
+	float const depth_signed((dir ? -1.0 : 1.0)*0.8*fireplace.get_sz_dim(dim)), wall_pos(fireplace.d[dim][!dir]);
+	fireplace.d[dim][ dir] = wall_pos; // flush with the house wall
+	fireplace.d[dim][!dir] = wall_pos + 0.67*depth_signed; // extend out into the room
+	fireplace.z2() -= 0.1*fireplace.dz(); // shorten slightly
+	cube_t room_exp(room);
+	room_exp.expand_by_xy(0.5*get_wall_thickness()); // allow fireplace to extend slightly into room walls
+	if (!room_exp.contains_cube_xy(fireplace)) return 0; // fireplace not in this room
+	// the code below should be run at most once per building
+	cube_t fireplace_ext(fireplace);
+	fireplace_ext.d[dim][!dir] = fireplace.d[dim][!dir] + 1.0*depth_signed; // extend out into the room even further for clearance
+	if (interior->is_blocked_by_stairs_or_elevator(fireplace_ext)) return 0; // blocked by stairs, don't add (would be more correct to relocate stairs)
+	fireplace.d[dim][dir] = room.d[dim][dir]; // re-align to room to remove any gap between the fireplace and the exterior wall
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	objs.emplace_back(fireplace, TYPE_FPLACE, room_id, dim, dir, 0, tot_light_amt);
+	cube_t blocker(fireplace_ext);
+	blocker.d[dim][ dir] = fireplace.d[dim][!dir]; // flush with the front of the fireplace
+	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
+	if (blockers.empty() || blockers.back() != fireplace_ext) {blockers.push_back(fireplace_ext);} // add as a blocker if it's not already there
+	return 1;
 }
 
 bool building_t::place_obj_along_wall(room_object type, room_t const &room, float height, vector3d const &sz_scale, rand_gen_t &rgen, float zval, unsigned room_id, float tot_light_amt,
@@ -1997,9 +2027,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	if (interior->room_geom) return; // already generated?
 	setup_bldg_obj_types(); // initialize object types if not already done
 	//highres_timer_t timer("Gen Room Details");
-	vect_cube_t empty_cubes;
 	// Note: people move from room to room, so using their current positions for room object generation is both nondeterministic and unnecessary
-	vect_cube_t const &blockers(empty_cubes); // or ped_bcubes
+	vect_cube_t blockers; // or ped_bcubes
 	interior->room_geom.reset(new building_room_geom_t(bcube.get_llc()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	vector<room_t> &rooms(interior->rooms);
@@ -2220,9 +2249,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			// place room objects
 			bool const allow_br(!is_house || must_be_bathroom || f > 0 || num_floors == 1 || (rgen.rand_float() < 0.33f*(added_living + (added_kitchen_mask&1) + 1))); // bed/bath
-			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f));
-			//if (has_chimney && f == 0) {} // TODO: add a fireplace?
-
+			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f)), has_fireplace(0);
+			
+			if (has_chimney && !is_basement && !must_be_bathroom && f == 0) { // handle fireplaces on the first floor
+				has_fireplace = maybe_add_fireplace_to_room(*r, blockers, room_center.z, room_id, tot_light_amt);
+			}
 			if (is_office_bathroom) { // bathroom is already assigned
 				added_obj = is_bathroom = added_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement); // add bathroom
 			}
@@ -2233,7 +2264,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (is_bedroom) {r->assign_to(RTYPE_BED, f);}
 					// Note: can't really mark room type as bedroom because it varies per floor; for example, there may be a bedroom over a living room connected to an exterior door
 				}
-				if (!added_obj && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < extra_bathroom_prob)))) {
+				if (!added_obj && !has_fireplace && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < extra_bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings
 					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement); // add bathroom
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
@@ -2308,7 +2339,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 				// else house
 				else if (has_stairs) {} // will be marked as RTYPE_STAIRS below
-				else if ((!added_obj || is_basement) && f == 0 && !added_laundry && add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+				else if ((!added_obj || is_basement) && f == 0 && !added_laundry && !has_fireplace && add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
 					r->assign_to(RTYPE_LAUNDRY, f);
 					added_laundry = 1;
 				}

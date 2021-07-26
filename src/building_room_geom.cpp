@@ -997,6 +997,11 @@ void building_room_geom_t::add_blinds(room_object_t const &c) {
 	get_untextured_material(1).add_cube_to_verts(c, texture_color(get_blinds_tid()).modulate_with(color), llc, df2); // draw top and bottom / front and back untextured
 }
 
+void building_room_geom_t::add_fireplace(room_object_t const &c, float tscale) {
+	rgeom_mat_t &mat(get_material(tid_nm_pair_t(BRICK2_TEX, 1.0*tscale, 1), 1)); // shadowed
+	mat.add_cube_to_verts(c, apply_light_color(c), c.get_llc(), ~get_face_mask(c.dim, c.dir), !c.dim); // skip back face
+}
+
 float get_railing_height(room_object_t const &c) {
 	bool const is_u_stairs(c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI));
 	return (is_u_stairs ? 0.70 : 0.35)*c.dz(); // use a larger relative height for lo/hi railings on U-shaped stairs
@@ -2373,6 +2378,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_TPROLL:   return (WHITE*0.75  + GRAY*0.25);
 	case TYPE_SPRAYCAN: return (DK_GRAY*0.5 + color*0.5);
 	case TYPE_CRACK:    return ALPHA0; // transparent
+	case TYPE_FPLACE:   return texture_color(BRICK2_TEX).modulate_with(color);
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(get_model_color());} // handle models

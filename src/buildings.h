@@ -288,7 +288,7 @@ enum {
 	TYPE_WALL_TRIM, TYPE_RAILING, TYPE_CRATE, TYPE_BOX, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_SHOWER, TYPE_RDESK, TYPE_BOTTLE,
 	TYPE_WINE_RACK, TYPE_COMPUTER, TYPE_MWAVE, TYPE_PAPER, TYPE_BLINDS, TYPE_PEN, TYPE_PENCIL, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_HANGER_ROD,
 	TYPE_DRAIN, TYPE_MONEY, TYPE_PHONE, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_MARKER, TYPE_BUTTON, TYPE_CRACK, TYPE_SWITCH, TYPE_PLATE,
-	TYPE_LAPTOP,
+	TYPE_LAPTOP, TYPE_FPLACE,
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, NUM_ROBJ_TYPES};
@@ -583,6 +583,7 @@ struct building_room_geom_t {
 	void add_flooring(room_object_t const &c, float tscale);
 	void add_wall_trim(room_object_t const &c);
 	void add_blinds(room_object_t const &c);
+	void add_fireplace(room_object_t const &c, float tscale);
 	void add_railing(room_object_t const &c);
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void add_lg_ball(room_object_t const &c);
@@ -1012,10 +1013,11 @@ private:
 	bool add_desk_to_room    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, colorRGBA const &chair_color,
 		float zval, unsigned room_id, unsigned floor, float tot_light_amt, bool is_basement);
 	bool create_office_cubicles(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
-	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, float min_bed_space=0.0) const;
+	bool check_valid_closet_placement(cube_t const &c, room_t const &room, unsigned objs_start, unsigned bed_ix, float min_bed_space=0.0) const;
 	bool add_bedroom_objs    (rand_gen_t rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, unsigned floor,
 		float tot_light_amt, unsigned objs_start, bool room_is_lit, light_ix_assign_t &light_ix_assign);
 	bool add_bed_to_room     (rand_gen_t &rgen, room_t const &room, vect_cube_t const &blockers, float zval, unsigned room_id, float tot_light_amt, unsigned floor);
+	bool maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt);
 	float add_flooring       (room_t const &room, float &zval, unsigned room_id, float tot_light_amt);
 	bool add_bathroom_objs   (rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
 	bool add_tp_roll         (cube_t const &room, unsigned room_id, float tot_light_amt, bool dim, bool dir, float length, float zval, float wall_pos, bool check_valid_pos=0);

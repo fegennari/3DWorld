@@ -1040,7 +1040,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
 			
 			if (has_chimney && (i+2 == parts.end())) { // skip inside face of fireplace (optimization); needs to be draw as part of the interior instead
-				if      (i->x1() <= bcube.x1()) {dim_mask |= 16;}
+				if      (i->x1() <= bcube.x1()) {dim_mask |= 16;} // Note: may not work on rotated buildings
 				else if (i->x2() >= bcube.x2()) {dim_mask |=  8;}
 				else if (i->y1() <= bcube.y1()) {dim_mask |= 64;}
 				else if (i->y2() >= bcube.y2()) {dim_mask |= 32;}
