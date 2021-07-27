@@ -6,7 +6,6 @@
 #include "3DWorld.h"
 
 struct xform_matrix;
-struct cube_with_zval_t;
 
 int omp_get_thread_num_3dw();
 
@@ -351,7 +350,6 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize);
 void gen_city_details();
 void get_city_bcubes(vect_cube_t &bcubes);
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only);
-void get_city_plot_bcubes(vector<cube_with_zval_t> &bcubes);
 void next_city_frame(bool use_threads_2_3);
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate);
 unsigned check_city_sphere_coll(point const &pos, float radius, bool exclude_bridges_and_tunnels, bool ret_first_coll=1, unsigned check_mask=3);

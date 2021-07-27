@@ -99,14 +99,14 @@ public:
 	bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
 };
 
-struct cube_with_zval_t : public cube_t {
+struct city_zone_t : public cube_t {
 	float zval;
-	bool is_park;
-	cube_with_zval_t() : zval(0.0), is_park(0) {}
-	cube_with_zval_t(cube_t const &c, float zval_=0.0, bool p=0) : cube_t(c), zval(zval_), is_park(p) {}
+	bool is_park, is_residential;
+	city_zone_t() : zval(0.0), is_park(0), is_residential(0) {}
+	city_zone_t(cube_t const &c, float zval_=0.0, bool p=0, bool r=0) : cube_t(c), zval(zval_), is_park(p), is_residential(r) {}
 };
 
-typedef vector<cube_with_zval_t> vect_cube_with_zval_t;
+typedef vector<city_zone_t> vect_city_zone_t;
 
 struct tid_nm_pair_t { // size=28
 
@@ -1176,6 +1176,7 @@ inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_t
 inline void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
 inline float get_tc_leg_width(cube_t const &c, float width) {return 0.5f*width*(c.dx() + c.dy());} // make legs square
 
+void get_city_plot_bcubes(vect_city_zone_t &bcubes);
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 cube_t get_building_lights_bcube();

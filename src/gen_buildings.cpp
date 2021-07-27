@@ -1763,7 +1763,7 @@ public:
 		if (rseed == 0) {rseed = 123;} // 0 is a bad value
 		rseed += params.buildings_rand_seed; // add in rand_seed from the config file
 		rgen.set_state(rand_gen_index, rseed); // update when mesh changes, otherwise determinstic
-		vect_cube_with_zval_t city_plot_bcubes;
+		vect_city_zone_t city_plot_bcubes;
 		vect_cube_t avoid_bcubes;
 		cube_t avoid_bcubes_bcube;
 		vector<unsigned> valid_city_plot_ixs;

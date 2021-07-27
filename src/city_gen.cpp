@@ -1779,7 +1779,7 @@ class city_road_gen_t : public road_gen_base_t {
 			get_all_bcubes(roads,  bcubes);
 			get_all_bcubes(tracks, bcubes);
 		}
-		void get_plot_bcubes(vect_cube_with_zval_t &bcubes) const { // Note: z-values of cubes indicate building height ranges
+		void get_plot_bcubes(vect_city_zone_t &bcubes) const { // Note: z-values of cubes indicate building height ranges
 			if (plots.empty()) return; // connector road city
 			unsigned const start(bcubes.size());
 
@@ -2758,7 +2758,7 @@ public:
 		if (connector_only) return;
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_road_bcubes(bcubes);}
 	}
-	void get_all_plot_bcubes(vect_cube_with_zval_t &bcubes) const {
+	void get_all_plot_bcubes(vect_city_zone_t &bcubes) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
@@ -3126,7 +3126,7 @@ public:
 	}
 	void get_city_bcubes(vect_cube_t &bcubes) const {return road_gen.get_city_bcubes(bcubes);}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
-	void get_all_plot_bcubes(vect_cube_with_zval_t &bcubes) {road_gen.get_all_plot_bcubes(bcubes);} // caches plot_id_offset, so non-const
+	void get_all_plot_bcubes(vect_city_zone_t &bcubes) {road_gen.get_all_plot_bcubes(bcubes);} // caches plot_id_offset, so non-const
 
 	// return: 0=no coll, 1=plot coll, 2=road coll, 3=both plot and road coll
 	unsigned check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) const {
@@ -3234,7 +3234,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
 void get_city_bcubes(vect_cube_t &bcubes) {city_gen.get_city_bcubes(bcubes);}
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
-void get_city_plot_bcubes(vector<cube_with_zval_t> &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
+void get_city_plot_bcubes(vect_city_zone_t &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_roads(trans_op_mask, xlate);}
