@@ -1042,13 +1042,11 @@ class city_road_gen_t : public road_gen_base_t {
 		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars) {
 			// Note: fills in plots.has_parking
 			//timer_t timer("Gen Parking Lots and Place Objects");
-			vect_cube_t bcubes; // local blockers for this plot; reused across calls
+			vect_cube_t bcubes; // blockers
 			vector<point> tree_pos;
 			rand_gen_t rgen, detail_rgen;
-			parking_lots.clear();
 			rgen.set_state(city_id, 123);
 			detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
-			clear();
 			if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0); tree_placer.begin_block(1);} // both small and large trees
 			bool const add_parking_lots(have_cars && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 			uint64_t prev_tile_id(0);
@@ -1056,8 +1054,8 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				uint64_t const tile_id(road_network_t::get_tile_id_for_cube(*i));
 				bool const is_new_tile(tile_id != prev_tile_id);
-				bcubes.clear();
 				tree_pos.clear();
+				bcubes.clear();
 				get_building_bcubes(*i, bcubes);
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
@@ -1167,7 +1165,7 @@ class city_road_gen_t : public road_gen_base_t {
 	}; // city_obj_placer_t
 
 
-	class road_network_t : public streetlights_t {
+	class road_network_t : public streetlights_t { // AKA city center
 
 		vector<road_t> roads; // full overlapping roads with constant slope, for collisions, etc.
 		vector<road_seg_t> segs; // non-overlapping road segments, for drawing with textures
@@ -1247,7 +1245,7 @@ class city_road_gen_t : public road_gen_base_t {
 		vector<road_t> const &get_roads() const {return roads;} // used for connecting roads between cities with 4-way intersections
 		bool empty() const {return roads.empty();}
 		plot_xy_t const &get_plot_xy() const {return plot_xy;}
-		bool has_tunnels() const {return !tunnels.empty();}
+		bool has_tunnels() const {return !tunnels.empty();} // global connector road only
 		void set_cluster(unsigned id) {cluster_id = id;}
 		void register_connected_city(unsigned id) {connected_to.insert(id);}
 		set<unsigned> const &get_connected() const {return connected_to;}
@@ -1350,7 +1348,7 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 1;
 		}
-		void gen_railroad_tracks(float width, unsigned num, cube_t const &region, vect_cube_t const &blockers, heightmap_query_t &hq) {
+		void gen_railroad_tracks(float width, unsigned num, cube_t const &region, vect_cube_t const &blockers, heightmap_query_t &hq) { // global connector road only, for now
 			rand_gen_t rgen;
 			assert(region.dx() > 0.0 && region.dy() > 0.0);
 			if (region.dx() <= 2.0*width || region.dy() <= 2.0*width) return; // region too small (shouldn't happen)
@@ -1614,6 +1612,8 @@ class city_road_gen_t : public road_gen_base_t {
 				isecs[1].emplace_back(ibc, (dim ? seg.road_ix : (int)other_rix), (dim ? other_rix : (int)seg.road_ix), conns[2*(!dim) + dir], true, dest_city_id); // 3-way
 			}
 		}
+
+		// global connector road functions
 		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vect_cube_t &blockers, road_network_t *rn1, road_network_t *rn2, unsigned city1, unsigned city2,
 			unsigned dest_city_id1, unsigned dest_city_id2, heightmap_query_t &hq, float road_width, float conn_pos, bool dim, bool check_only, bool is_4_way1, bool is_4_way2)
 		{
@@ -1747,6 +1747,7 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto b = bridges.begin(); b != bridges.end(); ++b) {b->add_streetlights();}
 			for (auto b = tunnels.begin(); b != tunnels.end(); ++b) {b->add_streetlights();}
 		}
+
 		void gen_tile_blocks() {
 			tile_blocks.clear(); // should already be empty?
 			tile_to_block_map.clear();
@@ -1906,7 +1907,7 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 0;
 		}
-		int get_color_at_xy(point const &pos, colorRGBA &color) const {
+		int get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: return value is currently unused, but it could be used for something in the future
 			// Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
 			if (!bcube.contains_pt_xy(pos)) return 0;
 			
@@ -1938,7 +1939,6 @@ class city_road_gen_t : public road_gen_base_t {
 			if (city_obj_placer.get_color_at_xy(pos, color)) {return INT_PLOT;} // hit a detail object, but still in a plot
 			
 			if (!plots.empty()) { // inside a city and not over a road - must be over a plot or park
-
 				for (auto i = parks.begin(); i != parks.end(); ++i) {
 					if (i->contains_pt_xy(pos)) {color = GREEN; return INT_PARK;}
 				}
