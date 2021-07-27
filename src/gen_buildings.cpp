@@ -1742,7 +1742,8 @@ public:
 		clear();
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
 		if (params.gen_inf_buildings() && !is_tile && !city_only) return; // secondary buildings - not added here
-		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only));
+		// FIXME: residential=0 here because we don't know if this is a residential block ahead of time
+		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only, 0));
 		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
 		timer_t timer("Gen Buildings", !is_tile);
 		float const def_water_level(get_water_z_height()), min_building_spacing(get_min_obj_spacing());
@@ -1793,15 +1794,20 @@ public:
 			bool success(0);
 
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
+				unsigned plot_ix(0);
+				bool residential(0);
+
+				if (use_city_plots) { // select a random plot, if available
+					plot_ix = valid_city_plot_ixs[rgen.rand() % valid_city_plot_ixs.size()];
+					assert(plot_ix < city_plot_bcubes.size());
+					residential = city_plot_bcubes[plot_ix].is_residential;
+				}
 				building_cand_t b(temp_parts);
-				b.mat_ix = params.choose_rand_mat(rgen, city_only, non_city_only); // set material
+				b.mat_ix = params.choose_rand_mat(rgen, city_only, non_city_only, residential); // set material
 				building_mat_t const &mat(b.get_material());
 				cube_t pos_range;
-				unsigned plot_ix(0);
 				
 				if (use_city_plots) { // select a random plot, if available
-					plot_ix   = valid_city_plot_ixs[rgen.rand() % valid_city_plot_ixs.size()];
-					assert(plot_ix < city_plot_bcubes.size());
 					pos_range = city_plot_bcubes[plot_ix];
 					center.z  = city_plot_bcubes[plot_ix].zval; // optimization: take zval from plot rather than calling get_exact_zval()
 					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
@@ -1820,7 +1826,7 @@ public:
 					if (is_tile || mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;} // place_radius ignored for tiles
 				}
 				if (!keep) continue; // placement failed, skip
-				b.is_house = (mat.house_prob > 0.0 && rgen.rand_float() < mat.house_prob);
+				b.is_house = (mat.house_prob > 0.0 && (residential || rgen.rand_float() < mat.house_prob)); // force a house if residential and houses are enabled
 				float const size_scale(b.is_house ? mat.gen_size_scale(rgen) : 1.0);
 				
 				for (unsigned d = 0; d < 2; ++d) { // x,y

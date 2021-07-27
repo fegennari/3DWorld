@@ -534,14 +534,15 @@ void building_params_t::add_cur_mat() {
 	for (unsigned n = 0; n < cur_prob; ++n) { // add more references to this mat for higher probability
 		mat_gen_ix.push_back(mat_ix);
 		(cur_mat.no_city ? mat_gen_ix_nocity : mat_gen_ix_city).push_back(mat_ix);
+		if (cur_mat.house_prob > 0.0) {mat_gen_ix_res.push_back(mat_ix);}
 	}
 	materials.push_back(cur_mat);
 	materials.back().finalize();
 	materials.back().update_range(range_translate);
 	has_normal_map |= cur_mat.has_normal_map();
 }
-unsigned building_params_t::choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only) const {
-	vector<unsigned> const &mat_ix_list(get_mat_list(city_only, non_city_only));
+unsigned building_params_t::choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only, bool residential) const {
+	vector<unsigned> const &mat_ix_list(get_mat_list(city_only, non_city_only, residential));
 	assert(!mat_ix_list.empty());
 	return mat_ix_list[rgen.rand()%mat_ix_list.size()];
 }

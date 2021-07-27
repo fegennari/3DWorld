@@ -203,7 +203,7 @@ struct building_params_t {
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
-	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity; // {any, city_only, non_city}
+	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity, mat_gen_ix_res; // {any, city_only, non_city, residential}
 	vector<unsigned> rug_tids, picture_tids, desktop_tids, sheet_tids, paper_tids;
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), dome_roof(0),
@@ -226,10 +226,10 @@ struct building_params_t {
 		assert(mat_ix < materials.size());
 		return materials[mat_ix];
 	}
-	vector<unsigned> const &get_mat_list(bool city_only, bool non_city_only) const {
-		return (city_only ? mat_gen_ix_city : (non_city_only ? mat_gen_ix_nocity : mat_gen_ix));
+	vector<unsigned> const &get_mat_list(bool city_only, bool non_city_only, bool residential) const {
+		return (residential ? mat_gen_ix_res : (city_only ? mat_gen_ix_city : (non_city_only ? mat_gen_ix_nocity : mat_gen_ix)));
 	}
-	unsigned choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only) const;
+	unsigned choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only, bool residential) const;
 	void set_pos_range(cube_t const &pos_range);
 	void restore_prev_pos_range();
 };
