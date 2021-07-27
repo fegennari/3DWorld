@@ -1970,13 +1970,12 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			if (city_obj_placer.pt_in_parking_lot_xy(pos)) {color = DK_GRAY; return INT_PARKING;}
 			if (city_obj_placer.get_color_at_xy(pos, color)) {return INT_PLOT;} // hit a detail object, but still in a plot
-			if (is_residential) return INT_NONE; // residential plots aren't concrete and don't show up in the overhead map
 			
 			if (!plots.empty()) { // inside a city and not over a road - must be over a plot or park
 				for (auto i = parks.begin(); i != parks.end(); ++i) {
 					if (i->contains_pt_xy(pos)) {color = GREEN; return INT_PARK;}
 				}
-				color = colorRGBA(0.65, 0.65, 0.65, 1.0);
+				color = (is_residential ? DK_GREEN : colorRGBA(0.65, 0.65, 0.65, 1.0)); // grass or concrete
 				return INT_PLOT;
 			}
 			return INT_NONE;
@@ -2005,14 +2004,20 @@ class city_road_gen_t : public road_gen_base_t {
 				for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 					if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
 					dstate.begin_tile(b->bcube.get_cube_center());
-					dstate.draw_road_region(segs,       b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
-					if (!is_residential) {dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT);} // concrete plots (non-residential only)
-					dstate.draw_road_region(plots,      b->ranges[TYPE_PLOT  ], b->quads[TYPE_PARK  ], TYPE_PARK  ); // parks (stored as plots)
-					dstate.draw_road_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
-					dstate.draw_road_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
+
+					if (is_residential) { // draw all plots with grass, using the park materials
+						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PARK, 1); // draw_all=1
+					}
+					else {
+						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // concrete
+						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PARK], TYPE_PARK); // grass parks (stored as plots)
+					}
+					dstate.draw_city_region(segs,       b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
+					dstate.draw_city_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
+					dstate.draw_city_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
 				
 					for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
-						dstate.draw_road_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
+						dstate.draw_city_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
 						if (i > 0) {dstate.draw_stoplights(isecs[i], b->ranges[TYPE_ISEC2 + i], 0);}
 					}
 				} // for b

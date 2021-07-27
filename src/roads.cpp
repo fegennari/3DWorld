@@ -44,7 +44,7 @@ road_t::road_t(point const &s, point const &e, float width, bool dim_, bool slop
 }
 
 void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const { // specialized here for sloped roads (road segments and railroad tracks)
-	if (z1() == z2()) {add_flat_road_quad(*this, qbd, color, ar); return;}
+	if (z1() == z2()) {add_flat_city_quad(*this, qbd, color, ar); return;}
 	bool const s(slope ^ dim);
 	point pts[4] = {point(x1(), y1(), d[2][!s]), point(x2(), y1(), d[2][!s]), point(x2(), y2(), d[2][ s]), point(x1(), y2(), d[2][ s])};
 	if (!dim) {swap(pts[0].z, pts[2].z);}
@@ -741,7 +741,7 @@ bool tunnel_t::line_intersect(point const &p1, point const &p2, float &t) const 
 
 road_mat_mgr_t road_mat_mgr;
 
-void road_draw_state_t::draw_road_region_int(quad_batch_draw &cache, unsigned type_ix) {
+void road_draw_state_t::draw_city_region_int(quad_batch_draw &cache, unsigned type_ix) {
 	if (cache.verts.empty()) return; // nothing to draw
 
 	if (emit_now) { // draw shadow blocks directly

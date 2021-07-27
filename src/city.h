@@ -23,7 +23,7 @@ enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING, INT_PARK};
 enum {RTYPE_ROAD=0, RTYPE_TRACKS};
 unsigned const CONN_TYPE_NONE = 0;
-colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, LT_GRAY, WHITE}; // all white except for parks
+colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, LT_GRAY, WHITE, WHITE}; // all white except for parks
 
 int       const FORCE_MODEL_ID = -1; // -1 disables
 unsigned  const NUM_CAR_COLORS = 10;
@@ -231,7 +231,7 @@ public:
 	void set_stoplight_texture();
 };
 
-template<typename T> static void add_flat_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, float ar) { // z1 == z2
+template<typename T> static void add_flat_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, float ar) { // z1 == z2
 	float const z(r.z1());
 	point const pts[4] = {point(r.x1(), r.y1(), z), point(r.x2(), r.y1(), z), point(r.x2(), r.y2(), z), point(r.x1(), r.y2(), z)};
 	qbd.add_quad_pts(pts, color, plus_z, r.get_tex_range(ar));
@@ -530,19 +530,19 @@ class road_draw_state_t : public draw_state_t {
 	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_sl, qbd_bridge;
 	float ar;
 
-	void draw_road_region_int(quad_batch_draw &cache, unsigned type_ix);
+	void draw_city_region_int(quad_batch_draw &cache, unsigned type_ix);
 public:
 	road_draw_state_t() : ar(1.0) {}
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader=0);
 	virtual void draw_unshadowed();
 	virtual void post_draw();
-	template<typename T> void add_road_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix) {add_flat_road_quad(r, qbd, color, ar);} // generic flat road case
-	void add_road_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix) {r.add_road_quad(qbd, color, ar);} // road segment
-	void add_road_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
-	void add_road_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix) { // plots and parks
-		if ((type_ix == TYPE_PARK) == r.is_park) {add_flat_road_quad(r, qbd, color, ar);}
+	template<typename T> void add_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {add_flat_city_quad(r, qbd, color, ar);} // generic flat road case
+	void add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {r.add_road_quad(qbd, color, ar);} // road segment
+	void add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks
+	void add_city_quad(road_plot_t const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool draw_all) { // plots and parks
+		if (draw_all || (type_ix == TYPE_PARK) == r.is_park) {add_flat_city_quad(r, qbd, color, ar);}
 	}
-	template<typename T> void draw_road_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix) {
+	template<typename T> void draw_city_region(vector<T> const &v, range_pair_t const &rp, quad_batch_draw &cache, unsigned type_ix, bool draw_all=0) {
 		if (rp.s == rp.e) return; // empty
 		assert(rp.s <= rp.e);
 		assert(rp.e <= v.size());
@@ -550,9 +550,9 @@ public:
 		colorRGBA const color(road_colors[type_ix]);
 
 		if (cache.empty()) { // generate and cache quads
-			for (unsigned i = rp.s; i < rp.e; ++i) {add_road_quad(v[i], cache, color, type_ix);}
+			for (unsigned i = rp.s; i < rp.e; ++i) {add_city_quad(v[i], cache, color, type_ix, draw_all);}
 		}
-		draw_road_region_int(cache, type_ix);
+		draw_city_region_int(cache, type_ix);
 	}
 	void draw_bridge(bridge_t const &bridge, bool shadow_only);
 	void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale);
