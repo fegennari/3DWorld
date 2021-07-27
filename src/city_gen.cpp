@@ -755,8 +755,9 @@ class city_road_gen_t : public road_gen_base_t {
 	};
 
 	class city_obj_placer_t {
-	public: // road network needs access to parking lots for drawing
+	public: // road network needs access to parking lots and driveways for drawing
 		vector<parking_lot_t> parking_lots;
+		vector<cube_t> driveways; // for houses
 	private:
 		vector<bench_t> benches;
 		vector<tree_planter_t> planters;
@@ -1032,7 +1033,7 @@ class city_road_gen_t : public road_gen_base_t {
 		city_obj_placer_t() : num_spaces(0), filled_spaces(0) {}
 		
 		void clear() {
-			parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); planters.clear(); fire_hydrants.clear();
+			parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); planters.clear(); fire_hydrants.clear(); driveways.clear();
 			bench_groups.clear(); planter_groups.clear(); fire_hydrant_groups.clear();
 			num_spaces = filled_spaces = 0;
 		}
@@ -1073,6 +1074,26 @@ class city_road_gen_t : public road_gen_base_t {
 			if (add_parking_lots) {
 				cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 			}
+		}
+		void add_driveways(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id) {
+			vect_cube_t bcubes; // buildings
+			uint64_t prev_tile_id(0);
+
+			for (auto i = plots.begin(); i != plots.end(); ++i) {
+				uint64_t const tile_id(road_network_t::get_tile_id_for_cube(*i));
+				bool const is_new_tile(tile_id != prev_tile_id);
+				bcubes.clear();
+				get_building_bcubes(*i, bcubes);
+				size_t const plot_id(i - plots.begin());
+				assert(plot_id < plot_colliders.size());
+				vect_cube_t &colliders(plot_colliders[plot_id]);
+
+				for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
+					// TODO: add driveways and colliders for each house
+				}
+				sort(colliders.begin(), colliders.end(), cube_by_x1());
+				prev_tile_id = tile_id;
+			} // for i
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 			draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
@@ -1189,6 +1210,7 @@ class city_road_gen_t : public road_gen_base_t {
 		//string city_name; // future work
 		float tot_road_len;
 		mutable unsigned num_cars; // Note: not counting parked cars; mutable so that car_manager can update this
+		bool is_residential;
 
 		// use only for the global road network
 		struct city_id_pair_t {
@@ -1202,7 +1224,7 @@ class city_road_gen_t : public road_gen_base_t {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (get_tile_id_for_cube(a) < get_tile_id_for_cube(b));}
 		};
 		struct tile_block_t { // collection of road parts for a given tile
-			range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot, tracks}
+			range_pair_t ranges[NUM_RD_TYPES]; // {plot, seg, isec2, isec3, isec4, park_lot, tracks, park, driveway, building}
 			quad_batch_draw quads[NUM_RD_TYPES];
 			cube_t bcube;
 			tile_block_t(cube_t const &bcube_) : bcube(bcube_) {}
@@ -1233,8 +1255,9 @@ class city_road_gen_t : public road_gen_base_t {
 			return segs[seg_ix];
 		}
 	public:
-		road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0) {} // global road network ctor
+		road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0), is_residential(0) {} // global road network ctor
 		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0) {
+			is_residential = city_params.residential_mode; // TODO: make this a random probability?
 			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
 		}
 		static uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}
@@ -1759,11 +1782,20 @@ class city_road_gen_t : public road_gen_base_t {
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
 		void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
-			city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars);
-			add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
+			city_obj_placer.clear();
+
+			if (is_residential) {
+				city_obj_placer.add_driveways(plots, plot_colliders, city_id);
+				add_tile_blocks(city_obj_placer.driveways, tile_to_block_map, TYPE_DRIVEWAY);
+			}
+			else { // no parking lots, trees, planters, or benches for residential cities; maybe we still want to add fire hydrants?
+				city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars);
+				add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
+			}
 			tile_to_block_map.clear(); // no longer needed
 		}
 		void add_streetlights() {
+			if (is_residential) {} // fewer/no streetlights in residential cities?
 			streetlights.clear();
 			streetlights.reserve(4*plots.size()); // one on each side of each plot
 			float const b(STREETLIGHT_DIST_FROM_PLOT_EDGE), a(1.0 - b); // spacing from light pos to plot edge (placed just outside the plot, so spacing is negative)
@@ -1787,6 +1819,7 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				bcubes.push_back(*i); // capture all plot bcubes, even parks (needed for pedestrians)
 				bcubes.back().is_park = i->is_park;
+				bcubes.back().is_residential = is_residential; // constant per-city
 			}
 			vector3d const city_radius(0.5*bcube.get_size());
 			point const city_center(bcube.get_cube_center());
@@ -1937,6 +1970,7 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			if (city_obj_placer.pt_in_parking_lot_xy(pos)) {color = DK_GRAY; return INT_PARKING;}
 			if (city_obj_placer.get_color_at_xy(pos, color)) {return INT_PLOT;} // hit a detail object, but still in a plot
+			if (is_residential) return INT_NONE; // residential plots aren't concrete and don't show up in the overhead map
 			
 			if (!plots.empty()) { // inside a city and not over a road - must be over a plot or park
 				for (auto i = parks.begin(); i != parks.end(); ++i) {
@@ -1972,7 +2006,7 @@ class city_road_gen_t : public road_gen_base_t {
 					if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
 					dstate.begin_tile(b->bcube.get_cube_center());
 					dstate.draw_road_region(segs,       b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
-					dstate.draw_road_region(plots,      b->ranges[TYPE_PLOT  ], b->quads[TYPE_PLOT  ], TYPE_PLOT  ); // plots
+					if (!is_residential) {dstate.draw_road_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT);} // concrete plots (non-residential only)
 					dstate.draw_road_region(plots,      b->ranges[TYPE_PLOT  ], b->quads[TYPE_PARK  ], TYPE_PARK  ); // parks (stored as plots)
 					dstate.draw_road_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
 					dstate.draw_road_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots

@@ -16,7 +16,8 @@ extern city_params_t city_params;
 
 void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
-	string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg", "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg"};
+	string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg",
+		                                   "parking_lot.png", "rail_tracks.jpg", "grass_park.jpg", "asphalt.jpg"};
 	float const aniso[NUM_RD_TIDS] = {4.0, 16.0, 8.0, 8.0, 8.0, 4.0, 16.0};
 	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) {tids[i] = get_texture_by_name(("roads/" + img_names[i]), 0, 0, 1, aniso[i]);}
 	sl_tid = get_texture_by_name("roads/traffic_light.png");
