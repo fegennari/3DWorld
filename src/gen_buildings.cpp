@@ -1742,8 +1742,23 @@ public:
 		clear();
 		if (params.tt_only && world_mode != WMODE_INF_TERRAIN) return;
 		if (params.gen_inf_buildings() && !is_tile && !city_only) return; // secondary buildings - not added here
-		// FIXME: residential=0 here because we don't know if this is a residential block ahead of time
-		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only, 0));
+		vect_city_zone_t city_plot_bcubes;
+		vector<unsigned> valid_city_plot_ixs;
+		bool residential(0); // Note: may not be correct for a mix of residential and non-residential, but that can't currently happen
+
+		if (city_only) {
+			bool num_residential(0), num_non_residential(0);
+			get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
+
+			for (auto i = city_plot_bcubes.begin(); i != city_plot_bcubes.end(); ++i) {
+				if (i->is_park) continue; // skip parks
+				valid_city_plot_ixs.push_back(i - city_plot_bcubes.begin()); // record non-park plots
+				if (i->is_residential) {++num_residential;} else {++num_non_residential;}
+			}
+			//assert(!valid_city_plot_ixs.empty()); // too strong? what happens if this is true?
+			residential = (num_residential > num_non_residential); // consider this city residential if the majority of non-park plots are residential
+		}
+		vector<unsigned> const &mat_ix_list(params.get_mat_list(city_only, non_city_only, residential));
 		if (params.materials.empty() || mat_ix_list.empty()) return; // no materials
 		timer_t timer("Gen Buildings", !is_tile);
 		float const def_water_level(get_water_z_height()), min_building_spacing(get_min_obj_spacing());
@@ -1764,19 +1779,9 @@ public:
 		if (rseed == 0) {rseed = 123;} // 0 is a bad value
 		rseed += params.buildings_rand_seed; // add in rand_seed from the config file
 		rgen.set_state(rand_gen_index, rseed); // update when mesh changes, otherwise determinstic
-		vect_city_zone_t city_plot_bcubes;
 		vect_cube_t avoid_bcubes;
 		cube_t avoid_bcubes_bcube;
-		vector<unsigned> valid_city_plot_ixs;
 
-		if (city_only) {
-			get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
-			
-			for (auto i = city_plot_bcubes.begin(); i != city_plot_bcubes.end(); ++i) {
-				if (!i->is_park) {valid_city_plot_ixs.push_back(i - city_plot_bcubes.begin());} // record non-park plots
-			}
-			//assert(!valid_city_plot_ixs.empty()); // too strong? what happens if this is true?
-		}
 		if (non_city_only) {
 			get_city_bcubes(avoid_bcubes);
 			get_city_road_bcubes(avoid_bcubes, 1); // connector roads only
@@ -1801,6 +1806,7 @@ public:
 					plot_ix = valid_city_plot_ixs[rgen.rand() % valid_city_plot_ixs.size()];
 					assert(plot_ix < city_plot_bcubes.size());
 					residential = city_plot_bcubes[plot_ix].is_residential;
+					if (residential && params.mat_gen_ix_res.empty()) break; // no residential buildings available, break from n loop (but retry i loop with new plot)
 				}
 				building_cand_t b(temp_parts);
 				b.mat_ix = params.choose_rand_mat(rgen, city_only, non_city_only, residential); // set material
@@ -1955,7 +1961,7 @@ public:
 				g->bcube.union_with_cube(bbc);
 			}
 		} // for g
-		if (!is_tile && !city_only) {place_building_trees(rgen);}
+		if (!is_tile && (!city_only || residential)) {place_building_trees(rgen);}
 
 		if (!is_tile) {
 			cout << "WM: " << world_mode << " MCF: " << max_consec_fail << " Buildings: " << params.num_place << " / " << num_tries << " / " << num_gen

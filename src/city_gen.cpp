@@ -949,7 +949,9 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = groups.begin(); i != groups.end(); start_ix = i->ix, ++i) {sort(objs.begin()+start_ix, objs.begin()+i->ix);}
 		}
 		// Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
-		void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile) {
+		void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
+			rand_gen_t &rgen, bool is_new_tile, bool is_residential)
+		{
 			float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 			// FIXME: due to some problem I can't figure out, bench shadow maps don't work right unless is_new_bench_tile is reset for each plot;
 			//        however, tree planters seem to work just fine without this, even though they use nearly the same code
@@ -975,28 +977,29 @@ class city_road_gen_t : public road_gen_base_t {
 					} // for dir
 				} // for dim
 			}
-			// place benches
-			bench_t bench;
-			bench.radius = 0.3*car_length;
-			float const bench_spacing(max(bench.radius, get_min_obj_spacing()));
+			// place benches in parks and non-residential areas
+			if (!is_residential || plot.is_park) {
+				bench_t bench;
+				bench.radius = 0.3*car_length;
+				float const bench_spacing(max(bench.radius, get_min_obj_spacing()));
 
-			for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
-				if (!try_place_obj(plot, blockers, rgen, bench_spacing, 0.0, 1, bench.pos)) continue; // 1 try
-				float dmin(0.0);
+				for (unsigned n = 0; n < city_params.max_benches_per_plot; ++n) {
+					if (!try_place_obj(plot, blockers, rgen, bench_spacing, 0.0, 1, bench.pos)) continue; // 1 try
+					float dmin(0.0);
 
-				for (unsigned dim = 0; dim < 2; ++dim) {
-					for (unsigned dir = 0; dir < 2; ++dir) {
-						float const dist(fabs(bench.pos[dim] - plot.d[dim][dir])); // find closest distance to road (plot edge) and orient bench that way
-						if (dmin == 0.0 || dist < dmin) {bench.dim = !dim; bench.dir = !dir; dmin = dist;}
+					for (unsigned dim = 0; dim < 2; ++dim) {
+						for (unsigned dir = 0; dir < 2; ++dir) {
+							float const dist(fabs(bench.pos[dim] - plot.d[dim][dir])); // find closest distance to road (plot edge) and orient bench that way
+							if (dmin == 0.0 || dist < dmin) {bench.dim = !dim; bench.dir = !dir; dmin = dist;}
+						}
 					}
-				}
-				bench.calc_bcube();
-				add_obj_to_group(bench, bench.bcube, benches, bench_groups, is_new_bench_tile);
-				colliders.push_back(bench.bcube);
-			} // for n
-
-			// place planters; don't add planters in parks
-			if (!plot.is_park) {
+					bench.calc_bcube();
+					add_obj_to_group(bench, bench.bcube, benches, bench_groups, is_new_bench_tile);
+					colliders.push_back(bench.bcube);
+				} // for n
+			}
+			// place planters; don't add planters in parks or residential areas
+			if (!is_residential && !plot.is_park) {
 				float const planter_height(0.05*car_length), planter_radius(0.25*car_length);
 
 				for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {
@@ -1004,6 +1007,12 @@ class city_road_gen_t : public road_gen_base_t {
 					add_obj_to_group(planter, planter.bcube, planters, planter_groups, is_new_planter_tile); // no colliders for planters; pedestrians avoid the trees instead
 				}
 			}
+		}
+		void add_house_driveways(road_plot_t const &plot, vect_cube_t &house_bcubes, vect_cube_t &colliders) {
+			for (auto i = house_bcubes.begin(); i != house_bcubes.end(); ++i) {
+				// TODO: add driveways and colliders for each house at closest edge of *i to edge of bcube
+			}
+			// TODO: place garage driveways above the grass
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
 			draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0)
@@ -1040,7 +1049,7 @@ class city_road_gen_t : public road_gen_base_t {
 		struct cube_by_x1 {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
 		};
-		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars) {
+		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential) {
 			// Note: fills in plots.has_parking
 			//timer_t timer("Gen Parking Lots and Place Objects");
 			vect_cube_t bcubes; // blockers
@@ -1049,7 +1058,7 @@ class city_road_gen_t : public road_gen_base_t {
 			rgen.set_state(city_id, 123);
 			detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
 			if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0); tree_placer.begin_block(1);} // both small and large trees
-			bool const add_parking_lots(have_cars && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
+			bool const add_parking_lots(have_cars && !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 			uint64_t prev_tile_id(0);
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
@@ -1062,8 +1071,9 @@ class city_road_gen_t : public road_gen_base_t {
 				assert(plot_id < plot_colliders.size());
 				vect_cube_t &colliders(plot_colliders[plot_id]);
 				if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, bcubes, colliders, rgen, is_new_tile);}
+				if (is_residential) {add_house_driveways(*i, bcubes, colliders);}
 				place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
-				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile);
+				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
 				prev_tile_id = tile_id;
 			} // for i
@@ -1074,26 +1084,6 @@ class city_road_gen_t : public road_gen_base_t {
 			if (add_parking_lots) {
 				cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 			}
-		}
-		void add_driveways(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id) {
-			vect_cube_t bcubes; // buildings
-			uint64_t prev_tile_id(0);
-
-			for (auto i = plots.begin(); i != plots.end(); ++i) {
-				uint64_t const tile_id(road_network_t::get_tile_id_for_cube(*i));
-				bool const is_new_tile(tile_id != prev_tile_id);
-				bcubes.clear();
-				get_building_bcubes(*i, bcubes);
-				size_t const plot_id(i - plots.begin());
-				assert(plot_id < plot_colliders.size());
-				vect_cube_t &colliders(plot_colliders[plot_id]);
-
-				for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
-					// TODO: add driveways and colliders for each house
-				}
-				sort(colliders.begin(), colliders.end(), cube_by_x1());
-				prev_tile_id = tile_id;
-			} // for i
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 			draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
@@ -1783,15 +1773,9 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
 			city_obj_placer.clear();
-
-			if (is_residential) {
-				city_obj_placer.add_driveways(plots, plot_colliders, city_id);
-				add_tile_blocks(city_obj_placer.driveways, tile_to_block_map, TYPE_DRIVEWAY);
-			}
-			else { // no parking lots, trees, planters, or benches for residential cities; maybe we still want to add fire hydrants?
-				city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars);
-				add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
-			}
+			city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars, is_residential);
+			add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
+			add_tile_blocks(city_obj_placer.driveways, tile_to_block_map, TYPE_DRIVEWAY);
 			tile_to_block_map.clear(); // no longer needed
 		}
 		void add_streetlights() {
