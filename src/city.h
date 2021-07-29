@@ -285,11 +285,16 @@ struct road_seg_t : public road_t {
 	void next_frame() {car_count = 0;}
 };
 
-struct road_plot_t : public cube_t {
+struct tr_cube_t : public cube_t {
+	tr_cube_t() {}
+	tr_cube_t(cube_t const &c) : cube_t(c) {}
+	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
+};
+
+struct road_plot_t : public tr_cube_t {
 	uint8_t xpos, ypos; // position within the city grid
 	bool has_parking, is_park;
-	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_) : cube_t(c), xpos(xpos_), ypos(ypos_), has_parking(0), is_park(0) {}
-	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
+	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_) : tr_cube_t(c), xpos(xpos_), ypos(ypos_), has_parking(0), is_park(0) {}
 };
 
 struct plot_adj_t {
