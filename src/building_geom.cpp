@@ -1255,7 +1255,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	bool const gen_door(global_building_params.windows_enabled());
 	float const door_width_scale(0.5), floor_spacing(get_window_vspace());
 	unsigned const rand_num(rgen.rand()); // some bits will be used for random bools
-	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);;
+	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);
+	float const driveway_dz(0.02*door_height);
 	bool door_dim(rand_num & 1), door_dir(0), dim(0), dir(0), dir2(0);
 	unsigned door_part(0), detail_type(0);
 	real_num_parts = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
@@ -1328,7 +1329,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 
 				if (add_porch_slab) {
 					driveway = c; // added as driveway
-					driveway.z2() = driveway.z1() + 0.02*door_height;
+					driveway.z2() = driveway.z1() + driveway_dz;
 				}
 				c.z1() += height; // move up
 				c.z2()  = c.z1() + 0.05*parts[1].dz();
@@ -1365,7 +1366,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				if (is_garage) { // add driveway
 					bool const ddir((long_dim == dim) ? dir : dir2);
 					driveway = c;
-					driveway.z2() = driveway.z1() + 0.02*door_height;
+					driveway.z2() = driveway.z1() + driveway_dz;
 					driveway.expand_in_dim(!long_dim, -0.05*c.get_sz_dim(!long_dim));
 					driveway.d[long_dim][!ddir] = driveway.d[long_dim][ddir];
 					driveway.d[long_dim][ ddir] += (ddir ? 1.0 : -1.0)*0.4*c.get_sz_dim(long_dim); // set length
@@ -1436,7 +1437,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				add_door(place_door(garage, gdim, gdir, door_height, 0.0, 0.0, 0.0, wscale, 0, 1, rgen), garage.part_id, gdim, gdir, 0); // centered in garage
 				doors.back().type = tquad_with_ix_t::TYPE_GDOOR; // make it a garage door
 				driveway = garage;
-				driveway.z2() = garage.z1();
+				driveway.z2() = garage.z1() + driveway_dz;
 				driveway.d[gdim][!gdir] = garage.d[gdim][gdir]; // start pos
 				driveway.d[gdim][ gdir] = garage.d[gdim][gdir] + (gdir ? 1.0 : -1.0)*0.4*garage.get_sz_dim(gdim); // extend outward
 			}

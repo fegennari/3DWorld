@@ -1012,7 +1012,6 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = house_bcubes.begin(); i != house_bcubes.end(); ++i) {
 				// TODO: add driveways and colliders for each house at closest edge of *i to edge of bcube
 			}
-			// TODO: place garage driveways above the grass
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
 			draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0)
