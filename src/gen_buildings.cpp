@@ -1824,12 +1824,14 @@ public:
 				vector3d const pos_range_sz(pos_range.get_size());
 				assert(pos_range_sz.x > 0.0 && pos_range_sz.y > 0.0);
 				point const place_center(pos_range.get_cube_center());
+				float const min_center_dist(residential ? 0.3*min(pos_range_sz.x, pos_range_sz.y) : 0.0);
 				bool keep(0);
 				++num_tries;
 
 				for (unsigned m = 0; m < params.num_tries; ++m) {
-					if (residential) {} // TODO: place buildings around the edges of the plot (pos_range) rather than randomly
 					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(pos_range.d[d][0], pos_range.d[d][1]);} // x,y
+					// place residential buildings around the edges of the plot (pos_range) / keep them out of the center
+					if (residential && dist_xy_less_than(center, place_center, min_center_dist)) continue;
 					if (is_tile || mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;} // place_radius ignored for tiles
 				}
 				if (!keep) continue; // placement failed, skip
@@ -1842,6 +1844,7 @@ public:
 					b.bcube.d[d][0] = center[d] - sz;
 					b.bcube.d[d][1] = center[d] + sz;
 				}
+				if (residential && b.bcube.contains_pt_xy(place_center)) continue; // house should not contain the center point of the plot
 				if ((use_city_plots || is_tile) && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot/tile (pre-rot)
 				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated) - must rotate before bcube checks below
 				if (is_tile && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in tile
