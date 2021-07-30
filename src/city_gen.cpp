@@ -1016,6 +1016,7 @@ class city_road_gen_t : public road_gen_base_t {
 			add_house_driveways_for_plot(plot_z, colliders);
 
 			for (auto i = (colliders.begin() + dw_start); i != colliders.end(); ++i) {
+				assert(i->is_normalized());
 				add_obj_to_group(tr_cube_t(*i), *i, driveways, driveway_groups, is_new_tile);
 			}
 		}

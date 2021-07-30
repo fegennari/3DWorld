@@ -1256,7 +1256,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	float const door_width_scale(0.5), floor_spacing(get_window_vspace());
 	unsigned const rand_num(rgen.rand()); // some bits will be used for random bools
 	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);
-	float const driveway_dz(0.02*door_height);
+	float const driveway_dz(0.004*door_height);
 	bool door_dim(rand_num & 1), door_dir(0), dim(0), dir(0), dir2(0);
 	unsigned door_part(0), detail_type(0);
 	real_num_parts = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
@@ -1593,7 +1593,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 // Note: applies to city residential plots, called by city_obj_placer_t
 void building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &driveways) const {
 	if (!is_house) return;
-	float const hwidth(1.2*get_window_vspace());
+	float const hwidth(0.8*get_window_vspace());
 	bool dim(0), dir(0); // closest edge of *i to edge of bcube
 	float dmin(0.0);
 
@@ -1604,11 +1604,25 @@ void building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 		}
 	}
 	cube_t dw(plot); // copy zvals from plot
-	float pos(bcube.get_center_dim(!dim)); // TODO: random offset, or align with driveway or part
-	set_wall_width(dw, pos, hwidth, !dim);
 	dw.d[dim][ dir] = plot .d[dim][dir];
 	dw.d[dim][!dir] = bcube.d[dim][dir];
-	assert(dw.is_normalized());
+
+	// TODO: houses should be placed so that their driveways exit toward a plot
+	if (has_driveway()) { // existing driveway, attempt to extend to connect to the plot
+		cube_t place_area(dw);
+		for (unsigned d = 0; d < 2; ++d) {place_area.d[!dim][d] = bcube.d[!dim][d];} // span of the house
+		
+		// TODO: or allow it to extend in any direction as long as it's not blocked by another house?
+		if (place_area.contains_cube_xy(driveway)) {
+			for (unsigned d = 0; d < 2; ++d) {dw.d[!dim][d] = driveway.d[!dim][d];} // set to width of existing driveway
+			dw.d[dim][!dir]   = driveway.d[dim][dir]; // shorten to connect to existing house driveway
+			dw.z1() = dw.z2() = driveway.z2(); // align to top of house driveway; height discontinuity is easier to hide at the edge of the plot than in the middle of the driveway
+			driveways.push_back(dw);
+			return; // done
+		}
+	}
+	float pos(bcube.get_center_dim(!dim)); // TODO: random offset, or align with a part
+	set_wall_width(dw, pos, hwidth, !dim);
 	driveways.push_back(dw);
 }
 
