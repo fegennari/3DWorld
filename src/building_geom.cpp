@@ -1590,6 +1590,28 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	}
 }
 
+// Note: applies to city residential plots, called by city_obj_placer_t
+void building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &driveways) const {
+	if (!is_house) return;
+	float const hwidth(1.2*get_window_vspace());
+	bool dim(0), dir(0); // closest edge of *i to edge of bcube
+	float dmin(0.0);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		for (unsigned e = 0; e < 2; ++e) {
+			float const dist(fabs(bcube.d[d][e] - plot.d[d][e]));
+			if (dmin == 0.0 || dist < dmin) {dim = d; dir = e; dmin = dist;}
+		}
+	}
+	cube_t dw(plot); // copy zvals from plot
+	float pos(bcube.get_center_dim(!dim)); // TODO: random offset, or align with driveway or part
+	set_wall_width(dw, pos, hwidth, !dim);
+	dw.d[dim][ dir] = plot .d[dim][dir];
+	dw.d[dim][!dir] = bcube.d[dim][dir];
+	assert(dw.is_normalized());
+	driveways.push_back(dw);
+}
+
 void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses only
 	if (global_building_params.basement_prob <= 0.0) return; // no basement
 

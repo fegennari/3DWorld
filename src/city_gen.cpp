@@ -35,6 +35,7 @@ extern object_model_loader_t building_obj_model_loader;
 void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh);
 void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
+void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 
 
 template<typename S, typename T> void get_all_bcubes(vector<T> const &v, S &bcubes) {
@@ -1008,29 +1009,15 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 			}
 		}
-		void add_house_driveways(road_plot_t const &plot, vect_cube_t &house_bcubes, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
-			float const hwidth(0.15*city_params.road_width); // 30% of road width
-			tr_cube_t driveway;
-			driveway.z1() = driveway.z2() = plot.z2() + 0.002*hwidth;
+		void add_house_driveways(road_plot_t const &plot, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
+			cube_t plot_z(plot);
+			plot_z.z1() = plot_z.z2() = plot.z2() + 0.0002*city_params.road_width; // shift slightly up to avoid Z-fighting
+			size_t const dw_start(colliders.size());
+			add_house_driveways_for_plot(plot_z, colliders);
 
-			for (auto i = house_bcubes.begin(); i != house_bcubes.end(); ++i) {
-				bool dim(0), dir(0); // closest edge of *i to edge of bcube
-				float dmin(0.0);
-
-				for (unsigned d = 0; d < 2; ++d) {
-					for (unsigned e = 0; e < 2; ++e) {
-						float const dist(fabs(i->d[d][e] - plot.d[d][e]));
-						if (dmin == 0.0 || dist < dmin) {dim = d; dir = e; dmin = dist;}
-					}
-				}
-				// TODO: random offset
-				set_wall_width(driveway, i->get_center_dim(!dim), hwidth, !dim);
-				driveway.d[dim][ dir] = plot.d[dim][dir];
-				driveway.d[dim][!dir] = i->  d[dim][dir];
-				assert(driveway.is_normalized());
-				add_obj_to_group(driveway, driveway, driveways, driveway_groups, is_new_tile);
-				colliders.push_back(driveway);
-			} // for i
+			for (auto i = (colliders.begin() + dw_start); i != colliders.end(); ++i) {
+				add_obj_to_group(tr_cube_t(*i), *i, driveways, driveway_groups, is_new_tile);
+			}
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
 			draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0)
@@ -1089,7 +1076,7 @@ class city_road_gen_t : public road_gen_base_t {
 				assert(plot_id < plot_colliders.size());
 				vect_cube_t &colliders(plot_colliders[plot_id]);
 				if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, bcubes, colliders, rgen, is_new_tile);}
-				if (is_residential) {add_house_driveways(*i, bcubes, colliders, detail_rgen, is_new_tile);}
+				if (is_residential) {add_house_driveways(*i, colliders, detail_rgen, is_new_tile);}
 				place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
 				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
 				sort(colliders.begin(), colliders.end(), cube_by_x1());

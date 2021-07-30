@@ -2951,25 +2951,30 @@ public:
 		return 1;
 	}
 
-	void get_overlapping_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) const { // Note: called on init, don't need to use get_camera_coord_space_xlate()
+	void query_for_cube(cube_t const &query_cube, vect_cube_t &cubes, int query_mode) const { // Note: called on init, don't need to use get_camera_coord_space_xlate()
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
-		get_grid_range(xy_range, ixr);
+		get_grid_range(query_cube, ixr);
 
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.bc_ixs.empty() || !xy_range.intersects_xy(ge.bcube)) continue;
+				if (ge.bc_ixs.empty() || !query_cube.intersects_xy(ge.bcube)) continue;
 
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
-					if (!xy_range.intersects_xy(*b)) continue;
-					cube_t shared(xy_range);
+					if (!query_cube.intersects_xy(*b)) continue;
+					cube_t shared(query_cube);
 					shared.intersect_with_cube(*b);
-					if (get_grid_ix(shared.get_llc()) == y*grid_sz + x) {bcubes.push_back(*b);} // add only if in home grid (to avoid duplicates)
+					if (get_grid_ix(shared.get_llc()) != y*grid_sz + x) continue; // add only if in home grid (to avoid duplicates)
+					if (query_mode == 0) {cubes.push_back(*b);} // return building bcube
+					else if (query_mode == 1) {get_building(b->ix).maybe_add_house_driveway(query_cube, cubes);} // return house driveways
+					else {assert(0);} // invalid mode/not implemented
 				}
 			} // for x
 		} // for y
 	}
+	void get_overlapping_bcubes      (cube_t const &xy_range, vect_cube_t &bcubes   ) const {return query_for_cube(xy_range, bcubes,    0);}
+	void add_house_driveways_for_plot(cube_t const &plot,     vect_cube_t &driveways) const {return query_for_cube(plot,     driveways, 1);}
 
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
 		state.init(pdu.pos, get_camera_coord_space_xlate());
@@ -3277,6 +3282,7 @@ void clear_building_vbos() {
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
+void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways) {building_creator_city.add_house_driveways_for_plot(plot, driveways);} // Note: no xlate applied
 void end_register_player_in_building();
 
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
