@@ -138,10 +138,10 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 }
 
 cube_t building_t::get_coll_bcube() const {
-	if (!is_house || (!has_ac && !has_driveway())) return bcube;
+	if (!is_house || (!has_ac && !has_dw_porch())) return bcube;
 	cube_t cc(bcube);
 	if (has_ac) {cc.expand_by_xy(0.35*get_window_vspace());} // conservative
-	if (has_driveway()) {cc.union_with_cube(driveway);}
+	if (has_dw_porch()) {cc.union_with_cube(driveway);}
 	return cc;
 }
 
