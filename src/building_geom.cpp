@@ -1590,9 +1590,44 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	}
 }
 
+bool is_valid_driveway_pos(cube_t const &driveway, cube_t const &bcube, vect_cube_t const &bcubes) {
+	for (auto i = bcubes.begin(); i != bcubes.end(); ++i) {
+		if (!i->intersects(bcube) && i->intersects_xy(driveway)) return 0;
+	}
+	return 1;
+}
+bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube, vect_cube_t const &bcubes, vect_cube_t &driveways, float hwidth, bool dim) {
+	if (!is_valid_driveway_pos(dw, bcube, bcubes)) return 0;
+	float pos(target.get_center_dim(!dim)); // TODO: random offset?
+	set_wall_width(dw, pos, hwidth, !dim);
+	driveways.push_back(dw);
+	return 1;
+}
+bool extend_existing_driveway(cube_t const &driveway, cube_t const &plot, cube_t const &bcube, vect_cube_t const &bcubes, vect_cube_t &driveways) {
+	if (!plot.contains_cube(driveway)) return 1; // driveway already extends to plot, don't need to add an extension, mark as done
+	cube_t dw(driveway);
+	bool dim(0), dir(0);
+	if      (dw.x1() < bcube.x1()) {dim = 0; dir = 0;}
+	else if (dw.x2() > bcube.x2()) {dim = 0; dir = 1;}
+	else if (dw.y1() < bcube.y1()) {dim = 1; dir = 0;}
+	else if (dw.y2() > bcube.y2()) {dim = 1; dir = 1;}
+	else {cout << TXT(dw.str()) << TXT(bcube.str()) << endl; assert(0); return 0;} // not adjacent?
+	dw.d[dim][ dir] = plot    .d[dim][dir];
+	dw.d[dim][!dir] = driveway.d[dim][dir]; // shorten to connect to existing house driveway
+	assert(dw.is_strictly_normalized());
+	if (!is_valid_driveway_pos(dw, bcube, bcubes)) return 0;
+	dw.z1() = dw.z2(); // shrink to zero height
+	driveways.push_back(dw);
+	return 1;
+}
+
 // Note: applies to city residential plots, called by city_obj_placer_t
-void building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &driveways) const {
-	if (!is_house) return;
+bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &driveways) const {
+	if (!is_house) return 0;
+	vect_cube_t bcubes;
+	get_building_bcubes(plot, bcubes); // Note: could be passed in by the caller, but requires many changes
+	// TODO: houses should be placed so that their driveways exit toward a plot
+	if (has_driveway() && extend_existing_driveway(driveway, plot, bcube, bcubes, driveways)) return 1;
 	float const hwidth(0.8*get_window_vspace());
 	bool dim(0), dir(0); // closest edge of *i to edge of bcube
 	float dmin(0.0);
@@ -1607,23 +1642,28 @@ void building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 	dw.d[dim][ dir] = plot .d[dim][dir];
 	dw.d[dim][!dir] = bcube.d[dim][dir];
 
-	// TODO: houses should be placed so that their driveways exit toward a plot
-	if (has_driveway()) { // existing driveway, attempt to extend to connect to the plot
+	/*if (has_driveway()) { // existing driveway, attempt to extend to connect to the plot
 		cube_t place_area(dw);
 		for (unsigned d = 0; d < 2; ++d) {place_area.d[!dim][d] = bcube.d[!dim][d];} // span of the house
 		
 		// TODO: or allow it to extend in any direction as long as it's not blocked by another house?
 		if (place_area.contains_cube_xy(driveway)) {
 			for (unsigned d = 0; d < 2; ++d) {dw.d[!dim][d] = driveway.d[!dim][d];} // set to width of existing driveway
-			dw.d[dim][!dir]   = driveway.d[dim][dir]; // shorten to connect to existing house driveway
-			dw.z1() = dw.z2() = driveway.z2(); // align to top of house driveway; height discontinuity is easier to hide at the edge of the plot than in the middle of the driveway
-			driveways.push_back(dw);
-			return; // done
+			dw.d[dim][!dir] = driveway.d[dim][dir]; // shorten to connect to existing house driveway
+			
+			if (is_valid_driveway_pos(dw, bcube, bcubes)) {
+				dw.z1() = dw.z2() = driveway.z2(); // align to top of house driveway; height discontinuity is easier to hide at the edge of the plot than in the middle of the driveway
+				driveways.push_back(dw);
+				return 1; // done
+			}
+			dw.d[dim][!dir] = bcube.d[dim][dir]; // restore orig value
 		}
+	}*/
+	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+		if (i->d[dim][dir] != bcube.d[dim][dir]) continue; // this part is not adjacent, connect the driveway to it
+		if (add_driveway_if_legal(dw, *i, bcube, bcubes, driveways, hwidth, dim)) return 1;
 	}
-	float pos(bcube.get_center_dim(!dim)); // TODO: random offset, or align with a part
-	set_wall_width(dw, pos, hwidth, !dim);
-	driveways.push_back(dw);
+	return add_driveway_if_legal(dw, bcube, bcube, bcubes, driveways, hwidth, dim);
 }
 
 void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses only
