@@ -1224,18 +1224,18 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 }
 
 // Note: non-const because this updates room lights
-void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, float delta_dir, rand_gen_t &rgen) {
+void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, unsigned p_start, unsigned p_end, float delta_dir, rand_gen_t &rgen) {
 	//timer_t timer("Building People Update"); // ~3.7ms for 50K people, 0.55ms with distance check
+	assert(p_start < p_end);
 	point const camera_bs(get_camera_building_space());
 	float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
-	unsigned const num_people(people.size());
-	ai_state.resize(num_people);
+	ai_state.resize(people.size());
 
-	for (unsigned i = 0; i < num_people; ++i) {
-		if (!dist_less_than(people[i].pos, camera_bs, dmax)) continue; // too far away, no updates
-		unsigned const bix(people[i].dest_bldg);
+	for (auto i = (people.begin() + p_start); i != (people.begin() + p_end); ++i) {
+		if (!dist_less_than(i->pos, camera_bs, dmax)) continue; // too far away, no updates
+		unsigned const bix(i->dest_bldg), pix(i - people.begin());
 		assert(bix < size());
-		operator[](bix).ai_room_update(ai_state[i], rgen, people, delta_dir, i, STAY_ON_ONE_FLOOR); // dispatch to the correct building
+		operator[](bix).ai_room_update(ai_state[pix], rgen, people, delta_dir, pix, STAY_ON_ONE_FLOOR); // dispatch to the correct building
 	}
 }
 
