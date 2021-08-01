@@ -1967,21 +1967,19 @@ public:
 			}
 			cout << endl;
 		}
+		// re-generate grid based on new building bcubes that include things like roofs and chimneys;
+		// since bcubes should only increase in size, we don't need to reset grid bcubes
+		for (auto g = grid.begin(); g != grid.end(); ++g) {g->bc_ixs.clear();}
+
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) { // add driveways and calculate has_interior_geom
 			if (b->enable_driveway_coll()) {
 				if (!b->driveway.is_all_zeros()) {add_to_grid(b->driveway, (b - buildings.begin()), 1);}
 				if (!b->porch   .is_all_zeros()) {add_to_grid(b->porch,    (b - buildings.begin()), 1);}
 			}
-			has_interior_geom |= b->has_interior();
-		}
-		// re-generate grid based on new building bcubes that include things like roofs and chimneys;
-		// since bcubes should only increase in size, we don't need to reset grid bcubes
-		for (auto g = grid.begin(); g != grid.end(); ++g) {g->bc_ixs.clear();}
-
-		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
 			add_to_grid(b->bcube, (b - buildings.begin()), 0);
 			buildings_bcube.assign_or_union_with_cube(b->bcube);
-		}
+			has_interior_geom |= b->has_interior();
+		} // for b
 		if (!is_tile && (!city_only || residential)) {place_building_trees(rgen);}
 
 		if (!is_tile) {
