@@ -847,6 +847,7 @@ struct building_t : public building_geom_t {
 	float get_floor_thickness() const {return (is_house ? FLOOR_THICK_VAL_HOUSE : FLOOR_THICK_VAL_OFFICE)*get_window_vspace();}
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
 	float get_door_height    () const {return 0.95f*(get_window_vspace() - get_floor_thickness());} // set height based on window spacing, 95% of ceiling height (may be too large)
+	unsigned get_person_capacity_mult() const;
 	void gen_rotation(rand_gen_t &rgen);
 	void maybe_inv_rotate_point(point &p) const {if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), p);}} // inverse rotate - negate the sine term
 	void maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const;

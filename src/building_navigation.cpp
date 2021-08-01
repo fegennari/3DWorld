@@ -866,6 +866,11 @@ void building_ai_state_t::next_path_pt(pedestrian_t &person, bool same_floor, bo
 	path.pop_back();
 }
 
+unsigned building_t::get_person_capacity_mult() const {
+	if (!interior || is_rotated()) return 0; // skip rotated buildings because AI logic doesn't work in them
+	return (is_house ? 1 : 2);
+}
+
 bool building_t::place_person(point &ppos, float radius, rand_gen_t &rgen) const {
 
 	if (!interior || interior->rooms.empty()) return 0; // should be error case
