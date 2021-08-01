@@ -1643,26 +1643,32 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, building_ix+111);
 	rgen.rand_mix();
-	// TODO: if this fails, try the other dim
-	// find closest edge of *i to edge of bcube
 	bool dim(0), dir(0);
 	float dmin(0.0);
 
-	for (unsigned d = 0; d < 2; ++d) {
+	for (unsigned d = 0; d < 2; ++d) { // find closest edge of *i to edge of bcube
 		for (unsigned e = 0; e < 2; ++e) {
 			float const dist(fabs(bcube.d[d][e] - plot.d[d][e]));
 			if (dmin == 0.0 || dist < dmin) {dim = d; dir = e; dmin = dist;}
 		}
 	}
-	cube_t dw(plot); // copy zvals from plot
-	dw.d[dim][ dir] = plot .d[dim][dir];
-	dw.d[dim][!dir] = bcube.d[dim][dir];
+	for (unsigned n = 0; n < 2; ++n) { // check the closest dim, then the second closest dim
+		cube_t dw(plot); // copy zvals from plot
+		dw.d[dim][ dir] = plot .d[dim][dir];
+		dw.d[dim][!dir] = bcube.d[dim][dir];
 
-	for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-		if (i->d[dim][dir] != bcube.d[dim][dir]) continue; // this part is not adjacent, connect the driveway to it
-		if (add_driveway_if_legal(dw, *i, bcube, avoid, bcubes, driveways, rgen, hwidth, dim)) return 1;
-	}
-	return add_driveway_if_legal(dw, bcube, bcube, avoid, bcubes, driveways, rgen, hwidth, dim);
+		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
+			if (i->d[dim][dir] != bcube.d[dim][dir]) continue; // this part is not adjacent, connect the driveway to it
+			if (add_driveway_if_legal(dw, *i, bcube, avoid, bcubes, driveways, rgen, hwidth, dim)) return 1;
+		}
+		if (add_driveway_if_legal(dw, bcube, bcube, avoid, bcubes, driveways, rgen, hwidth, dim)) return 1;
+
+		if (n == 0) {
+			dim ^= 1; // try the other dim
+			dir  = (bcube.get_center_dim(dim) > plot.get_center_dim(dim)); // choose the closer dir
+		}
+	} // for n
+	return 0; // failed to add driveway
 }
 
 void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses only
