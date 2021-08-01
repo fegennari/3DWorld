@@ -2976,7 +2976,7 @@ public:
 					shared.intersect_with_cube(*b);
 					if (get_grid_ix(shared.get_llc()) != y*grid_sz + x) continue; // add only if in home grid (to avoid duplicates)
 					if (query_mode == 0) {cubes.push_back(*b);} // return building bcube
-					else if (query_mode == 1) {get_building(b->ix).maybe_add_house_driveway(query_cube, cubes);} // return house driveways
+					else if (query_mode == 1) {get_building(b->ix).maybe_add_house_driveway(query_cube, cubes, b->ix);} // return house driveways
 					else {assert(0);} // invalid mode/not implemented
 				}
 			} // for x
