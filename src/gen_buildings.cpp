@@ -2073,15 +2073,19 @@ public:
 		if (cand_buildings.empty()) return 0; // no interiors, or all buildings rotated
 		locs.reserve(num);
 		rand_gen_t rgen2; // Note: we could also use our rgen member variable
-		unsigned tries(0);
+		point ppos;
 
+		if (num >= cand_buildings.size()) {
+			// assign one person per building slot ahead of time, then randomly distribute the remaining people; should ensure each building has at least one person
+			for (auto i = cand_buildings.begin(); i != cand_buildings.end(); ++i) {
+				if (get_building(i->bix).place_person(ppos, radius, rgen2)) {locs.emplace_back(ppos, i->bix); ++i->num; --num;}
+			}
+		}
 		for (unsigned n = 0; n < num; ++n) {
 			for (unsigned attempts = 0; attempts < 5; ++attempts) { // make up to 5 attempts to choose a building
-				point ppos;
 				building_ai_cand_t &chosen(cand_buildings[rgen2.rand() % cand_buildings.size()]);
-				++tries;
 				if (attempts < 3 && chosen.is_house && chosen.num >= 4) continue; // try another building if this is a house and already has > 4 people in it
-				if (buildings[chosen.bix].place_person(ppos, radius, rgen2)) {locs.emplace_back(ppos, chosen.bix); ++chosen.num; break;}
+				if (get_building(chosen.bix).place_person(ppos, radius, rgen2)) {locs.emplace_back(ppos, chosen.bix); ++chosen.num; break;}
 			}
 		} // for n
 		if (locs.empty()) return 0;
