@@ -311,7 +311,7 @@ bool sphere_in_light_cone_approx(pos_dir_up const &pdu, point const &center, flo
 	return pt_line_dist_less_than(center, pdu.pos, (pdu.pos + pdu.dir), rmod);
 }
 
-void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // Note: all quads
+void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool in_garage) { // Note: all quads
 	if (car.destroyed) return;
 	point const center(car.get_center());
 
@@ -337,7 +337,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows) { // N
 	gen_car_pts(car, draw_top, pb, pt);
 
 	if (draw_model && car_model_loader.is_model_valid(car.model_id)) {
-		if (is_occluded(car.bcube)) return; // only check occlusion for expensive car models
+		if (!in_garage && is_occluded(car.bcube)) return; // only check occlusion for expensive car models; skip cars in garages (maybe exclude the containing building?)
 		vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 		car_model_loader.draw_model(s, center, car.bcube, front_n, color, xlate, car.model_id, shadow_only, (dist_val > 0.035));
 	}
@@ -1067,7 +1067,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 
 			for (unsigned c = cb->start; c != end; ++c) {
 				if (only_parked && !cars[c].is_parked()) continue; // skip non-parked cars
-				dstate.draw_car(cars[c], is_dlight_shadows);
+				dstate.draw_car(cars[c], is_dlight_shadows, garages_pass);
 			}
 		} // for cb
 		if (!garages_pass && !is_dlight_shadows) {draw_helicopters(shadow_only);} // draw helicopters in the normal draw pass

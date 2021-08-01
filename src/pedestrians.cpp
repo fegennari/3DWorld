@@ -1174,7 +1174,7 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 	else {
 		cube_t const bcube(ped.get_bcube());
 		if (!pdu.sphere_visible_test(bcube.get_cube_center(), 0.5*ped.get_height())) return 0; // not visible - skip
-		if (dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models
+		if (!ped.in_building && dstate.is_occluded(bcube)) return 0; // only check occlusion for expensive ped models, and for peds outside buildings
 		end_sphere_draw(in_sphere_draw);
 		bool const low_detail(!shadow_only && dist_sq > 0.25*draw_dist_sq); // low detail for non-shadow pass at half draw dist
 		if (enable_animations) {s.add_uniform_float("animation_time", ped.anim_time);}
