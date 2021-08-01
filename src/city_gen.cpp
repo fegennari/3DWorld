@@ -1077,8 +1077,9 @@ class city_road_gen_t : public road_gen_base_t {
 				assert(plot_id < plot_colliders.size());
 				vect_cube_t &colliders(plot_colliders[plot_id]);
 				if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, bcubes, colliders, rgen, is_new_tile);}
+				unsigned const driveways_start(driveways.size());
 				if (is_residential) {add_house_driveways(*i, colliders, detail_rgen, is_new_tile);}
-				bcubes.insert(bcubes.end(), driveways.begin(), driveways.end()); // driveways become blockers for other placed objects
+				bcubes.insert(bcubes.end(), (driveways.begin() + driveways_start), driveways.end()); // driveways become blockers for other placed objects
 				place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
 				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
