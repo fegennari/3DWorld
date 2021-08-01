@@ -495,6 +495,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		register_at_dest();
 		ped_mgr.choose_new_ped_plot_pos(*this);
 	}
+	else if (!has_dest_bldg && !has_dest_car) {ped_mgr.choose_dest_building_or_parked_car(*this);}
 	if (at_crosswalk) {ped_mgr.mark_crosswalk_in_use(*this);}
 	// movement logic
 	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
