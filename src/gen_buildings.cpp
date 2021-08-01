@@ -1974,14 +1974,14 @@ public:
 			}
 			has_interior_geom |= b->has_interior();
 		}
-		for (auto g = grid.begin(); g != grid.end(); ++g) { // update grid bcube zvals to include building roofs
-			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
-				cube_t &bbc(*b);
-				bbc = get_building(b->ix).bcube;
-				buildings_bcube.assign_or_union_with_cube(bbc);
-				g->bcube.union_with_cube(bbc);
-			}
-		} // for g
+		// re-generate grid based on new building bcubes that include things like roofs and chimneys;
+		// since bcubes should only increase in size, we don't need to reset grid bcubes
+		for (auto g = grid.begin(); g != grid.end(); ++g) {g->bc_ixs.clear();}
+
+		for (auto b = buildings.begin(); b != buildings.end(); ++b) {
+			add_to_grid(b->bcube, (b - buildings.begin()), 0);
+			buildings_bcube.assign_or_union_with_cube(b->bcube);
+		}
 		if (!is_tile && (!city_only || residential)) {place_building_trees(rgen);}
 
 		if (!is_tile) {
@@ -2981,10 +2981,8 @@ public:
 
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
 					if (!query_cube.intersects_xy(*b)) continue;
-					cube_t shared(query_cube);
-					shared.intersect_with_cube(*b);
-					if (get_grid_ix(shared.get_llc()) != y*grid_sz + x) continue; // add only if in home grid (to avoid duplicates)
-					if (query_mode == 0) {cubes.push_back(*b);} // return building bcube
+					if (get_grid_ix(query_cube.get_llc().max(b->get_llc())) != (y*grid_sz + x)) continue; // add only if in home grid (to avoid duplicates)
+					if      (query_mode == 0) {cubes.push_back(*b);} // return building bcube
 					else if (query_mode == 1) {get_building(b->ix).maybe_add_house_driveway(query_cube, cubes, b->ix);} // return house driveways
 					else {assert(0);} // invalid mode/not implemented
 				}
