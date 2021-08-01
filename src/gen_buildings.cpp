@@ -1762,7 +1762,7 @@ public:
 		bool residential(0); // Note: may not be correct for a mix of residential and non-residential, but that can't currently happen
 
 		if (city_only) {
-			bool num_residential(0), num_non_residential(0);
+			unsigned num_residential(0), num_non_residential(0);
 			get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
 
 			for (auto i = city_plot_bcubes.begin(); i != city_plot_bcubes.end(); ++i) {
