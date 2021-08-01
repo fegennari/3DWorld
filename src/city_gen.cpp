@@ -1009,13 +1009,13 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 			}
 		}
-		void add_house_driveways(road_plot_t const &plot, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
+		void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, bool is_new_tile) {
 			cube_t plot_z(plot);
 			plot_z.z1() = plot_z.z2() = plot.z2() + 0.0002*city_params.road_width; // shift slightly up to avoid Z-fighting
-			size_t const dw_start(colliders.size());
-			add_house_driveways_for_plot(plot_z, colliders);
+			temp_cubes.clear();
+			add_house_driveways_for_plot(plot_z, temp_cubes);
 
-			for (auto i = (colliders.begin() + dw_start); i != colliders.end(); ++i) {
+			for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {
 				assert(i->is_normalized());
 				add_obj_to_group(tr_cube_t(*i), *i, driveways, driveway_groups, is_new_tile);
 			}
@@ -1058,7 +1058,7 @@ class city_road_gen_t : public road_gen_base_t {
 		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential) {
 			// Note: fills in plots.has_parking
 			//timer_t timer("Gen Parking Lots and Place Objects");
-			vect_cube_t bcubes; // blockers
+			vect_cube_t bcubes, temp_cubes; // blockers, driveways
 			vector<point> tree_pos;
 			rand_gen_t rgen, detail_rgen;
 			rgen.set_state(city_id, 123);
@@ -1075,10 +1075,10 @@ class city_road_gen_t : public road_gen_base_t {
 				get_building_bcubes(*i, bcubes);
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
-				vect_cube_t &colliders(plot_colliders[plot_id]);
+				vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
 				if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, bcubes, colliders, rgen, is_new_tile);}
 				unsigned const driveways_start(driveways.size());
-				if (is_residential) {add_house_driveways(*i, colliders, detail_rgen, is_new_tile);}
+				if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, is_new_tile);}
 				bcubes.insert(bcubes.end(), (driveways.begin() + driveways_start), driveways.end()); // driveways become blockers for other placed objects
 				place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
 				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
