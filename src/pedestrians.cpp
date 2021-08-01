@@ -670,7 +670,8 @@ void ped_manager_t::init(unsigned num_city, unsigned num_building) {
 		ped.dir   = vector3d(cosf(angle), sinf(angle), 0.0);
 		ped.speed = (enable_bp_ai ? city_params.ped_speed*rgen.rand_uniform(0.5, 0.75) : 0.0f); // small range, slower than outdoor city pedestrians
 		ped.ssn   = (unsigned short)(peds.size() + peds_b.size()); // may wrap
-		ped.dest_bldg = i->bix; // store building index in dest_bldg field
+		ped.dest_bldg   = i->bix; // store building index in dest_bldg field
+		ped.in_building = 1;
 		peds_b.push_back(ped);
 	} // for i
 	cout << "City Pedestrians: " << peds.size() << ", Building Residents: " << peds_b.size() << endl; // testing
