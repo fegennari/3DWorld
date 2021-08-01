@@ -890,11 +890,11 @@ class city_road_gen_t : public road_gen_base_t {
 			blockers.push_back(bc); // prevent trees and benches from being too close to each other
 			return 1;
 		}
-		static bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, float radius, float extra_spacing, float num_tries, point &pos) {
+		static bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, float radius, float extra_spacing, unsigned num_tries, point &pos) {
 			for (unsigned t = 0; t < num_tries; ++t) {
 				pos = rand_xy_pt_in_cube(plot, radius, rgen);
 				if (check_pt_and_place_blocker(pos, blockers, radius, extra_spacing)) return 1; // success
-			} // for t
+			}
 			return 0;
 		}
 		static void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> &tree_pos, bool allow_bush, bool is_sm_tree) {
