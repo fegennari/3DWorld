@@ -138,10 +138,10 @@ bool building_t::test_coll_with_sides(point &pos, point const &p_last, float rad
 }
 
 cube_t building_t::get_coll_bcube() const {
-	if (!is_house || (!has_ac && !has_dw_porch())) return bcube;
+	if (!is_house || (!has_ac && !has_driveway())) return bcube;
 	cube_t cc(bcube);
 	if (has_ac) {cc.expand_by_xy(0.35*get_window_vspace());} // conservative
-	if (has_dw_porch()) {cc.union_with_cube(driveway);}
+	if (has_driveway()) {cc.union_with_cube(driveway);}
 	return cc;
 }
 
@@ -1328,14 +1328,14 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				bool const add_porch_slab = 1;
 
 				if (add_porch_slab) {
-					driveway = c; // added as driveway
-					driveway.z2() = driveway.z1() + driveway_dz;
+					porch = c;
+					porch.z2() = porch.z1() + driveway_dz;
 				}
 				c.z1() += height; // move up
 				c.z2()  = c.z1() + 0.05*parts[1].dz();
 				parts.push_back(c); // porch roof
 				c.z2() = c.z1();
-				c.z1() = (add_porch_slab ? driveway.z2() : pre_shrunk_p1.z1()); // support pillar
+				c.z1() = (add_porch_slab ? porch.z2() : pre_shrunk_p1.z1()); // support pillar
 				c.d[!dim][!dir2] = c.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*width;
 				c.d[ dim][!dir ] = c.d[ dim][ dir] + (dir  ? -1.0 : 1.0)*width;
 				skip_last_roof = 1;

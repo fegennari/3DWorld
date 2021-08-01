@@ -1025,6 +1025,12 @@ int get_building_ext_door_tid(unsigned type) {
 	return -1; // never gets here
 }
 
+void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, cube_t const &c) {
+	if (c.is_all_zeros()) return;
+	tid_nm_pair_t const tex(get_texture_by_name("roads/asphalt.jpg"), 16.0);
+	bdraw.add_section(building, 0, c, tex, WHITE, 7, 1, 0, 1, 0); // all dims, skip bottom, no AO
+}
+
 void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior, bool get_int_ext_walls) {
 
 	assert(get_exterior || get_interior || get_int_ext_walls); // must be at least one of these
@@ -1111,10 +1117,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
 			bdraw.add_fence(*i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE);
 		}
-		if (has_dw_porch()) {
-			tid_nm_pair_t const tex(get_texture_by_name("roads/asphalt.jpg"), 16.0);
-			bdraw.add_section(*this, 0, driveway, tex, WHITE, 7, 1, 0, 1, 0); // all dims, skip bottom, no AO
-		}
+		add_driveway_or_porch(bdraw, *this, driveway);
+		add_driveway_or_porch(bdraw, *this, porch);
+
 		if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
 			cube_t const &top(parts.back()); // top/last part
 			point const center(top.get_cube_center());
@@ -1616,18 +1621,20 @@ class building_creator_t {
 		return 0;
 	}
 
+	void add_building_to_grid(building_t const &b, unsigned gix, unsigned bix) {
+		grid_by_tile[gix].add(b.bcube, bix, 0);
+		if (b.enable_driveway_coll()) {grid_by_tile[gix].add(b.driveway, bix, 1);} // add driveway as well
+	}
 	void build_grid_by_tile(bool single_tile) {
 		grid_by_tile.clear();
 
 		if (single_tile || world_mode != WMODE_INF_TERRAIN) { // not used in this mode - add all buildings to the first tile
 			grid_by_tile.resize(1);
-			grid_by_tile.front().bc_ixs.reserve(buildings.size());
+			grid_by_tile[0].bc_ixs.reserve(buildings.size());
 
 			for(unsigned bix = 0; bix < buildings.size(); ++bix) {
 				building_t const &b(buildings[bix]);
-				if (b.bcube.is_all_zeros()) continue; // skip invalid buildings
-				grid_by_tile.front().add(b.bcube, bix, 0);
-				if (b.enable_driveway_coll()) {grid_by_tile.front().add(b.driveway, bix, 1);} // add driveway as well
+				if (!b.bcube.is_all_zeros()) {add_building_to_grid(b, 0, bix);} // skip invalid buildings
 			}
 			return;
 		}
@@ -1650,8 +1657,7 @@ class building_creator_t {
 				gix = it->second;
 				assert(gix < grid_by_tile.size());
 			}
-			grid_by_tile[gix].add(b.bcube, bix, 0);
-			if (b.enable_driveway_coll()) {grid_by_tile[gix].add(b.driveway, bix, 1);} // add driveway as well
+			add_building_to_grid(b, gix, bix);
 		} // for bix
 	}
 
@@ -1953,7 +1959,10 @@ public:
 			cout << endl;
 		}
 		for (auto b = buildings.begin(); b != buildings.end(); ++b) { // add driveways and calculate has_interior_geom
-			if (b->enable_driveway_coll()) {add_to_grid(b->driveway, (b - buildings.begin()), 1);}
+			if (b->enable_driveway_coll()) {
+				if (!b->driveway.is_all_zeros()) {add_to_grid(b->driveway, (b - buildings.begin()), 1);}
+				if (!b->porch   .is_all_zeros()) {add_to_grid(b->porch,    (b - buildings.begin()), 1);}
+			}
 			has_interior_geom |= b->has_interior();
 		}
 		for (auto g = grid.begin(); g != grid.end(); ++g) { // update grid bcube zvals to include building roofs
