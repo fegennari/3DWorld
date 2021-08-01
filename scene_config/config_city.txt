@@ -85,7 +85,7 @@ city helicopter_model ../models/cars/Helicopter_ka27/ka27.model3d 1  0 0 90  1 2
 
 # pedestrians
 city num_peds 10000
-city num_building_peds 50000
+city num_building_peds 50000 # 60000 for residential_mode?
 city ped_speed 0.001
 city ped_respawn_at_dest 1
 # ped_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
