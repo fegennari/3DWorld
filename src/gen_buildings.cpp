@@ -692,6 +692,13 @@ public:
 		add_tquad_to_verts(bg, tquad, bcube, tex, color, get_verts(tex, (tquad.npts == 3)), invert_tc_x, exclude_frame, no_tc); // 0=quads, 1=tris
 	}
 
+	static void set_rotated_normal(vert_norm_comp_tc_color &vert, building_t const &b, vector3d &norm, unsigned n, bool dir) {
+		norm.z = 0.0; // likely doesn't need to be set, but okay to set to 0
+		if (n == 0) {norm.x =  b.rot_cos; norm.y = b.rot_sin;} // X
+		else        {norm.x = -b.rot_sin; norm.y = b.rot_cos;} // Y
+		vert.set_norm(dir ? norm : -norm);
+	}
+
 	// clip_windows: 0=no clip, 1=clip for building, 2=clip for house
 	// dim_mask bits: enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
 	void add_section(building_t const &bg, bool clip_to_other_parts, cube_t const &cube, tid_nm_pair_t const &tex,
@@ -737,16 +744,8 @@ public:
 				unsigned const dir(bool(j) ^ invert_normals);
 				if (dim_mask & (1<<(2*n+dir+3)))     continue; // check for disabled faces
 				if (clamp_cube != nullptr && (cube.d[n][dir] < clamp_cube->d[n][0] || cube.d[n][dir] > clamp_cube->d[n][1])) continue; // outside clamp cube, drop this face
-				
-				if (n < 2 && is_rotated) { // XY only
-					norm.z = 0.0;
-					if (n == 0) {norm.x =  bg.rot_cos; norm.y = bg.rot_sin;} // X
-					else        {norm.x = -bg.rot_sin; norm.y = bg.rot_cos;} // Y
-					vert.set_norm(j ? norm : -norm);
-				}
-				else {
-					vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
-				}
+				if (n < 2 && is_rotated) {set_rotated_normal(vert, bg, norm, n, j);} // XY only
+				else {vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = (j ? 127 : -128);} // -1.0 or 1.0
 				point pt; // parameteric position within cube in [vec3(0), vec3(1)]
 				pt[n] = dir; // our cube face, in direction of normal
 
@@ -898,13 +897,18 @@ public:
 		} // for i
 	}
 
-	void add_cube(cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color, bool swap_txy, unsigned dim_mask, bool skip_bottom, bool skip_top, bool ws_texture) {
+	void add_cube(building_t const &bg, cube_t const &cube, tid_nm_pair_t const &tex, colorRGBA const &color,
+		bool swap_txy, unsigned dim_mask, bool skip_bottom, bool skip_top, bool ws_texture)
+	{
 		assert(dim_mask != 0); // must draw at least some face
 		auto &verts(get_verts(tex));
 		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 		vert_norm_comp_tc_color vert;
 		vert.set_c4(color);
 		float const tscale[2] = {tex.tscale_x, tex.tscale_y};
+		unsigned const verts_start(verts.size());
+		bool const is_rotated(bg.is_rotated());
+		vector3d norm; // used for rotated buildings
 
 		for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 			unsigned const n((i+2)%3), d((i+1)%3), st(bool(i&1) ^ swap_txy); // n = dim of normal, i/d = other dims
@@ -913,7 +917,8 @@ public:
 			for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
 				if (skip_bottom && n == 2 && j == 0) continue; // skip bottom side
 				if (skip_top    && n == 2 && j == 1) continue; // skip top    side
-				vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = (j ? 127 : -128); // -1.0 or 1.0
+				if (n < 2 && is_rotated) {set_rotated_normal(vert, bg, norm, n, j);} // XY only
+				else {vert.n[i] = 0; vert.n[d] = 0; vert.n[n] = (j ? 127 : -128);} // -1.0 or 1.0
 				point pt; // parameteric position within cube in [vec3(0), vec3(1)]
 				pt[n] = j; // our cube face, in direction of normal
 				pt[d] = 0.0;
@@ -927,9 +932,13 @@ public:
 				EMIT_VERTEX_SIMPLE(); // 1 !j
 			} // for j
 		} // for i
+		if (is_rotated) {
+			point const center(bg.bcube.get_cube_center());
+			for (auto i = (verts.begin() + verts_start); i != verts.end(); ++i) {bg.do_xy_rotate(center, i->v);}
+		}
 	}
 
-	void add_fence(cube_t const &fence, tid_nm_pair_t const &tex, colorRGBA const &color) {
+	void add_fence(building_t const &bg, cube_t const &fence, tid_nm_pair_t const &tex, colorRGBA const &color) {
 		bool const dim(fence.dy() < fence.dx());
 		float const length(fence.get_sz_dim(!dim)), height(fence.dz());
 		float const post_width(fence.get_sz_dim(dim)), post_hwidth(0.5*post_width), beam_hwidth(0.5*post_hwidth), beam_hheight(1.0*post_hwidth);
@@ -942,11 +951,11 @@ public:
 
 		for (unsigned i = 0; i < num_posts; ++i) { // add posts
 			set_wall_width(post, (fence.d[!dim][0] + post_hwidth + i*post_spacing), post_hwidth, !dim);
-			add_cube(post, tex, color, 0, 7, 1, 0, 1); // skip bottom, ws_texture=1
+			add_cube(bg, post, tex, color, 0, 7, 1, 0, 1); // skip bottom, ws_texture=1
 		}
 		for (unsigned i = 0; i < num_beams; ++i) { // add beams
 			set_wall_width(beam, (fence.z1() + (i+1)*beam_spacing), beam_hheight, 2); // set beam zvals
-			add_cube(beam, tex, color, 0, (4U + (1U<<unsigned(dim))), 0, 0, 1); // skip !dim sides, ws_texture=1
+			add_cube(bg, beam, tex, color, 0, (4U + (1U<<unsigned(dim))), 0, 0, 1); // skip !dim sides, ws_texture=1
 		}
 	}
 
@@ -1090,8 +1099,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				bool const swap_st(i->dx() > i->dy());
 				bool const tex_id((details.size() + parts.size() + mat_ix) & 1); // somewhat of a hash of various things; deterministic
 				int const ac_tid(tex_id ? building_texture_mgr.get_ac_unit_tid1() : building_texture_mgr.get_ac_unit_tid2());
-				bdraw.add_cube(*i, tid_nm_pair_t(ac_tid, -1, (swap_st ? 1.0 : -1.0), 1.0), WHITE, swap_st, 4, 1, 0, 0); // Z, skip bottom, ws_texture=0
-				bdraw.add_cube(*i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
+				bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, (swap_st ? 1.0 : -1.0), 1.0), WHITE, swap_st, 4, 1, 0, 0); // Z, skip bottom, ws_texture=0
+				bdraw.add_cube(*this, *i, tid_nm_pair_t(ac_tid, -1, 0.3, 1.0), WHITE, 0, 3, 1, 0, 0); // XY with stretched texture, ws_texture=0
 				continue;
 			}
 			bool const skip_bot(i->type != ROOF_OBJ_SCAP), pointed(i->type == ROOF_OBJ_ANT); // draw antenna as a point
@@ -1115,7 +1124,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), dcolor);
 		}
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
-			bdraw.add_fence(*i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE);
+			bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE);
 		}
 		add_driveway_or_porch(bdraw, *this, driveway);
 		add_driveway_or_porch(bdraw, *this, porch);

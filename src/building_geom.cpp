@@ -1388,7 +1388,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			tree_pos  += (0.05f*(bcube.dx() + bcube.dy())/dir.mag())*dir; // shift slightly away from house center so that it's less likely to intersect the house
 			tree_pos.z = ground_floor_z1;
 		}
-		if (type == 1 && (rand_num & 6) != 0 && !is_rotated()) { // L-shaped house, add a fence 75% of the time
+		if (type == 1 && (rand_num & 6) != 0 && !is_rotated()) { // L-shaped house, add a fence 75% of the time (skip rotated due to assert in clip_cube_to_parts())
 			// use the same dim as the shrunk house part for the full fence section; or should we use garage_dim?
 			float const fence_thickness(0.08*door_height);
 			cube_t fence(bcube), fence2(bcube);
@@ -2054,7 +2054,7 @@ void merge_cubes_xy(vect_cube_t &cubes) {
 void building_t::gen_details(rand_gen_t &rgen, bool is_rectangle) { // for the roof
 
 	bool const flat_roof(roof_type == ROOF_TYPE_FLAT), add_walls(is_simple_cube() && flat_roof); // simple cube buildings with flat roofs
-	unsigned const num_ac_units((flat_roof && is_cube() && !is_rotated()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
+	unsigned const num_ac_units((flat_roof && is_cube()) ? (rgen.rand() % 7) : 0); // cube buildings only for now
 	float const window_vspacing(get_window_vspace()), wall_width(0.049*window_vspacing); // slightly narrower than interior wall width to avoid z-fighting with roof access
 	assert(!parts.empty());
 
