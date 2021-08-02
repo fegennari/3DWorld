@@ -883,7 +883,7 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for c
 			return has_parking;
 		}
-		void add_cars_to_driveways(vector<car_t> &cars, unsigned city_id, rand_gen_t &rgen) const {
+		void add_cars_to_driveways(vector<car_t> &cars, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen) const {
 			car_t car;
 			car.park();
 			car.cur_city = city_id;
@@ -906,6 +906,7 @@ class city_road_gen_t : public road_gen_base_t {
 				car.bcube.set_from_point(cpos);
 				car.bcube.expand_by(0.5*car_sz);
 				cars.push_back(car);
+				plot_colliders[i->plot_ix].push_back(car.bcube); // prevent pedestrians from walking through this parked car
 			} // for i
 		}
 		static bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float blocker_spacing) {
@@ -1107,10 +1108,10 @@ class city_road_gen_t : public road_gen_base_t {
 				bcubes.insert(bcubes.end(), (driveways.begin() + driveways_start), driveways.end()); // driveways become blockers for other placed objects
 				place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
 				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
-				sort(colliders.begin(), colliders.end(), cube_by_x1());
 				prev_tile_id = tile_id;
 			} // for i
-			add_cars_to_driveways(cars, city_id, rgen);
+			add_cars_to_driveways(cars, plot_colliders, city_id, rgen);
+			for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
 			sort_grouped_objects(benches,       bench_groups  );
 			sort_grouped_objects(planters,      planter_groups);
 			sort_grouped_objects(fire_hydrants, fire_hydrant_groups);
@@ -1165,14 +1166,17 @@ class city_road_gen_t : public road_gen_base_t {
 		bool pt_in_parking_lot_xy(point const &pos) const {return pt_in_cube_group_xy(pos, parking_lots, parking_lot_groups);}
 		bool pt_in_driveway_xy   (point const &pos) const {return pt_in_cube_group_xy(pos, driveways,    driveway_groups   );}
 
-		bool cube_overlaps_parking_lot_xy(cube_t const &c) const {
+		template<typename V, typename G> bool cube_overlaps_cube_group_xy(cube_t const &c, V const &cubes, G const &groups) const {
 			unsigned start_ix(0);
 
-			for (auto i = parking_lot_groups.begin(); i != parking_lot_groups.end(); start_ix = i->ix, ++i) {
+			for (auto i = groups.begin(); i != groups.end(); start_ix = i->ix, ++i) {
 				if (!i->intersects_xy(c)) continue;
-				for (unsigned b = start_ix; b < i->ix; ++b) {if (parking_lots[b].intersects_xy(c)) return 1;}
+				for (unsigned b = start_ix; b < i->ix; ++b) {if (cubes[b].intersects_xy(c)) return 1;}
 			}
 			return 0;
+		}
+		bool cube_overlaps_pl_or_dw_xy(cube_t const &c) const {
+			return (cube_overlaps_cube_group_xy(c, parking_lots, parking_lot_groups) || cube_overlaps_cube_group_xy(c, driveways, driveway_groups));
 		}
 		bool get_color_at_xy(point const &pos, colorRGBA &color) const {
 			unsigned start_ix(0);
@@ -2006,7 +2010,7 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = roads.begin(); i != roads.end(); ++i) {if (i->intersects(c)) return 1;}
 			return 0;
 		}
-		bool cube_overlaps_parking_lot_xy(cube_t const &c) const {return city_obj_placer.cube_overlaps_parking_lot_xy(c);}
+		bool cube_overlaps_pl_or_dw_xy(cube_t const &c) const {return city_obj_placer.cube_overlaps_pl_or_dw_xy(c);}
 
 		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 			if (empty()) return;
@@ -2605,8 +2609,8 @@ public:
 		bcube.expand_by_xy(city_params.get_max_car_size().x); // expand by car length to fully include cars that are partially inside connector road intersections
 		return bcube;
 	}
-	bool cube_overlaps_road_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_road_xy(c);}
-	bool cube_overlaps_parking_lot_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_parking_lot_xy(c);}
+	bool cube_overlaps_road_xy    (cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_road_xy    (c);}
+	bool cube_overlaps_pl_or_dw_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_pl_or_dw_xy(c);}
 
 	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
 		//timer_t timer("Gen Roads"); // ~0.5ms
@@ -2971,8 +2975,8 @@ void car_manager_t::get_car_ix_range_for_cube(vector<car_block_t>::const_iterato
 	start = cb->start; end = (cb+1)->start;
 	assert(end <= cars.size());
 	if (cb->is_in_building()) return; // cars parked in garages - keep full start/end range
-	if (!road_gen.cube_overlaps_parking_lot_xy(bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
-	if (!road_gen.cube_overlaps_road_xy       (bc, cb->cur_city)) {start = cb->first_parked;} // parked cars only (end of range)
+	if (!road_gen.cube_overlaps_pl_or_dw_xy(bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
+	if (!road_gen.cube_overlaps_road_xy    (bc, cb->cur_city)) {start = cb->first_parked;} // parked cars only (end of range)
 	assert(start <= end);
 }
 
