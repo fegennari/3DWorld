@@ -1993,7 +1993,8 @@ class city_road_gen_t : public road_gen_base_t {
 					if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
 				}
 			}
-			if (city_obj_placer.pt_in_parking_lot_xy(pos) || city_obj_placer.pt_in_driveway_xy(pos)) {color = DK_GRAY; return INT_PARKING;}
+			if (city_obj_placer.pt_in_parking_lot_xy(pos)) {color = DK_GRAY; return INT_PARKING;}
+			if (city_obj_placer.pt_in_driveway_xy   (pos)) {color = LT_GRAY; return INT_PARKING;}
 			if (city_obj_placer.get_color_at_xy(pos, color)) {return INT_PLOT;} // hit a detail object, but still in a plot
 			
 			if (!plots.empty()) { // inside a city and not over a road - must be over a plot or park
