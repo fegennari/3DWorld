@@ -1596,15 +1596,17 @@ bool is_valid_driveway_pos(cube_t const &driveway, cube_t const &bcube, vect_cub
 	}
 	return 1;
 }
-bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube, cube_t const &avoid, vect_cube_t const &bcubes,
-	vect_cube_t &driveways, rand_gen_t &rgen, float hwidth, bool dim)
+bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube, cube_t const &avoid, vect_cube_t const &blockers,
+	vect_cube_t const &bcubes, vect_cube_t &driveways, rand_gen_t &rgen, float hwidth, bool dim, bool dir)
 {
 	if (target.get_sz_dim(!dim) < 3.0*hwidth) return 0; // not wide enough for driveway
+	dw.d[dim][!dir] = target.d[dim][dir];
 
-	for (unsigned n = 0; n < 5; ++n) { // make up to 5 attempts
+	for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts
 		float const pos(rgen.rand_uniform((target.d[!dim][0] + hwidth), (target.d[!dim][1] - hwidth)));
 		set_wall_width(dw, pos, hwidth, !dim);
 		if (!avoid.is_all_zeros() && dw.intersects(avoid)) continue; // including adjacency
+		if (has_bcube_int_xy_no_adj(dw, blockers))         continue; // blocked
 		if (!is_valid_driveway_pos(dw, bcube, bcubes))     continue; // blocked
 		driveways.push_back(dw);
 		return 1;
@@ -1635,7 +1637,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 	if (!is_house) return 0;
 	vect_cube_t bcubes;
 	get_building_bcubes(plot, bcubes); // Note: could be passed in by the caller, but requires many changes
-	// TODO: houses should be placed so that their driveways exit toward a plot
+	// TODO: houses should be placed so that their driveways exit toward the edge of the plot
 	if (has_driveway() && extend_existing_driveway(driveway, plot, bcube, bcubes, driveways)) return 1;
 	float const hwidth(0.8*get_window_vspace());
 	cube_t avoid;
@@ -1655,13 +1657,11 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 	for (unsigned n = 0; n < 2; ++n) { // check the closest dim, then the second closest dim
 		cube_t dw(plot); // copy zvals from plot
 		dw.d[dim][ dir] = plot .d[dim][dir];
-		dw.d[dim][!dir] = bcube.d[dim][dir];
 
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-			if (i->d[dim][dir] != bcube.d[dim][dir]) continue; // this part is not adjacent, connect the driveway to it
-			if (add_driveway_if_legal(dw, *i, bcube, avoid, bcubes, driveways, rgen, hwidth, dim)) return 1;
+			if (add_driveway_if_legal(dw, *i, bcube, avoid, parts, bcubes, driveways, rgen, hwidth, dim, dir)) return 1;
 		}
-		if (add_driveway_if_legal(dw, bcube, bcube, avoid, bcubes, driveways, rgen, hwidth, dim)) return 1;
+		if (add_driveway_if_legal(dw, bcube, bcube, avoid, vect_cube_t(), bcubes, driveways, rgen, hwidth, dim, dir)) return 1;
 
 		if (n == 0) {
 			dim ^= 1; // try the other dim

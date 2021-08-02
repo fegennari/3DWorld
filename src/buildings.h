@@ -1167,6 +1167,10 @@ template<typename T> bool has_bcube_int_no_adj(cube_t const &bcube, vector<T> co
 	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects_no_adj(bcube)) return 1;}
 	return 0;
 }
+template<typename T> bool has_bcube_int_xy_no_adj(cube_t const &bcube, vector<T> const &bcubes) { // T must derive from cube_t
+	for (auto c = bcubes.begin(); c != bcubes.end(); ++c) {if (c->intersects_xy_no_adj(bcube)) return 1;}
+	return 0;
+}
 template<typename T> cube_t get_cube_height_radius(point const &center, T radius, float height) { // T can be float or vector3d
 	cube_t c(center);
 	c.expand_by_xy(radius);
