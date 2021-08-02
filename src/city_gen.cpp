@@ -883,22 +883,23 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for c
 			return has_parking;
 		}
-		void add_cars_to_driveways(vector<car_t> &cars, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen) const {
+		void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen) const {
 			car_t car;
 			car.park();
 			car.cur_city = city_id;
 			car.cur_road_type = TYPE_DRIVEWAY;
 
 			for (auto i = driveways.begin(); i != driveways.end(); ++i) {
-				if (rgen.rand_bool()) continue; // no car in this driveway
+				if (rgen.rand_float() < 0.4) continue; // no car in this driveway 40% of the time
 				car.cur_road = (unsigned short)i->plot_ix; // store plot_ix in road field
 				car.cur_seg  = (unsigned short)(i - driveways.begin()); // store driveway index in cur_seg
 				vector3d car_sz(city_params.get_nom_car_size()); // {length, width, height}
-				car.dim    = (i->dx() < i->dy()); // longer dim
-				if (i->get_sz_dim(car.dim) < 1.5*car_sz.x || i->get_sz_dim(!car.dim) < 1.2*car_sz.y) continue; // driveway is too small to fit this car
+				cube_t const &plot(plots[i->plot_ix]);
+				car.dim    = (i->y1() == plot.y1() || i->y2() == plot.y2()); // check which edge of the plot the driveway is connected to, which is more accurate than the aspect ratio
+				if (i->get_sz_dim(car.dim) < 1.6*car_sz.x || i->get_sz_dim(!car.dim) < 1.25*car_sz.y) continue; // driveway is too small to fit this car
 				car.dir    = rgen.rand_bool(); // randomly pulled in vs. backed in, since we don't know the direction to the house anyway
 				car.height = car_sz.z;
-				float const pad_l(0.6*car_sz.x), pad_w(0.55*car_sz.y);
+				float const pad_l(0.75*car_sz.x), pad_w(0.6*car_sz.y); // needs to be a bit larger to fit trucks
 				if (car.dim) {swap(car_sz.x, car_sz.y);}
 				point cpos(0.0, 0.0, (i->z2() + 0.5*car_sz.z));
 				cpos[ car.dim] = rgen.rand_uniform(i->d[ car.dim][0]+pad_l, i->d[ car.dim][1]-pad_l);
@@ -1110,7 +1111,7 @@ class city_road_gen_t : public road_gen_base_t {
 				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
 				prev_tile_id = tile_id;
 			} // for i
-			add_cars_to_driveways(cars, plot_colliders, city_id, rgen);
+			add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);
 			for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
 			sort_grouped_objects(benches,       bench_groups  );
 			sort_grouped_objects(planters,      planter_groups);
