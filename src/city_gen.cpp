@@ -758,7 +758,7 @@ class city_road_gen_t : public road_gen_base_t {
 	class city_obj_placer_t {
 	public: // road network needs access to parking lots and driveways for drawing
 		vector<parking_lot_t> parking_lots;
-		vector<tr_cube_t> driveways; // for houses
+		vector<driveway_t> driveways; // for houses
 	private:
 		vector<bench_t> benches;
 		vector<tree_planter_t> planters;
@@ -882,6 +882,31 @@ class city_road_gen_t : public road_gen_base_t {
 				} // for col
 			} // for c
 			return has_parking;
+		}
+		void add_cars_to_driveways(vector<car_t> &cars, unsigned city_id, rand_gen_t &rgen) const {
+			car_t car;
+			car.park();
+			car.cur_city = city_id;
+			car.cur_road_type = TYPE_DRIVEWAY;
+
+			for (auto i = driveways.begin(); i != driveways.end(); ++i) {
+				//if (rgen.rand_bool()) continue; // no car in this driveway
+				car.cur_road = (unsigned short)i->plot_ix; // store plot_ix in road field
+				car.cur_seg  = (unsigned short)(i - driveways.begin()); // store driveway index in cur_seg
+				vector3d car_sz(city_params.get_nom_car_size()); // {length, width, height}
+				car.dim    = (i->dx() < i->dy()); // longer dim
+				if (i->get_sz_dim(car.dim) < 1.5*car_sz.x || i->get_sz_dim(!car.dim) < 1.2*car_sz.y) continue; // driveway is too small to fit this car
+				car.dir    = rgen.rand_bool(); // randomly pulled in vs. backed in, since we don't know the direction to the house anyway
+				car.height = car_sz.z;
+				float const pad_l(0.6*car_sz.x), pad_w(0.55*car_sz.y);
+				if (car.dim) {swap(car_sz.x, car_sz.y);}
+				point cpos(0.0, 0.0, (i->z2() + 0.5*car_sz.z));
+				cpos[ car.dim] = rgen.rand_uniform(i->d[ car.dim][0]+pad_l, i->d[ car.dim][1]-pad_l);
+				cpos[!car.dim] = rgen.rand_uniform(i->d[!car.dim][0]+pad_w, i->d[!car.dim][1]-pad_w); // not quite centered
+				car.bcube.set_from_point(cpos);
+				car.bcube.expand_by(0.5*car_sz);
+				cars.push_back(car);
+			} // for i
 		}
 		static bool check_pt_and_place_blocker(point const &pos, vect_cube_t &blockers, float radius, float blocker_spacing) {
 			cube_t bc(pos);
@@ -1009,7 +1034,7 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 			}
 		}
-		void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, bool is_new_tile) {
+		void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix, bool is_new_tile) {
 			cube_t plot_z(plot);
 			plot_z.z1() = plot_z.z2() = plot.z2() + 0.0002*city_params.road_width; // shift slightly up to avoid Z-fighting
 			temp_cubes.clear();
@@ -1017,7 +1042,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 			for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {
 				assert(i->is_normalized());
-				add_obj_to_group(tr_cube_t(*i), *i, driveways, driveway_groups, is_new_tile);
+				add_obj_to_group(driveway_t(*i, plot_ix), *i, driveways, driveway_groups, is_new_tile);
 			}
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
@@ -1078,13 +1103,14 @@ class city_road_gen_t : public road_gen_base_t {
 				vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
 				if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, bcubes, colliders, rgen, is_new_tile);}
 				unsigned const driveways_start(driveways.size());
-				if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, is_new_tile);}
+				if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id, is_new_tile);}
 				bcubes.insert(bcubes.end(), (driveways.begin() + driveways_start), driveways.end()); // driveways become blockers for other placed objects
 				place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
 				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
 				sort(colliders.begin(), colliders.end(), cube_by_x1());
 				prev_tile_id = tile_id;
 			} // for i
+			add_cars_to_driveways(cars, city_id, rgen);
 			sort_grouped_objects(benches,       bench_groups  );
 			sort_grouped_objects(planters,      planter_groups);
 			sort_grouped_objects(fire_hydrants, fire_hydrant_groups);

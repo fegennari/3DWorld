@@ -291,6 +291,12 @@ struct tr_cube_t : public cube_t {
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 };
 
+struct driveway_t : public tr_cube_t {
+	unsigned plot_ix;
+	driveway_t() : plot_ix(0) {}
+	driveway_t(cube_t const &c, unsigned pix) : tr_cube_t(c), plot_ix(pix) {}
+};
+
 struct road_plot_t : public tr_cube_t {
 	uint8_t xpos, ypos; // position within the city grid
 	bool has_parking, is_park;
