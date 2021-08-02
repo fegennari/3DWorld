@@ -1034,10 +1034,10 @@ int get_building_ext_door_tid(unsigned type) {
 	return -1; // never gets here
 }
 
-void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, cube_t const &c) {
+void add_driveway_or_porch(building_draw_t &bdraw, building_t const &building, cube_t const &c, colorRGBA const &color) {
 	if (c.is_all_zeros()) return;
 	tid_nm_pair_t const tex(get_texture_by_name("roads/asphalt.jpg"), 16.0);
-	bdraw.add_section(building, 0, c, tex, WHITE, 7, 1, 0, 1, 0); // all dims, skip bottom, no AO
+	bdraw.add_section(building, 0, c, tex, color, 7, 1, 0, 1, 0); // all dims, skip bottom, no AO
 }
 
 void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, bool get_interior, bool get_int_ext_walls) {
@@ -1126,8 +1126,8 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
 			bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE);
 		}
-		add_driveway_or_porch(bdraw, *this, driveway);
-		add_driveway_or_porch(bdraw, *this, porch);
+		add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY);
+		add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY);
 
 		if (roof_type == ROOF_TYPE_DOME || roof_type == ROOF_TYPE_ONION) {
 			cube_t const &top(parts.back()); // top/last part

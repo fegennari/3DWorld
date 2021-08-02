@@ -23,7 +23,7 @@ enum {TURN_NONE=0, TURN_LEFT, TURN_RIGHT, TURN_UNSPEC};
 enum {INT_NONE=0, INT_ROAD, INT_PLOT, INT_PARKING, INT_PARK};
 enum {RTYPE_ROAD=0, RTYPE_TRACKS};
 unsigned const CONN_TYPE_NONE = 0;
-colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, LT_GRAY, WHITE, WHITE}; // all white except for parks
+colorRGBA const road_colors[NUM_RD_TYPES] = {WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, LT_GRAY, LT_GRAY, WHITE}; // all white except for parks and driveways
 
 int       const FORCE_MODEL_ID = -1; // -1 disables
 unsigned  const NUM_CAR_COLORS = 10;
