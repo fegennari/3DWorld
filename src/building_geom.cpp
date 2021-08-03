@@ -1675,6 +1675,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 			bool const s(bool(S) ^ rgen.rand_bool()); // not biased
 			set_wall_width(dw, (bcube.d[!dim][s] + (s ? 1.0 : -1.0)*hwidth), hwidth, !dim);
 			if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked (don't need to check parts or chimney/fireplace here)
+			if (s) {dw.translate_dim(2, 0.001*hwidth);} // hack to prevent z-fighting when driveways overlap on the left and right of adjacent houses
 			driveways.push_back(dw);
 			return 1;
 		} // for s
