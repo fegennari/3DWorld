@@ -67,7 +67,7 @@ city car_model ../models/cars/natla_car/natla_car.model3d         1 -1  2 90  1 
 city car_model ../models/cars/speedCar/speedCar.model3d           1 -1  6 0   1 1.0 0.5  4 5 # always DK_BLUE (writing to model3d file inverts DDS textures)
 city car_model ../models/cars/Lamborghini/Lamborghini.model3d     1  2 -1 180 1 1.0 0.5  2 3 4
 city car_model ../models/cars/GCPD_Police_Car/GCPD_Police_Car.model3d 1 -1  1 90  1 1.0 0.2  0 1 # always GRAY_BLACK
-city car_model ../models/cars/bugatti/bugatti.model3d             1  0 -1 80  1 1.0 2.0  0 4 # Note: underside disabled for shadows model is already too many triangles
+city car_model ../models/cars/bugatti/bugatti.model3d             1  0 -1 80  1 1.0 2.0  0 4 24 # Note: underside disabled for shadows model is already too many triangles, but need to include the windshield
 city car_model ../models/cars/Mercedes_Benz/Mercedes-Benz.model3d 1  0 -1 180 1 1.0 0.5  0 6 7
 city car_model ../models/cars/Rio/rio.model3d                     1  5 -1 270 1 1.0 0.5  1 5 # Note: shadow material 1 may be optional
 city car_model ../models/cars/Soarer/soarer.model3d               1  2 -1 90  1 1.0 0.5  2 5 8
