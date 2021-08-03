@@ -1596,18 +1596,19 @@ bool is_valid_driveway_pos(cube_t const &driveway, cube_t const &bcube, vect_cub
 	}
 	return 1;
 }
-bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube, cube_t const &avoid, vect_cube_t const &blockers,
+bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube, vect_cube_t const &avoid, vect_cube_t const &blockers,
 	vect_cube_t const &bcubes, vect_cube_t &driveways, rand_gen_t &rgen, float hwidth, bool dim, bool dir)
 {
 	if (target.get_sz_dim(!dim) < 3.0*hwidth) return 0; // not wide enough for driveway
 	dw.d[dim][!dir] = target.d[dim][dir];
+	if (dw.get_sz_dim(dim) < 3.0*hwidth) return 0; // too short compared to the width, likely can't fit a car
 
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts
 		float const pos(rgen.rand_uniform((target.d[!dim][0] + hwidth), (target.d[!dim][1] - hwidth)));
 		set_wall_width(dw, pos, hwidth, !dim);
-		if (!avoid.is_all_zeros() && dw.intersects(avoid)) continue; // including adjacency
-		if (has_bcube_int_xy_no_adj(dw, blockers))         continue; // blocked
-		if (!is_valid_driveway_pos(dw, bcube, bcubes))     continue; // blocked
+		if (has_bcube_int(dw, avoid))                  continue; // blocked, including adjacency
+		if (has_bcube_int_xy_no_adj(dw, blockers))     continue; // blocked
+		if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked
 		driveways.push_back(dw);
 		return 1;
 	}
@@ -1635,16 +1636,20 @@ bool extend_existing_driveway(cube_t const &driveway, cube_t const &plot, cube_t
 // Note: applies to city residential plots, called by city_obj_placer_t
 bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &driveways, unsigned building_ix) const {
 	if (!is_house) return 0;
-	vect_cube_t bcubes;
+	static vect_cube_t bcubes, avoid; // reused across calls
+	bcubes.clear();
 	get_building_bcubes(plot, bcubes); // Note: could be passed in by the caller, but requires many changes
 	// TODO: houses should be placed so that their driveways exit toward the edge of the plot
 	if (has_driveway() && extend_existing_driveway(driveway, plot, bcube, bcubes, driveways)) return 1;
-	float const hwidth(0.8*get_window_vspace());
-	cube_t avoid;
-	if (has_chimney) {avoid = get_fireplace();} // avoid placing the driveway across from the chimney/fireplace
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, building_ix+111);
 	rgen.rand_mix();
+	float const hwidth(0.8*get_window_vspace()*rgen.rand_uniform(0.9, 1.1));
+	avoid = fences;
+	if (!porch.is_all_zeros()) {avoid.push_back(porch);}
+	if (has_chimney) {avoid.push_back(get_fireplace());} // avoid placing the driveway across from the chimney/fireplace
+	if (tree_pos != all_zeros) {avoid.push_back(cube_t()); avoid.back().set_from_sphere(tree_pos, hwidth);} // assume tree diameter is similar to driveway width
+	// what about details/AC units?
 	bool dim(0), dir(0);
 	float dmin(0.0);
 
@@ -1656,13 +1661,23 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 	}
 	for (unsigned n = 0; n < 2; ++n) { // check the closest dim, then the second closest dim
 		cube_t dw(plot); // copy zvals from plot
-		dw.d[dim][ dir] = plot .d[dim][dir];
+		dw.d[dim][dir] = plot.d[dim][dir];
 
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
 			if (add_driveway_if_legal(dw, *i, bcube, avoid, parts, bcubes, driveways, rgen, hwidth, dim, dir)) return 1;
 		}
 		if (add_driveway_if_legal(dw, bcube, bcube, avoid, vect_cube_t(), bcubes, driveways, rgen, hwidth, dim, dir)) return 1;
+		// maybe it was too short? try to place to one side of the house or the other
+		dw.d[dim][!dir] = bcube.d[dim][!dir]; // extend up to far side of house
+		if (rgen.rand_bool()) {dw.d[dim][!dir] -= (dir ? -1.0 : 1.0)*hwidth*rgen.rand_uniform(1.0, 4.0);} // shorten a random amount
 
+		for (unsigned S = 0; S < 2; ++S) {
+			bool const s(bool(S) ^ rgen.rand_bool()); // not biased
+			set_wall_width(dw, (bcube.d[!dim][s] + (s ? 1.0 : -1.0)*hwidth), hwidth, !dim);
+			if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked (don't need to check parts or chimney/fireplace here)
+			driveways.push_back(dw);
+			return 1;
+		} // for s
 		if (n == 0) {
 			dim ^= 1; // try the other dim
 			dir  = (bcube.get_center_dim(dim) > plot.get_center_dim(dim)); // choose the closer dir

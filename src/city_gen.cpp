@@ -890,7 +890,7 @@ class city_road_gen_t : public road_gen_base_t {
 			car.cur_road_type = TYPE_DRIVEWAY;
 
 			for (auto i = driveways.begin(); i != driveways.end(); ++i) {
-				if (rgen.rand_float() < 0.4) continue; // no car in this driveway 40% of the time
+				if (rgen.rand_float() < 0.5) continue; // no car in this driveway 50% of the time
 				car.cur_road = (unsigned short)i->plot_ix; // store plot_ix in road field
 				car.cur_seg  = (unsigned short)(i - driveways.begin()); // store driveway index in cur_seg
 				vector3d car_sz(city_params.get_nom_car_size()); // {length, width, height}
