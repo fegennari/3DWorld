@@ -1804,7 +1804,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 	door.pts[0][ dim] = door.pts[1][ dim] = door.pts[2][dim] = door.pts[3][dim] = pos;
 	if (dim == 0) {swap(door.pts[0], door.pts[1]); swap(door.pts[2], door.pts[3]);} // swap two corner points to flip winding dir and invert normal for doors oriented in X
 
-	if (opened) { // rotate 90 degrees about pts[0]/pts[3] - change pts[1]/pts[2]
+	if (opened) { // rotate 90 degrees about pts[0]/pts[3] or pts[1]/pts[2]
 		if (opens_up) { // rotates inward and upward
 			door.pts[0].z = door.pts[1].z = c.z2();
 			door.pts[0][dim] = door.pts[1][dim] = pos + c.dz()*((dir ^ opens_out) ? 1.0 : -1.0);
@@ -1812,14 +1812,14 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 		else { // rotates to the side
 			float const width(c.get_sz_dim(!dim)), signed_width(width*((dir ^ opens_out) ? 1.0 : -1.0));
 			float const offset(0.01*width*((dir ^ dim) ? 1.0 : -1.0)); // move slightly away from the wall to prevent z-fighting
-			door.pts[!swap_sides][!dim] = door.pts[2+swap_sides][!dim] = door.pts[swap_sides][!dim] + offset;
+			door.pts[1-swap_sides][!dim] = door.pts[2+swap_sides][!dim] = door.pts[swap_sides][!dim] + offset; // 1,2=0+o / 0,3=1+o
 			door.pts[1][dim] = door.pts[2][dim] = pos + signed_width;
 
 			if (!exterior) { // try to open the door all the way
 				for (unsigned angle = 75; angle > 0; angle -= 15) { // try to open door as much as 75 degrees in steps of 15 degrees
 					tquad_with_ix_t orig_door(door); // cache orig 90 degree open door in case we need to revert it
-					float const shift(0.07*signed_width), rot_angle(-float(angle)*TO_RADIANS);
-					for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[swap_sides], rot_angle);}
+					float const shift(0.07*signed_width), rot_angle(-float(angle)*TO_RADIANS*(swap_sides ? -1.0 : 1.0));
+					for (unsigned i = 1; i < 3; ++i) {rotate_xy(door.pts[i], door.pts[0], rot_angle);}
 					for (unsigned i = 0; i < 4; ++i) {door.pts[i][dim] += shift;}
 					cube_t test_bcube(door.get_bcube());
 					test_bcube.expand_in_dim(!dim,  wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
