@@ -1235,7 +1235,8 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 		if (num_sides == 2) {dc.d[!dim][bool(side) ^ dim ^ dir ^ 1] = 0.5f*(D.d[!dim][0] + D.d[!dim][1]);} // split door in half
 		// we don't want to draw the open stairs door because it may get in the way, but we need to overwrite the previous verts, so make it zero area
 		if (opened && on_stairs) {dc.z2() = dc.z1();}
-		bool const swap_sides(exterior ? (side == 0) : 0); // swap sides for right half of exterior door
+		bool const int_other_side(exterior ? 0 : 0);
+		bool const swap_sides(exterior ? (side == 0) : int_other_side); // swap sides for right half of exterior door
 		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, opened, opens_out, opens_up, swap_sides));
 		vector3d const normal(door.get_norm());
 		tquad_with_ix_t door_edges[4] = {door, door, door, door}; // most doors will only use 2 of these
@@ -1255,7 +1256,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 				swap(door_side.pts[2], door_side.pts[3]);
 				door_side.type = tquad_with_ix_t::TYPE_IDOOR2;
 			}
-			drawer.add_tquad(*this, door_side, bcube, tp, color, 0, exclude_frame, 0); // invert_tc_x=0, no_tc=0
+			drawer.add_tquad(*this, door_side, bcube, tp, color, (int_other_side && !opened), exclude_frame, 0); // invert_tc_x=xxx, no_tc=0
 		} // for d
 		if (opened || on_stairs) { // add untextured door edges; only needed for open doors or doors at the bottom of basement stairs
 			for (unsigned e = 0; e < num_edges; ++e) {

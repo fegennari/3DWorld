@@ -1806,7 +1806,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 
 	if (opened) { // rotate 90 degrees about pts[0]/pts[3] or pts[1]/pts[2]
 		if (opens_up) { // rotates inward and upward
-			door.pts[0].z = door.pts[1].z = c.z2();
+			door.pts[0].z    = door.pts[1].z    = c.z2();
 			door.pts[0][dim] = door.pts[1][dim] = pos + c.dz()*((dir ^ opens_out) ? 1.0 : -1.0);
 		}
 		else { // rotates to the side
