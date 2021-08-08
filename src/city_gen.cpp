@@ -1827,9 +1827,9 @@ class city_road_gen_t : public road_gen_base_t {
 			add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 			add_tile_blocks(city_obj_placer.driveways, tile_to_block_map, TYPE_DRIVEWAY);
 			tile_to_block_map.clear(); // no longer needed
+			if (is_residential) {move_streetlights_to_not_overlap_driveways();}
 		}
 		void add_streetlights() {
-			if (is_residential) {} // TODO: don't block driveways
 			streetlights.clear();
 			streetlights.reserve(4*plots.size()); // one on each side of each plot
 			float const b(STREETLIGHT_DIST_FROM_PLOT_EDGE), a(1.0 - b); // spacing from light pos to plot edge (placed just outside the plot, so spacing is negative)
@@ -1841,6 +1841,21 @@ class city_road_gen_t : public road_gen_base_t {
 				streetlights.emplace_back(point((0.75*i->x1() + 0.25*i->x2()), (a*i->y2() + b*i->y1()), i->z2()),  plus_y); // top    edge one   quarter  right
 			}
 			sort_streetlights_by_yx();
+		}
+		void move_streetlights_to_not_overlap_driveways() {
+			for (auto s = streetlights.begin(); s != streetlights.end(); ++s) {
+				cube_t test_cube;
+				test_cube.set_from_sphere(s->pos, 0.25*city_params.road_width);
+
+				// Note: this could be accelerated by iterating by plot, but this seems to already be fast enough (< 1ms)
+				for (auto d = city_obj_placer.driveways.begin(); d != city_obj_placer.driveways.end(); ++d) {
+					if (!d->intersects_xy(test_cube)) continue;
+					bool const dim(s->dir.y == 0.0); // direction to move in
+					bool const dir((d->d[dim][1] - s->pos[dim]) < (s->pos[dim] - d->d[dim][0]));
+					s->pos[dim] = d->d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*city_params.road_width;
+					break; // maybe we should check for an adjacent driveway, but that would be rare and moving the streetlight could result in oscillation
+				}
+			} // for s
 		}
 		void get_road_bcubes(vect_cube_t &bcubes) const {
 			get_all_bcubes(roads,  bcubes);
