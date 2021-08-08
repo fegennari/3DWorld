@@ -1884,6 +1884,7 @@ public:
 				assert(b.bcube.is_strictly_normalized());
 				mat.side_color.gen_color(b.side_color, rgen);
 				mat.roof_color.gen_color(b.roof_color, rgen);
+				if (residential) {} // TODO: set garage side
 				add_to_grid(b.bcube, buildings.size(), 0);
 				vector3d const sz(b.bcube.get_size());
 				float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z

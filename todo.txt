@@ -11,6 +11,10 @@ Cities:
 - Railroad tracks
 - Interiors for non-rectangular buildings
 - Larger spacing between office building floors
-- Secondary Building roads
 
+* Residential Neighborhoods
+    * Place garage on the correct side of the house
+    * Assign smaller plots within the block
+    * Streelights don't block driveways
+* Interior door handle/hinge on other side
 * Improved city road path finding with more turns

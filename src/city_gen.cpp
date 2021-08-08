@@ -1821,7 +1821,7 @@ class city_road_gen_t : public road_gen_base_t {
 			tile_to_block_map.clear(); // no longer needed
 		}
 		void add_streetlights() {
-			if (is_residential) {} // fewer/no streetlights in residential cities?
+			if (is_residential) {} // TODO: don't block driveways
 			streetlights.clear();
 			streetlights.reserve(4*plots.size()); // one on each side of each plot
 			float const b(STREETLIGHT_DIST_FROM_PLOT_EDGE), a(1.0 - b); // spacing from light pos to plot edge (placed just outside the plot, so spacing is negative)
@@ -1843,6 +1843,7 @@ class city_road_gen_t : public road_gen_base_t {
 			unsigned const start(bcubes.size());
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
+				if (is_residential) {} // TODO: split into smaller plots for each house?
 				bcubes.push_back(*i); // capture all plot bcubes, even parks (needed for pedestrians)
 				bcubes.back().is_park = i->is_park;
 				bcubes.back().is_residential = is_residential; // constant per-city

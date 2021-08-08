@@ -1340,7 +1340,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[ dim][!dir ] = c.d[ dim][ dir] + (dir  ? -1.0 : 1.0)*width;
 				skip_last_roof = 1;
 			}
-			else if (detail_type == 2) { // detatched garage/shed
+			else if (detail_type == 2) { // detached garage/shed
 				c.d[!dim][dir2 ]  = base.d[!dim][dir2]; // shove it into the opposite corner of the bcube
 				c.d[ dim][dir  ]  = base.d[ dim][dir ]; // shove it into the opposite corner of the bcube
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
