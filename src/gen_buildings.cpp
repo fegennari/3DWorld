@@ -68,7 +68,7 @@ void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
 }
 
 void room_object_t::check_normalized() const {
-	if (!is_strictly_normalized()) {std::cerr << "denormalized object of type " << unsigned(type) << endl; assert(0);}
+	if (!is_strictly_normalized()) {std::cerr << "denormalized object of type " << unsigned(type) << " at " << str() << endl; assert(0);}
 }
 
 bool room_object_t::enable_rugs    () {return !global_building_params.rug_tids    .empty();}

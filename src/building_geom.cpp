@@ -5,6 +5,8 @@
 #include "function_registry.h"
 #include "buildings.h"
 
+float const DOOR_WIDTH_SCALE = 0.5;
+
 cube_t grass_exclude1, grass_exclude2;
 
 extern bool draw_building_interiors, player_near_toilet, player_is_hiding, player_in_elevator;
@@ -1253,7 +1255,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	parts.push_back(base);
 	// add a door
 	bool const gen_door(global_building_params.windows_enabled());
-	float const door_width_scale(0.5), floor_spacing(get_window_vspace());
+	float const floor_spacing(get_window_vspace());
 	unsigned const rand_num(rgen.rand()); // some bits will be used for random bools
 	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);
 	float const driveway_dz(0.004*door_height);
@@ -1361,7 +1363,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				(is_garage ? has_garage : has_shed) = 1;
 				// add a door
 				bool door_dir(c.d[pri_dim][0] == bcube.d[pri_dim][0]); // interior face
-				float wscale(door_width_scale);
+				float wscale(DOOR_WIDTH_SCALE);
 				float const gs_door_height(min(door_height, 0.9f*c.dz())); // clamp to 90% of garage/shed height to make sure there's room for the ceiling trim
 				
 				if (is_garage) {
@@ -1452,7 +1454,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				driveway.d[gdim][ gdir] = garage.d[gdim][gdir] + (gdir ? 1.0 : -1.0)*0.4*garage.get_sz_dim(gdim); // extend outward
 			}
 		}
-		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, 0, rgen));
+		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, DOOR_WIDTH_SCALE, 0, 0, rgen));
 
 		if (!is_valid_door_pos(door, 0.5*door_height)) { // blocked by stairs or door - switch door to other side/dim
 			door_dim ^= 1;
@@ -1465,7 +1467,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				door_part   = ((door_dim == dim) ? 0 : 1); // which part the door is connected to
 			}
 			for (unsigned n = 0; n < 4; ++n) { // make 4 attempts at generating a valid interior where this door can be placed; this still fails 32 times
-				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, door_width_scale, 0, 0, rgen); // keep door_height
+				door = place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, DOOR_WIDTH_SCALE, 0, 0, rgen); // keep door_height
 				if (is_valid_door_pos(door, 0.5*door_height)) break; // done
 				
 				if (n+1 < 4) { // still invalid, regenerate interior
@@ -1496,7 +1498,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 					for (unsigned door2_dir = 0; door2_dir < 2 && !added_door; ++door2_dir) {
 						if (door2_dim == door_dim && door_dir == bool(door2_dir) /*&& door2_part == door_part*/) continue; // don't place second door on the same side
 						if (part.d[door2_dim][door2_dir] != bcube.d[door2_dim][door2_dir]) continue; // door on building bcube is always exterior/never interior face between two parts
-						cube_t door2(place_door(part, door2_dim, door2_dir, door_height, 0.0, 0.0, 0.25, door_width_scale, 1, 0, rgen));
+						cube_t door2(place_door(part, door2_dim, door2_dir, door_height, 0.0, 0.0, 0.25, DOOR_WIDTH_SCALE, 1, 0, rgen));
 						if (!is_valid_door_pos(door2, 0.5*door_height)) continue; // bad placement
 						added_door |= add_door(door2, door2_part, door2_dim, door2_dir, 0);
 					} // for door_dir2
@@ -2405,10 +2407,15 @@ bool has_bcube_int(cube_t const &bcube, vector<elevator_t> const &elevators, flo
 float building_interior_t::get_doorway_width() const {
 	return (doors.empty() ? 0.0 : max(doors.front().dx(), doors.front().dy())); // calculate doorway width from first door
 }
+float building_t::get_doorway_width() const {
+	float width(0.0);
+	if (interior) {width = interior->get_doorway_width();}
+	return (width ? width : DOOR_WIDTH_SCALE*get_door_height()); // calculate from window spacing/door height if there's no interior or no interior doors
+}
 bool building_interior_t::is_blocked_by_stairs_or_elevator(cube_t const &c, float dmin, bool elevators_only) const {
 	cube_t tc(c);
 	tc.expand_by_xy(dmin); // no pad in z
-	float const doorway_width(get_doorway_width());
+	float const doorway_width(get_doorway_width()); // Note: can return zero
 	if (has_bcube_int(tc, elevators, doorway_width)) return 1;
 	if (elevators_only || stairwells.empty()) return 0;
 	tc.z1() -= 0.001*tc.dz(); // expand slightly to avoid placing an object exactly at the top of the stairs

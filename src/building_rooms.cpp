@@ -386,7 +386,7 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 	if (rwidth < 2.5*floor_spacing || rlength < 3.5*floor_spacing) return 0; // not large enough
 	unsigned const num_cubes(round_fp(rlength/(rgen.rand_uniform(0.75, 0.9)*floor_spacing))); // >= 4
 	float const cube_width(rlength/num_cubes), cube_depth(cube_width*rgen.rand_uniform(0.8, 1.2)); // not quite square
-	bool const add_middle_col(rwidth > 4.0*cube_depth + 2.0*interior->get_doorway_width()); // enough to fit 4 rows of cubes and 2 hallways in between
+	bool const add_middle_col(rwidth > 4.0*cube_depth + 2.0*get_doorway_width()); // enough to fit 4 rows of cubes and 2 hallways in between
 	uint16_t const bldg_id(uint16_t(mat_ix + interior->rooms.size())); // some value that's per-building
 	cube_t const &part(get_part_for_room(room));
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -524,7 +524,7 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
 	place_area.expand_by(-0.1*wall_thickness); // shrink to leave a small gap
 	// closet
-	float const doorway_width(interior->get_doorway_width()), floor_thickness(get_floor_thickness()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance()));
+	float const doorway_width(get_doorway_width()), floor_thickness(get_floor_thickness()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance()));
 	float const closet_min_depth(0.65*doorway_width), closet_min_width(1.5*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
 	unsigned const first_corner(rgen.rand() & 3);
 	bool const first_dim(rgen.rand_bool());
@@ -571,7 +571,8 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 				if (!check_valid_closet_placement(c2, room, objs_start, bed_obj_ix, min_bed_space)) break; // bad placement
 				c = c2; // valid placement, update with larger cube
 			}
-			c.d[ dim][!dir] -= signed_front_clearance; // subtract off front clearance
+			c.d[dim][!dir] -= signed_front_clearance; // subtract off front clearance
+			assert(c.is_strictly_normalized());
 			unsigned flags(0);
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
@@ -1199,7 +1200,7 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {add_door_if_blocker(i->get_bcube(), room, 0, 0, blockers);} // exterior doors, inc_open=0
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {add_door_if_blocker(*i, room, door_opens_inward(*i, room), i->open_dir, blockers);} // interior doors
-	float const doorway_width(interior->get_doorway_width());
+	float const doorway_width(get_doorway_width());
 
 	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 		cube_t tc(*s);
@@ -1547,7 +1548,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 void building_t::add_pri_hall_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt) {
 	float const window_vspacing(get_window_vspace()), desk_width(0.9*window_vspacing);
 	bool const long_dim(room.dx() < room.dy());
-	if (room.get_sz_dim(!long_dim) < (desk_width + 1.6*interior->get_doorway_width())) return; // hallway is too narrow
+	if (room.get_sz_dim(!long_dim) < (desk_width + 1.6*get_doorway_width())) return; // hallway is too narrow
 	float const centerline(room.get_center_dim(!long_dim)), desk_depth(0.6*desk_width);
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t desk;
