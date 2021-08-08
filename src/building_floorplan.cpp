@@ -873,6 +873,7 @@ int building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	rgen.set_state(mat_ix+1, num_rooms+1);
 	unsigned const room_start(rgen.rand() % num_rooms);
 	float const wall_thickness(get_wall_thickness());
+	bool const pref_street_dim(street_dir ? ((street_dir-1) >> 1) : 0), pref_street_dir(street_dir ? ((street_dir-1)&1) : 0);
 	int best_room(-1);
 	float best_score(0.0);
 
@@ -883,18 +884,19 @@ int building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 		if (has_basement() && r.part_id == (int)basement_part_ix) continue; // skip basement rooms
 		if (get_part_for_room(r).contains_cube_xy_no_adj(r)) continue; // skip interior rooms
 		if (r.get_room_type(0) != RTYPE_NOTSET) continue; // already assigned
-		bool const dim(r.dx() < r.dy()); // use larger dim
+		bool const dim(street_dir ? pref_street_dim : (r.dx() < r.dy())); // use larger dim unless there's a preference
 		if (r.d[!dim][0] != bcube.d[!dim][0] && r.d[!dim][1] != bcube.d[!dim][1]) continue; // require other dim at either side of the building
 		cube_t room_interior(r);
 		room_interior.expand_by_xy(-wall_thickness); // shrink slightly to allow a bit of extra padding at walls
 		if (!car_can_fit(room_interior)) continue; // too small
 		float const length(r.get_sz_dim(dim)), width(r.get_sz_dim(!dim)), ar(length/width);
-		if (ar > 2.5 || ar < 1.2) continue; // aspect ratio too high or too low
-		bool const pref_dir(rgen.rand_bool());
+		if (ar > 2.6 || ar < 1.1) continue; // aspect ratio too high or too low
+		bool const pref_dir(street_dir ? pref_street_dir : rgen.rand_bool());
 
 		for (unsigned d = 0; d < 2; ++d) {
 			bool const dir(bool(d) ^ pref_dir);
-			if (r.d[dim][dir] != bcube.d[dim][dir]) continue; // exterior walls on the building bcube only
+			if (r.d[dim][dir] != bcube.d[dim][dir])   continue; // exterior walls on the building bcube only
+			if (street_dir && dir != pref_street_dir) continue; // wrong dir
 			float const score(-(float)count_num_int_doors(r) - fabs(ar - 1.75f)); // prefer rooms with fewer interior doors, and aspect ratios around 1.75
 			if (best_room == -1 || score > best_score) {best_room = cur_room; best_score = score; gdim = dim; gdir = dir;}
 			break; // no need to try the other dir

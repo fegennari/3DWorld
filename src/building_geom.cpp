@@ -1258,19 +1258,27 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	float door_height(get_door_height()), door_center(0.0), door_pos(0.0), dist1(0.0), dist2(0.0);
 	float const driveway_dz(0.004*door_height);
 	bool door_dim(rand_num & 1), door_dir(0), dim(0), dir(0), dir2(0);
+	bool const pref_street_dim(street_dir ? ((street_dir-1) >> 1) : 0), pref_street_dir(street_dir ? ((street_dir-1)&1) : 0);
 	unsigned door_part(0), detail_type(0);
 	real_num_parts = (two_parts ? 2 : 1); // only walkable parts: excludes shed, garage, porch roof, and chimney
 	cube_t door_cube;
 
 	if (two_parts) { // multi-part house; parts[1] is the lower height part
-		parts.push_back(base); // add second part
-		dir = rgen.rand_bool(); // in dim
-		float const split(rgen.rand_uniform(0.4, 0.6)*(dir  ? -1.0 : 1.0));
+		dir = rgen.rand_bool(); // in dim; may be rea-assigned in street_dir case below
+		float const split(rgen.rand_uniform(0.4, 0.6));
 		float delta_height(0.0), shrink[2] = {0.0};
+		parts.push_back(base); // add second part
 
 		if (type == 1) { // L-shape
-			dir2         = rgen.rand_bool(); // in !dim
-			dim          = rgen.rand_bool();
+			if (street_dir) { // make sure L-type house faces the street; we can't change the garage dim if the aspect ratio is wrong, but we can at least get the dir right
+				dim = rgen.rand_bool(); // need to know dim first
+				((dim == pref_street_dim) ? dir : dir2) = pref_street_dir;
+				((dim != pref_street_dim) ? dir : dir2) = rgen.rand_bool();
+			}
+			else {
+				dir2 = rgen.rand_bool(); // in !dim
+				dim  = rgen.rand_bool();
+			}
 			shrink[dir2] = rgen.rand_uniform(0.4, 0.6)*(dir2 ? -1.0 : 1.0);
 			delta_height = max(0.0f, rgen.rand_uniform(-0.1, 0.5));
 		}
@@ -1285,7 +1293,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			if (un_shrink_each > 0.0) {shrink[0] -= un_shrink_each; shrink[1] += un_shrink_each;}
 		}
 		vector3d const sz(base.get_size());
-		parts[0].d[ dim][ dir] += split*sz[dim]; // split in dim
+		parts[0].d[ dim][ dir] += (dir ? -1.0 : 1.0)*split*sz[dim]; // split in dim
 		parts[1].d[ dim][!dir]  = parts[0].d[dim][dir];
 		cube_t const pre_shrunk_p1(parts[1]); // save for use in details below
 		parts[1].z2() -= delta_height*parts[1].dz(); // lower height
@@ -1308,8 +1316,9 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		if (detail_type != 0) { // add details to L-shaped house
 			cube_t c(pre_shrunk_p1);
 			c.d[!dim][!dir2] = parts[1].d[!dim][dir2]; // other half of the shrunk part1
-			dist1 = (c.d[!dim][!dir2] - base.d[!dim][dir2])*rgen.rand_uniform(0.4, 0.6);
-			dist2 = (c.d[ dim][!dir ] - base.d[ dim][dir ])*rgen.rand_uniform(0.4, 0.6);
+			float const spacing_scale((street_dir && detail_type == 2) ? 0.8 : 1.0); // larger room/smaller spacing for connecting to streets, to increase the chance of getting a garage
+			dist1 = (c.d[!dim][!dir2] - base.d[!dim][dir2])*rgen.rand_uniform(0.4, 0.6)*spacing_scale;
+			dist2 = (c.d[ dim][!dir ] - base.d[ dim][dir ])*rgen.rand_uniform(0.4, 0.6)*spacing_scale;
 			float const base_dz(parts[1].dz()), height(min(base_dz, max(door_height/0.95f, rgen.rand_uniform(0.55, 0.7)*base_dz)));
 
 			if (gen_door) { // add door in interior of L, centered under porch roof (if it exists, otherwise where it would be)
@@ -1346,30 +1355,31 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				c.d[!dim][!dir2] -= dist1; // move away from bcube edge
 				c.d[ dim][!dir ] -= dist2; // move away from bcube edge
 				c.z2() = c.z1() + min(min(c.dx(), c.dy()), height); // no taller than x or y size; Note: z1 same as part1
-				bool const is_garage(car_can_fit(c)); // must be able to fit a car
+				bool is_garage(car_can_fit(c)), pri_dim(c.dx() < c.dy()); // garage must be able to fit a car
+				// maybe we could extend the garage in the correct dim to fit a car, but that can lead to problems with the fence and driveway placement
+				//if (street_dir && pri_dim != pref_street_dim) {is_garage = 0;} // garage is in wrong dim, make it a shed instead (we're allowing driveway bends, so this is okay now)
 				(is_garage ? has_garage : has_shed) = 1;
 				// add a door
-				bool const long_dim(c.dx() < c.dy());
-				bool door_dir(c.d[long_dim][0] == bcube.d[long_dim][0]); // interior face
+				bool door_dir(c.d[pri_dim][0] == bcube.d[pri_dim][0]); // interior face
 				float wscale(door_width_scale);
 				float const gs_door_height(min(door_height, 0.9f*c.dz())); // clamp to 90% of garage/shed height to make sure there's room for the ceiling trim
 				
 				if (is_garage) {
-					float const shelf_depth(0.15*floor_spacing), garage_width(c.get_sz_dim(!long_dim));
+					float const shelf_depth(0.15*floor_spacing), garage_width(c.get_sz_dim(!pri_dim));
 					wscale    = min(0.9f*garage_width, (garage_width - 2.0f*shelf_depth))/gs_door_height; // avoid clipping through shelves
 					door_dir ^= 1; // facing away from the house, not toward it
 				}
-				add_door(place_door(c, long_dim, door_dir, gs_door_height, 0.0, 0.0, 0.0, wscale, 0, is_garage, rgen), parts.size(), long_dim, door_dir, 0);
+				add_door(place_door(c, pri_dim, door_dir, gs_door_height, 0.0, 0.0, 0.0, wscale, 0, is_garage, rgen), parts.size(), pri_dim, door_dir, 0);
 				if (is_garage) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
-				//garage_dim = long_dim;
 
 				if (is_garage) { // add driveway
-					bool const ddir((long_dim == dim) ? dir : dir2);
+					bool const ddir((pri_dim == dim) ? dir : dir2);
 					driveway = c;
 					driveway.z2() = driveway.z1() + driveway_dz;
-					driveway.expand_in_dim(!long_dim, -0.05*c.get_sz_dim(!long_dim));
-					driveway.d[long_dim][!ddir] = driveway.d[long_dim][ddir];
-					driveway.d[long_dim][ ddir] += (ddir ? 1.0 : -1.0)*0.4*c.get_sz_dim(long_dim); // set length
+					driveway.expand_in_dim(!pri_dim, -0.05*c.get_sz_dim(!pri_dim));
+					driveway.d[pri_dim][!ddir] = driveway.d[pri_dim][ddir];
+					driveway.d[pri_dim][ ddir] += (ddir ? 1.0 : -1.0)*0.4*c.get_sz_dim(pri_dim); // set length
+					//garage_dim = pri_dim;
 				}
 			}
 			parts.push_back(c); // support column or shed/garage
@@ -1425,7 +1435,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	gen_interior(rgen, 0); // before adding door
 
 	if (gen_door) {
-		if (rand_num & 24) { // attempt to add an interior garage when legal, 75% of the time
+		if (!has_garage && (street_dir || (rand_num & 24))) { // attempt to add an interior garage when legal, always when along a street, else 75% of the time
 			bool gdim(0), gdir(0);
 			int const garage_room(maybe_assign_interior_garage(gdim, gdir));
 

@@ -806,6 +806,7 @@ struct building_t : public building_geom_t {
 
 	unsigned mat_ix;
 	uint8_t hallway_dim, real_num_parts, roof_type; // main hallway dim: 0=x, 1=y, 2=none
+	uint8_t street_dir; // encoded as 2*dim + dir + 1; 0 is unassigned
 	int8_t open_door_ix, basement_part_ix;
 	bool is_house, has_chimney, has_garage, has_shed, has_int_garage, has_courtyard, has_complex_floorplan, has_helipad, has_ac;
 	colorRGBA side_color, roof_color, detail_color, door_color, wall_color;
@@ -820,10 +821,10 @@ struct building_t : public building_geom_t {
 
 	friend class building_indir_light_mgr_t;
 
-	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), open_door_ix(-1), basement_part_ix(-1),
-		is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0), has_ac(0),
-		side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0) {}
-	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), open_door_ix(-1),
+	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), street_dir(0), open_door_ix(-1),
+		basement_part_ix(-1), is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0),
+		has_helipad(0), has_ac(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0) {}
+	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), street_dir(0), open_door_ix(-1),
 		basement_part_ix(-1), is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0),
 		has_ac(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0) {}
 	static float get_scaled_player_radius();
@@ -1186,6 +1187,7 @@ void get_city_plot_bcubes(vect_city_zone_t &bcubes);
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 cube_t get_building_lights_bcube();
+void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
 void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5], bool is_desk);

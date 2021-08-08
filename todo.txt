@@ -13,7 +13,6 @@ Cities:
 - Larger spacing between office building floors
 
 * Residential Neighborhoods
-    * Place garage on the correct side of the house
     * Assign smaller plots within the block
     * Streelights don't block driveways
 * Interior door handle/hinge on other side
