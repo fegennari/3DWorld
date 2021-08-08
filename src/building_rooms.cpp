@@ -1432,7 +1432,8 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	}
 	// add shelves on walls (avoiding any door(s)), and have crates avoid them
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		if (room_bounds.get_sz_dim(dim) < 6.0*shelf_depth) continue; // too narrow to add shelves in this dim
+		if (room_bounds.get_sz_dim( dim) < 6.0*shelf_depth  ) continue; // too narrow to add shelves in this dim
+		if (room_bounds.get_sz_dim(!dim) < 4.0*shelf_shorten) continue; // too narrow in the other dim
 
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			if (is_int_garage ? ((rgen.rand()%3) == 0) : rgen.rand_bool()) continue; // only add shelves to 50% of the walls, 67% for interior garages
