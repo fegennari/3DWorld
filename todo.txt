@@ -12,7 +12,5 @@ Cities:
 - Interiors for non-rectangular buildings
 - Larger spacing between office building floors
 
-* Residential Neighborhoods
-    * Assign smaller plots within the block
 * Interior door handle/hinge on other side
 * Improved city road path finding with more turns

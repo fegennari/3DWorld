@@ -549,6 +549,14 @@ unsigned building_params_t::choose_rand_mat(rand_gen_t &rgen, bool city_only, bo
 	assert(!mat_ix_list.empty());
 	return mat_ix_list[rgen.rand()%mat_ix_list.size()];
 }
+float building_params_t::get_max_house_size() const {
+	float max_sz(0.0);
+
+	for (auto m = materials.begin(); m != materials.end(); ++m) {
+		if (m->house_prob > 0.0) {max_eq(max_sz, m->house_scale_max*max(m->sz_range.x2(), m->sz_range.y2()));} // take max of x/y size upper bounds
+	}
+	return max_sz;
+}
 void building_params_t::set_pos_range(cube_t const &pos_range) {
 	//cout << "pos_range: " << pos_range.str() << endl;
 	cur_mat.set_pos_range(pos_range);

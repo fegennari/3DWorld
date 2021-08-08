@@ -36,6 +36,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
+float get_max_house_size();
 
 
 template<typename S, typename T> void get_all_bcubes(vector<T> const &v, S &bcubes) {
@@ -1861,16 +1862,42 @@ class city_road_gen_t : public road_gen_base_t {
 			get_all_bcubes(roads,  bcubes);
 			get_all_bcubes(tracks, bcubes);
 		}
+		bool subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, vect_city_zone_t &bcubes) const {
+			assert(plot_subdiv_sz > 0.0);
+			unsigned ndiv[2] = {0,0};
+			float spacing[2] = {0,0};
+
+			for (unsigned d = 0; d < 2; ++d) {
+				float const plot_sz(plot.get_sz_dim(d));
+				ndiv   [d] = max(1U, unsigned(round_fp(plot_sz/plot_subdiv_sz)));
+				spacing[d] = plot_sz/ndiv[d];
+			}
+			if (ndiv[0] >= 100 || ndiv[1] >= 100) return 0; // too many plots? this shouldn't happen, but failing here is better than asserting or generating too many buildings
+
+			for (unsigned y = 0; y < ndiv[1]; ++y) {
+				for (unsigned x = 0; x < ndiv[0]; ++x) {
+					if (x > 0 && y > 0 && x+1 < ndiv[0] && y+1 < ndiv[1]) continue; // interior plot, no road access, skip
+					float const x1(plot.x1() + spacing[0]*x), y1(plot.y1() + spacing[1]*y);
+					cube_t const c(x1, (x1 + spacing[0]), y1, (y1 + spacing[1]), plot.z1(), plot.z2());
+					bcubes.emplace_back(c, 0.0, 0, 1, get_street_dir(c, plot), 1); // cube, zval, park, res, sdir, capacity; Note: will favor x-dim for corner plots
+				}
+			} // for y
+			return 1;
+		}
 		void get_plot_bcubes(vect_city_zone_t &bcubes) const { // Note: z-values of cubes indicate building height ranges
 			if (plots.empty()) return; // connector road city
 			unsigned const start(bcubes.size());
+			bool const assign_sub_plots(is_residential && city_params.assign_house_plots);
+			float const plot_subdiv_sz(assign_sub_plots ? 0.8*get_max_house_size() : 0.0);
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
-				if (is_residential) {} // TODO: split into smaller plots for each house?
+				if (assign_sub_plots && !i->is_park && plot_subdiv_sz > 0.0) { // split into smaller plots for each house
+					if (subdivide_plot_for_residential(*i, plot_subdiv_sz, bcubes)) continue;
+				}
 				bcubes.push_back(*i); // capture all plot bcubes, even parks (needed for pedestrians)
-				bcubes.back().is_park = i->is_park;
+				bcubes.back().is_park        = i->is_park;
 				bcubes.back().is_residential = is_residential; // constant per-city
-			}
+			} // for i
 			vector3d const city_radius(0.5*bcube.get_size());
 			point const city_center(bcube.get_cube_center());
 

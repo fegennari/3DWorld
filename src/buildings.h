@@ -102,8 +102,12 @@ public:
 struct city_zone_t : public cube_t {
 	float zval;
 	bool is_park, is_residential;
-	city_zone_t() : zval(0.0), is_park(0), is_residential(0) {}
-	city_zone_t(cube_t const &c, float zval_=0.0, bool p=0, bool r=0) : cube_t(c), zval(zval_), is_park(p), is_residential(r) {}
+	uint8_t street_dir; // encoded as 2*dim + dir + 1; 0 is unassigned
+	unsigned nbuildings, capacity; // in number of buildings; 0 is unlimited
+	city_zone_t() : zval(0.0), is_park(0), is_residential(0), street_dir(0), nbuildings(0), capacity(0) {}
+	city_zone_t(cube_t const &c, float zval_=0.0, bool p=0, bool r=0, unsigned sdir=0, unsigned cap=0) :
+		cube_t(c), zval(zval_), is_park(p), is_residential(r), street_dir(sdir), nbuildings(0), capacity(cap) {}
+	bool is_full() const {return (capacity > 0 && nbuildings >= capacity);}
 };
 
 typedef vector<city_zone_t> vect_city_zone_t;
@@ -170,7 +174,7 @@ struct building_mat_t : public building_tex_params_t {
 		split_prob(0.0), cube_prob(1.0), round_prob(0.0), asf_prob(0.0), min_fsa(0.0), max_fsa(0.0), min_asf(0.0), max_asf(0.0), wind_xscale(1.0),
 		wind_yscale(1.0), wind_xoff(0.0), wind_yoff(0.0), floor_spacing(0.0), floorplan_wind_xscale(0.0), pos_range(-100,100,-100,100,0,0), prev_pos_range(all_zeros),
 		sz_range(1,1,1,1,1,1), window_color(GRAY), wall_color(WHITE), ceil_color(WHITE), floor_color(LT_GRAY), house_ceil_color(WHITE), house_floor_color(WHITE) {}
-	float gen_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}
+	float gen_house_size_scale(rand_gen_t &rgen) const {return ((house_scale_min == house_scale_max) ? house_scale_min : rgen.rand_uniform(house_scale_min, house_scale_max));}
 	void update_range(vector3d const &range_translate);
 	void set_pos_range(cube_t const &new_pos_range) {prev_pos_range = pos_range; pos_range = new_pos_range;}
 	void restore_prev_pos_range() {
@@ -230,6 +234,7 @@ struct building_params_t {
 		return (residential ? mat_gen_ix_res : (city_only ? mat_gen_ix_city : (non_city_only ? mat_gen_ix_nocity : mat_gen_ix)));
 	}
 	unsigned choose_rand_mat(rand_gen_t &rgen, bool city_only, bool non_city_only, bool residential) const;
+	float get_max_house_size() const;
 	void set_pos_range(cube_t const &pos_range);
 	void restore_prev_pos_range();
 };
@@ -1188,7 +1193,7 @@ void get_city_plot_bcubes(vect_city_zone_t &bcubes);
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 cube_t get_building_lights_bcube();
-void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
+unsigned get_street_dir(cube_t const &inner, cube_t const &outer);
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
 void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5], bool is_desk);

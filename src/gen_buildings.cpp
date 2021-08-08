@@ -1816,12 +1816,18 @@ public:
 			bool success(0);
 
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
-				unsigned plot_ix(0);
+				unsigned plot_ix(0), pref_dir(0);
 				bool residential(0);
 
 				if (use_city_plots) { // select a random plot, if available
-					plot_ix = valid_city_plot_ixs[rgen.rand() % valid_city_plot_ixs.size()];
-					assert(plot_ix < city_plot_bcubes.size());
+					bool success(0);
+
+					for (unsigned N = 0; N < 10; ++N) { // 10 tries to choose a plot that has the capacity for a new building
+						plot_ix = valid_city_plot_ixs[rgen.rand() % valid_city_plot_ixs.size()];
+						assert(plot_ix < city_plot_bcubes.size());
+						if (!city_plot_bcubes[plot_ix].is_full()) {success = 1; break;}
+					}
+					if (!success) break; // all candidate plots were full
 					residential = city_plot_bcubes[plot_ix].is_residential;
 					if (residential && params.mat_gen_ix_res.empty()) break; // no residential buildings available, break from n loop (but retry i loop with new plot)
 				}
@@ -1829,11 +1835,15 @@ public:
 				b.mat_ix = params.choose_rand_mat(rgen, city_only, non_city_only, residential); // set material
 				building_mat_t const &mat(b.get_material());
 				cube_t pos_range;
+				float border_scale(1.0);
 				
 				if (use_city_plots) { // select a random plot, if available
-					pos_range = city_plot_bcubes[plot_ix];
-					center.z  = city_plot_bcubes[plot_ix].zval; // optimization: take zval from plot rather than calling get_exact_zval()
+					city_zone_t const &plot(city_plot_bcubes[plot_ix]);
+					pos_range = plot;
+					center.z  = plot.zval; // optimization: take zval from plot rather than calling get_exact_zval()
+					if (residential) {pref_dir = plot.street_dir;}
 					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
+					if (plot.capacity == 1) {border_scale *= 2.0;} // use smaller border scale since the individual building plots should handle borders
 				}
 				else {
 					pos_range = mat.pos_range + delta_range;
@@ -1841,27 +1851,28 @@ public:
 				vector3d const pos_range_sz(pos_range.get_size());
 				assert(pos_range_sz.x > 0.0 && pos_range_sz.y > 0.0);
 				point const place_center(pos_range.get_cube_center());
-				float const min_center_dist(residential ? 0.3*min(pos_range_sz.x, pos_range_sz.y) : 0.0);
+				bool const is_residential_block(residential && !pref_dir);
+				float const min_center_dist(is_residential_block ? 0.3*min(pos_range_sz.x, pos_range_sz.y) : 0.0);
 				bool keep(0);
 				++num_tries;
 
 				for (unsigned m = 0; m < params.num_tries; ++m) {
 					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(pos_range.d[d][0], pos_range.d[d][1]);} // x,y
-					// place residential buildings around the edges of the plot (pos_range) / keep them out of the center
-					if (residential && dist_xy_less_than(center, place_center, min_center_dist)) continue;
+					// place residential buildings around the edges of the plot (pos_range) unless the street dir has already been assigned (individual house plot) / keep out of the center
+					if (min_center_dist > 0.0 && dist_xy_less_than(center, place_center, min_center_dist)) continue;
 					if (is_tile || mat.place_radius == 0.0 || dist_xy_less_than(center, place_center, mat.place_radius)) {keep = 1; break;} // place_radius ignored for tiles
 				}
 				if (!keep) continue; // placement failed, skip
 				b.is_house = (mat.house_prob > 0.0 && (residential || rgen.rand_float() < mat.house_prob)); // force a house if residential and houses are enabled
-				float const size_scale(b.is_house ? mat.gen_size_scale(rgen) : 1.0);
+				float const size_scale(b.is_house ? mat.gen_house_size_scale(rgen) : 1.0);
 				
 				for (unsigned d = 0; d < 2; ++d) { // x,y
-					float const sz(0.5*size_scale*rgen.rand_uniform(min(mat.sz_range.d[d][0], 0.3f*pos_range_sz[d]),
-						                                            min(mat.sz_range.d[d][1], 0.5f*pos_range_sz[d]))); // use pos range size for max
+					float const sz(0.5*size_scale*rgen.rand_uniform(min(mat.sz_range.d[d][0], 0.3f*border_scale*pos_range_sz[d]),
+						                                            min(mat.sz_range.d[d][1], 0.5f*border_scale*pos_range_sz[d]))); // use pos range size for max
 					b.bcube.d[d][0] = center[d] - sz;
 					b.bcube.d[d][1] = center[d] + sz;
 				}
-				if (residential && b.bcube.contains_pt_xy(place_center)) continue; // house should not contain the center point of the plot
+				if (is_residential_block && b.bcube.contains_pt_xy(place_center)) continue; // house should not contain the center point of the plot
 				if ((use_city_plots || is_tile) && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in plot/tile (pre-rot)
 				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated) - must rotate before bcube checks below
 				if (is_tile && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in tile
@@ -1884,17 +1895,13 @@ public:
 				assert(b.bcube.is_strictly_normalized());
 				mat.side_color.gen_color(b.side_color, rgen);
 				mat.roof_color.gen_color(b.roof_color, rgen);
-
-				if (use_city_plots) {
-					bool dim(0), dir(0);
-					get_closest_dim_dir_xy(b.bcube, pos_range, dim, dir);
-					b.street_dir = 2*dim + dir + 1;
-				}
+				if (use_city_plots) {b.street_dir = (pref_dir ? pref_dir : get_street_dir(b.bcube, pos_range));}
 				add_to_grid(b.bcube, buildings.size(), 0);
 				vector3d const sz(b.bcube.get_size());
 				float const mult[3] = {0.5, 0.5, 1.0}; // half in X,Y and full in Z
 				UNROLL_3X(max_extent[i_] = max(max_extent[i_], mult[i_]*sz[i_]);)
 				buildings.push_back(b);
+				if (use_city_plots) {++city_plot_bcubes[plot_ix].nbuildings;}
 				success = 1;
 				break; // done
 			} // for n
@@ -3321,6 +3328,7 @@ void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.se
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways) {building_creator_city.add_house_driveways_for_plot(plot, driveways);} // Note: no xlate applied
 void end_register_player_in_building();
+float get_max_house_size() {return global_building_params.get_max_house_size();}
 
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 	//highres_timer_t timer("Add building interior lights"); // 0.97/0.37
