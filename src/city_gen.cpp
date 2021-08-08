@@ -906,6 +906,14 @@ class city_road_gen_t : public road_gen_base_t {
 				cpos[!car.dim] = rgen.rand_uniform(i->d[!car.dim][0]+pad_w, i->d[!car.dim][1]-pad_w); // not quite centered
 				car.bcube.set_from_point(cpos);
 				car.bcube.expand_by(0.5*car_sz);
+				// check if this car intersects another parked car; this can only happen if two driveways intersect, which should be rare
+				bool intersects(0);
+
+				for (auto c = cars.rbegin(); c != cars.rend(); ++c) {
+					if (c->cur_road != i->plot_ix) break; // prev plot, done
+					if (car.bcube.intersects(c->bcube)) {intersects = 1; break;}
+				}
+				if (intersects) continue; // skip
 				cars.push_back(car);
 				plot_colliders[i->plot_ix].push_back(car.bcube); // prevent pedestrians from walking through this parked car
 			} // for i
