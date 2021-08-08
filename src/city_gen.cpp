@@ -1119,7 +1119,7 @@ class city_road_gen_t : public road_gen_base_t {
 				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
 				prev_tile_id = tile_id;
 			} // for i
-			add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);
+			if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 			for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
 			sort_grouped_objects(benches,       bench_groups  );
 			sort_grouped_objects(planters,      planter_groups);
