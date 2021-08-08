@@ -854,7 +854,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 			if (i->cur_road_type == TYPE_BUILDING) continue; // ignore cars in buildings
 			bool const new_city(i->cur_city != cur_city), new_parked(!saw_parked && i->is_parked());
 			unsigned const cbr_ix(cars_by_road.size());
-			if (new_parked) {car_blocks_by_road.back().first_parked = cbr_ix; saw_parked = 1;}
+			if (new_parked && !car_blocks_by_road.empty()) {car_blocks_by_road.back().first_parked = cbr_ix; saw_parked = 1;}
 
 			if (new_city || new_parked || i->cur_road != cur_road) { // new city/road
 				if (new_city) { // new city
