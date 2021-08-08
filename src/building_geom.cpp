@@ -1384,8 +1384,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				empty_space = cubes[0];
 			}
 			tree_pos = empty_space.get_cube_center(); // centered on where the garage/shed would have been
-			vector3d const dir(tree_pos - bcube.get_cube_center());
-			tree_pos  += (0.05f*(bcube.dx() + bcube.dy())/dir.mag())*dir; // shift slightly away from house center so that it's less likely to intersect the house
+			vector3d const tdir(tree_pos - bcube.get_cube_center());
+			tree_pos  += (0.05f*(bcube.dx() + bcube.dy())/tdir.mag())*tdir; // shift slightly away from house center so that it's less likely to intersect the house
 			tree_pos.z = ground_floor_z1;
 		}
 		if (type == 1 && (rand_num & 6) != 0 && !is_rotated()) { // L-shaped house, add a fence 75% of the time (skip rotated due to assert in clip_cube_to_parts())

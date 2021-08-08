@@ -862,7 +862,7 @@ int building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	assert(interior != nullptr);
 	vector<room_t> &rooms(interior->rooms);
 	unsigned const num_rooms(rooms.size());
-	if (!is_house || has_sec_bldg() || num_rooms < 8U) return -1; // no garage for this building
+	if (!is_house || has_sec_bldg() || num_rooms < 8U) return -1; // no garage for this building (including the case where we have a shed)
 
 	if (has_basement()) { // count non-basement rooms
 		unsigned non_basement_rooms(0);

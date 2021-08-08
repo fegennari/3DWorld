@@ -512,7 +512,7 @@ void car_manager_t::finalize_cars() {
 				if (FORCE_MODEL_ID >= 0) {i->model_id = (unsigned char)FORCE_MODEL_ID;}
 				else {i->model_id = ((num_models > 1) ? (rgen.rand() % num_models) : 0);}
 				city_model_t const &model(car_model_loader.get_model(i->model_id));
-				// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck)
+				// if there are multiple models to choose from, and this car is in a garage, try for a model that's not scaled up (the truck) (what about driveways?)
 				if (FORCE_MODEL_ID < 0 && num_models > 1 && unsigned(i-cars.begin()) >= first_garage_car && n+1 < 20 && model.scale > 1.0) continue;
 				fixed_color = model.fixed_color_id;
 				i->apply_scale(model.scale);
