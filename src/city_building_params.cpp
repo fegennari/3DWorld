@@ -72,6 +72,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "residential_mode") {
 		if (!read_bool(fp, residential_mode)) {return read_error(str);}
 	}
+	else if (str == "assign_house_plots") {
+		if (!read_bool(fp, assign_house_plots)) {return read_error(str);}
+	}
 	// cars
 	else if (str == "num_cars") {
 		if (!read_uint(fp, num_cars)) {return read_error(str);}

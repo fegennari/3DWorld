@@ -45,6 +45,7 @@ city conn_road_seg_len 6.0 # also determines max length of bridges and tunnels
 city max_road_slope 0.3
 city make_4_way_ints 2 # 0,1,2,3
 city residential_mode 0
+city assign_house_plots 0 # only applies to residential_mode
 city min_park_spaces 12
 city min_park_rows 1
 city min_park_density 0.0
