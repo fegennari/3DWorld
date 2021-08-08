@@ -452,6 +452,7 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor) 
 		if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
 
 		if (room.dz() > 1.5*get_window_vspace()) { // more than one floor
+			if (interior->stairwells.empty()) return 1; // failed to place stairs in this house, maybe because it was too small; I guess we just return 0 here
 			// determine if this room is on the shortest path from an exterior door to the stairs; if so, it can't be a bedroom or bathroom;
 			// okay, that's not easy/fast to do, so determine if there is any path from the exterior door to the stairs that doesn't go through this room;
 			// this won't work when there are two paths from the door to the stairs and this room is only on one of the paths, so we could put a BR/BR on both paths
@@ -465,6 +466,7 @@ bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor) 
 				if (r.has_stairs_on_floor(floor))  {stairs_rooms.push_back(i);}
 				if (is_room_adjacent_to_ext_door(r)) {door_rooms.push_back(i);}
 			}
+			if (cur_room < 0 || stairs_rooms.empty()) {cout << TXT(bcube.str());}
 			assert(cur_room >= 0); // must be found
 			assert(!stairs_rooms.empty());
 
