@@ -1614,23 +1614,43 @@ bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube
 	}
 	return 0; // failed
 }
-bool extend_existing_driveway(cube_t const &driveway, cube_t const &plot, cube_t const &bcube, vect_cube_t const &bcubes, vect_cube_t &driveways) {
-	if (!plot.contains_cube_xy(driveway)) return 1; // driveway already extends to plot, don't need to add an extension, mark as done
+bool extend_existing_driveway_in_dim(cube_t const &driveway, cube_t const &plot, cube_t const &bcube, vect_cube_t const &bcubes, vect_cube_t &driveways, bool dim, bool dir) {
 	cube_t dw(driveway);
-	bool dim(0), dir(0);
-	if      (dw.x1() < bcube.x1()) {dim = 0; dir = 0;}
-	else if (dw.x2() > bcube.x2()) {dim = 0; dir = 1;}
-	else if (dw.y1() < bcube.y1()) {dim = 1; dir = 0;}
-	else if (dw.y2() > bcube.y2()) {dim = 1; dir = 1;}
-	else {cout << TXT(dw.str()) << TXT(bcube.str()) << endl; assert(0); return 0;} // not adjacent?
 	dw.d[dim][ dir] = plot    .d[dim][dir];
 	dw.d[dim][!dir] = driveway.d[dim][dir]; // shorten to connect to existing house driveway
-	if (dw.get_sz_dim(dim) > 0.5*plot.get_sz_dim(dim)) return 0; // don't let the driveway cross through the entire block on the wrong side of the house (optional)
+	float const len(dw.get_sz_dim(dim));
+	if (len < 0.01*dw.get_sz_dim(!dim)) return 1; // length is tiny, extension is not needed
 	assert(dw.is_strictly_normalized());
+	if (len > 0.3*plot.get_sz_dim(dim)) return 0; // don't let the driveway cross through the entire block on the wrong side of the house
 	if (!is_valid_driveway_pos(dw, bcube, bcubes)) return 0;
 	dw.z1() = dw.z2(); // shrink to zero height
 	driveways.push_back(dw);
-	return 1;
+	return 1; // success
+}
+bool extend_existing_driveway(cube_t const &driveway, cube_t const &plot, cube_t const &bcube, vect_cube_t const &bcubes, vect_cube_t &driveways) {
+	if (!plot.contains_cube_xy(driveway)) return 1; // driveway already extends to plot, don't need to add an extension, mark as done
+	bool dim(0), dir(0);
+	if      (driveway.x1() < bcube.x1()) {dim = 0; dir = 0;}
+	else if (driveway.x2() > bcube.x2()) {dim = 0; dir = 1;}
+	else if (driveway.y1() < bcube.y1()) {dim = 1; dir = 0;}
+	else if (driveway.y2() > bcube.y2()) {dim = 1; dir = 1;}
+	else {cout << TXT(driveway.str()) << TXT(bcube.str()) << endl; assert(0); return 0;} // not adjacent?
+	if (extend_existing_driveway_in_dim(driveway, plot, bcube, bcubes, driveways, dim, dir)) return 1;
+	// what about making a right angle turn?
+	dim ^= 1; // try the other dim
+	dir  = ((plot.d[dim][1] - driveway.d[dim][1]) < (driveway.d[dim][0] - plot.d[dim][0])); // closer dir
+	return extend_existing_driveway_in_dim(driveway, plot, bcube, bcubes, driveways, dim, dir);
+}
+
+void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir) {
+	float dmin(0.0);
+
+	for (unsigned d = 0; d < 2; ++d) { // find closest edge of *i to edge of bcube
+		for (unsigned e = 0; e < 2; ++e) {
+			float const dist(fabs(inner.d[d][e] - outer.d[d][e]));
+			if (dmin == 0.0 || dist < dmin) {dim = d; dir = e; dmin = dist;}
+		}
+	}
 }
 
 // Note: applies to city residential plots, called by city_obj_placer_t
@@ -1651,14 +1671,8 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 	if (tree_pos != all_zeros) {avoid.push_back(cube_t()); avoid.back().set_from_sphere(tree_pos, hwidth);} // assume tree diameter is similar to driveway width
 	// what about details/AC units?
 	bool dim(0), dir(0);
-	float dmin(0.0);
+	get_closest_dim_dir_xy(bcube, plot, dim, dir);
 
-	for (unsigned d = 0; d < 2; ++d) { // find closest edge of *i to edge of bcube
-		for (unsigned e = 0; e < 2; ++e) {
-			float const dist(fabs(bcube.d[d][e] - plot.d[d][e]));
-			if (dmin == 0.0 || dist < dmin) {dim = d; dir = e; dmin = dist;}
-		}
-	}
 	for (unsigned n = 0; n < 2; ++n) { // check the closest dim, then the second closest dim
 		cube_t dw(plot); // copy zvals from plot
 		dw.d[dim][dir] = plot.d[dim][dir];
@@ -1674,6 +1688,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 		for (unsigned S = 0; S < 2; ++S) {
 			bool const s(bool(S) ^ rgen.rand_bool()); // not biased
 			set_wall_width(dw, (bcube.d[!dim][s] + (s ? 1.0 : -1.0)*hwidth), hwidth, !dim);
+			if (!plot.contains_cube_xy(dw)) continue; // extends outside the plot
 			if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked (don't need to check parts or chimney/fireplace here)
 			if (s) {dw.translate_dim(2, 0.001*hwidth);} // hack to prevent z-fighting when driveways overlap on the left and right of adjacent houses
 			driveways.push_back(dw);
