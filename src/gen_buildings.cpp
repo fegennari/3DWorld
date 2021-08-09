@@ -1867,8 +1867,9 @@ public:
 				float const size_scale(b.is_house ? mat.gen_house_size_scale(rgen) : 1.0);
 				
 				for (unsigned d = 0; d < 2; ++d) { // x,y
-					float const sz(0.5*size_scale*rgen.rand_uniform(min(mat.sz_range.d[d][0], 0.3f*border_scale*pos_range_sz[d]),
-						                                            min(mat.sz_range.d[d][1], 0.5f*border_scale*pos_range_sz[d]))); // use pos range size for max
+					float const size_cap(border_scale*pos_range_sz[d]*(b.is_house ? 0.8 : 1.0)); // size cap relative to plot size
+					float const sz(0.5*rgen.rand_uniform(min(size_scale*mat.sz_range.d[d][0], 0.3f*size_cap),
+						                                 min(size_scale*mat.sz_range.d[d][1], 0.5f*size_cap))); // use pos range size for max
 					b.bcube.d[d][0] = center[d] - sz;
 					b.bcube.d[d][1] = center[d] + sz;
 				}
