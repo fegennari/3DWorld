@@ -1594,7 +1594,8 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			set_wall_width(ac, place_pos, 0.5*width, !ac_dim);
 			set_cube_zvals(ac, ac_part.z1(), (ac_part.z1() + height));
 
-			if (!(two_parts && ac.intersects(parts[1-ac_part_ix])) && !is_cube_close_to_exterior_doorway(ac, width, 1)) {
+			// skip if AC units intersects the other part, the fireplace, or an exterior door (what about the driveway, which is added later?)
+			if (!(two_parts && ac.intersects(parts[1-ac_part_ix])) && !(has_chimney && ac.intersects(get_fireplace())) && !is_cube_close_to_exterior_doorway(ac, width, 1)) {
 				details.push_back(ac);
 				has_ac = 1;
 			}
