@@ -764,11 +764,11 @@ class city_road_gen_t : public road_gen_base_t {
 		vector<bench_t> benches;
 		vector<tree_planter_t> planters;
 		vector<fire_hydrant_t> fire_hydrants;
-		vector<cube_with_ix_t> parking_lot_groups, driveway_groups, bench_groups, planter_groups, fire_hydrant_groups; // index is last object in group
+		vector<cube_with_ix_t> bench_groups, planter_groups, fire_hydrant_groups; // index is last object in group
 		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
 
-		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
+		bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen) {
 			vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 			float const space_width(PARK_SPACE_WIDTH *nom_car_size.y); // add 50% extra space between cars
 			float const space_len  (PARK_SPACE_LENGTH*nom_car_size.x); // space for car + gap for cars to drive through
@@ -814,7 +814,7 @@ class city_road_gen_t : public road_gen_base_t {
 				assert(park.row_sz >= city_params.min_park_spaces && park.num_rows >= city_params.min_park_rows);
 				assert(park.dx() > 0.0 && park.dy() > 0.0);
 				car.cur_seg = (unsigned short)parking_lots.size(); // store parking lot index in cur_seg
-				add_obj_to_group(park, park, parking_lots, parking_lot_groups, is_new_tile);
+				parking_lots.push_back(park);
 				bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
 				//colliders.push_back(park); // added per-filled space below
 				//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
@@ -1045,16 +1045,12 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 			}
 		}
-		void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix, bool is_new_tile) {
+		void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix) {
 			cube_t plot_z(plot);
 			plot_z.z1() = plot_z.z2() = plot.z2() + 0.0002*city_params.road_width; // shift slightly up to avoid Z-fighting
 			temp_cubes.clear();
 			add_house_driveways_for_plot(plot_z, temp_cubes);
-
-			for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {
-				assert(i->is_normalized());
-				add_obj_to_group(driveway_t(*i, plot_ix), *i, driveways, driveway_groups, is_new_tile);
-			}
+			for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {driveways.emplace_back(*i, plot_ix);}
 		}
 		template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
 			draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0)
@@ -1084,7 +1080,7 @@ class city_road_gen_t : public road_gen_base_t {
 		city_obj_placer_t() : num_spaces(0), filled_spaces(0) {}
 		
 		void clear() {
-			parking_lots.clear(); parking_lot_groups.clear(); benches.clear(); planters.clear(); fire_hydrants.clear(); driveways.clear(); driveway_groups.clear();
+			parking_lots.clear(); benches.clear(); planters.clear(); fire_hydrants.clear(); driveways.clear();
 			bench_groups.clear(); planter_groups.clear(); fire_hydrant_groups.clear();
 			num_spaces = filled_spaces = 0;
 		}
@@ -1112,9 +1108,9 @@ class city_road_gen_t : public road_gen_base_t {
 				size_t const plot_id(i - plots.begin());
 				assert(plot_id < plot_colliders.size());
 				vect_cube_t &colliders(plot_colliders[plot_id]); // used for pedestrians
-				if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, bcubes, colliders, rgen, is_new_tile);}
+				if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, bcubes, colliders, rgen);}
 				unsigned const driveways_start(driveways.size());
-				if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id, is_new_tile);}
+				if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
 				bcubes.insert(bcubes.end(), (driveways.begin() + driveways_start), driveways.end()); // driveways become blockers for other placed objects
 				place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
 				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
@@ -1163,30 +1159,6 @@ class city_road_gen_t : public road_gen_base_t {
 				ret |= check_line_clip_update_t(p1, p2, t, i->bcube); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
 			}
 			return ret;
-		}
-		template<typename V, typename G> bool pt_in_cube_group_xy(point const &pos, V const &cubes, G const &groups) const {
-			unsigned start_ix(0);
-
-			for (auto i = groups.begin(); i != groups.end(); start_ix = i->ix, ++i) {
-				if (!i->contains_pt_xy(pos)) continue;
-				for (unsigned b = start_ix; b < i->ix; ++b) {if (cubes[b].contains_pt_xy(pos)) return 1;}
-			}
-			return 0;
-		}
-		bool pt_in_parking_lot_xy(point const &pos) const {return pt_in_cube_group_xy(pos, parking_lots, parking_lot_groups);}
-		bool pt_in_driveway_xy   (point const &pos) const {return pt_in_cube_group_xy(pos, driveways,    driveway_groups   );}
-
-		template<typename V, typename G> bool cube_overlaps_cube_group_xy(cube_t const &c, V const &cubes, G const &groups) const {
-			unsigned start_ix(0);
-
-			for (auto i = groups.begin(); i != groups.end(); start_ix = i->ix, ++i) {
-				if (!i->intersects_xy(c)) continue;
-				for (unsigned b = start_ix; b < i->ix; ++b) {if (cubes[b].intersects_xy(c)) return 1;}
-			}
-			return 0;
-		}
-		bool cube_overlaps_pl_or_dw_xy(cube_t const &c) const {
-			return (cube_overlaps_cube_group_xy(c, parking_lots, parking_lot_groups) || cube_overlaps_cube_group_xy(c, driveways, driveway_groups));
 		}
 		bool get_color_at_xy(point const &pos, colorRGBA &color) const {
 			unsigned start_ix(0);
@@ -2017,6 +1989,31 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 0;
 		}
+		template<typename T> bool check_tile_group_contains_pt_xy(vector<T> const &objs, point const &pos, unsigned type) const {
+			assert(type < NUM_RD_TYPES);
+			if (objs.empty()) return 0;
+
+			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
+				if (!b->bcube.contains_pt_xy(pos)) continue;
+				range_pair_t const &rp(b->ranges[type]);
+				for (unsigned i = rp.s; i < rp.e; ++i) {if (objs[i].contains_pt_xy(pos)) return 1;}
+			}
+			return 0;
+		}
+		template<typename T> bool cube_overlaps_tile_group_xy(vector<T> const &objs, cube_t const &c, unsigned type) const {
+			assert(type < NUM_RD_TYPES);
+			if (objs.empty()) return 0;
+
+			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
+				if (!b->bcube.intersects_xy(c)) continue;
+				range_pair_t const &rp(b->ranges[type]);
+				for (unsigned i = rp.s; i < rp.e; ++i) {if (objs[i].intersects_xy(c)) return 1;}
+			}
+			return 0;
+		}
+		bool cube_overlaps_pl_or_dw_xy(cube_t const &c) const {
+			return (cube_overlaps_tile_group_xy(city_obj_placer.parking_lots, c, TYPE_PARK_LOT) || cube_overlaps_tile_group_xy(city_obj_placer.driveways, c, TYPE_DRIVEWAY));
+		}
 		int get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: return value is currently unused, but it could be used for something in the future
 			// Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
 			if (!bcube.contains_pt_xy(pos)) return 0;
@@ -2045,8 +2042,8 @@ class city_road_gen_t : public road_gen_base_t {
 					if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
 				}
 			}
-			if (city_obj_placer.pt_in_parking_lot_xy(pos)) {color = DK_GRAY; return INT_PARKING;}
-			if (city_obj_placer.pt_in_driveway_xy   (pos)) {color = LT_GRAY; return INT_PARKING;}
+			if (check_tile_group_contains_pt_xy(city_obj_placer.parking_lots, pos, TYPE_PARK_LOT)) {color = DK_GRAY; return INT_PARKING;}
+			if (check_tile_group_contains_pt_xy(city_obj_placer.driveways,    pos, TYPE_DRIVEWAY)) {color = LT_GRAY; return INT_PARKING;}
 			if (city_obj_placer.get_color_at_xy(pos, color)) {return INT_PLOT;} // hit a detail object, but still in a plot
 			
 			if (!plots.empty()) { // inside a city and not over a road - must be over a plot or park
@@ -2063,8 +2060,6 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = roads.begin(); i != roads.end(); ++i) {if (i->intersects(c)) return 1;}
 			return 0;
 		}
-		bool cube_overlaps_pl_or_dw_xy(cube_t const &c) const {return city_obj_placer.cube_overlaps_pl_or_dw_xy(c);}
-
 		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 			if (empty()) return;
 			if (!dstate.check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
