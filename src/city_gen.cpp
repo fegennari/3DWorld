@@ -2226,7 +2226,7 @@ class city_road_gen_t : public road_gen_base_t {
 		bool choose_dest_building(unsigned &global_plot, unsigned &building, rand_gen_t &rgen) const { // for pedestrians
 			if (plots.empty()) return 0; // no plots
 			global_plot = (rgen.rand() % plots.size()) + plot_id_offset;
-			if (!select_building_in_plot(global_plot, rgen.rand(), building)) return 0; // no buildings in plot
+			if (!select_building_in_plot(global_plot, rgen.rand(), building)) return 0; // no buildings in plot (maybe it's a park)
 			return 1;
 		}
 		void find_car_next_seg(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
@@ -3091,7 +3091,7 @@ bool ped_manager_t::choose_dest_building_or_parked_car(pedestrian_t &ped) { // m
 	if (city_params.num_cars == 0 || (rgen.rand() & 3) != 0) { // choose a dest building 75% of the time, 100% of the time if there are no cars
 		ped.has_dest_bldg = road_gen.choose_dest_building(ped.city, ped.dest_plot, ped.dest_bldg, rgen);
 	}
-	if (!ped.has_dest_bldg) { // chose a dest parked car 25% of the time, or if choosing a dest building failed
+	if (city_params.num_cars > 0 && !ped.has_dest_bldg) { // chose a dest parked car 25% of the time, or if choosing a dest building failed
 		ped.has_dest_car = choose_dest_parked_car(ped.city, ped.dest_plot, ped.dest_bldg, ped.dest_car_center);
 		if (!ped.has_dest_car) return 0;
 		ped.dest_plot = road_gen.get_city(ped.city).encode_plot_id(ped.dest_plot);
