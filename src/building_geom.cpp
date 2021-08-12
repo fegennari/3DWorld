@@ -1579,28 +1579,31 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	colorRGBA const wall_colors[8] = {WHITE, WHITE, WHITE, WHITE, colorRGBA(1.0, 0.85, 0.85), colorRGBA(1.0, 0.85, 0.75), colorRGBA(0.85, 1.0, 0.85), colorRGBA(0.85, 0.85, 1.0)};
 	wall_color = wall_color.modulate_with(wall_colors[rgen.rand()%8]);
 	if (rgen.rand_bool()) {add_solar_panels(rgen);} // maybe add solar panels
+	if (rgen.rand_bool()) {add_outdoor_ac_unit(rgen);} // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
+}
 
-	if (rgen.rand_bool()) { // place an outdoor AC unit against an exterior wall 50% of the time, not actually on the roof
-		float const depth(door_height*rgen.rand_uniform(0.26, 0.35)), width(1.5*depth), height(door_height*rgen.rand_uniform(0.32, 0.36)); // constant width to keep the texture square
-		unsigned const ac_part_ix(two_parts ? rgen.rand_bool() : 0);
-		cube_t const &ac_part(parts[ac_part_ix]);
-		bool const ac_dim(rgen.rand_bool()), ac_dir(rgen.rand_bool());
+bool building_t::add_outdoor_ac_unit(rand_gen_t &rgen) {
+	float const door_height(get_door_height());
+	float const depth(door_height*rgen.rand_uniform(0.26, 0.35)), width(1.5*depth), height(door_height*rgen.rand_uniform(0.32, 0.36)); // constant width to keep the texture square
+	unsigned const ac_part_ix((real_num_parts == 2) ? rgen.rand_bool() : 0);
+	cube_t const &ac_part(parts[ac_part_ix]);
+	bool const ac_dim(rgen.rand_bool()), ac_dir(rgen.rand_bool());
+	if (ac_part.get_sz_dim(!ac_dim) < 4.0*width) return 0; // not enough space
+	float const place_pos(rgen.rand_uniform(ac_part.d[!ac_dim][0]+width, ac_part.d[!ac_dim][1]-width));
+	roof_obj_t ac(ROOF_OBJ_AC);
+	ac.d[ac_dim][!ac_dir] = ac_part.d[ac_dim][ ac_dir] + (ac_dir ? 1.0 : -1.0)*0.1*depth; // place slightly away from the exterior wall
+	ac.d[ac_dim][ ac_dir] = ac     .d[ac_dim][!ac_dir] + (ac_dir ? 1.0 : -1.0)*depth;
+	set_wall_width(ac, place_pos, 0.5*width, !ac_dim);
+	set_cube_zvals(ac, ac_part.z1(), (ac_part.z1() + height));
+	if (has_driveway() && ac.intersects_xy(driveway)) return 0; // driveway in the way
 
-		if (ac_part.get_sz_dim(!ac_dim) > 4.0*width) {
-			float const place_pos(rgen.rand_uniform(ac_part.d[!ac_dim][0]+width, ac_part.d[!ac_dim][1]-width));
-			roof_obj_t ac(ROOF_OBJ_AC);
-			ac.d[ac_dim][!ac_dir] = ac_part.d[ac_dim][ ac_dir] + (ac_dir ? 1.0 : -1.0)*0.1*depth; // place slightly away from the exterior wall
-			ac.d[ac_dim][ ac_dir] = ac     .d[ac_dim][!ac_dir] + (ac_dir ? 1.0 : -1.0)*depth;
-			set_wall_width(ac, place_pos, 0.5*width, !ac_dim);
-			set_cube_zvals(ac, ac_part.z1(), (ac_part.z1() + height));
-
-			// skip if AC units intersects the other part, the fireplace, or an exterior door (what about the driveway, which is added later?)
-			if (!(two_parts && ac.intersects(parts[1-ac_part_ix])) && !(has_chimney && ac.intersects(get_fireplace())) && !is_cube_close_to_exterior_doorway(ac, width, 1)) {
-				details.push_back(ac);
-				has_ac = 1;
-			}
-		}
+	for (unsigned i = 0; i < parts.size(); ++i) {
+		if (i != ac_part_ix && ac.intersects(parts[i])) return 0; // intersects another part, or the fireplace
 	}
+	if (is_cube_close_to_exterior_doorway(ac, width, 1)) return 0;
+	details.push_back(ac);
+	has_ac = 1;
+	return 1;
 }
 
 bool is_valid_driveway_pos(cube_t const &driveway, cube_t const &bcube, vect_cube_t const &bcubes) {
