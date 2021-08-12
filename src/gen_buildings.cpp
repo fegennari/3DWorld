@@ -1217,8 +1217,9 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 	} // end interior case
 }
 
-template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const {
-
+template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
+	bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs, bool hinge_side) const
+{
 	float const ty((exterior || SPLIT_DOOR_PER_FLOOR) ? 1.0 : D.dz()/get_window_vspace()); // tile door texture across floors for unsplit interior doors
 	int const type(tquad_with_ix_t::TYPE_IDOOR); // always use interior door type, even for exterior door, because we're drawing it in 3D inside the building
 	bool const opens_up(door_type == tquad_with_ix_t::TYPE_GDOOR);
@@ -1235,7 +1236,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 		if (num_sides == 2) {dc.d[!dim][bool(side) ^ dim ^ dir ^ 1] = 0.5f*(D.d[!dim][0] + D.d[!dim][1]);} // split door in half
 		// we don't want to draw the open stairs door because it may get in the way, but we need to overwrite the previous verts, so make it zero area
 		if (opened && on_stairs) {dc.z2() = dc.z1();}
-		bool const int_other_side(exterior ? 0 : 0);
+		bool const int_other_side(exterior ? 0 : hinge_side);
 		bool const swap_sides(exterior ? (side == 0) : int_other_side); // swap sides for right half of exterior door
 		tquad_with_ix_t const door(set_door_from_cube(dc, dim, dir, type, 0.0, exterior, opened, opens_out, opens_up, swap_sides));
 		vector3d const normal(door.get_norm());
@@ -1267,7 +1268,8 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 }
 
 // explicit template specialization
-template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;
+template void building_t::add_door_verts(cube_t const &D, building_room_geom_t &drawer, uint8_t door_type,
+	bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs, bool hinge_side) const;
 
 void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass, float offset_scale, point const *const only_cont_pt_in) const {
 
@@ -1437,7 +1439,7 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 		vector3d const normal2(d->get_norm());
 		if (dot_product_ptv(normal2, pos, d->pts[0]) > 0.0) continue; // facing exterior of door rather than interior, skip
 		bool const dim2(fabs(normal2.x) < fabs(normal2.y)), dir2(normal2[dim] > 0.0); // dir2 is reversed
-		add_door_verts(d->get_bcube(), open_door_draw, d->type, dim2, dir2, 0, opens_outward, 1, 0); // opened=0, exterior=1, on_stairs
+		add_door_verts(d->get_bcube(), open_door_draw, d->type, dim2, dir2, 0, opens_outward, 1, 0); // opened=0, exterior=1, on_stairs=0
 	}
 	open_door_draw.draw(s, 0, 1); // direct_draw_no_vbo=1
 	return 1;

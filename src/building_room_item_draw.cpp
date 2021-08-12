@@ -631,7 +631,7 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 	vector<door_t> const &doors(building.interior->doors);
 
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
-		building.add_door_verts(*i, *this, tquad_with_ix_t::TYPE_HDOOR, i->dim, i->open_dir, i->open, 0, 0, i->on_stairs); // opens_out=0, exterior=0
+		building.add_door_verts(*i, *this, tquad_with_ix_t::TYPE_HDOOR, i->dim, i->open_dir, i->open, 0, 0, i->on_stairs, i->hinge_side); // opens_out=0, exterior=0
 	}
 	mats_doors.create_vbos(building);
 }

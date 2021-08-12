@@ -707,14 +707,14 @@ struct stairwell_t : public cube_t, public stairs_landing_base_t {
 typedef vector<stairwell_t> vect_stairwell_t;
 
 struct door_stack_t : public cube_t {
-	bool dim, open_dir, on_stairs;
+	bool dim, open_dir, hinge_side, on_stairs;
 	// is it useful to store the two rooms in the door/door_stack? this will speed up connectivity searches for navigation and room assignment,
 	// but only for finding the second room connected to a door, because we still need to iterate over all doors;
 	// unfortunately, it's not easy/cheap to assign these values because the room may not even be added until after the door is placed, so we have to go back and set room1/room2 later
 	//uint8_t room1, room2;
-	door_stack_t() : dim(0), open_dir(0), on_stairs(0) {}
-	door_stack_t(cube_t const &c, bool dim_, bool dir, bool os=0) :
-		cube_t(c), dim(dim_), open_dir(dir), on_stairs(os) {assert(is_strictly_normalized());}
+	door_stack_t() : dim(0), open_dir(0), hinge_side(0), on_stairs(0) {}
+	door_stack_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
+		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_strictly_normalized());}
 };
 struct door_t : public door_stack_t {
 	bool open, locked;
@@ -976,7 +976,8 @@ struct building_t : public building_geom_t {
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass) const;
-	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type, bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs) const;
+	template<typename T> void add_door_verts(cube_t const &D, T &drawer, uint8_t door_type,
+		bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
 		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
 	void invalidate_nav_graph();
