@@ -1682,7 +1682,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 	static vect_cube_t bcubes, avoid; // reused across calls
 	bcubes.clear();
 	get_building_bcubes(plot, bcubes); // Note: could be passed in by the caller, but requires many changes
-	// TODO: houses should be placed so that their driveways exit toward the edge of the plot
+	// garages should be placed so that their driveways exit toward the edge of the plot
 	if (has_driveway() && extend_existing_driveway(driveway, plot, bcube, bcubes, driveways)) return 1;
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, building_ix+111);
@@ -1692,7 +1692,13 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 	if (!porch.is_all_zeros()) {avoid.push_back(porch);}
 	if (has_chimney) {avoid.push_back(get_fireplace());} // avoid placing the driveway across from the chimney/fireplace
 	if (tree_pos != all_zeros) {avoid.push_back(cube_t()); avoid.back().set_from_sphere(tree_pos, hwidth);} // assume tree diameter is similar to driveway width
-	// what about details/AC units?
+	cube_t ac_unit;
+	
+	if (has_ac) { // include outdoor AC unit; would be better if we can move the AC instead, but it's too late for that
+		assert(!details.empty() && details.back().type == ROOF_OBJ_AC);
+		ac_unit = details.back();
+		avoid.push_back(ac_unit);
+	}
 	bool dim(0), dir(0);
 	get_closest_dim_dir_xy(bcube, plot, dim, dir);
 
@@ -1716,6 +1722,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 			set_wall_width(dw, (bcube.d[!dim][s] + (s ? 1.0 : -1.0)*hwidth), hwidth, !dim);
 			if (!plot.contains_cube_xy(dw)) continue; // extends outside the plot
 			if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked (don't need to check parts or chimney/fireplace here)
+			if (has_ac && dw.intersects_xy(ac_unit)) continue;
 			if (s) {dw.translate_dim(2, 0.001*hwidth);} // hack to prevent z-fighting when driveways overlap on the left and right of adjacent houses
 			assert(dw.dx() > 0 && dw.dy() > 0); // strictly normalized in XY
 			driveways.push_back(dw);
