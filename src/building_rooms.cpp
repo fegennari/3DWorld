@@ -1174,8 +1174,8 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 	return 1;
 }
 
-void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, bool dir, vect_cube_t &blockers) {
-	bool const dim(door.dy() < door.dx()), edir(dim ^ dir ^ 1);
+void add_door_if_blocker(cube_t const &door, cube_t const &room, bool inc_open, bool dir, bool hinge_side, vect_cube_t &blockers) {
+	bool const dim(door.dy() < door.dx()), edir(dim ^ dir ^ hinge_side ^ 1);
 	float const width(door.get_sz_dim(!dim));
 	cube_t door_exp(door);
 	door_exp.expand_in_dim(dim, width);
@@ -1200,8 +1200,11 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 			blockers.push_back(*i);
 		}
 	}
-	for (auto i = doors.begin(); i != doors.end(); ++i) {add_door_if_blocker(i->get_bcube(), room, 0, 0, blockers);} // exterior doors, inc_open=0
-	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {add_door_if_blocker(*i, room, door_opens_inward(*i, room), i->open_dir, blockers);} // interior doors
+	for (auto i = doors.begin(); i != doors.end(); ++i) {add_door_if_blocker(i->get_bcube(), room, 0, 0, 0, blockers);} // exterior doors, inc_open=0
+
+	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // interior doors
+		add_door_if_blocker(*i, room, door_opens_inward(*i, room), i->open_dir, i->hinge_side, blockers);
+	}
 	float const doorway_width(get_doorway_width());
 
 	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {

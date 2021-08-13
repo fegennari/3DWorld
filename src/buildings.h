@@ -719,7 +719,7 @@ struct door_stack_t : public cube_t {
 struct door_t : public door_stack_t {
 	bool open, locked;
 	door_t() : open(0), locked(0) {}
-	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0) : door_stack_t(c, dim_, dir, os), open(open_), locked(0) {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_stack_t(c, dim_, dir, os, hs), open(open_), locked(0) {}
 	bool is_closed_and_locked() const {return (!open && locked);}
 };
 typedef vector<door_stack_t> vect_door_stack_t;

@@ -33,10 +33,11 @@ void building_t::add_interior_door_for_floor(door_t &door) {
 void building_t::remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir) {
 	// remove a section from this cube; c is input+output cube, c2 is other output cube
 	assert(v1 > c.d[xy][0] && v1 < v2 && v2 < c.d[xy][1]); // v1/v2 must be interior values for cube
+	bool const hinge_side(xy ^ open_dir ^ (v1-c.d[xy][0] < c.d[xy][1]-v1) ^ 1); // put the hinge on the side closer to the end of the wall
 	c2 = c; // clone first cube
 	c.d[xy][1] = v1; c2.d[xy][0] = v2; // c=low side, c2=high side
 	// add a door
-	door_t door(c, !xy, open_dir);
+	door_t door(c, !xy, open_dir, 1, 0, hinge_side); // open=1, on_stairs=0
 	door.d[!xy][0] = door.d[!xy][1] = c.get_center_dim(!xy); // zero area at wall centerline
 	door.d[ xy][0] = v1; door.d[ xy][1] = v2;
 	add_interior_door(door);

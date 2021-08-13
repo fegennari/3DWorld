@@ -2389,7 +2389,7 @@ bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, f
 }
 bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // ignores zvals
 	for (auto i = door_stacks.begin(); i != door_stacks.end(); ++i) { // interior doors
-		if (is_cube_close_to_door(c, dmin, (inc_open && door_opens_inward(*i, room)), *i, (i->dim ^ i->open_dir ^ 1))) return 1;
+		if (is_cube_close_to_door(c, dmin, (inc_open && door_opens_inward(*i, room)), *i, (i->dim ^ i->open_dir ^ i->hinge_side ^ 1))) return 1;
 	}
 	return 0;
 }
