@@ -20,6 +20,8 @@
 
 #ifdef _WIN32 // wglew.h seems to be Windows only
 #include <GL/wglew.h> // for wglSwapIntervalEXT
+#else // linux
+#include <GL/glxew.h>
 #endif
 
 using namespace std;
@@ -255,10 +257,12 @@ void quit_3dworld() { // called once at the end for proper cleanup
 }
 
 
+int get_swap_interval() {return ((vsync_enabled || is_video_recording()) ? 1 : 0);}
 #ifdef _WIN32
-void set_vsync() {wglSwapIntervalEXT((vsync_enabled || is_video_recording()) ? 1 : 0);}
-#else
-void set_vsync() {} // unsupported
+void set_vsync() {wglSwapIntervalEXT(get_swap_interval());}
+#else // linux
+void set_vsync() {glXSwapIntervalSGI(get_swap_interval());}
+//void set_vsync() {glXSwapIntervalEXT(glXGetCurrentDisplay(), glXGetCurrentDrawable(), get_swap_interval());} // seg faults
 #endif
 
 void init_window() { // register all glut callbacks
