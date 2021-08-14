@@ -261,8 +261,11 @@ int get_swap_interval() {return ((vsync_enabled || is_video_recording()) ? 1 : 0
 #ifdef _WIN32
 void set_vsync() {wglSwapIntervalEXT(get_swap_interval());}
 #else // linux
-void set_vsync() {glXSwapIntervalSGI(get_swap_interval());}
-//void set_vsync() {glXSwapIntervalEXT(glXGetCurrentDisplay(), glXGetCurrentDrawable(), get_swap_interval());} // seg faults
+void set_vsync() {
+  //has_extension("GLX_EXT_swap_control")
+  if (glXSwapIntervalEXT) {glXSwapIntervalEXT(glXGetCurrentDisplay(), glXGetCurrentDrawable(), get_swap_interval());}
+  else if (glXSwapIntervalSGI) {glXSwapIntervalSGI(get_swap_interval());}
+}
 #endif
 
 void init_window() { // register all glut callbacks
