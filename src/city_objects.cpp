@@ -5,8 +5,6 @@
 #include "city_objects.h"
 #include "tree_3dw.h" // for tree_placer_t
 
-using std::string;
-
 extern unsigned max_unique_trees;
 extern tree_placer_t tree_placer;
 extern city_params_t city_params;
@@ -16,14 +14,15 @@ struct plot_divider_type_t {
 	string tex_name;
 	int tid;
 	float wscale, hscale; // width and height scales
-	plot_divider_type_t(string const &tn, float ws, float hs) : tex_name(tn), tid(-1), wscale(ws), hscale(hs) {}
+	colorRGBA color;
+	plot_divider_type_t(string const &tn, float ws, float hs, colorRGBA const &c) : tex_name(tn), tid(-1), wscale(ws), hscale(hs), color(c) {}
 };
 enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
 
 plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
-	plot_divider_type_t("cblock2.jpg", 0.5, 2.5),  // wall
-	plot_divider_type_t("fence.jpg",   0.1, 2.0),  // fence
-	plot_divider_type_t("hedges.jpg",  1.0, 1.6)}; // hedge
+	plot_divider_type_t("cblock2.jpg", 0.50, 2.5, WHITE),  // wall
+	plot_divider_type_t("fence.jpg",   0.15, 2.0, WHITE),  // fence
+	plot_divider_type_t("hedges.jpg",  1.00, 1.6, GRAY )}; // hedge
 
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 
@@ -169,7 +168,8 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
-	dstate.draw_cube(qbd, bcube, color_wrapper(WHITE), 1); // skip bottom
+	assert(dstate.pass_ix < DIV_NUM_TYPES);
+	dstate.draw_cube(qbd, bcube, color_wrapper(plot_divider_types[type].color), 1, 1.0/bcube.dz()); // skip bottom, scale texture to match the height
 }
 
 
@@ -459,7 +459,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	if (plot_subdiv_sz > 0.0 && !plot.is_park) { // split into smaller plots for each house
 		vector<city_zone_t> sub_plots;
 		subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots);
-		float const sz_scale(0.1*city_params.road_width);
+		float const sz_scale(0.06*city_params.road_width);
 
 		for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
 			for (unsigned dim = 0; dim < 2; ++dim) {

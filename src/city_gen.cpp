@@ -11,8 +11,6 @@
 #include "profiler.h"
 #include <cfloat> // for FLT_MAX
 
-using std::string;
-
 bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edge discontinuity rather than amount of land that needs to be modified
 float const OUTSIDE_TERRAIN_HEIGHT  = 0.0;
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
