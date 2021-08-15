@@ -12,6 +12,7 @@ struct city_obj_t : public sphere_t {
 	city_obj_t(point const &pos_, float radius_) : sphere_t(pos_, radius_) {}
 	bool operator<(city_obj_t const &b) const {return (bcube.x1() < b.bcube.x1());} // sort by bcube x1
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {}
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default, can be overridden in derived class
 };
 
 struct bench_t : public city_obj_t {
@@ -20,7 +21,6 @@ struct bench_t : public city_obj_t {
 	void calc_bcube();
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
-	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct tree_planter_t : public city_obj_t {
@@ -39,25 +39,22 @@ struct fire_hydrant_t : public city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
+struct divider_t : public city_obj_t {
+	unsigned type;
+	divider_t(cube_t const &c, unsigned type_) : city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), type(type_) {bcube = c;}
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
+};
+
 class city_obj_placer_t {
 public: // road network needs access to parking lots and driveways for drawing
 	vector<parking_lot_t> parking_lots;
 	vector<driveway_t> driveways; // for houses
 private:
-	struct plot_divider_type_t {
-		string tex_name;
-		float wscale, hscale; // width and height scales
-		plot_divider_type_t(string const &tn, float ws, float hs) : tex_name(tn), wscale(ws), hscale(hs) {}
-	};
-	enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
-	plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
-		plot_divider_type_t("cblock2.jpg", 0.5, 2.5),  // wall
-		plot_divider_type_t("fence.jpg",   0.1, 2.0),  // fence
-		plot_divider_type_t("hedges.jpg",  1.0, 1.6)}; // hedge
 	vector<bench_t> benches;
 	vector<tree_planter_t> planters;
 	vector<fire_hydrant_t> fire_hydrants;
-	vector<cube_with_ix_t> dividers; // dividers for residential plots; index is type
+	vector<divider_t> dividers; // dividers for residential plots
 	vector<cube_with_ix_t> bench_groups, planter_groups, fire_hydrant_groups, divider_groups; // index is last object in group
 	quad_batch_draw qbd;
 	unsigned num_spaces, filled_spaces;
