@@ -761,10 +761,21 @@ class city_road_gen_t : public road_gen_base_t {
 		vector<parking_lot_t> parking_lots;
 		vector<driveway_t> driveways; // for houses
 	private:
+		struct plot_divider_type_t {
+			string tex_name;
+			float wscale, hscale; // width and height scales
+			plot_divider_type_t(string const &tn, float ws, float hs) : tex_name(tn), wscale(ws), hscale(hs) {}
+		};
+		enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
+		plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
+			plot_divider_type_t("cblock2.jpg", 0.5, 2.5),  // wall
+			plot_divider_type_t("fence.jpg",   0.1, 2.0),  // fence
+			plot_divider_type_t("hedges.jpg",  1.0, 1.6)}; // hedge
 		vector<bench_t> benches;
 		vector<tree_planter_t> planters;
 		vector<fire_hydrant_t> fire_hydrants;
-		vector<cube_with_ix_t> bench_groups, planter_groups, fire_hydrant_groups; // index is last object in group
+		vector<cube_with_ix_t> dividers; // dividers for residential plots; index is type
+		vector<cube_with_ix_t> bench_groups, planter_groups, fire_hydrant_groups, divider_groups; // index is last object in group
 		quad_batch_draw qbd;
 		unsigned num_spaces, filled_spaces;
 
@@ -987,12 +998,12 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		// Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 		void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
-			rand_gen_t &rgen, bool is_new_tile, bool is_residential)
+			rand_gen_t &rgen, bool is_new_tile, bool is_residential, float plot_subdiv_sz)
 		{
 			float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 			// FIXME: due to some problem I can't figure out, bench shadow maps don't work right unless is_new_bench_tile is reset for each plot;
 			//        however, tree planters seem to work just fine without this, even though they use nearly the same code
-			bool is_new_fh_tile(is_new_tile), is_new_bench_tile(1 || is_new_tile), is_new_planter_tile(is_new_tile);
+			bool is_new_fh_tile(is_new_tile), is_new_bench_tile(1 || is_new_tile), is_new_planter_tile(is_new_tile), is_new_divider_tile(is_new_tile);
 
 			// place fire_hydrants; don't add fire hydrants in parks
 			if (!plot.is_park) {
@@ -1044,6 +1055,28 @@ class city_road_gen_t : public road_gen_base_t {
 					add_obj_to_group(planter, planter.bcube, planters, planter_groups, is_new_planter_tile); // no colliders for planters; pedestrians avoid the trees instead
 				}
 			}
+			bool const assign_sub_plots(is_residential && city_params.assign_house_plots);
+
+			if (0 && plot_subdiv_sz > 0.0 && !plot.is_park) { // split into smaller plots for each house
+				vector<city_zone_t> sub_plots;
+				subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots);
+				float const sz_scale(0.1*city_params.road_width);
+
+				for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
+					for (unsigned dim = 0; dim < 2; ++dim) {
+						bool const dir = 0; // since plots share sides with their neighbors, we only need to add a wall on one side (FIXME: except for back walls bordering empty space)
+						float const div_pos(i->d[dim][dir]);
+						if (div_pos == plot.d[dim][dir]) continue; // sub-plot is against the plot border, don't need to add a divider
+						unsigned const type(rgen.rand()%DIV_NUM_TYPES);
+						plot_divider_type_t const &pdt(plot_divider_types[type]);
+						cube_with_ix_t divider(*i, type);
+						divider.z2() = i->z1() + sz_scale*pdt.hscale;
+						set_wall_width(divider, div_pos, 0.5*sz_scale*pdt.wscale, dim); // centered on the edge of the plot
+						add_obj_to_group(divider, divider, dividers, divider_groups, is_new_divider_tile);
+						colliders.push_back(divider);
+					} // for dim
+				} // for i
+			}
 		}
 		void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix) {
 			cube_t plot_z(plot);
@@ -1087,7 +1120,9 @@ class city_road_gen_t : public road_gen_base_t {
 		struct cube_by_x1 {
 			bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
 		};
-		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential) {
+		void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
+			unsigned city_id, bool have_cars, bool is_residential, float plot_subdiv_sz)
+		{
 			// Note: fills in plots.has_parking
 			//timer_t timer("Gen Parking Lots and Place Objects");
 			vect_cube_t bcubes, temp_cubes; // blockers, driveways
@@ -1113,7 +1148,7 @@ class city_road_gen_t : public road_gen_base_t {
 				if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
 				bcubes.insert(bcubes.end(), (driveways.begin() + driveways_start), driveways.end()); // driveways become blockers for other placed objects
 				place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
-				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
+				place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential, plot_subdiv_sz);
 				prev_tile_id = tile_id;
 			} // for i
 			if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
@@ -1125,6 +1160,29 @@ class city_road_gen_t : public road_gen_base_t {
 			if (add_parking_lots) {
 				cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 			}
+		}
+		static bool subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, vect_city_zone_t &sub_plots) {
+			assert(plot_subdiv_sz > 0.0);
+			unsigned ndiv[2] = {0,0};
+			float spacing[2] = {0,0};
+
+			for (unsigned d = 0; d < 2; ++d) {
+				float const plot_sz(plot.get_sz_dim(d));
+				ndiv   [d] = max(1U, unsigned(round_fp(plot_sz/plot_subdiv_sz)));
+				spacing[d] = plot_sz/ndiv[d];
+			}
+			if (ndiv[0] >= 100 || ndiv[1] >= 100) return 0; // too many plots? this shouldn't happen, but failing here is better than asserting or generating too many buildings
+			if (sub_plots.empty()) {sub_plots.reserve(2*(ndiv[0] + ndiv[1]) - 4);}
+
+			for (unsigned y = 0; y < ndiv[1]; ++y) {
+				for (unsigned x = 0; x < ndiv[0]; ++x) {
+					if (x > 0 && y > 0 && x+1 < ndiv[0] && y+1 < ndiv[1]) continue; // interior plot, no road access, skip
+					float const x1(plot.x1() + spacing[0]*x), y1(plot.y1() + spacing[1]*y);
+					cube_t const c(x1, (x1 + spacing[0]), y1, (y1 + spacing[1]), plot.z1(), plot.z2());
+					sub_plots.emplace_back(c, 0.0, 0, 1, get_street_dir(c, plot), 1); // cube, zval, park, res, sdir, capacity; Note: will favor x-dim for corner plots
+				}
+			} // for y
+			return 1;
 		}
 		void draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 			draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
@@ -1796,7 +1854,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
 			city_obj_placer.clear();
-			city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars, is_residential);
+			city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars, is_residential, get_plot_subdiv_sz());
 			add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 			add_tile_blocks(city_obj_placer.driveways, tile_to_block_map, TYPE_DRIVEWAY);
 			tile_to_block_map.clear(); // no longer needed
@@ -1834,37 +1892,16 @@ class city_road_gen_t : public road_gen_base_t {
 			get_all_bcubes(roads,  bcubes);
 			get_all_bcubes(tracks, bcubes);
 		}
-		bool subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, vect_city_zone_t &bcubes) const {
-			assert(plot_subdiv_sz > 0.0);
-			unsigned ndiv[2] = {0,0};
-			float spacing[2] = {0,0};
+		float get_plot_subdiv_sz() const {return ((is_residential && city_params.assign_house_plots) ? 0.8*get_max_house_size() : 0.0);}
 
-			for (unsigned d = 0; d < 2; ++d) {
-				float const plot_sz(plot.get_sz_dim(d));
-				ndiv   [d] = max(1U, unsigned(round_fp(plot_sz/plot_subdiv_sz)));
-				spacing[d] = plot_sz/ndiv[d];
-			}
-			if (ndiv[0] >= 100 || ndiv[1] >= 100) return 0; // too many plots? this shouldn't happen, but failing here is better than asserting or generating too many buildings
-
-			for (unsigned y = 0; y < ndiv[1]; ++y) {
-				for (unsigned x = 0; x < ndiv[0]; ++x) {
-					if (x > 0 && y > 0 && x+1 < ndiv[0] && y+1 < ndiv[1]) continue; // interior plot, no road access, skip
-					float const x1(plot.x1() + spacing[0]*x), y1(plot.y1() + spacing[1]*y);
-					cube_t const c(x1, (x1 + spacing[0]), y1, (y1 + spacing[1]), plot.z1(), plot.z2());
-					bcubes.emplace_back(c, 0.0, 0, 1, get_street_dir(c, plot), 1); // cube, zval, park, res, sdir, capacity; Note: will favor x-dim for corner plots
-				}
-			} // for y
-			return 1;
-		}
 		void get_plot_bcubes(vect_city_zone_t &bcubes) const { // Note: z-values of cubes indicate building height ranges
 			if (plots.empty()) return; // connector road city
 			unsigned const start(bcubes.size());
-			bool const assign_sub_plots(is_residential && city_params.assign_house_plots);
-			float const plot_subdiv_sz(assign_sub_plots ? 0.8*get_max_house_size() : 0.0);
+			float const plot_subdiv_sz(get_plot_subdiv_sz());
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
-				if (assign_sub_plots && !i->is_park && plot_subdiv_sz > 0.0) { // split into smaller plots for each house
-					if (subdivide_plot_for_residential(*i, plot_subdiv_sz, bcubes)) continue;
+				if (plot_subdiv_sz > 0.0 && !i->is_park) { // split into smaller plots for each house
+					if (city_obj_placer.subdivide_plot_for_residential(*i, plot_subdiv_sz, bcubes)) continue;
 				}
 				bcubes.push_back(*i); // capture all plot bcubes, even parks (needed for pedestrians)
 				bcubes.back().is_park        = i->is_park;
