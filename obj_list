@@ -114,3 +114,4 @@ building_interact.o
 simplifier.o
 city_model.o
 city_building_params.o
+city_objects.o

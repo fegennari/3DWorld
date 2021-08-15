@@ -438,6 +438,9 @@
     <ClCompile Include="src\building_room_obj_expand.cpp">
       <Filter>Source Files\City</Filter>
     </ClCompile>
+    <ClCompile Include="src\city_objects.cpp">
+      <Filter>Source Files\City</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h">
@@ -643,6 +646,9 @@
     </ClInclude>
     <ClInclude Include="src\profiler.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\city_objects.h">
+      <Filter>Source Files\City</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
