@@ -73,8 +73,8 @@ private:
 	static void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen);
 	template<typename T> void add_obj_to_group(T const &obj, cube_t const &bcube, vector<T> &objs, vector<cube_with_ix_t> &groups, bool &is_new_tile);
 	template<typename T> void sort_grouped_objects(vector<T> &objs, vector<cube_with_ix_t> const &groups);
-	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
-		rand_gen_t &rgen, bool is_new_tile, bool is_residential, float plot_subdiv_sz);
+	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile, bool is_residential);
+	void place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile, float plot_subdiv_sz);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
 		draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0);

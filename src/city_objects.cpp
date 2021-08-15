@@ -397,12 +397,12 @@ template<typename T> void city_obj_placer_t::sort_grouped_objects(vector<T> &obj
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
-	rand_gen_t &rgen, bool is_new_tile, bool is_residential, float plot_subdiv_sz)
+	rand_gen_t &rgen, bool is_new_tile, bool is_residential)
 {
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 	// FIXME: due to some problem I can't figure out, bench shadow maps don't work right unless is_new_bench_tile is reset for each plot;
 	//        however, tree planters seem to work just fine without this, even though they use nearly the same code
-	bool is_new_fh_tile(is_new_tile), is_new_bench_tile(1 || is_new_tile), is_new_planter_tile(is_new_tile), is_new_divider_tile(is_new_tile);
+	bool is_new_fh_tile(is_new_tile), is_new_bench_tile(1 || is_new_tile), is_new_planter_tile(is_new_tile);
 
 	// place fire_hydrants; don't add fire hydrants in parks
 	if (!plot.is_park) {
@@ -454,62 +454,61 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			add_obj_to_group(planter, planter.bcube, planters, planter_groups, is_new_planter_tile); // no colliders for planters; pedestrians avoid the trees instead
 		}
 	}
-	bool const assign_sub_plots(is_residential && city_params.assign_house_plots);
+}
 
-	// place dividers for residential plots
-	// FIXME: should be before tree placement
+void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile, float plot_subdiv_sz) {
+	if (plot.is_park) return; // no dividers in parks
+	assert(plot_subdiv_sz > 0.0);
 	// FIXME: shorten to allow pedestrians to cross through the front of yards
-	if (plot_subdiv_sz > 0.0 && !plot.is_park) {
-		vector<city_zone_t> sub_plots;
-		subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots);
-		if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
-		unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
-		float const sz_scale(0.06*city_params.road_width);
-		unsigned const dividers_start(dividers.size());
+	vector<city_zone_t> sub_plots;
+	subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots);
+	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
+	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
+	float const sz_scale(0.06*city_params.road_width);
+	unsigned const dividers_start(dividers.size());
 
-		for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
-			unsigned const type(rgen.rand()%(DIV_NUM_TYPES + 1)); // use a consistent divider type for all sides of this plot
-			if (type >= DIV_NUM_TYPES) continue; // no divider for this plot
-			// should we remove or move houses fences for divided sub-plots? I'm not sure how that would actually be possible at this point; or maybe skip dividers if the house has a fence?
-			plot_divider_type_t const &pdt(plot_divider_types[type]);
-			float const hwidth(0.5*sz_scale*pdt.wscale), z2(i->z1() + sz_scale*pdt.hscale);
-			unsigned const prev_dividers_end(dividers.size());
+	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
+		unsigned const type(rgen.rand()%(DIV_NUM_TYPES + 1)); // use a consistent divider type for all sides of this plot
+		if (type >= DIV_NUM_TYPES) continue; // no divider for this plot
+		// should we remove or move houses fences for divided sub-plots? I'm not sure how that would actually be possible at this point; or maybe skip dividers if the house has a fence?
+		plot_divider_type_t const &pdt(plot_divider_types[type]);
+		float const hwidth(0.5*sz_scale*pdt.wscale), z2(i->z1() + sz_scale*pdt.hscale);
+		unsigned const prev_dividers_end(dividers.size());
 
-			for (unsigned dim = 0; dim < 2; ++dim) {
-				for (unsigned dir = 0; dir < 2; ++dir) {
-					float const div_pos(i->d[dim][dir]);
-					if (div_pos == plot.d[dim][dir]) continue; // sub-plot is against the plot border, don't need to add a divider
-					bool const back_of_plot(i->d[!dim][0] != plot.d[!dim][0] && i->d[!dim][1] != plot.d[!dim][1]); // back of the plot, opposite the street
-					unsigned const skip_dims(0); // can't make this (back_of_plot ? (1<<(1-dim)) : 0) because the edge may be showing at borders of different divider types
-					cube_t c(*i);
-					c.z2() = z2;
-					set_wall_width(c, div_pos, hwidth, dim); // centered on the edge of the plot
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				float const div_pos(i->d[dim][dir]);
+				if (div_pos == plot.d[dim][dir]) continue; // sub-plot is against the plot border, don't need to add a divider
+				bool const back_of_plot(i->d[!dim][0] != plot.d[!dim][0] && i->d[!dim][1] != plot.d[!dim][1]); // back of the plot, opposite the street
+				unsigned const skip_dims(0); // can't make this (back_of_plot ? (1<<(1-dim)) : 0) because the edge may be showing at borders of different divider types
+				cube_t c(*i);
+				c.z2() = z2;
+				set_wall_width(c, div_pos, hwidth, dim); // centered on the edge of the plot
 					
-					if (dim == shrink_dim) {
-						c.translate_dim(dim, (dir ? -1.0 : 1.0)*hwidth); // move inside the plot so that edges line up
-						// clip to the sides to remove overlap; may not line up with a neibhgoring divider of a different type/width, but hopefully okay
-						for (unsigned d = 0; d < 2; ++d) {
-							if (c.d[!dim][d] != plot.d[!dim][d]) {c.d[!dim][d] -= (d ? 1.0 : -1.0)*hwidth;}
-						}
+				if (dim == shrink_dim) {
+					c.translate_dim(dim, (dir ? -1.0 : 1.0)*hwidth); // move inside the plot so that edges line up
+					// clip to the sides to remove overlap; may not line up with a neibhgoring divider of a different type/width, but hopefully okay
+					for (unsigned d = 0; d < 2; ++d) {
+						if (c.d[!dim][d] != plot.d[!dim][d]) {c.d[!dim][d] -= (d ? 1.0 : -1.0)*hwidth;}
 					}
-					if (!back_of_plot) { // check for overlap of other plot dividers to the left and right
-						cube_t test_cube(c);
-						test_cube.expand_by_xy(4.0*hwidth); // expand so that adjacency counts as intersection
-						bool overlaps(0);
+				}
+				if (!back_of_plot) { // check for overlap of other plot dividers to the left and right
+					cube_t test_cube(c);
+					test_cube.expand_by_xy(4.0*hwidth); // expand so that adjacency counts as intersection
+					bool overlaps(0);
 
-						for (auto d = (dividers.begin()+dividers_start); d != (dividers.begin()+prev_dividers_end) && !overlaps; ++d) {
-							overlaps |= (d->dim == bool(dim) && test_cube.contains_pt_xy(d->bcube.get_cube_center()));
-						}
-						if (overlaps) continue; // overlaps a previous divider, skip this one
+					for (auto d = (dividers.begin()+dividers_start); d != (dividers.begin()+prev_dividers_end) && !overlaps; ++d) {
+						overlaps |= (d->dim == bool(dim) && test_cube.contains_pt_xy(d->bcube.get_cube_center()));
 					}
-					divider_t divider(c, type, dim, dir, skip_dims);
-					add_obj_to_group(divider, divider.bcube, dividers, divider_groups, is_new_divider_tile);
-					colliders.push_back(divider.bcube);
-					blockers .push_back(divider.bcube);
-				} // for dir
-			} // for dim
-		} // for i
-	}
+					if (overlaps) continue; // overlaps a previous divider, skip this one
+				}
+				divider_t divider(c, type, dim, dir, skip_dims);
+				add_obj_to_group(divider, divider.bcube, dividers, divider_groups, is_new_tile);
+				colliders.push_back(divider.bcube);
+				blockers .push_back(divider.bcube);
+			} // for dir
+		} // for dim
+	} // for i
 }
 
 void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix) {
@@ -578,8 +577,10 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		unsigned const driveways_start(driveways.size());
 		if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
 		bcubes.insert(bcubes.end(), (driveways.begin() + driveways_start), driveways.end()); // driveways become blockers for other placed objects
+		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {place_plot_dividers(*i, bcubes, colliders, detail_rgen, is_new_tile, plot_subdiv_sz);} // before placing trees
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen);
-		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential, plot_subdiv_sz);
+		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
+
 		prev_tile_id = tile_id;
 	} // for i
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
