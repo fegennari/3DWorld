@@ -456,7 +456,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	bool const assign_sub_plots(is_residential && city_params.assign_house_plots);
 
-	if (plot_subdiv_sz > 0.0 && !plot.is_park) { // split into smaller plots for each house
+	// place dividers for residential plots
+	if (plot_subdiv_sz > 0.0 && !plot.is_park) {
 		vector<city_zone_t> sub_plots;
 		subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots);
 		float const sz_scale(0.06*city_params.road_width);
