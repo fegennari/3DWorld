@@ -2064,6 +2064,11 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 
 			// find best bathroom with no hard size constraints
 			if (can_be_bedroom_or_bathroom(*r, (num_floors-1))) { // use the top floor for the test since it's less restrictive than the ground floor; will be checked per-floor later
+				if (has_chimney && num_floors == 1) { // can't be a bathroom if there's a fireplace
+					cube_t test_cube(*r);
+					test_cube.expand_by_xy(floor_thickness);
+					if (r->intersects(get_fireplace())) continue;
+				}
 				float score(r->dx() + r->dy()); // starts as half the perimeter
 				score *= (1.0 + 10.0*(max(count_num_int_doors(*r), 1U) - 1U)); // multiply by a large value if there are mult doors so we only choose this if there are no alternatives
 				if (min_score == 0.0 || score < min_score) {cand_bathroom = (r - rooms.begin()); min_score = score;}
@@ -2260,7 +2265,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			bool is_office_bathroom(is_room_office_bathroom(*r, room_center.z, f)), has_fireplace(0);
 			blockers.clear(); // clear for this new room
 			
-			if (has_chimney && !is_basement && !must_be_bathroom && f == 0) { // handle fireplaces on the first floor
+			if (has_chimney && !is_basement && f == 0) { // handle fireplaces on the first floor
 				has_fireplace = maybe_add_fireplace_to_room(*r, blockers, room_center.z, room_id, tot_light_amt);
 			}
 			if (is_office_bathroom) { // bathroom is already assigned
