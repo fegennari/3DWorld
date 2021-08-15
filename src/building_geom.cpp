@@ -1198,46 +1198,71 @@ void add_cube_top(cube_t const &c, vector<tquad_with_ix_t> &tquads, unsigned typ
 	tquads.emplace_back(tquad, type);
 }
 
-bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen) {
+bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, int garage_room, rand_gen_t &rgen) {
 	cube_t c(part);
-	float const sz1(c.get_sz_dim(!dim)), sz2(c.get_sz_dim(dim));
+	float const sz1(c.get_sz_dim(!dim)), sz2(c.get_sz_dim(dim)), center(c.get_center_dim(!dim));
+	float const chimney_depth(0.03f*(sz1 + sz2)), window_vspace(get_window_vspace());
 	float shift(0.0);
 
 	if ((rgen.rand()%3) != 0) { // make the chimney non-centered 67% of the time
 		shift = sz1*rgen.rand_uniform(0.1, 0.25); // select a shift in +/- (0.1, 0.25) - no small offset from center
 		if (rgen.rand_bool()) {shift = -shift;}
 	}
-	float const center(c.get_center_dim(!dim) + shift);
-	float const chimney_height(rgen.rand_uniform(1.25, 1.5)*chimney_dz - 0.4f*abs(shift)), chimney_depth(0.03f*(sz1 + sz2));
+	float chimney_height(rgen.rand_uniform(1.25, 1.5)*chimney_dz);
 
 	if (rgen.rand()&3) { // chimney outside the bounds of the house, 75% of the time
 		float const hwidth(0.04*sz1);
-		set_wall_width(c, center, hwidth, !dim); // set chimney width
 		c.d[dim][!dir]  = c.d[dim][dir] + 0.001*(dir ? 1.0 : -1.0)*chimney_depth; // slight shift to avoid Z-fighting
 		c.d[dim][ dir] += (dir ? 1.0 : -1.0)*chimney_depth;
-		// add bottom section, which will be the outside of the fireplace
-		cube_t fplace(c);
-		c.z1() = fplace.z2() = c.z1() + 0.85*get_window_vspace(); // 85% of floor height
-		fplace.expand_in_dim(!dim, max(1.0f*hwidth, 0.6f*chimney_depth)); // widen for fireplace
-		// check if blocked by a door, and skip if it is
-		cube_t test_cube(fplace);
-		test_cube.expand_by_xy(0.5*hwidth);
 
-		for (auto d = doors.begin(); d != doors.end(); ++d) {
-			if (test_cube.intersects(d->get_bcube())) return 0; // failed to place chimney; is it better to choose a new chimney location in this case?
-		}
-		parts.push_back(fplace);
-		if (rgen.rand_bool()) {c.d[!dim][0] = fplace.d[!dim][0]; c.d[!dim][1] = fplace.d[!dim][1];} // widen chimney to include entire fireplace (for more modern houses)
-		else {add_cube_top(fplace, roof_tquads, (unsigned)tquad_with_ix_t::TYPE_CCAP);} // add top tquad - should this be sloped?
-		has_chimney = 1; // only used for exterior chimney
+		for (unsigned n = 0; n < 10; ++n) { // make up to 10 tries to place the chimney
+			set_wall_width(c, (center + shift), hwidth, !dim); // set chimney width
+			// add bottom section, which will be the outside of the fireplace
+			cube_t fplace(c);
+			fplace.z1() = part.z1();
+			fplace.z2() = c.z1() = part.z1() + 0.85*window_vspace; // 85% of floor height
+			fplace.expand_in_dim(!dim, max(1.0f*hwidth, 0.6f*chimney_depth)); // widen for fireplace
+			// check if blocked by a door, wall, stairs, or garage, and skip if it is
+			cube_t test_cube(fplace);
+			test_cube.expand_by_xy(0.5*hwidth);
+			bool bad_pos(0);
+			for (auto d = doors.begin(); d != doors.end() && !bad_pos; ++d) {bad_pos = test_cube.intersects(d->get_bcube());} // check doors
+
+			if (interior) { // check walls
+				for (auto w = interior->walls[!dim].begin(); w != interior->walls[!dim].end() && !bad_pos; ++w) {
+					if (w->z1() > fplace.z2() || w->z2() < fplace.z2()) continue; // not on the ground floor
+					bad_pos = test_cube.intersects(*w);
+				}
+				if (!bad_pos) { // check stairs
+					cube_t fireplace_ext(fplace);
+					fireplace_ext.d[dim][!dir] += (dir ? -1.0 : 1.0)*1.5*chimney_depth;
+					bad_pos = interior->is_blocked_by_stairs_or_elevator(fireplace_ext);
+				}
+				if (!bad_pos && has_int_garage) { // check garage, which shouldn't have a fireplace
+					assert(garage_room >= 0 && garage_room < (int)interior->rooms.size());
+					bad_pos = interior->rooms[garage_room].intersects(test_cube);
+				}
+			}
+			if (bad_pos) { // failed to place chimney
+				shift = sz1*rgen.rand_uniform(-0.3, 0.3); // try a new random position, with a bit more room to move
+				continue;
+			}
+			parts.push_back(fplace); // Note: invalidates part
+			if (rgen.rand_bool()) {c.d[!dim][0] = fplace.d[!dim][0]; c.d[!dim][1] = fplace.d[!dim][1];} // widen chimney to include entire fireplace (for more modern houses)
+			else {add_cube_top(fplace, roof_tquads, (unsigned)tquad_with_ix_t::TYPE_CCAP);} // add top tquad - should this be sloped?
+			has_chimney = 1; // only used for exterior chimney
+			break; // done
+		} // for n
+		if (!has_chimney) return 0; // failed to place
 	}
-	else { // chimney inside the bounds of the house
-		set_wall_width(c, center, 0.05*sz1, !dim); // set chimney width
+	else { // chimney inside the bounds of the house; placement can't fail
+		set_wall_width(c, (center + shift), 0.05*sz1, !dim); // set chimney width
 		c.d[dim][!dir]  = c.d[dim][dir] + (dir ? -1.0 : 1.0)*chimney_depth;
 		c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*sz2; // slight shift from edge of house to avoid z-fighting
 		c.z1() = c.z2();
 	}
-	c.z2() += max(chimney_height, 0.75f*get_window_vspace()); // make it at least 3/4 a story in height
+	chimney_height -= 0.4f*abs(shift); // lower it if it's not at the peak of the roof
+	c.z2() += max(chimney_height, 0.75f*window_vspace); // make it at least 3/4 a story in height
 	parts.push_back(c);
 	add_cube_top(c, roof_tquads, (unsigned)tquad_with_ix_t::TYPE_CCAP); // add top quad to cap chimney (also updates bcube to contain chimney)
 	return 1;
@@ -1435,11 +1460,12 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 	}
 	calc_bcube_from_parts(); // maybe calculate a tighter bounding cube
 	gen_interior(rgen, 0); // before adding door
+	int garage_room(-1); // unset
 
 	if (gen_door) {
 		if (!has_garage && (street_dir || (rand_num & 24))) { // attempt to add an interior garage when legal, always when along a street, else 75% of the time
 			bool gdim(0), gdir(0);
-			int const garage_room(maybe_assign_interior_garage(gdim, gdir));
+			garage_room = maybe_assign_interior_garage(gdim, gdir);
 
 			if (garage_room >= 0) { // assigned a garage
 				has_int_garage = 1;
@@ -1473,9 +1499,10 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				if (n+1 < 4) { // still invalid, regenerate interior
 					if (has_int_garage) { // must also remove garage, garage door, and driveway
 						assert(doors.size() == 1);
-						has_int_garage = 0;
 						driveway.set_to_zeros();
 						doors.pop_back();
+						has_int_garage = 0;
+						garage_room    = -1;
 					}
 					gen_interior(rgen, 0);
 				}
@@ -1569,7 +1596,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		bool dir(rgen.rand_bool());
 		if (two_parts && part.d[dim][dir] != bcube.d[dim][dir]) {dir ^= 1;} // force dir to be on the edge of the house bcube (not at a point interior to the house)
 		float const chimney_dz((hipped_roof[part_ix] ? 0.5 : 1.0)*roof_dz[part_ix]); // lower for hipped roof
-		add_chimney(part, dim, dir, chimney_dz, rgen); // Note: return value is ignored
+		add_chimney(part, dim, dir, chimney_dz, garage_room, rgen); // Note: return value is ignored
 	}
 	roof_type = ROOF_TYPE_PEAK; // peaked and hipped roofs are both this type
 	add_roof_to_bcube();

@@ -985,7 +985,7 @@ struct building_t : public building_geom_t {
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
 private:
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
-	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, rand_gen_t &rgen);
+	bool add_chimney(cube_t const &part, bool dim, bool dir, float chimney_dz, int garage_room, rand_gen_t &rgen);
 	void gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes);
 	void maybe_add_basement(rand_gen_t &rgen);
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;

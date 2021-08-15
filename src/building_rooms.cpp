@@ -767,7 +767,7 @@ bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &bl
 	// the code below should be run at most once per building
 	cube_t fireplace_ext(fireplace);
 	fireplace_ext.d[dim][!dir] = fireplace.d[dim][!dir] + 0.5*depth_signed; // extend out into the room even further for clearance
-	if (interior->is_blocked_by_stairs_or_elevator(fireplace_ext)) return 0; // blocked by stairs, don't add (would be more correct to relocate stairs)
+	if (interior->is_blocked_by_stairs_or_elevator(fireplace_ext)) return 0; // blocked by stairs, don't add (would be more correct to relocate stairs) - should no longer fail
 	fireplace.d[dim][dir] = room.d[dim][dir]; // re-align to room to remove any gap between the fireplace and the exterior wall
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	objs.emplace_back(fireplace, TYPE_FPLACE, room_id, dim, dir, 0, tot_light_amt);
