@@ -60,7 +60,9 @@ private:
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<cube_with_ix_t> bench_groups, planter_groups, fire_hydrant_groups, divider_groups; // index is last object in group
 	quad_batch_draw qbd;
+	vector<city_zone_t> sub_plots; // reused across calls
 	unsigned num_spaces, filled_spaces;
+	float plot_subdiv_sz;
 	
 	struct cube_by_x1 {
 		bool operator()(cube_t const &a, cube_t const &b) const {return (a.x1() < b.x1());}
@@ -71,14 +73,15 @@ private:
 	template<typename T> void add_obj_to_group(T const &obj, cube_t const &bcube, vector<T> &objs, vector<cube_with_ix_t> &groups, bool &is_new_tile);
 	template<typename T> void sort_grouped_objects(vector<T> &objs, vector<cube_with_ix_t> const &groups);
 	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile, bool is_residential);
-	void place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile, float plot_subdiv_sz);
+	void place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
 		draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0);
 public:
+	city_obj_placer_t() : num_spaces(0), filled_spaces(0), plot_subdiv_sz(0.0) {}
 	void clear();
-	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
-		unsigned city_id, bool have_cars, bool is_residential, float plot_subdiv_sz);
+	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
+	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential);
 	static bool subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, vect_city_zone_t &sub_plots);
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;

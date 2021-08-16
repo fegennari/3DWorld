@@ -464,10 +464,10 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 }
 
-void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile, float plot_subdiv_sz) {
+void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
 	if (plot.is_park) return; // no dividers in parks
 	assert(plot_subdiv_sz > 0.0);
-	vector<city_zone_t> sub_plots;
+	sub_plots.clear();
 	subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots);
 	if (sub_plots.size() <= 1) return; // nothing to divide
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
@@ -527,6 +527,12 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 	cube_t plot_z(plot);
 	plot_z.z1() = plot_z.z2() = plot.z2() + 0.0002*city_params.road_width; // shift slightly up to avoid Z-fighting
 	temp_cubes.clear();
+#if 0 // not yet working
+	sub_plots.clear();
+	if (plot_subdiv_sz > 0.0 && subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots)) {
+		for (auto p = sub_plots.begin(); p != sub_plots.end(); ++p) {add_house_driveways_for_plot(*p, temp_cubes);}
+	}
+#endif
 	add_house_driveways_for_plot(plot_z, temp_cubes);
 	for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {driveways.emplace_back(*i, plot_ix);}
 }
@@ -563,7 +569,7 @@ void city_obj_placer_t::clear() {
 }
 
 void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
-	unsigned city_id, bool have_cars, bool is_residential, float plot_subdiv_sz)
+	unsigned city_id, bool have_cars, bool is_residential)
 {
 	// Note: fills in plots.has_parking
 	//timer_t timer("Gen Parking Lots and Place Objects");
@@ -589,7 +595,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		unsigned const driveways_start(driveways.size());
 		if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
 		bcubes.insert(bcubes.end(), (driveways.begin() + driveways_start), driveways.end()); // driveways become blockers for other placed objects
-		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {place_plot_dividers(*i, bcubes, colliders, detail_rgen, is_new_tile, plot_subdiv_sz);} // before placing trees
+		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {place_plot_dividers(*i, bcubes, colliders, detail_rgen, is_new_tile);} // before placing trees
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
 		prev_tile_id = tile_id;
