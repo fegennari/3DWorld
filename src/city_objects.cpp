@@ -467,9 +467,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile, float plot_subdiv_sz) {
 	if (plot.is_park) return; // no dividers in parks
 	assert(plot_subdiv_sz > 0.0);
-	// FIXME: shorten to allow pedestrians to cross through the front of yards
 	vector<city_zone_t> sub_plots;
 	subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots);
+	if (sub_plots.size() <= 1) return; // nothing to divide
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
 	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
 	float const sz_scale(0.06*city_params.road_width);
@@ -481,7 +481,10 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 		// should we remove or move houses fences for divided sub-plots? I'm not sure how that would actually be possible at this point; or maybe skip dividers if the house has a fence?
 		plot_divider_type_t const &pdt(plot_divider_types[type]);
 		float const hwidth(0.5*sz_scale*pdt.wscale), z2(i->z1() + sz_scale*pdt.hscale);
+		float const shrink_border(0.15*city_params.road_width); // needed for pedestrians to move along the edge of the plot
 		unsigned const prev_dividers_end(dividers.size());
+		cube_t place_area(plot);
+		place_area.expand_by_xy(-shrink_border);
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
@@ -490,6 +493,7 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 				bool const back_of_plot(i->d[!dim][0] != plot.d[!dim][0] && i->d[!dim][1] != plot.d[!dim][1]); // back of the plot, opposite the street
 				unsigned const skip_dims(0); // can't make this (back_of_plot ? (1<<(1-dim)) : 0) because the edge may be showing at borders of different divider types
 				cube_t c(*i);
+				c.intersect_with_cube_xy(place_area);
 				c.z2() = z2;
 				set_wall_width(c, div_pos, hwidth, dim); // centered on the edge of the plot
 					
@@ -603,6 +607,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 }
 
 /*static*/ bool city_obj_placer_t::subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, vect_city_zone_t &sub_plots) {
+	if (min(plot.dx(), plot.dy()) < city_params.road_width) return 0; // plot is too small to divide
 	assert(plot_subdiv_sz > 0.0);
 	unsigned ndiv[2] = {0,0};
 	float spacing[2] = {0,0};
