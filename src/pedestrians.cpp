@@ -189,8 +189,16 @@ bool pedestrian_t::check_ped_ped_coll_stopped(vector<pedestrian_t> &peds, unsign
 	return 0;
 }
 
+point rand_xy_pt_on_cube_edge(cube_t const &c, float radius, rand_gen_t &rgen) {
+	bool const dim(rgen.rand_bool()), dir(rgen.rand_bool());
+	point pt;
+	pt[ dim] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*radius;
+	pt[!dim] = rgen.rand_uniform(c.d[!dim][0]+radius, c.d[!dim][1]-radius);
+	pt.z     = c.z1();
+	return pt;
+}
 bool pedestrian_t::try_place_in_plot(cube_t const &plot_cube, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen) {
-	pos    = rand_xy_pt_in_cube(plot_cube, radius, rgen);
+	pos    = rand_xy_pt_on_cube_edge(plot_cube, radius, rgen);
 	pos.z += radius; // place on top of the plot
 	plot   = next_plot = dest_plot = plot_id; // set next_plot and dest_plot as well so that they're valid for the first frame
 	bool temp_at_dest(0); // we don't want to set at_dest from this call
