@@ -359,10 +359,10 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 	unsigned num_trees(city_params.max_trees_per_plot);
 	if (plot.is_park) {num_trees += (rgen.rand() % city_params.max_trees_per_plot);} // allow up to twice as many trees in parks
 	assert(buildings_end <= blockers.size());
-	temp_blockers = blockers;
 	// shrink non-building blockers (parking lots, driveways, fences, walls, hedges) to allow trees to hang over them; okay if they become denormalized
-	float const non_buildings_overlap(0.75*radius);
-	for (auto i = temp_blockers.begin()+buildings_end; i != temp_blockers.end(); ++i) {i->expand_by_xy(-non_buildings_overlap);}
+	unsigned const input_blockers_end(blockers.size());
+	float const non_buildings_overlap(0.7*radius);
+	for (auto i = blockers.begin()+buildings_end; i != blockers.end(); ++i) {i->expand_by_xy(-non_buildings_overlap);}
 
 	for (unsigned n = 0; n < num_trees; ++n) {
 		bool const is_sm_tree((rgen.rand()%3) == 0); // 33% of the time is a pine/palm tree
@@ -373,7 +373,7 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 		bool const allow_bush(plot.is_park && max_unique_trees == 0); // can't place bushes if tree instances are enabled (generally true) because bushes may be instanced in non-parks
 		float const bldg_extra_radius(is_palm ? 0.5f*radius : 0.0f); // palm trees are larger and must be kept away from buildings, but can overlap with other trees
 		point pos;
-		if (!try_place_obj(plot, temp_blockers, rgen, (spacing + bldg_extra_radius), (radius - bldg_extra_radius), 10, pos)) continue; // 10 tries per tree, extra spacing for palm trees
+		if (!try_place_obj(plot, blockers, rgen, (spacing + bldg_extra_radius), (radius - bldg_extra_radius), 10, pos)) continue; // 10 tries per tree, extra spacing for palm trees
 		place_tree(pos, radius, ttype, colliders, tree_pos, allow_bush, is_sm_tree); // size is randomly selected by the tree generator using default values; allow bushes in parks
 		if (plot.is_park) continue; // skip row logic and just place trees randomly throughout the park
 		// now that we're here, try to place more trees at this same distance from the road in a row
@@ -384,10 +384,11 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 		for (; n < city_params.max_trees_per_plot; ++n) {
 			pos[dim] += step;
 			if (pos[dim] < plot.d[dim][0]+radius || pos[dim] > plot.d[dim][1]-radius) break; // outside place area
-			if (!check_pt_and_place_blocker(pos, temp_blockers, (spacing + bldg_extra_radius), (spacing - bldg_extra_radius))) break; // placement failed
+			if (!check_pt_and_place_blocker(pos, blockers, (spacing + bldg_extra_radius), (spacing - bldg_extra_radius))) break; // placement failed
 			place_tree(pos, radius, ttype, colliders, tree_pos, plot.is_park, is_sm_tree); // use same tree type
 		} // for n
 	} // for n
+	for (auto i = blockers.begin()+buildings_end; i != blockers.begin()+input_blockers_end; ++i) {i->expand_by_xy(non_buildings_overlap);} // undo initial expand
 }
 
 template<typename T> void city_obj_placer_t::add_obj_to_group(T const &obj, cube_t const &bcube, vector<T> &objs, vector<cube_with_ix_t> &groups, bool &is_new_tile) {

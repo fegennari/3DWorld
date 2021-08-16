@@ -60,7 +60,6 @@ private:
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<cube_with_ix_t> bench_groups, planter_groups, fire_hydrant_groups, divider_groups; // index is last object in group
 	quad_batch_draw qbd;
-	vect_cube_t temp_blockers;
 	unsigned num_spaces, filled_spaces;
 	
 	struct cube_by_x1 {
