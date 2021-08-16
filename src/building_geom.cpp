@@ -1688,11 +1688,12 @@ bool extend_existing_driveway(cube_t const &driveway, cube_t const &plot, cube_t
 
 void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir) {
 	float dmin(0.0);
+	bool dmin_set(0);
 
 	for (unsigned d = 0; d < 2; ++d) { // find closest edge of *i to edge of bcube
 		for (unsigned e = 0; e < 2; ++e) {
 			float const dist(fabs(inner.d[d][e] - outer.d[d][e]));
-			if (dmin == 0.0 || dist < dmin) {dim = d; dir = e; dmin = dist;}
+			if (!dmin_set || dist < dmin) {dim = d; dir = e; dmin = dist; dmin_set = 1;}
 		}
 	}
 }
