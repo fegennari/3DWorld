@@ -55,10 +55,7 @@ cube_t pedestrian_t::get_bcube() const {
 	return c;
 }
 
-float get_sidewalk_width(cube_t const &plot_bcube) { // Note: technically should depend on road_width rather than plot size?
-	float const plot_sz(max(plot_bcube.dx(), plot_bcube.dy())); // plot is almost square, so this is close enough
-	return -STREETLIGHT_DIST_FROM_PLOT_EDGE*plot_sz + streetlight_ns::get_streetlight_pole_radius();
-}
+float get_sidewalk_width() {return SIDEWALK_WIDTH*city_params.road_width;} // approx sidewalk width in the texture
 
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
 	if (in_building) return 0; // not implemented yet
@@ -86,7 +83,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 
 bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) const {
 	if (!in_the_road) return 0;
-	float const expand(get_sidewalk_width(plot_bcube) + radius); // max dist from plot edge where a collision can occur
+	float const expand(get_sidewalk_width() + radius); // max dist from plot edge where a collision can occur
 	cube_t pbce(plot_bcube), npbce(next_plot_bcube);
 	pbce.expand_by_xy(expand);
 	npbce.expand_by_xy(expand);
@@ -455,7 +452,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 
 bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t *dbg_cubes) const {
 	if (!in_the_road || speed < TOLERANCE) return 1;
-	float const sw_width(get_sidewalk_width(plot_bcube));
+	float const sw_width(get_sidewalk_width());
 	if (!plot_bcube.closest_dist_xy_less_than(pos, sw_width)) return 1; // too far into the road to turn back
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)

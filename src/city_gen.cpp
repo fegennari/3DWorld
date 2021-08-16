@@ -1205,7 +1205,8 @@ class city_road_gen_t : public road_gen_base_t {
 		void add_streetlights() {
 			streetlights.clear();
 			streetlights.reserve(4*plots.size()); // one on each side of each plot
-			float const b(STREETLIGHT_DIST_FROM_PLOT_EDGE), a(1.0 - b); // spacing from light pos to plot edge (placed just outside the plot, so spacing is negative)
+			// spacing from light pos to plot edge, relative to plot size (placed just outside the plot, so spacing is negative)
+			float const b(-(SIDEWALK_WIDTH*city_params.road_width - streetlight_ns::get_streetlight_pole_radius())/city_params.road_spacing), a(1.0 - b);
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				streetlights.emplace_back(point((a*i->x1() + b*i->x2()), (0.75*i->y1() + 0.25*i->y2()), i->z2()), -plus_x); // left   edge one   quarter  up

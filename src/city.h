@@ -38,7 +38,7 @@ float const STREETLIGHT_ON_RAND  = 0.05;
 float const TUNNEL_WALL_THICK    = 0.25; // relative to radius
 float const TRACKS_WIDTH         = 0.5; // relative to road width
 float const CAR_SPEED_SCALE      = 0.001;
-float const STREETLIGHT_DIST_FROM_PLOT_EDGE = -0.015; // relative to plot width
+float const SIDEWALK_WIDTH       = 0.1; // relative to road texture
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
 
 float const PED_WIDTH_SCALE  = 0.5; // ratio of collision radius to model radius (x/y)
