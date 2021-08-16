@@ -502,9 +502,19 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	}
 	else if (!has_dest_bldg && !has_dest_car) {ped_mgr.choose_dest_building_or_parked_car(*this);}
 	if (at_crosswalk) {ped_mgr.mark_crosswalk_in_use(*this);}
-	// movement logic
+#if 0
+	// this approach is more visually pleasing because pedestrians will actually walk on the edges of the roads on what appears to be the sidewalks;
+	// unfortunately, they also run into streetlights, traffic lights, and each other in this narrow area
+	cube_t plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
+	cube_t next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
+	float const sidewalk_width(get_sidewalk_width());
+	plot_bcube.expand_by_xy(sidewalk_width);
+	next_plot_bcube.expand_by_xy(sidewalk_width);
+#else
 	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
+#endif
+	// movement logic
 	point const prev_pos(pos); // assume this ped starts out not colliding
 	move(ped_mgr, plot_bcube, next_plot_bcube, delta_dir);
 
