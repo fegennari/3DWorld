@@ -815,7 +815,7 @@ struct building_t : public building_geom_t {
 	int8_t open_door_ix, basement_part_ix;
 	bool is_house, has_chimney, has_garage, has_shed, has_int_garage, has_courtyard, has_complex_floorplan, has_helipad, has_ac;
 	colorRGBA side_color, roof_color, detail_color, door_color, wall_color;
-	cube_t bcube, pri_hall, driveway, porch;
+	cube_t bcube, pri_hall, driveway, porch, assigned_plot;
 	vect_cube_t parts, fences;
 	vect_roof_obj_t details; // cubes on the roof - antennas, AC units, etc.
 	vector<tquad_with_ix_t> roof_tquads, doors;

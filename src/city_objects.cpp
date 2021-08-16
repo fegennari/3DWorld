@@ -527,12 +527,6 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 	cube_t plot_z(plot);
 	plot_z.z1() = plot_z.z2() = plot.z2() + 0.0002*city_params.road_width; // shift slightly up to avoid Z-fighting
 	temp_cubes.clear();
-#if 0 // not yet working
-	sub_plots.clear();
-	if (plot_subdiv_sz > 0.0 && subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots)) {
-		for (auto p = sub_plots.begin(); p != sub_plots.end(); ++p) {add_house_driveways_for_plot(*p, temp_cubes);}
-	}
-#endif
 	add_house_driveways_for_plot(plot_z, temp_cubes);
 	for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {driveways.emplace_back(*i, plot_ix);}
 }

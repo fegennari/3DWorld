@@ -1843,6 +1843,7 @@ public:
 					city_zone_t const &plot(city_plot_bcubes[plot_ix]);
 					pos_range = plot;
 					center.z  = plot.zval; // optimization: take zval from plot rather than calling get_exact_zval()
+					b.assigned_plot = plot; // only really needed for residential sub-plots
 					if (residential) {pref_dir = plot.street_dir;}
 					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
 					if (plot.capacity == 1) {border_scale *= 2.0;} // use smaller border scale since the individual building plots should handle borders

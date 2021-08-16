@@ -1707,6 +1707,13 @@ unsigned get_street_dir(cube_t const &inner, cube_t const &outer) {
 bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &driveways, unsigned building_ix) const {
 	if (!is_house) return 0;
 	assert(plot.contains_cube_xy(bcube));
+	cube_t sub_plot(plot);
+
+	if (!assigned_plot.is_all_zeros()) { // check for residential sub-plot (could also be the same as plot)
+		assert(plot.contains_cube_xy(assigned_plot));
+		assert(assigned_plot.contains_cube_xy(bcube));
+		sub_plot = assigned_plot;
+	}
 	static vect_cube_t bcubes, avoid; // reused across calls
 	bcubes.clear();
 	get_building_bcubes(plot, bcubes); // Note: could be passed in by the caller, but requires many changes
@@ -1728,7 +1735,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 		avoid.push_back(ac_unit);
 	}
 	bool dim(0), dir(0);
-	get_closest_dim_dir_xy(bcube, plot, dim, dir);
+	get_closest_dim_dir_xy(bcube, plot, dim, dir); // must use larger plot, not sub_plot
 
 	for (unsigned n = 0; n < 2; ++n) { // check the closest dim, then the second closest dim
 		cube_t dw(plot); // copy zvals and dim/dir from plot
@@ -1748,7 +1755,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 		for (unsigned S = 0; S < 2; ++S) {
 			bool const s(bool(S) ^ rgen.rand_bool()); // not biased
 			set_wall_width(dw, (bcube.d[!dim][s] + (s ? 1.0 : -1.0)*hwidth), hwidth, !dim);
-			if (!plot.contains_cube_xy(dw)) continue; // extends outside the plot
+			if (!sub_plot.contains_cube_xy(dw)) continue; // extends outside the plot
 			if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked (don't need to check parts or chimney/fireplace here)
 			if (has_ac && dw.intersects_xy(ac_unit)) continue;
 			if (s) {dw.translate_dim(2, 0.001*hwidth);} // hack to prevent z-fighting when driveways overlap on the left and right of adjacent houses
