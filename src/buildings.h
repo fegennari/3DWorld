@@ -104,9 +104,11 @@ struct city_zone_t : public cube_t {
 	bool is_park, is_residential;
 	uint8_t street_dir; // encoded as 2*dim + dir + 1; 0 is unassigned
 	unsigned nbuildings, capacity; // in number of buildings; 0 is unlimited
-	city_zone_t() : zval(0.0), is_park(0), is_residential(0), street_dir(0), nbuildings(0), capacity(0) {}
-	city_zone_t(cube_t const &c, float zval_=0.0, bool p=0, bool r=0, unsigned sdir=0, unsigned cap=0) :
-		cube_t(c), zval(zval_), is_park(p), is_residential(r), street_dir(sdir), nbuildings(0), capacity(cap) {}
+	int parent_plot_ix; // if this is a sub-plot; -1 otherwise
+
+	city_zone_t() : zval(0.0), is_park(0), is_residential(0), street_dir(0), nbuildings(0), capacity(0), parent_plot_ix(-1) {}
+	city_zone_t(cube_t const &c, float zval_=0.0, bool p=0, bool r=0, unsigned sdir=0, unsigned cap=0, int ppix=-1) :
+		cube_t(c), zval(zval_), is_park(p), is_residential(r), street_dir(sdir), nbuildings(0), capacity(cap), parent_plot_ix(ppix) {}
 	bool is_full() const {return (capacity > 0 && nbuildings >= capacity);}
 };
 

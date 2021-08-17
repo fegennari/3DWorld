@@ -1818,7 +1818,7 @@ public:
 			bool success(0);
 
 			for (unsigned n = 0; n < params.num_tries; ++n) { // 10 tries to find a non-overlapping building placement
-				unsigned plot_ix(0), pref_dir(0);
+				unsigned plot_ix(0), city_plot_ix(0), pref_dir(0);
 				bool residential(0);
 
 				if (use_city_plots) { // select a random plot, if available
@@ -1844,6 +1844,7 @@ public:
 					pos_range = plot;
 					center.z  = plot.zval; // optimization: take zval from plot rather than calling get_exact_zval()
 					b.assigned_plot = plot; // only really needed for residential sub-plots
+					city_plot_ix    = ((plot.parent_plot_ix >= 0) ? plot.parent_plot_ix : plot_ix);
 					if (residential) {pref_dir = plot.street_dir;}
 					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
 					if (plot.capacity == 1) {border_scale *= 2.0;} // use smaller border scale since the individual building plots should handle borders
@@ -1881,8 +1882,8 @@ public:
 				if (!use_city_plots) {b.gen_rotation(rgen);} // city plots are Manhattan (non-rotated) - must rotate before bcube checks below
 				if (is_tile && !pos_range.contains_cube_xy(b.bcube)) continue; // not completely contained in tile
 				if (start_in_inf_terrain && b.bcube.contains_pt_xy(get_camera_pos())) continue; // don't place a building over the player appearance spot
-				if (!check_valid_building_placement(params, b, avoid_bcubes, avoid_bcubes_bcube,
-					min_building_spacing, plot_ix, non_city_only, use_city_plots, check_plot_coll)) continue; // check overlap
+				if (!check_valid_building_placement(params, b, avoid_bcubes, avoid_bcubes_bcube, min_building_spacing,
+					city_plot_ix, non_city_only, use_city_plots, check_plot_coll)) continue; // check overlap (use city plot_ix rather than sub-plot ix)
 				++num_gen;
 				if (!use_city_plots) {center.z = get_exact_zval(center.x+xlate.x, center.y+xlate.y);} // only calculate when needed
 				float const z_sea_level(center.z - def_water_level);

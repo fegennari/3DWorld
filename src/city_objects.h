@@ -82,7 +82,7 @@ public:
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential);
-	static bool subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, vect_city_zone_t &sub_plots);
+	static bool subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, unsigned parent_plot_ix, vect_city_zone_t &sub_plots);
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;

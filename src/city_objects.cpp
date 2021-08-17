@@ -469,7 +469,7 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 	if (plot.is_park) return; // no dividers in parks
 	assert(plot_subdiv_sz > 0.0);
 	sub_plots.clear();
-	subdivide_plot_for_residential(plot, plot_subdiv_sz, sub_plots);
+	subdivide_plot_for_residential(plot, plot_subdiv_sz, 0, sub_plots); // parent_plot_ix=0, not needed
 	if (sub_plots.size() <= 1) return; // nothing to divide
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
 	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
@@ -607,7 +607,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	}
 }
 
-/*static*/ bool city_obj_placer_t::subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, vect_city_zone_t &sub_plots) {
+/*static*/ bool city_obj_placer_t::subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, unsigned parent_plot_ix, vect_city_zone_t &sub_plots) {
 	if (min(plot.dx(), plot.dy()) < city_params.road_width) return 0; // plot is too small to divide
 	assert(plot_subdiv_sz > 0.0);
 	unsigned ndiv[2] = {0,0};
@@ -628,7 +628,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			if (x > 0 && y > 0 && x+1 < ndiv[0] && y+1 < ndiv[1]) continue; // interior plot, no road access, skip
 			float const x1(plot.x1() + spacing[0]*x), x2((x+1 == ndiv[0]) ? plot.x2() : (x1 + spacing[0])); // last sub-plot must end exactly at plot x2
 			cube_t const c(x1, x2, y1, y2, plot.z1(), plot.z2());
-			sub_plots.emplace_back(c, 0.0, 0, 1, get_street_dir(c, plot), 1); // cube, zval, park, res, sdir, capacity; Note: will favor x-dim for corner plots
+			sub_plots.emplace_back(c, 0.0, 0, 1, get_street_dir(c, plot), 1, parent_plot_ix); // cube, zval, park, res, sdir, capacity, ppix; Note: will favor x-dim for corner plots
 		}
 	} // for y
 	return 1;
