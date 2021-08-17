@@ -490,6 +490,38 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 	anim_time += timestep*speed;
 }
 
+void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t const &colliders, vector3d &dest_pos) {
+	vect_cube_t &avoid(ped_mgr.path_finder.get_avoid_vector());
+	get_avoid_cubes(ped_mgr, colliders, dest_pos, avoid);
+
+	if (ped_mgr.is_city_residential(city)) {
+		if (plot == dest_plot) { // plot contains our destination
+			if (city_params.assign_house_plots) { // we can only walk through our own sub-plot
+				// TODO: add plot_bcube minus our plot to colliders
+				if (has_dest_bldg) {
+					//cube_t const dest_bcube(get_building_bcube(dest_bldg)); // need the sub-plot, not the building, and also need this to work for has_dest_car
+				}
+			} // else we can walk through this plot
+		}
+		else { // not our destination plot, we can't walk through any residential properties
+			cube_t avoid_area(plot_bcube);
+			avoid_area.expand_by_xy(-get_sidewalk_width());
+			auto i(avoid.begin()), o(i);
+
+			for (; i != avoid.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
+				if (!avoid_area.contains_cube_xy(*i)) {*(o++) = *i;}
+			}
+			avoid.erase(o, avoid.end());
+			avoid.push_back(avoid_area);
+		}
+	} // else we can walk through this plot
+	target_pos = all_zeros;
+	cube_t union_plot_bcube(plot_bcube);
+	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
+	// run path finding between pos and dest_pos using avoid cubes
+	if (ped_mgr.path_finder.run(pos, dest_pos, union_plot_bcube, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
+}
+
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (destroyed)    return; // destroyed
 	if (speed == 0.0) return; // not moving, no update needed
@@ -551,14 +583,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 				update_path = (((frame_counter + ssn) & 63) == 0);
 			}
 			// run only every several frames to reduce runtime; also run when at dest and when close to the current target pos or at the destination
-			if (at_dest || update_path) {
-				get_avoid_cubes(ped_mgr, colliders, dest_pos, ped_mgr.path_finder.get_avoid_vector());
-				target_pos = all_zeros;
-				cube_t union_plot_bcube(plot_bcube);
-				union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
-				// run path finding between pos and dest_pos using avoid cubes
-				if (ped_mgr.path_finder.run(pos, dest_pos, union_plot_bcube, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
-			}
+			if (at_dest || update_path) {run_path_finding(ped_mgr, plot_bcube, next_plot_bcube, colliders, dest_pos);}
 			else if (target_valid()) {dest_pos = target_pos;} // use previous frame's dest if valid
 			vector3d dest_dir((dest_pos.x - pos.x), (dest_pos.y - pos.y), 0.0); // zval=0, not normalized
 			float const dmag(dest_dir.xy_mag());

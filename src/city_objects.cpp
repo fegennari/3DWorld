@@ -25,6 +25,7 @@ plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
 	plot_divider_type_t("hedges.jpg",  1.00, 1.6, GRAY )}; // hedge
 
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
+float get_sidewalk_width();
 
 
 bool city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
@@ -481,7 +482,7 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 		// should we remove or move houses fences for divided sub-plots? I'm not sure how that would actually be possible at this point; or maybe skip dividers if the house has a fence?
 		plot_divider_type_t const &pdt(plot_divider_types[type]);
 		float const hwidth(0.5*sz_scale*pdt.wscale), z2(i->z1() + sz_scale*pdt.hscale);
-		float const shrink_border(0.15*city_params.road_width); // needed for pedestrians to move along the edge of the plot
+		float const shrink_border(get_sidewalk_width()); // needed for pedestrians to move along the edge of the plot
 		unsigned const prev_dividers_end(dividers.size());
 		cube_t place_area(plot);
 		place_area.expand_by_xy(-shrink_border);

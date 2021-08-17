@@ -730,6 +730,8 @@ struct pedestrian_t : public waiting_obj_t {
 	void destroy() {destroyed = 1;} // that's it, no other effects
 	bool is_close_to_player() const;
 	void debug_draw(ped_manager_t &ped_mgr) const;
+private:
+	void run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t const &colliders, vector3d &dest_pos);
 };
 
 unsigned const MAX_PATH_DEPTH = 32;
@@ -806,6 +808,7 @@ public:
 	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
+	bool is_city_residential(unsigned city_ix) const;
 	car_manager_t const &get_car_manager() const {return car_manager;}
 	void choose_new_ped_plot_pos(pedestrian_t &ped);
 	bool check_isec_sphere_coll(pedestrian_t const &ped) const;

@@ -674,6 +674,7 @@ class city_road_gen_t : public road_gen_base_t {
 			is_residential = city_params.residential_mode; // TODO: make this a random probability?
 			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
 		}
+		bool get_is_residential() const {return is_residential;}
 		cube_t const &get_bcube() const {return bcube;}
 		cube_t const &get_plot_bcube(unsigned plot_ix) const {assert(plot_ix < plots.size()); return plots[plot_ix];}
 		void set_bcube(cube_t const &bcube_) {bcube = bcube_;}
@@ -2325,6 +2326,7 @@ public:
 		if (road_networks.empty()) return 0; // no cities to add peds to
 		return road_network_t::gen_ped_pos(ped, rgen, road_networks);
 	}
+	bool is_city_residential(unsigned city_id) const {return get_city(city_id).get_is_residential();}
 	cube_t const &get_plot_from_global_id(unsigned city_id, unsigned global_plot_id) const {return get_city(city_id).get_plot_from_global_id(global_plot_id);}
 	unsigned get_next_plot(unsigned city_id, unsigned plot, unsigned dest_plot, int exclude_plot) const {return get_city(city_id).get_next_plot(plot, dest_plot, exclude_plot);}
 	bool choose_dest_building(unsigned city_id, unsigned &plot, unsigned &building, rand_gen_t &rgen) const {return get_city(city_id).choose_dest_building(plot, building, rgen);}
@@ -2431,6 +2433,7 @@ void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point con
 // Note: these ped_manager_t functions are defined here because they use road_gen
 cube_t const &ped_manager_t::get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_plot_from_global_id(city_ix, plot_ix);}
 road_isec_t const &ped_manager_t::get_car_isec(car_base_t const &car) const {return road_gen.get_car_isec(car);}
+bool ped_manager_t::is_city_residential(unsigned city_ix) const {return road_gen.is_city_residential(city_ix);}
 
 cube_t ped_manager_t::get_expanded_city_bcube_for_peds(unsigned city_ix) const {
 	cube_t bcube(road_gen.get_city_bcube(city_ix));
