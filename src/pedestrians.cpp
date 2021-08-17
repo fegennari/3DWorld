@@ -17,6 +17,7 @@ extern city_params_t city_params;
 
 
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
+void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
 
 string pedestrian_t::get_name() const {
 	rand_gen_t rgen;
@@ -66,7 +67,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 	
 	if (next_plot_bcube.contains_pt_xy(pos)) {
 		ped_mgr.move_ped_to_next_plot(*this);
-		next_plot = ped_mgr.get_next_plot(*this);
+		next_plot = ped_mgr.get_next_plot(*this); // FIXME: update next_plot_bcube?
 		return 1;
 	}
 	cube_t union_plot_bcube(plot_bcube);
@@ -495,17 +496,32 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 	get_avoid_cubes(ped_mgr, colliders, dest_pos, avoid);
 
 	if (ped_mgr.is_city_residential(city)) {
-		if (plot == dest_plot) { // plot contains our destination
-			if (city_params.assign_house_plots) { // we can only walk through our own sub-plot
-				// TODO: add plot_bcube minus our plot to colliders
-				if (has_dest_bldg) {
-					//cube_t const dest_bcube(get_building_bcube(dest_bldg)); // need the sub-plot, not the building, and also need this to work for has_dest_car
+		cube_t avoid_area(plot_bcube);
+		avoid_area.expand_by_xy(-get_sidewalk_width());
+
+		if (plot == dest_plot && plot_bcube == next_plot_bcube) { // plot contains our destination, and the plot bcube has been updated
+			if (city_params.assign_house_plots && (has_dest_bldg || has_dest_car)) { // we can only walk through our own sub-plot
+				// FIXME: still doesn't work due to non-convex rectangular region
+				cube_t dest_cube;
+				if      (has_dest_bldg) {dest_cube = get_building_bcube(dest_bldg);}
+				else if (has_dest_car ) {dest_cube.set_from_sphere(dest_car_center, city_params.get_nom_car_size().x);} // somewhat approximate/conservative
+				assert(dest_cube.intersects_xy(plot_bcube)); // or contains, or is that too strong?
+				bool dim(0), dir(0);
+				get_closest_dim_dir_xy(dest_cube, plot_bcube, dim, dir);
+				dest_cube.d[dim][dir] = plot_bcube.d[dim][dir]; // extend out to the plot so that there's a path to walk from the road to the building/car
+				dest_cube.expand_by_xy(2.0*radius); // add a bit of extra room
+				auto i(avoid.begin()), o(i);
+				unsigned const sz1(avoid.size());
+
+				for (; i != avoid.end(); ++i) { // remove any cubes contained in the plot, since they're redundant; leave cubes intersecting the dest cube since they can still collide
+					if (!avoid_area.contains_cube_xy(*i) || dest_cube.intersects_xy(*i)) {*(o++) = *i;}
 				}
+				avoid.erase(o, avoid.end());
+				unsigned const sz2(avoid.size());
+				subtract_cube_from_cube(plot_bcube, dest_cube, avoid); // add in the plot with the destination area removed
 			} // else we can walk through this plot
 		}
 		else { // not our destination plot, we can't walk through any residential properties
-			cube_t avoid_area(plot_bcube);
-			avoid_area.expand_by_xy(-get_sidewalk_width());
 			auto i(avoid.begin()), o(i);
 
 			for (; i != avoid.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
