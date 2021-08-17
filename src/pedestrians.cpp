@@ -57,6 +57,7 @@ cube_t pedestrian_t::get_bcube() const {
 }
 
 float get_sidewalk_width() {return SIDEWALK_WIDTH*city_params.road_width;} // approx sidewalk width in the texture
+float get_sidewalk_walkable_area() {return 0.5*get_sidewalk_width();} // half, to avoid streetlights and traffic lights
 
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
 	if (in_building) return 0; // not implemented yet
@@ -84,7 +85,7 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 
 bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) const {
 	if (!in_the_road) return 0;
-	float const expand(get_sidewalk_width() + radius); // max dist from plot edge where a collision can occur
+	float const expand((get_sidewalk_width() - get_sidewalk_walkable_area()) + radius); // max dist from plot edge where a collision can occur
 	cube_t pbce(plot_bcube), npbce(next_plot_bcube);
 	pbce.expand_by_xy(expand);
 	npbce.expand_by_xy(expand);
@@ -462,7 +463,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t *dbg_cubes) const {
 	if (!in_the_road || speed < TOLERANCE) return 1;
 	float const sw_width(get_sidewalk_width());
-	if (!plot_bcube.closest_dist_xy_less_than(pos, sw_width)) return 1; // too far into the road to turn back
+	if (!plot_bcube.closest_dist_xy_less_than(pos, sw_width)) return 1; // too far into the road to turn back (should this use get_sidewalk_walkable_area()?)
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
 	if (!union_plot_bcube.contains_pt_xy(pos)) return 1; // not crossing between plots - must be in the road, go back to the sidewalk
@@ -538,6 +539,17 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 	if (ped_mgr.path_finder.run(pos, dest_pos, union_plot_bcube, 0.1*radius, dest_pos)) {target_pos = dest_pos;}
 }
 
+void pedestrian_t::get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, cube_t &plot_bcube, cube_t &next_plot_bcube) const {
+	// this approach is more visually pleasing because pedestrians will actually walk on the edges of the roads on what appears to be the sidewalks;
+	// unfortunately, they also run into streetlights, traffic lights, and each other in this narrow area
+	// FIXME: move traffic lights
+	plot_bcube      = ped_mgr.get_city_plot_bcube_for_peds(city, plot);
+	next_plot_bcube = ped_mgr.get_city_plot_bcube_for_peds(city, next_plot);
+	float const sidewalk_width(get_sidewalk_walkable_area());
+	plot_bcube.expand_by_xy(sidewalk_width);
+	next_plot_bcube.expand_by_xy(sidewalk_width);
+}
+
 void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir) {
 	if (destroyed)    return; // destroyed
 	if (speed == 0.0) return; // not moving, no update needed
@@ -550,14 +562,9 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	}
 	else if (!has_dest_bldg && !has_dest_car) {ped_mgr.choose_dest_building_or_parked_car(*this);}
 	if (at_crosswalk) {ped_mgr.mark_crosswalk_in_use(*this);}
-#if 0
-	// this approach is more visually pleasing because pedestrians will actually walk on the edges of the roads on what appears to be the sidewalks;
-	// unfortunately, they also run into streetlights, traffic lights, and each other in this narrow area
-	cube_t plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
-	cube_t next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
-	float const sidewalk_width(get_sidewalk_width());
-	plot_bcube.expand_by_xy(sidewalk_width);
-	next_plot_bcube.expand_by_xy(sidewalk_width);
+#if 1
+	cube_t plot_bcube, next_plot_bcube;
+	get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube);
 #else
 	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
@@ -1029,8 +1036,13 @@ void end_sphere_draw(bool &in_sphere_draw) {
 }
 
 void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
+#if 1
+	cube_t plot_bcube, next_plot_bcube;
+	get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube);
+#else
 	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
 	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
+#endif
 	point const orig_dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr));
 	point dest_pos(orig_dest_pos);
 	if (dest_pos == pos) return; // no path, nothing to draw
@@ -1042,7 +1054,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
 	vector<point> path;
-	unsigned const ret(path_finder.run(pos, dest_pos, union_plot_bcube, 0.05*radius, dest_pos)); // 0=no path, 1=standard path, 2=init intersection path
+	unsigned const ret(path_finder.run(pos, dest_pos, union_plot_bcube, 0.05*radius, dest_pos)); // 0=failed, 1=valid path, 2=init contained, 3=straight path (no collisions)
 	if (ret == 0) return; // no path found
 	bool const at_dest_plot(plot == dest_plot), complete(path_finder.found_complete_path());
 	colorRGBA line_color(at_dest_plot ? RED : YELLOW); // paths
