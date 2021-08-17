@@ -1767,7 +1767,7 @@ public:
 
 		if (city_only) {
 			unsigned num_residential(0), num_non_residential(0);
-			get_city_plot_bcubes(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
+			get_city_plot_zones(city_plot_bcubes); // Note: assumes approx equal area for placement distribution
 
 			for (auto i = city_plot_bcubes.begin(); i != city_plot_bcubes.end(); ++i) {
 				if (i->is_park) continue; // skip parks

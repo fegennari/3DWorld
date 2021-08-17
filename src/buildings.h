@@ -1191,7 +1191,7 @@ inline point get_camera_building_space() {return (get_camera_pos() - get_tiled_t
 inline void set_cube_zvals(cube_t &c, float z1, float z2) {c.z1() = z1; c.z2() = z2;}
 inline float get_tc_leg_width(cube_t const &c, float width) {return 0.5f*width*(c.dx() + c.dy());} // make legs square
 
-void get_city_plot_bcubes(vect_city_zone_t &bcubes);
+void get_city_plot_zones(vect_city_zone_t &zones);
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
 cube_t get_building_lights_bcube();

@@ -1239,23 +1239,21 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		float get_plot_subdiv_sz() const {return ((is_residential && city_params.assign_house_plots) ? 0.8*get_max_house_size() : 0.0);}
 
-		void get_plot_bcubes(vect_city_zone_t &bcubes) const { // Note: z-values of cubes indicate building height ranges
+		void get_plot_zones(vect_city_zone_t &zones) const { // Note: z-values of cubes indicate building height ranges
 			if (plots.empty()) return; // connector road city
-			unsigned const start(bcubes.size());
+			unsigned const start(zones.size());
 			float const plot_subdiv_sz(get_plot_subdiv_sz());
 
-			for (auto i = plots.begin(); i != plots.end(); ++i) {
+			for (auto i = plots.begin(); i != plots.end(); ++i) { // capture all plot zones, even parks (needed for pedestrians)
 				if (plot_subdiv_sz > 0.0 && !i->is_park) { // split into smaller plots for each house
-					if (city_obj_placer.subdivide_plot_for_residential(*i, plot_subdiv_sz, bcubes)) continue;
+					if (city_obj_placer.subdivide_plot_for_residential(*i, plot_subdiv_sz, zones)) continue;
 				}
-				bcubes.push_back(*i); // capture all plot bcubes, even parks (needed for pedestrians)
-				bcubes.back().is_park        = i->is_park;
-				bcubes.back().is_residential = is_residential; // constant per-city
+				zones.emplace_back(*i, 0.0, i->is_park, is_residential, 0, 0); // cube, zval, park, res, sdir, capacity
 			} // for i
 			vector3d const city_radius(0.5*bcube.get_size());
 			point const city_center(bcube.get_cube_center());
 
-			for (auto i = bcubes.begin()+start; i != bcubes.end(); ++i) { // set zvals to control building height range, higher in city center
+			for (auto i = zones.begin()+start; i != zones.end(); ++i) { // set zvals to control building height range, higher in city center
 				point const center(i->get_cube_center());
 				float const dx(fabs(center.x - city_center.x)/city_radius.x); // 0 at city center, 1 at city perimeter
 				float const dy(fabs(center.y - city_center.y)/city_radius.y); // 0 at city center, 1 at city perimeter
@@ -2253,8 +2251,8 @@ public:
 		if (connector_only) return;
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_road_bcubes(bcubes);}
 	}
-	void get_all_plot_bcubes(vect_city_zone_t &bcubes) const {
-		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_bcubes(bcubes);}
+	void get_all_plot_zones(vect_city_zone_t &zones) const {
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_zones(zones);}
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
 		return global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges_and_tunnels);
@@ -2623,7 +2621,7 @@ public:
 	}
 	void get_city_bcubes(vect_cube_t &bcubes) const {return road_gen.get_city_bcubes(bcubes);}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
-	void get_all_plot_bcubes(vect_city_zone_t &bcubes) {road_gen.get_all_plot_bcubes(bcubes);} // caches plot_id_offset, so non-const
+	void get_all_plot_zones(vect_city_zone_t &zones) {road_gen.get_all_plot_zones(zones);} // caches plot_id_offset, so non-const
 
 	// return: 0=no coll, 1=plot coll, 2=road coll, 3=both plot and road coll
 	unsigned check_city_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels, bool ret_first_coll, unsigned check_mask) const {
@@ -2731,7 +2729,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
 void get_city_bcubes(vect_cube_t &bcubes) {city_gen.get_city_bcubes(bcubes);}
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
-void get_city_plot_bcubes(vect_city_zone_t &bcubes) {city_gen.get_all_plot_bcubes(bcubes);}
+void get_city_plot_zones(vect_city_zone_t &zones) {city_gen.get_all_plot_zones(zones);}
 void next_city_frame(bool use_threads_2_3) {city_gen.next_frame(use_threads_2_3);}
 void draw_cities(int shadow_only, int reflection_pass, int trans_op_mask, vector3d const &xlate) {city_gen.draw(shadow_only, reflection_pass, trans_op_mask, xlate);}
 void draw_city_roads(int trans_op_mask, vector3d const &xlate) {city_gen.draw_roads(trans_op_mask, xlate);}
