@@ -256,6 +256,7 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 	unsigned dest_cix(dir ? cix2 : cix1);
 	bool const move_dir((((dest_cix+1)&3) == (dir ? cix1 : cix2)) ? 0 : 1); // CCW/CW based on which dir moves around the other side of the cube
 	if (check_line_clip_xy(*p, ecorners[dest_cix], c.d)) return 0; // something bad happened (floating-point error?), fail
+	//if (!line_int_cubes_xy(*p, ecorners[dest_cix], avoid)) return 0; // TODO: should we test other avoid cubes that may be blocking the path?
 	if (!add_pt_to_path(ecorners[dest_cix], path)) return 0; // expanded corner
 
 	if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // no path to dest, add another point
@@ -499,7 +500,9 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 
 	if (ped_mgr.is_city_residential(city)) {
 		cube_t avoid_area(plot_bcube);
-		avoid_area.expand_by_xy(-get_sidewalk_width());
+		avoid_area.expand_by_xy(-get_inner_sidewalk_width()); // shrink to plot interior
+		static vect_cube_t plot_avoid; // reused across peds
+		plot_avoid.clear();
 
 		if (plot == dest_plot && plot_bcube == next_plot_bcube) { // plot contains our destination, and the plot bcube has been updated
 			if (city_params.assign_house_plots && (has_dest_bldg || has_dest_car)) { // we can only walk through our own sub-plot
@@ -512,25 +515,21 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 				get_closest_dim_dir_xy(dest_cube, plot_bcube, dim, dir);
 				dest_cube.d[dim][dir] = plot_bcube.d[dim][dir]; // extend out to the plot so that there's a path to walk from the road to the building/car
 				dest_cube.expand_by_xy(2.0*radius); // add a bit of extra room
-				auto i(avoid.begin()), o(i);
-				unsigned const sz1(avoid.size());
+				subtract_cube_from_cube(plot_bcube, dest_cube, plot_avoid); // add in the plot with the destination area removed with highest priority
 
-				for (; i != avoid.end(); ++i) { // remove any cubes contained in the plot, since they're redundant; leave cubes intersecting the dest cube since they can still collide
-					if (!avoid_area.contains_cube_xy(*i) || dest_cube.intersects_xy(*i)) {*(o++) = *i;}
+				for (auto i = avoid.begin(); i != avoid.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
+					if (!avoid_area.contains_cube_xy(*i) || dest_cube.intersects_xy(*i)) {plot_avoid.push_back(*i);}
 				}
-				avoid.erase(o, avoid.end());
-				unsigned const sz2(avoid.size());
-				subtract_cube_from_cube(plot_bcube, dest_cube, avoid); // add in the plot with the destination area removed
+				plot_avoid.swap(avoid);
 			} // else we can walk through this plot
 		}
 		else { // not our destination plot, we can't walk through any residential properties
-			auto i(avoid.begin()), o(i);
+			plot_avoid.push_back(avoid_area); // this is the highest priority
 
-			for (; i != avoid.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
-				if (!avoid_area.contains_cube_xy(*i)) {*(o++) = *i;}
+			for (auto i = avoid.begin(); i != avoid.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
+				if (!avoid_area.contains_cube_xy(*i)) {plot_avoid.push_back(*i);}
 			}
-			avoid.erase(o, avoid.end());
-			avoid.push_back(avoid_area);
+			plot_avoid.swap(avoid);
 		}
 	} // else we can walk through this plot
 	target_pos = all_zeros;
