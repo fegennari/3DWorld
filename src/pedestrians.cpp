@@ -56,8 +56,9 @@ cube_t pedestrian_t::get_bcube() const {
 	return c;
 }
 
-float get_sidewalk_width() {return SIDEWALK_WIDTH*city_params.road_width;} // approx sidewalk width in the texture
-float get_sidewalk_walkable_area() {return 0.5*get_sidewalk_width();} // half, to avoid streetlights and traffic lights
+float get_sidewalk_width        () {return SIDEWALK_WIDTH*city_params.road_width;} // approx sidewalk width in the texture
+float get_sidewalk_walkable_area() {return 0.6*get_sidewalk_width();} // walkable area of sidewalk on the street side; 60%, to avoid streetlights and traffic lights
+float get_inner_sidewalk_width  () {return 0.9*get_sidewalk_width();} // walkable area of sidewalk on the plot side (not a sidewalk texture in residential neighborhoods)
 
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
 	if (in_building) return 0; // not implemented yet
@@ -562,13 +563,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	}
 	else if (!has_dest_bldg && !has_dest_car) {ped_mgr.choose_dest_building_or_parked_car(*this);}
 	if (at_crosswalk) {ped_mgr.mark_crosswalk_in_use(*this);}
-#if 1
 	cube_t plot_bcube, next_plot_bcube;
 	get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube);
-#else
-	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
-	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
-#endif
 	// movement logic
 	point const prev_pos(pos); // assume this ped starts out not colliding
 	move(ped_mgr, plot_bcube, next_plot_bcube, delta_dir);
@@ -879,7 +875,7 @@ void ped_manager_t::next_frame() {
 
 	// Note: peds and peds_b can be processed in parallel, but that doesn't seem to make a significant difference in framerate
 	if (!peds.empty()) {
-		//timer_t timer("Ped Update"); // ~3.8ms for 10K peds
+		//timer_t timer("Ped Update"); // ~4.2ms for 10K peds
 		// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
 #pragma omp critical(modify_car_data)
 		car_manager.extract_car_data(cars_by_city);
@@ -1036,13 +1032,8 @@ void end_sphere_draw(bool &in_sphere_draw) {
 }
 
 void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
-#if 1
 	cube_t plot_bcube, next_plot_bcube;
 	get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube);
-#else
-	cube_t const &plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, plot));
-	cube_t const &next_plot_bcube(ped_mgr.get_city_plot_bcube_for_peds(city, next_plot));
-#endif
 	point const orig_dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr));
 	point dest_pos(orig_dest_pos);
 	if (dest_pos == pos) return; // no path, nothing to draw
