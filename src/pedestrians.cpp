@@ -449,7 +449,7 @@ bool pedestrian_t::choose_alt_next_plot(ped_manager_t const &ped_mgr) {
 }
 
 void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders,
-	cube_t const &plot_bcube, cube_t const &next_plot_bcube, point const &dest_pos, vect_cube_t &avoid) const
+	cube_t const &plot_bcube, cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid) const
 {
 	avoid.clear();
 	if (in_building) return; // not yet implemented, but if it was we would get the nearby building walls, objects, etc.
@@ -458,27 +458,34 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	if (ped_mgr.is_city_residential(city)) {
 		cube_t avoid_area(plot_bcube);
 		avoid_area.expand_by_xy(-get_inner_sidewalk_width()); // shrink to plot interior
+		bool avoid_entire_plot(0);
 
 		if (plot == dest_plot && plot_bcube == next_plot_bcube) { // plot contains our destination, and the plot bcube has been updated
 			if (city_params.assign_house_plots && (has_dest_bldg || has_dest_car)) { // we can only walk through our own sub-plot
-				// FIXME: still doesn't work due to non-convex rectangular region
 				cube_t dest_cube;
 				if      (has_dest_bldg) {dest_cube = get_building_bcube(dest_bldg);}
 				else if (has_dest_car ) {dest_cube.set_from_sphere(dest_car_center, city_params.get_nom_car_size().x);} // somewhat approximate/conservative
 				assert(dest_cube.intersects_xy(plot_bcube)); // or contains, or is that too strong?
 				bool dim(0), dir(0);
 				get_closest_dim_dir_xy(dest_cube, plot_bcube, dim, dir);
-				dest_cube.d[dim][dir] = plot_bcube.d[dim][dir]; // extend out to the plot so that there's a path to walk from the road to the building/car
-				dest_cube.expand_by_xy(2.0*radius); // add a bit of extra room
-				subtract_cube_from_cube(plot_bcube, dest_cube, avoid); // add in the plot with the destination area removed with highest priority
+				// update dest_pos to use the proxy point along the sidewalk across from our destination as the next path point
+				point new_dest_pos(dest_pos);
+				new_dest_pos[ dim] = plot_bcube.d[dim][dir];
+				new_dest_pos[!dim] = dest_cube.get_center_dim(!dim);
+				point const dest_center(dest_cube.get_cube_center());
 
-				for (auto i = colliders.begin(); i != colliders.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
-					if (!avoid_area.contains_cube_xy(*i) || dest_cube.intersects_xy(*i)) {avoid.push_back(*i); avoid.back().expand_by(expand);}
+				if (p2p_dist_xy_sq(pos, dest_center) < 1.05*p2p_dist_xy_sq(new_dest_pos, dest_center)) {
+					// if we're equal to or closer to the distance from our true destination than the proxy point, then proceed to the destination
 				}
-				return; // done
+				else { // walk around the plot
+					dest_pos = new_dest_pos;
+					avoid_entire_plot = 1;
+				}
 			} // else we can walk through this plot
 		}
-		else { // not our destination plot, we can't walk through any residential properties
+		else {avoid_entire_plot = 1;} // not our destination plot, we can't walk through any residential properties
+
+		if (avoid_entire_plot) {
 			avoid.push_back(avoid_area); // this is the highest priority
 
 			for (auto i = colliders.begin(); i != colliders.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
@@ -542,7 +549,6 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 void pedestrian_t::get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, cube_t &plot_bcube, cube_t &next_plot_bcube) const {
 	// this approach is more visually pleasing because pedestrians will actually walk on the edges of the roads on what appears to be the sidewalks;
 	// unfortunately, they also run into streetlights, traffic lights, and each other in this narrow area
-	// FIXME: move traffic lights
 	plot_bcube      = ped_mgr.get_city_plot_bcube_for_peds(city, plot);
 	next_plot_bcube = ped_mgr.get_city_plot_bcube_for_peds(city, next_plot);
 	float const sidewalk_width(get_sidewalk_walkable_area());

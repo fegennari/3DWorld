@@ -724,7 +724,7 @@ struct pedestrian_t : public waiting_obj_t {
 	bool try_place_in_plot(cube_t const &plot_cube, vect_cube_t const &colliders, unsigned plot_id, rand_gen_t &rgen);
 	point get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr) const;
 	bool choose_alt_next_plot(ped_manager_t const &ped_mgr);
-	void get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, cube_t const &plot_bcube, cube_t const &next_plot_bcube, point const &dest_pos, vect_cube_t &avoid) const;
+	void get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, cube_t const &plot_bcube, cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid) const;
 	void next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, rand_gen_t &rgen, float delta_dir);
 	void register_at_dest();
 	void destroy() {destroyed = 1;} // that's it, no other effects
