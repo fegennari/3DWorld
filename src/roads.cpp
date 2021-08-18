@@ -5,7 +5,7 @@
 #include "lightmap.h"
 
 float const STREETLIGHT_BEAMWIDTH       = 0.25;
-float const SLIGHT_DIST_TO_CORNER_SCALE = 2.0;
+float const SLIGHT_DIST_TO_CORNER_SCALE = 3.0; // larger is closer to the road surface
 
 extern bool tt_fire_button_down;
 extern int frame_counter, game_mode, display_mode;
