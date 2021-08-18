@@ -448,17 +448,52 @@ bool pedestrian_t::choose_alt_next_plot(ped_manager_t const &ped_mgr) {
 	return 1; // success
 }
 
-void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders, point const &dest_pos, vect_cube_t &avoid) const {
+void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders,
+	cube_t const &plot_bcube, cube_t const &next_plot_bcube, point const &dest_pos, vect_cube_t &avoid) const
+{
 	avoid.clear();
 	if (in_building) return; // not yet implemented, but if it was we would get the nearby building walls, objects, etc.
-	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
 	float const expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
+
+	if (ped_mgr.is_city_residential(city)) {
+		cube_t avoid_area(plot_bcube);
+		avoid_area.expand_by_xy(-get_inner_sidewalk_width()); // shrink to plot interior
+
+		if (plot == dest_plot && plot_bcube == next_plot_bcube) { // plot contains our destination, and the plot bcube has been updated
+			if (city_params.assign_house_plots && (has_dest_bldg || has_dest_car)) { // we can only walk through our own sub-plot
+				// FIXME: still doesn't work due to non-convex rectangular region
+				cube_t dest_cube;
+				if      (has_dest_bldg) {dest_cube = get_building_bcube(dest_bldg);}
+				else if (has_dest_car ) {dest_cube.set_from_sphere(dest_car_center, city_params.get_nom_car_size().x);} // somewhat approximate/conservative
+				assert(dest_cube.intersects_xy(plot_bcube)); // or contains, or is that too strong?
+				bool dim(0), dir(0);
+				get_closest_dim_dir_xy(dest_cube, plot_bcube, dim, dir);
+				dest_cube.d[dim][dir] = plot_bcube.d[dim][dir]; // extend out to the plot so that there's a path to walk from the road to the building/car
+				dest_cube.expand_by_xy(2.0*radius); // add a bit of extra room
+				subtract_cube_from_cube(plot_bcube, dest_cube, avoid); // add in the plot with the destination area removed with highest priority
+
+				for (auto i = colliders.begin(); i != colliders.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
+					if (!avoid_area.contains_cube_xy(*i) || dest_cube.intersects_xy(*i)) {avoid.push_back(*i); avoid.back().expand_by(expand);}
+				}
+				return; // done
+			} // else we can walk through this plot
+		}
+		else { // not our destination plot, we can't walk through any residential properties
+			avoid.push_back(avoid_area); // this is the highest priority
+
+			for (auto i = colliders.begin(); i != colliders.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
+				if (!avoid_area.contains_cube_xy(*i)) {avoid.push_back(*i); avoid.back().expand_by(expand);}
+			}
+			return; // done
+		}
+	} // else we can walk through this plot
+	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
 	expand_cubes_by_xy(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
 	if (plot == dest_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
 	size_t const num_building_cubes(avoid.size());
 	vector_add_to(colliders, avoid);
-	if (plot == dest_plot && has_dest_car ) {remove_cube_if_contains_pt_xy(avoid, dest_pos, num_building_cubes);} // exclude our dest car, we do want to collide with it
+	if (plot == dest_plot && has_dest_car) {remove_cube_if_contains_pt_xy(avoid, dest_pos, num_building_cubes);} // exclude our dest car, we do want to collide with it
 	for (auto i = avoid.begin()+num_building_cubes; i != avoid.end(); ++i) {i->expand_by_xy(expand);} // expand colliders as well
 }
 
@@ -496,42 +531,7 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 
 void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t const &colliders, vector3d &dest_pos) {
 	vect_cube_t &avoid(ped_mgr.path_finder.get_avoid_vector());
-	get_avoid_cubes(ped_mgr, colliders, dest_pos, avoid);
-
-	if (ped_mgr.is_city_residential(city)) {
-		cube_t avoid_area(plot_bcube);
-		avoid_area.expand_by_xy(-get_inner_sidewalk_width()); // shrink to plot interior
-		static vect_cube_t plot_avoid; // reused across peds
-		plot_avoid.clear();
-
-		if (plot == dest_plot && plot_bcube == next_plot_bcube) { // plot contains our destination, and the plot bcube has been updated
-			if (city_params.assign_house_plots && (has_dest_bldg || has_dest_car)) { // we can only walk through our own sub-plot
-				// FIXME: still doesn't work due to non-convex rectangular region
-				cube_t dest_cube;
-				if      (has_dest_bldg) {dest_cube = get_building_bcube(dest_bldg);}
-				else if (has_dest_car ) {dest_cube.set_from_sphere(dest_car_center, city_params.get_nom_car_size().x);} // somewhat approximate/conservative
-				assert(dest_cube.intersects_xy(plot_bcube)); // or contains, or is that too strong?
-				bool dim(0), dir(0);
-				get_closest_dim_dir_xy(dest_cube, plot_bcube, dim, dir);
-				dest_cube.d[dim][dir] = plot_bcube.d[dim][dir]; // extend out to the plot so that there's a path to walk from the road to the building/car
-				dest_cube.expand_by_xy(2.0*radius); // add a bit of extra room
-				subtract_cube_from_cube(plot_bcube, dest_cube, plot_avoid); // add in the plot with the destination area removed with highest priority
-
-				for (auto i = avoid.begin(); i != avoid.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
-					if (!avoid_area.contains_cube_xy(*i) || dest_cube.intersects_xy(*i)) {plot_avoid.push_back(*i);}
-				}
-				plot_avoid.swap(avoid);
-			} // else we can walk through this plot
-		}
-		else { // not our destination plot, we can't walk through any residential properties
-			plot_avoid.push_back(avoid_area); // this is the highest priority
-
-			for (auto i = avoid.begin(); i != avoid.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
-				if (!avoid_area.contains_cube_xy(*i)) {plot_avoid.push_back(*i);}
-			}
-			plot_avoid.swap(avoid);
-		}
-	} // else we can walk through this plot
+	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid);
 	target_pos = all_zeros;
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube); // this is the area the ped is constrained to (both plots + road in between)
@@ -1040,7 +1040,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	bool const safe_to_cross(check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube, &dbg_cubes));
 	if (!safe_to_cross) {assert(!dbg_cubes.empty());} // must find a blocking car
 	path_finder_t path_finder(1); // debug=1
-	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), dest_pos, path_finder.get_avoid_vector());
+	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), plot_bcube, next_plot_bcube, dest_pos, path_finder.get_avoid_vector());
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
 	vector<point> path;
