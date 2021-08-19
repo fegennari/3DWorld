@@ -1748,12 +1748,13 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 		dw.d[dim][!dir] = bcube.d[dim][!dir]; // extend up to far side of house
 		float const length(dw.get_sz_dim(dim)), min_length(3.0*hwidth);
 		assert(length > 0.0);
+		bool const first_side(rgen.rand_bool()); // not biased
 
 		if (rgen.rand_bool() && length > min_length) { // shorten a random amount if it's long enough
 			dw.d[dim][!dir] -= (dir ? -1.0 : 1.0)*min((length - min_length), hwidth*rgen.rand_uniform(1.0, 4.0));
 		}
 		for (unsigned S = 0; S < 2; ++S) {
-			bool const s(bool(S) ^ rgen.rand_bool()); // not biased
+			bool const s(bool(S) ^ first_side);
 			set_wall_width(dw, (bcube.d[!dim][s] + (s ? 1.0 : -1.0)*hwidth), hwidth, !dim);
 			if (!sub_plot.contains_cube_xy(dw)) continue; // extends outside the plot
 			if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked (don't need to check parts or chimney/fireplace here)
@@ -1768,7 +1769,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 			dir  = (bcube.get_center_dim(dim) > plot.get_center_dim(dim)); // choose the closer dir
 		}
 	} // for n
-	return 0; // failed to add driveway
+	return 0; // failed to add driveway; this is rare, but can happen with a house that's close to the road, close to the plot edge on one side, and has an AC unit on the other side
 }
 
 void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses only
