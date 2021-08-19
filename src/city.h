@@ -295,8 +295,8 @@ struct driveway_t : public cube_t {
 
 struct road_plot_t : public cube_t {
 	uint8_t xpos, ypos; // position within the city grid
-	bool has_parking, is_park;
-	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_) : cube_t(c), xpos(xpos_), ypos(ypos_), has_parking(0), is_park(0) {}
+	bool is_residential, has_parking, is_park;
+	road_plot_t(cube_t const &c, uint8_t xpos_, uint8_t ypos_, bool is_res=0) : cube_t(c), xpos(xpos_), ypos(ypos_), is_residential(is_res), has_parking(0), is_park(0) {}
 	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, ar, ar);}
 };
 
@@ -806,7 +806,7 @@ public:
 	// for use in pedestrian_t, mostly for collisions and path finding
 	path_finder_t path_finder;
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
-	cube_t const &get_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
+	road_plot_t const &get_city_plot_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	bool is_city_residential(unsigned city_ix) const;

@@ -454,8 +454,9 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	avoid.clear();
 	if (in_building) return; // not yet implemented, but if it was we would get the nearby building walls, objects, etc.
 	float const expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
+	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 
-	if (ped_mgr.is_city_residential(city)) {
+	if (cur_plot.is_residential && !cur_plot.is_park) { // apply special restrictions when walking through a residential block
 		cube_t avoid_area(plot_bcube);
 		avoid_area.expand_by_xy(-get_inner_sidewalk_width()); // shrink to plot interior
 		bool avoid_entire_plot(0);
@@ -491,7 +492,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			return; // done
 		}
 	} // else we can walk through this plot
-	get_building_bcubes(ped_mgr.get_city_plot_bcube_for_peds(city, plot), avoid);
+	get_building_bcubes(cur_plot, avoid);
 	expand_cubes_by_xy(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
 	if (plot == dest_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
@@ -546,8 +547,8 @@ void pedestrian_t::run_path_finding(ped_manager_t &ped_mgr, cube_t const &plot_b
 void pedestrian_t::get_plot_bcubes_inc_sidewalks(ped_manager_t const &ped_mgr, cube_t &plot_bcube, cube_t &next_plot_bcube) const {
 	// this approach is more visually pleasing because pedestrians will actually walk on the edges of the roads on what appears to be the sidewalks;
 	// unfortunately, they also run into streetlights, traffic lights, and each other in this narrow area
-	plot_bcube      = ped_mgr.get_city_plot_bcube_for_peds(city, plot);
-	next_plot_bcube = ped_mgr.get_city_plot_bcube_for_peds(city, next_plot);
+	plot_bcube      = ped_mgr.get_city_plot_for_peds(city, plot);
+	next_plot_bcube = ped_mgr.get_city_plot_for_peds(city, next_plot);
 	float const sidewalk_width(get_sidewalk_walkable_area());
 	plot_bcube.expand_by_xy(sidewalk_width);
 	next_plot_bcube.expand_by_xy(sidewalk_width);
@@ -1143,7 +1144,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 
 				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow at below half draw distance
 					float const ao_radius(0.6*ped.radius);
-					float const zval(get_city_plot_bcube_for_peds(ped.city, ped.plot).z2() + 0.02*ped.radius); // at the feet
+					float const zval(get_city_plot_for_peds(ped.city, ped.plot).z2() + 0.02*ped.radius); // at the feet
 					point pao[4];
 					
 					for (unsigned n = 0; n < 4; ++n) {
