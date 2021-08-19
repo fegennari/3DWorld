@@ -25,6 +25,7 @@ plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
 	plot_divider_type_t("hedges.jpg",  1.00, 1.6, GRAY )}; // hedge
 
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
+float get_sidewalk_width();
 float get_inner_sidewalk_width();
 
 
@@ -415,7 +416,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 
 	// place fire_hydrants; don't add fire hydrants in parks
 	if (!plot.is_park) {
-		float const radius(0.04*car_length), height(0.18*car_length), dist_from_road(radius);
+		// we want the fire hydrant on the edge of the sidewalk next to the road, not next to the plot; this makes it outside the plot itself
+		float const radius(0.04*car_length), height(0.18*car_length), dist_from_road(-0.5*radius - get_sidewalk_width());
 		point pos(0.0, 0.0, plot.z2()); // XY will be assigned below
 
 		for (unsigned dim = 0; dim < 2; ++dim) {
@@ -575,6 +577,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	detail_rgen.set_state(3145739*(city_id+1), 1572869*(city_id+1));
 	if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0); tree_placer.begin_block(1);} // both small and large trees
 	bool const add_parking_lots(have_cars && !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
+	float const sidewalk_width(get_sidewalk_width());
 	uint64_t prev_tile_id(0);
 
 	for (auto i = plots.begin(); i != plots.end(); ++i) {
@@ -589,7 +592,17 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		if (add_parking_lots && !i->is_park) {i->has_parking = gen_parking_lots_for_plot(*i, cars, city_id, plot_id, bcubes, colliders, rgen);}
 		unsigned const driveways_start(driveways.size());
 		if (is_residential) {add_house_driveways(*i, temp_cubes, detail_rgen, plot_id);}
-		bcubes.insert(bcubes.end(), (driveways.begin() + driveways_start), driveways.end()); // driveways become blockers for other placed objects
+
+		// driveways become blockers for other placed objects; make sure they extend into the road so that they intersect any placed streetlights or fire hydrants
+		for (auto j = driveways.begin()+driveways_start; j != driveways.end(); ++j) {
+			cube_t dw(*j);
+
+			for (unsigned d = 0; d < 2; ++d) {
+				if      (dw.d[d][0] == i->d[d][0]) {dw.d[d][0] -= sidewalk_width;}
+				else if (dw.d[d][1] == i->d[d][1]) {dw.d[d][1] += sidewalk_width;}
+			}
+			bcubes.push_back(dw);
+		} // for j
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {place_plot_dividers(*i, bcubes, colliders, detail_rgen, is_new_tile);} // before placing trees
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
