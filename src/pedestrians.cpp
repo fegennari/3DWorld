@@ -468,17 +468,14 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				assert(dest_cube.intersects_xy(plot_bcube)); // or contains, or is that too strong?
 				bool dim(0), dir(0);
 				get_closest_dim_dir_xy(dest_cube, plot_bcube, dim, dir);
-				// update dest_pos to use the proxy point along the sidewalk across from our destination as the next path point
-				point new_dest_pos(dest_pos);
-				new_dest_pos[ dim] = plot_bcube.d[dim][dir];
-				new_dest_pos[!dim] = dest_cube.get_center_dim(!dim);
-				point const dest_center(dest_cube.get_cube_center());
+				cube_t approach_area(dest_cube);
+				approach_area.d[dim][dir] = plot_bcube.d[dim][dir]; // expand out to the plot
+				approach_area.expand_by_xy(radius); // add a small fudge factor
 
-				if (p2p_dist_xy_sq(pos, dest_center) < 1.05*p2p_dist_xy_sq(new_dest_pos, dest_center)) {
-					// if we're equal to or closer to the distance from our true destination than the proxy point, then proceed to the destination
-				}
-				else { // walk around the plot
-					dest_pos = new_dest_pos;
+				if (!approach_area.contains_pt(pos)) { // not in approach area - walk around the plot
+					// update dest_pos to use the proxy point along the sidewalk across from our destination as the next path point
+					dest_pos[ dim]    = plot_bcube.d[dim][dir];
+					dest_pos[!dim]    = dest_cube.get_center_dim(!dim);
 					avoid_entire_plot = 1;
 				}
 			} // else we can walk through this plot
