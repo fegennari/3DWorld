@@ -85,6 +85,9 @@ void create_sky_vis_zval_texture(unsigned &tid);
 void set_fill_mode() {
 	glPolygonMode(GL_FRONT_AND_BACK, ((draw_model == 0) ? GL_FILL : GL_LINE));
 }
+void ensure_outlined_polygons() {
+	if (draw_model == 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);}
+}
 void ensure_filled_polygons() {
 	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);} // always filled
 }

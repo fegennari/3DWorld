@@ -91,6 +91,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 // function prototypes - draw_world
 void set_fill_mode();
 void ensure_filled_polygons();
+void ensure_outlined_polygons();
 void reset_fill_mode();
 int get_universe_ambient_light(bool for_universe_draw);
 void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader=NULL);
@@ -220,7 +221,7 @@ void disable_flares();
 void draw_tquad(float xsize, float ysize, float z, int prim_type=GL_TRIANGLE_FAN);
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z, int prim_type=GL_TRIANGLE_FAN);
 int get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]);
-void draw_simple_cube(cube_t const &c, bool texture, unsigned dim_mask=0xFF);
+void draw_simple_cube(cube_t const &c, bool texture=0, unsigned dim_mask=0xFF);
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, float texture_scale=1.0,
 	bool proportional_texture=0, vector3d const *const view_dir=NULL, unsigned dim_mask=0xFF, bool swap_y_st=0);
 void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);

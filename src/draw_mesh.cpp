@@ -490,7 +490,7 @@ void display_mesh(bool shadow_pass, bool reflection_pass) { // fast array versio
 			disable_blend();
 		}
 		else {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			ensure_outlined_polygons();
 			s.begin_color_only_shader(BLUE);
 			vector<vert_wrap_t> verts;
 
