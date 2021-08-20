@@ -223,7 +223,6 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 		car.cur_seg = (unsigned short)parking_lots.size(); // store parking lot index in cur_seg
 		parking_lots.push_back(park);
 		bcubes.push_back(park); // add to list of blocker bcubes so that no later parking lots overlap this one
-		//colliders.push_back(park); // added per-filled space below
 		//parking_lots.back().expand_by_xy(0.5*pad_dist); // re-add half the padding for drawing (breaks texture coord alignment)
 		unsigned const nspaces(park.row_sz*park.num_rows);
 		num_spaces += nspaces;
@@ -344,7 +343,7 @@ bool try_place_obj(cube_t const &plot, vect_cube_t &blockers, rand_gen_t &rgen, 
 }
 void place_tree(point const &pos, float radius, int ttype, vect_cube_t &colliders, vector<point> &tree_pos, bool allow_bush, bool is_sm_tree) {
 	tree_placer.add(pos, 0, ttype, allow_bush, is_sm_tree); // use same tree type
-	cube_t bcube; bcube.set_from_sphere(pos, 0.1*radius); // use 10% of the placement radius for collision
+	cube_t bcube; bcube.set_from_sphere(pos, 0.15*radius); // use 15% of the placement radius for collision (trunk + planter)
 	bcube.z2() += radius; // increase cube height
 	colliders.push_back(bcube);
 	tree_pos.push_back(pos);
@@ -484,7 +483,7 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 		// should we remove or move houses fences for divided sub-plots? I'm not sure how that would actually be possible at this point; or maybe skip dividers if the house has a fence?
 		plot_divider_type_t const &pdt(plot_divider_types[type]);
 		float const hwidth(0.5*sz_scale*pdt.wscale), z2(i->z1() + sz_scale*pdt.hscale);
-		float const shrink_border(1.1*get_inner_sidewalk_width()); // needed for pedestrians to move along the edge of the plot; slightly larger to prevent collisions
+		float const shrink_border(1.5*get_inner_sidewalk_width()); // needed for pedestrians to move along the edge of the plot; slightly larger to prevent collisions
 		unsigned const prev_dividers_end(dividers.size());
 		cube_t place_area(plot);
 		place_area.expand_by_xy(-shrink_border);

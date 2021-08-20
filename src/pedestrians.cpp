@@ -57,8 +57,8 @@ cube_t pedestrian_t::get_bcube() const {
 }
 
 float get_sidewalk_width        () {return SIDEWALK_WIDTH*city_params.road_width;} // approx sidewalk width in the texture
-float get_sidewalk_walkable_area() {return 0.6*get_sidewalk_width();} // walkable area of sidewalk on the street side; 60%, to avoid streetlights and traffic lights
-float get_inner_sidewalk_width  () {return 0.9*get_sidewalk_width();} // walkable area of sidewalk on the plot side (not a sidewalk texture in residential neighborhoods)
+float get_sidewalk_walkable_area() {return 0.65*get_sidewalk_width();} // walkable area of sidewalk on the street side; 65%, to avoid streetlights and traffic lights
+float get_inner_sidewalk_width  () {return 1.00*get_sidewalk_width();} // walkable area of sidewalk on the plot side (not a sidewalk texture in residential neighborhoods)
 
 bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
 	if (in_building) return 0; // not implemented yet
@@ -448,17 +448,22 @@ bool pedestrian_t::choose_alt_next_plot(ped_manager_t const &ped_mgr) {
 	return 1; // success
 }
 
+void add_and_expand_ped_avoid_cube(cube_t const &c, vect_cube_t &avoid, float expand, float height) {
+	avoid.push_back(c);
+	avoid.back().expand_by_xy(expand*((c.dz() < 0.67*height) ? 0.5 : 1.0)); // reduce expand value for short objects that will only collide with our legs
+}
+
 void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t const &colliders,
 	cube_t const &plot_bcube, cube_t const &next_plot_bcube, point &dest_pos, vect_cube_t &avoid) const
 {
 	avoid.clear();
 	if (in_building) return; // not yet implemented, but if it was we would get the nearby building walls, objects, etc.
-	float const expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
+	float const height(get_height()), expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 
 	if (cur_plot.is_residential && !cur_plot.is_park) { // apply special restrictions when walking through a residential block
 		cube_t avoid_area(plot_bcube);
-		avoid_area.expand_by_xy(-get_inner_sidewalk_width()); // shrink to plot interior
+		avoid_area.expand_by_xy(0.5*radius - (get_inner_sidewalk_width() + get_sidewalk_walkable_area())); // shrink to plot interior, and undo the expand applied to the plot
 		bool avoid_entire_plot(0);
 
 		if (plot == dest_plot && plot_bcube == next_plot_bcube) { // plot contains our destination, and the plot bcube has been updated
@@ -487,7 +492,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			avoid.push_back(avoid_area); // this is the highest priority
 
 			for (auto i = colliders.begin(); i != colliders.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
-				if (!avoid_area.contains_cube_xy(*i)) {avoid.push_back(*i); avoid.back().expand_by(expand);}
+				if (!avoid_area.contains_cube_xy(*i)) {add_and_expand_ped_avoid_cube(*i, avoid, expand, height);}
 			}
 			return; // done
 		}
@@ -496,10 +501,11 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	expand_cubes_by_xy(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
 	if (plot == dest_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
-	size_t const num_building_cubes(avoid.size());
-	vector_add_to(colliders, avoid);
-	if (plot == dest_plot && has_dest_car) {remove_cube_if_contains_pt_xy(avoid, dest_pos, num_building_cubes);} // exclude our dest car, we do want to collide with it
-	for (auto i = avoid.begin()+num_building_cubes; i != avoid.end(); ++i) {i->expand_by_xy(expand);} // expand colliders as well
+
+	for (auto i = colliders.begin(); i != colliders.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
+		if (plot == dest_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
+		add_and_expand_ped_avoid_cube(*i, avoid, expand, height);
+	}
 }
 
 bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, vect_cube_t *dbg_cubes) const {
