@@ -1034,6 +1034,11 @@ void end_sphere_draw(bool &in_sphere_draw) {
 	in_sphere_draw = 0;
 }
 
+void draw_colored_cube(cube_t const &c, colorRGBA const &color, shader_t &s) {
+	s.set_cur_color(PURPLE);
+	draw_simple_cube(c);
+}
+
 void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	cube_t plot_bcube, next_plot_bcube;
 	get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube);
@@ -1044,7 +1049,9 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	bool const safe_to_cross(check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube, &dbg_cubes));
 	if (!safe_to_cross) {assert(!dbg_cubes.empty());} // must find a blocking car
 	path_finder_t path_finder(1); // debug=1
-	get_avoid_cubes(ped_mgr, ped_mgr.get_colliders_for_plot(city, plot), plot_bcube, next_plot_bcube, dest_pos, path_finder.get_avoid_vector());
+	vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
+	vect_cube_t &avoid(path_finder.get_avoid_vector());
+	get_avoid_cubes(ped_mgr, colliders, plot_bcube, next_plot_bcube, dest_pos, avoid);
 	cube_t union_plot_bcube(plot_bcube);
 	union_plot_bcube.union_with_cube(next_plot_bcube);
 	vector<point> path;
@@ -1086,8 +1093,20 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 
 	for (auto i = dbg_cubes.begin(); i != dbg_cubes.end(); ++i) {
 		s.set_cur_color((!safe_to_cross && i+1 == dbg_cubes.end()) ? RED : GREEN);
-		draw_simple_cube(*i, 0);
+		draw_simple_cube(*i);
 	}
+	ensure_outlined_polygons();
+	s.set_cur_color(CYAN);
+
+	for (auto i = avoid.begin(); i != avoid.end(); ++i) { // draw avoid cubes
+		cube_t c(*i);
+		max_eq(c.z2(), (c.z1() + radius)); // make sure it's nonzero area
+		draw_simple_cube(c);
+	}
+	if (has_dest_bldg   ) {draw_colored_cube(get_building_bcube(dest_bldg), PURPLE, s);} // draw dest building bcube
+	if (collided        ) {draw_colored_cube(get_bcube(), RED, s);} // show marker if collided this frame
+	else if (in_the_road) {draw_colored_cube(get_bcube(), GREEN, s);}
+	set_fill_mode(); // reset
 	draw_verts(line_pts, GL_LINES);
 	s.end_shader();
 }
