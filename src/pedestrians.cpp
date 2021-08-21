@@ -395,6 +395,12 @@ unsigned path_finder_t::run(point const &pos_, point const &dest_, cube_t const 
 	return (next_pt_ix ? 1 : 2); // return 2 for the init contained case
 }
 
+cube_t get_avoid_area_for_plot(cube_t const &plot_bcube, float radius) {
+	cube_t avoid_area(plot_bcube);
+	avoid_area.expand_by_xy(0.5f*radius - (get_inner_sidewalk_width() + get_sidewalk_walkable_area())); // shrink to plot interior, and undo the expand applied to the plot
+	return avoid_area;
+}
+
 // pedestrian_t
 point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr) const {
 	if (is_stopped && target_valid()) {return target_pos;} // stay the course (this case only needed for debug drawing)
@@ -424,7 +430,19 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 				}
 			}
 			else { // closest point
-				dest_pos = next_plot_bcube.closest_pt(pos);
+				point pos_adj(pos);
+				road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
+				
+				if (cur_plot.is_residential && !cur_plot.is_park) { // residential plot
+					cube_t const avoid(get_avoid_area_for_plot(plot_bcube, 2.0*radius)); // 2x radius for extra padding
+
+					if (avoid.contains_pt(pos)) { // move point away from plot edge so that the line to the closest point doesn't clip through the avoid cube
+						bool dim(0), dir(0);
+						get_closest_dim_dir_xy(cube_t(pos, pos), avoid, dim, dir);
+						pos_adj[dim] = avoid.d[dim][dir]; // move to the edge of the avoid cube
+					}
+				}
+				dest_pos = next_plot_bcube.closest_pt(pos_adj);
 			}
 			if (!in_cur_plot) { // went outside the current plot
 				cube_t union_plot_bcube(plot_bcube);
@@ -462,8 +480,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
 
 	if (cur_plot.is_residential && !cur_plot.is_park) { // apply special restrictions when walking through a residential block
-		cube_t avoid_area(plot_bcube);
-		avoid_area.expand_by_xy(0.5*radius - (get_inner_sidewalk_width() + get_sidewalk_walkable_area())); // shrink to plot interior, and undo the expand applied to the plot
+		cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
 		bool avoid_entire_plot(0);
 
 		if (plot == dest_plot && plot_bcube == next_plot_bcube) { // plot contains our destination, and the plot bcube has been updated
