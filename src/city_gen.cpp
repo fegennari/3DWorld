@@ -2047,16 +2047,112 @@ public:
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back(); return;}
 		//cout << "Roads: " << road_networks.back().num_roads() << endl;
 	}
+
+	struct road_cand_t {
+		vector<point> pts;
+		bool start_dim;
+		float cost;
+		road_cand_t(bool sdim=0) : start_dim(sdim), cost(0.0) {}
+		void clear() {pts.clear(); cost = 0.0;}
+		bool valid() const {return !pts.empty();}
+	};
+	struct conn_isec_t {
+		flatten_op_t fop;
+		cube_t int_bcube;
+		unsigned road_ix;
+		bool dim, dir;
+		conn_isec_t(heightmap_query_t const &hq, cube_t const &ibc, unsigned rix, bool dim_, bool dir_) : fop(hq.last_flatten_op), int_bcube(ibc), road_ix(rix), dim(dim_), dir(dir_) {}
+	};
+
+	static bool get_closer_dir(cube_t const &A, cube_t const &B, bool dim) {
+		float const center(B.get_center_dim(dim));
+		return (abs(A.d[dim][1] - center) < abs(A.d[dim][0] - center));
+	}
+	static float find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, heightmap_query_t const &hq, vector<point> &pts) {
+		// TODO: experiment with using A* path finding on the terrain heightmap, with heavy weight for introducing jogs; may complicate bridge and tunnel creation
+		return 0.0;
+	}
+	bool connect_two_cities_new(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width) {
+		// Note: ignores the value of city_params.make_4_way_ints because this will always start and end at a 4-way intersection
+		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
+		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
+		vector<road_t> const &roads1(rn1.get_roads()), &roads2(rn2.get_roads());
+		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width), road_hwidth(road_width);
+		road_cand_t cand, best_cand;
+
+		// try to extend all permutations of roads on the shared sides between cities
+		for (auto r1 = roads1.begin(); r1 != roads1.end(); ++r1) {
+			bool const dim1(r1->dim), dir1(get_closer_dir(*r1, bcube2, dim1));
+			if (!rn1.check_valid_conn_intersection(*r1, dim1, dir1, 1)) continue; // not a valid 3-way intersection; is_4_way1=1
+			point start;
+			start[ dim1] = r1->d[dim1][dir1];
+			start[!dim1] = r1->get_center_dim(!dim1);
+			start.z      = r1->z2();
+
+			for (auto r2 = roads1.begin(); r2 != roads1.end(); ++r2) {
+				bool const dim2(r2->dim), dir2(get_closer_dir(*r2, bcube1, dim2));
+				if (!rn2.check_valid_conn_intersection(*r2, dim2, dir2, 1)) continue; // not a valid 3-way intersection; is_4_way1=1
+				point end;
+				end[ dim1] = r2->d[dim2][dir2];
+				end[!dim1] = r2->get_center_dim(!dim2);
+				end.z      = r2->z2();
+				cand.clear();
+				cand.start_dim = dim1;
+				cand.cost = find_route_between_points(start, end, blockers, hq, cand.pts);
+				if (cand.cost > 0.0 && cand.cost < best_cand.cost) {best_cand = cand;} // update best_can if valid and a lower cost
+			} // for r2
+		} // for r1
+		if (!best_cand.valid()) return 0; // failed
+
+		// create the road segments
+		assert(best_cand.pts.size() > 1); // must be at least 1 segment/2 points (in practical cases there must be at least 2 segments/3 points)
+		bool fdim(best_cand.start_dim), last_dir(0);
+		cube_t cur_bcube(bcube1); // start at the first city
+		vector<conn_isec_t> conn_isecs;
+		unsigned last_road_ix(0);
+		
+		for (auto p = best_cand.pts.begin(); p+1 != best_cand.pts.end(); ++p, fdim ^= 1) {
+			bool const is_first(p == best_cand.pts.begin()), is_last(p+2 == best_cand.pts.end());
+			point const &p1(*p), &p2(*(p+1));
+			assert(p1[!fdim] == p2[!fdim] && p1[fdim] != p2[fdim]); // must be a straight, nonzero length road in this dim
+			bool const dir(p1[fdim] < p2[fdim]);
+			cube_t next_bcube;
+			if (is_last) {next_bcube = bcube2;} // end at the second city
+			else {next_bcube.set_from_sphere(p2, road_hwidth);} // intersection of this road and the next one
+			hq.flatten_region_to(next_bcube, city_params.road_border); // do this first to improve flattening
+			unsigned const road_ix(global_rn.num_roads());
+			float const cost(global_rn.create_connector_road(cur_bcube, next_bcube, blockers,
+				(is_first ? &rn1 : nullptr), (is_last ? &rn2 : nullptr), (is_first ? city1 : CONN_CITY_IX), (is_last ? city2 : CONN_CITY_IX),
+				city1, city2, hq, road_width, p1[!fdim], fdim, 0, is_first, is_last)); // check_only=0, is_4way=at_city
+			assert(cost >= 0.0);
+			// if not the last segment, cache state so that the loop below can create the intersection; can't create it here without the road_ix of the next segment
+			if (!is_last) {conn_isecs.emplace_back(hq, next_bcube, road_ix, fdim, dir);}
+			last_road_ix = road_ix;
+			last_dir     = dir;
+			cur_bcube    = next_bcube;
+		} // for p
+		for (auto i = conn_isecs.begin(); i != conn_isecs.end(); ++i) {
+			bool const is_last(i+1 == conn_isecs.end()), next_dir(is_last ? last_dir : (i+1)->dir);
+			unsigned const next_road_ix(is_last ? last_road_ix : (i+1)->road_ix);
+			if (i->dim) {global_rn.create_connector_bend(i->int_bcube, next_dir, i->dir, next_road_ix, i->road_ix);} // Y
+			else        {global_rn.create_connector_bend(i->int_bcube, i->dir, next_dir, i->road_ix, next_road_ix);} // X
+			// decrease_only=1; remove any dirt that the prev road added
+			hq.flatten_sloped_region(i->fop.x1, i->fop.y1, i->fop.x2, i->fop.y2, i->fop.z1, i->fop.z2, i->fop.dim, i->fop.border, i->fop.skip_six, i->fop.skip_eix, 0, 1);
+			hq.flatten_region_to(i->int_bcube, city_params.road_border, 1); // one more pass to fix mesh that was raised above the intersection by a sloped road segment
+		} // for i
+		return 1;
+	}
+
 	bool connect_two_cities(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
 		//cout << "Connect city " << city1 << " and " << city2 << endl;
+		//if (connect_two_cities_new(city1, city2, blockers, hq, road_width)) return 1;
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
 		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width);
 		// Note: cost function should include road length, number of jogs, total elevation change, and max slope
-		// TODO: experiment with using A* path finding on the terrain heightmap, with heavy weight for introducing jogs; may complicate bridge and tunnel creation
 
 		for (unsigned d = 0; d < 2; ++d) { // try for single segment
 			if (city_params.make_4_way_ints > 2) continue; // only allow connector roads that have 4-way intersections at both ends (single jog case below)
@@ -2074,7 +2170,7 @@ public:
 						for (auto r = roads.begin(); r != roads.end(); ++r) {
 							if (r->dim == (d != 0)) continue; // wrong dim
 							if (r->d[d][0] < val1 || r->d[d][1] > val2) continue; // road not contained in placement range
-							float const conn_pos(r->get_center_dim(d));
+							float const conn_pos(r->get_center_dim(d)); // road centerline position along the edge of the plot
 							float const cost(0.5*global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2,
 								city1, city2, city1, city2, hq, road_width, conn_pos, !d, 1, (r12==0), (r12!=0))); // check_only=1; half cost (prefer over 3-way intersection)
 							
