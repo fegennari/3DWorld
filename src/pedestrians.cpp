@@ -18,6 +18,7 @@ extern city_params_t city_params;
 
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
 void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
+bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos);
 
 string pedestrian_t::get_name() const {
 	rand_gen_t rgen;
@@ -409,7 +410,7 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 		if (!at_dest && has_dest_bldg) { // not there yet
 			cube_t const dest_bcube(get_building_bcube(dest_bldg));
 			//if (dest_bcube.contains_pt_xy(pos)) {at_dest = 1;} // could set this here, but requiring a collision also works
-			point const dest_pos(dest_bcube.get_cube_center()); // slowly adjust dir to move toward dest_bldg
+			point const dest_pos(dest_bcube.get_cube_center()); // target a door nearest pos?
 			return point(dest_pos.x, dest_pos.y, pos.z); // same zval
 		}
 		else if (!at_dest && has_dest_car) {return point(dest_car_center.x, dest_car_center.y, pos.z);} // same zval
@@ -478,12 +479,13 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	if (in_building) return; // not yet implemented, but if it was we would get the nearby building walls, objects, etc.
 	float const height(get_height()), expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
+	bool const is_home_plot(plot == dest_plot && plot_bcube == next_plot_bcube); // plot contains our destination, and the plot bcube has been updated
 
 	if (cur_plot.is_residential && !cur_plot.is_park) { // apply special restrictions when walking through a residential block
 		cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
 		bool avoid_entire_plot(0);
 
-		if (plot == dest_plot && plot_bcube == next_plot_bcube) { // plot contains our destination, and the plot bcube has been updated
+		if (is_home_plot) {
 			if (city_params.assign_house_plots && (has_dest_bldg || has_dest_car)) { // we can only walk through our own sub-plot
 				cube_t dest_cube;
 				if      (has_dest_bldg) {dest_cube = get_building_bcube(dest_bldg);}
@@ -514,6 +516,11 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 			return; // done
 		}
 	} // else we can walk through this plot
+	if (is_home_plot && has_dest_bldg) {
+		// target a building door; if it's on the wrong side of the building we'll still collide with the building when walking to it
+		point door_pos;
+		if (get_building_door_pos_closest_to(dest_bldg, pos, door_pos)) {dest_pos.x = door_pos.x; dest_pos.y = door_pos.y;}
+	}
 	get_building_bcubes(cur_plot, avoid);
 	expand_cubes_by_xy(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
@@ -1099,7 +1106,7 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	if (ret == 2) { // show segment from current pos to edge of building/car
 		assert(!path.empty());
 		draw_sphere_vbo(path[0], radius, 16, 0);
-		line_pts.emplace_back(pos, BLUE);
+		line_pts.emplace_back(pos,     BLUE);
 		line_pts.emplace_back(path[0], BLUE);
 	}
 	for (auto p = path.begin(); p+1 != path.end(); ++p) { // iterate over line segments, skip last point

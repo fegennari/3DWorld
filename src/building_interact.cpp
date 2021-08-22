@@ -167,6 +167,7 @@ bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
 
 // doors and other interactive objects
 
+// used for drawing open doors
 int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const {
 	point query_pt(pos);
 	if (is_rotated()) {do_xy_rotate_inv(bcube.get_cube_center(), query_pt);}
@@ -185,6 +186,20 @@ int building_t::find_ext_door_close_to_point(tquad_with_ix_t &door, point const 
 		if (c.contains_pt(query_pt)) {door = *d; return (d - doors.begin());}
 	} // for d
 	return -1; // not found
+}
+
+// used for pedestrians; pos should be outside the building
+bool building_t::get_building_door_pos_closest_to(point const &target_pos, point &door_pos) const {
+	float dmin_sq(0.0);
+
+	for (auto d = doors.begin(); d != doors.end(); ++d) {
+		if (d->type == tquad_with_ix_t::TYPE_GDOOR || d->type == tquad_with_ix_t::TYPE_RDOOR) continue; // skip garage and rooftop doors
+		point const center(d->get_bcube().get_cube_center());
+		float const dsq(p2p_dist_xy_sq(target_pos, center)); // ignore zval
+		if (dmin_sq == 0.0 || dsq < dmin_sq) {door_pos = center; dmin_sq = dsq;}
+	}
+	if (dmin_sq == 0.0) return 0; // doors not added for some reason
+	return 1;
 }
 
 void building_t::register_open_ext_door_state(int door_ix) {
