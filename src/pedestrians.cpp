@@ -669,11 +669,16 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			new_dir = cross_product(vel, plus_z);
 			if (dot_product_xy(new_dir, coll_dir) > 0.0) {new_dir = -new_dir;} // orient away from the other ped
 		}
-		else { // static object collision (should be rare if path_finder does a good job)
+		else if (outside_plot && !in_the_road && !plot_bcube.contains_pt_xy(pos)) { // attempt to re-enter the plot at the nearest point
+			point plot_pt(pos);
+			plot_bcube.clamp_pt_xy(plot_pt);
+			new_dir = (plot_pt - pos).get_norm();
+		}
+		else { // static object collision (should be rare if path_finder does a good job), or in_the_road (need this to get around traffic lights, etc.)
 			new_dir = rgen.signed_rand_vector_spherical_xy(); // try a random new direction
 			if (dot_product_xy(vel, new_dir) > 0.0) {new_dir *= -1.0;} // negate if pointing in the same dir
 		}
-		set_velocity(new_dir);
+		if (new_dir != zero_vector) {set_velocity(new_dir);}
 		target_pos = all_zeros; // reset and force path finding to re-route from this new direction/pos
 	}
 	if (vel != zero_vector) { // if stopped, don't update dir
