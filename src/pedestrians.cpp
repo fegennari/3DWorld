@@ -61,7 +61,8 @@ float get_sidewalk_width        () {return SIDEWALK_WIDTH*city_params.road_width
 float get_sidewalk_walkable_area() {return 0.65*get_sidewalk_width();} // walkable area of sidewalk on the street side; 65%, to avoid streetlights and traffic lights
 float get_inner_sidewalk_width  () {return 1.00*get_sidewalk_width();} // walkable area of sidewalk on the plot side (not a sidewalk texture in residential neighborhoods)
 
-bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t const &plot_bcube, cube_t const &next_plot_bcube) {
+// Note: may update plot_bcube and next_plot_bcube
+bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_pos, cube_t &plot_bcube, cube_t &next_plot_bcube) {
 	if (in_building) return 0; // not implemented yet
 	//if (ssn == 2516) {cout << "in_the_road: " << in_the_road << ", pos: " << pos.str() << ", plot_bcube: " << plot_bcube.str() << ", npbc: " << next_plot_bcube.str() << endl;}
 	if (plot_bcube.contains_pt_xy(pos)) {return 1;} // inside the plot
@@ -70,7 +71,8 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 	
 	if (next_plot_bcube.contains_pt_xy(pos)) {
 		ped_mgr.move_ped_to_next_plot(*this);
-		next_plot = ped_mgr.get_next_plot(*this); // FIXME: update next_plot_bcube?
+		next_plot = ped_mgr.get_next_plot(*this);
+		get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube); // update plot bcubes
 		return 1;
 	}
 	cube_t union_plot_bcube(plot_bcube);
@@ -479,7 +481,8 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	if (in_building) return; // not yet implemented, but if it was we would get the nearby building walls, objects, etc.
 	float const height(get_height()), expand(1.1*radius); // slightly larger than radius to leave some room for floating-point error
 	road_plot_t const &cur_plot(ped_mgr.get_city_plot_for_peds(city, plot));
-	bool const is_home_plot(plot == dest_plot && plot_bcube == next_plot_bcube); // plot contains our destination, and the plot bcube has been updated
+	bool const is_home_plot(plot == dest_plot); // plot contains our destination
+	if (is_home_plot) {assert(plot_bcube == next_plot_bcube);}
 
 	if (cur_plot.is_residential && !cur_plot.is_park) { // apply special restrictions when walking through a residential block
 		cube_t const avoid_area(get_avoid_area_for_plot(plot_bcube, radius));
