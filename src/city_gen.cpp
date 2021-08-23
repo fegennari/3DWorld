@@ -2078,9 +2078,50 @@ public:
 		float const center(B.get_center_dim(dim));
 		return (abs(A.d[dim][1] - center) < abs(A.d[dim][0] - center));
 	}
-	static float find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, heightmap_query_t const &hq, vector<point> &pts) {
+	static cube_t get_road_between_pts(point const &p1, point const &p2, float road_hwidth, bool expand_start, bool expand_end) {
+		assert((p1.x == p2.x) != (p1.y == p2.y)); // roads must either be in X or Y
+		bool const dim(p1.x == p2.x), dir(p1[dim] < p2[dim]);
+		cube_t road(p1, p2);
+		road.expand_in_dim(!dim, road_hwidth);
+		if (expand_start) {road.d[dim][!dir] -= (dir ? 1.0 : -1.0)*road_hwidth;}
+		if (expand_end  ) {road.d[dim][ dir] += (dir ? 1.0 : -1.0)*road_hwidth;}
+		return road;
+	}
+	static float get_road_cost(point const &p1, point const &p2) {return (p2p_dist(p1, p2) + 4.0f*fabs(p1.z - p2.z));} // 4x penalty for steepness
+
+	static bool is_road_seg_valid(point const &p1, point const &p2, bool dim, vect_cube_t const &blockers, float road_hwidth, bool expand_start, bool expand_end) {
+		float const length(fabs(p1[dim] - p2[dim]));
+		if (length < 4.0*road_hwidth) return 0; // too short
+		if (fabs(p1.z - p2.z)/(length - road_hwidth) > city_params.max_road_slope) return 0; // check slope
+		return !has_bcube_int_no_adj(get_road_between_pts(p1, p2, road_hwidth, expand_start, expand_end), blockers);
+	}
+	static float find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, heightmap_query_t const &hq,
+		vector<point> &pts, cube_t const exclude[2], float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2)
+	{
+		pts.push_back(p1);
+		float cost(0.0);
+		
 		// TODO: experiment with using A* path finding on the terrain heightmap, with heavy weight for introducing jogs; may complicate bridge and tunnel creation
-		return 0.0;
+		if (dim1 == dim2) { // add 2 points to create a job
+			assert(dir1 != dir2);
+			// TODO
+		}
+		else { // add one point to create a right angle bend
+			point ipt;
+			ipt[ dim1] = p2[ dim1];
+			ipt[!dim1] = p1[!dim1];
+			ipt.z = hq.get_road_zval_at_pt(ipt);
+
+			if (!exclude[0].contains_pt_xy(ipt) && !exclude[1].contains_pt_xy(ipt) &&
+				is_road_seg_valid(p1, ipt, dim1, blockers, road_hwidth, 0, 1) &&
+				is_road_seg_valid(ipt, p2, dim2, blockers, road_hwidth, 1, 0))
+			{
+				pts.push_back(ipt);
+				cost = get_road_cost(p1, ipt) + get_road_cost(p2, ipt);
+			}
+		}
+		pts.push_back(p2);
+		return cost;
 	}
 	bool connect_two_cities_new(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width) {
 		// Note: ignores the value of city_params.make_4_way_ints because this will always start and end at a 4-way intersection
@@ -2089,7 +2130,14 @@ public:
 		vector<road_t> const &roads1(rn1.get_roads()), &roads2(rn2.get_roads());
 		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width), road_hwidth(road_width);
 		road_cand_t cand, best_cand;
-
+		vect_cube_t active_blockers;
+		cube_t exclude[2] = {bcube1, bcube2};
+		for (unsigned d = 0; d < 2; ++d) {exclude[d].expand_by_xy(min_edge_dist);}
+		
+		// determine the set of active blockers, which exclude the two cities to be connected
+		for (auto b = blockers.begin(); b != blockers.end(); ++b) {
+			if (!b->contains_cube(bcube1) && !b->contains_cube(bcube2)) {active_blockers.push_back(*b);}
+		}
 		// try to extend all permutations of roads on the shared sides between cities
 		for (auto r1 = roads1.begin(); r1 != roads1.end(); ++r1) {
 			bool const dim1(r1->dim), dir1(get_closer_dir(*r1, bcube2, dim1));
@@ -2099,17 +2147,17 @@ public:
 			start[!dim1] = r1->get_center_dim(!dim1);
 			start.z      = r1->z2();
 
-			for (auto r2 = roads1.begin(); r2 != roads1.end(); ++r2) {
+			for (auto r2 = roads2.begin(); r2 != roads2.end(); ++r2) {
 				bool const dim2(r2->dim), dir2(get_closer_dir(*r2, bcube1, dim2));
 				if (!rn2.check_valid_conn_intersection(*r2, dim2, dir2, 1)) continue; // not a valid 3-way intersection; is_4_way1=1
 				point end;
-				end[ dim1] = r2->d[dim2][dir2];
-				end[!dim1] = r2->get_center_dim(!dim2);
+				end[ dim2] = r2->d[dim2][dir2];
+				end[!dim2] = r2->get_center_dim(!dim2);
 				end.z      = r2->z2();
 				cand.clear();
 				cand.start_dim = dim1;
-				cand.cost = find_route_between_points(start, end, blockers, hq, cand.pts);
-				if (cand.cost > 0.0 && cand.cost < best_cand.cost) {best_cand = cand;} // update best_can if valid and a lower cost
+				cand.cost = find_route_between_points(start, end, active_blockers, hq, cand.pts, exclude, road_hwidth, dim1, dir1, dim2, dir2);
+				if (cand.cost > 0.0 && (best_cand.cost == 0.0 || cand.cost < best_cand.cost)) {best_cand = cand;} // update best_can if valid and a lower cost
 			} // for r2
 		} // for r1
 		if (!best_cand.valid()) return 0; // failed
@@ -2124,11 +2172,13 @@ public:
 		for (auto p = best_cand.pts.begin(); p+1 != best_cand.pts.end(); ++p, fdim ^= 1) {
 			bool const is_first(p == best_cand.pts.begin()), is_last(p+2 == best_cand.pts.end());
 			point const &p1(*p), &p2(*(p+1));
+			assert(!bcube1.contains_pt(p2));
+			assert(!bcube2.contains_pt(p1));
 			assert(p1[!fdim] == p2[!fdim] && p1[fdim] != p2[fdim]); // must be a straight, nonzero length road in this dim
 			bool const dir(p1[fdim] < p2[fdim]);
 			cube_t next_bcube;
 			if (is_last) {next_bcube = bcube2;} // end at the second city
-			else {next_bcube.set_from_sphere(p2, road_hwidth);} // intersection of this road and the next one
+			else {next_bcube.set_from_point(p2); next_bcube.expand_by_xy(road_hwidth);} // intersection of this road and the next one
 			hq.flatten_region_to(next_bcube, city_params.road_border); // do this first to improve flattening
 			unsigned const road_ix(global_rn.num_roads());
 			float const cost(global_rn.create_connector_road(cur_bcube, next_bcube, blockers,
