@@ -278,6 +278,8 @@ public:
 		int const x(get_x_pos(xval)), y(get_y_pos(yval));
 		return (is_inside_terrain(x, y) ? get_height(x, y) : OUTSIDE_TERRAIN_HEIGHT);
 	}
+	float get_road_zval_at_pt(point const &pos) const {return get_height_at(pos.x, pos.y) + ROAD_HEIGHT;}
+
 	bool any_underwater(unsigned x1, unsigned y1, unsigned x2, unsigned y2, bool check_border=0) const {
 		min_eq(x2, xsize); min_eq(y2, ysize); // clamp upper bound
 		assert(is_valid_region(x1, y1, x2, y2));
@@ -672,7 +674,7 @@ class city_road_gen_t : public road_gen_base_t {
 		
 		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0) {
 			is_residential = city_params.residential_mode; // TODO: make this a random probability?
-			bcube.d[2][1] += ROAD_HEIGHT; // make it nonzero size
+			bcube.z2() += ROAD_HEIGHT; // make it nonzero size
 		}
 		bool get_is_residential() const {return is_residential;}
 		cube_t const &get_bcube() const {return bcube;}
@@ -810,8 +812,8 @@ class city_road_gen_t : public road_gen_base_t {
 					p2[dim] = (p1[dim] + step_sz); // back to starting segment
 
 					while (p1[dim] < seg_end) { // split into per-tile segments
-						p1.z = hq.get_height_at(p1.x, p1.y) + ROAD_HEIGHT;
-						p2.z = hq.get_height_at(p2.x, p2.y) + ROAD_HEIGHT;
+						p1.z = hq.get_road_zval_at_pt(p1);
+						p2.z = hq.get_road_zval_at_pt(p2);
 						track_segs.emplace_back(p1, p2, width, dim, (p2.z < p1.z), n);
 						p1[dim] += step_sz;
 						p2[dim]  = min((p1[dim] + step_sz), seg_end);
@@ -848,6 +850,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 		int find_3way_int_at(cube_t const &c, bool dim, bool dir) const {
 			float const cube_cent(c.get_center_dim(!dim));
+			assert(bcube.d[!dim][1] > cube_cent && bcube.d[!dim][0] < cube_cent); // c must overlap bcube in !dim
 			//float dmin(0.0);
 			int ret(-1);
 
@@ -1029,6 +1032,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 			if (is_4_way) {
 				int const int3_ix(find_3way_int_at(c, dim, dir));
+				if (int3_ix < 0) {cout << TXT(dim) << TXT(dir) << TXT(bcube.str()) << TXT(c.str()) << endl;}
 				assert(int3_ix >= 0); // must be found
 				align_isec3_to(int3_ix, c, dim);
 				make_4way_int(int3_ix, dim, dir, dest_city_id, encode_neg_ix(grn_rix));
@@ -1054,11 +1058,12 @@ class city_road_gen_t : public road_gen_base_t {
 		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vect_cube_t &blockers, road_network_t *rn1, road_network_t *rn2, unsigned city1, unsigned city2,
 			unsigned dest_city_id1, unsigned dest_city_id2, heightmap_query_t &hq, float road_width, float conn_pos, bool dim, bool check_only, bool is_4_way1, bool is_4_way2)
 		{
+			assert(city1 != city2); // only holds for 2-segment connector roads
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
 			if (dir == 0) {swap(city1, city2);} // make {lo, hi}
 			point p1, p2;
-			p1.z = bcube1.d[2][1];
-			p2.z = bcube2.d[2][1];
+			p1.z = bcube1.z2();
+			p2.z = bcube2.z2();
 			p1[!dim] = p2[!dim] = conn_pos;
 			p1[ dim] = bcube1.d[dim][ dir];
 			p2[ dim] = bcube2.d[dim][!dir];
@@ -1066,7 +1071,12 @@ class city_road_gen_t : public road_gen_base_t {
 			road_t const road(p1, p2, road_width, dim, slope, roads.size());
 			float const road_len(road.get_length()), delta_z(road.dz()), max_slope(city_params.max_road_slope);
 			assert(road_len > 0.0 && delta_z >= 0.0);
-			if (delta_z/road_len > max_slope) {assert(check_only); return -1.0;} // slope is too high (split segments will have even higher slopes)
+
+			if (delta_z/road_len > max_slope) { // slope is too high (split segments will have even higher slopes)
+				if (!check_only) {cout << TXT(dim) << TXT(road_len) << TXT(delta_z) << TXT(bcube1.str()) << TXT(bcube2.str()) << TXT(p1.str()) << TXT(p2.str()) << endl;}
+				assert(check_only);
+				return -1.0;
+			}
 			unsigned const x1(hq.get_x_pos(road.x1())), y1(hq.get_y_pos(road.y1())), x2(hq.get_x_pos(road.x2())), y2(hq.get_y_pos(road.y2()));
 
 			if (check_only) { // only need to do these checks in this case
@@ -1113,7 +1123,7 @@ class city_road_gen_t : public road_gen_base_t {
 				point pos;
 				pos[ dim] = rs.d[dim][1];
 				pos[!dim] = conn_pos;
-				rs.z2()   = hq.get_height_at(pos.x, pos.y) + ROAD_HEIGHT; // terrain height at end of segment
+				rs.z2()   = hq.get_road_zval_at_pt(pos); // terrain height at end of segment
 				rs.slope  = (rs.z2() < rs.z1());
 				
 				if (fabs(rs.get_slope_val()) > max_slope) { // slope is too high, clamp z2 to max allowed value
@@ -1759,7 +1769,7 @@ class city_road_gen_t : public road_gen_base_t {
 				car.bcube.z2() = road_z + 0.5*fabs(car.dz) + car.height;
 			}
 			else if (car.dz != 0.0) { // car moving from connector road to level city
-				float const road_z(bcube.d[2][1]);
+				float const road_z(bcube.z2());
 				car.dz = 0.0;
 				car.bcube.z1() = road_z;
 				car.bcube.z2() = road_z + car.height;
@@ -2279,7 +2289,7 @@ public:
 	void try_single_jog_conn_road(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width,
 		bool fdim, float xval, float yval, bool is_4way, float &best_xval, float &best_yval, float &best_cost, cube_t &best_int_cube)
 	{
-		float const height(hq.get_height_at(xval, yval) + ROAD_HEIGHT), half_width(0.5*road_width);
+		float const height(hq.get_road_zval_at_pt(point(xval, yval, 0.0))), half_width(0.5*road_width);
 		cube_t const int_cube(xval-half_width, xval+half_width, yval-half_width, yval+half_width, height, height); // the candidate intersection point
 		if (has_bcube_int_xy(int_cube, blockers)) return; // bad intersection, fail
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
