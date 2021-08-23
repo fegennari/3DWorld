@@ -238,24 +238,6 @@ template<typename T> static void add_flat_city_quad(T const &r, quad_batch_draw 
 	qbd.add_quad_pts(pts, color, plus_z, r.get_tex_range(ar));
 }
 
-struct rect_t {
-	unsigned x1, y1, x2, y2;
-	rect_t() : x1(0), y1(0), x2(0), y2(0) {}
-	rect_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_) : x1(x1_), y1(y1_), x2(x2_), y2(y2_) {}
-	bool is_valid() const {return (x1 < x2 && y1 < y2);}
-	unsigned get_area() const {return (x2 - x1)*(y2 - y1);}
-	bool operator== (rect_t const &r) const {return (x1 == r.x1 && y1 == r.y1 && x2 == r.x2 && y2 == r.y2);}
-	bool has_overlap(rect_t const &r) const {return (x1 < r.x2 && y1 < r.y2 && r.x1 < x2 && r.y1 < y2);}
-};
-struct flatten_op_t : public rect_t {
-	float z1, z2;
-	bool dim;
-	unsigned border, skip_six, skip_eix;
-	flatten_op_t() : z1(0.0), z2(0.0), dim(0), border(0), skip_six(0), skip_eix(0) {}
-	flatten_op_t(unsigned x1_, unsigned y1_, unsigned x2_, unsigned y2_, float z1_, float z2_, bool dim_, unsigned border_) :
-		rect_t(x1_, y1_, x2_, y2_), z1(z1_), z2(z2_), dim(dim_), border(border_), skip_six(0), skip_eix(0) {}
-};
-
 struct road_t : public cube_t {
 	unsigned road_ix;
 	//unsigned char type; // road, railroad, etc. {RTYPE_ROAD, RTYPE_TRACKS}

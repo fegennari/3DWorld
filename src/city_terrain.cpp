@@ -1,0 +1,285 @@
+// 3D World - City Terrain and Road System
+// by Frank Gennari
+// 08/22/21
+
+#include "city_terrain.h"
+
+extern float water_plane_z;
+extern city_params_t city_params;
+
+
+// heightmap_query_t
+
+float smooth_interp(float a, float b, float mix) {
+	mix = mix * mix * (3.0 - 2.0 * mix); // cubic Hermite interoplation (smoothstep)
+	return mix*a + (1.0 - mix)*b;
+}
+
+cube_t heightmap_query_t::get_cube_for_bounds(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float elevation) const {
+	cube_t c;
+	c.x1() = get_x_value(x1);
+	c.x2() = get_x_value(x2);
+	c.y1() = get_y_value(y1);
+	c.y2() = get_y_value(y2);
+	c.z1() = c.z2() = elevation;
+	return c;
+}
+
+float heightmap_query_t::get_height_at(float xval, float yval) const {
+	int const x(get_x_pos(xval)), y(get_y_pos(yval));
+	return (is_inside_terrain(x, y) ? get_height(x, y) : OUTSIDE_TERRAIN_HEIGHT);
+}
+
+bool heightmap_query_t::any_underwater(unsigned x1, unsigned y1, unsigned x2, unsigned y2, bool check_border) const {
+	min_eq(x2, xsize); min_eq(y2, ysize); // clamp upper bound
+	assert(is_valid_region(x1, y1, x2, y2));
+
+	for (unsigned y = y1; y < y2; ++y) {
+		for (unsigned x = x1; x < x2; ++x) {
+			if (check_border && y != y1 && y != y2-1 && x == x1+1) {x = x2-1;} // jump to right edge
+			if (get_height(x, y) < water_plane_z) return 1;
+		}
+	}
+	return 0;
+}
+
+void heightmap_query_t::get_segment_end_pts(road_t const &r, unsigned six, unsigned eix, point &ps, point &pe) const {
+	float const sv(r.dim ? get_y_value(six) : get_x_value(six)), ev(r.dim ? get_y_value(eix) : get_x_value(eix)); // start/end pos of bridge in road dim
+	float const z1(r.get_start_z()), z2(r.get_end_z()), dz(z2 - z1), len(r.get_length()), v0(r.dim ? r.y1() : r.x1());
+	ps[ r.dim] = sv;
+	pe[ r.dim] = ev;
+	ps[!r.dim] = pe[!r.dim] = r.get_center_dim(!r.dim);
+	ps.z = z1 + dz*CLIP_TO_01((sv - v0)/len);
+	pe.z = z1 + dz*CLIP_TO_01((ev - v0)/len);
+}
+
+void heightmap_query_t::flatten_region_to(cube_t const c, unsigned slope_width, bool decrease_only) {
+	flatten_region_to(get_x_pos(c.x1()), get_y_pos(c.y1()), get_x_pos(c.x2()), get_y_pos(c.y2()), slope_width, (c.z1() - ROAD_HEIGHT), decrease_only);
+}
+void heightmap_query_t::flatten_region_to(unsigned x1, unsigned y1, unsigned x2, unsigned y2, unsigned slope_width, float elevation, bool decrease_only) {
+	assert(is_valid_region(x1, y1, x2, y2));
+
+	for (unsigned y = max((int)y1-(int)slope_width, 0); y < min(y2+slope_width, ysize); ++y) {
+		for (unsigned x = max((int)x1-(int)slope_width, 0); x < min(x2+slope_width, xsize); ++x) {
+			float &h(get_height(x, y));
+			if (decrease_only && h < elevation) continue; // don't increase
+
+			if (slope_width > 0) {
+				float const dx(max(0, max(((int)x1 - (int)x), ((int)x - (int)x2 + 1))));
+				float const dy(max(0, max(((int)y1 - (int)y), ((int)y - (int)y2 + 1))));
+				h = smooth_interp(h, elevation, min(1.0f, sqrt(dx*dx + dy*dy)/slope_width));
+			} else {h = elevation;}
+		} // for x
+	} // for y
+}
+
+float heightmap_query_t::flatten_sloped_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float z1, float z2, bool dim, unsigned border,
+	unsigned skip_six, unsigned skip_eix, bool stats_only, bool decrease_only, bridge_t *bridge, tunnel_t *tunnel)
+{
+	if (!stats_only) {last_flatten_op = flatten_op_t(x1, y1, x2, y2, z1, z2, dim, border);} // cache for later replay
+	assert(is_valid_region(x1, y1, x2, y2));
+	if (x1 == x2 || y1 == y2) return 0.0; // zero area
+	float const run_len(dim ? (y2 - y1) : (x2 - x1)), denom(1.0f/max(run_len, 1.0f)), dz(z2 - z1), border_inv(1.0/border);
+	int const pad(border + 1U); // pad an extra 1 texel to handle roads misaligned with the texture
+	unsigned px1(x1), py1(y1), px2(x2), py2(y2), six(dim ? ysize : xsize), eix(0);
+	float tot_dz(0.0), seg_min_dh(0.0);
+	float const bridge_cost(0.0), bridge_dist_cost(0.0), tunnel_cost(0.0), tunnel_dist_cost(0.0); // Note: currently set to zero, but could be used
+	unsigned const min_bridge_len(12), min_tunnel_len(12); // in mesh texels
+
+	if (dim) {
+		px1 = max((int)x1-pad, 0);
+		px2 = min(x2+pad, xsize);
+		py1 = max((int)y1-1, 0); // pad by 1 in road dim as well to blend with edge of city
+		py2 = min(y2+1, ysize);
+	}
+	else {
+		py1 = max((int)y1-pad, 0);
+		py2 = min(y2+pad, ysize);
+		px1 = max((int)x1-1, 0);
+		px2 = min(x2+1, xsize);
+	}
+	if (!stats_only && !decrease_only && bridge != nullptr && fabs(bridge->get_slope_val()) < 0.1) { // determine if we should add a bridge here
+		float added(0.0), removed(0.0), total(0.0);
+		bool end_bridge(0);
+
+		for (unsigned y = y1; y < y2; ++y) { // Note: not padded
+			for (unsigned x = x1; x < x2; ++x) {
+				float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
+				float const road_z(z1 + dz*t - ROAD_HEIGHT), h(get_height(x, y));
+
+				if (road_z > h) {
+					added += (road_z - h);
+
+					if (!end_bridge && road_z > h + 1.0*city_params.road_width) { // higher than terrain by a significant amount
+						min_eq(six, (dim ? y : x));
+						max_eq(eix, (dim ? y : x));
+					}
+				}
+				else {
+					removed += (h - road_z);
+					if (eix > 0) {end_bridge = 1;} // done with bridge - don't create bridge past high point
+				}
+				total += 1.0;
+			} // for x
+		} // for y
+		max_eq(six, (dim ? y1+border : x1+border)); // keep away from segment end points (especially connector road jogs)
+		min_eq(eix, (dim ? y2-border : x2-border));
+
+		if (eix > six+min_bridge_len && added > 1.5*city_params.road_width*total && added > 2.0*removed) {
+			point ps, pe;
+			get_segment_end_pts(bridge->src_road, six, eix, ps, pe);
+			bridge->d[dim][0] = ps[dim];
+			bridge->d[dim][1] = pe[dim];
+			bridge->z1() = min(ps.z, pe.z);
+			bridge->z2() = max(ps.z, pe.z);
+			bridge->make_bridge = 1;
+			skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
+			tot_dz += bridge_cost + bridge_dist_cost*bridge->get_length();
+		}
+	} // end bridge logic
+	if (!stats_only && tunnel != nullptr && skip_eix == 0 && fabs(tunnel->get_slope_val()) < 0.2) { // determine if we should add a tunnel here
+		float const radius(1.0*city_params.road_width), min_height((1.0 + TUNNEL_WALL_THICK)*radius);
+		float added(0.0), removed(0.0), total(0.0);
+		bool end_tunnel(0);
+
+		for (unsigned y = y1; y < y2; ++y) { // Note: not padded
+			for (unsigned x = x1; x < x2; ++x) {
+				float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
+				float const road_z(z1 + dz*t), h(get_height(x, y));
+
+				if (road_z < h) {
+					removed += (h - road_z);
+
+					if (!end_tunnel && road_z + min_height < h) { // below terrain by a significant amount
+						min_eq(six, (dim ? y : x));
+						max_eq(eix, (dim ? y : x));
+					}
+				}
+				else {
+					added += (road_z - h);
+					if (eix > 0) {end_tunnel = 1;} // done with tunnel - don't create tunnel past low point
+				}
+				total += 1.0;
+			} // for x
+		} // for y
+		max_eq(six, (dim ? y1+border : x1+border)); // keep away from segment end points (especially connector road jogs)
+		min_eq(eix, (dim ? y2-border : x2-border));
+
+		if (eix > six+min_tunnel_len && removed > 1.0*city_params.road_width*total && removed > 2.0*added) {
+			point ps, pe;
+			get_segment_end_pts(*tunnel, six, eix, ps, pe);
+			float const len(fabs(ps[dim] - pe[dim]));
+
+			if (len > 4.0*radius) { // don't make the tunnel too short
+				tunnel->init(ps, pe, radius, 0.5*radius, dim);
+				unsigned const tunnel_border((unsigned)ceil(radius/(dim ? DY_VAL : DX_VAL)));
+				seg_min_dh = tunnel->height + TUNNEL_WALL_THICK*radius; // add another wall thickness to account for sloped terrain minima
+				skip_six = six; skip_eix = eix; // mark so that mesh height isn't updated in this region
+				tot_dz += tunnel_cost + tunnel_dist_cost*tunnel->get_length();
+				int const rwidth(ceil(city_params.road_width/(dim ? DX_VAL : DY_VAL)));
+
+				for (int dxy = -rwidth; dxy <= rwidth; ++dxy) { // shifts in !dim
+					unsigned qpt[2] = {(x1 + x2)/2, (y1 + y2)/2}; // start at center
+					qpt[!dim] += dxy;
+
+					for (unsigned n = 0; n < tunnel_border; ++n) { // take several samples and find the peak mesh height for the tunnel facades
+						qpt[dim] = six + n;
+						max_eq(tunnel->facade_height[0], (get_height(qpt[0], qpt[1]) - ps.z - radius)); // effectively adds an additional wall height (= tunnel->height - radius)
+						qpt[dim] = eix - n;
+						max_eq(tunnel->facade_height[1], (get_height(qpt[0], qpt[1]) - pe.z - radius));
+					} // for n
+				} // for dxy
+			}
+		}
+	} // end tunnel logic
+	if (!stats_only && skip_six < skip_eix) {last_flatten_op.skip_six = skip_six; last_flatten_op.skip_eix = skip_eix;} // clip to a partial range
+
+	for (unsigned y = py1; y < py2; ++y) {
+		for (unsigned x = px1; x < px2; ++x) {
+			float const t(((dim ? int(y - y1) : int(x - x1)) + ((dz < 0.0) ? 1 : -1))*denom); // bias toward the lower zval
+			float const road_z(z1 + dz*t - ROAD_HEIGHT);
+			float &h(get_height(x, y));
+			if (decrease_only && h < road_z) continue; // don't increase
+			float new_h;
+			unsigned dist(0);
+
+			if (border > 0) {
+				dist = (dim ? max(0, max(((int)x1 - (int)x - 1), ((int)x - (int)x2))) : max(0, max(((int)y1 - (int)y - 1), ((int)y - (int)y2))));
+				new_h = smooth_interp(h, road_z, dist*border_inv);
+			} else {new_h = road_z;}
+			tot_dz += fabs(h - new_h);
+			if (stats_only) continue; // no height update
+			unsigned const dv(dim ? y : x);
+
+			if (dv > skip_six && dv < skip_eix) { // don't modify mesh height at bridges or tunnels, but still count it toward the cost
+				if (seg_min_dh > 0.0) { // clamp to roof of tunnel (Note: doesn't count toward tot_dz)
+					float const zmin(road_z + seg_min_dh);
+					if (h < zmin) {h = smooth_interp(h, zmin, dist*border_inv);}
+				}
+			}
+			else {h = new_h;} // apply the height change
+		} // for x
+	} // for y
+	return tot_dz;
+}
+
+float heightmap_query_t::flatten_for_road(road_t const &road, unsigned border, bool stats_only, bool decrease_only, bridge_t *bridge, tunnel_t *tunnel) {
+	float const z_adj(road.get_z_adj());
+	unsigned const rx1(get_x_pos(road.x1())), ry1(get_y_pos(road.y1())), rx2(get_x_pos(road.x2())), ry2(get_y_pos(road.y2()));
+	return flatten_sloped_region(rx1, ry1, rx2, ry2, road.d[2][road.slope]-z_adj, road.d[2][!road.slope]-z_adj, road.dim, border, 0, 0, stats_only, decrease_only, bridge, tunnel);
+}
+
+
+// city connector road path finding
+
+bool city_road_connector_t::get_closer_dir(cube_t const &A, cube_t const &B, bool dim) {
+	float const center(B.get_center_dim(dim));
+	return (abs(A.d[dim][1] - center) < abs(A.d[dim][0] - center));
+}
+cube_t get_road_between_pts(point const &p1, point const &p2, float road_hwidth, bool expand_start, bool expand_end) {
+	assert((p1.x == p2.x) != (p1.y == p2.y)); // roads must either be in X or Y
+	bool const dim(p1.x == p2.x), dir(p1[dim] < p2[dim]);
+	cube_t road(p1, p2);
+	road.expand_in_dim(!dim, road_hwidth);
+	if (expand_start) {road.d[dim][!dir] -= (dir ? 1.0 : -1.0)*road_hwidth;}
+	if (expand_end  ) {road.d[dim][ dir] += (dir ? 1.0 : -1.0)*road_hwidth;}
+	return road;
+}
+float get_road_cost(point const &p1, point const &p2) {return (p2p_dist(p1, p2) + 4.0f*fabs(p1.z - p2.z));} // 4x penalty for steepness
+
+bool is_road_seg_valid(point const &p1, point const &p2, bool dim, vect_cube_t const &blockers, float road_hwidth, bool expand_start, bool expand_end) {
+	float const length(fabs(p1[dim] - p2[dim]));
+	if (length < 4.0*road_hwidth) return 0; // too short
+	if (fabs(p1.z - p2.z)/(length - road_hwidth) > city_params.max_road_slope) return 0; // check slope
+	return !has_bcube_int_no_adj(get_road_between_pts(p1, p2, road_hwidth, expand_start, expand_end), blockers);
+}
+
+float city_road_connector_t::find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, heightmap_query_t const &hq,
+	vector<point> &pts, cube_t const exclude[2], float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2)
+{
+	pts.push_back(p1);
+	float cost(0.0);
+
+	// TODO: experiment with using A* path finding on the terrain heightmap, with heavy weight for introducing jogs; may complicate bridge and tunnel creation
+	if (dim1 == dim2) { // add 2 points to create a job
+		assert(dir1 != dir2);
+		// TODO
+	}
+	else { // add one point to create a right angle bend
+		point ipt;
+		ipt[ dim1] = p2[ dim1];
+		ipt[!dim1] = p1[!dim1];
+		ipt.z = hq.get_road_zval_at_pt(ipt);
+
+		if (!exclude[0].contains_pt_xy(ipt) && !exclude[1].contains_pt_xy(ipt) &&
+			is_road_seg_valid(p1, ipt, dim1, blockers, road_hwidth, 0, 1) &&
+			is_road_seg_valid(ipt, p2, dim2, blockers, road_hwidth, 1, 0))
+		{
+			pts.push_back(ipt);
+			cost = get_road_cost(p1, ipt) + get_road_cost(p2, ipt);
+		}
+	}
+	pts.push_back(p2);
+	return cost;
+}
+
