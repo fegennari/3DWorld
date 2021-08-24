@@ -60,6 +60,13 @@ public:
 };
 
 // structs/classes used for connector road path finding
+struct road_endpoint_t {
+	point pt;
+	bool dim, dir;
+	road_endpoint_t() : dim(0), dir(0) {}
+	road_endpoint_t(point const &pt_, bool dim_, bool dir_) : pt(pt_), dim(dim_), dir(dir_) {}
+};
+
 struct road_cand_t {
 	vector<point> pts;
 	bool start_dim;
