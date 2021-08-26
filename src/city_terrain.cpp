@@ -247,12 +247,13 @@ cube_t get_road_between_pts(point const &p1, point const &p2, float road_hwidth,
 }
 float get_road_cost(point const &p1, point const &p2) {return (p2p_dist(p1, p2) + 4.0f*fabs(p1.z - p2.z));} // 4x penalty for steepness
 
-bool is_road_seg_valid(point const &p1, point const &p2, bool dim, vect_cube_t const &blockers, float road_hwidth, bool expand_start, bool expand_end) {
+bool road_seg_valid(point const &p1, point const &p2, bool dim, vect_cube_t const &blockers, float road_hwidth, bool expand_start, bool expand_end) {
 	float const length(fabs(p1[dim] - p2[dim]));
 	if (length < 4.0*road_hwidth) return 0; // too short
 	if (fabs(p1.z - p2.z)/(length - road_hwidth) > city_params.max_road_slope) return 0; // check slope
-	return !has_bcube_int_no_adj(get_road_between_pts(p1, p2, road_hwidth, expand_start, expand_end), blockers);
+	return !has_bcube_int_xy_no_adj(get_road_between_pts(p1, p2, road_hwidth, expand_start, expand_end), blockers);
 }
+bool check_pt_exclude(point const &pt, cube_t const exclude[2]) {return (!exclude[0].contains_pt_xy(pt) && !exclude[1].contains_pt_xy(pt));}
 
 float city_road_connector_t::find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, heightmap_query_t const &hq,
 	vector<point> &pts, cube_t const exclude[2], float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2)
@@ -262,8 +263,19 @@ float city_road_connector_t::find_route_between_points(point const &p1, point co
 
 	// TODO: experiment with using A* path finding on the terrain heightmap, with heavy weight for introducing jogs; may complicate bridge and tunnel creation
 	if (dim1 == dim2) { // add 2 points to create a job
-		assert(dir1 != dir2);
-		// TODO
+		assert(dir1 != dir2); // must be opposing
+		point pt[2];
+		pt[0][ dim1] = pt[1][ dim1] = 0.5f*(p1[dim1] + p2[dim1]); // halfway between the two end points
+		pt[0][!dim1] = p1[!dim1]; pt[1][!dim1] = p2[!dim1];
+		for (unsigned d = 0; d < 2; ++d) {pt[d].z = hq.get_road_zval_at_pt(pt[d]);}
+		
+		if (check_pt_exclude(pt[0], exclude) && check_pt_exclude(pt[1], exclude) && road_seg_valid(p1, pt[0], dim1, blockers, road_hwidth, 0, 1) &&
+			road_seg_valid(pt[0], pt[1], !dim1, blockers, road_hwidth, 1, 1) && road_seg_valid(pt[1], p2, dim1, blockers, road_hwidth, 1, 0))
+		{
+			for (unsigned d = 0; d < 2; ++d) {pts.push_back(pt[d]);}
+			cost = get_road_cost(p1, pt[0]) + get_road_cost(pt[0], pt[1]) + get_road_cost(pt[1], p2);
+			cost *= 1.5; // extra cost for having two bends
+		}
 	}
 	else { // add one point to create a right angle bend
 		point ipt;
@@ -271,12 +283,9 @@ float city_road_connector_t::find_route_between_points(point const &p1, point co
 		ipt[!dim1] = p1[!dim1];
 		ipt.z = hq.get_road_zval_at_pt(ipt);
 
-		if (!exclude[0].contains_pt_xy(ipt) && !exclude[1].contains_pt_xy(ipt) &&
-			is_road_seg_valid(p1, ipt, dim1, blockers, road_hwidth, 0, 1) &&
-			is_road_seg_valid(ipt, p2, dim2, blockers, road_hwidth, 1, 0))
-		{
+		if (check_pt_exclude(ipt, exclude) && road_seg_valid(p1, ipt, dim1, blockers, road_hwidth, 0, 1) && road_seg_valid(ipt, p2, dim2, blockers, road_hwidth, 1, 0)) {
 			pts.push_back(ipt);
-			cost = get_road_cost(p1, ipt) + get_road_cost(p2, ipt);
+			cost = get_road_cost(p1, ipt) + get_road_cost(ipt, p2);
 		}
 	}
 	pts.push_back(p2);
