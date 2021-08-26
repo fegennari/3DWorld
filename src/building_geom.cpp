@@ -1400,12 +1400,13 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				if (is_garage) {doors.back().type = tquad_with_ix_t::TYPE_GDOOR;} // make it a garage door rather than a house door
 
 				if (is_garage) { // add driveway
-					bool const ddir((pri_dim == dim) ? dir : dir2);
+					bool const ddir((pri_dim == dim) ? dir : dir2), has_r90_turn(street_dir && (2*pri_dim + ddir + 1) != street_dir);
+					float const length(c.get_sz_dim(pri_dim)), width(c.get_sz_dim(!pri_dim));
 					driveway = c;
 					driveway.z2() = driveway.z1() + driveway_dz;
-					driveway.expand_in_dim(!pri_dim, -0.05*c.get_sz_dim(!pri_dim));
+					driveway.expand_in_dim(!pri_dim, -0.05*width); // shrink slightly to a bit narrower than the garage
 					driveway.d[pri_dim][!ddir] = driveway.d[pri_dim][ddir];
-					driveway.d[pri_dim][ ddir] += (ddir ? 1.0 : -1.0)*0.4*c.get_sz_dim(pri_dim); // set length
+					driveway.d[pri_dim][ ddir] += (ddir ? 1.0 : -1.0)*max(0.4*length, (has_r90_turn ? 1.2 : 0.9)*width); // set length extension, wider for 90 degree turn
 					//garage_dim = pri_dim;
 				}
 			}
