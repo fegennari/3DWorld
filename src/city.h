@@ -628,6 +628,7 @@ class car_manager_t { // and trucks and helicopters
 	road_isec_t const &get_car_isec(car_t const &car) const;
 	bool check_collision(car_t &c1, car_t &c2) const;
 	void register_car_at_city(car_t const &car);
+	cube_t const &get_car_dest_isec_bcube(car_t const &car) const;
 	void add_car();
 	void get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const;
 	void remove_destroyed_cars();

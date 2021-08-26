@@ -1074,11 +1074,29 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 1.0);} // restore
 		dstate.post_draw();
 		fgPopMatrix();
+		static car_t const *sel_car(nullptr);
 
-		if (tt_fire_button_down && !game_mode && !garages_pass && !shadow_only) {
-			car_t const *const car(get_car_at_player(FAR_CLIP)); // no distance limit
-			if (car != nullptr && !car->in_garage()) {dstate.set_label_text(car->label_str(), (car->get_center() + xlate));} // car found
+		if (!game_mode && !garages_pass && !shadow_only) {
+			if (tt_fire_button_down) {sel_car = get_car_at_player(FAR_CLIP);} // no distance limit
+			
+			if (sel_car != nullptr && !sel_car->in_garage()) { // car found
+				dstate.set_label_text(sel_car->label_str(), (sel_car->get_center() + xlate));
+				shader_t s;
+				s.begin_color_only_shader(YELLOW);
+				ensure_outlined_polygons();
+				draw_simple_cube(sel_car->bcube + xlate);
+
+				if (!sel_car->is_parked() && sel_car->dest_valid) { // draw destination of moving car
+					s.set_cur_color(PURPLE);
+					cube_t isec_bcube(get_car_dest_isec_bcube(*sel_car));
+					isec_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
+					draw_simple_cube(isec_bcube + xlate);
+				}
+				set_fill_mode(); // reset
+				s.end_shader();
+			}
 		}
+		if (animate2) {sel_car = nullptr;} // only reset sel_car when physics is enabled so that debug display will stay enabled when stopping time
 		dstate.show_label_text();
 
 		if (city_action_key && !garages_pass && !shadow_only) {

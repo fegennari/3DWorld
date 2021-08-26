@@ -1650,15 +1650,18 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car, global_rn).intersects_xy(car.bcube)); // sanity check
 		}
-	private:
-		point get_car_dest_isec_center(car_t &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
-			if (car.dest_city == city_id) {return get_isec_by_ix(car.dest_isec).get_cube_center();} // local destination within the current city
+		road_isec_t const &get_car_dest_isec(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
+			if (car.dest_city == city_id) {return get_isec_by_ix(car.dest_isec);} // local destination within the current city
 			assert(car.dest_city < road_networks.size());
 			road_isec_t const *const isec(find_isec_to_dest_city(car, road_networks[car.dest_city], global_rn)); // destination in another city
 			assert(isec != nullptr); // path must exist, otherwise this city wouldn't have been chosen
-			return isec->get_cube_center();
+			return *isec;
 		}
-		road_isec_t const *find_isec_to_dest_city(car_t &car, road_network_t const &dest_rn, road_network_t const &global_rn) const {
+		point get_car_dest_isec_center(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
+			return get_car_dest_isec(car, road_networks, global_rn).get_cube_center();
+		}
+	private:
+		road_isec_t const *find_isec_to_dest_city(car_t const &car, road_network_t const &dest_rn, road_network_t const &global_rn) const {
 			assert(car. cur_city == city_id);
 			assert(car.dest_city == dest_rn.city_id);
 			assert(dest_rn.city_id != city_id); // not ourself
@@ -1802,6 +1805,7 @@ public:
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
 	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
+	cube_t const &get_car_dest_isec_bcube(car_t const &car) const {return get_city(car.dest_city).get_car_dest_isec(car, road_networks, global_rn);}
 
 	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
 		cube_t bcube(get_city_bcube(city_ix));
@@ -2217,7 +2221,6 @@ public:
 			}
 		}
 		car.dest_valid = get_city(car.dest_city).choose_new_car_dest(car, rgen);
-		//cout << TXT(car.dest_valid) << TXT(car.dest_city) << TXT(car.dest_isec) << endl;
 	}
 	bool car_at_dest(car_t const &car) const {
 		if (!car.dest_valid) return 0;
@@ -2246,6 +2249,7 @@ cube_t car_manager_t::get_cb_bcube(car_block_t const &cb ) const {
 road_isec_t const &car_manager_t::get_car_isec(car_t const &car) const {return road_gen.get_car_isec(car);}
 bool car_manager_t::check_collision(car_t &c1, car_t &c2)        const {return c1.check_collision(c2, road_gen);}
 void car_manager_t::register_car_at_city(car_t const &car) {road_gen.register_car_at_city(car.cur_city);}
+cube_t const &car_manager_t::get_car_dest_isec_bcube(car_t const &car) const {return road_gen.get_car_dest_isec_bcube(car);}
 
 void car_manager_t::add_car() {
 	car_t car;
