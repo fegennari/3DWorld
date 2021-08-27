@@ -245,6 +245,7 @@ cube_t get_road_between_pts(point const &p1, point const &p2, float road_hwidth,
 	if (expand_end  ) {road.d[dim][ dir] += (dir ? 1.0 : -1.0)*road_hwidth;}
 	return road;
 }
+// Note: this is a simple fast cost estimate based on road length and elevation change at endpoints; it doesn't include elevation change along the length of the road
 float get_road_cost(point const &p1, point const &p2) {return (p2p_dist(p1, p2) + 4.0f*fabs(p1.z - p2.z));} // 4x penalty for steepness
 
 bool road_seg_valid(point const &p1, point const &p2, bool dim, vect_cube_t const &blockers, float road_hwidth, bool expand_start, bool expand_end) {

@@ -818,7 +818,7 @@ class city_road_gen_t : public road_gen_base_t {
 		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vect_cube_t &blockers, road_network_t *rn1, road_network_t *rn2, unsigned city1, unsigned city2,
 			unsigned dest_city_id1, unsigned dest_city_id2, heightmap_query_t &hq, float road_width, float conn_pos, bool dim, bool check_only, bool is_4_way1, bool is_4_way2)
 		{
-			//assert(city1 != city2); // only holds for 2-segment connector roads
+			assert(city1 != city2 || city1 == CONN_CITY_IX); // only holds for 2-segment connector roads
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
 			if (dir == 0) {swap(city1, city2);} // make {lo, hi}
 			point p1, p2;
@@ -1910,7 +1910,10 @@ public:
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
 		//cout << "Connect city " << city1 << " and " << city2 << endl;
-		//if (connect_two_cities_new(city1, city2, blockers, hq, road_width)) return 1;
+
+		if (city_params.new_city_conn_road_alg) { // run the new algorithm first; if that fails, run the old algorithm
+			if (connect_two_cities_new(city1, city2, blockers, hq, road_width)) return 1;
+		}
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
