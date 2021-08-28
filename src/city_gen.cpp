@@ -1946,7 +1946,7 @@ public:
 		cube_t const bc[2] = {bcube1, bcube2};
 		
 		if ((bc[dx].x1() - bc[!dx].x1() > min_jog) && (bc[dy].y1() - bc[!dy].y1() > min_jog)) {
-			// connect with two road segments using a jog: Note: assumes cities are all the same size
+			// connect with two road segments using a jog: Note: assumes cities are all about the same size
 			bool const inv_dim(rgen.rand_bool());
 			//cout << "Try connect using jog in dim " << inv_dim << endl;
 			cube_t bc1_conn(bcube1), bc2_conn(bcube2);
@@ -2072,7 +2072,7 @@ public:
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();
 		timer.end();
-		// old: 8, 12, 19057 ; new: 8, 15, 51802
+		// old: 8, 12, 19057 ; new: 8, 16, 47454
 		cout << "Cities: " << num_cities << ", connector roads: " << num_conn << ", total cost: " << tot_cost << endl;
 	}
 	void add_streetlights() {

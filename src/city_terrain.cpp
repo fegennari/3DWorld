@@ -352,7 +352,7 @@ cube_t get_road_between_pts(point const &p1, point const &p2, float road_hwidth,
 	return road;
 }
 // Note: this is a simple fast cost estimate based on road length and elevation change at endpoints; it doesn't include elevation change along the length of the road
-float get_road_cost(point const &p1, point const &p2) {return (p2p_dist(p1, p2) + 4.0f*fabs(p1.z - p2.z));} // 4x penalty for steepness
+float estimate_road_cost(point const &p1, point const &p2) {return (p2p_dist(p1, p2) + 4.0f*fabs(p1.z - p2.z));} // 4x penalty for steepness
 
 bool road_seg_valid(point const &p1, point const &p2, bool dim, vect_cube_t const &blockers, float road_hwidth, bool expand_start, bool expand_end) {
 	float const length(fabs(p1[dim] - p2[dim]));
@@ -364,7 +364,23 @@ bool check_pt_valid(point const &pt, cube_t const exclude[2]) {
 	return (pt.z > water_plane_z && !exclude[0].contains_pt_xy(pt) && !exclude[1].contains_pt_xy(pt));
 }
 
-float city_road_connector_t::find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, heightmap_query_t const &hq,
+// Note: hq is not modifed
+float city_road_connector_t::calc_road_cost(point const &p1, point const &p2, heightmap_query_t &hq) {
+	bool const dim(fabs(p2.x - p1.x) < fabs(p2.y - p1.y)), dir(p1[dim] < p2[dim]), slope((p1.z < p2.z) ^ dir);
+	road_t const road(p1, p2, city_params.road_width, dim, slope, 0); // road_ix = 0
+	if (!segment_road(road, hq, 1)) return 0.0; // check_only=1
+	float tot_dz(0.0);
+
+	for (auto s = segments.begin(); s != segments.end(); ++s) {
+		if (s->z2() < s->z1()) {swap(s->z2(), s->z1());} // swap zvals if needed
+		assert(s->is_normalized());
+		tot_dz += hq.flatten_for_road(*s, city_params.road_border, 1, 0, nullptr, nullptr); // check_only=1, no bridges or tunnels
+	}
+	return tot_dz;
+}
+
+// Note: hq is not modifed
+float city_road_connector_t::find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, heightmap_query_t &hq,
 	vector<point> &pts, cube_t const exclude[2], float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2)
 {
 	pts.push_back(p1);
@@ -401,9 +417,15 @@ float city_road_connector_t::find_route_between_points(point const &p1, point co
 	}
 	if (!success) {pts.clear(); return 0.0;} // failed
 	pts.push_back(p2);
-	// calculate cost
+	// calculate road cost
 	float cost(0.0);
-	for (auto p = pts.begin(); p+1 != pts.end(); ++p) {cost += get_road_cost(*p, *(p+1));}
+
+	for (auto p = pts.begin(); p+1 != pts.end(); ++p) {
+		//cost += estimate_road_cost(*p, *(p+1));
+		float const seg_cost(calc_road_cost(*p, *(p+1), hq));
+		if (seg_cost == 0.0) {pts.clear(); return 0.0;} // failed
+		cost += seg_cost;
+	}
 	cost *= (pts.size() - 1); // add jog penalty
 	return cost;
 }
@@ -413,11 +435,12 @@ bool city_road_connector_t::segment_road(road_t const &road, heightmap_query_t c
 	float const road_len(road.get_length()), conn_pos(road.get_center_dim(!dim));
 	unsigned const num_segs(ceil(road_len/city_params.conn_road_seg_len));
 	assert(num_segs > 0 && num_segs < 1000); // sanity check
+	segments.clear();
+	if (num_segs == 1) {segments.push_back(road); return (fabs(road.get_slope_val()) < city_params.max_road_slope);} // single segment optimization
 	float const seg_len(road_len/num_segs);
 	assert(seg_len <= city_params.conn_road_seg_len);
 	road_t rs(road); // keep d[!dim][0], d[!dim][1], dim, and road_ix
 	rs.z1() = road.d[2][road.slope];
-	segments.clear();
 
 	for (unsigned n = 0; n < num_segs; ++n) {
 		rs.d[dim][1] = ((n+1 == num_segs) ? road.d[dim][1] : (rs.d[dim][0] + seg_len)); // make sure it ends exactly at the correct location
