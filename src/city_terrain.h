@@ -43,12 +43,16 @@ public:
 	int get_y_pos(float y) const {return (get_ypos(y) + int(ysize)/2);}
 	float  get_height(unsigned x, unsigned y) const {return heightmap[y*xsize + x];} // Note: not bounds checked
 	float &get_height(unsigned x, unsigned y)       {return heightmap[y*xsize + x];} // Note: not bounds checked
+	float  get_height_bc(unsigned x, unsigned y) const {assert(x < xsize && y < ysize); return heightmap[y*xsize + x];}
+	float  get_height_clamped(int x, int y) const {return (is_inside_terrain(x, y) ? get_height(x, y) : OUTSIDE_TERRAIN_HEIGHT);}
 	bool is_normalized_region(unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {return (x1 <  x2 && y1 <  y2 && x2 <= xsize && y2 <= ysize);}
 	bool is_valid_region     (unsigned x1, unsigned y1, unsigned x2, unsigned y2) const {return (x1 <= x2 && y1 <= y2 && x2 <= xsize && y2 <= ysize);}
 	bool is_inside_terrain(int x, int y) const {return (x >= 0 && y >= 0 && x < (int)xsize && y < (int)ysize);}
 	cube_t get_full_hmap_bcube() const {return get_cube_for_bounds(0, 0, xsize, ysize, 0.0);}
 	cube_t get_cube_for_bounds(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float elevation) const;
-	float get_height_at(float xval, float yval) const;
+	cube_t get_cube_for_cell(int x, int y) const;
+	point  get_pos_for_cell (int x, int y) const {return point(get_x_value(x), get_y_value(y), get_height_clamped(x, y));}
+	float get_height_at(float xval, float yval) const {return get_height_clamped(get_x_pos(xval), get_y_pos(yval));}
 	float get_road_zval_at_pt(point const &pos) const {return get_height_at(pos.x, pos.y) + ROAD_HEIGHT;}
 	bool any_underwater(unsigned x1, unsigned y1, unsigned x2, unsigned y2, bool check_border=0) const;
 	void get_segment_end_pts(road_t const &r, unsigned six, unsigned eix, point &ps, point &pe) const;

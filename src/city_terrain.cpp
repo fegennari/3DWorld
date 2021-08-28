@@ -16,18 +16,11 @@ float smooth_interp(float a, float b, float mix) {
 }
 
 cube_t heightmap_query_t::get_cube_for_bounds(unsigned x1, unsigned y1, unsigned x2, unsigned y2, float elevation) const {
-	cube_t c;
-	c.x1() = get_x_value(x1);
-	c.x2() = get_x_value(x2);
-	c.y1() = get_y_value(y1);
-	c.y2() = get_y_value(y2);
-	c.z1() = c.z2() = elevation;
-	return c;
+	return cube_t(get_x_value(x1), get_x_value(x2), get_y_value(y1), get_y_value(y2), elevation, elevation);
 }
-
-float heightmap_query_t::get_height_at(float xval, float yval) const {
-	int const x(get_x_pos(xval)), y(get_y_pos(yval));
-	return (is_inside_terrain(x, y) ? get_height(x, y) : OUTSIDE_TERRAIN_HEIGHT);
+cube_t heightmap_query_t::get_cube_for_cell(int x, int y) const {
+	float const xv(get_x_value(x)), yv(get_y_value(y)), z(get_height_clamped(x, y));
+	return cube_t(xv, xv+DX_VAL, yv, yv+DY_VAL, z, z);
 }
 
 bool heightmap_query_t::any_underwater(unsigned x1, unsigned y1, unsigned x2, unsigned y2, bool check_border) const {
