@@ -408,3 +408,37 @@ float city_road_connector_t::find_route_between_points(point const &p1, point co
 	return cost;
 }
 
+bool city_road_connector_t::segment_road(road_t const &road, heightmap_query_t const &hq, bool check_only) {
+	bool const dim(road.dim);
+	float const road_len(road.get_length()), conn_pos(road.get_center_dim(!dim));
+	unsigned const num_segs(ceil(road_len/city_params.conn_road_seg_len));
+	assert(num_segs > 0 && num_segs < 1000); // sanity check
+	float const seg_len(road_len/num_segs);
+	assert(seg_len <= city_params.conn_road_seg_len);
+	road_t rs(road); // keep d[!dim][0], d[!dim][1], dim, and road_ix
+	rs.z1() = road.d[2][road.slope];
+	segments.clear();
+
+	for (unsigned n = 0; n < num_segs; ++n) {
+		rs.d[dim][1] = ((n+1 == num_segs) ? road.d[dim][1] : (rs.d[dim][0] + seg_len)); // make sure it ends exactly at the correct location
+		point pos;
+		pos[ dim] = rs.d[dim][1];
+		pos[!dim] = conn_pos;
+		rs.z2()   = hq.get_road_zval_at_pt(pos); // terrain height at end of segment
+		rs.slope  = (rs.z2() < rs.z1());
+
+		if (fabs(rs.get_slope_val()) > city_params.max_road_slope) { // slope is too high, clamp z2 to max allowed value
+			if (n+1 == num_segs) {
+				// Note: the height of the first/last segment may change slightly after placing the bend,
+				// which can make this slope check fail when check_only=0 while it passed when check_only=1;
+				// returning here will create a disconnected road segment and fail an assert later, so instead we allow the high slope
+				if (check_only) return 0;
+			}
+			else {rs.z2() = rs.z1() + seg_len*city_params.max_road_slope*SIGN(rs.dz());}
+		}
+		segments.push_back(rs);
+		rs.d[dim][0] = rs.d[dim][1]; rs.z1() = rs.z2(); // shift segment end point
+	} // for n
+	return 1;
+}
+

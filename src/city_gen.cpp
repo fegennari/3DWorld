@@ -375,8 +375,8 @@ class city_road_gen_t : public road_gen_base_t {
 		vect_cube_t parks;
 		//vector<road_isec_t> track_turns; // for railroad tracks
 		city_obj_placer_t city_obj_placer;
+		city_road_connector_t city_road_connector;
 		cube_t bcube;
-		vector<road_t> segments; // reused temporary
 		set<unsigned> connected_to; // vector?
 		map<uint64_t, unsigned> tile_to_block_map;
 		map<unsigned, road_isec_t const *> cix_to_isec; // maps city_ix to intersection
@@ -829,10 +829,10 @@ class city_road_gen_t : public road_gen_base_t {
 			p2[ dim] = bcube2.d[dim][!dir];
 			bool const slope((p1.z < p2.z) ^ dir);
 			road_t const road(p1, p2, road_width, dim, slope, roads.size());
-			float const road_len(road.get_length()), delta_z(road.dz()), max_slope(city_params.max_road_slope);
+			float const road_len(road.get_length()), delta_z(road.dz());
 			assert(road_len > 0.0 && delta_z >= 0.0);
 
-			if (delta_z/road_len > max_slope) { // slope is too high (split segments will have even higher slopes)
+			if (delta_z/road_len > city_params.max_road_slope) { // slope is too high (split segments will have even higher slopes)
 				if (!check_only) {cout << TXT(dim) << TXT(road_len) << TXT(delta_z) << TXT(bcube1.str()) << TXT(bcube2.str()) << TXT(p1.str()) << TXT(p2.str()) << endl;}
 				assert(check_only);
 				return -1.0;
@@ -867,38 +867,12 @@ class city_road_gen_t : public road_gen_base_t {
 				// Note: no bridges here, but could add them
 				return hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope]-ROAD_HEIGHT, road.d[2][!slope]-ROAD_HEIGHT, dim, city_params.road_border, 0, 0, check_only);
 			}
-			unsigned const num_segs(ceil(road_len/city_params.conn_road_seg_len));
-			assert(num_segs > 0 && num_segs < 1000); // sanity check
-			float const seg_len(road_len/num_segs);
-			assert(seg_len <= city_params.conn_road_seg_len);
-			road_t rs(road); // keep d[!dim][0], d[!dim][1], dim, and road_ix
-			rs.z1() = road.d[2][slope];
-			segments.clear();
+			if (!city_road_connector.segment_road(road, hq, check_only)) return -1.0;
 			float tot_dz(0.0);
 			bool last_was_bridge(0), last_was_tunnel(0);
 			vector<flatten_op_t> replay_fops;
 
-			for (unsigned n = 0; n < num_segs; ++n) {
-				rs.d[dim][1] = ((n+1 == num_segs) ? road.d[dim][1] : (rs.d[dim][0] + seg_len)); // make sure it ends exactly at the correct location
-				point pos;
-				pos[ dim] = rs.d[dim][1];
-				pos[!dim] = conn_pos;
-				rs.z2()   = hq.get_road_zval_at_pt(pos); // terrain height at end of segment
-				rs.slope  = (rs.z2() < rs.z1());
-				
-				if (fabs(rs.get_slope_val()) > max_slope) { // slope is too high, clamp z2 to max allowed value
-					if (n+1 == num_segs) {
-						// Note: the height of the first/last segment may change slightly after placing the bend,
-						// which can make this slope check fail when check_only=0 while it passed when check_only=1;
-						// returning here will create a disconnected road segment and fail an assert later, so instead we allow the high slope
-						if (check_only) return -1.0;
-					}
-					else {rs.z2() = rs.z1() + seg_len*max_slope*SIGN(rs.dz());}
-				}
-				segments.push_back(rs);
-				rs.d[dim][0] = rs.d[dim][1]; rs.z1() = rs.z2(); // shift segment end point
-			} // for n
-			for (auto s = segments.begin(); s != segments.end(); ++s) {
+			for (auto s = city_road_connector.segments.begin(); s != city_road_connector.segments.end(); ++s) {
 				if (s->z2() < s->z1()) {swap(s->z2(), s->z1());} // swap zvals if needed
 				assert(s->is_normalized());
 				bridge_t bridge(*s);
@@ -1844,7 +1818,6 @@ public:
 		vect_cube_t active_blockers;
 		cube_t exclude[2] = {bcube1, bcube2};
 		for (unsigned d = 0; d < 2; ++d) {exclude[d].expand_by_xy(min_edge_dist);}
-		city_road_connector_t CRC;
 		
 		// determine the set of active blockers, which exclude the two cities to be connected
 		for (auto b = blockers.begin(); b != blockers.end(); ++b) {
@@ -1854,12 +1827,13 @@ public:
 		vector<road_endpoint_t> rpts1, rpts2;
 		get_all_conn_road_endpoints(rn1, bcube2, rpts1);
 		get_all_conn_road_endpoints(rn2, bcube1, rpts2);
+		city_road_connector_t city_road_connector;
 
 		for (auto r1 = rpts1.begin(); r1 != rpts1.end(); ++r1) {
 			for (auto r2 = rpts2.begin(); r2 != rpts2.end(); ++r2) {
 				cand.clear();
 				cand.start_dim = r1->dim;
-				cand.cost = CRC.find_route_between_points(r1->pt, r2->pt, active_blockers, hq, cand.pts, exclude, road_hwidth, r1->dim, r1->dir, r2->dim, r2->dir);
+				cand.cost = city_road_connector.find_route_between_points(r1->pt, r2->pt, active_blockers, hq, cand.pts, exclude, road_hwidth, r1->dim, r1->dir, r2->dim, r2->dir);
 				if (cand.cost > 0.0 && (best_cand.cost == 0.0 || cand.cost < best_cand.cost)) {best_cand = cand;} // update best_can if valid and a lower cost
 			} // for r2
 		} // for r1

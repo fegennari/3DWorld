@@ -89,8 +89,11 @@ struct conn_isec_t {
 };
 
 struct city_road_connector_t {
+	vector<road_t> segments; // reused temporary
+
 	static bool get_closer_dir(cube_t const &A, cube_t const &B, bool dim);
 	float find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, heightmap_query_t const &hq,
 		vector<point> &pts, cube_t const exclude[2], float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2);
+	bool segment_road(road_t const &road, heightmap_query_t const &hq, bool check_only);
 };
 
