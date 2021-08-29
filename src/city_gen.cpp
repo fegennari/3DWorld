@@ -1801,7 +1801,7 @@ public:
 			bool const dir(city_road_connector_t::get_closer_dir(*r, dest_bcube, r->dim));
 			if (!rn.check_valid_conn_intersection(*r, r->dim, dir, 1)) continue; // not a valid 3-way intersection; is_4_way1=1
 			point pt;
-			pt[ r->dim] = r->d[r->dim][dir];
+			pt[ r->dim] = r->d[r->dim][dir]; // extend to the outside of the intersection; should this be rn.get_bcube().d[r->dim][dir]?
 			pt[!r->dim] = r->get_center_dim(!r->dim);
 			pt.z        = r->z2();
 			rpts.emplace_back(pt, r->dim, dir);
@@ -1852,7 +1852,8 @@ public:
 			point const &p1(*p), &p2(*(p+1));
 			assert(!bcube1.contains_pt(p2));
 			assert(!bcube2.contains_pt(p1));
-			assert(p1[!fdim] == p2[!fdim] && p1[fdim] != p2[fdim]); // must be a straight, nonzero length road in this dim
+			assert(p1[!fdim] == p2[!fdim]); // must be a straight road in this dim
+			assert(p1[ fdim] != p2[ fdim]); // must be a nonzero length road in this dim
 			bool const dir(p1[fdim] < p2[fdim]);
 			cube_t next_bcube;
 			if (is_last) {next_bcube = bcube2;} // end at the second city

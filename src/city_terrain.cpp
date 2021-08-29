@@ -239,7 +239,7 @@ class road_router_t {
 		cmp_xy_by_dist(xy_ix_t const &dest_) : dest(dest_) {}
 		
 		bool operator()(xy_ix_t const &a, xy_ix_t const &b) const { // comapre Euclidean distan squared
-			int const dax(a.x - dest.x), day(a.y - dest.y), dbx(b.x - dest.x), dby(b.y - dest.y);
+			int64_t const dax((int64_t)a.x - dest.x), day((int64_t)a.y - dest.y), dbx((int64_t)b.x - dest.x), dby((int64_t)b.y - dest.y);
 			return ((dax*dax + day*day) < (dbx*dbx + dby*dby));
 		}
 	};
@@ -249,8 +249,8 @@ public:
 	road_router_t(vect_cube_t const &blockers_, heightmap_query_t const &hq_, cube_t const exclude[2]) : blockers(blockers_), hq(hq_) {
 		// add the two exclude (city) cubes back into blockers; is it better to just pass blockers + active_blockers?
 		for (unsigned d = 0; d < 2; ++d) {
-			//blockers.push_back(exclude[d]);
-			//blockers.back().expand_by(-HALF_DXY); // shrink to prevent initial collisions
+			blockers.push_back(exclude[d]);
+			blockers.back().expand_by(-city_params.road_spacing); // shrink to prevent initial collisions
 		}
 	}
 private:
@@ -283,8 +283,10 @@ public:
 		// TODO: use A* path finding on the terrain heightmap, with heavy weight for introducing jogs
 		xy_ix_t const start(get_ix_for_pos(p1)), end(get_ix_for_pos(p2));
 		if (start == end) return 1; // success
-		//deque<xy_ix_t> pend;
-		vector<xy_ix_t> pend, next;
+		assert(is_cell_valid(start.x, start.y) && is_cell_valid(end.x, end.y)); // TESTING
+		//deque<xy_ix_t> pend; // queue for BFS
+		vector<xy_ix_t> pend; // stack for DFS
+		vector<xy_ix_t> next;
 		pend.push_back(start);
 		map<xy_ix_t, xy_ix_t> seen; // map to parent index; maybe could be a bit vector, but the heightmap could be very large (50M entries)
 		seen.insert(make_pair(start, start));
@@ -301,6 +303,7 @@ public:
 			next.clear();
 			float const zval(get_valid_adj_cells(cur, next));
 			sort(next.begin(), next.end(), cmp_xy_by_dist(end)); // sort by distance to end
+			std::reverse(next.begin(), next.end()); // since we're using a stack, we want these to be sorted descending so that the closest cell is last/on the top
 
 			for (auto i = next.begin(); i != next.end(); ++i) {
 				if (*i == end) { // reached the end
@@ -323,7 +326,7 @@ public:
 					} // for while()
 					std::reverse(pts.begin()+pts_start, pts.end());
 					unsigned const min_len(abs(end.x - start.x) + abs(end.y - start.y));
-					cout << TXT(seen.size()) << TXT(pts.size()) << TXT(min_len) << TXT(path_len) << TXT(num_visited) << endl;
+					cout << "success: " << TXT(seen.size()) << TXT(pts.size()) << TXT(min_len) << TXT(path_len) << TXT(num_visited) << endl;
 					return 1; // done
 				}
 				if (!seen.insert(make_pair(*i, cur)).second) continue; // already seen
@@ -333,7 +336,7 @@ public:
 				pend.push_back(*i);
 			} // for i
 		} // end while()
-		cout << "failed" << endl;
+		cout << "failed: " << TXT(seen.size()) << TXT(pts.size()) << TXT(num_visited) << endl;
 		return 0;
 	}
 }; // end road_router_t
