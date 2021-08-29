@@ -2015,8 +2015,18 @@ public:
 					return (cost1 + cost2);
 				}
 			} // for d
+		} // end two segment/one jog case
+		if (city_params.make_4_way_ints > 2) {
+			// determine if the two cities project onto each other in one dim; if so, maybe we can use the new city connector algorithm to join them with a jog (3 segments + 2 bends)
+			cube_t bc1(bcube1), bc2(bcube2);
+			bc1.expand_by(-min_jog);
+			bc2.expand_by(-min_jog);
+
+			if ((bc1.x1() < bc2.x2() && bc1.x2() > bc2.x1()) || (bc1.y1() < bc2.y2() && bc1.y2() > bc2.y1())) {
+				return connect_two_cities_new(city1, city2, blockers, hq, road_width);
+			}
 		}
-		return 0.0;
+		return 0.0; // failed to connect cities
 	}
 	private:
 	void try_single_jog_conn_road(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width,
