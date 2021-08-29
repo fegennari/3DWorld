@@ -226,130 +226,6 @@ float heightmap_query_t::flatten_for_road(road_t const &road, unsigned border, b
 
 // city connector road path finding
 
-class road_router_t {
-	struct xy_ix_t { // should we just use tile_xy_pair instead?
-		int x, y;
-		xy_ix_t() : x(0), y(0) {}
-		xy_ix_t(int x_, int y_) : x(x_), y(y_) {}
-		bool operator==(xy_ix_t const &v) const {return (x == v.x && y == v.y);}
-		bool operator!=(xy_ix_t const &v) const {return !operator==(v);}
-		bool operator< (xy_ix_t const &v) const {return (y == v.y) ? (x < v.x) : (y < v.y);} // compare y then x
-		int  operator[](bool dim) const {return (dim ? y : x);}
-		int &operator[](bool dim)       {return (dim ? y : x);}
-	};
-	struct cmp_xy_by_dist {
-		xy_ix_t const &dest;
-		cmp_xy_by_dist(xy_ix_t const &dest_) : dest(dest_) {}
-		
-		bool operator()(xy_ix_t const &a, xy_ix_t const &b) const { // comapre Euclidean distan squared
-			int64_t const dax((int64_t)a.x - dest.x), day((int64_t)a.y - dest.y), dbx((int64_t)b.x - dest.x), dby((int64_t)b.y - dest.y);
-			return ((dax*dax + day*day) < (dbx*dbx + dby*dby));
-		}
-	};
-	vect_cube_t blockers;
-	heightmap_query_t const &hq;
-public:
-	road_router_t(vect_cube_t const &blockers_, heightmap_query_t const &hq_, cube_t const &bcube1, cube_t const &bcube2) : blockers(blockers_), hq(hq_) {
-		for (unsigned d = 0; d < 2; ++d) { // add the two exclude (city) cubes back into blockers
-			blockers.push_back(d ? bcube2 : bcube1);
-			blockers.back().expand_by(-HALF_DXY); // shrink to prevent initial collisions
-		}
-	}
-private:
-	xy_ix_t get_ix_for_pos(point const &pos) const {return xy_ix_t(hq.get_x_pos(pos.x), hq.get_y_pos(pos.y));}
-
-	bool is_cell_valid(int x, int y, float zmin=0.0, float zmax=0.0) const {
-		if (!hq.is_inside_terrain(x, y)) return 0;
-		cube_t const c(hq.get_cube_for_cell(x, y));
-		if (c.z1() < water_plane_z) return 0; // underwater
-		//if (zmin != zmax && (c.z1() < zmin || c.z2() > zmax)) return 0; // delta-z is too large
-		return !has_bcube_int_xy_no_adj(c, blockers);
-	}
-	bool is_adj_cell_valid(int x, int y, float zval) const {
-		float const max_dz(HALF_DXY*city_params.max_road_slope); // dz/dx < city_params.max_road_slope
-		return is_cell_valid(x, y, zval-max_dz, zval+max_dz);
-	}
-	float get_valid_adj_cells(xy_ix_t const &cell, vector<xy_ix_t> &adj) const {
-		assert(hq.is_inside_terrain(cell.x, cell.y));
-		float const zval(hq.get_height(cell.x, cell.y));
-
-		for (unsigned d = 0; d < 4; ++d) { // try +x, -x, +y, and -y
-			xy_ix_t adj_cell(cell);
-			adj_cell[d>>1] += ((d&1) ? 1 : -1);
-			if (is_adj_cell_valid(adj_cell.x, adj_cell.y, zval)) {adj.push_back(adj_cell);}
-		}
-		return zval;
-	}
-public:
-	bool connect_endpoints(point const &p1, point const &p2, vector<point> &pts, bool dim1, bool dim2) {
-		return 0; // not yet completed, disable
-		// TODO: use A* path finding on the terrain heightmap, with heavy weight for introducing jogs
-		xy_ix_t const start(get_ix_for_pos(p1)), end(get_ix_for_pos(p2));
-		assert(start.x != end.x && start.y != end.y); // this case should be handled by the caller
-		if (start == end) return 1; // success? we didn't even try
-		//deque<xy_ix_t> pend; // queue for BFS
-		vector<xy_ix_t> pend; // stack for DFS
-		vector<xy_ix_t> next;
-		pend.push_back(start);
-		map<xy_ix_t, xy_ix_t> seen; // map to parent index; maybe could be a bit vector, but the heightmap could be very large (50M entries)
-		seen.insert(make_pair(start, start));
-		unsigned num_visited(0), path_len(0);
-		cout << "connecting endpoints " << TXT(start.x) << TXT(start.y) << TXT(end.x) << TXT(end.y) << endl;
-
-		while (!pend.empty()) {
-			++num_visited;
-			xy_ix_t cur(pend.back());
-			pend.pop_back();
-			auto it(seen.find(cur));
-			assert(it != seen.end());
-			xy_ix_t const prev(it->second);
-			next.clear();
-			float const zval(get_valid_adj_cells(cur, next));
-			sort(next.begin(), next.end(), cmp_xy_by_dist(end)); // sort by distance to end
-			std::reverse(next.begin(), next.end()); // since we're using a stack, we want these to be sorted descending so that the closest cell is last/on the top
-
-			for (auto i = next.begin(); i != next.end(); ++i) {
-				if (*i == end) { // reached the end
-					unsigned const pts_start(pts.size()); // typically 1-2
-					assert(pts_start > 0);
-					bool cur_dim(dim2); // current road dim, starting from the end
-
-					while (cur != start) { // reconstruct the path by walking backwards using seen
-						auto it2(seen.find(cur));
-						assert(it2 != seen.end());
-						xy_ix_t const &parent(it2->second);
-						assert(parent != cur); // check for cycles
-						assert((cur.x == parent.x) != (cur.y == parent.y)); // must move in either x or y
-
-						if ((cur.y == parent.y) != cur_dim) { // direction change, add a bend
-							point pt(hq.get_pos_for_cell(cur.x, cur.y));
-							// snap to starting and ending line segments where needed to make the road X/Y axis aligned
-							if (cur.x == start.x) {pt.x = p1.x;} else if (cur.x == end.x) {pt.x = p2.x;}
-							if (cur.y == start.y) {pt.y = p1.y;} else if (cur.y == end.y) {pt.y = p2.y;}
-							assert(pts.size() == pts_start || pt.x == pts.back().x || pt.y == pts.back().y);
-							if (pts.empty() || pt.x != pts.back().x || pt.y != pts.back().y) {pts.push_back(pt);} // skip duplicate points after snapping
-							cur_dim ^= 1;
-						}
-						cur = parent;
-						++path_len;
-					} // for while()
-					std::reverse(pts.begin()+pts_start, pts.end());
-					unsigned const min_len(abs(end.x - start.x) + abs(end.y - start.y));
-					cout << "success: " << TXT(seen.size()) << TXT(pts.size()) << TXT(min_len) << TXT(path_len) << TXT(num_visited) << endl;
-					return 1; // done
-				}
-				if (!seen.insert(make_pair(*i, cur)).second) continue; // already seen
-				bool const is_turn(i->x != prev.x && i->y != prev.y);
-				float const dz(fabs(zval - hq.get_height(i->x, i->y)));
-				float const cost(dz + 1.0*is_turn*city_params.road_width);
-				pend.push_back(*i);
-			} // for i
-		} // end while()
-		cout << "failed: " << TXT(seen.size()) << TXT(pts.size()) << TXT(num_visited) << endl;
-		return 0;
-	}
-}; // end road_router_t
-
 bool city_road_connector_t::get_closer_dir(cube_t const &A, cube_t const &B, bool dim) {
 	float const center(B.get_center_dim(dim));
 	return (abs(A.d[dim][1] - center) < abs(A.d[dim][0] - center));
@@ -396,67 +272,40 @@ float city_road_connector_t::find_route_between_points(point const &p1, point co
 	// can't route if the two endpoints are too close to add a jog/road
 	if (min(fabs(p1.x - p2.x), fabs(p1.y - p2.y)) < max(min_extend, 2.0f*HALF_DXY)) return 0.0;
 	pts.push_back(p1);
-	// extend both the start and end away from the city so that connect_endpoints() doesn't create a jog too close to the city
-	point p1_ext(p1), p2_ext(p2);
-	p1_ext[dim1] += (dir1 ? 1.0 : -1.0)*min_extend;
-	p2_ext[dim2] += (dir2 ? 1.0 : -1.0)*min_extend;
-	pts.push_back(p1_ext);
-	road_router_t router(blockers, hq, bcube1, bcube2);
-	int success(0);
-	
-	if (router.connect_endpoints(p1_ext, p2_ext, pts, dim1, dim2)) {
-		pts.push_back(p2_ext);
-		success = 2;
-	}
-	else { // try adding 1-2 simple jogs
-		assert(pts.size() == 2);
-		pts.pop_back(); // remove p1_ext
-		float const min_edge_dist(4.0*road_hwidth);
-		cube_t exclude[2] = {bcube1, bcube2};
-		for (unsigned d = 0; d < 2; ++d) {exclude[d].expand_by_xy(min_edge_dist);}
+	float const min_edge_dist(4.0*road_hwidth);
+	cube_t exclude[2] = {bcube1, bcube2};
+	for (unsigned d = 0; d < 2; ++d) {exclude[d].expand_by_xy(min_edge_dist);}
+	bool success(0);
 
-		if (dim1 == dim2) { // add 2 points to create a job
-			assert(dir1 != dir2); // must be opposing
-			point pt[2];
-			pt[0][ dim1] = pt[1][ dim1] = 0.5f*(p1[dim1] + p2[dim1]); // halfway between the two end points
-			pt[0][!dim1] = p1[!dim1]; pt[1][!dim1] = p2[!dim1];
-			for (unsigned d = 0; d < 2; ++d) {pt[d].z = hq.get_road_zval_at_pt(pt[d]);}
+	// try adding 1-2 simple jogs
+	if (dim1 == dim2) { // add 2 points to create a jog
+		assert(dir1 != dir2); // must be opposing
+		float const jog_pos(0.5f*(p1[dim1] + p2[dim1])); // halfway between the two end points
+		point pt[2];
+		pt[0][ dim1] = pt[1][ dim1] = jog_pos;
+		pt[0][!dim1] = p1[!dim1]; pt[1][!dim1] = p2[!dim1];
+		for (unsigned d = 0; d < 2; ++d) {pt[d].z = hq.get_road_zval_at_pt(pt[d]);}
 		
-			if (check_pt_valid(pt[0], exclude) && check_pt_valid(pt[1], exclude) && road_seg_valid(p1, pt[0], dim1, blockers, road_hwidth, 0, 1) &&
-				road_seg_valid(pt[0], pt[1], !dim1, blockers, road_hwidth, 1, 1) && road_seg_valid(pt[1], p2, dim1, blockers, road_hwidth, 1, 0))
-			{
-				for (unsigned d = 0; d < 2; ++d) {pts.push_back(pt[d]);}
-				success = 1;
-			}
+		if (check_pt_valid(pt[0], exclude) && check_pt_valid(pt[1], exclude) && road_seg_valid(p1, pt[0], dim1, blockers, road_hwidth, 0, 1) &&
+			road_seg_valid(pt[0], pt[1], !dim1, blockers, road_hwidth, 1, 1) && road_seg_valid(pt[1], p2, dim1, blockers, road_hwidth, 1, 0))
+		{
+			for (unsigned d = 0; d < 2; ++d) {pts.push_back(pt[d]);}
+			success = 1;
 		}
-		else { // add one point to create a right angle bend
-			point ipt;
-			ipt[ dim1] = p2[ dim1];
-			ipt[!dim1] = p1[!dim1];
-			ipt.z = hq.get_road_zval_at_pt(ipt);
+	}
+	else { // add one point to create a right angle bend
+		point ipt;
+		ipt[ dim1] = p2[ dim1];
+		ipt[!dim1] = p1[!dim1];
+		ipt.z = hq.get_road_zval_at_pt(ipt);
 
-			if (check_pt_valid(ipt, exclude) && road_seg_valid(p1, ipt, dim1, blockers, road_hwidth, 0, 1) && road_seg_valid(ipt, p2, dim2, blockers, road_hwidth, 1, 0)) {
-				pts.push_back(ipt);
-				success = 1;
-			}
+		if (check_pt_valid(ipt, exclude) && road_seg_valid(p1, ipt, dim1, blockers, road_hwidth, 0, 1) && road_seg_valid(ipt, p2, dim2, blockers, road_hwidth, 1, 0)) {
+			pts.push_back(ipt);
+			success = 1;
 		}
 	}
 	if (!success) {pts.clear(); return 0.0;} // failed
 	pts.push_back(p2);
-
-	if (success == 2) { // remove any duplicate or colinear points
-		auto i(pts.begin()+2), o(i); // skip first 2 points
-
-		for (; i != pts.end(); ++i) {
-			point &next(*i), cur(*(o-1)), prev(*(o-2));
-			assert(cur.x == prev.x || cur.y == prev.y); // no diagonal segments
-			if (next.x == cur.x && next.y == cur.y) continue; // duplicate, skip
-			if (next.x == cur.x && cur.x == prev.x) {cur.y = next.y; continue;} // colinear X
-			if (next.y == cur.y && cur.y == prev.y) {cur.x = next.x; continue;} // colinear Y
-			*(o++) = next;
-		}
-		pts.erase(o, pts.end());
-	}
 	// calculate road cost
 	float cost(0.0);
 

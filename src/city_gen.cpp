@@ -2078,7 +2078,7 @@ public:
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();
 		timer.end();
-		// old: 8, 12, 19057 ; new: 8, 16, 47454
+		// old: 8, 12, 19057 ; new: 8, 16, 47400
 		cout << "Cities: " << num_cities << ", connector roads: " << num_conn << ", total cost: " << tot_cost << endl;
 	}
 	void add_streetlights() {
