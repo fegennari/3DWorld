@@ -249,11 +249,10 @@ bool check_pt_valid(point const &pt, cube_t const exclude[2]) {
 	return (pt.z > water_plane_z && !exclude[0].contains_pt_xy(pt) && !exclude[1].contains_pt_xy(pt));
 }
 
-// Note: hq is not modifed
-float city_road_connector_t::calc_road_cost(point const &p1, point const &p2, heightmap_query_t &hq) {
+float city_road_connector_t::calc_road_cost(point const &p1, point const &p2) {
 	bool const dim(fabs(p2.x - p1.x) < fabs(p2.y - p1.y)), dir(p1[dim] < p2[dim]), slope((p1.z < p2.z) ^ dir);
 	road_t const road(p1, p2, city_params.road_width, dim, slope, 0); // road_ix = 0
-	if (!segment_road(road, hq, 1)) return 0.0; // check_only=1
+	if (!segment_road(road, 1)) return 0.0; // check_only=1
 	float tot_dz(0.0);
 
 	for (auto s = segments.begin(); s != segments.end(); ++s) {
@@ -263,10 +262,20 @@ float city_road_connector_t::calc_road_cost(point const &p1, point const &p2, he
 	}
 	return tot_dz;
 }
+float city_road_connector_t::calc_road_path_cost(vector<point> &pts) {
+	float cost(0.0);
 
-// Note: hq is not modifed
-float city_road_connector_t::find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, heightmap_query_t &hq,
-	vector<point> &pts, cube_t const &bcube1, cube_t const &bcube2, float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2)
+	for (auto p = pts.begin(); p+1 != pts.end(); ++p) {
+		float const seg_cost(calc_road_cost(*p, *(p+1)));
+		if (seg_cost == 0.0) {pts.clear(); return 0.0;} // failed
+		cost += seg_cost;
+	}
+	cost *= (pts.size() - 1); // add jog penalty
+	return cost;
+}
+
+float city_road_connector_t::find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, vector<point> &pts,
+	cube_t const &bcube1, cube_t const &bcube2, float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2)
 {
 	float const min_extend(4.0*road_hwidth);
 	// can't route if the two endpoints are too close to add a jog/road
@@ -282,8 +291,8 @@ float city_road_connector_t::find_route_between_points(point const &p1, point co
 		assert(dir1 != dir2); // must be opposing
 		float const jog_pos(0.5f*(p1[dim1] + p2[dim1])); // halfway between the two end points
 		point pt[2];
-		pt[0][ dim1] = pt[1][ dim1] = jog_pos;
 		pt[0][!dim1] = p1[!dim1]; pt[1][!dim1] = p2[!dim1];
+		pt[0][ dim1] = pt[1][ dim1] = jog_pos;
 		for (unsigned d = 0; d < 2; ++d) {pt[d].z = hq.get_road_zval_at_pt(pt[d]);}
 		
 		if (check_pt_valid(pt[0], exclude) && check_pt_valid(pt[1], exclude) && road_seg_valid(p1, pt[0], dim1, blockers, road_hwidth, 0, 1) &&
@@ -306,19 +315,10 @@ float city_road_connector_t::find_route_between_points(point const &p1, point co
 	}
 	if (!success) {pts.clear(); return 0.0;} // failed
 	pts.push_back(p2);
-	// calculate road cost
-	float cost(0.0);
-
-	for (auto p = pts.begin(); p+1 != pts.end(); ++p) {
-		float const seg_cost(calc_road_cost(*p, *(p+1), hq));
-		if (seg_cost == 0.0) {pts.clear(); return 0.0;} // failed
-		cost += seg_cost;
-	}
-	cost *= (pts.size() - 1); // add jog penalty
-	return cost;
+	return calc_road_path_cost(pts); // Note: clears pts on failure
 }
 
-bool city_road_connector_t::segment_road(road_t const &road, heightmap_query_t const &hq, bool check_only) {
+bool city_road_connector_t::segment_road(road_t const &road, bool check_only) {
 	bool const dim(road.dim);
 	float const road_len(road.get_length()), conn_pos(road.get_center_dim(!dim));
 	assert(road_len > 0.0);

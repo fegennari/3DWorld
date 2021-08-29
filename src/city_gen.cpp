@@ -375,7 +375,6 @@ class city_road_gen_t : public road_gen_base_t {
 		vect_cube_t parks;
 		//vector<road_isec_t> track_turns; // for railroad tracks
 		city_obj_placer_t city_obj_placer;
-		city_road_connector_t city_road_connector;
 		cube_t bcube;
 		set<unsigned> connected_to; // vector?
 		map<uint64_t, unsigned> tile_to_block_map;
@@ -816,7 +815,7 @@ class city_road_gen_t : public road_gen_base_t {
 
 		// global connector road functions
 		float create_connector_road(cube_t const &bcube1, cube_t const &bcube2, vect_cube_t &blockers, road_network_t *rn1, road_network_t *rn2, unsigned city1, unsigned city2,
-			unsigned dest_city_id1, unsigned dest_city_id2, heightmap_query_t &hq, float road_width, float conn_pos, bool dim, bool check_only, bool is_4_way1, bool is_4_way2)
+			unsigned dest_city_id1, unsigned dest_city_id2, city_road_connector_t &crc, float road_width, float conn_pos, bool dim, bool check_only, bool is_4_way1, bool is_4_way2)
 		{
 			assert(city1 != city2 || city1 == CONN_CITY_IX); // only holds for 2-segment connector roads
 			bool const dir(bcube1.d[dim][0] < bcube2.d[dim][0]);
@@ -831,6 +830,7 @@ class city_road_gen_t : public road_gen_base_t {
 			road_t const road(p1, p2, road_width, dim, slope, roads.size());
 			float const road_len(road.get_length()), delta_z(road.dz());
 			assert(road_len > 0.0 && delta_z >= 0.0);
+			heightmap_query_t &hq(crc.hq);
 
 			if (delta_z/road_len > city_params.max_road_slope) { // slope is too high (split segments will have even higher slopes)
 				if (!check_only) {cout << TXT(dim) << TXT(road_len) << TXT(delta_z) << TXT(bcube1.str()) << TXT(bcube2.str()) << TXT(p1.str()) << TXT(p2.str()) << endl;}
@@ -867,12 +867,12 @@ class city_road_gen_t : public road_gen_base_t {
 				// Note: no bridges here, but could add them
 				return hq.flatten_sloped_region(x1, y1, x2, y2, road.d[2][slope]-ROAD_HEIGHT, road.d[2][!slope]-ROAD_HEIGHT, dim, city_params.road_border, 0, 0, check_only);
 			}
-			if (!city_road_connector.segment_road(road, hq, check_only)) return -1.0;
+			if (!crc.segment_road(road, check_only)) return -1.0;
 			float tot_dz(0.0);
 			bool last_was_bridge(0), last_was_tunnel(0);
 			vector<flatten_op_t> replay_fops;
 
-			for (auto s = city_road_connector.segments.begin(); s != city_road_connector.segments.end(); ++s) {
+			for (auto s = crc.segments.begin(); s != crc.segments.end(); ++s) {
 				if (s->z2() < s->z1()) {swap(s->z2(), s->z1());} // swap zvals if needed
 				assert(s->is_normalized());
 				bridge_t bridge(*s);
@@ -1808,11 +1808,12 @@ public:
 		} // for r
 	}
 
-	float connect_two_cities_new(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width) {
+	float connect_two_cities_new(unsigned city1, unsigned city2, vect_cube_t &blockers, city_road_connector_t &crc, float road_width) {
 		// Note: ignores the value of city_params.make_4_way_ints because this will always start and end at a 4-way intersection
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		vector<road_t> const &roads1(rn1.get_roads()), &roads2(rn2.get_roads());
+		heightmap_query_t &hq(crc.hq);
 		float const road_hwidth(0.5*road_width);
 		road_cand_t cand, best_cand;
 		vect_cube_t active_blockers;
@@ -1825,13 +1826,12 @@ public:
 		vector<road_endpoint_t> rpts1, rpts2;
 		get_all_conn_road_endpoints(rn1, bcube2, rpts1);
 		get_all_conn_road_endpoints(rn2, bcube1, rpts2);
-		city_road_connector_t city_road_connector;
 
 		for (auto r1 = rpts1.begin(); r1 != rpts1.end(); ++r1) {
 			for (auto r2 = rpts2.begin(); r2 != rpts2.end(); ++r2) {
 				cand.clear();
 				cand.start_dim = r1->dim;
-				cand.cost = city_road_connector.find_route_between_points(r1->pt, r2->pt, active_blockers, hq, cand.pts, bcube1, bcube2, road_hwidth, r1->dim, r1->dir, r2->dim, r2->dir);
+				cand.cost = crc.find_route_between_points(r1->pt, r2->pt, active_blockers, cand.pts, bcube1, bcube2, road_hwidth, r1->dim, r1->dir, r2->dim, r2->dir);
 				if (cand.cost > 0.0 && (best_cand.cost == 0.0 || cand.cost < best_cand.cost)) {best_cand = cand;} // update best_can if valid and a lower cost
 			} // for r2
 		} // for r1
@@ -1861,7 +1861,7 @@ public:
 			unsigned const road_ix(global_rn.num_roads());
 			float const cost(global_rn.create_connector_road(cur_bcube, next_bcube, blockers,
 				(is_first ? &rn1 : nullptr), (is_last ? &rn2 : nullptr), (is_first ? city1 : CONN_CITY_IX), (is_last ? city2 : CONN_CITY_IX),
-				city1, city2, hq, road_width, p1[!fdim], fdim, 0, is_first, is_last)); // check_only=0, is_4way=at_city
+				city1, city2, crc, road_width, p1[!fdim], fdim, 0, is_first, is_last)); // check_only=0, is_4way=at_city
 			assert(cost >= 0.0);
 			tot_cost += cost;
 			// if not the last segment, cache state so that the loop below can create the intersection; can't create it here without the road_ix of the next segment
@@ -1882,12 +1882,12 @@ public:
 		return tot_cost;
 	}
 
-	float connect_two_cities(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width) {
+	float connect_two_cities(unsigned city1, unsigned city2, vect_cube_t &blockers, city_road_connector_t &crc, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
 
 		if (city_params.new_city_conn_road_alg) { // run the new algorithm first; if that fails, run the old algorithm
-			float const cost(connect_two_cities_new(city1, city2, blockers, hq, road_width));
+			float const cost(connect_two_cities_new(city1, city2, blockers, crc, road_width));
 			if (cost > 0.0) return cost;
 		}
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
@@ -1914,7 +1914,7 @@ public:
 							if (r->d[d][0] < val1 || r->d[d][1] > val2) continue; // road not contained in placement range
 							float const conn_pos(r->get_center_dim(d)); // road centerline position along the edge of the plot
 							float const cost(0.5*global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2,
-								city1, city2, city1, city2, hq, road_width, conn_pos, !d, 1, (r12==0), (r12!=0))); // check_only=1; half cost (prefer over 3-way intersection)
+								city1, city2, city1, city2, crc, road_width, conn_pos, !d, 1, (r12==0), (r12!=0))); // check_only=1; half cost (prefer over 3-way intersection)
 							
 							if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {
 								best_conn_pos = conn_pos; best_cost = cost;
@@ -1927,13 +1927,13 @@ public:
 				if (city_params.make_4_way_ints < 2) { // include connector roads that have 3-way intersections on both ends
 					for (unsigned n = 0; n < city_params.num_conn_tries; ++n) { // make up to num_tries attempts at connecting the cities with a straight line
 						float const conn_pos(rgen_uniform(val1, val2, rgen)); // chose a random new connection point and try it
-						float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, city1, city2, city1, city2, hq, road_width, conn_pos, !d, 1, 0, 0)); // check_only=1
+						float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2, city1, city2, city1, city2, crc, road_width, conn_pos, !d, 1, 0, 0)); // check_only=1
 						if (cost >= 0.0 && (best_cost < 0.0 || cost < best_cost)) {best_conn_pos = conn_pos; best_cost = cost; is_4way1 = is_4way2 = 0;}
 					}
 				}
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
 					float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2,
-						city1, city2, city1, city2, hq, road_width, best_conn_pos, !d, 0, is_4way1, is_4way2)); // check_only=0; make change
+						city1, city2, city1, city2, crc, road_width, best_conn_pos, !d, 0, is_4way1, is_4way2)); // check_only=0; make change
 					assert(cost >= 0.0);
 					return cost;
 				}
@@ -1981,7 +1981,7 @@ public:
 							if (r2->d[d2][0] < (fdim ? ymin : xmin) || r2->d[d2][1] > (fdim ? ymax : xmax)) continue; // road not contained in placement range
 							float const cpos2(r2->get_center_dim(d2)); // fdim=0 => xval
 							float const xval(fdim ? cpos1 : cpos2), yval(fdim ? cpos2 : cpos1);
-							try_single_jog_conn_road(city1, city2, blockers, hq, road_width, fdim, xval, yval, 1, best_xval, best_yval, best_cost, best_int_cube);
+							try_single_jog_conn_road(city1, city2, blockers, crc, road_width, fdim, xval, yval, 1, best_xval, best_yval, best_cost, best_int_cube);
 						} // for r2
 					} // for r1
 				}
@@ -1989,25 +1989,25 @@ public:
 					for (unsigned n = 0; n < city_params.num_conn_tries; ++n) { // make up to num_tries attempts at connecting the cities with a single jog
 						float xval(rgen_uniform(xmin, xmax, rgen)), yval(rgen_uniform(ymin, ymax, rgen));
 						if (!fdim) {swap(xval, yval);}
-						try_single_jog_conn_road(city1, city2, blockers, hq, road_width, fdim, xval, yval, 0, best_xval, best_yval, best_cost, best_int_cube);
+						try_single_jog_conn_road(city1, city2, blockers, crc, road_width, fdim, xval, yval, 0, best_xval, best_yval, best_cost, best_int_cube);
 					} // for n
 				}
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
-					hq.flatten_region_to(best_int_cube, city_params.road_border); // do this first to improve flattening
+					crc.hq.flatten_region_to(best_int_cube, city_params.road_border); // do this first to improve flattening
 					unsigned road_ix[2] = {};
 					road_ix[ fdim] = global_rn.num_roads();
 					float const cost1(global_rn.create_connector_road(bcube1, best_int_cube, blockers, &rn1, nullptr, city1,
-						CONN_CITY_IX, city1, city2, hq, road_width, (fdim ? best_xval : best_yval),  fdim, 0, is_4way, 0)); // check_only=0
+						CONN_CITY_IX, city1, city2, crc, road_width, (fdim ? best_xval : best_yval),  fdim, 0, is_4way, 0)); // check_only=0
 					assert(cost1 >= 0.0);
-					flatten_op_t const fop(hq.last_flatten_op); // cache for reuse later during decrease_only pass
+					flatten_op_t const fop(crc.hq.last_flatten_op); // cache for reuse later during decrease_only pass
 					road_ix[!fdim] = global_rn.num_roads();
 					float const cost2(global_rn.create_connector_road(best_int_cube, bcube2, blockers, nullptr, &rn2,
-						CONN_CITY_IX, city2, city1, city2, hq, road_width, (fdim ? best_yval : best_xval), !fdim, 0, 0, is_4way)); // check_only=0
+						CONN_CITY_IX, city2, city1, city2, crc, road_width, (fdim ? best_yval : best_xval), !fdim, 0, 0, is_4way)); // check_only=0
 					assert(cost2 >= 0.0);
 					global_rn.create_connector_bend(best_int_cube, (dx ^ fdim), (dy ^ fdim), road_ix[0], road_ix[1]);
 					// decrease_only=1; remove any dirt that the prev road added
-					hq.flatten_sloped_region(fop.x1, fop.y1, fop.x2, fop.y2, fop.z1, fop.z2, fop.dim, fop.border, fop.skip_six, fop.skip_eix, 0, 1);
-					hq.flatten_region_to(best_int_cube, city_params.road_border, 1); // one more pass to fix mesh that was raised above the intersection by a sloped road segment
+					crc.hq.flatten_sloped_region(fop.x1, fop.y1, fop.x2, fop.y2, fop.z1, fop.z2, fop.dim, fop.border, fop.skip_six, fop.skip_eix, 0, 1);
+					crc.hq.flatten_region_to(best_int_cube, city_params.road_border, 1); // one more pass to fix mesh that was raised above the intersection by a sloped road segment
 					return (cost1 + cost2);
 				}
 			} // for d
@@ -2019,25 +2019,25 @@ public:
 			bc2.expand_by(-min_jog);
 
 			if ((bc1.x1() < bc2.x2() && bc1.x2() > bc2.x1()) || (bc1.y1() < bc2.y2() && bc1.y2() > bc2.y1())) {
-				return connect_two_cities_new(city1, city2, blockers, hq, road_width);
+				return connect_two_cities_new(city1, city2, blockers, crc, road_width);
 			}
 		}
 		return 0.0; // failed to connect cities
 	}
 	private:
-	void try_single_jog_conn_road(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width,
+	void try_single_jog_conn_road(unsigned city1, unsigned city2, vect_cube_t &blockers, city_road_connector_t &crc, float road_width,
 		bool fdim, float xval, float yval, bool is_4way, float &best_xval, float &best_yval, float &best_cost, cube_t &best_int_cube)
 	{
-		float const height(hq.get_road_zval_at_pt(point(xval, yval, 0.0))), half_width(0.5*road_width);
+		float const height(crc.hq.get_road_zval_at_pt(point(xval, yval, 0.0))), half_width(0.5*road_width);
 		cube_t const int_cube(xval-half_width, xval+half_width, yval-half_width, yval+half_width, height, height); // the candidate intersection point
 		if (has_bcube_int_xy(int_cube, blockers)) return; // bad intersection, fail
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		float const cost1(global_rn.create_connector_road(rn1.get_bcube(), int_cube, blockers, &rn1, nullptr, city1,
-			CONN_CITY_IX, city1, city2, hq, road_width, (fdim ? xval : yval), fdim, 1, is_4way, 0)); // check_only=1
+			CONN_CITY_IX, city1, city2, crc, road_width, (fdim ? xval : yval), fdim, 1, is_4way, 0)); // check_only=1
 		if (cost1 < 0.0) return; // bad segment
 		if (best_cost > 0.0 && cost1 > best_cost) return; // bound - early terminate
 		float const cost2(global_rn.create_connector_road(int_cube, rn2.get_bcube(), blockers, nullptr, &rn2,
-			CONN_CITY_IX, city2, city1, city2, hq, road_width, (fdim ? yval : xval), !fdim, 1, 0, is_4way)); // check_only=1
+			CONN_CITY_IX, city2, city1, city2, crc, road_width, (fdim ? yval : xval), !fdim, 1, 0, is_4way)); // check_only=1
 		if (cost2 < 0.0) return; // bad segment
 		float const cost(cost1 + cost2);
 		if (best_cost < 0.0 || cost < best_cost) {best_xval = xval; best_yval = yval; best_int_cube = int_cube; best_cost = cost;}
@@ -2049,6 +2049,7 @@ public:
 		if (num_cities < 2) return; // not cities to connect
 		timer_t timer("Connect Cities");
 		heightmap_query_t hq(heightmap, xsize, ysize);
+		city_road_connector_t crc(hq);
 		vector<unsigned> is_conn(num_cities, 0); // start with all cities unconnected (0=unconnected, 1=connected, 2=done/connect failed
 		vector<pair<float, unsigned>> cands;
 		vect_cube_t blockers; // existing cities and connector roads that we want to avoid intersecting
@@ -2064,7 +2065,7 @@ public:
 		// full cross-product connectivity
 		for (unsigned i = 0; i < num_cities; ++i) {
 			for (unsigned j = i+1; j < num_cities; ++j) {
-				float const cost(connect_two_cities(i, j, blockers, hq, road_width));
+				float const cost(connect_two_cities(i, j, blockers, crc, road_width));
 				bool const success(cost > 0.0);
 				if (cost == 0.0) continue;
 				tot_cost += cost;
