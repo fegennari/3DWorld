@@ -60,7 +60,7 @@ struct city_params_t {
 
 	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width, num_rr_tracks, park_rate;
 	float road_width, road_spacing, conn_road_seg_len, max_road_slope;
-	unsigned make_4_way_ints; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 4=only 4-way (no straight roads)
+	unsigned make_4_way_ints; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 3=only 4-way (no straight roads)
 	bool residential_mode, assign_house_plots, new_city_conn_road_alg;
 	// cars
 	unsigned num_cars;

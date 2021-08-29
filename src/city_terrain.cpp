@@ -226,10 +226,6 @@ float heightmap_query_t::flatten_for_road(road_t const &road, unsigned border, b
 
 // city connector road path finding
 
-void add_pt_no_dup_xy(point const &p, vector<point> &pts) {
-	if (pts.empty() || p.x != pts.back().x || p.y != pts.back().y) {pts.push_back(p);}
-}
-
 class road_router_t {
 	struct xy_ix_t { // should we just use tile_xy_pair instead?
 		int x, y;
@@ -331,7 +327,7 @@ public:
 							if (cur.x == start.x) {pt.x = p1.x;} else if (cur.x == end.x) {pt.x = p2.x;}
 							if (cur.y == start.y) {pt.y = p1.y;} else if (cur.y == end.y) {pt.y = p2.y;}
 							assert(pts.size() == pts_start || pt.x == pts.back().x || pt.y == pts.back().y);
-							add_pt_no_dup_xy(pt, pts); // skip duplicate points after snapping
+							if (pts.empty() || pt.x != pts.back().x || pt.y != pts.back().y) {pts.push_back(pt);} // skip duplicate points after snapping
 							cur_dim ^= 1;
 						}
 						cur = parent;
@@ -367,9 +363,6 @@ cube_t get_road_between_pts(point const &p1, point const &p2, float road_hwidth,
 	if (expand_end  ) {road.d[dim][ dir] += (dir ? 1.0 : -1.0)*road_hwidth;}
 	return road;
 }
-// Note: this is a simple fast cost estimate based on road length and elevation change at endpoints; it doesn't include elevation change along the length of the road
-float estimate_road_cost(point const &p1, point const &p2) {return (p2p_dist(p1, p2) + 4.0f*fabs(p1.z - p2.z));} // 4x penalty for steepness
-
 bool road_seg_valid(point const &p1, point const &p2, bool dim, vect_cube_t const &blockers, float road_hwidth, bool expand_start, bool expand_end) {
 	float const length(fabs(p1[dim] - p2[dim]));
 	if (length < 4.0*road_hwidth) return 0; // too short
@@ -468,7 +461,6 @@ float city_road_connector_t::find_route_between_points(point const &p1, point co
 	float cost(0.0);
 
 	for (auto p = pts.begin(); p+1 != pts.end(); ++p) {
-		//cost += estimate_road_cost(*p, *(p+1));
 		float const seg_cost(calc_road_cost(*p, *(p+1), hq));
 		if (seg_cost == 0.0) {pts.clear(); return 0.0;} // failed
 		cost += seg_cost;

@@ -1885,7 +1885,6 @@ public:
 	float connect_two_cities(unsigned city1, unsigned city2, vect_cube_t &blockers, heightmap_query_t &hq, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
-		//cout << "Connect city " << city1 << " and " << city2 << endl;
 
 		if (city_params.new_city_conn_road_alg) { // run the new algorithm first; if that fails, run the old algorithm
 			float const cost(connect_two_cities_new(city1, city2, blockers, hq, road_width));
@@ -1933,7 +1932,6 @@ public:
 					}
 				}
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
-					//cout << "Single segment dim: << "d " << cost: " << best_cost << endl;
 					float const cost(global_rn.create_connector_road(bcube1, bcube2, blockers, &rn1, &rn2,
 						city1, city2, city1, city2, hq, road_width, best_conn_pos, !d, 0, is_4way1, is_4way2)); // check_only=0; make change
 					assert(cost >= 0.0);
@@ -1948,7 +1946,6 @@ public:
 		if ((bc[dx].x1() - bc[!dx].x1() > min_jog) && (bc[dy].y1() - bc[!dy].y1() > min_jog)) {
 			// connect with two road segments using a jog: Note: assumes cities are all about the same size
 			bool const inv_dim(rgen.rand_bool());
-			//cout << "Try connect using jog in dim " << inv_dim << endl;
 			cube_t bc1_conn(bcube1), bc2_conn(bcube2);
 			bc1_conn.d[0][ dx] = bcube2.d[0][!dx];
 			bc2_conn.d[0][!dx] = bcube1.d[0][ dx];
@@ -1996,7 +1993,6 @@ public:
 					} // for n
 				}
 				if (best_cost >= 0.0) { // found a candidate - use connector with lowest cost
-					//cout << "Double segment cost: " << best_cost << " " << TXT(best_xval) << TXT(best_yval) << TXT(fdim) << ", int_cube: " << best_int_cube.str() << endl;
 					hq.flatten_region_to(best_int_cube, city_params.road_border); // do this first to improve flattening
 					unsigned road_ix[2] = {};
 					road_ix[ fdim] = global_rn.num_roads();

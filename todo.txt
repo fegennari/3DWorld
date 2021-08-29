@@ -11,5 +11,3 @@ Cities:
 - Railroad tracks
 - Interiors for non-rectangular buildings
 - Larger spacing between office building floors
-
-* Improved city road path finding with more turns
