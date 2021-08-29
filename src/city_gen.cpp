@@ -1812,7 +1812,6 @@ public:
 		// Note: ignores the value of city_params.make_4_way_ints because this will always start and end at a 4-way intersection
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
-		vector<road_t> const &roads1(rn1.get_roads()), &roads2(rn2.get_roads());
 		heightmap_query_t &hq(crc.hq);
 		float const road_hwidth(0.5*road_width);
 		road_cand_t cand, best_cand;
@@ -2066,7 +2065,6 @@ public:
 		for (unsigned i = 0; i < num_cities; ++i) {
 			for (unsigned j = i+1; j < num_cities; ++j) {
 				float const cost(connect_two_cities(i, j, blockers, crc, road_width));
-				bool const success(cost > 0.0);
 				if (cost == 0.0) continue;
 				tot_cost += cost;
 				road_networks[i].register_connected_city(j);
