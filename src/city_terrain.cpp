@@ -263,6 +263,7 @@ float city_road_connector_t::calc_road_cost(point const &p1, point const &p2) {
 	return tot_dz;
 }
 float city_road_connector_t::calc_road_path_cost(vector<point> &pts) {
+	if (pts.empty()) return 0.0; // failed case
 	float cost(0.0);
 
 	for (auto p = pts.begin(); p+1 != pts.end(); ++p) {
@@ -277,45 +278,53 @@ float city_road_connector_t::calc_road_path_cost(vector<point> &pts) {
 float city_road_connector_t::find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, vector<point> &pts,
 	cube_t const &bcube1, cube_t const &bcube2, float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2)
 {
-	float const min_extend(4.0*road_hwidth);
+	float const min_extend(4.0*road_hwidth), min_jog(4.0*road_hwidth);
 	// can't route if the two endpoints are too close to add a jog/road
-	if (min(fabs(p1.x - p2.x), fabs(p1.y - p2.y)) < max(min_extend, 2.0f*HALF_DXY)) return 0.0;
-	pts.push_back(p1);
-	float const min_edge_dist(4.0*road_hwidth);
+	if (min(fabs(p1.x - p2.x), fabs(p1.y - p2.y)) <= max(min_extend, 2.0f*HALF_DXY)) return 0.0;
 	cube_t exclude[2] = {bcube1, bcube2};
-	for (unsigned d = 0; d < 2; ++d) {exclude[d].expand_by_xy(min_edge_dist);}
-	bool success(0);
+	for (unsigned d = 0; d < 2; ++d) {exclude[d].expand_by_xy(min_jog);}
 
-	// try adding 1-2 simple jogs
-	if (dim1 == dim2) { // add 2 points to create a jog
+	if (dim1 == dim2) { // can add 2 points to create a jog
 		assert(dir1 != dir2); // must be opposing
-		float const jog_pos(0.5f*(p1[dim1] + p2[dim1])); // halfway between the two end points
-		point pt[2];
-		pt[0][!dim1] = p1[!dim1]; pt[1][!dim1] = p2[!dim1];
-		pt[0][ dim1] = pt[1][ dim1] = jog_pos;
-		for (unsigned d = 0; d < 2; ++d) {pt[d].z = hq.get_road_zval_at_pt(pt[d]);}
-		
-		if (check_pt_valid(pt[0], exclude) && check_pt_valid(pt[1], exclude) && road_seg_valid(p1, pt[0], dim1, blockers, road_hwidth, 0, 1) &&
-			road_seg_valid(pt[0], pt[1], !dim1, blockers, road_hwidth, 1, 1) && road_seg_valid(pt[1], p2, dim1, blockers, road_hwidth, 1, 0))
-		{
-			for (unsigned d = 0; d < 2; ++d) {pts.push_back(pt[d]);}
-			success = 1;
-		}
-	}
-	else { // add one point to create a right angle bend
-		point ipt;
-		ipt[ dim1] = p2[ dim1];
-		ipt[!dim1] = p1[!dim1];
-		ipt.z = hq.get_road_zval_at_pt(ipt);
+		float const gap_lo(min(p1[dim1], p2[dim1])), gap_hi(max(p1[dim1], p2[dim1]));
 
-		if (check_pt_valid(ipt, exclude) && road_seg_valid(p1, ipt, dim1, blockers, road_hwidth, 0, 1) && road_seg_valid(ipt, p2, dim2, blockers, road_hwidth, 1, 0)) {
-			pts.push_back(ipt);
-			success = 1;
+		if ((gap_hi - gap_lo) > 2.1f*min_jog) { // we have enough space for a jog
+			point pt[2];
+			pt[0][!dim1] = p1[!dim1]; pt[1][!dim1] = p2[!dim1];
+			vector<point> cand_pts;
+			float min_cost(0.0);
+
+			for (unsigned n = 0; n < 10; ++n) { // choose best of 10 attempts
+				pt[0][dim1] = pt[1][dim1] = rgen.rand_uniform((gap_lo + min_jog), (gap_hi - min_jog)); // choose a random jog pos
+				for (unsigned d = 0; d < 2; ++d) {pt[d].z = hq.get_road_zval_at_pt(pt[d]);}
+		
+				if (check_pt_valid(pt[0], exclude) && check_pt_valid(pt[1], exclude) && road_seg_valid(p1, pt[0], dim1, blockers, road_hwidth, 0, 1) &&
+					road_seg_valid(pt[0], pt[1], !dim1, blockers, road_hwidth, 1, 1) && road_seg_valid(pt[1], p2, dim1, blockers, road_hwidth, 1, 0))
+				{
+					cand_pts.clear();
+					cand_pts.push_back(p1);
+					for (unsigned d = 0; d < 2; ++d) {cand_pts.push_back(pt[d]);}
+					cand_pts.push_back(p2);
+					float const cost(calc_road_path_cost(cand_pts));
+					if (cost > 0.0 && (min_cost == 0.0 || cost < min_cost)) {min_cost = cost; pts = cand_pts;}
+				}
+			} // for n
+			return min_cost;
 		}
 	}
-	if (!success) {pts.clear(); return 0.0;} // failed
-	pts.push_back(p2);
-	return calc_road_path_cost(pts); // Note: clears pts on failure
+	// add one point to create a right angle bend
+	point ipt;
+	ipt[ dim1] = p2[ dim1];
+	ipt[!dim1] = p1[!dim1];
+	ipt.z = hq.get_road_zval_at_pt(ipt);
+
+	if (check_pt_valid(ipt, exclude) && road_seg_valid(p1, ipt, dim1, blockers, road_hwidth, 0, 1) && road_seg_valid(ipt, p2, dim2, blockers, road_hwidth, 1, 0)) {
+		pts.push_back(p1);
+		pts.push_back(ipt);
+		pts.push_back(p2);
+		return calc_road_path_cost(pts); // Note: clears pts on failure
+	}
+	return 0.0; // failed
 }
 
 bool city_road_connector_t::segment_road(road_t const &road, bool check_only) {

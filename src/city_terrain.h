@@ -91,6 +91,7 @@ struct conn_isec_t {
 struct city_road_connector_t {
 	heightmap_query_t &hq; // Note: hq is not modifed
 	vector<road_t> segments; // reused temporary
+	rand_gen_t rgen;
 
 	city_road_connector_t(heightmap_query_t &hq_) : hq(hq_) {}
 	static bool get_closer_dir(cube_t const &A, cube_t const &B, bool dim);
