@@ -1813,11 +1813,9 @@ public:
 		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		vector<road_t> const &roads1(rn1.get_roads()), &roads2(rn2.get_roads());
-		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width), road_hwidth(0.5*road_width);
+		float const road_hwidth(0.5*road_width);
 		road_cand_t cand, best_cand;
 		vect_cube_t active_blockers;
-		cube_t exclude[2] = {bcube1, bcube2};
-		for (unsigned d = 0; d < 2; ++d) {exclude[d].expand_by_xy(min_edge_dist);}
 		
 		// determine the set of active blockers, which exclude the two cities to be connected
 		for (auto b = blockers.begin(); b != blockers.end(); ++b) {
@@ -1833,7 +1831,7 @@ public:
 			for (auto r2 = rpts2.begin(); r2 != rpts2.end(); ++r2) {
 				cand.clear();
 				cand.start_dim = r1->dim;
-				cand.cost = city_road_connector.find_route_between_points(r1->pt, r2->pt, active_blockers, hq, cand.pts, exclude, road_hwidth, r1->dim, r1->dir, r2->dim, r2->dir);
+				cand.cost = city_road_connector.find_route_between_points(r1->pt, r2->pt, active_blockers, hq, cand.pts, bcube1, bcube2, road_hwidth, r1->dim, r1->dir, r2->dim, r2->dir);
 				if (cand.cost > 0.0 && (best_cand.cost == 0.0 || cand.cost < best_cand.cost)) {best_cand = cand;} // update best_can if valid and a lower cost
 			} // for r2
 		} // for r1
@@ -1850,6 +1848,7 @@ public:
 		for (auto p = best_cand.pts.begin(); p+1 != best_cand.pts.end(); ++p, fdim ^= 1) {
 			bool const is_first(p == best_cand.pts.begin()), is_last(p+2 == best_cand.pts.end());
 			point const &p1(*p), &p2(*(p+1));
+			//cout << TXT(fdim) << TXT(p1.str()) << TXT(p2.str())<< TXT(is_first) << TXT(is_last) << endl;
 			assert(!bcube1.contains_pt(p2));
 			assert(!bcube2.contains_pt(p1));
 			assert(p1[!fdim] == p2[!fdim]); // must be a straight road in this dim
