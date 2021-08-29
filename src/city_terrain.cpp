@@ -275,15 +275,74 @@ float city_road_connector_t::calc_road_path_cost(vector<point> &pts) {
 	return cost;
 }
 
-float city_road_connector_t::find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, vector<point> &pts,
+float city_road_connector_t::find_route_between_points(point const &p1_, point const &p2, vect_cube_t const &blockers, vector<point> &pts,
 	cube_t const &bcube1, cube_t const &bcube2, float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2)
 {
+	point p1(p1_);
 	float const min_extend(4.0*road_hwidth), min_jog(4.0*road_hwidth);
 	// can't route if the two endpoints are too close to add a jog/road
 	if (min(fabs(p1.x - p2.x), fabs(p1.y - p2.y)) <= max(min_extend, 2.0f*HALF_DXY)) return 0.0;
 	cube_t exclude[2] = {bcube1, bcube2};
 	for (unsigned d = 0; d < 2; ++d) {exclude[d].expand_by_xy(min_jog);}
 
+	if (0) { // create a crazy diag road
+		float const step_len(1.0*min_jog);
+#if 1
+		vector3d const delta(p2 - p1);
+		float const dmin(min(fabs(delta.x), fabs(delta.y)));
+		unsigned const nsteps(dmin/step_len);
+
+		if (nsteps > 2) {
+			bool dim(dim1);
+			pts.push_back(p1);
+
+			for (unsigned n = 0; n < nsteps; ++n, dim ^= 1) {
+				point const &prev(pts.back());
+				point cur(prev);
+				cur[dim] += step_len*SIGN(delta[dim]);
+				if (!check_pt_valid(cur, exclude) || !road_seg_valid(prev, cur, dmin, blockers, road_hwidth, 0, 0)) break;
+				pts.push_back(cur);
+			} // for n
+			p1 = pts.back(); // reroute from this point
+			pts.pop_back();
+			dim1 = dim;
+			dir1 = (p1[dim1] < p2[dim1]);
+			if (dim1 == dim2 && dir1 == dir2) return 0.0;
+		}
+#else
+		point p1_ext(p1), p2_ext(p2);
+		p1_ext[dim1] += (dir1 ? 1.0 : -1.0)*step_len;
+		p2_ext[dim2] += (dir2 ? 1.0 : -1.0)*step_len;
+		pts.push_back(p1);
+		pts.push_back(p1_ext);
+
+		while (1) {
+			point const cur(pts.back());
+			vector3d const delta(p2_ext - cur);
+			bool dmin(fabs(delta.y) < fabs(delta.x));
+			point next(cur);
+
+			if (delta[dmin] < step_len) { // finish the road
+				dmin = !dim2; // make sure it ends in the correct dim
+				next[dmin] = p2_ext[dmin]; // complete the segment
+				if (!check_pt_valid(next, exclude) || !road_seg_valid(cur, next, dmin, blockers, road_hwidth, 1, 1) || !road_seg_valid(next, p2_ext, !dmin, blockers, road_hwidth, 1, 0)) break;
+				if (pts.size() < 5) break;
+				if (pts[pts.size()-2][!dmin] == next[!dmin]) {pts.back()[dmin] = next[dmin];} // extend colinear segment
+				else {pts.push_back(next);} // add a new point/bend
+				if (dmin == dim2) {pts.push_back(p2_ext);}
+				pts.push_back(p2);
+				return calc_road_path_cost(pts); // Note: clears pts on failure
+			}
+			next[dmin] += step_len*SIGN(delta[dmin]);
+			if (pts[pts.size()-2][!dmin] == next[!dmin]) {pts.back()[dmin] = next[dmin];} // extend colinear segment
+			else {pts.push_back(next);} // add a new point/bend
+			point const &new_pt(pts.back());
+			if (!check_pt_valid(new_pt, exclude) || !road_seg_valid(pts[pts.size()-2], new_pt, dmin, blockers, road_hwidth, (pts.size() > 3), 1)) break;
+		} // end while()
+		pts.clear();
+		return 0.0; // failed
+#endif
+	}
 	if (dim1 == dim2) { // can add 2 points to create a jog
 		assert(dir1 != dir2); // must be opposing
 		float const gap_lo(min(p1[dim1], p2[dim1])), gap_hi(max(p1[dim1], p2[dim1]));

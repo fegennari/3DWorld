@@ -1848,7 +1848,7 @@ public:
 		for (auto p = best_cand.pts.begin(); p+1 != best_cand.pts.end(); ++p, fdim ^= 1) {
 			bool const is_first(p == best_cand.pts.begin()), is_last(p+2 == best_cand.pts.end());
 			point const &p1(*p), &p2(*(p+1));
-			//cout << TXT(fdim) << TXT(p1.str()) << TXT(p2.str())<< TXT(is_first) << TXT(is_last) << endl;
+			//cout << (p-best_cand.pts.begin()) << " " << best_cand.pts.size() << " " << TXT(fdim) << TXT(p1.str()) << TXT(p2.str()) << TXT(is_first) << TXT(is_last) << endl;
 			assert(!bcube1.contains_pt(p2));
 			assert(!bcube2.contains_pt(p1));
 			assert(p1[!fdim] == p2[!fdim]); // must be a straight road in this dim
