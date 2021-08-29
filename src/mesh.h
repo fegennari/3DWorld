@@ -137,8 +137,6 @@ inline float get_zval_max()      {return get_zval(max(MESH_SIZE[2], 1));}
 
 inline int get_xpos(float xval) {return int((xval + X_SCENE_SIZE)*DX_VAL_INV + 0.5);}
 inline int get_ypos(float yval) {return int((yval + Y_SCENE_SIZE)*DY_VAL_INV + 0.5);}
-inline int get_xpos_floor(float xval) {return int((xval + X_SCENE_SIZE)*DX_VAL_INV);}
-inline int get_ypos_floor(float yval) {return int((yval + Y_SCENE_SIZE)*DY_VAL_INV);}
 inline int get_zpos(float z)    {return int((z - czmin)*DZ_VAL_INV2);}
 inline int get_zpos2(float z)   {return int((z + Z_SCENE_SIZE)/DZ_VAL + 0.5);}
 

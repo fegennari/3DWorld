@@ -513,10 +513,10 @@ bool tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen, bool no_wait) {
 void tile_t::get_z_minmax_for_area(point const &pos, float radius, float &zmin, float &zmax) const {
 
 	float const rx1(pos.x - radius), ry1(pos.y - radius), rx2(pos.x + radius), ry2(pos.y + radius);
-	unsigned const ix1(max(0, (get_xpos_floor(rx1) - x1))); // stride = zvsize-1
-	unsigned const iy1(max(0, (get_ypos_floor(ry1) - y1)));
-	unsigned const ix2(min(stride, (unsigned)(get_xpos_floor(rx2) - x1 + 1)));
-	unsigned const iy2(min(stride, (unsigned)(get_ypos_floor(ry2) - y1 + 1)));
+	unsigned const ix1(max(0, (get_xpos_round_down(rx1) - x1))); // stride = zvsize-1
+	unsigned const iy1(max(0, (get_ypos_round_down(ry1) - y1)));
+	unsigned const ix2(min(stride, (unsigned)(get_xpos_round_down(rx2) - x1 + 1)));
+	unsigned const iy2(min(stride, (unsigned)(get_ypos_round_down(ry2) - y1 + 1)));
 	assert(ix1 <= ix2 && iy1 <= iy2); // must be inside the tile
 
 	for (unsigned y = iy1; y <= iy2; ++y) {
