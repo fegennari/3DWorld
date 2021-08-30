@@ -3034,6 +3034,8 @@ public:
 			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
 				if ((int)b->ix == state.exclude_bix) continue; // excluded
 				cube_t const c(*b + state.xlate); // check far clipping plane first because that's more likely to reject buildings
+				// if player's inside this building, skip occlusion so that objects are visible through windows
+				if (state.skip_cont_camera && !player_in_basement && c.contains_pt(pdu.pos) && get_building(b->ix).has_windows()) continue;
 				if (dist_less_than(pdu.pos, c.closest_pt(pdu.pos), pdu.far_) && pdu.cube_visible(c)) {state.building_ids.push_back(*b);}
 			}
 		}
@@ -3223,7 +3225,7 @@ public:
 void occlusion_checker_noncity_t::set_camera(pos_dir_up const &pdu) {
 	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // occlusion culling disabled
 	pos_dir_up near_pdu(pdu);
-	near_pdu.far_ = 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE); // set far clipping plane to half a tile
+	near_pdu.far_ = 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE); // set far clipping plane to half a tile
 	bc.get_occluders(near_pdu, state);
 	//cout << "buildings: " << bc.get_num_buildings() << ", occluders: " << state.building_ids.size() << endl;
 }

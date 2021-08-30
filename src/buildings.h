@@ -68,11 +68,12 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 
 struct building_occlusion_state_t {
 	int exclude_bix;
+	bool skip_cont_camera;
 	point pos;
 	vector3d xlate;
 	vector<cube_with_ix_t> building_ids;
 	vector<point> temp_points;
-	building_occlusion_state_t() : exclude_bix(-1) {}
+	building_occlusion_state_t() : exclude_bix(-1), skip_cont_camera(0) {}
 
 	void init(point const &pos_, vector3d const &xlate_) {
 		pos   = pos_;
@@ -85,6 +86,7 @@ class occlusion_checker_t {
 	building_occlusion_state_t state;
 public:
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
+	void set_exclude_camera_building() {state.skip_cont_camera = 1;}
 	void set_camera(pos_dir_up const &pdu);
 	bool is_occluded(cube_t const &c); // Note: non-const - state temp_points is modified
 };

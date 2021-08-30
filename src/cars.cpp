@@ -256,7 +256,11 @@ bool occlusion_checker_t::is_occluded(cube_t const &c) {
 
 void ao_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_) {
 	draw_state_t::pre_draw(xlate_, use_dlights_, shadow_only_, 1); // always_setup_shader=1 (required for model drawing)
-	if (!shadow_only) {occlusion_checker.set_camera(camera_pdu);}
+	
+	if (!shadow_only) {
+		occlusion_checker.set_exclude_camera_building(); // if the player is inside a building, skip occlusion culling
+		occlusion_checker.set_camera(camera_pdu);
+	}
 }
 
 /*static*/ float car_draw_state_t::get_headlight_dist() {return 3.5*city_params.road_width;} // distance headlights will shine
