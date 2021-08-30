@@ -20,7 +20,7 @@ float city_dlight_pcf_offset_scale(1.0);
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
-extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps;
+extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps, player_in_basement;
 extern int rand_gen_index, display_mode, animate2, draw_model;
 extern unsigned shadow_map_sz, cur_display_iter;
 extern float shadow_map_pcf_offset, cobj_z_bias, fticks;
@@ -1203,18 +1203,20 @@ class city_road_gen_t : public road_gen_base_t {
 					if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
 					dstate.begin_tile(b->bcube.get_cube_center());
 
-					if (is_residential) { // draw all plots with grass, using the park materials
-						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PARK, 1); // draw_all=1
+					// if the player is in the basement, don't draw the plot over the basement stairs; the player can't see any of this anyway
+					if (!player_in_basement || is_connector_road) {
+						if (is_residential) { // draw all plots with grass, using the park materials
+							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PARK, 1); // draw_all=1
+						}
+						else {
+							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // concrete
+							dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PARK], TYPE_PARK); // grass parks (stored as plots)
+						}
+						dstate.draw_city_region(segs,       b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
+						dstate.draw_city_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
+						dstate.draw_city_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
+						dstate.draw_city_region(city_obj_placer.driveways,    b->ranges[TYPE_DRIVEWAY], b->quads[TYPE_DRIVEWAY], TYPE_DRIVEWAY); // driveways
 					}
-					else {
-						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // concrete
-						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PARK], TYPE_PARK); // grass parks (stored as plots)
-					}
-					dstate.draw_city_region(segs,       b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
-					dstate.draw_city_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
-					dstate.draw_city_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
-					dstate.draw_city_region(city_obj_placer.driveways,    b->ranges[TYPE_DRIVEWAY], b->quads[TYPE_DRIVEWAY], TYPE_DRIVEWAY); // driveways
-				
 					for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
 						dstate.draw_city_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
 						if (i > 0) {dstate.draw_stoplights(isecs[i], b->ranges[TYPE_ISEC2 + i], 0);}
