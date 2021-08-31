@@ -604,7 +604,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 		auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
-			if (!i->is_visible() || !i->is_dynamic()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
+			if (!i->is_dynamic() || !i->is_visible()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
 			switch (i->type) {
 			case TYPE_LG_BALL: add_lg_ball(*i); break;
 			default: assert(0); // not a supported dynamic object type
