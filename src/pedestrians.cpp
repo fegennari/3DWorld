@@ -916,18 +916,27 @@ void ped_manager_t::next_frame() {
 
 	// Note: peds and peds_b can be processed in parallel, but that doesn't seem to make a significant difference in framerate
 	if (!peds.empty()) {
-		//timer_t timer("Ped Update"); // ~4.2ms for 10K peds
+		//timer_t timer("Ped Update"); // ~4.2ms for 10K peds; 1ms for sparse per-city update
 		// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
 #pragma omp critical(modify_car_data)
 		car_manager.extract_car_data(cars_by_city);
 
 		if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
 		static bool first_frame(1);
+		float const enable_ai_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
 
 		if (first_frame) { // choose initial ped destinations (must be after building setup, etc.)
 			for (auto i = peds.begin(); i != peds.end(); ++i) {choose_dest_building_or_parked_car(*i);}
 		}
-		for (auto i = peds.begin(); i != peds.end(); ++i) {i->next_frame(*this, peds, (i - peds.begin()), rgen, delta_dir);}
+		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
+			if (!get_expanded_city_bcube_for_peds(city).closest_dist_less_than(camera_pos, enable_ai_dist)) continue; // too far from the player
+			unsigned const ped_start(by_city[city].ped_ix), ped_end(by_city[city+1].ped_ix);
+			assert(ped_start <= ped_end && ped_end <= peds.size());
+				
+			for (auto i = peds.begin()+ped_start; i != peds.begin()+ped_end; ++i) {
+				i->next_frame(*this, peds, (i - peds.begin()), rgen, delta_dir);
+			}
+		} // for city
 		if (need_to_sort_peds) {sort_by_city_and_plot();}
 		first_frame = 0;
 	}
