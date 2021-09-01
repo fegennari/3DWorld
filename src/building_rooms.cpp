@@ -7,6 +7,7 @@
 #include "city.h" // for object_model_loader_t
 #include "profiler.h"
 
+extern bool camera_in_building;
 extern int display_mode;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
@@ -3041,7 +3042,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t
 	if (!interior) return;
 	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collision detection, mirrors, etc.
 
-	if ((display_mode & 0x08) && !player_in_building && !is_rotated() && camera_pdu.pos.z < bcube.z2()) {
+	if ((display_mode & 0x08) && !player_in_building && !camera_in_building && !is_rotated() && camera_pdu.pos.z < bcube.z2()) {
 		point const camera_bs(camera_pdu.pos - xlate);
 		bool any_visible(0);
 
