@@ -7,6 +7,7 @@
 #include "city.h" // for object_model_loader_t
 #include "profiler.h"
 
+extern int display_mode;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -3040,6 +3041,17 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t
 	if (!interior) return;
 	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collision detection, mirrors, etc.
 
+	if ((display_mode & 0x08) && !player_in_building && !is_rotated() && camera_pdu.pos.z < bcube.z2()) {
+		point const camera_bs(camera_pdu.pos - xlate);
+		bool any_visible(0);
+
+		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+			if (has_basement() && (i - parts.begin()) == (int)basement_part_ix) continue; // skip the basement, which isn't visible from outside the building
+			//if (!check_obj_occluded(*i, camera_bs, oc, reflection_pass)) {any_visible = 1; break;}
+			if (!oc.is_occluded(*i)) {any_visible = 1; break;}
+		}
+		if (!any_visible) return; // all parts occluded
+	}
 	if (!has_room_geom()) {
 		rand_gen_t rgen;
 		rgen.set_state(building_ix, parts.size()); // set to something canonical per building
