@@ -2217,6 +2217,7 @@ public:
 		vect_cube_t ped_bcubes; // reused temporary
 		occlusion_checker_noncity_t oc(*this);
 		bool is_first_building(1);
+		//highres_timer_t timer("Add Interior Lights");
 
 		for (auto g = grid_by_tile.begin(); g != grid_by_tile.end(); ++g) { // Note: all grids should be nonempty
 			if (!lights_bcube.intersects_xy(g->bcube)) continue; // not within light volume (too far from camera)
@@ -2370,9 +2371,10 @@ public:
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						if (!camera_near_building && !b.has_windows()) continue; // player is outside a windowless building (city office building)
+						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated)); // player is within the building's bcube
+						if ((display_mode & 0x08) && !player_in_building_bcube && b.is_entire_building_occluded(camera_xlated, oc)) continue; // check occlusion
 						int const ped_ix((*i)->get_ped_ix_for_bix(bi->ix)); // Note: assumes only one building_draw has people
 						bool const inc_small(b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_sm_draw_dist));
-						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated)); // player is within the building's bcube
 						b.gen_and_draw_room_geom(s, oc, xlate, ped_bcubes, bi->ix, ped_ix, 0, reflection_pass, inc_small, player_in_building_bcube); // shadow_only=0
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;

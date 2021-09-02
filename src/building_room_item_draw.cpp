@@ -945,3 +945,13 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	return 0;
 }
 
+bool building_t::is_entire_building_occluded(point const &viewer, occlusion_checker_noncity_t &oc) const {
+	if (is_rotated()) return 0; // not handled (optimization)
+
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+		if (has_basement() && (i - parts.begin()) == (int)basement_part_ix) continue; // skip the basement, which isn't visible from outside the building
+		if (!check_obj_occluded(*i, viewer, oc, 0, 1)) return 0; // c_is_building_part=1
+	}
+	return 1; // all parts occluded
+}
+
