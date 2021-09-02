@@ -892,7 +892,7 @@ template<bool check_sz> bool are_pts_occluded_by_any_cubes(point const &pt, poin
 }
 
 // Note: c is in local building space and viewer_in is in non-rotated building space
-bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t &oc, bool reflection_pass) const {
+bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occlusion_checker_noncity_t &oc, bool reflection_pass, bool c_is_building_part) const {
 	if (!interior) return 0; // could probably make this an assert
 	//highres_timer_t timer("Check Object Occlusion"); // 0.001ms
 	point viewer(viewer_in);
@@ -901,12 +901,14 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	point pts[8];
 	unsigned const npts(get_cube_corners(c.d, pts, viewer, 0)); // should return only the 6 visible corners
 	
-	if (!reflection_pass) { // check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
+	if (!reflection_pass && !c_is_building_part) {
+		// check walls of this building; not valid for reflections because the reflected camera may be on the other side of a wall/mirror
 		for (unsigned d = 0; d < 2; ++d) {
 			if (are_pts_occluded_by_any_cubes<1>(viewer, pts, npts, interior->walls[d], d, c.get_sz_dim(!d))) return 1; // with size check (helps with light bcubes)
 		}
 	}
-	if (reflection_pass || bcube.contains_pt(viewer)) { // viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building)
+	if (!c_is_building_part && (reflection_pass || bcube.contains_pt(viewer))) {
+		// viewer inside this building; includes shadow_only case and reflection_pass (even if reflected camera is outside the building);
 		// check floors of this building (and technically also ceilings)
 		if (fabs(viewer.z - c.zc()) > (reflection_pass ? 1.0 : 0.5)*get_window_vspace()) { // on different floors
 			if (are_pts_occluded_by_any_cubes<0>(viewer, pts, npts, interior->floors, 2)) return 1;
@@ -927,7 +929,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 		if (is_rotated()) return 0; // not implemented yet - c is not an axis aligned cube in global coordinate space
 		if (oc.is_occluded(c)) return 1; // check other buildings
 	}
-	else if (is_simple_cube()) { // player above this building; check if object is occluded by the roof
+	else if (!c_is_building_part && is_simple_cube()) { // player above this building; check if object is occluded by the roof
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			cube_t roof(*p);
 			roof.z1() = roof.z2() - 0.5*get_floor_thickness();
