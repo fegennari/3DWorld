@@ -323,16 +323,15 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 		if (!dist_less_than(camera_pdu.pos, center, 0.6*camera_pdu.far_)) return; // optimization
 		// since we know the dlight is a spotlight with a cone shape rather than a frustum, we can do a tighter visibility test
 		if (!sphere_in_light_cone_approx(camera_pdu, center, car.bcube.get_xy_bsphere_radius())) return;
-		cube_t bcube(car.bcube);
-		bcube.expand_by(0.1*car.height);
-		if (bcube.contains_pt(camera_pdu.pos)) return; // don't self-shadow
+		if (car.bcube.contains_pt_exp(camera_pdu.pos, 0.1*car.height)) return; // don't self-shadow
 	}
-	//if (!shadow_only && !car.bcube.closest_dist_less_than((camera_pdu.pos - xlate), 0.75*get_draw_tile_dist())) return; // check draw distance, dist_scale=0.75
-	if (!camera_pdu.sphere_visible_test((center + xlate), 0.5f*(car.bcube.dx() + car.bcube.dy() + car.bcube.dz()))) return; // use fast upper bound approx for radius
-	if (!check_cube_visible(car.bcube, (shadow_only ? 0.0 : 0.75))) return; // dist_scale=0.75
+	point const center_xlated(center + xlate);
+	float const tile_draw_dist(get_draw_tile_dist());
+	if (!shadow_only && !dist_less_than(camera_pdu.pos, center_xlated, 0.5*tile_draw_dist)) return; // check draw distance, dist_scale=0.5
+	if (!camera_pdu.sphere_visible_test(center_xlated, 0.5f*car.height*CAR_RADIUS_SCALE) || !camera_pdu.cube_visible(car.bcube + xlate)) return;
 	begin_tile(center); // enable shadows
 	colorRGBA const &color(car.get_color());
-	float const tile_draw_dist(get_draw_tile_dist()), dist_val(p2p_dist(camera_pdu.pos, (center + xlate))/tile_draw_dist);
+	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/tile_draw_dist);
 	bool const is_truck(car.height > 1.2*city_params.get_nom_car_size().z); // hack - truck has a larger than average size
 	bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
 	bool const draw_model(car_model_loader.num_models() > 0 &&

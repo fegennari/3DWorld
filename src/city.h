@@ -40,6 +40,7 @@ float const TRACKS_WIDTH         = 0.5; // relative to road width
 float const CAR_SPEED_SCALE      = 0.001;
 float const SIDEWALK_WIDTH       = 0.1; // relative to road texture
 vector3d const CAR_SIZE(0.30, 0.13, 0.08); // {length, width, height} in units of road width
+float const CAR_RADIUS_SCALE(CAR_SIZE.mag()/CAR_SIZE.z);
 
 float const PED_WIDTH_SCALE  = 0.5; // ratio of collision radius to model radius (x/y)
 float const PED_HEIGHT_SCALE = 2.5; // ratio of collision radius to model height (z)
