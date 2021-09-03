@@ -924,12 +924,13 @@ void ped_manager_t::next_frame() {
 		if (ped_destroyed) {remove_destroyed_peds();} // at least one ped was destroyed in the previous frame - remove it/them
 		static bool first_frame(1);
 		float const enable_ai_dist(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		point const camera_bs(get_camera_building_space());
 
 		if (first_frame) { // choose initial ped destinations (must be after building setup, etc.)
 			for (auto i = peds.begin(); i != peds.end(); ++i) {choose_dest_building_or_parked_car(*i);}
 		}
 		for (unsigned city = 0; city+1 < by_city.size(); ++city) {
-			if (!get_expanded_city_bcube_for_peds(city).closest_dist_less_than(camera_pos, enable_ai_dist)) continue; // too far from the player
+			if (!get_expanded_city_bcube_for_peds(city).closest_dist_less_than(camera_bs, enable_ai_dist)) continue; // too far from the player
 			unsigned const ped_start(by_city[city].ped_ix), ped_end(by_city[city+1].ped_ix);
 			assert(ped_start <= ped_end && ped_end <= peds.size());
 				
