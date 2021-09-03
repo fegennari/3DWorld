@@ -45,8 +45,8 @@ city conn_road_seg_len 6.0 # also determines max length of bridges and tunnels
 city max_road_slope 0.3
 city new_city_conn_road_alg 0
 city make_4_way_ints 2 # 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 3=only 4-way (no straight roads)
-city residential_probability 0.0 # 0.0=all office buildings, 1.0=all houses
-city assign_house_plots 0 # only applies to residential cities
+city residential_probability 0.5 # 0.0=all office buildings, 1.0=all houses
+city assign_house_plots 1 # only applies to residential cities
 city min_park_spaces 12
 city min_park_rows 1
 city min_park_density 0.0
@@ -57,7 +57,7 @@ no_subdiv_model 1
 merge_model_objects 1 # optimization for large instance counts
 
 # cars
-city num_cars 4000
+city num_cars 3000 # 4000 for city/2000 for residential
 city car_speed 10.0
 city traffic_balance_val 0.9
 city new_city_prob 0.5
@@ -86,8 +86,8 @@ city helicopter_model ../models/cars/Helicopter/md500.3DS         1  0 0 90  0 2
 city helicopter_model ../models/cars/Helicopter_ka27/ka27.model3d 1  0 0 90  1 2.5 1.0   1 # always white color, materials are {body, prop blade}; prop blade rotates a bit off center
 
 # pedestrians
-city num_peds 10000
-city num_building_peds 50000 # 60000 for residential_mode?
+city num_peds 8000 # 10000 for city/6000 for residential
+city num_building_peds 55000 # 50000 for city/60000 for residential
 city ped_speed 0.001
 city ped_respawn_at_dest 1
 # ped_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
