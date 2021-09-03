@@ -174,6 +174,15 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scal
 	dstate.draw_cube(qbd, bcube, color_wrapper(plot_divider_types[type].color), 1, 1.0/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
 }
 
+/*static*/ void swimming_pool_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(WHITE_TEX);} // untextured, for now
+}
+void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
+	dstate.draw_cube(qbd, bcube, color_wrapper( color), 1, 0.0, 4); // draw sides
+	dstate.draw_cube(qbd, bcube, color_wrapper(wcolor), 1, 0.0, 3); // draw top water
+}
+
 
 bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen) {
 	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
@@ -467,9 +476,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 }
 
 void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
-	if (plot.is_park) return; // no dividers in parks
 	assert(plot_subdiv_sz > 0.0);
 	sub_plots.clear();
+	if (plot.is_park) return; // no dividers in parks
 	subdivide_plot_for_residential(plot, plot_subdiv_sz, 0, sub_plots); // parent_plot_ix=0, not needed
 	if (sub_plots.size() <= 1) return; // nothing to divide
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
@@ -525,6 +534,15 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 	} // for i
 }
 
+void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
+	// assumes place_plot_dividers() has been called first to populate sub_plots
+	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
+		for (unsigned n = 0; n < 4; ++n) { // make some attempts to generate a valid pool location
+			// TODO
+		}
+	} // for i
+}
+
 void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix) {
 	cube_t plot_z(plot);
 	plot_z.z1() = plot_z.z2() = plot.z2() + 0.0002*city_params.road_width; // shift slightly up to avoid Z-fighting
@@ -559,8 +577,8 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 }
 
 void city_obj_placer_t::clear() {
-	parking_lots.clear(); benches.clear(); planters.clear(); fire_hydrants.clear(); driveways.clear(); dividers.clear();
-	bench_groups.clear(); planter_groups.clear(); fire_hydrant_groups.clear(); divider_groups.clear();
+	parking_lots.clear(); benches.clear(); planters.clear(); fire_hydrants.clear(); driveways.clear(); dividers.clear(); pools.clear();
+	bench_groups.clear(); planter_groups.clear(); fire_hydrant_groups.clear(); divider_groups.clear(); pool_groups.clear();
 	num_spaces = filled_spaces = 0;
 }
 
@@ -602,7 +620,10 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			}
 			bcubes.push_back(dw);
 		} // for j
-		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {place_plot_dividers(*i, bcubes, colliders, detail_rgen, is_new_tile);} // before placing trees
+		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
+			place_plot_dividers(*i, bcubes, colliders, detail_rgen, is_new_tile); // before placing trees
+			place_residential_plot_objects(*i, bcubes, colliders, detail_rgen, is_new_tile);
+		}
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
 		prev_tile_id = tile_id;
@@ -613,6 +634,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	sort_grouped_objects(planters,      planter_groups);
 	sort_grouped_objects(fire_hydrants, fire_hydrant_groups);
 	sort_grouped_objects(dividers,      divider_groups);
+	sort_grouped_objects(pools,         pool_groups);
 
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
@@ -649,6 +671,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.12, not_using_qbd=1
+	draw_objects(pools,         pool_groups,         dstate, 0.20, shadow_only, 0); // dist_scale=0.2
 			
 	if (!shadow_only) { // low profile, not drawn in shadow pass
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt, stone}
@@ -662,28 +685,31 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	dstate.pass_ix = 0; // reset back to 0
 }
 
+template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) {
+	for (auto i = objs.begin(); i != objs.end(); ++i) { // Note: could use bench_groups
+		if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
+	}
+	return 0;
+}
 bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
 	vector3d const xlate(get_camera_coord_space_xlate());
-
-	for (auto i = benches.begin(); i != benches.end(); ++i) { // Note: could use bench_groups
-		if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
-	}
-	for (auto i = fire_hydrants.begin(); i != fire_hydrants.end(); ++i) { // Note: could use fire_hydrant_groups
-		if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
-	}
-	for (auto i = dividers.begin(); i != dividers.end(); ++i) { // Note: could use divider_groups
-		if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
-	}
+	if (proc_vector_sphere_coll(benches,       pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(fire_hydrants, pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(dividers,      pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(pools,         pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it
 	return 0;
 }
 
+template<typename T> void check_vector_line_intersect(vector<T> const &objs, point const &p1, point const &p2, float &t, bool &ret) {
+	for (auto i = objs.begin(); i != objs.end(); ++i) {ret |= check_line_clip_update_t(p1, p2, t, i->bcube);} // check bounding cube
+}
 bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &t) const { // Note: nothing to do for parking lots or tree_planters
 	bool ret(0);
-	for (auto i = benches.begin(); i != benches.end(); ++i) {ret |= check_line_clip_update_t(p1, p2, t, i->bcube);} // check bounding cube
-	// check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
-	for (auto i = fire_hydrants.begin(); i != fire_hydrants.end(); ++i) {ret |= check_line_clip_update_t(p1, p2, t, i->bcube); }
-	for (auto i = dividers.begin(); i != dividers.end(); ++i) {ret |= check_line_clip_update_t(p1, p2, t, i->bcube);}
+	check_vector_line_intersect(benches,       p1, p2, t, ret);
+	check_vector_line_intersect(fire_hydrants, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
+	check_vector_line_intersect(dividers,      p1, p2, t, ret);
+	check_vector_line_intersect(pools,         p1, p2, t, ret);
 	return ret;
 }
 
@@ -733,6 +759,14 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) cons
 				assert(b->type < DIV_NUM_TYPES);
 				color = texture_color(plot_divider_types[b->type].tid); return 1;
 			}
+		}
+	} // for i
+	for (auto i = pool_groups.begin(); i != pool_groups.end(); start_ix = i->ix, ++i) {
+		if (!i->contains_pt_xy(pos)) continue;
+
+		for (auto b = pools.begin()+start_ix; b != pools.begin()+i->ix; ++b) {
+			if (pos.x < b->bcube.x1()) break; // pools are sorted by x1, no divider after this can match
+			if (b->bcube.contains_pt_xy(pos)) {color = b->wcolor; return 1;} // return water color
 		}
 	} // for i
 	return 0;

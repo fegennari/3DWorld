@@ -49,6 +49,15 @@ struct divider_t : public city_obj_t {
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
 };
 
+struct swimming_pool_t : public city_obj_t {
+	colorRGBA color, wcolor; // wall color and water color
+
+	swimming_pool_t(cube_t const &c, colorRGBA const &color_, colorRGBA const &wcolor_) :
+		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), color(color_), wcolor(wcolor_) {bcube = c;}
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
+};
+
 class city_obj_placer_t {
 public: // road network needs access to parking lots and driveways for drawing
 	vector<parking_lot_t> parking_lots;
@@ -58,7 +67,8 @@ private:
 	vector<tree_planter_t> planters;
 	vector<fire_hydrant_t> fire_hydrants;
 	vector<divider_t> dividers; // dividers for residential plots
-	vector<cube_with_ix_t> bench_groups, planter_groups, fire_hydrant_groups, divider_groups; // index is last object in group
+	vector<swimming_pool_t> pools;
+	vector<cube_with_ix_t> bench_groups, planter_groups, fire_hydrant_groups, divider_groups, pool_groups; // index is last object in group
 	quad_batch_draw qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
 	unsigned num_spaces, filled_spaces;
@@ -74,6 +84,7 @@ private:
 	template<typename T> void sort_grouped_objects(vector<T> &objs, vector<cube_with_ix_t> const &groups);
 	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_new_tile, bool is_residential);
 	void place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile);
+	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
 		draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0);
