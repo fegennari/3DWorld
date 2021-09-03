@@ -69,8 +69,8 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "make_4_way_ints") {
 		if (!read_uint(fp, make_4_way_ints) || make_4_way_ints > 3) {return read_error(str);}
 	}
-	else if (str == "residential_mode") {
-		if (!read_bool(fp, residential_mode)) {return read_error(str);}
+	else if (str == "residential_probability") {
+		if (!read_float(fp, residential_probability)) {return read_error(str);}
 	}
 	else if (str == "assign_house_plots") {
 		if (!read_bool(fp, assign_house_plots)) {return read_error(str);}

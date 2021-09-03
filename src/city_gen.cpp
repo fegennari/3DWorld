@@ -432,8 +432,9 @@ class city_road_gen_t : public road_gen_base_t {
 	public:
 		road_network_t() : bcube(all_zeros), city_id(CONN_CITY_IX), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0), is_residential(0) {} // global road network ctor
 		
-		road_network_t(cube_t const &bcube_, unsigned city_id_) : bcube(bcube_), city_id(city_id_), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0) {
-			is_residential = city_params.residential_mode; // TODO: make this a random probability?
+		road_network_t(cube_t const &bcube_, unsigned city_id_, bool is_residential_) :
+			bcube(bcube_), city_id(city_id_), cluster_id(0), plot_id_offset(0), tot_road_len(0.0), num_cars(0), is_residential(is_residential_)
+		{
 			bcube.z2() += ROAD_HEIGHT; // make it nonzero size
 		}
 		bool get_is_residential() const {return is_residential;}
@@ -1791,9 +1792,9 @@ public:
 	bool cube_overlaps_road_xy    (cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_road_xy    (c);}
 	bool cube_overlaps_pl_or_dw_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_pl_or_dw_xy(c);}
 
-	void gen_roads(cube_t const &region, float road_width, float road_spacing) {
+	void gen_roads_and_plots(cube_t const &region, float road_width, float road_spacing, bool is_residential) {
 		//timer_t timer("Gen Roads"); // ~0.5ms
-		road_networks.push_back(road_network_t(region, road_networks.size()));
+		road_networks.push_back(road_network_t(region, road_networks.size(), is_residential));
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back(); return;}
 		//cout << "Roads: " << road_networks.back().num_roads() << endl;
 	}
@@ -2442,7 +2443,14 @@ public:
 		float const elevation(flatten_region(x1, y1, x2, y2, params.slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
 		if (cities_bcube.is_all_zeros()) {cities_bcube = pos_range;} else {cities_bcube.union_with_cube(pos_range);}
-		if (params.roads_enabled()) {road_gen.gen_roads(pos_range, params.road_width, params.road_spacing);}
+		
+		if (params.roads_enabled()) {
+			rand_gen_t rgen2; // don't use the built-in rgen to avoid affecting other state
+			rgen2.set_state(x1, y1+y2);
+			float const rp(params.residential_probability);
+			bool const is_residential((rp == 0.0) ? 0 : ((rp == 1.0) ? 1 : (rgen2.rand_float() < rp)));
+			road_gen.gen_roads_and_plots(pos_range, params.road_width, params.road_spacing, is_residential);
+		}
 		return 1;
 	}
 	void gen_cities(city_params_t const &params) {

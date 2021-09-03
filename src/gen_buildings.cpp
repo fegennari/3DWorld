@@ -1767,7 +1767,7 @@ public:
 		if (params.gen_inf_buildings() && !is_tile && !city_only) return; // secondary buildings - not added here
 		vect_city_zone_t city_plot_bcubes;
 		vector<unsigned> valid_city_plot_ixs;
-		bool residential(0); // Note: may not be correct for a mix of residential and non-residential, but that can't currently happen
+		bool residential(0); // Note: may not be correct for a mix of residential and non-residential, but this only matters if the material nonemptiness or ranges differ
 
 		if (city_only) {
 			unsigned num_residential(0), num_non_residential(0);
