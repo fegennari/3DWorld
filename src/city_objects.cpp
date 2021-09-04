@@ -562,9 +562,9 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 	for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
 		if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling for group
 		if (not_using_qbd) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // must setup shader and tile shadow map before drawing
+		assert(start_ix <= g->ix && g->ix <= objs.size());
 
 		for (unsigned i = start_ix; i < g->ix; ++i) {
-			assert(i < objs.size());
 			T const &obj(objs[i]);
 			if (dstate.check_sphere_visible(obj.pos, obj.radius)) {obj.draw(dstate, qbd, dist_scale, shadow_only);}
 		}
@@ -718,6 +718,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) cons
 
 	for (auto i = bench_groups.begin(); i != bench_groups.end(); start_ix = i->ix, ++i) {
 		if (!i->contains_pt_xy(pos)) continue;
+		assert(start_ix <= i->ix && i->ix <= benches.size());
 					
 		for (auto b = benches.begin()+start_ix; b != benches.begin()+i->ix; ++b) {
 			if (pos.x < b->bcube.x1()) break; // benches are sorted by x1, no bench after this can match
@@ -729,6 +730,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) cons
 
 	for (auto i = planter_groups.begin(); i != planter_groups.end(); start_ix = i->ix, ++i) {
 		if (!i->contains_pt_xy_exp(pos, expand)) continue;
+		assert(start_ix <= i->ix && i->ix <= planters.size());
 
 		for (auto p = planters.begin()+start_ix; p != planters.begin()+i->ix; ++p) {
 			if (x_test < p->bcube.x1()) break; // planters are sorted by x1, no planter after this can match
@@ -741,6 +743,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) cons
 
 	for (auto i = fire_hydrant_groups.begin(); i != fire_hydrant_groups.end(); start_ix = i->ix, ++i) {
 		if (!i->contains_pt_xy(pos)) continue;
+		assert(start_ix <= i->ix && i->ix <= fire_hydrants.size());
 
 		for (auto b = fire_hydrants.begin()+start_ix; b != fire_hydrants.begin()+i->ix; ++b) {
 			if (pos.x < b->bcube.x1()) break; // fire_hydrants are sorted by x1, no fire_hydrant after this can match
@@ -751,6 +754,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) cons
 
 	for (auto i = divider_groups.begin(); i != divider_groups.end(); start_ix = i->ix, ++i) {
 		if (!i->contains_pt_xy(pos)) continue;
+		assert(start_ix <= i->ix && i->ix <= dividers.size());
 
 		for (auto b = dividers.begin()+start_ix; b != dividers.begin()+i->ix; ++b) {
 			if (pos.x < b->bcube.x1()) break; // dividers are sorted by x1, no divider after this can match
@@ -761,8 +765,11 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) cons
 			}
 		}
 	} // for i
+	start_ix = 0;
+
 	for (auto i = pool_groups.begin(); i != pool_groups.end(); start_ix = i->ix, ++i) {
 		if (!i->contains_pt_xy(pos)) continue;
+		assert(start_ix <= i->ix && i->ix <= pools.size());
 
 		for (auto b = pools.begin()+start_ix; b != pools.begin()+i->ix; ++b) {
 			if (pos.x < b->bcube.x1()) break; // pools are sorted by x1, no divider after this can match
