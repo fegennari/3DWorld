@@ -551,6 +551,8 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 
 void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
 	// assumes place_plot_dividers() has been called first to populate sub_plots
+	float const min_spacing_to_plot_edge(0.5*city_params.road_width);
+
 	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
 		if (rgen.rand_bool()) continue; // only add pools 50% of the time
@@ -558,12 +560,17 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		cube_t pool_area(*i);
 		pool_area.d[dim][dir] = pool_area.get_center_dim(dim); // limit the pool to the back yard
 		float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
+
+		for (unsigned d = 0; d < 2; ++d) { // keep pools away from the edges of plots; applies to sub-plots on the corners
+			max_eq(pool_area.d[d][0], plot.d[d][0]+min_spacing_to_plot_edge);
+			min_eq(pool_area.d[d][1], plot.d[d][1]-min_spacing_to_plot_edge);
+		}
 		pool_area.expand_by_xy(-0.05*dmin); // small shrink to keep away from walls, fences, and hedges
 		vector3d pool_sz;
 		pool_sz.z = 0.01*dmin;
 		for (unsigned d = 0; d < 2; ++d) {pool_sz[d] = rgen.rand_uniform(0.4, 0.7)*dmin;}
 		for (unsigned d = 0; d < 2; ++d) {pool_area.d[d][1] -= pool_sz[d];} // shrink so that pool_area is where (x1, x2) can be placed
-		assert(pool_area.is_normalized());
+		if (!pool_area.is_normalized()) continue; // pool area is too small; this can only happen due to shrink at plot edges
 		point pool_llc;
 		pool_llc.z = i->z2();
 
