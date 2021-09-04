@@ -179,8 +179,18 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scal
 }
 void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
-	dstate.draw_cube(qbd, bcube, color_wrapper( color), 1, 0.0, 4); // draw sides
-	dstate.draw_cube(qbd, bcube, color_wrapper(wcolor), 1, 0.0, 3); // draw top water
+	float const dz(bcube.dz()), wall_thick(1.2*dz);
+	cube_t inner(bcube);
+	inner.z2() -= 0.5*dz; // reduce water height by 50%; can't make water below the mesh though
+	inner.expand_by_xy(-wall_thick);
+	color_wrapper const cw(color);
+	cube_t sides[4] = {bcube, bcube, bcube, bcube}; // {S, N, W center, E center}
+	sides[0].y2() = sides[2].y1() = sides[3].y1() = inner.y1();
+	sides[1].y1() = sides[2].y2() = sides[3].y2() = inner.y2();
+	sides[2].x2() = inner.x1();
+	sides[3].x1() = inner.x2();
+	for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbd, sides[d], cw, 1, 0.0, ((d > 2) ? 2 : 0));}
+	dstate.draw_cube(qbd, inner, color_wrapper(wcolor), 1, 0.0, 3); // draw top water
 }
 
 
@@ -537,9 +547,33 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
 	// assumes place_plot_dividers() has been called first to populate sub_plots
 	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
-		for (unsigned n = 0; n < 4; ++n) { // make some attempts to generate a valid pool location
-			// TODO
-		}
+		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
+		if (rgen.rand_bool()) continue; // only add pools 50% of the time
+		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
+		cube_t pool_area(*i);
+		pool_area.d[dim][dir] = pool_area.get_center_dim(dim); // limit the pool to the back yard
+		float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
+		pool_area.expand_by_xy(-0.05*dmin); // small shrink to keep away from walls, fences, and hedges
+		vector3d pool_sz;
+		pool_sz.z = rgen.rand_uniform(0.01, 0.02)*dmin;
+		for (unsigned d = 0; d < 2; ++d) {pool_sz[d] = rgen.rand_uniform(0.4, 0.7)*dmin;}
+		for (unsigned d = 0; d < 2; ++d) {pool_area.d[d][1] -= pool_sz[d];} // shrink so that pool_area is where (x1, x2) can be placed
+		assert(pool_area.is_normalized());
+		point pool_llc;
+		pool_llc.z = i->z2();
+
+		for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid pool location
+			for (unsigned d = 0; d < 2; ++d) {pool_llc[d] = rgen.rand_uniform(pool_area.d[d][0], pool_area.d[d][1]);}
+			cube_t const pool(pool_llc, (pool_llc + pool_sz));
+			if (has_bcube_int_xy(pool, blockers, 0.08*dmin)) continue; // intersects some other object
+			colliders.push_back(pool);
+			blockers .push_back(pool);
+			float const grayscale(rgen.rand_uniform(0.4, 0.7));
+			float const water_white_comp(rgen.rand_uniform(0.1, 0.4)), extra_green(rgen.rand_uniform(0.0, 0.8)), lightness(rgen.rand_uniform(0.5, 1.0));
+			colorRGBA color(grayscale, grayscale, grayscale), wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
+			add_obj_to_group(swimming_pool_t(pool, color, wcolor), pool, pools, pool_groups, is_new_tile);
+			break; // success
+		} // for n
 	} // for i
 }
 
