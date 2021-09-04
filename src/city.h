@@ -145,13 +145,13 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 
 struct car_t : public car_base_t, public waiting_obj_t { // size = 92
 	cube_t prev_bcube;
-	bool entering_city, in_tunnel, dest_valid, destroyed;
+	bool entering_city, in_tunnel, dest_valid, destroyed, in_reverse;
 	unsigned char color_id, front_car_turn_dir, model_id;
 	unsigned short dest_city, dest_isec;
 	float height, dz, rot_z, turn_val, waiting_pos;
 	car_t const *car_in_front;
 
-	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), color_id(0), front_car_turn_dir(TURN_UNSPEC),
+	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), in_reverse(0), color_id(0), front_car_turn_dir(TURN_UNSPEC),
 		model_id(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), waiting_pos(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	float get_max_lookahead_dist() const;

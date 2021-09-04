@@ -56,7 +56,7 @@ void car_t::destroy() { // Note: not calling create_explosion(), so no chain rea
 	destroyed = 1;
 }
 
-float car_t::get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len) const {
+float car_t::get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len) const { // should this depend on in_reverse?
 	float const avg_len(0.5f*(get_length() + c.get_length())); // average length of the two cars
 	float const min_speed(max(0.0f, (min(cur_speed, c.cur_speed) - 0.1f*max_speed))); // relative to max speed of 1.0, clamped to 10% at bottom end for stability
 	return avg_len*(MIN_CAR_STOP_SEP + 1.11*min_speed + (add_one_car_len ? 1.0 : 0.0)); // 25% to 125% car length, depending on speed (2x on connector roads)
@@ -85,7 +85,7 @@ void car_t::move(float speed_mult) {
 	float dist(cur_speed*speed_mult);
 	if (dz != 0.0) {dist *= min(1.25, max(0.75, (1.0 - 0.5*dz/get_length())));} // slightly faster down hills, slightly slower up hills
 	min_eq(dist, 0.25f*city_params.road_width); // limit to half a car length to prevent cars from crossing an intersection in a single frame
-	move_by(dir ? dist : -dist);
+	move_by((dir ^ in_reverse) ? dist : -dist);
 	// update waiting state
 	float const cur_pos(bcube.d[dim][dir]);
 	if (fabs(cur_pos - waiting_pos) > get_length()) {waiting_pos = cur_pos; reset_waiting();} // update when we move at least a car length
@@ -389,11 +389,12 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 			add_light_flare(pos, front_n, hl_color, 2.0, 0.65*car.height); // pb 0,1,4,5
 		}
 	}
-	if ((brake_lights_on || headlights_on) && dist_val < 0.2) { // brake lights
+	if ((brake_lights_on || headlights_on || car.in_reverse) && dist_val < 0.2) { // brake/tail/backup lights
 		for (unsigned d = 0; d < 2; ++d) { // L, R
 			unsigned const lr(d ^ lr_xor);
 			point const pos((lr ? 0.2 : 0.8)*(0.2*pb[2] + 0.8*pb[6]) + (lr ? 0.8 : 0.2)*(0.2*pb[3] + 0.8*pb[7]));
-			add_light_flare(pos, -front_n, colorRGBA(1.0, 0.1, 0.05, 1.0), (brake_lights_on ? 1.0 : 0.5), 0.5*car.height); // near red; pb 2,3,6,7
+			colorRGBA const bl_color(car.in_reverse ? colorRGBA(1.0, 0.9, 0.7, 1.0) : colorRGBA(1.0, 0.1, 0.05, 1.0)); // yellow-white/near red; pb 2,3,6,7
+			add_light_flare(pos, -front_n, bl_color, (brake_lights_on ? 1.0 : 0.5), 0.5*car.height);
 		}
 	}
 	if (car.turn_dir != TURN_NONE && car.cur_city != CONN_CITY_IX && dist_val < 0.1) { // turn signals (not on connector road bends)
