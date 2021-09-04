@@ -175,22 +175,27 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scal
 }
 
 /*static*/ void swimming_pool_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(WHITE_TEX);} // untextured, for now
+	if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? get_texture_by_name("bathroom_tile.jpg") : get_texture_by_name("snow2.jpg"));}
 }
 void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
-	float const dz(bcube.dz()), wall_thick(1.2*dz);
+	float const dz(bcube.dz()), wall_thick(1.2*dz), tscale(0.5/wall_thick);
 	cube_t inner(bcube);
-	inner.z2() -= 0.5*dz; // reduce water height by 50%; can't make water below the mesh though
 	inner.expand_by_xy(-wall_thick);
-	color_wrapper const cw(color);
-	cube_t sides[4] = {bcube, bcube, bcube, bcube}; // {S, N, W center, E center}
-	sides[0].y2() = sides[2].y1() = sides[3].y1() = inner.y1();
-	sides[1].y1() = sides[2].y2() = sides[3].y2() = inner.y2();
-	sides[2].x2() = inner.x1();
-	sides[3].x1() = inner.x2();
-	for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbd, sides[d], cw, 1, 0.0, ((d > 2) ? 2 : 0));}
-	dstate.draw_cube(qbd, inner, color_wrapper(wcolor), 1, 0.0, 3); // draw top water
+
+	if (dstate.pass_ix == 0) { // first pass, draw walls
+		color_wrapper const cw(color);
+		cube_t sides[4] = {bcube, bcube, bcube, bcube}; // {S, N, W center, E center}
+		sides[0].y2() = sides[2].y1() = sides[3].y1() = inner.y1();
+		sides[1].y1() = sides[2].y2() = sides[3].y2() = inner.y2();
+		sides[2].x2() = inner.x1();
+		sides[3].x1() = inner.x2();
+		for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0));}
+	}
+	else { // second pass, draw water surface
+		inner.z2() -= 0.5*dz; // reduce water height by 50%; can't make water below the mesh though
+		dstate.draw_cube(qbd, inner, color_wrapper(wcolor), 1, 0.5*tscale, 3); // draw top water
+	}
 }
 
 
@@ -555,7 +560,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
 		pool_area.expand_by_xy(-0.05*dmin); // small shrink to keep away from walls, fences, and hedges
 		vector3d pool_sz;
-		pool_sz.z = rgen.rand_uniform(0.01, 0.02)*dmin;
+		pool_sz.z = 0.01*dmin;
 		for (unsigned d = 0; d < 2; ++d) {pool_sz[d] = rgen.rand_uniform(0.4, 0.7)*dmin;}
 		for (unsigned d = 0; d < 2; ++d) {pool_area.d[d][1] -= pool_sz[d];} // shrink so that pool_area is where (x1, x2) can be placed
 		assert(pool_area.is_normalized());
@@ -564,14 +569,15 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 
 		for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid pool location
 			for (unsigned d = 0; d < 2; ++d) {pool_llc[d] = rgen.rand_uniform(pool_area.d[d][0], pool_area.d[d][1]);}
-			cube_t const pool(pool_llc, (pool_llc + pool_sz));
+			cube_t pool(pool_llc, (pool_llc + pool_sz));
 			if (has_bcube_int_xy(pool, blockers, 0.08*dmin)) continue; // intersects some other object
-			colliders.push_back(pool);
-			blockers .push_back(pool);
-			float const grayscale(rgen.rand_uniform(0.4, 0.7));
-			float const water_white_comp(rgen.rand_uniform(0.1, 0.4)), extra_green(rgen.rand_uniform(0.0, 0.8)), lightness(rgen.rand_uniform(0.5, 1.0));
+			float const grayscale(rgen.rand_uniform(0.7, 1.0));
+			float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
 			colorRGBA color(grayscale, grayscale, grayscale), wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
 			add_obj_to_group(swimming_pool_t(pool, color, wcolor), pool, pools, pool_groups, is_new_tile);
+			pool.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
+			colliders.push_back(pool);
+			blockers .push_back(pool);
 			break; // success
 		} // for n
 	} // for i
@@ -705,11 +711,13 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.12, not_using_qbd=1
-	draw_objects(pools,         pool_groups,         dstate, 0.20, shadow_only, 0); // dist_scale=0.2
 			
 	if (!shadow_only) { // low profile, not drawn in shadow pass
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt, stone}
 			draw_objects(planters, planter_groups, dstate, 0.1, shadow_only, 0); // dist_scale=0.1
+		}
+		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {walls, water}
+			draw_objects(pools, pool_groups, dstate, ((dstate.pass_ix == 0) ? 0.1 : 0.5), shadow_only, 0);
 		}
 	}
 	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
