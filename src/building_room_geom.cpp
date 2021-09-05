@@ -1827,9 +1827,16 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
-	// TODO: texture with alpha mask for holes
-	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
-	mat.add_vcylin_to_verts(c, apply_light_color(c), 1, 0, 1, 1); // untextured, bottom only, two_sided cylinder with inverted bottom normal
+	// Note: no alpha test is enabled in the shader when drawing this, so the holes in the material may not be drawn correctly against objects such as exterior walls
+	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png")), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	cube_t bot(c), mid(c), top(c);
+	bot.z2() = mid.z1() = c.z1() + 0.12*c.dz();
+	mid.z2() = top.z1() = c.z2() - 0.12*c.dz();
+	colorRGBA const color(apply_light_color(c));
+	tex_mat  .add_vcylin_to_verts(mid, color, 0, 0, 1, 1); // two_sided cylinder
+	rgeom_mat_t &solid_mat(get_untextured_material(0, 0, 1)); // inc_shadows=0, dynamic=0, small=1
+	solid_mat.add_vcylin_to_verts(bot, color, 1, 0, 1, 1); // two_sided cylinder with bottom
+	solid_mat.add_vcylin_to_verts(top, color, 0, 0, 1, 1); // two_sided cylinder
 }
 
 void building_room_geom_t::add_br_stall(room_object_t const &c) {

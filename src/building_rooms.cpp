@@ -1550,6 +1550,8 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 			float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.1, 0.12)*floor_spacing), height(rgen.rand_uniform(1.5, 2.2)*radius);
 			place_area.expand_by_xy(-radius); // leave a slight gap between laundry basket and wall
 			if (!place_area.is_strictly_normalized()) return 1; // no space for laundry basket (likely can't happen)
+			cube_t legal_area(get_part_for_room(room));
+			legal_area.expand_by_xy(-(1.0*floor_spacing + radius)); // keep away from part edge/exterior walls to avoid alpha mask drawing problems
 			point center;
 			center.z = zval + 0.002*floor_spacing; // slightly above the floor to avoid z-fighting
 
@@ -1557,6 +1559,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 				bool const dim(rgen.rand_bool()), dir(rgen.rand_bool()); // choose a random wall
 				center[ dim] = place_area.d[dim][dir]; // against this wall
 				center[!dim] = rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1]);
+				if (!legal_area.contains_pt_xy(center)) continue; // too close to part edge
 				cube_t const c(get_cube_height_radius(center, radius, height));
 				if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
 				colorRGBA const colors[4] = {WHITE, LT_BLUE, LT_GREEN, LT_BROWN};
