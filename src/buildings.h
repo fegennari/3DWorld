@@ -85,6 +85,7 @@ struct building_occlusion_state_t {
 class occlusion_checker_t {
 	building_occlusion_state_t state;
 public:
+	vect_cube_t occluders;
 	void set_exclude_bix(int exclude_bix) {state.exclude_bix = exclude_bix;}
 	void set_exclude_camera_building() {state.skip_cont_camera = 1;}
 	void set_camera(pos_dir_up const &pdu);

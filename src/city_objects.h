@@ -98,6 +98,7 @@ public:
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	bool get_color_at_xy(point const &pos, colorRGBA &color) const;
+	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
 };
 
 inline uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}

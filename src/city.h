@@ -557,6 +557,7 @@ protected:
 	occlusion_checker_t occlusion_checker;
 public:
 	quad_batch_draw ao_qbd;
+	vect_cube_t &get_occluders() {return occlusion_checker.occluders;}
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
 	bool is_occluded(cube_t const &bcube) {return (!shadow_only && occlusion_checker.is_occluded(bcube));} // Note: non-const - OC state temp_points is modified
 	void draw_ao_qbd();
@@ -635,6 +636,7 @@ class car_manager_t { // and trucks and helicopters
 	void remove_destroyed_cars();
 	void update_cars();
 	int find_next_car_after_turn(car_t &car);
+	void setup_occluders();
 	vector3d get_helicopter_size(unsigned model_id);
 	void draw_helicopters(bool shadow_only);
 public:

@@ -3227,7 +3227,7 @@ public:
 void occlusion_checker_noncity_t::set_camera(pos_dir_up const &pdu) {
 	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // occlusion culling disabled
 	pos_dir_up near_pdu(pdu);
-	near_pdu.far_ = 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE); // set far clipping plane to half a tile
+	near_pdu.far_ = 0.5f*(X_SCENE_SIZE + Y_SCENE_SIZE); // set far clipping plane to half a tile (currently 4.0)
 	bc.get_occluders(near_pdu, state);
 	//cout << "buildings: " << bc.get_num_buildings() << ", occluders: " << state.building_ids.size() << endl;
 }

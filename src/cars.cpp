@@ -243,15 +243,25 @@ void ao_draw_state_t::draw_ao_qbd() {
 void occlusion_checker_t::set_camera(pos_dir_up const &pdu) {
 	if ((display_mode & 0x08) == 0) {state.building_ids.clear(); return;} // testing
 	pos_dir_up near_pdu(pdu);
-	near_pdu.far_ = 2.0*city_params.road_spacing; // set far clipping plane to one city block
+	near_pdu.far_ = 2.0*city_params.road_spacing; // set far clipping plane to one city block (currently 3.0)
 	get_city_building_occluders(near_pdu, state);
 	//cout << "occluders: " << state.building_ids.size() << endl;
 }
 bool occlusion_checker_t::is_occluded(cube_t const &c) {
-	if (state.building_ids.empty()) return 0;
+	if (state.building_ids.empty() && occluders.empty()) return 0;
 	float const z(c.z2()); // top edge
 	point const corners[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
-	return check_city_pts_occluded(corners, 4, state);
+	if (check_city_pts_occluded(corners, 4, state)) return 1;
+
+	for (auto c = occluders.begin(); c != occluders.end(); ++c) {
+		bool occluded(1);
+
+		for (unsigned i = 0; i < 4; ++i) {
+			if (!check_line_clip(state.pos, (corners[i] + state.xlate), c->d)) {occluded = 0; break;}
+		}
+		if (occluded) return 1;
+	} // for i
+	return 0;
 }
 
 void ao_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_) {
@@ -1055,8 +1065,9 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 
 	if (trans_op_mask & 1) { // opaque pass, should be first
 		if (is_dlight_shadows && !city_params.car_shadows) return;
-		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
 		//timer_t timer(string("Draw Cars") + (garages_pass ? " Garages" : " City") + (shadow_only ? " Shadow" : "")); // 10K cars = 1.5ms / 2K cars = 0.33ms
+		bool const only_parked(shadow_only && !is_dlight_shadows); // sun/moon shadows are precomputed and cached, so only include static objects such as parked cars
+		setup_occluders();
 		dstate.xlate = xlate;
 		dstate.use_building_lights = garages_pass;
 		fgPushMatrix();

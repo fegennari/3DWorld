@@ -828,4 +828,20 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) cons
 	return 0;
 }
 
+void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const {
+	if (dividers.empty()) return; // dividers are currently the only occluders
+	float const dmax(0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // set far clipping plane to 1/4 a tile (currently 2.0)
+	unsigned start_ix(0);
+
+	for (auto i = divider_groups.begin(); i != divider_groups.end(); start_ix = i->ix, ++i) {
+		if (!dist_less_than(pdu.pos, i->closest_pt(pdu.pos), dmax) || !pdu.cube_visible(*i)) continue;
+		assert(start_ix <= i->ix && i->ix <= dividers.size());
+
+		for (auto b = dividers.begin()+start_ix; b != dividers.begin()+i->ix; ++b) {
+			if (b->bcube.z1() > pdu.pos.z || b->bcube.z2() < pdu.pos.z) continue; // z-range does not include the camera
+			if (dist_less_than(pdu.pos, b->bcube.closest_pt(pdu.pos), dmax) && pdu.cube_visible(b->bcube)) {occluders.push_back(b->bcube);}
+		}
+	} // for i
+}
+
 

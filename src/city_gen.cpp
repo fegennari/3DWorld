@@ -1186,6 +1186,9 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = roads.begin(); i != roads.end(); ++i) {if (i->intersects(c)) return 1;}
 			return 0;
 		}
+		void get_occluders(vect_cube_t &occluders) const {
+			if (bcube.contains_pt_xy(camera_pdu.pos)) {city_obj_placer.get_occluders(camera_pdu, occluders);} // only add if this city contains the camera
+		}
 		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 			if (empty()) return;
 			if (!dstate.check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
@@ -2140,6 +2143,9 @@ public:
 		global_rn.add_city_lights(xlate, lights_bcube); // no streetlights, but may need to add lights for bridges and tunnels
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->add_city_lights(xlate, lights_bcube);}
 	}
+	void get_occluders(vect_cube_t &occluders) const {
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_occluders(occluders);}
+	}
 	void draw(int trans_op_mask, vector3d const &xlate, bool use_dlights, bool shadow_only) { // non-const because qbd is modified
 		if (road_networks.empty() && global_rn.empty()) return;
 
@@ -2249,11 +2255,9 @@ void car_manager_t::add_car() {
 	car_t car;
 	if (road_gen.add_car(car, rgen)) {cars.push_back(car);}
 }
-
 void car_manager_t::update_cars() {
 	for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
 }
-
 void car_manager_t::get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const {
 	start = cb->start; end = (cb+1)->start;
 	assert(end <= cars.size());
@@ -2261,6 +2265,10 @@ void car_manager_t::get_car_ix_range_for_cube(vector<car_block_t>::const_iterato
 	if (!road_gen.cube_overlaps_pl_or_dw_xy(bc, cb->cur_city)) {end   = cb->first_parked;} // moving cars only (beginning of range)
 	if (!road_gen.cube_overlaps_road_xy    (bc, cb->cur_city)) {start = cb->first_parked;} // parked cars only (end of range)
 	assert(start <= end);
+}
+void car_manager_t::setup_occluders() {
+	dstate.get_occluders().clear();
+	if ((display_mode & 0x08) && !cars.empty()) {road_gen.get_occluders(dstate.get_occluders());}
 }
 
 
@@ -2538,7 +2546,7 @@ public:
 		bool const use_dlights(enable_lights()), is_dlight_shadows(shadow_only == 2);
 		if (reflection_pass == 0) {road_gen.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0));} // roads don't cast shadows and aren't reflected in water, but stoplights cast shadows
 		car_manager.draw(trans_op_mask, xlate, use_dlights, (shadow_only != 0), is_dlight_shadows, 0);
-		if (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
+		if  (trans_op_mask & 1) {ped_manager.draw(xlate, use_dlights, (shadow_only != 0), is_dlight_shadows);} // opaque
 		if ((trans_op_mask & 1) && !shadow_only) {road_gen.draw_label();} // after drawing cars so that it's in front
 		// Note: buildings are drawn through draw_buildings()
 	}
