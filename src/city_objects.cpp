@@ -315,7 +315,8 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 	return has_parking;
 }
 
-void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen) const {
+// non-const because this sets driveway_t::car_ix
+void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen) {
 	car_t car;
 	car.park();
 	car.cur_city = city_id;
@@ -346,6 +347,7 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 			if (car.bcube.intersects(c->bcube)) {intersects = 1; break;}
 		}
 		if (intersects) continue; // skip
+		i->car_ix = cars.size();
 		cars.push_back(car);
 		plot_colliders[i->plot_ix].push_back(car.bcube); // prevent pedestrians from walking through this parked car
 	} // for i
@@ -595,7 +597,11 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 	plot_z.z1() = plot_z.z2() = plot.z2() + 0.0002*city_params.road_width; // shift slightly up to avoid Z-fighting
 	temp_cubes.clear();
 	add_house_driveways_for_plot(plot_z, temp_cubes);
-	for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {driveways.emplace_back(*i, plot_ix);}
+
+	for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {
+		bool const dim(i->dx() < i->dy()), dir(fabs(plot.d[dim][1] - i->d[dim][1]) < fabs(plot.d[dim][0] - i->d[dim][0]));
+		driveways.emplace_back(*i, dim, dir, plot_ix);
+	}
 }
 
 template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,

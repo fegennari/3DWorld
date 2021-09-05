@@ -270,10 +270,13 @@ struct road_seg_t : public road_t {
 };
 
 struct driveway_t : public cube_t {
+	bool dim, dir; // direction to road
 	unsigned plot_ix;
-	driveway_t() : plot_ix(0) {}
-	driveway_t(cube_t const &c, unsigned pix) : cube_t(c), plot_ix(pix) {}
-	tex_range_t get_tex_range(float ar) const {bool const dim(dx() < dy()); return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
+	int car_ix; // -1 = none
+	driveway_t() : dim(0), dir(0), plot_ix(0), car_ix(-1) {}
+	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), plot_ix(pix), car_ix(-1) {}
+	bool in_use() const {return (car_ix >= 0);}
+	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
 };
 
 struct road_plot_t : public cube_t {
