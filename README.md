@@ -112,6 +112,10 @@ https://3dworldgen.blogspot.com/
 
 Here are some screenshots linked from my blog:
 
+![alt text](https://1.bp.blogspot.com/-ZbJUmGiha84/YTRRfRWTE4I/AAAAAAAADEs/yB9tPZcllnM40FOsh8nkut3HtDjm0MLqQCLcBGAsYHQ/s1920/residential_grid.jpg)
+
+Procedural residential neighborhood with office buildings in the backround. There are cars and people both on the sidewalks and inside buildings. (config_heightmap.txt)
+
 ![alt text](https://1.bp.blogspot.com/-GW82PSnZt7s/X7DVx4wb4aI/AAAAAAAACxM/4PSV1e2iI8wzVEXVnA9K3GPrPqfdpKmcwCLcBGAsYHQ/w640-h360/office_libraries.jpg)
 
 Procedural building interior - a library with procedurally generated books. (config_heightmap.txt)
