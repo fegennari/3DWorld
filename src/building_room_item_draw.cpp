@@ -556,6 +556,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_LAPTOP:    add_laptop(*i); break;
 		case TYPE_BUTTON:    if (!(i->flags & RO_FLAG_IN_ELEV)) {add_button(*i);} break; // skip buttons inside elevators, which are drawn as dynamic objects
 		case TYPE_HANGER:    if (has_hanger_model()) {model_objs.push_back(*i);} break;
+		case TYPE_LBASKET:   add_laundry_basket(*i); break;
 		default: break;
 		}
 	} // for i

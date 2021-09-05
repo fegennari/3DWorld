@@ -1788,7 +1788,7 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	colorRGBA const color(apply_light_color(c));
 
 	if (c.shape == SHAPE_CYLIN) {
-		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.7, 1.0); // untextured, bottom only, two_sided cylinder with inverted bottom normal
+		mat.add_vcylin_to_verts(c, color, 1, 0, 1, 1, 0.7, 1.0); // untextured, bottom only, two_sided truncated cone with inverted bottom normal
 	}
 	else { // sloped cube; this shape is rather unique, so is drawn inline; untextured
 		cube_t base(c);
@@ -1824,6 +1824,12 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 			} // for dir
 		} // for dim
 	}
+}
+
+void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
+	// TODO: texture with alpha mask for holes
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	mat.add_vcylin_to_verts(c, apply_light_color(c), 1, 0, 1, 1); // untextured, bottom only, two_sided cylinder with inverted bottom normal
 }
 
 void building_room_geom_t::add_br_stall(room_object_t const &c) {
