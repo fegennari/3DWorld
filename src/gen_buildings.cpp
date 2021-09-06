@@ -2923,7 +2923,7 @@ public:
 	}
 
 	// Note: unlike check_line_coll(), p1 and p2 are in building space
-	void update_zmax_for_line(point const &p1, point const &p2, float radius, float &cur_zmax) const {
+	void update_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) const {
 		if (empty()) return;
 		cube_t bcube(p1, p2);
 		bcube.expand_by_xy(radius);
@@ -2949,7 +2949,9 @@ public:
 					float t(1.0); // result is unused
 					// Note: unclear if we need to do a detailed line collision check, maybe testing the building bbox is good enough?
 					// if radius is passed in as nonzero, then simply assume it intersects because check_line_coll() can't easily take a radius value
-					if (radius > 0.0 || building.check_line_coll(p1, p2, zero_vector, t, points, 0, 1, 1)) {max_eq(cur_zmax, b->z2());}
+					if (radius > 0.0 || building.check_line_coll(p1, p2, zero_vector, t, points, 0, 1, 1)) {
+						max_eq(cur_zmax, (b->z2() + (building.is_house ? house_extra_zval : 0.0f)));
+					}
 				} // for b
 			} // for x
 		} // for y
@@ -3148,10 +3150,10 @@ public:
 		}
 		return 0;
 	}
-	void update_zmax_for_line(point const &p1, point const &p2, float radius, float &cur_zmax) const { // Note p1/p2 are in building space
+	void update_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) const { // Note p1/p2 are in building space
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
 			if (!check_line_clip(p1, p2, i->second.get_bcube().d)) continue; // optimization
-			i->second.update_zmax_for_line(p1, p2, radius, cur_zmax);
+			i->second.update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
 		}
 	}
 	void add_drawn(vector3d const &xlate, vector<building_creator_t *> &bcs) {
@@ -3313,10 +3315,10 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	unsigned const coll2(building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 1));
 	return (coll2 ? coll2 : coll1); // Note: excludes building_tiles
 }
-void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float &cur_zmax) {
-	building_creator_city.update_zmax_for_line(p1, p2, radius, cur_zmax);
-	building_creator     .update_zmax_for_line(p1, p2, radius, cur_zmax);
-	building_tiles       .update_zmax_for_line(p1, p2, radius, cur_zmax);
+void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) {
+	building_creator_city.update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
+	building_creator     .update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
+	building_tiles       .update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
 }
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
 	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.get_building_hit_color(p1, p2, color)) return 1;

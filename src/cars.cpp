@@ -912,7 +912,8 @@ float get_flight_path_zmax(point const &p1, point const &p2, float radius) {
 		pos += step;
 	}
 	// test buildings using approach #2
-	update_buildings_zmax_for_line(p1, p2, radius, cur_zmax);
+	float const house_extra_zval(20.0*city_params.road_width); // doesn't seem to make a difference, since helicopters don't normally fly over residential areas anyway
+	update_buildings_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
 	return cur_zmax;
 }
 
