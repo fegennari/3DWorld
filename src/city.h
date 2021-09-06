@@ -143,16 +143,17 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 	point get_front(float dval=0.5) const;
 };
 
-struct car_t : public car_base_t, public waiting_obj_t { // size = 92
+struct car_t : public car_base_t, public waiting_obj_t { // size = 96
 	cube_t prev_bcube;
 	bool entering_city, in_tunnel, dest_valid, destroyed, in_reverse;
 	unsigned char color_id, front_car_turn_dir, model_id;
 	unsigned short dest_city, dest_isec;
+	short dest_driveway; // -1 is unset
 	float height, dz, rot_z, turn_val, waiting_pos;
 	car_t const *car_in_front;
 
 	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), in_reverse(0), color_id(0), front_car_turn_dir(TURN_UNSPEC),
-		model_id(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), waiting_pos(0.0), car_in_front(nullptr) {}
+		model_id(0), dest_city(0), dest_isec(0), dest_driveway(-1), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), waiting_pos(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	float get_max_lookahead_dist() const;
 	bool headlights_on() const;
@@ -270,13 +271,15 @@ struct road_seg_t : public road_t {
 };
 
 struct driveway_t : public cube_t {
-	bool dim, dir; // direction to road
+	bool dim, dir; // direction to road; d[dim][dir] is the edge shared with the road
+	mutable bool in_use; // either reserves the spot, or car <car_ix> is parked there; modified by car_manager in a different thread - must be mutable, maybe should be atomic
 	unsigned plot_ix;
-	int car_ix; // -1 = none
-	driveway_t() : dim(0), dir(0), plot_ix(0), car_ix(-1) {}
-	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), plot_ix(pix), car_ix(-1) {}
-	bool in_use() const {return (car_ix >= 0);}
-	tex_range_t get_tex_range(float ar) const {return tex_range_t(0.0, 0.0, -ar, (dim ? -1.0 : 1.0), 0, dim);}
+	int car_ix; // driveway can old exactly one car; -1 = none
+	driveway_t() : dim(0), dir(0), in_use(0), plot_ix(0), car_ix(-1) {}
+	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), in_use(0), plot_ix(pix), car_ix(-1) {}
+	int get_cur_car() const {return (in_use ? car_ix : -1);} // if not in use, return -1/none even if car_ix hasn't been reset
+	void add_car(unsigned ix) {assert(!in_use); car_ix = ix; in_use = 1;}
+	tex_range_t get_tex_range(float ar) const {bool const dmin(dx() < dy()); return tex_range_t(0.0, 0.0, -ar, (dmin ? -1.0 : 1.0), 0, dmin);}
 };
 
 struct road_plot_t : public cube_t {

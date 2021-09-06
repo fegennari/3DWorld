@@ -1466,11 +1466,44 @@ class city_road_gen_t : public road_gen_base_t {
 				car = orig_car; // failed (unlikely) - restore original car state
 			}
 		}
+		void find_and_set_car_road_and_seg(car_t &car) const {
+			// find the road and segment the car is currently on; this can be slow, but should be rare
+			point const center(car.get_center());
+
+			for (auto i = segs.begin(); i != segs.end(); ++i) {
+				if (!i->contains_pt_xy(center)) continue;
+				car.cur_seg       = (i - segs.begin());
+				car.cur_road      = i->road_ix;
+				car.cur_road_type = TYPE_RSEG;
+				return;
+			} // for i
+			assert(0); // should never get here
+		}
 	public:
 		void update_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
 			
+			if (car.cur_road_type == TYPE_DRIVEWAY) { // moving in a driveway
+				unsigned const dix(car.cur_seg);
+				assert(dix < city_obj_placer.driveways.size());
+				driveway_t const &driveway(city_obj_placer.driveways[dix]);
+
+				if (!driveway.intersects_xy(car.bcube)) { // car no longer in driveway
+					driveway.in_use = 0;
+					//driveway.car_ix = -1; // not legal
+					car.in_reverse = 0;
+					find_and_set_car_road_and_seg(car);
+				}
+				else { // car still in driveway, continue pulling/backing out
+					if (!driveway.contains_cube_xy(car.bcube)) { // partially out of the driveway/into the road
+						// TODO: check for intersection with other cars
+					}
+					assert(car.dim == driveway.dim);
+					min_eq(car.cur_speed, 0.25f*car.max_speed); // clamp the speed to 25% of max
+					car.in_reverse = (car.dir == driveway.dir); // back up if pointing away from the road
+				}
+			}
 			if (car.in_isect()) {
 				road_isec_t const &isec(get_car_isec(car));
 				isec.notify_waiting_car(car); // even if not stopped
@@ -1650,9 +1683,42 @@ class city_road_gen_t : public road_gen_base_t {
 			if (it != cix_to_isec.end()) {return it->second;} // found
 			return nullptr; // not found, caller can error check
 		}
+		bool select_avail_driveway(car_t &car, rand_gen_t &rgen) const { // consider destination driveways, since these are easier to handle than parking lots
+			if (city_obj_placer.driveways.empty()) return 0;
+			
+			for (unsigned n = 0; n < 4; ++n) { // make 4 attempts to find a valid driveway
+				unsigned const dix(rgen.rand()%city_obj_placer.driveways.size());
+				driveway_t const &driveway(city_obj_placer.driveways[dix]);
+				if (driveway.in_use) continue;
+				driveway.in_use   = 1;
+				car.dest_driveway = (unsigned short)dix;
+				// find intersection before the driveway such that driving on the road exiting this intersection will encounter the driveway on the right
+				bool const dim(driveway.dim), dir(driveway.dir), extend_dir(dim ^ dir); // extend_dir is the direction of the last intersection before our right turn
+				float const dw_road_meet(driveway.d[dim][dir]); // point at which the road and driveway meet
+				//float const road_spacing(city_params.road_spacing); // is this accurate for all cities?
+				assert(!plots.empty());
+				float const road_spacing(plots.front().get_sz_dim(!dim)); // use actual segment length (should be the same across segments)
+				cube_t query_cube(driveway); // segment of road connected to driveway
+				query_cube.d[ dim][ dir] = dw_road_meet + (dir ? 1.0 : -1.0)*city_params.road_width; // edge of road opposite driveway
+				query_cube.d[ dim][!dir] = dw_road_meet;
+				query_cube.d[!dim][extend_dir] += (extend_dir ? 1.0 : -1.0)*road_spacing; // extend out to include the adjacent intersection in this dim/dir, assuming driveway on a road seg
+				car.dest_isec = 0; // used as a loop index
+
+				// this is slow, but we need the correct index; should be rarely called
+				for (unsigned n = 0; n < 3; ++n) { // {2-way, 3-way, 4-way}
+					for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i, ++car.dest_isec) {
+						if (i->intersects_xy(query_cube)) return 1; // car.dest_isec is the correct value
+					}
+				}
+				cout << TXT(dim) << TXT(dir) << TXT(extend_dir) << TXT(road_spacing) << TXT(dw_road_meet) << TXT(driveway.str()) << TXT(query_cube.str()) << endl;
+				assert(0); // should never get here
+			}
+			return 0; // failed
+		}
 	public:
 		bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
-			unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size());
+			//if (select_avail_driveway(car, rgen)) return 1; // incomplete, not yet enabled
+			unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size()); // include 2-way, 3-way, and 4-way intersections
 			if (num_tot == 0) return 0; // no isecs to select
 			car.dest_isec = (unsigned short)(rgen.rand() % num_tot);
 			return 1;

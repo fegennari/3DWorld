@@ -347,7 +347,7 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 			if (car.bcube.intersects(c->bcube)) {intersects = 1; break;}
 		}
 		if (intersects) continue; // skip
-		i->car_ix = cars.size();
+		i->add_car(cars.size());
 		cars.push_back(car);
 		plot_colliders[i->plot_ix].push_back(car.bcube); // prevent pedestrians from walking through this parked car
 	} // for i
