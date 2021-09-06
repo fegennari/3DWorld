@@ -53,7 +53,7 @@ void road_t::add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float a
 }
 
 
-tex_range_t parking_lot_t::get_tex_range(float ar) const {
+tex_range_t parking_lot_t::get_tex_range(float ar) const { // ar is unused
 	bool const d(!dim); // Note: R90
 	float const xscale(1.0/(2.0*PARK_SPACE_WIDTH *city_params.get_nom_car_size().y));
 	float const yscale(1.0/(1.0*PARK_SPACE_LENGTH*city_params.get_nom_car_size().x));
@@ -61,6 +61,11 @@ tex_range_t parking_lot_t::get_tex_range(float ar) const {
 	return tex_range_t(tx, ty, (xscale*(d ? dy() : dx()) + tx), (yscale*(d ? dx() : dy()) + ty), 0, d);
 }
 
+tex_range_t driveway_t::get_tex_range(float ar) const { // ar is unused
+	float txy[2] = {2.0, 2.0};
+	txy[dim] *= get_sz_dim(dim)/get_sz_dim(!dim); // ensure 1:1 texture scale
+	return tex_range_t(0.0, 0.0, txy[0], txy[1], 0, 0); // since the asphalt driveway texture isn't directional, we don't need to worry about swap_xy
+}
 
 namespace stoplight_ns {
 

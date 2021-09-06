@@ -279,7 +279,7 @@ struct driveway_t : public cube_t {
 	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), in_use(0), plot_ix(pix), car_ix(-1) {}
 	int get_cur_car() const {return (in_use ? car_ix : -1);} // if not in use, return -1/none even if car_ix hasn't been reset
 	void add_car(unsigned ix) {assert(!in_use); car_ix = ix; in_use = 1;}
-	tex_range_t get_tex_range(float ar) const {bool const dmin(dx() < dy()); return tex_range_t(0.0, 0.0, -ar, (dmin ? -1.0 : 1.0), 0, dmin);}
+	tex_range_t get_tex_range(float ar) const;
 };
 
 struct road_plot_t : public cube_t {
