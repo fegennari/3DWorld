@@ -263,6 +263,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "add_secondary_buildings") {
 		if (!read_bool(fp, global_building_params.add_secondary_buildings)) {buildings_file_err(str, error);}
 	}
+	else if (str == "add_office_basements") {
+		if (!read_bool(fp, global_building_params.add_office_basements)) {buildings_file_err(str, error);}
+	}
 	else if (str == "enable_people_ai") {
 		if (!read_bool(fp, global_building_params.enable_people_ai)) {buildings_file_err(str, error);}
 	}

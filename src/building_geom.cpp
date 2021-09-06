@@ -948,9 +948,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			}
 			gen_details(rgen, 1);
 		}
-		end_add_parts();
-		gen_interior(rgen, 0);
-		gen_building_doors_if_needed(rgen);
+		finish_gen_geometry(rgen, 0);
 		return; // for now the bounding cube
 	}
 	// generate building levels and splits
@@ -995,9 +993,7 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 			std::reverse(parts.begin(), parts.end()); // highest part should be last so that it gets the roof details (remember to update basement_part_ix if needed)
 			calc_bcube_from_parts(); // update bcube
 			gen_details(rgen, 1);
-			end_add_parts();
-			gen_interior(rgen, 1);
-			gen_building_doors_if_needed(rgen);
+			finish_gen_geometry(rgen, 1);
 			return;
 		}
 	}
@@ -1048,8 +1044,13 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 		if ((rgen.rand()&3) != 0) {maybe_add_special_roof(rgen);} // 67% chance
 		if (num_levels <= 3) {gen_details(rgen, 1);}
 	}
+	finish_gen_geometry(rgen, 0);
+}
+
+void building_t::finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes) { // for office buildings
+	if (global_building_params.add_office_basements) {maybe_add_basement(rgen);}
 	end_add_parts();
-	gen_interior(rgen, 0);
+	gen_interior(rgen, has_overlapping_cubes);
 	gen_building_doors_if_needed(rgen);
 }
 
