@@ -471,7 +471,7 @@ bool building_t::adjust_blinds_state(unsigned obj_ix) {
 		auto &other_blinds(interior->room_geom->get_room_object_by_index(other_blinds_ix));
 		if (other_blinds.type != TYPE_BLINDS) {assert(0); return 0;} // was taken, etc.
 		float const fixed_end(obj.d[!obj.dim][!move_dir]), width(obj.get_sz_dim(!obj.dim));
-		float const window_center(0.5*(fixed_end + other_blinds.d[!obj.dim][move_dir])); // center of the span of the pair of left/right blinds
+		float const window_center(0.5f*(fixed_end + other_blinds.d[!obj.dim][move_dir])); // center of the span of the pair of left/right blinds
 		bool const mostly_open(width < 0.5*fabs(fixed_end - window_center));
 		float &move_edge(obj.d[!obj.dim][move_dir]);
 		if (mostly_open) {move_edge = window_center;} // close the blinds fully
@@ -1055,7 +1055,7 @@ class phone_manager_t {
 	double stop_ring_time=0.0, next_ring_time=0.0, next_cycle_time=0.0, auto_off_time=0.0, next_button_time=0.0;
 	rand_gen_t rgen;
 
-	void schedule_next_ring() {next_ring_time = tfticks + rgen.rand_uniform(30.0, 120.0)*TICKS_PER_SECOND;} // 30s to 2min
+	void schedule_next_ring() {next_ring_time = tfticks + (double)rgen.rand_uniform(30.0, 120.0)*TICKS_PER_SECOND;} // 30s to 2min
 public:
 	bool is_phone_ringing() const {return is_ringing;}
 	bool is_phone_on     () const {return is_on     ;}
@@ -1073,7 +1073,7 @@ public:
 		else {
 			if (tfticks > next_ring_time) { // start a new ring cycle
 				is_ringing      = 1;
-				stop_ring_time  = tfticks + rgen.rand_uniform(12.0, 24.0)*TICKS_PER_SECOND; // 10-20s into the future
+				stop_ring_time  = tfticks + (double)rgen.rand_uniform(12.0, 24.0)*TICKS_PER_SECOND; // 10-20s into the future
 				next_cycle_time = tfticks; // cycle begins now
 			}
 			if (is_on && tfticks > auto_off_time) {is_on = 0;} // auto off
