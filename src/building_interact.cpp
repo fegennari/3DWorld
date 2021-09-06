@@ -1326,10 +1326,11 @@ public:
 				
 				if (!carried.empty()) {
 					unsigned const capacity(bldg_obj_types[player_held_object.type].capacity);
-					oss << "  [" << get_taken_obj_type(player_held_object).name << "]"; // print the name of the throwable object
-					if (capacity > 0) {oss << " (" << (capacity - carried.back().use_count) << "/" << capacity << ")";} // print use/capacity
+					oss << "  [" << get_taken_obj_type(player_held_object).name; // print the name of the throwable object
+					if (capacity > 0) {oss << " " << (capacity - carried.back().use_count) << "/" << capacity;} // print use/capacity
+					oss << "]";
 				}
-				draw_text(GREEN, -0.010*aspect_ratio, -0.011, -0.02, oss.str());
+				draw_text(GREEN, -0.010*aspect_ratio, -0.011, -0.02, oss.str(), 0.8); // size=0.8
 			}
 			if (in_building_gameplay_mode()) {
 				float const lvl(min(cur_building_sound_level, 1.0f));
