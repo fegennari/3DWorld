@@ -947,8 +947,10 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			}
 			if (new_dest_hp < 0) {i->wait_time = 1.0; continue;} // wait 1s and try again later
 			vector3d const model_sz(get_helicopter_size(i->model_id));
-			float const hc_height(model_sz.z), min_vert_clearance(2.0f*hc_height), min_climb_height(max(min_vert_clearance, 5.0f*hc_height));
-			float const avoid_dist(2.0*SQRT2*max(model_sz.x, model_sz.y)); // increase radius factor for added clearance
+			float const hc_height(model_sz.z), hc_width(model_sz.y), hc_length(model_sz.x);
+			float const min_vert_clearance(2.0f*hc_height), min_climb_height(max(min_vert_clearance, 5.0f*hc_height));
+			float const min_hc_spacing(2.0f*sqrt(hc_height*hc_height + hc_width*hc_width));
+			float const avoid_dist(2.0*SQRT2*max(hc_length, hc_width)); // increase radius factor for added clearance
 			assert(i->dest_hp < helipads.size());
 			helipad_t &helipad(helipads[new_dest_hp]);
 			point p1(i->bcube.get_cube_center()), p2(helipad.bcube.get_cube_center());
@@ -961,6 +963,20 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			i->fly_zval  = max(p1.z, (get_flight_path_zmax(p1, p2, avoid_dist) + min_vert_clearance));
 			i->state     = helicopter_t::STATE_TAKEOFF;
 			i->invalidate_tile_shadow_map(xlate, 0); // update static shadows for this tile to remove the helicopter shadow; resting on roof, no need to compute shadow_offset
+
+			// check if the flight path intersects another helicopter and increase fly_zval to avoid it
+			for (auto j = helicopters.begin(); j != helicopters.end(); ++j) {
+				if (i == j) continue; // skip self
+				if (j->state == helicopter_t::STATE_WAIT) continue; // not flying
+				if (fabs(i->fly_zval - j->fly_zval) > min_vert_clearance) continue; // zvals far apart
+				assert(j->dest_hp < helipads.size());
+				point const p1b(j->bcube.get_cube_center()), p2b(helipads[j->dest_hp].bcube.get_cube_center());
+				if (line_line_dist(p1, p2, p1b, p2b) > min_hc_spacing) continue;
+				cube_t bounds1(p1, p2), bounds2(p1b, p2b);
+				bounds1.expand_by(min_hc_spacing);
+				if (!bounds1.intersects(bounds2)) continue;
+				i->fly_zval = j->fly_zval + min_vert_clearance; // increase fly zval
+			} // for j
 		} // end stopped case
 		else { // moving
 			assert(i->wait_time == 0.0); // must not be waiting
