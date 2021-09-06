@@ -41,6 +41,7 @@ cube_t get_sink_cube(room_object_t const &c);
 bool player_can_unlock_door();
 void show_key_icon();
 bool player_has_room_key();
+void register_broken_object(room_object_t const &obj);
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -635,6 +636,8 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 						
 						if (dot_product(cnorm, front_dir) > 0.9) { // hit the front side of the screen
 							if (dist_less_than(center, obj.get_cube_center(), (radius + 0.5*obj.get_sz_dim(obj.dim) + 0.2*obj.dz()))) { // near the screen center
+								// capture value before breaking; if the player then takes this object, damage will be higher, but we can attribute this to making a mess of broken glass
+								register_broken_object(obj);
 								obj.flags |= RO_FLAG_BROKEN;
 								point const sound_origin(obj.xc(), obj.yc(), center.z); // generate sound from the player height
 								gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
@@ -1106,7 +1109,7 @@ phone_manager_t phone_manager;
 
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
-	float cur_value, cur_weight, tot_value, tot_weight, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
+	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
 	bool prev_in_building, has_key;
 
 	void register_player_death(unsigned sound_id, std::string const &why) {
@@ -1121,7 +1124,7 @@ public:
 
 	void clear() { // called on player death
 		max_eq(best_value, tot_value);
-		cur_value     = cur_weight = tot_value = tot_weight = 0.0;
+		cur_value     = cur_weight = tot_value = tot_weight = damage_done = 0.0;
 		drunkenness   = bladder = bladder_time = prev_player_zval = 0.0;
 		player_health = 1.0; // full health
 		prev_in_building = has_key = 0;
@@ -1133,6 +1136,8 @@ public:
 		clear();
 	}
 	void take_damage(float amt) {player_health -= amt*(1.0f - 0.75f*min(drunkenness, 1.0f));} // up to 75% damage reduction when drunk
+	void record_damage_done(float amt) {damage_done += amt;}
+	void return_object_to_building(room_object_t const &obj) {damage_done -= get_obj_value(obj);}
 	bool check_weight_limit(float weight) const {return ((cur_weight + weight) <= global_building_params.player_weight_limit);}
 	bool can_pick_up_item(room_object_t const &obj) const {return check_weight_limit(get_obj_weight(obj));}
 	float get_carry_weight_ratio() const {return min(1.0f, cur_weight/global_building_params.player_weight_limit);}
@@ -1156,6 +1161,8 @@ public:
 	void add_item(room_object_t const &obj) {
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
 		bool const bladder_was_full(bladder >= 0.9);
+		float const value(get_obj_value(obj));
+		damage_done += value;
 		colorRGBA text_color(GREEN);
 		std::ostringstream oss;
 		oss << get_taken_obj_type(obj).name;
@@ -1184,7 +1191,7 @@ public:
 			has_key = 1; // mark as having the key, but it doesn't go into the inventory or contribute to weight or value
 		}
 		else if (health == 0.0 && drunk == 0.0) { // print value and weight if item is not consumed
-			float const value(get_obj_value(obj)), weight(get_obj_weight(obj));
+			float const weight(get_obj_weight(obj));
 			cur_value  += value;
 			cur_weight += weight;
 			
@@ -1314,14 +1321,15 @@ public:
 
 			if (cur_weight > 0.0 || tot_weight > 0.0 || best_value > 0.0) { // don't show stats until the player has picked something up
 				std::ostringstream oss;
-				oss << "Cur $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight << " lbs  Best $" << best_value;
+				oss << "Cur $" << cur_value << " / " << cur_weight << " lbs  Total $" << tot_value << " / " << tot_weight
+					<< " lbs  Best $" << best_value << "  Damage $" << damage_done;
 				
 				if (!carried.empty()) {
 					unsigned const capacity(bldg_obj_types[player_held_object.type].capacity);
 					oss << "  [" << get_taken_obj_type(player_held_object).name << "]"; // print the name of the throwable object
 					if (capacity > 0) {oss << " (" << (capacity - carried.back().use_count) << "/" << capacity << ")";} // print use/capacity
 				}
-				draw_text(GREEN, -0.005*aspect_ratio, -0.011, -0.02, oss.str());
+				draw_text(GREEN, -0.010*aspect_ratio, -0.011, -0.02, oss.str());
 			}
 			if (in_building_gameplay_mode()) {
 				float const lvl(min(cur_building_sound_level, 1.0f));
@@ -1396,6 +1404,8 @@ void register_building_sound_for_obj(room_object_t const &obj, point const &pos)
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
 	register_building_sound(pos, volume);
 }
+
+void register_broken_object(room_object_t const &obj) {player_inventory.record_damage_done(get_obj_value(obj));}
 
 bool register_player_object_pickup(room_object_t const &obj, point const &at_pos) {
 	bool const can_pick_up(player_inventory.can_pick_up_item(obj));
@@ -1782,6 +1792,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 		obj.flags |= RO_FLAG_DYNAMIC; // make it dynamic, assuming it will be dropped/thrown
 		if (!interior->room_geom->add_room_object(obj, *this, 1, THROW_VELOCITY*cview_dir)) return 0;
+		player_inventory.return_object_to_building(obj); // re-add this object's value
 		play_obj_fall_sound(obj, player_pos);
 		delay_use = 1;
 	}
@@ -1812,6 +1823,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			obj.flags |= (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP);
 			obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
 			if (!interior->room_geom->add_room_object(obj, *this)) return 0;
+			player_inventory.return_object_to_building(obj); // re-add this object's value
 			player_inventory.remove_last_item(); // used
 			play_obj_fall_sound(obj, player_pos);
 			delay_use = 1;
@@ -1994,6 +2006,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		if (is_spraypaint) {register_building_sound(pos, 0.1);}
 		next_sound_time = tfticks + double(is_spraypaint ? 0.5 : 0.25)*TICKS_PER_SECOND;
 	}
+	player_inventory.record_damage_done(is_spraypaint ? 1.0 : 0.1); // spraypaint does more damage than markers
 	return 1;
 }
 
@@ -2063,6 +2076,7 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	vector3d d2(cross_product(d1, plus_z));
 	if (d2 == zero_vector) {d2 = plus_y;} else {d2.normalize();}
 	tp_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
+	// Note: no damage done for TP
 	return 1;
 }
 
@@ -2072,6 +2086,7 @@ void building_t::add_blood_decal(point const &pos) const {
 	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
 	tex_range_t const tex_range(tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2)); // 2x2 texture atlas
 	blood_qbd.add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, WHITE, plus_z, tex_range); // Note: never cleared
+	player_inventory.record_damage_done(100.0); // blood is a mess to clean up (though damage will be reset on player death anyway)
 }
 
 bool have_paint_for_building(bool exterior) {
