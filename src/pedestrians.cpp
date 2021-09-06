@@ -17,7 +17,6 @@ extern city_params_t city_params;
 
 
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
-void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
 bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos);
 
 string pedestrian_t::get_name() const {

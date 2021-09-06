@@ -599,7 +599,8 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 	add_house_driveways_for_plot(plot_z, temp_cubes);
 
 	for (auto i = temp_cubes.begin(); i != temp_cubes.end(); ++i) {
-		bool const dim(i->dx() < i->dy()), dir(fabs(plot.d[dim][1] - i->d[dim][1]) < fabs(plot.d[dim][0] - i->d[dim][0]));
+		bool dim(0), dir(0);
+		get_closest_dim_dir_xy(*i, plot, dim, dir);
 		driveways.emplace_back(*i, dim, dir, plot_ix);
 	}
 }
