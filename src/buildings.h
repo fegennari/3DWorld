@@ -6,6 +6,7 @@
 #include "3DWorld.h"
 #include "gl_ext_arb.h" // for vbo_wrap_t
 #include "transform_obj.h" // for xform_matrix
+#include "draw_utils.h" // for quad_batch_draw
 
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 bool const ENABLE_MIRROR_REFLECTIONS = 1;
@@ -494,6 +495,11 @@ struct obj_model_inst_t {
 	obj_model_inst_t(unsigned oid, vector3d const &d) : obj_id(oid), dir(d) {}
 };
 
+struct building_decal_manager_t {
+	quad_batch_draw blood_qbd, tp_qbd;
+	void draw_building_interior_decals() const;
+};
+
 struct building_room_geom_t {
 
 	bool has_elevators, has_pictures, lights_changed, materials_invalid, modified_by_player;
@@ -508,6 +514,7 @@ struct building_room_geom_t {
 	// {large static, small static, dynamic, lights, plants, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
+	building_decal_manager_t decal_manager;
 
 	building_room_geom_t(point const &tex_origin_=all_zeros) : has_elevators(0), has_pictures(0), lights_changed(0), materials_invalid(0), modified_by_player(0),
 		num_pic_tids(0), obj_scale(1.0), buttons_start(0), stairs_start(0), tex_origin(tex_origin_), wood_color(WHITE) {}
@@ -1097,11 +1104,11 @@ private:
 	bool need_to_update_ai_path(building_ai_state_t const &state, pedestrian_t const &person) const;
 	void set_bcube_from_rotated_cube(cube_t const &bc);
 	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const;
-	bool apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) const;
+	bool apply_toilet_paper(point const &pos, vector3d const &dir, float half_width);
 	void register_button_event(room_object_t const &button);
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
-	void add_blood_decal(point const &pos) const;
+	void add_blood_decal(point const &pos);
 public:
 	// ray queries
 	bool check_line_intersect_doors(point const &p1, point const &p2) const;
@@ -1238,7 +1245,6 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out);
 bool have_paint_for_building(bool exterior);
 void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building);
-void draw_building_interior_decals(building_t const *const building);
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);

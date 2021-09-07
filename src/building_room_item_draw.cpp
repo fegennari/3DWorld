@@ -863,7 +863,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	}
 	// alpha blended, should be drawn near last
 	if (!shadow_only) {draw_building_interior_paint(3, &building);} // draw both interior and exterior
-	if (player_in_building && !shadow_only) {draw_building_interior_decals(&building);} // for blood decals, only drawn for current building
+	if (player_in_building && !shadow_only) {decal_manager.draw_building_interior_decals();} // draw decals in this building
 	
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
@@ -954,5 +954,22 @@ bool building_t::is_entire_building_occluded(point const &viewer, occlusion_chec
 		if (!check_obj_occluded(*i, viewer, oc, 0, 1)) return 0; // c_is_building_part=1
 	}
 	return 1; // all parts occluded
+}
+
+void building_decal_manager_t::draw_building_interior_decals() const {
+	if (!tp_qbd.empty()) { // toilet paper squares
+		glDisable(GL_CULL_FACE); // draw both sides
+		select_texture(WHITE_TEX);
+		tp_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
+		glEnable(GL_CULL_FACE);
+	}
+	if (!blood_qbd.empty()) {
+		select_texture(BLOOD_SPLAT_TEX);
+		glDepthMask(GL_FALSE); // disable depth write
+		enable_blend();
+		blood_qbd.draw();
+		disable_blend();
+		glDepthMask(GL_TRUE);
+	}
 }
 

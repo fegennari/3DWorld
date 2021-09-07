@@ -5,7 +5,6 @@
 #include "function_registry.h"
 #include "buildings.h"
 #include "openal_wrap.h"
-#include "draw_utils.h" // for quad_batch_draw
 
 // physics constants, currently applied to balls
 float const KICK_VELOCITY  = 0.0025;
@@ -1873,36 +1872,8 @@ vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float t
 
 // decals
 
-class decal_manager_t {
-	quad_batch_draw blood_qbd, tp_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
-	building_t const *tp_bldg = nullptr;
-public:
-	quad_batch_draw &get_tp_qbd(building_t const *const building) {
-		if (building != tp_bldg) {tp_qbd.clear(); tp_bldg = building;} // TP switches to this building
-		return tp_qbd;
-	}
-	quad_batch_draw &get_blood_qbd() {return blood_qbd;}
-
-	void draw_building_interior_decals(building_t const *const building) const { // interior only
-		if (!tp_qbd.empty() && tp_bldg == building) { // toilet paper squares
-			glDisable(GL_CULL_FACE); // draw both sides
-			select_texture(WHITE_TEX);
-			tp_qbd.draw();
-			glEnable(GL_CULL_FACE);
-		}
-		if (!blood_qbd.empty()) {
-			select_texture(BLOOD_SPLAT_TEX);
-			glDepthMask(GL_FALSE); // disable depth write
-			enable_blend();
-			blood_qbd.draw();
-			disable_blend();
-			glDepthMask(GL_TRUE);
-		}
-	}
-};
-
 class paint_manager_t {
-	quad_batch_draw paint_qbd[2][2]; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
+	quad_batch_draw paint_qbd[2][2]; // {spraypaint, markers}x{interior walls, exterior walls}
 	building_t const *paint_bldg = nullptr;
 public:
 	bool have_paint_for_building(bool exterior) const {
@@ -1934,11 +1905,9 @@ public:
 	}
 };
 
-decal_manager_t decal_manager; // TODO: make per building
-paint_manager_t paint_manager; // TODO: make per bu
+paint_manager_t paint_manager; // make per building?
 bool have_paint_for_building(bool exterior) {return paint_manager.have_paint_for_building(exterior);}
 void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) {paint_manager.draw_building_interior_paint(int_ext_mask, building);}
-void draw_building_interior_decals(building_t const *const building) {decal_manager.draw_building_interior_decals(building);}
 
 bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const { // spraypaint or marker
 	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER);
@@ -2126,8 +2095,9 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	return 1;
 }
 
-bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) const {
+bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float half_width) {
 	// for now, just drop a square of TP on the floor; could do better; should the TP roll shrink in size as this is done?
+	assert(has_room_geom());
 	static point last_tp_pos;
 	if (dist_xy_less_than(pos, last_tp_pos, 1.5*half_width)) return 0; // too close to prev pos
 	last_tp_pos = pos;
@@ -2137,17 +2107,20 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	if (d1 == zero_vector) {d1 = plus_x;} else {d1.normalize();}
 	vector3d d2(cross_product(d1, plus_z));
 	if (d2 == zero_vector) {d2 = plus_y;} else {d2.normalize();}
-	decal_manager.get_tp_qbd(this).add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
+	interior->room_geom->decal_manager.tp_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
+	interior->room_geom->modified_by_player = 1; // make sure TP stays in this building
 	// Note: no damage done for TP
 	return 1;
 }
 
-void building_t::add_blood_decal(point const &pos) const {
+void building_t::add_blood_decal(point const &pos) {
+	assert(has_room_geom());
 	float const radius(get_scaled_player_radius());
 	float zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
 	tex_range_t const tex_range(tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2)); // 2x2 texture atlas
-	decal_manager.get_blood_qbd().add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, WHITE, plus_z, tex_range); // Note: never cleared
+	interior->room_geom->decal_manager.blood_qbd.add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, WHITE, plus_z, tex_range); // Note: never cleared
+	interior->room_geom->modified_by_player = 1; // make sure blood stays in this building
 	player_inventory.record_damage_done(100.0); // blood is a mess to clean up (though damage will be reset on player death anyway)
 }
 
