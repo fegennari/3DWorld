@@ -862,8 +862,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		else {assert(0);}
 	}
 	// alpha blended, should be drawn near last
-	if (!shadow_only) {draw_building_interior_paint(3, &building);} // draw both interior and exterior
-	if (player_in_building && !shadow_only) {decal_manager.draw_building_interior_decals();} // draw decals in this building
+	if (!shadow_only) {decal_manager.draw_building_interior_decals(player_in_building);} // draw decals in this building
 	
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
@@ -956,7 +955,28 @@ bool building_t::is_entire_building_occluded(point const &viewer, occlusion_chec
 	return 1; // all parts occluded
 }
 
-void building_decal_manager_t::draw_building_interior_decals() const {
+void paint_draw_t::draw_paint() const {
+	if (qbd[0].empty() && qbd[1].empty()) return; // nothing to do
+	glDepthMask(GL_FALSE); // disable depth write
+	enable_blend();
+
+	if (!qbd[0].empty()) {
+		select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
+		qbd[0].draw();
+	}
+	if (!qbd[1].empty()) {
+		select_texture(get_texture_by_name("circle.png", 0, 0, 1, 0.0, 1, 1, 1)); // markers - sharp edges, used as alpha mask with white background color
+		qbd[1].draw();
+	}
+	disable_blend();
+	glDepthMask(GL_TRUE);
+}
+
+void building_decal_manager_t::draw_building_interior_decals(bool player_in_building) const {
+	paint_draw[1].draw_paint(); // draw exterior paint always - this will show up on windows (even when looking outside into another part of the same building)
+	if (!player_in_building) return;
+	paint_draw[0].draw_paint(); // draw interior paint
+
 	if (!tp_qbd.empty()) { // toilet paper squares
 		glDisable(GL_CULL_FACE); // draw both sides
 		select_texture(WHITE_TEX);

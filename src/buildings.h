@@ -495,9 +495,14 @@ struct obj_model_inst_t {
 	obj_model_inst_t(unsigned oid, vector3d const &d) : obj_id(oid), dir(d) {}
 };
 
+struct paint_draw_t {
+	quad_batch_draw qbd[2]; // {spraypaint, markers}
+	void draw_paint() const;
+};
 struct building_decal_manager_t {
+	paint_draw_t paint_draw[2]; // {interior, exterior}
 	quad_batch_draw blood_qbd, tp_qbd;
-	void draw_building_interior_decals() const;
+	void draw_building_interior_decals(bool player_in_building) const;
 };
 
 struct building_room_geom_t {
@@ -1243,8 +1248,8 @@ void rotate_verts(vector<rgeom_mat_t::vertex_t> &verts, building_t const &buildi
 void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
 	colorRGBA const &color, vect_vnctcc_t &verts, bool invert_tc_x=0, bool exclude_frame=0, bool no_tc=0, bool no_rotate=0);
 void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out);
-bool have_paint_for_building(bool exterior);
-void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building);
+bool have_buildings_ext_paint();
+void draw_buildings_ext_paint();
 // functions in city_gen.cc
 void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights, int use_smap, int use_bmap,
 	float min_alpha=0.0, bool force_tsl=0, float pcf_scale=1.0, bool use_texgen=0, bool indir_lighting=0);

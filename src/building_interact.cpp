@@ -1872,48 +1872,30 @@ vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float t
 
 // decals
 
-class paint_manager_t {
-	quad_batch_draw paint_qbd[2][2]; // {spraypaint, markers}x{interior walls, exterior walls}
+class paint_manager_t : public paint_draw_t { // for paint on exterior walls/windows, viewed from inside the building
 	building_t const *paint_bldg = nullptr;
 public:
-	bool have_paint_for_building(bool exterior) const {
-		return (paint_bldg && !(paint_qbd[0][exterior].empty() && paint_qbd[1][exterior].empty()) &&
-			camera_pdu.cube_visible(paint_bldg->bcube + get_camera_coord_space_xlate())); // VFC
+	bool have_paint_for_building() const { // only true if the building contains the player
+		return (paint_bldg && !(qbd[0].empty() && qbd[1].empty()) && paint_bldg->bcube.contains_pt(get_camera_building_space()));
 	}
-	quad_batch_draw &get_paint_qbd(building_t const *const building, bool is_marker, bool exterior_wall) {
+	quad_batch_draw &get_paint_qbd(building_t const *const building, bool is_marker) {
 		if (building != paint_bldg) { // paint switches to this building
-			for (unsigned d = 0; d < 4; ++d) {paint_qbd[d>>1][d&1].clear();}
+			for (unsigned d = 0; d < 2; ++d) {qbd[d].clear();}
 			paint_bldg = building;
 		}
-		return paint_qbd[is_marker][exterior_wall];
-	}
-	void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) const {
-		if (building && building != paint_bldg) return; // wrong building
-		bool const interior(int_ext_mask & 1), exterior(int_ext_mask & 2);
-		if (!(interior && !(paint_qbd[0][0].empty() && paint_qbd[1][0].empty())) &&
-			!(exterior && !(paint_qbd[0][1].empty() && paint_qbd[1][1].empty()))) return; // nothing to draw
-		glDepthMask(GL_FALSE); // disable depth write
-		enable_blend();
-		select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
-		if (interior) {paint_qbd[0][0].draw();}
-		if (exterior) {paint_qbd[0][1].draw();}
-		select_texture(get_texture_by_name("circle.png", 0, 0, 1, 0.0, 1, 1, 1)); // markers - sharp edges, used as alpha mask with white background color
-		if (interior) {paint_qbd[1][0].draw();}
-		if (exterior) {paint_qbd[1][1].draw();}
-		disable_blend();
-		glDepthMask(GL_TRUE);
+		return qbd[is_marker];
 	}
 };
 
-paint_manager_t paint_manager; // make per building?
-bool have_paint_for_building(bool exterior) {return paint_manager.have_paint_for_building(exterior);}
-void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) {paint_manager.draw_building_interior_paint(int_ext_mask, building);}
+paint_manager_t ext_paint_manager;
+bool have_buildings_ext_paint() {return ext_paint_manager.have_paint_for_building();}
+void draw_buildings_ext_paint() {ext_paint_manager.draw_paint();}
 
 bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const { // spraypaint or marker
 	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER);
 	assert(is_spraypaint || is_marker); // only these two are supported
 	// find intersection point and normal; assumes pos is inside the building
-	assert(interior);
+	assert(has_room_geom());
 	float const max_dist((is_spraypaint ? 16.0 : 3.0)*CAMERA_RADIUS), tolerance(0.01*get_wall_thickness());
 	point const pos2(pos + max_dist*dir);
 	float tmin(1.0);
@@ -2030,7 +2012,8 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
-	paint_manager.get_paint_qbd(this, is_marker, exterior_wall).add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
+	interior->room_geom->decal_manager.paint_draw[exterior_wall].qbd[is_marker].add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal); // add interior/exterior paint
+	if (exterior_wall) {ext_paint_manager.get_paint_qbd(this, is_marker).add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);} // add exterior paint only
 	static double next_sound_time(0.0);
 
 	if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
