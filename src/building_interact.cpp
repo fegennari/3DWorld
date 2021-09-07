@@ -23,8 +23,6 @@ float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
-quad_batch_draw paint_qbd[2][2], blood_qbd, tp_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
-building_t const *paint_bldg(nullptr), *tp_bldg(nullptr);
 
 extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on, player_is_hiding;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode, animate2, camera_surf_collide;
@@ -1873,6 +1871,68 @@ vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float t
 	return n;
 }
 
+// decals
+
+class decal_manager_t {
+	quad_batch_draw paint_qbd[2][2], blood_qbd, tp_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
+	building_t const *paint_bldg = nullptr, *tp_bldg = nullptr;
+public:
+	bool have_paint_for_building(bool exterior) const {
+		return (paint_bldg && !(paint_qbd[0][exterior].empty() && paint_qbd[1][exterior].empty()) &&
+			camera_pdu.cube_visible(paint_bldg->bcube + get_camera_coord_space_xlate())); // VFC
+	}
+	quad_batch_draw &get_paint_qbd(building_t const *const building, bool is_marker, bool exterior_wall) {
+		if (building != paint_bldg) { // paint switches to this building
+			for (unsigned d = 0; d < 4; ++d) {paint_qbd[d>>1][d&1].clear();}
+			paint_bldg = building;
+		}
+		return paint_qbd[is_marker][exterior_wall];
+	}
+	quad_batch_draw &get_tp_qbd(building_t const *const building) {
+		if (building != tp_bldg) {tp_qbd.clear(); tp_bldg = building;} // TP switches to this building
+		return tp_qbd;
+	}
+	quad_batch_draw &get_blood_qbd() {return blood_qbd;}
+
+	void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) const {
+		if (building && building != paint_bldg) return; // wrong building
+		bool const interior(int_ext_mask & 1), exterior(int_ext_mask & 2);
+		if (!(interior && !(paint_qbd[0][0].empty() && paint_qbd[1][0].empty())) &&
+			!(exterior && !(paint_qbd[0][1].empty() && paint_qbd[1][1].empty()))) return; // nothing to draw
+		glDepthMask(GL_FALSE); // disable depth write
+		enable_blend();
+		select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
+		if (interior) {paint_qbd[0][0].draw();}
+		if (exterior) {paint_qbd[0][1].draw();}
+		select_texture(get_texture_by_name("circle.png", 0, 0, 1, 0.0, 1, 1, 1)); // markers - sharp edges, used as alpha mask with white background color
+		if (interior) {paint_qbd[1][0].draw();}
+		if (exterior) {paint_qbd[1][1].draw();}
+		disable_blend();
+		glDepthMask(GL_TRUE);
+	}
+	void draw_building_interior_decals(building_t const *const building) const { // interior only
+		if (!tp_qbd.empty()) { // toilet paper squares
+			glDisable(GL_CULL_FACE); // draw both sides
+			select_texture(WHITE_TEX);
+			tp_qbd.draw();
+			glEnable(GL_CULL_FACE);
+		}
+		if (!blood_qbd.empty()) {
+			select_texture(BLOOD_SPLAT_TEX);
+			glDepthMask(GL_FALSE); // disable depth write
+			enable_blend();
+			blood_qbd.draw();
+			disable_blend();
+			glDepthMask(GL_TRUE);
+		}
+	}
+};
+
+decal_manager_t decal_manager; // TODO: make per building
+bool have_paint_for_building(bool exterior) {return decal_manager.have_paint_for_building(exterior);}
+void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) {decal_manager.draw_building_interior_paint(int_ext_mask, building);}
+void draw_building_interior_decals(building_t const *const building) {decal_manager.draw_building_interior_decals(building);}
+
 bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const { // spraypaint or marker
 	bool const is_spraypaint(obj_type == TYPE_SPRAYCAN), is_marker(obj_type == TYPE_MARKER);
 	assert(is_spraypaint || is_marker); // only these two are supported
@@ -1992,14 +2052,9 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	vector3d dir1, dir2; // unit vectors
 	dir1[d1] = 1.0; dir2[d2] = 1.0;
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
-	
-	if (this != paint_bldg) { // paint switches to this building
-		for (unsigned d = 0; d < 4; ++d) {paint_qbd[d>>1][d&1].clear();}
-		paint_bldg = this;
-	}
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
-	paint_qbd[is_marker][exterior_wall].add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
+	decal_manager.get_paint_qbd(this, is_marker, exterior_wall).add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
 	static double next_sound_time(0.0);
 
 	if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
@@ -2071,12 +2126,11 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	last_tp_pos = pos;
 	float zval(pos.z);
 	if (!get_zval_for_obj_placement(pos, half_width, zval, 1)) return 0; // no suitable placement found; add_z_bias=1
-	if (this != tp_bldg) {tp_qbd.clear(); tp_bldg = this;} // TP switches to this building
 	vector3d d1(dir.x, dir.y, 0.0);
 	if (d1 == zero_vector) {d1 = plus_x;} else {d1.normalize();}
 	vector3d d2(cross_product(d1, plus_z));
 	if (d2 == zero_vector) {d2 = plus_y;} else {d2.normalize();}
-	tp_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
+	decal_manager.get_tp_qbd(this).add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
 	// Note: no damage done for TP
 	return 1;
 }
@@ -2086,45 +2140,8 @@ void building_t::add_blood_decal(point const &pos) const {
 	float zval(pos.z);
 	if (!get_zval_of_floor(pos, radius, zval)) return; // no suitable floor found
 	tex_range_t const tex_range(tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2)); // 2x2 texture atlas
-	blood_qbd.add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, WHITE, plus_z, tex_range); // Note: never cleared
+	decal_manager.get_blood_qbd().add_quad_dirs(point(pos.x, pos.y, zval), -plus_x*radius, plus_y*radius, WHITE, plus_z, tex_range); // Note: never cleared
 	player_inventory.record_damage_done(100.0); // blood is a mess to clean up (though damage will be reset on player death anyway)
-}
-
-bool have_paint_for_building(bool exterior) {
-	return (paint_bldg && !(paint_qbd[0][exterior].empty() && paint_qbd[1][exterior].empty()) &&
-		camera_pdu.cube_visible(paint_bldg->bcube + get_camera_coord_space_xlate())); // VFC
-}
-void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) {
-	if (building && building != paint_bldg) return; // wrong building
-	bool const interior(int_ext_mask & 1), exterior(int_ext_mask & 2);
-	if (!(interior && !(paint_qbd[0][0].empty() && paint_qbd[1][0].empty())) &&
-		!(exterior && !(paint_qbd[0][1].empty() && paint_qbd[1][1].empty()))) return; // nothing to draw
-	glDepthMask(GL_FALSE); // disable depth write
-	enable_blend();
-	select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
-	if (interior) {paint_qbd[0][0].draw();}
-	if (exterior) {paint_qbd[0][1].draw();}
-	select_texture(get_texture_by_name("circle.png", 0, 0, 1, 0.0, 1, 1, 1)); // markers - sharp edges, used as alpha mask with white background color
-	if (interior) {paint_qbd[1][0].draw();}
-	if (exterior) {paint_qbd[1][1].draw();}
-	disable_blend();
-	glDepthMask(GL_TRUE);
-}
-void draw_building_interior_decals(building_t const *const building) { // interior only
-	if (!tp_qbd.empty()) { // toilet paper squares
-		glDisable(GL_CULL_FACE); // draw both sides
-		select_texture(WHITE_TEX);
-		tp_qbd.draw();
-		glEnable(GL_CULL_FACE);
-	}
-	if (!blood_qbd.empty()) {
-		select_texture(BLOOD_SPLAT_TEX);
-		glDepthMask(GL_FALSE); // disable depth write
-		enable_blend();
-		blood_qbd.draw();
-		disable_blend();
-		glDepthMask(GL_TRUE);
-	}
 }
 
 // sound/audio tracking
