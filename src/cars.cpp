@@ -692,7 +692,7 @@ car_t const *car_manager_t::get_car_at(point const &p1, point const &p2) const {
 	return nullptr; // no car found
 }
 car_t const *car_manager_t::get_car_at_player(float max_dist) const {
-	point const p1(get_camera_pos() - get_camera_coord_space_xlate()), p2(p1 + cview_dir*max_dist);
+	point const p1(get_camera_building_space()), p2(p1 + cview_dir*max_dist);
 	return get_car_at(p1, p2);
 }
 

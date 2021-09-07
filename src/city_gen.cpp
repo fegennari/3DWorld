@@ -2482,7 +2482,7 @@ void city_lights_manager_t::setup_shadow_maps(vector<light_source> &light_source
 	unsigned num_used(0);
 	unsigned const smap_size(city_params.smap_size); // 0 = use default shadow map resolution
 	// capture player pos in global coordinate space before replacing with light pos so it can be used for LOD during model drawing
-	pre_smap_player_pos = get_camera_pos() - get_camera_coord_space_xlate();
+	pre_smap_player_pos = get_camera_building_space();
 	// Note: if using a dynamic (distance-based) sm_size, need to maintain a pool of different sm resolutions somehow
 	check_gl_error(430);
 

@@ -2128,7 +2128,7 @@ void register_building_sound(point const &pos, float volume) {
 	}
 }
 void register_building_sound_at_player(float volume) {
-	register_building_sound((get_camera_pos() - get_camera_coord_space_xlate()), 1.0);
+	register_building_sound(get_camera_building_space(), 1.0);
 }
 
 bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing) {
