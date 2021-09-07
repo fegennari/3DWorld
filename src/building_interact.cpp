@@ -1297,6 +1297,7 @@ public:
 			cur_weight -= keep_weight;
 		}
 		else {carried.clear();}
+		if (cur_weight == 0.0 && cur_value == 0.0) return; // no update to print
 		std::ostringstream oss;
 		oss << "Added value $" << cur_value << " Added weight " << cur_weight << " lbs\n";
 		tot_value  += cur_value;  cur_value  = keep_value;
