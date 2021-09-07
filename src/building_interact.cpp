@@ -1874,44 +1874,17 @@ vector3d get_normal_for_ray_cube_int_xy(point const &p, cube_t const &c, float t
 // decals
 
 class decal_manager_t {
-	quad_batch_draw paint_qbd[2][2], blood_qbd, tp_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
-	building_t const *paint_bldg = nullptr, *tp_bldg = nullptr;
+	quad_batch_draw blood_qbd, tp_qbd; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
+	building_t const *tp_bldg = nullptr;
 public:
-	bool have_paint_for_building(bool exterior) const {
-		return (paint_bldg && !(paint_qbd[0][exterior].empty() && paint_qbd[1][exterior].empty()) &&
-			camera_pdu.cube_visible(paint_bldg->bcube + get_camera_coord_space_xlate())); // VFC
-	}
-	quad_batch_draw &get_paint_qbd(building_t const *const building, bool is_marker, bool exterior_wall) {
-		if (building != paint_bldg) { // paint switches to this building
-			for (unsigned d = 0; d < 4; ++d) {paint_qbd[d>>1][d&1].clear();}
-			paint_bldg = building;
-		}
-		return paint_qbd[is_marker][exterior_wall];
-	}
 	quad_batch_draw &get_tp_qbd(building_t const *const building) {
 		if (building != tp_bldg) {tp_qbd.clear(); tp_bldg = building;} // TP switches to this building
 		return tp_qbd;
 	}
 	quad_batch_draw &get_blood_qbd() {return blood_qbd;}
 
-	void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) const {
-		if (building && building != paint_bldg) return; // wrong building
-		bool const interior(int_ext_mask & 1), exterior(int_ext_mask & 2);
-		if (!(interior && !(paint_qbd[0][0].empty() && paint_qbd[1][0].empty())) &&
-			!(exterior && !(paint_qbd[0][1].empty() && paint_qbd[1][1].empty()))) return; // nothing to draw
-		glDepthMask(GL_FALSE); // disable depth write
-		enable_blend();
-		select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
-		if (interior) {paint_qbd[0][0].draw();}
-		if (exterior) {paint_qbd[0][1].draw();}
-		select_texture(get_texture_by_name("circle.png", 0, 0, 1, 0.0, 1, 1, 1)); // markers - sharp edges, used as alpha mask with white background color
-		if (interior) {paint_qbd[1][0].draw();}
-		if (exterior) {paint_qbd[1][1].draw();}
-		disable_blend();
-		glDepthMask(GL_TRUE);
-	}
 	void draw_building_interior_decals(building_t const *const building) const { // interior only
-		if (!tp_qbd.empty()) { // toilet paper squares
+		if (!tp_qbd.empty() && tp_bldg == building) { // toilet paper squares
 			glDisable(GL_CULL_FACE); // draw both sides
 			select_texture(WHITE_TEX);
 			tp_qbd.draw();
@@ -1928,9 +1901,43 @@ public:
 	}
 };
 
+class paint_manager_t {
+	quad_batch_draw paint_qbd[2][2]; // paint_qbd: {spraypaint, markers}x{interior walls, exterior walls}
+	building_t const *paint_bldg = nullptr;
+public:
+	bool have_paint_for_building(bool exterior) const {
+		return (paint_bldg && !(paint_qbd[0][exterior].empty() && paint_qbd[1][exterior].empty()) &&
+			camera_pdu.cube_visible(paint_bldg->bcube + get_camera_coord_space_xlate())); // VFC
+	}
+	quad_batch_draw &get_paint_qbd(building_t const *const building, bool is_marker, bool exterior_wall) {
+		if (building != paint_bldg) { // paint switches to this building
+			for (unsigned d = 0; d < 4; ++d) {paint_qbd[d>>1][d&1].clear();}
+			paint_bldg = building;
+		}
+		return paint_qbd[is_marker][exterior_wall];
+	}
+	void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) const {
+		if (building && building != paint_bldg) return; // wrong building
+		bool const interior(int_ext_mask & 1), exterior(int_ext_mask & 2);
+		if (!(interior && !(paint_qbd[0][0].empty() && paint_qbd[1][0].empty())) &&
+			!(exterior && !(paint_qbd[0][1].empty() && paint_qbd[1][1].empty()))) return; // nothing to draw
+		glDepthMask(GL_FALSE); // disable depth write
+		enable_blend();
+		select_texture(BLUR_CENT_TEX); // spraypaint - smooth alpha blended edges
+		if (interior) {paint_qbd[0][0].draw();}
+		if (exterior) {paint_qbd[0][1].draw();}
+		select_texture(get_texture_by_name("circle.png", 0, 0, 1, 0.0, 1, 1, 1)); // markers - sharp edges, used as alpha mask with white background color
+		if (interior) {paint_qbd[1][0].draw();}
+		if (exterior) {paint_qbd[1][1].draw();}
+		disable_blend();
+		glDepthMask(GL_TRUE);
+	}
+};
+
 decal_manager_t decal_manager; // TODO: make per building
-bool have_paint_for_building(bool exterior) {return decal_manager.have_paint_for_building(exterior);}
-void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) {decal_manager.draw_building_interior_paint(int_ext_mask, building);}
+paint_manager_t paint_manager; // TODO: make per bu
+bool have_paint_for_building(bool exterior) {return paint_manager.have_paint_for_building(exterior);}
+void draw_building_interior_paint(unsigned int_ext_mask, building_t const *const building) {paint_manager.draw_building_interior_paint(int_ext_mask, building);}
 void draw_building_interior_decals(building_t const *const building) {decal_manager.draw_building_interior_decals(building);}
 
 bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const { // spraypaint or marker
@@ -2054,7 +2061,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	float const winding_order_sign(-SIGN(normal[dim])); // make sure to invert the winding order to match the normal sign
 	// Note: interior spraypaint draw uses back face culling while exterior draw does not; invert the winding order for exterior quads so that they show through windows correctly
 	vector3d const dx(radius*dir1*winding_order_sign*(exterior_wall ? -1.0 : 1.0));
-	decal_manager.get_paint_qbd(this, is_marker, exterior_wall).add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
+	paint_manager.get_paint_qbd(this, is_marker, exterior_wall).add_quad_dirs(p_int, dx, radius*dir2, colorRGBA(color, alpha), normal);
 	static double next_sound_time(0.0);
 
 	if (tfticks > next_sound_time) { // play sound if sprayed/marked, but not too frequently; marker has no sound
