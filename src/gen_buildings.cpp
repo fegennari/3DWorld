@@ -1842,6 +1842,7 @@ public:
 				building_mat_t const &mat(b.get_material());
 				cube_t pos_range;
 				float border_scale(1.0);
+				unsigned max_floors(0); // starts at unlimited
 				
 				if (use_city_plots) { // select a random plot, if available
 					city_zone_t const &plot(city_plot_bcubes[plot_ix]);
@@ -1849,6 +1850,7 @@ public:
 					center.z  = plot.zval; // optimization: take zval from plot rather than calling get_exact_zval()
 					b.assigned_plot = plot; // only really needed for residential sub-plots
 					city_plot_ix    = ((plot.parent_plot_ix >= 0) ? plot.parent_plot_ix : plot_ix);
+					max_floors      = plot.max_floors;
 					if (residential) {pref_dir = plot.street_dir;}
 					pos_range.expand_by_xy(-min_building_spacing); // force min spacing between building and edge of plot
 					if (plot.capacity == 1) {border_scale *= 2.0;} // use smaller border scale since the individual building plots should handle borders
@@ -1898,9 +1900,10 @@ public:
 				float const height_range(mat.sz_range.dz());
 				assert(height_range >= 0.0);
 				float const z_size_scale(size_scale*(b.is_house ? rgen.rand_uniform(0.6, 0.8) : 1.0)); // make houses slightly shorter on average to offset extra height added by roof
-				float const height_val(z_size_scale*(mat.sz_range.z1() + height_range*rgen.rand_uniform(hmin, hmax)));
+				float height_val(0.5f*z_size_scale*(mat.sz_range.z1() + height_range*rgen.rand_uniform(hmin, hmax)));
+				if (max_floors > 0) {min_eq(height_val, max_floors*b.get_window_vspace());} // limit height based on max floors
 				assert(height_val > 0.0);
-				b.set_z_range(center.z, (center.z + 0.5*height_val));
+				b.set_z_range(center.z, (center.z + height_val));
 				assert(b.bcube.is_strictly_normalized());
 				mat.side_color.gen_color(b.side_color, rgen);
 				mat.roof_color.gen_color(b.roof_color, rgen);

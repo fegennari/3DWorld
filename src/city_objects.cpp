@@ -707,6 +707,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		spacing[d] = plot_sz/ndiv[d];
 	}
 	if (ndiv[0] >= 100 || ndiv[1] >= 100) return 0; // too many plots? this shouldn't happen, but failing here is better than asserting or generating too many buildings
+	unsigned const max_floors(0); // 0 is unlimited
 	if (sub_plots.empty()) {sub_plots.reserve(2*(ndiv[0] + ndiv[1]) - 4);}
 
 	for (unsigned y = 0; y < ndiv[1]; ++y) {
@@ -716,7 +717,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			if (x > 0 && y > 0 && x+1 < ndiv[0] && y+1 < ndiv[1]) continue; // interior plot, no road access, skip
 			float const x1(plot.x1() + spacing[0]*x), x2((x+1 == ndiv[0]) ? plot.x2() : (x1 + spacing[0])); // last sub-plot must end exactly at plot x2
 			cube_t const c(x1, x2, y1, y2, plot.z1(), plot.z2());
-			sub_plots.emplace_back(c, 0.0, 0, 1, get_street_dir(c, plot), 1, parent_plot_ix); // cube, zval, park, res, sdir, capacity, ppix; Note: will favor x-dim for corner plots
+			sub_plots.emplace_back(c, 0.0, 0, 1, get_street_dir(c, plot), 1, parent_plot_ix, max_floors); // cube, zval, park, res, sdir, capacity, ppix, nf; will favor x-dim for corner plots
 		}
 	} // for y
 	return 1;

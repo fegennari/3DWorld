@@ -988,13 +988,13 @@ class city_road_gen_t : public road_gen_base_t {
 			if (plots.empty()) return; // connector road city
 			unsigned const start(zones.size());
 			float const plot_subdiv_sz(get_plot_subdiv_sz());
-			unsigned cur_global_plot_ix(plot_id_offset);
+			unsigned cur_global_plot_ix(plot_id_offset), max_floors(0); // max_floors of 0 is unlimited
 
 			for (auto i = plots.begin(); i != plots.end(); ++i, ++cur_global_plot_ix) { // capture all plot zones, even parks (needed for pedestrians)
 				if (plot_subdiv_sz > 0.0 && !i->is_park) { // split into smaller plots for each house
 					if (city_obj_placer.subdivide_plot_for_residential(*i, plot_subdiv_sz, cur_global_plot_ix, zones)) continue;
 				}
-				zones.emplace_back(*i, 0.0, i->is_park, is_residential, 0, 0, cur_global_plot_ix); // cube, zval, park, res, sdir, capacity, ppix
+				zones.emplace_back(*i, 0.0, i->is_park, is_residential, 0, 0, cur_global_plot_ix, max_floors); // cube, zval, park, res, sdir, capacity, ppix, max_floors
 			} // for i
 			vector3d const city_radius(0.5*bcube.get_size());
 			point const city_center(bcube.get_cube_center());
