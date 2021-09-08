@@ -179,6 +179,13 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scal
 }
 void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
+
+	// a square pool is interpreted as being a cylindrical above ground pool rather than a rectangular in-ground pool
+	if (bcube.dx() == bcube.dy()) {
+		float const height(bcube.dz()), radius(0.5*bcube.dx());
+		// TODO
+		return;
+	}
 	float const dz(bcube.dz()), wall_thick(1.2*dz), tscale(0.5/wall_thick);
 	cube_t inner(bcube);
 	inner.expand_by_xy(-wall_thick);
@@ -559,6 +566,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
 		if (rgen.rand_bool()) continue; // only add pools 50% of the time
 		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
+		bool const above_ground_cylin(0/*rgen.rand_bool()*/);
 		cube_t pool_area(*i);
 		pool_area.d[dim][dir] = pool_area.get_center_dim(dim); // limit the pool to the back yard
 		float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
@@ -569,9 +577,12 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		}
 		pool_area.expand_by_xy(-0.05*dmin); // small shrink to keep away from walls, fences, and hedges
 		vector3d pool_sz;
-		pool_sz.z = 0.01*dmin;
-		for (unsigned d = 0; d < 2; ++d) {pool_sz[d] = rgen.rand_uniform(0.4, 0.7)*dmin;}
-		for (unsigned d = 0; d < 2; ++d) {pool_area.d[d][1] -= pool_sz[d];} // shrink so that pool_area is where (x1, x2) can be placed
+		pool_sz.z = (above_ground_cylin ? 0.25*city_params.road_width : 0.01*dmin);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			pool_sz[d] = ((above_ground_cylin && d == 1) ? pool_sz[0] : rgen.rand_uniform(0.4, 0.7)*dmin); // above_ground_cylin pools have square bcubes
+			pool_area.d[d][1] -= pool_sz[d]; // shrink so that pool_area is where (x1, x2) can be placed
+		}
 		if (!pool_area.is_normalized()) continue; // pool area is too small; this can only happen due to shrink at plot edges
 		point pool_llc;
 		pool_llc.z = i->z2();
