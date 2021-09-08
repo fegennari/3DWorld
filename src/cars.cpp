@@ -1091,10 +1091,13 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		translate_to(xlate);
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);} // disable hemispherical lighting normal because the transforms make it incorrect
+		float const tile_draw_dist(get_draw_tile_dist());
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			if (cb->is_in_building() != garages_pass) continue; // wrong pass
-			if (!camera_pdu.cube_visible(get_cb_bcube(*cb) + xlate)) continue; // city not visible - skip
+			cube_t const block_bcube(get_cb_bcube(*cb) + xlate);
+			if (!shadow_only && !block_bcube.closest_dist_less_than(camera_pdu.pos, 0.5*tile_draw_dist)) continue; // check draw distance, dist_scale=0.5
+			if (!camera_pdu.cube_visible(block_bcube)) continue; // city not visible - skip
 			unsigned const end((cb+1)->start);
 			assert(end <= cars.size());
 
