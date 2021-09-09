@@ -174,35 +174,59 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scal
 	dstate.draw_cube(qbd, bcube, color_wrapper(plot_divider_types[type].color), 1, 1.0/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
 }
 
+// passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
 /*static*/ void swimming_pool_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? get_texture_by_name("bathroom_tile.jpg") : get_texture_by_name("snow2.jpg"));}
+	if (!shadow_only) {
+		if      (dstate.pass_ix == 2) {select_texture(WHITE_TEX);} // sides/untextured
+		else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("bathroom_tile.jpg"));} // walls
+		else if (dstate.pass_ix == 1 || dstate.pass_ix == 3) {select_texture(get_texture_by_name("snow2.jpg"));} // water surface
+		else {assert(0);}
+	}
 }
 void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+	if ((dstate.pass_ix > 1) ^ above_ground) return; // not drawn in this pass
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 
-	// a square pool is interpreted as being a cylindrical above ground pool rather than a rectangular in-ground pool
-	if (bcube.dx() == bcube.dy()) {
-		float const height(bcube.dz()), radius(0.5*bcube.dx());
-		// TODO
-		return;
-	}
-	float const dz(bcube.dz()), wall_thick(1.2*dz), tscale(0.5/wall_thick);
-	cube_t inner(bcube);
-	inner.expand_by_xy(-wall_thick);
+	if (above_ground) { // cylindrical; bcube should be square in XY
+		point const camera_bs(camera_pdu.pos - dstate.xlate);
+		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc());
+		unsigned const ndiv(shadow_only ? 24 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, bcube.closest_pt(camera_bs))))));
 
-	if (dstate.pass_ix == 0) { // first pass, draw walls
-		color_wrapper const cw(color);
-		cube_t sides[4] = {bcube, bcube, bcube, bcube}; // {S, N, W center, E center}
-		sides[0].y2() = sides[2].y1() = sides[3].y1() = inner.y1();
-		sides[1].y1() = sides[2].y2() = sides[3].y2() = inner.y2();
-		sides[2].x2() = inner.x1();
-		sides[3].x1() = inner.x2();
-		for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0));}
+		if (dstate.pass_ix == 2) { // draw sides
+			dstate.s.set_cur_color(color);
+			draw_fast_cylinder(point(xc, yc, bcube.z1()), point(xc, yc, bcube.z2()), radius, radius, ndiv, 0, 0); // untextured, no ends
+		}
+		else if (dstate.pass_ix == 3) { // draw water surface
+			dstate.s.set_cur_color(wcolor);
+			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, (bcube.z2() - 0.1*bcube.dz()))); // shift slightly below the top
+		}
 	}
-	else { // second pass, draw water surface
-		inner.z2() -= 0.5*dz; // reduce water height by 50%; can't make water below the mesh though
-		dstate.draw_cube(qbd, inner, color_wrapper(wcolor), 1, 0.5*tscale, 3); // draw top water
+	else { // in-ground
+		float const dz(bcube.dz()), wall_thick(1.2*dz), tscale(0.5/wall_thick);
+		cube_t inner(bcube);
+		inner.expand_by_xy(-wall_thick);
+
+		if (dstate.pass_ix == 0) { // draw walls
+			color_wrapper const cw(color);
+			cube_t sides[4] = {bcube, bcube, bcube, bcube}; // {S, N, W center, E center}
+			sides[0].y2() = sides[2].y1() = sides[3].y1() = inner.y1();
+			sides[1].y1() = sides[2].y2() = sides[3].y2() = inner.y2();
+			sides[2].x2() = inner.x1();
+			sides[3].x1() = inner.x2();
+			for (unsigned d = 0; d < 4; ++d) {dstate.draw_cube(qbd, sides[d], cw, 1, tscale, ((d > 2) ? 2 : 0));}
+		}
+		else if (dstate.pass_ix == 1) { // draw water surface
+			inner.z2() -= 0.5*dz; // reduce water height by 50%; can't make water below the mesh though
+			dstate.draw_cube(qbd, inner, color_wrapper(wcolor), 1, 0.5*tscale, 3); // draw top water
+		}
 	}
+}
+bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (above_ground) {
+		float const radius(get_radius()), xc(bcube.xc() + xlate.x), yc(bcube.yc() + xlate.y), z1(bcube.z1() + xlate.z), z2(bcube.z2() + xlate.z);
+		return sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw(point(xc, yc, z1), point(xc, yc, z2), radius, radius), cnorm); // checks sides
+	}
+	else {return city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);}
 }
 
 
@@ -561,12 +585,13 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
 	// assumes place_plot_dividers() has been called first to populate sub_plots
 	float const min_spacing_to_plot_edge(0.5*city_params.road_width);
+	colorRGBA const side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
 
 	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
 		if (rgen.rand_bool()) continue; // only add pools 50% of the time
 		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
-		bool const above_ground_cylin(0/*rgen.rand_bool()*/);
+		bool const above_ground(rgen.rand_bool());
 		cube_t pool_area(*i);
 		pool_area.d[dim][dir] = pool_area.get_center_dim(dim); // limit the pool to the back yard
 		float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
@@ -577,10 +602,10 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		}
 		pool_area.expand_by_xy(-0.05*dmin); // small shrink to keep away from walls, fences, and hedges
 		vector3d pool_sz;
-		pool_sz.z = (above_ground_cylin ? 0.25*city_params.road_width : 0.01*dmin);
+		pool_sz.z = (above_ground ? rgen.rand_uniform(0.08, 0.12)*city_params.road_width : 0.01f*dmin);
 
 		for (unsigned d = 0; d < 2; ++d) {
-			pool_sz[d] = ((above_ground_cylin && d == 1) ? pool_sz[0] : rgen.rand_uniform(0.4, 0.7)*dmin); // above_ground_cylin pools have square bcubes
+			pool_sz[d] = ((above_ground && d == 1) ? pool_sz[0] : rgen.rand_uniform(0.4, 0.7)*dmin); // above_ground_cylin pools have square bcubes
 			pool_area.d[d][1] -= pool_sz[d]; // shrink so that pool_area is where (x1, x2) can be placed
 		}
 		if (!pool_area.is_normalized()) continue; // pool area is too small; this can only happen due to shrink at plot edges
@@ -593,8 +618,9 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			if (has_bcube_int_xy(pool, blockers, 0.08*dmin)) continue; // intersects some other object
 			float const grayscale(rgen.rand_uniform(0.7, 1.0));
 			float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
-			colorRGBA color(grayscale, grayscale, grayscale), wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
-			add_obj_to_group(swimming_pool_t(pool, color, wcolor), pool, pools, pool_groups, is_new_tile);
+			colorRGBA const color(above_ground ? side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
+			colorRGBA const wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
+			add_obj_to_group(swimming_pool_t(pool, color, wcolor, above_ground), pool, pools, pool_groups, is_new_tile);
 			pool.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
 			colliders.push_back(pool);
 			blockers .push_back(pool);
@@ -742,9 +768,11 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt, stone}
 			draw_objects(planters, planter_groups, dstate, 0.1, shadow_only, 0); // dist_scale=0.1
 		}
-		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {walls, water}
-			draw_objects(pools, pool_groups, dstate, ((dstate.pass_ix == 0) ? 0.1 : 0.5), shadow_only, 0);
-		}
+	}
+	for (dstate.pass_ix = 0; dstate.pass_ix < 4; ++dstate.pass_ix) { // {in-ground walls, in-ground water, above ground sides, above ground water}
+		if (shadow_only && dstate.pass_ix <= 1) continue; // only above ground pools are drawn in the shadow pass; water surface is drawn to prevent light leaks, but maybe should extend z1 lower
+		float const dist_scales[4] = {0.1, 0.5, 0.3, 0.5};
+		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes don't use qbd
 	}
 	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
 	for (dstate.pass_ix = 0; dstate.pass_ix < DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge}
@@ -841,7 +869,10 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) cons
 
 		for (auto b = pools.begin()+start_ix; b != pools.begin()+i->ix; ++b) {
 			if (pos.x < b->bcube.x1()) break; // pools are sorted by x1, no divider after this can match
-			if (b->bcube.contains_pt_xy(pos)) {color = b->wcolor; return 1;} // return water color
+			if (!b->bcube.contains_pt_xy(pos)) continue;
+			if (b->above_ground && !dist_xy_less_than(pos, point(b->bcube.xc(), b->bcube.yc(), b->bcube.z1()), b->get_radius())) continue; // circular in-ground pool
+			color = b->wcolor; // return water color
+			return 1;
 		}
 	} // for i
 	return 0;
