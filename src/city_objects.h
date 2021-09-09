@@ -57,6 +57,7 @@ struct swimming_pool_t : public city_obj_t {
 		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), color(color_), wcolor(wcolor_), above_ground(above_ground_) {bcube = c;}
 	float get_radius() const {assert(above_ground); return 0.25f*(bcube.dx() + bcube.dy());}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };

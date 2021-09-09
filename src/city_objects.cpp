@@ -138,6 +138,7 @@ fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, v
 }
 /*static*/ void fire_hydrant_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
+	city_obj_t::post_draw(dstate, shadow_only);
 }
 void fire_hydrant_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const { // Note: qbd is unused
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
@@ -220,6 +221,10 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dis
 			dstate.draw_cube(qbd, inner, color_wrapper(wcolor), 1, 0.5*tscale, 3); // draw top water
 		}
 	}
+}
+/*static*/ void swimming_pool_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
+	city_obj_t::post_draw(dstate, shadow_only);
 }
 bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (above_ground) {
