@@ -727,6 +727,10 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	sort_grouped_objects(dividers,      divider_groups);
 	sort_grouped_objects(pools,         pool_groups);
 
+	if (0) { // debug info printing
+		cout << TXT(benches.size()) << TXT(bench_groups.size()) << TXT(planters.size()) << TXT(planter_groups.size()) << TXT(fire_hydrants.size())
+			 << TXT(fire_hydrant_groups.size()) << TXT(dividers.size()) << TXT(divider_groups.size()) << TXT(pools.size()) << TXT(pool_groups.size()) << endl;
+	}
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
 	}

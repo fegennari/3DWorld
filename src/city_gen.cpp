@@ -2542,13 +2542,14 @@ public:
 	}
 	void gen_details() {
 		if (road_gen.empty()) return; // nothing to do - no roads or cars
-		// generate parking lots
 		vector<car_t> parked_cars;
 		vect_cube_t garages, hp_locs;
 		bool const have_cars(!car_manager.empty());
+		highres_timer_t timer("Gen City Details");
 		road_gen.gen_parking_lots_and_place_objects(parked_cars, have_cars);
 		if (have_cars) {get_all_garages(garages);}
 		if (city_params.has_helicopter_model()) {get_all_city_helipads(hp_locs);}
+		timer.end(); // exclude the steps below, which are dominated by model load time
 		car_manager.add_parked_cars(parked_cars, garages);
 		car_manager.finalize_cars();
 		car_manager.add_helicopters(hp_locs);
