@@ -454,12 +454,11 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 	for (auto i = blockers.begin()+buildings_end; i != blockers.begin()+input_blockers_end; ++i) {i->expand_by_xy(non_buildings_overlap);} // undo initial expand
 }
 
-template<typename T> void city_obj_placer_t::add_obj_to_group(T const &obj, cube_t const &bcube, vector<T> &objs, vector<cube_with_ix_t> &groups, bool &is_new_tile) {
+template<typename T> void city_obj_placer_t::add_obj_to_group(T const &obj, vector<T> &objs, vector<cube_with_ix_t> &groups) {
+	if (groups.empty() || objs.empty() || get_tile_id_for_cube(obj.bcube) != get_tile_id_for_cube(objs.back().bcube)) {groups.push_back(cube_with_ix_t(obj.bcube));}
+	else {groups.back().union_with_cube(obj.bcube);}
 	objs.push_back(obj);
-	if (groups.empty() || is_new_tile) {groups.push_back(cube_with_ix_t(bcube));}
-	else {groups.back().union_with_cube(bcube);}
 	groups.back().ix = objs.size();
-	is_new_tile = 0;
 }
 template<typename T> void city_obj_placer_t::sort_grouped_objects(vector<T> &objs, vector<cube_with_ix_t> const &groups) {
 	unsigned start_ix(0);
@@ -467,13 +466,10 @@ template<typename T> void city_obj_placer_t::sort_grouped_objects(vector<T> &obj
 }
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
-void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
-	rand_gen_t &rgen, bool is_new_tile, bool is_residential)
+void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
+	vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential)
 {
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
-	// FIXME: due to some problem I can't figure out, bench shadow maps don't work right unless is_new_bench_tile is reset for each plot;
-	//        however, tree planters seem to work just fine without this, even though they use nearly the same code
-	bool is_new_fh_tile(is_new_tile), is_new_bench_tile(1 || is_new_tile), is_new_planter_tile(is_new_tile);
 
 	// place fire_hydrants; don't add fire hydrants in parks
 	if (!plot.is_park) {
@@ -491,7 +487,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				vector3d orient(zero_vector);
 				orient[!dim] = (dir ? 1.0 : -1.0); // oriented perpendicular to the road
 				fire_hydrant_t const fire_hydrant(pos, radius, height, orient);
-				add_obj_to_group(fire_hydrant, fire_hydrant.bcube, fire_hydrants, fire_hydrant_groups, is_new_fh_tile);
+				add_obj_to_group(fire_hydrant, fire_hydrants, fire_hydrant_groups);
 				colliders.push_back(fire_hydrant.bcube);
 			} // for dir
 		} // for dim
@@ -513,7 +509,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				}
 			}
 			bench.calc_bcube();
-			add_obj_to_group(bench, bench.bcube, benches, bench_groups, is_new_bench_tile);
+			add_obj_to_group(bench, benches, bench_groups);
 			colliders.push_back(bench.bcube);
 		} // for n
 	}
@@ -523,12 +519,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 
 		for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {
 			tree_planter_t const planter(*i, planter_radius, planter_height);
-			add_obj_to_group(planter, planter.bcube, planters, planter_groups, is_new_planter_tile); // no colliders for planters; pedestrians avoid the trees instead
+			add_obj_to_group(planter, planters, planter_groups); // no colliders for planters; pedestrians avoid the trees instead
 		}
 	}
 }
 
-void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
+void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
 	assert(plot_subdiv_sz > 0.0);
 	sub_plots.clear();
 	if (plot.is_park) return; // no dividers in parks
@@ -579,7 +575,7 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 					if (overlaps) continue; // overlaps a previous divider, skip this one
 				}
 				divider_t divider(c, type, dim, dir, skip_dims);
-				add_obj_to_group(divider, divider.bcube, dividers, divider_groups, is_new_tile);
+				add_obj_to_group(divider, dividers, divider_groups);
 				colliders.push_back(divider.bcube);
 				blockers .push_back(divider.bcube);
 			} // for dir
@@ -587,7 +583,7 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 	} // for i
 }
 
-void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen, bool is_new_tile) {
+void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
 	// assumes place_plot_dividers() has been called first to populate sub_plots
 	float const min_spacing_to_plot_edge(0.5*city_params.road_width);
 	colorRGBA const side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
@@ -625,7 +621,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
 			colorRGBA const color(above_ground ? side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
 			colorRGBA const wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
-			add_obj_to_group(swimming_pool_t(pool, color, wcolor, above_ground), pool, pools, pool_groups, is_new_tile);
+			add_obj_to_group(swimming_pool_t(pool, color, wcolor, above_ground), pools, pool_groups);
 			pool.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
 			colliders.push_back(pool);
 			blockers .push_back(pool);
@@ -691,11 +687,8 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	if (city_params.max_trees_per_plot > 0) {tree_placer.begin_block(0); tree_placer.begin_block(1);} // both small and large trees
 	bool const add_parking_lots(have_cars && !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 	float const sidewalk_width(get_sidewalk_width());
-	uint64_t prev_tile_id(0);
 
 	for (auto i = plots.begin(); i != plots.end(); ++i) {
-		uint64_t const tile_id(get_tile_id_for_cube(*i));
-		bool const is_new_tile(tile_id != prev_tile_id);
 		tree_pos.clear();
 		bcubes.clear();
 		get_building_bcubes(*i, bcubes);
@@ -717,12 +710,11 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			bcubes.push_back(dw);
 		} // for j
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
-			place_plot_dividers(*i, bcubes, colliders, detail_rgen, is_new_tile); // before placing trees
-			place_residential_plot_objects(*i, bcubes, colliders, detail_rgen, is_new_tile);
+			place_plot_dividers(*i, bcubes, colliders, detail_rgen); // before placing trees
+			place_residential_plot_objects(*i, bcubes, colliders, detail_rgen);
 		}
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
-		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_new_tile, is_residential);
-		prev_tile_id = tile_id;
+		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential);
 	} // for i
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
