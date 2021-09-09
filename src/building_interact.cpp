@@ -965,12 +965,6 @@ void setup_bldg_obj_types() {
 	//                                                pc ac pu at im ls value  weight  name [capacity]
 }
 
-bool is_draggable(unsigned type) {
-	assert(type < NUM_ROBJ_TYPES);
-	bldg_obj_type_t const &bot(bldg_obj_types[type]);
-	return (bot.weight > 80.0 && !bot.attached); // heavy non-attached objects
-}
-
 float carried_item_t::get_remaining_capacity_ratio() const {
 	assert(type >= 0 && type < NUM_ROBJ_TYPES);
 	unsigned const capacity(bldg_obj_types[type].capacity);
@@ -1774,6 +1768,22 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	}
 	update_draw_state_for_room_object(obj, building);
 	return 1;
+}
+
+bool is_movable(unsigned type) {
+	assert(type < NUM_ROBJ_TYPES);
+	bldg_obj_type_t const &bot(bldg_obj_types[type]);
+	return (bot.weight > 80.0 && !bot.attached); // heavy non-attached objects
+}
+bool building_room_geom_t::move_room_object(room_object_t &obj, building_t &building, vector3d const &move_vector) {
+	if (move_vector == zero_vector) return 0;
+	if (!is_movable(obj.type)) return 0;
+	room_object_t moved_obj(obj);
+	moved_obj += move_vector; // only the position changes
+	// TODO: check for valid new location
+	obj = moved_obj;
+	update_draw_state_for_room_object(obj, building);
+	return 1; // success
 }
 
 void play_obj_fall_sound(room_object_t const &obj, point const &player_pos) {

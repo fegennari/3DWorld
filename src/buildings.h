@@ -632,6 +632,7 @@ struct building_room_geom_t {
 	int find_avail_obj_slot() const;
 	void add_expanded_object(room_object_t const &obj);
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
+	bool move_room_object(room_object_t &obj, building_t &building, vector3d const &move_vector);
 	void update_dynamic_draw_data() {mats_dynamic.clear();}
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
