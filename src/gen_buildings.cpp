@@ -3155,6 +3155,18 @@ public:
 		}
 		return 0;
 	}
+	unsigned check_line_coll(point const &p1, point const &p2, float &t, bool ret_any_pt, bool no_coll_pt) const {
+		if (empty()) return 0;
+		cube_t const line_bcube(p1, p2);
+		unsigned ret(0), hit_bix(0); // internal tile index, can't return
+
+		for (auto i = tiles.begin(); i != tiles.end(); ++i) { // no vertical line test
+			if (!i->second.get_bcube().intersects(line_bcube)) continue; // optimization
+			unsigned const tile_ret(i->second.check_line_coll(p1, p2, t, hit_bix, ret_any_pt, no_coll_pt));
+			if (tile_ret) {ret = tile_ret;}
+		}
+		return ret;
+	}
 	void update_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) const { // Note p1/p2 are in building space
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
 			if (!check_line_clip(p1, p2, i->second.get_bcube().d)) continue; // optimization
@@ -3319,7 +3331,9 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	unsigned const coll1(building_creator_city.check_line_coll(p1x, p2x, t, hit_bix, ret_any_pt, 0));
 	if (coll1 && ret_any_pt) return coll1;
 	unsigned const coll2(building_creator.check_line_coll(p1x, p2x, t, hit_bix, ret_any_pt, 1));
-	return (coll2 ? coll2 : coll1); // Note: excludes building_tiles
+	if (coll2 && ret_any_pt) return coll2;
+	unsigned const coll3(building_tiles.check_line_coll(p1x, p2x, t, ret_any_pt, 1)); // Note: does't take/set hit_bix
+	return (coll3 ? coll3 : (coll2 ? coll2 : coll1));
 }
 void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) {
 	building_creator_city.update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
