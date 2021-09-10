@@ -1746,7 +1746,7 @@ public:
 	bool is_visible(vector3d const &xlate) const {return (!empty() && camera_pdu.cube_visible(buildings_bcube + xlate));}
 	bool is_single_tile() const {return (grid_by_tile.size() == 1);}
 	
-	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const { // exterior only
+	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const { // exterior only; p1 and p2 are in building space
 		float t(1.0); // unused
 		unsigned hit_bix(0);
 		unsigned const ret(check_line_coll(p1, p2, t, hit_bix, 0, 1)); // no_coll_pt=1; returns: 0=no hit, 1=hit side, 2=hit roof
@@ -2874,28 +2874,26 @@ public:
 		} // for y
 	}
 
-	// Note: p1 and p2 are in camera space
+	// Note: p1 and p2 are in building space
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt, bool no_coll_pt) const {
 		if (empty()) return 0;
-		vector3d const xlate(get_camera_coord_space_xlate());
-		point const p1x(p1 - xlate);
 		vector<point> points; // reused across calls
 
 		if (p1.x == p2.x && p1.y == p2.y) { // vertical line special case optimization (for example map mode)
-			if (!get_bcube().contains_pt_xy(p1x)) return 0;
-			unsigned const gix(get_grid_ix(p1x));
+			if (!get_bcube().contains_pt_xy(p1)) return 0;
+			unsigned const gix(get_grid_ix(p1));
 			grid_elem_t const &ge(grid[gix]);
 			if (ge.bc_ixs.empty()) return 0; // skip empty grid
-			if (!ge.bcube.contains_pt_xy(p1x)) return 0; // no intersection - skip this grid
+			if (!ge.bcube.contains_pt_xy(p1)) return 0; // no intersection - skip this grid
 
 			for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) {
-				if (!b->contains_pt_xy(p1x)) continue;
-				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, xlate, t, points, 0, ret_any_pt, no_coll_pt));
+				if (!b->contains_pt_xy(p1)) continue;
+				unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t, points, 0, ret_any_pt, no_coll_pt));
 				if (ret) {hit_bix = b->ix; return ret;} // can only intersect one building
 			} // for b
 			return 0; // no coll
 		}
-		cube_t bcube(p1x, p2-xlate);
+		cube_t bcube(p1, p2);
 		unsigned ixr[2][2];
 		get_grid_range(bcube, ixr);
 		unsigned coll(0); // 0=none, 1=side, 2=roof
@@ -2907,12 +2905,12 @@ public:
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
 				if (ge.bc_ixs.empty()) continue; // skip empty grid
-				if (!check_line_clip(p1x, (end_pos - xlate), ge.bcube.d)) continue; // no intersection - skip this grid
+				if (!check_line_clip(p1, end_pos, ge.bcube.d)) continue; // no intersection - skip this grid
 
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: okay to check the same building more than once
 					if (!b->intersects(bcube)) continue;
 					float t_new(t);
-					unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, xlate, t_new, points, 0, ret_any_pt, no_coll_pt));
+					unsigned const ret(get_building(b->ix).check_line_coll(p1, p2, t_new, points, 0, ret_any_pt, no_coll_pt));
 
 					if (ret && t_new <= t) { // closer hit pos, update state
 						t = t_new; hit_bix = b->ix; coll = ret;
@@ -2925,7 +2923,7 @@ public:
 		return coll; // 0=none, 1=side, 2=roof, 3=details
 	}
 
-	// Note: unlike check_line_coll(), p1 and p2 are in building space
+	// Note: p1 and p2 are in building space
 	void update_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) const {
 		if (empty()) return;
 		cube_t bcube(p1, p2);
@@ -2952,7 +2950,7 @@ public:
 					float t(1.0); // result is unused
 					// Note: unclear if we need to do a detailed line collision check, maybe testing the building bbox is good enough?
 					// if radius is passed in as nonzero, then simply assume it intersects because check_line_coll() can't easily take a radius value
-					if (radius > 0.0 || building.check_line_coll(p1, p2, zero_vector, t, points, 0, 1, 1)) {
+					if (radius > 0.0 || building.check_line_coll(p1, p2, t, points, 0, 1, 1)) {
 						max_eq(cur_zmax, (b->z2() + (building.is_house ? house_extra_zval : 0.0f)));
 					}
 				} // for b
@@ -2960,12 +2958,12 @@ public:
 		} // for y
 	}
 
-	// Note: we can get building_id by calling check_ped_coll() or get_building_bcube_at_pos()
+	// Note: we can get building_id by calling check_ped_coll() or get_building_bcube_at_pos(); p1 and p2 are in building space
 	bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) const { // Note: not thread safe due to static points
 		assert(building_id < buildings.size());
 		static vector<point> points; // reused across calls
 		float t_new(1.0);
-		return buildings[building_id].check_line_coll(p1, p2, zero_vector, t_new, points, 0, 1);
+		return buildings[building_id].check_line_coll(p1, p2, t_new, points, 0, 1);
 	}
 
 	int get_building_bcube_contains_pos(point const &pos) { // Note: not thread safe due to static points
@@ -3058,8 +3056,7 @@ public:
 
 			for (unsigned i = 0; i < npts; ++i) {
 				float t(1.0); // start at end of line
-				// Note: check_line_coll() expects both points in camera space, so we add xlate to our points
-				if (!building.check_line_coll(state.pos, (pts[i] + state.xlate), state.xlate, t, state.temp_points, 1)) {occluded = 0; break;}
+				if (!building.check_line_coll(pos_bs, pts[i], t, state.temp_points, 1)) {occluded = 0; break;}
 			}
 			if (occluded) return 1;
 		} // for b
@@ -3075,9 +3072,13 @@ class building_tiles_t {
 	//set<xy_pair> generated; // only used in heightmap terrain mode, and generally limited to the size of the heightmap in tiles
 	vector3d max_extent;
 
-	tile_map_t::const_iterator get_tile_by_pos(point const &pos) const { // Note: pos is in camera space
+	tile_map_t::const_iterator get_tile_by_pos_cs(point const &pos) const { // Note: pos is in camera space
 		vector3d const xlate(get_camera_coord_space_xlate());
 		int const x(round_fp(0.5f*(pos.x - xlate.x)/X_SCENE_SIZE)), y(round_fp(0.5f*(pos.y - xlate.y)/Y_SCENE_SIZE));
+		return tiles.find(make_pair(x, y));
+	}
+	tile_map_t::const_iterator get_tile_by_pos_bs(point const &pos) const { // Note: pos is in building space
+		int const x(round_fp(0.5f*pos.x/X_SCENE_SIZE)), y(round_fp(0.5f*pos.y/Y_SCENE_SIZE));
 		return tiles.find(make_pair(x, y));
 	}
 public:
@@ -3122,11 +3123,11 @@ public:
 		clear_vbos();
 		tiles.clear();
 	}
-	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const {
+	bool check_sphere_coll(point &pos, point const &p_last, float radius, bool xy_only=0, vector3d *cnorm=nullptr, bool check_interior=0) const { // Note: pos is in camera space
 		if (empty()) return 0;
 
 		if (radius == 0.0) { // single point, use map lookup optimization (for example for grass)
-			auto it(get_tile_by_pos(pos));
+			auto it(get_tile_by_pos_cs(pos));
 			if (it == tiles.end()) return 0;
 			return it->second.check_sphere_coll(pos, p_last, radius, xy_only, cnorm, check_interior);
 		}
@@ -3138,14 +3139,15 @@ public:
 	void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only, vect_cube_t &out) const {
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);}
 	}
-	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const { // Note p1/p2 are in camera space
+	bool get_building_hit_color(point const &p1, point const &p2, colorRGBA &color) const { // Note: p1/p2 are in building space
+		if (empty()) return 0;
+
 		if (p1.x == p2.x && p1.y == p2.y) { // vertical line, use map lookup optimization (for overhead map mode)
-			auto it(get_tile_by_pos(p1));
+			auto it(get_tile_by_pos_bs(p1));
 			if (it == tiles.end()) return 0;
 			return it->second.get_building_hit_color(p1, p2, color);
 		}
-		vector3d const xlate(get_camera_coord_space_xlate());
-		cube_t const line_bcube((p1 - xlate), (p2 - xlate));
+		cube_t const line_bcube(p1, p2);
 
 		for (auto i = tiles.begin(); i != tiles.end(); ++i) {
 			if (!i->second.get_bcube().intersects(line_bcube)) continue; // optimization
@@ -3206,11 +3208,11 @@ public:
 		//for (auto i = tiles.begin(); i != tiles.end(); ++i) {i->second.update_ai_state(people, delta_dir);}
 	}
 	void get_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) const {
-		auto it(get_tile_by_pos(pdu.pos));
+		auto it(get_tile_by_pos_cs(pdu.pos));
 		if (it != tiles.end()) {it->second.get_occluders(pdu, state);}
 	}
 	bool check_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) const {
-		auto it(get_tile_by_pos(state.pos));
+		auto it(get_tile_by_pos_cs(state.pos));
 		return ((it == tiles.end()) ? 0 : it->second.check_pts_occluded(pts, npts, state));
 	}
 	void get_all_garages(vect_cube_t &garages) const {
@@ -3311,11 +3313,12 @@ void get_driveway_sphere_coll_cubes(point const &pos, float radius, bool xy_only
 	building_creator.get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);
 	building_tiles  .get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);
 }
-unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool apply_tt_xlate, bool ret_any_pt) { // for line_intersect_city()
-	vector3d const xlate(apply_tt_xlate ? get_tt_xlate_val() : zero_vector);
-	unsigned const coll1(building_creator_city.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 0));
+unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, unsigned &hit_bix, bool ret_any_pt) { // for line_intersect_city(); p1/p2 are in camera space
+	vector3d const xlate(get_camera_coord_space_xlate());
+	point const p1x(p1 - xlate), p2x(p2 - xlate); // convert from camera to building space
+	unsigned const coll1(building_creator_city.check_line_coll(p1x, p2x, t, hit_bix, ret_any_pt, 0));
 	if (coll1 && ret_any_pt) return coll1;
-	unsigned const coll2(building_creator.check_line_coll(p1+xlate, p2+xlate, t, hit_bix, ret_any_pt, 1));
+	unsigned const coll2(building_creator.check_line_coll(p1x, p2x, t, hit_bix, ret_any_pt, 1));
 	return (coll2 ? coll2 : coll1); // Note: excludes building_tiles
 }
 void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) {
@@ -3323,10 +3326,12 @@ void update_buildings_zmax_for_line(point const &p1, point const &p2, float radi
 	building_creator     .update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
 	building_tiles       .update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
 }
-bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) {
-	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.get_building_hit_color(p1, p2, color)) return 1;
-	if (building_tiles.get_building_hit_color(p1, p2, color)) return 1;
-	return building_creator.get_building_hit_color(p1, p2, color);
+bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color) { // Note: p1 and p2 are in camera space
+	vector3d const xlate(get_camera_coord_space_xlate());
+	point const p1x(p1 - xlate), p2x(p2 - xlate); // convert from camera to building space
+	if (world_mode == WMODE_INF_TERRAIN && building_creator_city.get_building_hit_color(p1x, p2x, color)) return 1;
+	if (building_tiles.get_building_hit_color(p1x, p2x, color)) return 1;
+	return building_creator.get_building_hit_color(p1x, p2x, color);
 }
 bool have_buildings() {return (!building_creator.empty() || !building_creator_city.empty() || !building_tiles.empty());} // for postproc effects
 bool no_grass_under_buildings() {return (world_mode == WMODE_INF_TERRAIN && !(building_creator.empty() && building_tiles.empty()) && global_building_params.flatten_mesh);}

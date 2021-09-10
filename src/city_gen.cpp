@@ -2577,7 +2577,7 @@ public:
 		if (!inc_cars) return 0;
 		return car_manager.proc_sphere_coll(pos, p_last, radius, cnorm); // Note: doesn't really work well, at least for player collisions
 	}
-	bool line_intersect(point const &p1, point const &p2, float &t) const {
+	bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: p1 and p2 are in camera space
 		vector3d const xlate(get_camera_coord_space_xlate()), p1x(p1 - xlate), p2x(p2 - xlate);
 		bool ret(road_gen.line_intersect(p1x, p2x, t));
 		ret |= car_manager.line_intersect_cars(p1x, p2x, t);
@@ -2689,7 +2689,7 @@ bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float 
 }
 bool line_intersect_city(point const &p1, point const &p2, float &t, bool ret_any_pt) {
 	unsigned hit_bix(0); // unused
-	bool ret(check_buildings_line_coll(p1, p2, t, hit_bix, 0, ret_any_pt)); // apply_tt_xlate=0
+	bool ret(check_buildings_line_coll(p1, p2, t, hit_bix, ret_any_pt));
 	ret |= city_gen.line_intersect(p1, p2, t);
 	return ret;
 }

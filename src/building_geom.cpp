@@ -629,10 +629,9 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	return had_coll;
 }
 
-unsigned building_t::check_line_coll(point const &p1, point const &p2, vector3d const &xlate, float &t, vector<point> &points,
-	bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const
-{
-	point p1r(p1 - xlate), p2r(p2 - xlate); // convert points from camera space to building space
+// Note: p1/p2 are in building space
+unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t, vector<point> &points, bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const {
+	point p1r(p1), p2r(p2); // copy before clipping
 	if (!check_line_clip(p1r, p2r, bcube.d)) return 0; // no intersection
 
 	if (is_rotated()) {
