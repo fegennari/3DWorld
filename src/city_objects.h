@@ -62,6 +62,13 @@ struct swimming_pool_t : public city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
+class city_obj_groups_t : public vector<cube_with_ix_t> {
+	map<uint64_t, vector<unsigned> > by_tile;
+public:
+	template<typename T> void add_obj(T const &obj, vector<T> &objs);
+	template<typename T> void create_groups(vector<T> &objs);
+};
+
 class city_obj_placer_t {
 public: // road network needs access to parking lots and driveways for drawing
 	vector<parking_lot_t> parking_lots;
@@ -72,7 +79,7 @@ private:
 	vector<fire_hydrant_t> fire_hydrants;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
-	vector<cube_with_ix_t> bench_groups, planter_groups, fire_hydrant_groups, divider_groups, pool_groups; // index is last object in group
+	city_obj_groups_t bench_groups, planter_groups, fire_hydrant_groups, divider_groups, pool_groups; // index is last object in group
 	quad_batch_draw qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
 	unsigned num_spaces, filled_spaces;
@@ -84,13 +91,11 @@ private:
 	bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen);
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
 	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, unsigned buildings_end);
-	template<typename T> void add_obj_to_group(T const &obj, vector<T> &objs, vector<cube_with_ix_t> &groups);
-	template<typename T> void sort_grouped_objects(vector<T> &objs, vector<cube_with_ix_t> const &groups);
 	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential);
 	void place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
-	template<typename T> void draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
+	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
 		draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0);
 public:
 	city_obj_placer_t() : num_spaces(0), filled_spaces(0), plot_subdiv_sz(0.0) {}

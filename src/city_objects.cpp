@@ -454,15 +454,30 @@ void city_obj_placer_t::place_trees_in_plot(road_plot_t const &plot, vect_cube_t
 	for (auto i = blockers.begin()+buildings_end; i != blockers.begin()+input_blockers_end; ++i) {i->expand_by_xy(non_buildings_overlap);} // undo initial expand
 }
 
-template<typename T> void city_obj_placer_t::add_obj_to_group(T const &obj, vector<T> &objs, vector<cube_with_ix_t> &groups) {
-	if (groups.empty() || objs.empty() || get_tile_id_for_cube(obj.bcube) != get_tile_id_for_cube(objs.back().bcube)) {groups.push_back(cube_with_ix_t(obj.bcube));}
-	else {groups.back().union_with_cube(obj.bcube);}
+template<typename T> void city_obj_groups_t::add_obj(T const &obj, vector<T> &objs) {
+	by_tile[get_tile_id_for_cube(obj.bcube)].push_back(objs.size());
 	objs.push_back(obj);
-	groups.back().ix = objs.size();
 }
-template<typename T> void city_obj_placer_t::sort_grouped_objects(vector<T> &objs, vector<cube_with_ix_t> const &groups) {
-	unsigned start_ix(0);
-	for (auto i = groups.begin(); i != groups.end(); start_ix = i->ix, ++i) {sort(objs.begin()+start_ix, objs.begin()+i->ix);}
+template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs) {
+	vector<T> new_objs;
+	new_objs.reserve(objs.size());
+	reserve(by_tile.size()); // the number of actual groups
+
+	for (auto g = by_tile.begin(); g != by_tile.end(); ++g) {
+		unsigned const group_start(new_objs.size());
+		cube_with_ix_t group;
+
+		for (auto i = g->second.begin(); i != g->second.end(); ++i) {
+			assert(*i < objs.size());
+			group.assign_or_union_with_cube(objs[*i].bcube);
+			new_objs.push_back(objs[*i]);
+		}
+		sort(new_objs.begin()+group_start, new_objs.end());
+		group.ix = new_objs.size();
+		push_back(group);
+	} // for g
+	objs.swap(new_objs);
+	by_tile.clear(); // no longer needed
 }
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
@@ -487,7 +502,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				vector3d orient(zero_vector);
 				orient[!dim] = (dir ? 1.0 : -1.0); // oriented perpendicular to the road
 				fire_hydrant_t const fire_hydrant(pos, radius, height, orient);
-				add_obj_to_group(fire_hydrant, fire_hydrants, fire_hydrant_groups);
+				fire_hydrant_groups.add_obj(fire_hydrant, fire_hydrants);
 				colliders.push_back(fire_hydrant.bcube);
 			} // for dir
 		} // for dim
@@ -509,7 +524,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				}
 			}
 			bench.calc_bcube();
-			add_obj_to_group(bench, benches, bench_groups);
+			bench_groups.add_obj(bench, benches);
 			colliders.push_back(bench.bcube);
 		} // for n
 	}
@@ -518,8 +533,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		float const planter_height(0.05*car_length), planter_radius(0.25*car_length);
 
 		for (auto i = tree_pos.begin(); i != tree_pos.end(); ++i) {
-			tree_planter_t const planter(*i, planter_radius, planter_height);
-			add_obj_to_group(planter, planters, planter_groups); // no colliders for planters; pedestrians avoid the trees instead
+			planter_groups.add_obj(tree_planter_t(*i, planter_radius, planter_height), planters); // no colliders for planters; pedestrians avoid the trees instead
 		}
 	}
 }
@@ -575,7 +589,7 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 					if (overlaps) continue; // overlaps a previous divider, skip this one
 				}
 				divider_t divider(c, type, dim, dir, skip_dims);
-				add_obj_to_group(divider, dividers, divider_groups);
+				divider_groups.add_obj(divider, dividers);
 				colliders.push_back(divider.bcube);
 				blockers .push_back(divider.bcube);
 			} // for dir
@@ -621,7 +635,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
 			colorRGBA const color(above_ground ? side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
 			colorRGBA const wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
-			add_obj_to_group(swimming_pool_t(pool, color, wcolor, above_ground), pools, pool_groups);
+			pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground), pools);
 			pool.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
 			colliders.push_back(pool);
 			blockers .push_back(pool);
@@ -643,7 +657,7 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 	}
 }
 
-template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, vector<cube_with_ix_t> const &groups,
+template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
 	draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd)
 {
 	if (objs.empty()) return;
@@ -718,11 +732,11 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	} // for i
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
-	sort_grouped_objects(benches,       bench_groups  );
-	sort_grouped_objects(planters,      planter_groups);
-	sort_grouped_objects(fire_hydrants, fire_hydrant_groups);
-	sort_grouped_objects(dividers,      divider_groups);
-	sort_grouped_objects(pools,         pool_groups);
+	bench_groups.create_groups(benches);
+	planter_groups.create_groups(planters);
+	fire_hydrant_groups.create_groups(fire_hydrants);
+	divider_groups.create_groups(dividers);
+	pool_groups.create_groups(pools);
 
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(bench_groups.size()) << TXT(planters.size()) << TXT(planter_groups.size()) << TXT(fire_hydrants.size())
