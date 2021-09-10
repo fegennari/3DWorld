@@ -137,7 +137,7 @@ void draw_overhead_map() {
 		float x0((float)map_x + xoff2*DX_VAL), y0((float)map_y + yoff2*DY_VAL);
 		float const relh_water(get_rel_height_no_clamp(water_plane_z, -zmax_est, zmax_est));
 		point const camera(get_camera_pos());
-		float map_heights[6];
+		float map_heights[6] = {};
 		map_heights[0] = 0.9f*lttex_dirt[3].zval  + 0.1f*lttex_dirt[4].zval;
 		map_heights[1] = 0.5f*(lttex_dirt[2].zval + lttex_dirt[3].zval);
 		map_heights[2] = 0.5f*(lttex_dirt[1].zval + lttex_dirt[2].zval);
@@ -370,7 +370,7 @@ void write_map_mode_heightmap_image() {
 
 	float const window_ar((float(window_width)*window_height)/(float(window_height)*window_width));
 	float const xscale(2.0*map_zoom*window_ar*HALF_DXY), yscale(2.0*map_zoom*(X_SCENE_SIZE/Y_SCENE_SIZE)*HALF_DXY);
-	float const xstart((float)map_x + xoff2*DX_VAL - (window_width/2)*xscale), ystart((float)map_y + yoff2*DY_VAL - (window_height/2)*yscale);
+	float const xstart((float)map_x + xoff2*DX_VAL - float(window_width/2)*xscale), ystart((float)map_y + yoff2*DY_VAL - float(window_height/2)*yscale);
 	int const x1(get_xpos(xstart)), y1(get_ypos(ystart)), x2(get_xpos(xstart + window_width*xscale)), y2(get_ypos(ystart + window_height*yscale)), width(x2 - x1), height(y2 - y1);
 	cout << "Heightmap image size: " << width << "x" << height << " = " << width*height/1024 << "K" << endl;
 	if (width > 16384 || height > 16384) {std::cerr << "Error: heightmap image is too large, max size is 16384 pixels" << endl; return;} // fail
