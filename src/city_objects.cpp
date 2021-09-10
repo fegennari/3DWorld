@@ -810,7 +810,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	return ret;
 }
 
-bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) const {
+bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const {
 	unsigned start_ix(0);
 
 	for (auto i = bench_groups.begin(); i != bench_groups.end(); start_ix = i->ix, ++i) {
@@ -838,17 +838,18 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color) cons
 	} // for i
 	start_ix = 0;
 
-	for (auto i = fire_hydrant_groups.begin(); i != fire_hydrant_groups.end(); start_ix = i->ix, ++i) {
-		if (!i->contains_pt_xy(pos)) continue;
-		assert(start_ix <= i->ix && i->ix <= fire_hydrants.size());
+	if (!skip_in_road) { // fire hydrants are now placed on the edges of the road, so they're not inside plots and are skipped here
+		for (auto i = fire_hydrant_groups.begin(); i != fire_hydrant_groups.end(); start_ix = i->ix, ++i) {
+			if (!i->contains_pt_xy(pos)) continue;
+			assert(start_ix <= i->ix && i->ix <= fire_hydrants.size());
 
-		for (auto b = fire_hydrants.begin()+start_ix; b != fire_hydrants.begin()+i->ix; ++b) {
-			if (pos.x < b->bcube.x1()) break; // fire_hydrants are sorted by x1, no fire_hydrant after this can match
-			if (dist_xy_less_than(pos, b->pos, b->radius)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;} // orange/yellow color
-		}
-	} // for i
-	start_ix = 0;
-
+			for (auto b = fire_hydrants.begin()+start_ix; b != fire_hydrants.begin()+i->ix; ++b) {
+				if (pos.x < b->bcube.x1()) break; // fire_hydrants are sorted by x1, no fire_hydrant after this can match
+				if (dist_xy_less_than(pos, b->pos, b->radius)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;} // orange/yellow color
+			}
+		} // for i
+		start_ix = 0;
+	}
 	for (auto i = divider_groups.begin(); i != divider_groups.end(); start_ix = i->ix, ++i) {
 		if (!i->contains_pt_xy(pos)) continue;
 		assert(start_ix <= i->ix && i->ix <= dividers.size());

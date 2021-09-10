@@ -101,7 +101,7 @@ public:
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
-	bool get_color_at_xy(point const &pos, colorRGBA &color) const;
+	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
 };
 

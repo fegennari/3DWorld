@@ -1170,7 +1170,7 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			if (check_tile_group_contains_pt_xy(city_obj_placer.parking_lots, pos, TYPE_PARK_LOT)) {color = DK_GRAY; return INT_PARKING;}
 			if (check_tile_group_contains_pt_xy(city_obj_placer.driveways,    pos, TYPE_DRIVEWAY)) {color = LT_GRAY; return INT_PARKING;}
-			if (city_obj_placer.get_color_at_xy(pos, color)) {return INT_PLOT;} // hit a detail object, but still in a plot
+			if (city_obj_placer.get_color_at_xy(pos, color, 1)) {return INT_PLOT;} // hit a detail object, but still in a plot; skip objects in roads such as fire hydrants
 			
 			if (!plots.empty()) { // inside a city and not over a road - must be over a plot or park
 				for (auto i = parks.begin(); i != parks.end(); ++i) {
