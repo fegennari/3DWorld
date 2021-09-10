@@ -14,15 +14,16 @@ struct plot_divider_type_t {
 	string tex_name;
 	int tid;
 	float wscale, hscale; // width and height scales
-	colorRGBA color;
-	plot_divider_type_t(string const &tn, float ws, float hs, colorRGBA const &c) : tex_name(tn), tid(-1), wscale(ws), hscale(hs), color(c) {}
+	colorRGBA color, map_color;
+	plot_divider_type_t(string const &tn, float ws, float hs, colorRGBA const &c, colorRGBA const &mc) : tex_name(tn), tid(-1), wscale(ws), hscale(hs), color(c), map_color(mc) {}
+	colorRGBA get_avg_color() const {return ((tid >= 0) ? texture_color(tid) : map_color).modulate_with(color);}
 };
 enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
 
 plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
-	plot_divider_type_t("cblock2.jpg", 0.50, 2.5, WHITE),  // wall
-	plot_divider_type_t("fence.jpg",   0.15, 2.0, WHITE),  // fence
-	plot_divider_type_t("hedges.jpg",  1.00, 1.6, GRAY )}; // hedge
+	plot_divider_type_t("cblock2.jpg", 0.50, 2.5, WHITE, GRAY    ),  // wall
+	plot_divider_type_t("fence.jpg",   0.15, 2.0, WHITE, LT_BROWN),  // fence
+	plot_divider_type_t("hedges.jpg",  1.00, 1.6, GRAY,  GREEN   )}; // hedge
 
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 float get_sidewalk_width();
@@ -873,7 +874,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 			
 			if (b->bcube.contains_pt_xy(pos)) {
 				assert(b->type < DIV_NUM_TYPES);
-				color = texture_color(plot_divider_types[b->type].tid); return 1;
+				color = plot_divider_types[b->type].get_avg_color(); return 1;
 			}
 		}
 	} // for i
