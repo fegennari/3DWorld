@@ -24,7 +24,7 @@ carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
-extern bool toggle_door_open_state, camera_in_building, tt_fire_button_down, flashlight_on, player_is_hiding;
+extern bool building_action_key, camera_in_building, tt_fire_button_down, flashlight_on, player_is_hiding;
 extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode, animate2, camera_surf_collide;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
@@ -2295,7 +2295,7 @@ void building_gameplay_action_key(int mode, bool mouse_wheel) {
 		// show crosshair on first pickup because it's too difficult to pick up objects without it
 		else if (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
 		else if (mode == 2) {use_last_pickup_object = 1;} // 'E'
-		else                {toggle_door_open_state = 1;} // 'q'
+		else                {building_action_key    = 1;} // 'q'
 	}
 	else { // building exterior/city/road/car action
 		if      (mode != 0) {city_action_key = 1;} // 'e'/'E'

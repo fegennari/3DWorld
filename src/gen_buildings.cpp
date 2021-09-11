@@ -26,7 +26,7 @@ int player_in_closet(0); // uses flags RO_FLAG_IN_CLOSET (player in closet), RO_
 building_params_t global_building_params;
 building_t const *player_building(nullptr);
 
-extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, toggle_door_open_state;
+extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light, building_action_key;
 extern bool teleport_to_screenshot, enable_dlight_bcubes, player_in_elevator;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2;
@@ -2418,8 +2418,8 @@ public:
 							indir_bcs_ix = bcs_ix; indir_bix = bi->ix;
 						}
 						// run any player interaction logic here
-						if (toggle_room_light) {b.toggle_room_light(camera_xlated);}
-						if (toggle_door_open_state) {b.apply_player_action_key(camera_xlated, cview_dir);}
+						if (toggle_room_light  ) {b.toggle_room_light(camera_xlated);}
+						if (building_action_key) {b.apply_player_action_key(camera_xlated, cview_dir);}
 						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2) {b.update_player_interact_objects(camera_xlated, bi->ix, ped_ix);} // update dynamic objects if the player is in the building
@@ -2450,7 +2450,7 @@ public:
 				end_stencil_write();
 			}
 		} // end have_interior
-		if (!reflection_pass) {toggle_room_light = toggle_door_open_state = teleport_to_screenshot = 0;} // reset these even if the player wasn't in a building
+		if (!reflection_pass) {toggle_room_light = building_action_key = teleport_to_screenshot = 0;} // reset these even if the player wasn't in a building
 
 		if (draw_interior && reflection_pass != 2) { // skip for interior room reflections (but what about looking out through the bathroom door?)
 			// draw back faces of buildings, which will be interior walls
