@@ -871,6 +871,7 @@ struct building_t : public building_geom_t {
 	float get_window_vspace  () const {return get_material().get_floor_spacing();}
 	float get_floor_thickness() const {return (is_house ? FLOOR_THICK_VAL_HOUSE : FLOOR_THICK_VAL_OFFICE)*get_window_vspace();}
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
+	float get_trim_thickness () const {return 0.1*get_wall_thickness();}
 	float get_door_height    () const {return 0.95f*(get_window_vspace() - get_floor_thickness());} // set height based on window spacing, 95% of ceiling height (may be too large)
 	float get_doorway_width  () const;
 	unsigned get_person_capacity_mult() const;

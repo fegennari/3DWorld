@@ -208,7 +208,7 @@ void building_t::add_trashcan_to_room(rand_gen_t rgen, room_t const &room, float
 // Note: no blockers, but does check existing objects
 bool building_t::add_bookcase_to_room(rand_gen_t &rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement) {
 	cube_t room_bounds(get_walkable_room_bounds(room));
-	room_bounds.expand_by_xy(-0.1*get_wall_thickness());
+	room_bounds.expand_by_xy(-get_trim_thickness());
 	float const vspace(get_window_vspace());
 	if (min(room_bounds.dx(), room_bounds.dy()) < 1.0*vspace) return 0; // room is too small
 	rand_gen_t rgen2;
@@ -524,9 +524,9 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 	if (!add_bed_to_room(rgen, room, blockers, zval, room_id, tot_light_amt, floor)) return 0; // it's only a bedroom if there's bed
 	assert(bed_obj_ix < objs.size());
 	room_object_t const bed(objs[bed_obj_ix]); // deep copy so that we don't need to worry about invalidating the reference below
-	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const window_vspacing(get_window_vspace());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
-	place_area.expand_by(-0.1*wall_thickness); // shrink to leave a small gap
+	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
 	// closet
 	float const doorway_width(get_doorway_width()), floor_thickness(get_floor_thickness()), front_clearance(max(0.6f*doorway_width, get_min_front_clearance()));
 	float const closet_min_depth(0.65*doorway_width), closet_min_width(1.5*doorway_width), min_dist_to_wall(1.0*doorway_width), min_bed_space(front_clearance);
@@ -969,7 +969,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 	}
 	if (is_house) { // place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
 		cube_t place_area_tub(room_bounds);
-		place_area_tub.expand_by(-0.1*wall_thickness); // just enough to prevent z-fighting
+		place_area_tub.expand_by(-get_trim_thickness()); // just enough to prevent z-fighting and intersecting the wall trim
 		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, 0.2, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4);
 	}
 	if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
@@ -1375,7 +1375,7 @@ void building_t::add_diningroom_objs(rand_gen_t rgen, room_t const &room, float 
 	//if (!is_house || room.is_hallway || room.is_sec_bldg || room.is_office) return; // still applies, but unnecessary
 	if ((rgen.rand()&3) == 0) return; // no additional objects 25% of the time
 	cube_t room_bounds(get_walkable_room_bounds(room));
-	room_bounds.expand_by_xy(-0.1*get_wall_thickness());
+	room_bounds.expand_by_xy(-get_trim_thickness());
 	float const vspace(get_window_vspace()), clearance(max(0.2f*vspace, get_min_front_clearance()));
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	// add a wine rack
@@ -1823,7 +1823,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 				}
 				cube_t c(center, center);
 				c.expand_in_dim(2, 0.5*height);
-				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness;
+				c.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.1*wall_thickness; // move out to prevent z-fighting
 				if (room.is_hallway) {c.translate_dim(dim, (dir ? -1.0 : 1.0)*0.5*wall_thickness);} // add an additional half wall thickness for hallways
 				c.expand_in_dim(!dim, 0.5*width);
 				int const ret(check_valid_picture_placement(room, c, width, zval, dim, dir, objs_start));
@@ -1843,7 +1843,7 @@ bool building_t::hang_pictures_in_room(rand_gen_t rgen, room_t const &room, floa
 void building_t::add_plants_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned num) {
 	float const window_vspacing(get_window_vspace());
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-0.1*get_wall_thickness()); // shrink to leave a small gap
+	place_area.expand_by(-get_trim_thickness()); // shrink to leave a small gap
 	zval += 0.01*get_floor_thickness(); // move up slightly to avoid z-fithing of bottom when the dirt is taken
 	
 	for (unsigned n = 0; n < num; ++n) {
@@ -2448,7 +2448,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 
 	//highres_timer_t timer("Add Wall And Door Trim");
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
-	float const trim_height(0.04*window_vspacing), trim_thickness(0.1*wall_thickness), expand_val(2.0*trim_thickness);
+	float const trim_height(0.04*window_vspacing), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness), floor_to_ceil_height(window_vspacing - floor_thickness);
 	float const trim_toler(0.1*trim_thickness); // required to handle wall intersections that were calculated with FP math and may misalign due to FP rounding error
 	unsigned const flags(RO_FLAG_NOCOLL);
@@ -2612,7 +2612,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	float const border_mult(0.94); // account for the frame part of the window texture, which is included in the interior cutout of the window
 	float const window_h_border(border_mult*get_window_h_border()), window_v_border(border_mult*get_window_v_border()); // (0, 1) range
 	// Note: depth must be small to avoid object intersections; this applies to the windowsill as well
-	float const window_trim_width(0.75*wall_thickness), window_trim_depth(0.1*wall_thickness), windowsill_depth(0.1*wall_thickness);
+	float const window_trim_width(0.75*wall_thickness), window_trim_depth(1.0*trim_thickness), windowsill_depth(1.0*trim_thickness);
 	float const window_offset(0.01*window_vspacing); // must match building_draw_t::add_section()
 	static vect_vnctcc_t wall_quad_verts;
 	wall_quad_verts.clear();
@@ -2734,7 +2734,7 @@ void building_t::add_bathroom_window(cube_t const &window, bool dim, bool dir, u
 	if (count_ext_walls_for_room(room, window.z1()) != 1) return; // it looks odd to have window block walls at the corner of a building, so only enable this for single exterior walls
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	cube_t c(window);
-	c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*get_wall_thickness());
+	c.translate_dim(dim, (dir ? 1.0 : -1.0)*get_trim_thickness());
 	unsigned const flags(RO_FLAG_NOCOLL | (room.is_lit_on_floor(floor) ? RO_FLAG_LIT : 0));
 	objs.emplace_back(c, TYPE_WINDOW, room_id, dim, dir, flags, 1.0, SHAPE_CUBE, WHITE); // always lit
 }
