@@ -632,8 +632,6 @@ struct building_room_geom_t {
 	int find_avail_obj_slot() const;
 	void add_expanded_object(room_object_t const &obj);
 	bool add_room_object(room_object_t const &obj, building_t &building, bool set_obj_id=0, vector3d const &velocity=zero_vector);
-	bool move_nearest_object(building_t &building, point const &at_pos, vector3d const &in_dir, float range);
-	bool move_room_object(room_object_t &obj, building_t &building, vector3d const &move_vector);
 	void update_dynamic_draw_data() {mats_dynamic.clear();}
 	void create_static_vbos(building_t const &building);
 	void create_small_static_vbos(building_t const &building);
@@ -950,6 +948,7 @@ struct building_t : public building_geom_t {
 	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1);
 	void toggle_light_object(room_object_t const &light, point const &sound_pos);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in);
+	bool move_nearest_object(point const &at_pos, vector3d const &in_dir, float range);
 	bool interact_with_object(unsigned obj_ix, point const &int_pos, vector3d const &int_dir);
 	bool adjust_blinds_state(unsigned obj_ix);
 	void add_box_contents(room_object_t const &box);
@@ -995,7 +994,7 @@ struct building_t : public building_geom_t {
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
 	void update_player_interact_objects(point const &player_pos, unsigned building_ix, int first_ped_ix);
 	bool line_intersect_walls(point const &p1, point const &p2) const;
-	bool is_obj_pos_valid(cube_t const &obj) const;
+	bool is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
 	bool is_cube_face_visible_from_pt(cube_t const &c, point const &p, unsigned dim, bool dir) const;
 	bool check_obj_occluded(cube_t const &c, point const &viewer, occlusion_checker_noncity_t &oc, bool reflection_pass, bool c_is_building_part=0) const;

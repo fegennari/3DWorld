@@ -19,7 +19,6 @@ float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_in_elevator(0), city_action_key(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
-point last_camera_move_pos(all_zeros);
 carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
@@ -314,6 +313,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			float const drawer_dist(found_item ? sqrt(closest_dist_sq) : 2.5*CAMERA_RADIUS);
 			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist, 0)) return 0; // drawer is closer - open or close it
 		}
+		if (!found_item && !player_in_closet) {move_nearest_object(closest_to, in_dir, 3.0*CAMERA_RADIUS);} // try to move an object instead
 		if (!found_item) return 0; // no door or object found
 	}
 	if (is_obj) { // interactive object
@@ -893,7 +893,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_BOOK      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 10.0,  1.0,   "book");
 	bldg_obj_types[TYPE_BCASE     ] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 150.0, 100.0, "bookcase"); // Note: can't pick up until bookcase can be expanded and books taken off
 	bldg_obj_types[TYPE_TCAN      ] = bldg_obj_type_t(0, 1, 1, 0, 0, 2, 12.0,  2.0,   "trashcan"); // skip player collisions because they can be in the way and block the path in some rooms
-	bldg_obj_types[TYPE_DESK      ] = bldg_obj_type_t(1, 1, 0, 0, 0, 1, 100.0, 80.0,  "desk");
+	bldg_obj_types[TYPE_DESK      ] = bldg_obj_type_t(1, 1, 0, 0, 0, 3, 100.0, 80.0,  "desk"); // drawers are small items
 	bldg_obj_types[TYPE_BED       ] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 300.0, 200.0, "bed"); // pillows are small, and the rest is large
 	bldg_obj_types[TYPE_WINDOW    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "window");
 	bldg_obj_types[TYPE_BLOCKER   ] = bldg_obj_type_t(0, 0, 0, 0, 0, 0, 0.0,   0.0,   "<blocker>");  // not a drawn object; block other objects, but not the player or AI
@@ -1439,11 +1439,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	int const obj_id(find_nearest_pickup_object(building, at_pos_rot, in_dir_rot, range, obj_dist));
 	if (obj_id >= 0) {min_eq(drawer_range, obj_dist);} // only include drawers that are closer than the pickup object
 	if (open_nearest_drawer(building, at_pos_rot, in_dir_rot, drawer_range_max, 1)) return 1; // try objects in drawers; pickup_item=1
-	
-	if (obj_id < 0) { // no object to pick up
-		if (do_room_obj_pickup) {move_nearest_object(building, at_pos_rot, in_dir_rot, range);} // try to move an object instead
-		return 0;
-	}
+	if (obj_id < 0) return 0; // no object to pick up
 	room_object_t &obj(get_room_object_by_index(obj_id));
 
 	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !(obj.flags & RO_FLAG_EXPANDED))) { // shelves or unexpanded wine rack
@@ -1484,7 +1480,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 }
 
 void building_t::register_player_enter_building() const {
-	last_camera_move_pos = all_zeros;
+	// nothing to do yet
 }
 void building_t::register_player_exit_building() const {
 	// only collect items in gameplay mode where there's a risk the player can lose them; otherwise, let the player carry items between buildings
@@ -1792,20 +1788,24 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	return 1;
 }
 
-bool is_movable(unsigned type) {
-	assert(type < NUM_ROBJ_TYPES);
-	bldg_obj_type_t const &bot(bldg_obj_types[type]);
-	return (bot.weight > 80.0 && !bot.attached); // heavy non-attached objects
+bool is_movable(room_object_t const &obj) {
+	if (obj.no_coll() || obj.type == TYPE_BLOCKER) return 0; // no blockers
+	assert(obj.type < NUM_ROBJ_TYPES);
+	bldg_obj_type_t const &bot(bldg_obj_types[obj.type]);
+	return (bot.weight >= 40.0 && !bot.attached); // heavy non-attached objects, including tables
 }
-bool building_room_geom_t::move_nearest_object(building_t &building, point const &at_pos, vector3d const &in_dir, float range) {
-	if (last_camera_move_pos == all_zeros) {last_camera_move_pos = at_pos; return 0;} // first move in this building
+bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir, float range) {
+	assert(has_room_geom());
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
-	auto objs_end(get_stairs_start()); // skip stairs and elevators
+	vector<room_object_t> &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
+	auto objs_end(interior->room_geom->get_stairs_start()); // skip stairs and elevators
 
+	// determine which object the player may be choosing to move
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!is_movable(i->type)) continue; // not movable; TODO: should this check be done later, after setting closest_obj_id?
+		if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // not interactive
+		//if (!is_movable(*i)) continue; // not movable; should this check be done later, after setting closest_obj_id?
 		cube_t const obj_bcube(get_true_obj_bcube(*i));
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
@@ -1814,49 +1814,74 @@ bool building_room_geom_t::move_nearest_object(building_t &building, point const
 		if (obj_has_open_drawers(*i))             continue; // can't move if any drawers are open
 		if (object_has_something_on_it(*i, objs,          objs_end           )) continue; // can't move a table, etc. that has something on it
 		if (object_has_something_on_it(*i, expanded_objs, expanded_objs.end())) continue; // check the other one as well
-		if (building.check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // skip if it's on the other side of a wall, ceiling, or floor
+		if (check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // skip if it's on the other side of a wall, ceiling, or floor
 		closest_obj_id = (i - objs.begin()); // valid pickup object
 		dmin_sq = dsq; // this object is the closest
 	} // for i
-	vector3d move_vector(at_pos - last_camera_move_pos); // delta since the last call to this function
-	move_vector.z = 0.0; // no vertical movement, for now
-	last_camera_move_pos = at_pos;
+	cout << TXT(closest_obj_id) << TXT(dmin_sq) << endl;
 	if (closest_obj_id < 0) return 0;
-	return move_room_object(get_room_object_by_index(closest_obj_id), building, move_vector);
-}
-bool building_room_geom_t::move_room_object(room_object_t &obj, building_t &building, vector3d const &move_vector) {
-	if (move_vector == zero_vector) return 0;
-	if (!is_movable(obj.type)) return 0;
-	room_object_t moved_obj(obj);
-	moved_obj += move_vector; // only the position changes
-	if (!building.is_obj_pos_valid(moved_obj)) return 0;
-	auto objs_end(get_stairs_start()); // skip stairs and elevators
 
-	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->intersects(obj)) continue; // assume that if the current object intersects something, it's okay to continue intersecting it; that includes obj itself
-		// TODO: check for other object intersection
-	} // for i
-	obj = moved_obj;
-	update_draw_state_for_room_object(obj, building);
-	return 1; // success
+	// determine move direction and distance
+	room_object_t &obj(objs[closest_obj_id]);
+	if (!is_movable(obj))        {cout << "not movable"   << endl; return 0;} // closest object isn't movable
+	if (obj.contains_pt(at_pos)) {cout << "player inside" << endl; return 0;} // player is inside this object?
+	float const move_dist(rand_uniform(0.5, 1.0)*CAMERA_RADIUS*(100.0f/max(75.0f, bldg_obj_types[obj.type].weight))); // heavier objects move less; add some global randomness
+	vector3d delta(obj.closest_pt(at_pos) - at_pos);
+	delta.z = 0.0; // XY only
+	delta.normalize();
+
+	// attempt to move the object
+	for (unsigned mdir = 0; mdir < 3; ++mdir) { // X+Y, closer dim, further dim
+		vector3d move_vector(zero_vector);
+		if (mdir == 0) {move_vector = delta*move_dist;} // move diag in XY
+		else { // move in one dim
+			if (delta.x == 0.0 || delta.y == 0.0) break; // no more dims to try (only one mdir iteration)
+			bool const dim(fabs(delta.x) < fabs(delta.y));
+			move_vector[dim] = delta[dim]*move_dist;
+		}
+		for (unsigned n = 0; n < 5; ++n, move_vector *= 0.5) { // move in several incrementally smaller steps
+			cout << TXT(mdir) << TXT(n) << TXT(move_vector.str()) << endl;
+			room_object_t moved_obj(obj);
+			moved_obj += move_vector; // only the position changes
+			if (!is_obj_pos_valid(moved_obj, 1)) {cout << "bad pos" << endl; continue;} // try a smaller movement; keep_in_room=1
+			bool bad_placement(0);
+
+			for (auto i = objs.begin(); i != objs_end; ++i) { // do we need to check expanded_objs?
+				if (i == objs.begin() + closest_obj_id)      continue; // skip self
+				if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // skip non-colliding objects and blockers that add clearance between objects as these won't block this object
+				//if (i->intersects(obj)) continue; // assume that if the current object intersects something, it's okay to continue intersecting it -- doesn't work for chairs
+				if (i->intersects(moved_obj)) {bad_placement = 1; break;}
+			}
+			if (bad_placement) {cout << "intersects obj" << endl; continue;} // intersects another object, try a smaller movement
+			obj = moved_obj; // keep this placement
+			interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
+			gen_sound_thread_safe_at_player(SOUND_SLIDING);
+			register_building_sound_at_player(0.7);
+			cout << "success!" << endl;
+			return 1; // success
+		} // for n
+	} // for mdir
+	return 0; // failed
 }
 
-bool building_t::is_obj_pos_valid(cube_t const &obj) const {
+bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) const {
 	assert(interior);
+	room_t const &room(get_room(obj.room_id));
+	if (keep_in_room && !room.contains_cube(obj)) {cout << "outside room " << TXT(obj.str()) << TXT(room.str()) << endl; return 0;} // outside the room
 	bool contained_in_part(0);
 
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 		if (p->contains_cube(obj)) {contained_in_part = 1; break;}
 	}
-	if (!contained_in_part) return 0;
+	if (!contained_in_part) {cout << "outside part" << endl; return 0;}
 
 	for (unsigned d = 0; d < 2; ++d) { // check for wall intersection
-		if (has_bcube_int_no_adj(obj, interior->walls[d])) return 0;
+		if (has_bcube_int_no_adj(obj, interior->walls[d])) {cout << "wall intersect" << endl; return 0;}
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-		if (is_cube_close_to_door(obj, 0.0, (i->open /*&& door_opens_inward(*i, room)*/), *i, (i->dim ^ i->open_dir ^ i->hinge_side ^ 1))) return 0;
+		if (is_cube_close_to_door(obj, 0.0, (i->open && door_opens_inward(*i, room)), *i, (i->dim ^ i->open_dir ^ i->hinge_side ^ 1))) {cout << "door intersect" << endl; return 0;}
 	}
-	if (has_bcube_int(obj, interior->stairwells) || has_bcube_int(obj, interior->elevators)) return 0;
+	if (has_bcube_int(obj, interior->stairwells) || has_bcube_int(obj, interior->elevators)) {cout << "stair/elevator intersect" << endl; return 0;}
 	return 1;
 }
 
