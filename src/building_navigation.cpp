@@ -1145,7 +1145,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 				door.expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness to a nonzero value
 				if (!door.line_intersects(person.pos, person.target_pos)) continue; // check if our path goes through the door, to allow for "glancing blows" when pushed or turning
 
-				if (global_building_params.ai_opens_doors && (!i->is_closed_and_locked() || person.has_key)) { // can open the door
+				if (global_building_params.ai_opens_doors && !i->is_locked_or_blocked(person.has_key)) { // can open the door
 					toggle_door_state((i - interior->doors.begin()), player_in_this_building, 0, person.pos.z); // by_player=0
 				}
 				else { // can't open the door

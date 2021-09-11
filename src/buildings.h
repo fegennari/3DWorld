@@ -736,10 +736,11 @@ struct door_stack_t : public cube_t {
 		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_strictly_normalized());}
 };
 struct door_t : public door_stack_t {
-	bool open, locked;
-	door_t() : open(0), locked(0) {}
-	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_stack_t(c, dim_, dir, os, hs), open(open_), locked(0) {}
+	bool open, locked, blocked;
+	door_t() : open(0), locked(0), blocked(0) {}
+	door_t(cube_t const &c, bool dim_, bool dir, bool open_=1, bool os=0, bool hs=0) : door_stack_t(c, dim_, dir, os, hs), open(open_), locked(0), blocked(0) {}
 	bool is_closed_and_locked() const {return (!open && locked);}
+	bool is_locked_or_blocked(bool have_key) const {return (blocked || (is_closed_and_locked() && !have_key));}
 };
 typedef vector<door_stack_t> vect_door_stack_t;
 typedef vector<door_t> vect_door_t;
@@ -1233,7 +1234,7 @@ cube_t get_elevator_car_panel(room_object_t const &c);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_stack_t const &door, cube_t const &room);
-bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs);
+bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs, bool allow_block_door=0);
 void add_building_interior_lights(point const &xlate, cube_t &lights_bcube);
 unsigned calc_num_floors(cube_t const &c, float window_vspacing, float floor_thickness);
 void set_wall_width(cube_t &wall, float pos, float half_thick, unsigned dim);

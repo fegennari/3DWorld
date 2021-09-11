@@ -321,7 +321,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	}
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
-		if (door.is_closed_and_locked() && !player_can_unlock_door()) return 0; // locked
+		if (door.is_locked_or_blocked(player_can_unlock_door())) return 0; // locked/blocked
 		if (door.locked && !player_has_room_key()) {door.locked = 0;} // don't lock door when closing, to prevent the player from locking themselves in a room
 		toggle_door_state(door_ix, 1, 1, closest_to.z); // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
 		//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
@@ -1788,6 +1788,13 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	return 1;
 }
 
+// TODO:
+// * Pull mode
+// * Block doors from opening
+//   * Including closets
+//   * Make AI path finding work
+// * Move objects on top of this object the same amount
+// * Prevent drawers and cabinet doors from opening when blocked
 bool is_movable(room_object_t const &obj) {
 	if (obj.no_coll() || obj.type == TYPE_BLOCKER) return 0; // no blockers
 	assert(obj.type < NUM_ROBJ_TYPES);
@@ -1805,7 +1812,6 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	// determine which object the player may be choosing to move
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // not interactive
-		//if (!is_movable(*i)) continue; // not movable; should this check be done later, after setting closest_obj_id?
 		cube_t const obj_bcube(get_true_obj_bcube(*i));
 		point p1c(at_pos), p2c(p2);
 		if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
@@ -1828,6 +1834,8 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	vector3d delta(obj.closest_pt(at_pos) - at_pos);
 	delta.z = 0.0; // XY only
 	delta.normalize();
+	cube_t player_bcube;
+	player_bcube.set_from_sphere(at_pos, get_scaled_player_radius());
 
 	// attempt to move the object
 	for (unsigned mdir = 0; mdir < 3; ++mdir) { // X+Y, closer dim, further dim
@@ -1841,13 +1849,13 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 		for (unsigned n = 0; n < 5; ++n, move_vector *= 0.5) { // move in several incrementally smaller steps
 			room_object_t moved_obj(obj);
 			moved_obj += move_vector; // only the position changes
-			if (!is_obj_pos_valid(moved_obj, 1)) continue; // try a smaller movement; keep_in_room=1
+			if (player_bcube.intersects(moved_obj)) continue; // don't intersect the player - applies to pull mode
+			if (!is_obj_pos_valid(moved_obj, 1))    continue; // try a smaller movement; keep_in_room=1
 			bool bad_placement(0);
 
 			for (auto i = objs.begin(); i != objs_end; ++i) { // do we need to check expanded_objs?
 				if (i == objs.begin() + closest_obj_id)      continue; // skip self
 				if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // skip non-colliding objects and blockers that add clearance between objects as these won't block this object
-				//if (i->intersects(obj)) continue; // assume that if the current object intersects something, it's okay to continue intersecting it -- doesn't work for chairs
 				if (i->intersects(moved_obj)) {bad_placement = 1; break;}
 			}
 			if (bad_placement) continue; // intersects another object, try a smaller movement
@@ -1855,6 +1863,8 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 			gen_sound_thread_safe_at_player(SOUND_SLIDING);
 			register_building_sound_at_player(0.7);
+			// TODO: move objects on top of this one
+			// TODO: mark doors as blocked
 			return 1; // success
 		} // for n
 	} // for mdir
@@ -1864,7 +1874,13 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) const {
 	assert(interior);
 	room_t const &room(get_room(obj.room_id));
-	if (keep_in_room && !room.contains_cube(obj)) return 0; // outside the room
+	float const trim_thickness(get_trim_thickness());
+	
+	if (keep_in_room) {
+		cube_t place_area(room);
+		place_area.expand_by_xy(-0.99*trim_thickness); // shrink to exclude wall trim
+		if (!place_area.contains_cube(obj)) return 0; // outside the room
+	}
 	bool contained_in_part(0);
 
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
@@ -1876,7 +1892,9 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) c
 		if (has_bcube_int_no_adj(obj, interior->walls[d])) return 0;
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-		if (is_cube_close_to_door(obj, 0.0, (i->open && door_opens_inward(*i, room)), *i, (i->dim ^ i->open_dir ^ i->hinge_side ^ 1))) return 0;
+		bool const inc_open(i->open && door_opens_inward(*i, room)), check_dirs(i->dim ^ i->open_dir ^ i->hinge_side ^ 1);
+		float const dmin(i->open ? 0.0 : trim_thickness); // use default door width when open and only the trim thickness when closed
+		if (is_cube_close_to_door(obj, dmin, inc_open, *i, check_dirs, !i->open)) return 0; // allow door to be blocked if closed
 	}
 	if (has_bcube_int(obj, interior->stairwells) || has_bcube_int(obj, interior->elevators)) return 0;
 	return 1;
