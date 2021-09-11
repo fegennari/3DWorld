@@ -789,9 +789,10 @@ void toggle_camera_mode() {
 }
 
 
-// This function is called whenever there is a keyboard input
-// key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127)
-// x and y are the location of the mouse, which generally aren't used but are part of the callback function
+// This function is called whenever there is a keyboard input;
+// key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127);
+// x and y are the location of the mouse, which generally aren't used but are part of the callback function;
+// key repeat is only enabled for movement keys wasd
 void keyboard_proc(unsigned char key, int x, int y) {
 
     switch (key) { // available: O,. somtimes Z
@@ -1386,7 +1387,7 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 
 void init_keyset() {
 
-	string keyvals = "wsad "; // movement
+	string keyvals = "wsad "; // movement; these keys repeat each frame
 	for (unsigned i = 0; i < keyvals.size(); ++i) {keyset.insert(keyvals[i]);}
 }
 
