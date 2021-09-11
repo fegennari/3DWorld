@@ -437,7 +437,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, vec
 		update_draw_data = 1;
 	}
 	else {assert(0);} // unhandled type
-	if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this);}
+	if (update_draw_data) {interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);}
 	if (sound_scale > 0.0) {register_building_sound(sound_origin, sound_scale);}
 	if (obj.type == TYPE_BOX) {add_box_contents(obj);} // must be done last to avoid reference invalidation
 	return 1;
@@ -640,7 +640,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 								point const sound_origin(obj.xc(), obj.yc(), center.z); // generate sound from the player height
 								gen_sound_thread_safe(SOUND_GLASS, local_to_camera_space(sound_origin), 0.7);
 								register_building_sound(sound_origin, 0.7);
-								interior->room_geom->update_draw_state_for_room_object(obj, *this);
+								interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 								handled = 1;
 							}
 						}
@@ -1475,7 +1475,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 		if (!register_player_object_pickup(book, at_pos)) return 0;
 		obj.set_combined_flags(obj.get_combined_flags() | (1<<(book.item_flags&31))); // set flag bit to remove this book from the bookcase
 		player_inventory.add_item(book);
-		update_draw_state_for_room_object(book, building);
+		update_draw_state_for_room_object(book, building, 1);
 		return 1;
 	}
 	if (!register_player_object_pickup(obj, at_pos)) return 0;
@@ -1581,9 +1581,9 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				for (unsigned n = 0; n < 3 && !intersects; ++n) {intersects |= cubes[n].line_intersects(p1c, p2c);}
 				if (!intersects) continue;
 			}
-			if (i->type == TYPE_MIRROR && !i->is_house())                 continue; // can only pick up mirrors from houses, not office buildings
-			if (i->type == TYPE_TABLE && i->shape == SHAPE_CUBE)          continue; // can only pick up short (TV) tables and cylindrical tables
-			if (i->type == TYPE_BED   && (i->flags & RO_FLAG_TAKEN3))     continue; // can only take pillow, sheets, and mattress - not the frame
+			if (i->type == TYPE_MIRROR  && !i->is_house())                continue; // can only pick up mirrors from houses, not office buildings
+			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE)        continue; // can only pick up short (TV) tables and cylindrical tables
+			if (i->type == TYPE_BED     && (i->flags & RO_FLAG_TAKEN3))   continue; // can only take pillow, sheets, and mattress - not the frame
 			if (i->type == TYPE_SHELVES && (i->flags & RO_FLAG_EXPANDED)) continue; // shelves are already expanded, can no longer select this object
 			if (obj_has_open_drawers(*i))                                 continue; // can't take if any drawers are open
 			if (object_has_something_on_it(*i,       obj_vect, objs_end)) continue; // can't remove a table, etc. that has something on it
@@ -1659,7 +1659,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		if (!register_player_object_pickup(item, at_pos)) return 0;
 		obj.item_flags |= (1U << closest_obj_id); // flag item as taken
 		player_inventory.add_item(item);
-		update_draw_state_for_room_object(item, building);
+		update_draw_state_for_room_object(item, building, 1);
 	}
 	else { // open or close the drawer/door
 		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
@@ -1691,7 +1691,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 			} // for i
 			// Note: expanding cabinets by opening a single door will allow the player to take items from anywhere in the cabinet, even if behind a closed door
 			expand_object(obj);
-			update_draw_state_for_room_object(obj, building);
+			update_draw_state_for_room_object(obj, building, 0);
 		}
 		else {
 			create_small_static_vbos(building); // only need to update small objects for drawers
@@ -1740,14 +1740,17 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 		obj.flags = (RO_FLAG_NOCOLL | RO_FLAG_INVIS);
 	}
 	if (is_light) {clear_and_recreate_lights();}
-	update_draw_state_for_room_object(old_obj, building);
+	update_draw_state_for_room_object(old_obj, building, 1);
 }
-void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building) { // Note: called when adding or removing objects
+
+// Note: called when adding, removing, or moving objects
+void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {
 	// reuild necessary VBOs and other data structures
 	if (obj.is_dynamic()) {mats_dynamic.clear();} // dynamic object
 	else if (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV)) {update_dynamic_draw_data();} // interior elevator buttons are drawn as dynamic objects
 	else { // static object
-		bldg_obj_type_t const type(get_taken_obj_type(obj));
+		assert(obj.type < NUM_ROBJ_TYPES);
+		bldg_obj_type_t const type(was_taken ? get_taken_obj_type(obj) : bldg_obj_types[obj.type]);
 		if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
 		if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
 		if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
@@ -1785,7 +1788,7 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 		if (set_obj_id) {added_obj.obj_id = (uint16_t)(obj.has_dstate() ? allocate_dynamic_state() : obj_id);}
 		if (velocity != zero_vector) {get_dstate(added_obj).velocity = velocity;}
 	}
-	update_draw_state_for_room_object(obj, building);
+	update_draw_state_for_room_object(obj, building, 0);
 	return 1;
 }
 

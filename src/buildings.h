@@ -627,7 +627,7 @@ struct building_room_geom_t {
 	bool open_nearest_drawer(building_t &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item);
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
-	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building);
+	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken);
 	room_object_t &get_room_object_by_index(unsigned obj_id);
 	int find_avail_obj_slot() const;
 	void add_expanded_object(room_object_t const &obj);
@@ -1268,4 +1268,5 @@ bool car_can_fit(cube_t const &c);
 void draw_cars_in_garages(vector3d const &xlate, bool shadow_only);
 void create_mirror_reflection_if_needed();
 void draw_city_roads(int trans_op_mask, vector3d const &xlate);
+void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
 
