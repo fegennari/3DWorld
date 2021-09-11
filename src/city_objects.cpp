@@ -11,19 +11,23 @@ extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 
 struct plot_divider_type_t {
-	string tex_name;
+	bool is_occluder;
 	int tid;
 	float wscale, hscale; // width and height scales
 	colorRGBA color, map_color;
-	plot_divider_type_t(string const &tn, float ws, float hs, colorRGBA const &c, colorRGBA const &mc) : tex_name(tn), tid(-1), wscale(ws), hscale(hs), color(c), map_color(mc) {}
+	string tex_name;
+
+	plot_divider_type_t(string const &tn, float ws, float hs, bool ic, colorRGBA const &c, colorRGBA const &mc) :
+		is_occluder(ic), tid(-1), wscale(ws), hscale(hs), color(c), map_color(mc), tex_name(tn) {}
 	colorRGBA get_avg_color() const {return ((tid >= 0) ? texture_color(tid) : map_color).modulate_with(color);}
 };
 enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
 
 plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
-	plot_divider_type_t("cblock2.jpg", 0.50, 2.5, WHITE, GRAY    ),  // wall
-	plot_divider_type_t("fence.jpg",   0.15, 2.0, WHITE, LT_BROWN),  // fence
-	plot_divider_type_t("hedges.jpg",  1.00, 1.6, GRAY,  GREEN   )}; // hedge
+	plot_divider_type_t("cblock2.jpg", 0.50, 2.5, 1, WHITE, GRAY    ), // wall
+	plot_divider_type_t("fence.jpg",   0.15, 2.0, 1, WHITE, LT_BROWN), // fence
+	plot_divider_type_t("hedges.jpg",  1.00, 1.6, 0, GRAY,  GREEN   )  // hedge - too short to be an occluder
+};
 
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 float get_sidewalk_width();
@@ -904,9 +908,11 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vect_cube_t &occlud
 		if (!dist_less_than(pdu.pos, i->closest_pt(pdu.pos), dmax) || !pdu.cube_visible(*i)) continue;
 		assert(start_ix <= i->ix && i->ix <= dividers.size());
 
-		for (auto b = dividers.begin()+start_ix; b != dividers.begin()+i->ix; ++b) {
-			if (b->bcube.z1() > pdu.pos.z || b->bcube.z2() < pdu.pos.z) continue; // z-range does not include the camera
-			if (dist_less_than(pdu.pos, b->bcube.closest_pt(pdu.pos), dmax) && pdu.cube_visible(b->bcube)) {occluders.push_back(b->bcube);}
+		for (auto d = dividers.begin()+start_ix; d != dividers.begin()+i->ix; ++d) {
+			assert(d->type < DIV_NUM_TYPES);
+			if (!plot_divider_types[d->type].is_occluder) continue; // skip
+			if (d->bcube.z1() > pdu.pos.z || d->bcube.z2() < pdu.pos.z) continue; // z-range does not include the camera
+			if (dist_less_than(pdu.pos, d->bcube.closest_pt(pdu.pos), dmax) && pdu.cube_visible(d->bcube)) {occluders.push_back(d->bcube);}
 		}
 	} // for i
 }
