@@ -1818,13 +1818,12 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 		closest_obj_id = (i - objs.begin()); // valid pickup object
 		dmin_sq = dsq; // this object is the closest
 	} // for i
-	cout << TXT(closest_obj_id) << TXT(dmin_sq) << endl;
 	if (closest_obj_id < 0) return 0;
 
 	// determine move direction and distance
 	room_object_t &obj(objs[closest_obj_id]);
-	if (!is_movable(obj))        {cout << "not movable"   << endl; return 0;} // closest object isn't movable
-	if (obj.contains_pt(at_pos)) {cout << "player inside" << endl; return 0;} // player is inside this object?
+	if (!is_movable(obj))        return 0; // closest object isn't movable
+	if (obj.contains_pt(at_pos)) return 0; // player is inside this object?
 	float const move_dist(rand_uniform(0.5, 1.0)*CAMERA_RADIUS*(100.0f/max(75.0f, bldg_obj_types[obj.type].weight))); // heavier objects move less; add some global randomness
 	vector3d delta(obj.closest_pt(at_pos) - at_pos);
 	delta.z = 0.0; // XY only
@@ -1840,10 +1839,9 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			move_vector[dim] = delta[dim]*move_dist;
 		}
 		for (unsigned n = 0; n < 5; ++n, move_vector *= 0.5) { // move in several incrementally smaller steps
-			cout << TXT(mdir) << TXT(n) << TXT(move_vector.str()) << endl;
 			room_object_t moved_obj(obj);
 			moved_obj += move_vector; // only the position changes
-			if (!is_obj_pos_valid(moved_obj, 1)) {cout << "bad pos" << endl; continue;} // try a smaller movement; keep_in_room=1
+			if (!is_obj_pos_valid(moved_obj, 1)) continue; // try a smaller movement; keep_in_room=1
 			bool bad_placement(0);
 
 			for (auto i = objs.begin(); i != objs_end; ++i) { // do we need to check expanded_objs?
@@ -1852,12 +1850,11 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 				//if (i->intersects(obj)) continue; // assume that if the current object intersects something, it's okay to continue intersecting it -- doesn't work for chairs
 				if (i->intersects(moved_obj)) {bad_placement = 1; break;}
 			}
-			if (bad_placement) {cout << "intersects obj" << endl; continue;} // intersects another object, try a smaller movement
+			if (bad_placement) continue; // intersects another object, try a smaller movement
 			obj = moved_obj; // keep this placement
 			interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
 			gen_sound_thread_safe_at_player(SOUND_SLIDING);
 			register_building_sound_at_player(0.7);
-			cout << "success!" << endl;
 			return 1; // success
 		} // for n
 	} // for mdir
@@ -1867,21 +1864,21 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) const {
 	assert(interior);
 	room_t const &room(get_room(obj.room_id));
-	if (keep_in_room && !room.contains_cube(obj)) {cout << "outside room " << TXT(obj.str()) << TXT(room.str()) << endl; return 0;} // outside the room
+	if (keep_in_room && !room.contains_cube(obj)) return 0; // outside the room
 	bool contained_in_part(0);
 
 	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
 		if (p->contains_cube(obj)) {contained_in_part = 1; break;}
 	}
-	if (!contained_in_part) {cout << "outside part" << endl; return 0;}
+	if (!contained_in_part) return 0;
 
 	for (unsigned d = 0; d < 2; ++d) { // check for wall intersection
-		if (has_bcube_int_no_adj(obj, interior->walls[d])) {cout << "wall intersect" << endl; return 0;}
+		if (has_bcube_int_no_adj(obj, interior->walls[d])) return 0;
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-		if (is_cube_close_to_door(obj, 0.0, (i->open && door_opens_inward(*i, room)), *i, (i->dim ^ i->open_dir ^ i->hinge_side ^ 1))) {cout << "door intersect" << endl; return 0;}
+		if (is_cube_close_to_door(obj, 0.0, (i->open && door_opens_inward(*i, room)), *i, (i->dim ^ i->open_dir ^ i->hinge_side ^ 1))) return 0;
 	}
-	if (has_bcube_int(obj, interior->stairwells) || has_bcube_int(obj, interior->elevators)) {cout << "stair/elevator intersect" << endl; return 0;}
+	if (has_bcube_int(obj, interior->stairwells) || has_bcube_int(obj, interior->elevators)) return 0;
 	return 1;
 }
 
