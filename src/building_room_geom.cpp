@@ -1701,6 +1701,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 	cube_t const &frame(cubes[0]), &head(cubes[1]), &foot(cubes[2]), &mattress(cubes[3]), &pillow(cubes[4]), &legs_bcube(cubes[5]);
 	colorRGBA const sheet_color(apply_light_color(c));
 	tid_nm_pair_t const sheet_tex(c.get_sheet_tid(), tscale);
+	vector3d const tex_origin(c.get_llc());
 
 	if (inc_lg) {
 		bool const no_mattress(c.flags & RO_FLAG_TAKEN3);
@@ -1708,7 +1709,6 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 		add_tc_legs(legs_bcube, color, max(head_width, foot_width), tscale);
 		if (no_mattress) {get_wood_material(4.0*tscale);} // pre-allocate slats material if needed
 		rgeom_mat_t &wood_mat(get_wood_material(tscale));
-		vector3d const tex_origin(c.get_llc());
 
 		if (no_mattress) { // mattress is gone, draw the slats on the bottom of the bed
 			unsigned const num_slats = 12;
