@@ -519,6 +519,7 @@ struct building_room_geom_t {
 	vector<room_object_t> objs, expanded_objs, model_objs; // objects in rooms; expanded_objs is for things that have been expanded for player interaction; model_objs is for models in drawers
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
+	vector<unsigned> moved_obj_ids;
 	// {large static, small static, dynamic, lights, plants, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;

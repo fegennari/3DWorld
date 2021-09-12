@@ -1921,11 +1921,20 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					test_bcube.expand_in_dim(!dim,  wall_thickness); // expand slightly to leave a bit of a gap between walls, and space for whiteboards
 					test_bcube.expand_in_dim( dim, -wall_thickness); // shrink in other dim to avoid intersecting with other part/walls when this door separates two parts
 					test_bcube.expand_in_dim(2, -floor_thickness);   // shrink a bit in z to avoid picking up objects from stacks above or below
+					bool is_bad(!check_cube_contained_in_part(test_bcube));           // extends outside part
+					is_bad |= has_bcube_int(test_bcube, interior->walls[!dim]);       // hits perp wall
+					is_bad |= interior->is_blocked_by_stairs_or_elevator(test_bcube); // hits stairs or elevator
 					
-					if (!check_cube_contained_in_part(test_bcube) || // bad placement (extends outside part)
-					    has_bcube_int(test_bcube, interior->walls[!dim]) || // bad placement (hits perp wall)
-					    interior->is_blocked_by_stairs_or_elevator(test_bcube)) // bad placement (hits stairs or elevator)
-					{
+					// check if the player moved an object that would block this door; this doesn't work perfectly because the door may move through the object when opening
+					if (!is_bad && has_room_geom() && interior->room_geom->modified_by_player) {
+						vector<room_object_t> const &objs(interior->room_geom->objs);
+
+						for (auto i = interior->room_geom->moved_obj_ids.begin(); i != interior->room_geom->moved_obj_ids.end(); ++i) {
+							assert(*i < objs.size());
+							if (objs[*i].intersects(test_bcube)) {is_bad = 1; break;} // intersects a moved object
+						}
+					}
+					if (is_bad) {
 						door = orig_door; // revert
 						continue;
 					}
