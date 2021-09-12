@@ -235,13 +235,14 @@ bool can_open_bathroom_stall(room_object_t const &stall, point const &pos, vecto
 
 bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in) { // called for the player
 	if (!interior) return 0; // error?
-	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace());
-	float closest_dist_sq(0.0);
+	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float closest_dist_sq(0.0), t(0.0); // t is unused
 	unsigned door_ix(0), obj_ix(0);
 	bool found_item(0), is_obj(0);
 	vector3d in_dir(in_dir_in);
 	point closest_to(closest_to_in);
 	maybe_inv_rotate_pos_dir(closest_to, in_dir);
+	point const query_ray_end(closest_to + dmax*in_dir);
 
 	if (!player_in_closet) { // if the player is in the closet, only the closet door can be opened
 		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
@@ -250,6 +251,14 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			float const dist_sq(p2p_dist_sq(closest_to, center));
 			if (found_item && dist_sq >= closest_dist_sq) continue; // not the closest
 			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, dmax)) continue; // door is not in the correct direction or too far away, skip
+			cube_t door_bcube(*i);
+			door_bcube.expand_in_dim(i->dim, 0.5*wall_thickness); // expand to nonzero area
+
+			if (!door_bcube.line_intersects(closest_to, query_ray_end)) { // if camera ray doesn't intersect the door frame, check for ray intersection with opened door
+				if (!i->open) continue;
+				tquad_with_ix_t const door(set_door_from_cube(*i, i->dim, i->open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, i->open, 0, 0, 0));
+				if (!line_poly_intersect(closest_to, query_ray_end, door.pts, door.npts, door.get_norm(), t)) continue; // test camera ray intersection with door plane
+			}
 			closest_dist_sq = dist_sq;
 			door_ix    = (i - interior->doors.begin());
 			found_item = 1;
@@ -258,7 +267,6 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	if (interior->room_geom) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
 		vector<room_object_t> &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
 		auto objs_end(interior->room_geom->get_stairs_start());
-		point const query_ray_end(closest_to + dmax*in_dir);
 		cube_t active_area;
 
 		// make a first pass over all the large objects to determinf if the player is inside one; in that case, the player can't reach out and interact with an object outside it
