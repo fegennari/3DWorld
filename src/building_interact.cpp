@@ -35,7 +35,7 @@ void place_player_at_xy(float xval, float yval);
 room_object_t get_dresser_middle(room_object_t const &c);
 room_object_t get_desk_drawers_part(room_object_t const &c);
 cube_t get_sink_cube(room_object_t const &c);
-bool player_can_unlock_door();
+bool player_can_open_door(door_t const &door);
 void show_key_icon();
 bool player_has_room_key();
 void register_broken_object(room_object_t const &obj);
@@ -321,7 +321,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	}
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
-		if (door.is_locked_or_blocked(player_can_unlock_door())) return 0; // locked/blocked
+		if (!player_can_open_door(door)) return 0; // locked/blocked
 		if (door.locked && !player_has_room_key()) {door.locked = 0;} // don't lock door when closing, to prevent the player from locking themselves in a room
 		toggle_door_state(door_ix, 1, 1, closest_to.z); // toggle state if interior door; player_in_this_building=1, by_player=1, at player height
 		//interior->room_geom->modified_by_player = 1; // should door state always be preserved?
@@ -966,16 +966,15 @@ void setup_bldg_obj_types() {
 	//                                                pc ac pu at im ls value  weight  name [capacity]
 }
 
-float carried_item_t::get_remaining_capacity_ratio() const {
-	assert(type >= 0 && type < NUM_ROBJ_TYPES);
-	unsigned const capacity(bldg_obj_types[type].capacity);
-	return ((capacity == 0) ? 1.0 : (1.0 - float(use_count)/float(capacity))); // Note: zero capacity is unlimited and ratio returned is always 1.0
-}
-
 bldg_obj_type_t const &get_room_obj_type(room_object_t const &obj) {
 	assert(obj.type < NUM_ROBJ_TYPES);
 	return bldg_obj_types[obj.type];
 }
+float carried_item_t::get_remaining_capacity_ratio() const {
+	unsigned const capacity(get_room_obj_type(*this).capacity);
+	return ((capacity == 0) ? 1.0 : (1.0 - float(use_count)/float(capacity))); // Note: zero capacity is unlimited and ratio returned is always 1.0
+}
+
 bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_PICTURE && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 1, 20.0, 6.0, "picture frame");} // second item to take from picture
 	if (obj.type == TYPE_TPROLL  && (obj.flags & RO_FLAG_TAKEN1)) {return bldg_obj_type_t(0, 0, 1, 0, 0, 2, 6.0,  0.5, "toilet paper holder");} // second item to take from tproll
@@ -1145,11 +1144,18 @@ public:
 	bool  player_is_dead () const {return (player_health <= 0.0);}
 	bool  player_has_key () const {return has_key;}
 
-	bool can_unlock_door() const {
-		if (has_key) return 1;
-		print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
-		gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
-		return 0;
+	bool can_open_door(door_t const &door) const {
+		if (door.blocked) {
+			print_text_onscreen("Door is blocked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
+			gen_sound_thread_safe_at_player(SOUND_DOOR_CLOSE, 1.0, 0.6);
+			return 0;
+		}
+		if (door.is_closed_and_locked() && !has_key) {
+			print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
+			gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
+			return 0;
+		}
+		return 1;
 	}
 	void switch_item(bool dir) { // Note: current item is always carried.back()
 		if (carried.size() <= 1) return; // no other item to switch to
@@ -1265,7 +1271,7 @@ public:
 		assert(!carried.empty());
 		carried_item_t &obj(carried.back());
 		obj.flags |= RO_FLAG_USED;
-		unsigned const capacity(bldg_obj_types[obj.type].capacity);
+		unsigned const capacity(get_room_obj_type(obj).capacity);
 
 		if (capacity > 0) {
 			++obj.use_count;
@@ -1325,7 +1331,7 @@ public:
 					<< " lbs  Best $" << best_value << "  Damage $" << damage_done;
 				
 				if (!carried.empty()) {
-					unsigned const capacity(bldg_obj_types[player_held_object.type].capacity);
+					unsigned const capacity(get_room_obj_type(player_held_object).capacity);
 					oss << "  [" << get_taken_obj_type(player_held_object).name; // print the name of the throwable object
 					if (capacity > 0) {oss << " " << (capacity - carried.back().use_count) << "/" << capacity;} // print use/capacity
 					oss << "]";
@@ -1399,7 +1405,7 @@ player_inventory_t player_inventory;
 
 float get_player_drunkenness() {return player_inventory.get_drunkenness();}
 float get_player_building_speed_mult() {return player_inventory.get_speed_mult();}
-bool player_can_unlock_door() {return player_inventory.can_unlock_door();}
+bool player_can_open_door(door_t const &door) {return player_inventory.can_open_door(door);}
 
 void register_building_sound_for_obj(room_object_t const &obj, point const &pos) {
 	float const weight(get_obj_weight(obj)), volume((weight <= 1.0) ? 0.0 : min(1.0f, 0.01f*weight)); // heavier objects make more sound
@@ -1500,17 +1506,21 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2)
 	return check_line_intersect_doors(p1, p2);
 }
 
+bool is_obj_in_or_on_obj(room_object_t const &parent, room_object_t const &child) {
+	if (parent.type == TYPE_WINE_RACK && parent.contains_pt(child.get_cube_center()))     return 1; // check for wine bottles left in wine rack
+	if (fabs(child.z1() - parent.z2()) < 0.05*parent.dz() && child.intersects_xy(parent)) return 1; // zval test
+	if (parent.type == TYPE_BOX && parent.is_open() && parent.contains_cube(child))       return 1; // open box with an object inside
+	return 0;
+}
 bool object_has_something_on_it(room_object_t const &obj, vector<room_object_t> const &objs, vector<room_object_t>::const_iterator objs_end) {
 	// only these types can have objects placed on them (what about TYPE_SHELF?)
 	if (obj.type != TYPE_TABLE && obj.type != TYPE_DESK && obj.type != TYPE_COUNTER && obj.type != TYPE_DRESSER && obj.type != TYPE_NIGHTSTAND &&
 		obj.type != TYPE_BOX && obj.type != TYPE_CRATE && obj.type != TYPE_WINE_RACK && obj.type != TYPE_BOOK) return 0;
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (i->type == TYPE_BLOCKER) continue; // ignore blockers (from removed objects)
-		if (*i == obj)               continue; // skip self (bcube check)
-		if (obj.type == TYPE_WINE_RACK && obj.contains_pt(i->get_cube_center())) return 1; // check for wine bottles left in wine rack
-		if (i->z1() == obj.z2() && i->intersects_xy(obj))                        return 1; // zval has to match exactly
-		if (obj.type == TYPE_BOX && obj.is_open() && obj.contains_cube(*i))      return 1; // open box with an object inside
+		if (i->type == TYPE_BLOCKER)      continue; // ignore blockers (from removed objects)
+		if (*i == obj)                    continue; // skip self (bcube check)
+		if (is_obj_in_or_on_obj(obj, *i)) return 1;
 	}
 	return 0;
 }
@@ -1555,8 +1565,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 		auto other_objs_end((vect_id == 1) ? get_stairs_start() : expanded_objs.end());
 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
-			assert(i->type < NUM_ROBJ_TYPES);
-			if (!bldg_obj_types[i->type].pickup) continue; // this object type can't be picked up
+			if (!get_room_obj_type(*i).pickup) continue; // this object type can't be picked up
 			cube_t const obj_bcube(get_true_obj_bcube(*i));
 			point p1c(at_pos), p2c(p2);
 			if (!do_line_clip(p1c, p2c, obj_bcube.d)) continue; // test ray intersection vs. bcube
@@ -1739,19 +1748,18 @@ void building_room_geom_t::remove_object(unsigned obj_id, building_t &building) 
 	update_draw_state_for_room_object(old_obj, building, 1);
 }
 
+void building_room_geom_t::update_draw_state_for_obj_type_flags(bldg_obj_type_t const &type, building_t &building) {
+	if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
+	if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
+	if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
+	//if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object should not affect the AI navigation graph
+}
 // Note: called when adding, removing, or moving objects
 void building_room_geom_t::update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken) {
 	// reuild necessary VBOs and other data structures
 	if (obj.is_dynamic()) {mats_dynamic.clear();} // dynamic object
 	else if (obj.type == TYPE_BUTTON && (obj.flags & RO_FLAG_IN_ELEV)) {update_dynamic_draw_data();} // interior elevator buttons are drawn as dynamic objects
-	else { // static object
-		assert(obj.type < NUM_ROBJ_TYPES);
-		bldg_obj_type_t const type(was_taken ? get_taken_obj_type(obj) : bldg_obj_types[obj.type]);
-		if (type.lg_sm & 2) {create_small_static_vbos(building);} // small object
-		if (type.lg_sm & 1) {create_static_vbos      (building);} // large object
-		if (type.is_model ) {create_obj_model_insts  (building);} // 3D model
-		//if (type.ai_coll  ) {building.invalidate_nav_graph();} // removing this object should not affect the AI navigation graph
-	}
+	else {update_draw_state_for_obj_type_flags((was_taken ? get_taken_obj_type(obj) : get_room_obj_type(obj)), building);} // static object
 	modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 }
 
@@ -1790,15 +1798,11 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 
 // TODO:
 // * Pull mode
-// * Block doors from opening
-//   * Including closets
-//   * Make AI path finding work
-// * Move objects on top of this object the same amount
+// * Block closet doors from opening
 // * Prevent drawers and cabinet doors from opening when blocked
 bool is_movable(room_object_t const &obj) {
 	if (obj.no_coll() || obj.type == TYPE_BLOCKER) return 0; // no blockers
-	assert(obj.type < NUM_ROBJ_TYPES);
-	bldg_obj_type_t const &bot(bldg_obj_types[obj.type]);
+	bldg_obj_type_t const &bot(get_room_obj_type(obj));
 	return (bot.weight >= 40.0 && !bot.attached); // heavy non-attached objects, including tables
 }
 bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir, float range) {
@@ -1818,8 +1822,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 		float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
 		if (dmin_sq > 0.0 && dsq > dmin_sq)       continue; // not the closest
 		if (obj_has_open_drawers(*i))             continue; // can't move if any drawers are open
-		if (object_has_something_on_it(*i, objs,          objs_end           )) continue; // can't move a table, etc. that has something on it
-		if (object_has_something_on_it(*i, expanded_objs, expanded_objs.end())) continue; // check the other one as well
+		if (object_has_something_on_it(*i, expanded_objs, expanded_objs.end())) continue; // check the other one as well (wine in wine rack, etc.)
 		if (check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // skip if it's on the other side of a wall, ceiling, or floor
 		closest_obj_id = (i - objs.begin()); // valid pickup object
 		dmin_sq = dsq; // this object is the closest
@@ -1830,7 +1833,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	room_object_t &obj(objs[closest_obj_id]);
 	if (!is_movable(obj))        return 0; // closest object isn't movable
 	if (obj.contains_pt(at_pos)) return 0; // player is inside this object?
-	float const move_dist(rand_uniform(0.5, 1.0)*CAMERA_RADIUS*(100.0f/max(75.0f, bldg_obj_types[obj.type].weight))); // heavier objects move less; add some global randomness
+	float const move_dist(rand_uniform(0.5, 1.0)*CAMERA_RADIUS*(100.0f/max(75.0f, get_room_obj_type(obj).weight))); // heavier objects move less; add some global randomness
 	vector3d delta(obj.closest_pt(at_pos) - at_pos);
 	delta.z = 0.0; // XY only
 	delta.normalize();
@@ -1859,12 +1862,35 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 				if (i->intersects(moved_obj)) {bad_placement = 1; break;}
 			}
 			if (bad_placement) continue; // intersects another object, try a smaller movement
+			bldg_obj_type_t type_flags(get_room_obj_type(obj));
+
+			// move objects on top of this one
+			for (auto i = objs.begin(); i != objs_end; ++i) {
+				if (i->type == TYPE_BLOCKER || *i == obj) continue; // ignore blockers and self
+				if (!is_obj_in_or_on_obj(obj, *i))        continue;
+				*i += move_vector; // move this object as well
+				if (i->is_dynamic()) {interior->room_geom->mats_dynamic.clear();} // dynamic object
+				else {
+					bldg_obj_type_t const &type(get_room_obj_type(*i));
+					type_flags.lg_sm    |= type.lg_sm;
+					type_flags.is_model |= type.is_model;
+					type_flags.ai_coll  |= type.ai_coll;
+				}
+			} // for i
+
+			// mark doors as blocked
+			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
+				if (i->open) continue; // if the door is already open, it can't be blocked
+				bool const inc_open(0), check_dirs(i->get_check_dirs());
+				if (is_cube_close_to_door(moved_obj, 0.0, inc_open, *i, check_dirs))              {i->blocked = 1;} // newly blocked
+				else if (i->blocked && is_cube_close_to_door(obj, 0.0, inc_open, *i, check_dirs)) {i->blocked = 0;} // newly unblocked
+			}
+			// update this object
 			obj = moved_obj; // keep this placement
-			interior->room_geom->update_draw_state_for_room_object(obj, *this, 0);
+			interior->room_geom->update_draw_state_for_obj_type_flags(type_flags, *this);
+			interior->room_geom->modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 			gen_sound_thread_safe_at_player(SOUND_SLIDING);
 			register_building_sound_at_player(0.7);
-			// TODO: move objects on top of this one
-			// TODO: mark doors as blocked
 			return 1; // success
 		} // for n
 	} // for mdir
@@ -1892,7 +1918,7 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) c
 		if (has_bcube_int_no_adj(obj, interior->walls[d])) return 0;
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-		bool const inc_open(i->open && door_opens_inward(*i, room)), check_dirs(i->dim ^ i->open_dir ^ i->hinge_side ^ 1);
+		bool const inc_open(i->open && door_opens_inward(*i, room)), check_dirs(i->get_check_dirs());
 		float const dmin(i->open ? 0.0 : trim_thickness); // use default door width when open and only the trim thickness when closed
 		if (is_cube_close_to_door(obj, dmin, inc_open, *i, check_dirs, !i->open)) return 0; // allow door to be blocked if closed
 	}

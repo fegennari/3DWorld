@@ -628,6 +628,7 @@ struct building_room_geom_t {
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
 	void update_draw_state_for_room_object(room_object_t const &obj, building_t &building, bool was_taken);
+	void update_draw_state_for_obj_type_flags(bldg_obj_type_t const &type, building_t &building);
 	room_object_t &get_room_object_by_index(unsigned obj_id);
 	int find_avail_obj_slot() const;
 	void add_expanded_object(room_object_t const &obj);
@@ -734,6 +735,7 @@ struct door_stack_t : public cube_t {
 	door_stack_t() : dim(0), open_dir(0), hinge_side(0), on_stairs(0) {}
 	door_stack_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
 		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_strictly_normalized());}
+	bool get_check_dirs() const {return (dim ^ open_dir ^ hinge_side ^ 1);}
 };
 struct door_t : public door_stack_t {
 	bool open, locked, blocked;
