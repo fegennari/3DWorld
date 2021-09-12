@@ -1882,8 +1882,8 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
 				if (i->open) continue; // if the door is already open, it can't be blocked
 				bool const inc_open(0), check_dirs(i->get_check_dirs());
-				if (is_cube_close_to_door(moved_obj, 0.0, inc_open, *i, check_dirs))              {i->blocked = 1;} // newly blocked
-				else if (i->blocked && is_cube_close_to_door(obj, 0.0, inc_open, *i, check_dirs)) {i->blocked = 0;} // newly unblocked
+				if (is_cube_close_to_door(moved_obj, 0.0, inc_open, *i, check_dirs))              {i->blocked = 1; interior->door_state_updated = 1;} // newly blocked
+				else if (i->blocked && is_cube_close_to_door(obj, 0.0, inc_open, *i, check_dirs)) {i->blocked = 0; interior->door_state_updated = 1;} // newly unblocked
 			}
 			// update this object
 			obj = moved_obj; // keep this placement
