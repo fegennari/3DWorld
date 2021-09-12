@@ -609,7 +609,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			cube_t door_bounds(*i);
 			door_bounds.expand_by_xy(door_width);
 			if (!sphere_cube_intersect(pos, radius, door_bounds)) continue; // check intersection with rough/conservative door bounds (optimization)
-			tquad_with_ix_t const door(building.set_door_from_cube(*i, i->dim, i->open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, i->open, 0, 0, 0));
+			tquad_with_ix_t const door(building.set_door_from_cube(*i, i->dim, i->open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, i->open, 0, 0, i->hinge_side));
 			vector3d normal(door.get_norm());
 			if (dot_product_ptv(normal, pos, door.pts[0]) < 0.0) {normal.negate();} // use correct normal sign
 			float rdist, thick;
