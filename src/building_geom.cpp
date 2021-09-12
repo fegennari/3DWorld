@@ -332,7 +332,9 @@ unsigned check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, po
 unsigned check_closet_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5];
 	get_closet_cubes(c, cubes, 1); // get cubes for walls and door; required to handle collision with closet interior; for_collision=1
-	return check_cubes_collision(cubes, (c.is_open() ? 4U : 5U), pos, p_last, radius, cnorm); // only check for door collision if closet door is closed
+	bool const open(c.is_open()), small(c.is_small_closet());
+	if (open && small) {cubes[4] = get_open_closet_door(c, cubes[4]);} // include open doors for small closets
+	return check_cubes_collision(cubes, ((open && !small) ? 4U : 5U), pos, p_last, radius, cnorm); // skip collision check of open doors for large closets since this case is more complex
 }
 unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
@@ -377,6 +379,14 @@ bool check_shower_collision(room_object_t const &c, point &pos, point const &p_l
 }
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius) {
 	return ((obj.is_open() && sphere_cube_intersect(pos, radius, obj)) || obj.contains_pt(pos));
+}
+
+cube_t get_closet_bcube_including_door(room_object_t const &c) {
+	if (c.type != TYPE_CLOSET || !c.is_open() || !c.is_small_closet()) return c;
+	cube_t bcube(c); // only applies to small closets with open doors; use the width of a standard interior door
+	float const width(c.get_sz_dim(!c.dim)), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
+	bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width);
+	return bcube;
 }
 
 // Note: used for the player; pos and p_last are already in rotated coordinate space
@@ -431,7 +441,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 			}
 			if ((c->type == TYPE_STAIR || on_stairs) && (obj_z + radius) > c->z2()) continue; // above the stair - allow it to be walked on
 			cube_t c_extended(*c);
-			if (c->type == TYPE_STAIR) {c_extended.z1() -= camera_zh;} // handle the player's head (for stairs), or is pos already at this height?
+			if      (c->type == TYPE_STAIR ) {c_extended.z1() -= camera_zh;} // handle the player's head (for stairs), or is pos already at this height?
+			else if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
 			if (!sphere_cube_intersect(pos, xy_radius, c_extended)) continue; // optimization
 
 			if (c->type == TYPE_RAILING) { // only collide with railing at top of stairs, not when walking under stairs
@@ -525,7 +536,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 		if (c == self || c->type == TYPE_BLOCKER || c->type == TYPE_RAILING || c->type == TYPE_PAPER || c->type == TYPE_PEN || c->type == TYPE_PENCIL ||
 			c->type == TYPE_BOTTLE || c->type == TYPE_FLOORING || c->type == TYPE_SIGN || c->type == TYPE_WBOARD || c->type == TYPE_WALL_TRIM ||
 			c->type == TYPE_DRAIN || c->type == TYPE_CRACK || c->type == TYPE_SWITCH) continue;
-		if (!sphere_cube_intersect(pos, radius, *c)) continue; // no intersection (optimization)
+		if (!sphere_cube_intersect(pos, radius, ((c->type == TYPE_CLOSET) ? get_closet_bcube_including_door(*c) : *c))) continue; // no intersection (optimization)
 		unsigned coll_ret(0);
 		// add special handling for things like elevators, cubicles, and bathroom stalls? right now these are only in office buildings, where there are no dynamic objects
 

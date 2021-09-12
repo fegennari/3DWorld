@@ -283,6 +283,14 @@ void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], fl
 	for (unsigned n = 0; n < 4; ++n) {mat.quad_verts.emplace_back(pts[n], normal, ts[n], tt[n], cw);}
 }
 
+cube_t get_open_closet_door(room_object_t const &c, cube_t const &closed_door) {
+	assert(c.is_small_closet()); // only small closets are supported for now
+	float const door_width(closed_door.get_sz_dim(!c.dim)), door_thickness(closed_door.get_sz_dim(c.dim));
+	cube_t door(closed_door);
+	door.d[ c.dim][c.dir] += (c.dir ? 1.0 : -1.0)*door_width;
+	door.d[!c.dim][1    ] -= (door_width - door_thickness);
+	return door;
+}
 void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t const &wall_tex, bool inc_lg, bool inc_sm) { // no lighting scale, houses only
 	bool const open(c.is_open()), use_small_door(c.is_small_closet()), draw_interior(open || player_in_closet);
 	cube_t cubes[5];
@@ -309,10 +317,7 @@ void building_room_geom_t::add_closet(room_object_t const &c, tid_nm_pair_t cons
 			tid_nm_pair_t const tp(get_int_door_tid(), 0.0);
 
 			if (open) {
-				float const door_width(doors.get_sz_dim(!c.dim)), door_thickness(doors.get_sz_dim(c.dim));
-				cube_t door(doors);
-				door.d[ c.dim][c.dir] += out_sign*door_width;
-				door.d[!c.dim][1    ] -= (door_width - door_thickness);
+				cube_t const door(get_open_closet_door(c, doors));
 				get_material(tp, 1)       .add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy(!c.dim), c.dim, !c.dir); // draw front and back faces
 				get_untextured_material(1).add_cube_to_verts(door, WHITE, llc, ~get_skip_mask_for_xy( c.dim)); // draw edges untextured
 			}
