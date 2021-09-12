@@ -1436,7 +1436,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		exclude.push_back(*i);
 		exclude.back().expand_in_dim( i->dim, 0.6*room.get_sz_dim(i->dim));
 		// if there are multiple doors (houses only?), expand the exclude area more in the other dimension to make sure there's a path between doors
-		exclude.back().expand_in_dim(!i->dim, max(0.1*i->get_sz_dim(!i->dim), ((num_doors > 1) ? 0.3*room.get_sz_dim(!i->dim) : 0.0)));
+		exclude.back().expand_in_dim(!i->dim, max(0.1*i->get_width(), ((num_doors > 1) ? 0.3*room.get_sz_dim(!i->dim) : 0.0)));
 	}
 	// add shelves on walls (avoiding any door(s)), and have crates avoid them
 	for (unsigned dim = 0; dim < 2; ++dim) {
@@ -1899,7 +1899,7 @@ void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, f
 		for (auto i = cands.begin(); i != cands.end() && !done; ++i) {
 			// check for windows if (real_num_parts > 1)? is it actually possible for doors to be within far_spacing of a window?
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
-			float const door_width(i->get_sz_dim(!dim)), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to the side of the door when open
+			float const door_width(i->get_width()), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to the side of the door when open
 			assert(door_width > 0.0);
 			cube_t c;
 			c.d[dim][ dir] = room_bounds.d[dim][dir]; // flush with wall

@@ -738,6 +738,7 @@ struct door_stack_t : public cube_t {
 	door_stack_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
 		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_strictly_normalized());}
 	bool get_check_dirs() const {return (dim ^ open_dir ^ hinge_side ^ 1);}
+	float get_width() const {return get_sz_dim(!dim);}
 };
 struct door_t : public door_stack_t {
 	bool open, locked, blocked;
