@@ -594,6 +594,9 @@ void resize(int x, int y) {
 	display_window_resized();
 }
 
+bool is_shift_key_pressed() {return ((glutGetModifiers() & GLUT_ACTIVE_SHIFT) != 0);}
+bool is_ctrl_key_pressed () {return ((glutGetModifiers() & GLUT_ACTIVE_CTRL ) != 0);}
+bool is_alt_key_pressed  () {return ((glutGetModifiers() & GLUT_ACTIVE_ALT  ) != 0);}
 
 // This function is called whenever the mouse is pressed or released
 // button is a number 0 to 2 designating the button
@@ -742,7 +745,6 @@ void mousePassiveMotion(int x, int y) {
 	if (enable_mouse_look) {mouseMotion(x, y);}
 }
 
-
 void change_tree_mode() {
 
 	if (world_mode != WMODE_GROUND && world_mode != WMODE_INF_TERRAIN) return;
@@ -764,7 +766,6 @@ void change_tree_mode() {
 	}
 }
 
-
 void switch_weapon_mode() {
 
 	if (sstates == NULL || !game_mode) return;
@@ -773,12 +774,6 @@ void switch_weapon_mode() {
 	play_switch_wmode_sound();
 	//last_inventory_frame = frame_counter;
 }
-
-
-bool is_shift_key_pressed() {return ((glutGetModifiers() & GLUT_ACTIVE_SHIFT) != 0);}
-bool is_ctrl_key_pressed () {return ((glutGetModifiers() & GLUT_ACTIVE_CTRL ) != 0);}
-bool is_alt_key_pressed  () {return ((glutGetModifiers() & GLUT_ACTIVE_ALT  ) != 0);}
-
 
 void toggle_camera_mode() {
 

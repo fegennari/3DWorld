@@ -13,6 +13,7 @@ using namespace std;
 
 float const MENU_TEXT_SIZE = 1.0;
 
+bool is_shift_key_pressed();
 
 class keyboard_menu_t {
 
@@ -606,7 +607,7 @@ class sphere_mat_kbd_menu_t : public keyboard_menu_t {
 		case SM_FDELAY:       value << sphere_mat_fire_delay; spos = sphere_mat_fire_delay; break; // 0.0 to 1.0 seconds
 		case SM_EMISS:        value << mat.emissive;     spos = mat.emissive;         break; // 0/1
 		case SM_REFLECT:      value << mat.reflective;   spos = mat.reflective;       break; // 0/1
-		case SM_DESTROY:      value << destroy_tags[mat.destroyable]; spos = mat.destroyable/2; break; // 0/1
+		case SM_DESTROY:      value << destroy_tags[mat.destroyable]; spos = float(mat.destroyable/2); break; // 0/1
 		case SM_RSCALE:       value << mat.radius_scale; spos = (mat.radius_scale-0.2)/1.8; break; // 0.2 to 2.0
 		case SM_HARDNESS:     value << mat.hardness;     spos = mat.hardness;         break; // 0.05 to 1.0
 		case SM_DENSITY:      value << mat.density;      spos = mat.density/4.0;      break; // 0.1 to 4.0
