@@ -1806,7 +1806,6 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 }
 
 // TODO:
-// * Pull mode: back facing sides
 // * Door partially open
 // * Block closet doors from opening
 // * Prevent drawers and cabinet doors from opening when blocked
@@ -1898,6 +1897,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			}
 			// update this object
 			obj = moved_obj; // keep this placement
+			obj.flags |= RO_FLAG_MOVED;
 			interior->room_geom->update_draw_state_for_obj_type_flags(type_flags, *this);
 			interior->room_geom->modified_by_player = 1; // flag so that we avoid re-generating room geom if the player leaves and comes back
 			gen_sound_thread_safe_at_player(SOUND_SLIDING);

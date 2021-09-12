@@ -1406,7 +1406,7 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	point const *const use_this_tex_origin, vector<room_object_t> *books)
 {
 	colorRGBA const color(apply_wood_light_color(c));
-	unsigned const skip_faces(~get_face_mask(c.dim, !c.dir)); // skip back face
+	unsigned const skip_faces(c.was_moved() ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless moved by the player and no longer against the wall
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
 	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
 	float const side_thickness(0.06*sides_scale*width);
@@ -1426,7 +1426,11 @@ void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, boo
 	cube_t back(middle);
 	back.d[c.dim] [c.dir]  += 0.94*depth;
 	middle.d[c.dim][!c.dir] = back.d[c.dim][c.dir];
-	if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(back, color, tex_origin, get_face_mask(c.dim, c.dir));} // back - only face oriented outward
+	
+	if (inc_lg) {
+		unsigned const back_skip_faces(c.was_moved() ? ~get_skip_mask_for_xy(c.dim) : get_face_mask(c.dim, c.dir)); // back - only face oriented outward
+		get_wood_material(tscale).add_cube_to_verts(back, color, tex_origin, back_skip_faces);
+	}
 	if (no_shelves) return;
 	// add shelves
 	rand_gen_t rgen;
