@@ -1831,7 +1831,6 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 		float const dsq(p2p_dist(at_pos, p1c)); // use closest intersection point
 		if (dmin_sq > 0.0 && dsq > dmin_sq)       continue; // not the closest
 		if (obj_has_open_drawers(*i))             continue; // can't move if any drawers are open
-		if (object_has_something_on_it(*i, expanded_objs, expanded_objs.end())) continue; // check the other one as well (wine in wine rack, etc.)
 		if (check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // skip if it's on the other side of a wall, ceiling, or floor
 		closest_obj_id = (i - objs.begin()); // valid pickup object
 		dmin_sq = dsq; // this object is the closest
@@ -1866,28 +1865,33 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			if (!is_obj_pos_valid(moved_obj, 1))    continue; // try a smaller movement; keep_in_room=1
 			bool bad_placement(0);
 
-			for (auto i = objs.begin(); i != objs_end; ++i) { // do we need to check expanded_objs?
+			for (auto i = objs.begin(); i != objs_end && !bad_placement; ++i) {
 				if (i == objs.begin() + closest_obj_id)      continue; // skip self
 				if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // skip non-colliding objects and blockers that add clearance between objects as these won't block this object
-				if (i->intersects(moved_obj)) {bad_placement = 1; break;}
+				bad_placement = i->intersects(moved_obj);
 			}
+			// Note: okay to skip expanded_objs because these should already be on/inside some other object; this allows us to move wine racks containing wine
 			if (bad_placement) continue; // intersects another object, try a smaller movement
 			bldg_obj_type_t type_flags(get_room_obj_type(obj));
 
-			// move objects on top of this one
-			for (auto i = objs.begin(); i != objs_end; ++i) {
-				if (i->type == TYPE_BLOCKER || *i == obj) continue; // ignore blockers and self
-				if (!is_obj_in_or_on_obj(obj, *i))        continue;
-				*i += move_vector; // move this object as well
-				if (i->is_dynamic()) {interior->room_geom->mats_dynamic.clear();} // dynamic object
-				else {
-					bldg_obj_type_t const &type(get_room_obj_type(*i));
-					type_flags.lg_sm    |= type.lg_sm;
-					type_flags.is_model |= type.is_model;
-					type_flags.ai_coll  |= type.ai_coll;
-				}
-			} // for i
+			// move objects inside or on top of this one
+			for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
+				auto &obj_vect((vect_id == 1) ? expanded_objs : objs);
+				auto obj_vect_end((vect_id == 1) ? expanded_objs.end() : objs_end); // skip stairs and elevators
 
+				for (auto i = obj_vect.begin(); i != obj_vect_end; ++i) {
+					if (i->type == TYPE_BLOCKER || *i == obj) continue; // ignore blockers and self
+					if (!is_obj_in_or_on_obj(obj, *i))        continue;
+					*i += move_vector; // move this object as well
+					if (i->is_dynamic()) {interior->room_geom->mats_dynamic.clear();} // dynamic object
+					else {
+						bldg_obj_type_t const &type(get_room_obj_type(*i));
+						type_flags.lg_sm    |= type.lg_sm;
+						type_flags.is_model |= type.is_model;
+						type_flags.ai_coll  |= type.ai_coll;
+					}
+				} // for i
+			} // for vect_id
 			// mark doors as blocked
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
 				if (i->open) continue; // if the door is already open, it can't be blocked
