@@ -10,8 +10,7 @@
 
 bool const USE_BKG_THREAD = 1;
 
-extern bool building_action_key;
-extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter;
+extern int MESH_Z_SIZE, display_mode, display_framerate, camera_surf_collide, animate2, frame_counter, building_action_key;
 extern unsigned LOCAL_RAYS, MAX_RAY_BOUNCES, NUM_THREADS;
 extern float indir_light_exp;
 extern double camera_zh;
@@ -744,7 +743,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		}
 		else if (camera_near_building && !is_lamp) {
 			if (building_action_key) {
-				dynamic_shadows = 1; // toggling a door state will generally invalidate shadows in the building for that frame
+				dynamic_shadows = 1; // toggling a door state or interacting with objects will generally invalidate shadows in the building for that frame
 			}
 			else if (animate2 && enable_building_people_ai()) { // check moving people
 				if (ped_ix >= 0 && ped_bcubes.empty()) {

@@ -76,7 +76,7 @@ bool enable_model3d_custom_mipmaps(1), flatten_tt_mesh_under_models(0), show_map
 bool enable_dpart_shadows(0), enable_tt_model_reflect(1), enable_tt_model_indir(0), auto_calc_tt_model_zvals(0), use_model_lod_blocks(0), enable_translocator(0), enable_grass_fire(0);
 bool disable_model_textures(0), start_in_inf_terrain(0), allow_shader_invariants(1), config_unlimited_weapons(0), disable_tt_water_reflect(0), allow_model3d_quads(1);
 bool enable_timing_profiler(0), fast_transparent_spheres(0), force_ref_cmap_update(0), use_instanced_pine_trees(0), enable_postproc_recolor(0), draw_building_interiors(0);
-bool toggle_room_light(0), building_action_key(0), teleport_to_screenshot(0), merge_model_objects(0), display_frame_time(0), reverse_3ds_vert_winding_order(1), disable_dlights(0);
+bool toggle_room_light(0), teleport_to_screenshot(0), merge_model_objects(0), display_frame_time(0), reverse_3ds_vert_winding_order(1), disable_dlights(0);
 bool enable_hcopter_shadows(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), mesh_rgen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0), init_num_balls(-1), change_wmode_frame(0);
@@ -87,7 +87,7 @@ int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), cam
 int window_width(512), window_height(512), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
 int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), fullscreen(0), verbose_mode(0), leaf_color_changed(0);
-int do_zoom(0), disable_universe(0), disable_inf_terrain(0), precip_mode(0);
+int do_zoom(0), disable_universe(0), disable_inf_terrain(0), precip_mode(0), building_action_key(0);
 int num_trees(0), num_smileys(1), srand_param(3), left_handed(0), mesh_scale_change(0);
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
@@ -817,7 +817,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'r': // run mode (always move forward)
-		run_forward = !run_forward;
+		if (world_mode == WMODE_INF_TERRAIN && have_buildings()) {building_gameplay_action_key(3, 0);}
+		else {run_forward = !run_forward;}
 		break;
 	case 'V': // change mouse mode
 		enable_mouse_look = !enable_mouse_look;

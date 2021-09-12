@@ -23,8 +23,8 @@ carried_item_t player_held_object;
 bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
-extern bool building_action_key, camera_in_building, tt_fire_button_down, flashlight_on, player_is_hiding;
-extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode, animate2, camera_surf_collide;
+extern bool camera_in_building, tt_fire_button_down, flashlight_on, player_is_hiding;
+extern int window_width, window_height, display_framerate, player_in_closet, frame_counter, display_mode, game_mode, animate2, camera_surf_collide, building_action_key;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
@@ -233,7 +233,7 @@ bool can_open_bathroom_stall(room_object_t const &stall, point const &pos, vecto
 	return (dot_product_ptv(dir, door_center, pos) > 0.0); // facing the stall door
 }
 
-bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in) { // called for the player
+bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode) { // called for the player
 	if (!interior) return 0; // error?
 	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float closest_dist_sq(0.0), t(0.0); // t is unused
@@ -277,6 +277,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			break; // there can be only one - done
 		}
 		for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
+			if (mode > 0) continue; // pull object only mode, skip this step
 			auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
 			unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
 			auto obj_vect_end((vect_id == 1) ? expanded_objs.end() : objs_end); // skip stairs and elevators
@@ -317,11 +318,11 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				is_obj = found_item = 1;
 			} // for i
 		} // for vect_id
-		if (!player_in_closet) {
+		if (!player_in_closet && mode == 0) {
 			float const drawer_dist(found_item ? sqrt(closest_dist_sq) : 2.5*CAMERA_RADIUS);
 			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist, 0)) return 0; // drawer is closer - open or close it
 		}
-		if (!found_item && !player_in_closet) {move_nearest_object(closest_to, in_dir, 3.0*CAMERA_RADIUS);} // try to move an object instead
+		if (!found_item && !player_in_closet) {move_nearest_object(closest_to, in_dir, 3.0*CAMERA_RADIUS, mode);} // try to move an object instead
 		if (!found_item) return 0; // no door or object found
 	}
 	if (is_obj) { // interactive object
@@ -1805,7 +1806,8 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 }
 
 // TODO:
-// * Pull mode
+// * Pull mode: back facing sides
+// * Door partially open
 // * Block closet doors from opening
 // * Prevent drawers and cabinet doors from opening when blocked
 bool is_movable(room_object_t const &obj) {
@@ -1813,7 +1815,7 @@ bool is_movable(room_object_t const &obj) {
 	bldg_obj_type_t const &bot(get_room_obj_type(obj));
 	return (bot.weight >= 40.0 && !bot.attached); // heavy non-attached objects, including tables
 }
-bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir, float range) {
+bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode) {
 	assert(has_room_geom());
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
@@ -1845,6 +1847,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	vector3d delta(obj.closest_pt(at_pos) - at_pos);
 	delta.z = 0.0; // XY only
 	delta.normalize();
+	if (mode == 1) {delta.negate();} // changes push to pull ('r' key vs 'e' key)
 	cube_t player_bcube;
 	player_bcube.set_from_sphere(at_pos, get_scaled_player_radius());
 
@@ -2368,15 +2371,17 @@ int register_ai_player_coll(bool &has_key, float height) {
 
 void building_gameplay_action_key(int mode, bool mouse_wheel) {
 	if (camera_in_building) { // building interior action
-		if (mouse_wheel && mode <= 1) {player_inventory.switch_item(mode);}
-		// show crosshair on first pickup because it's too difficult to pick up objects without it
-		else if (mode == 1) {do_room_obj_pickup = show_bldg_pickup_crosshair = 1;} // 'e'
+		if (mouse_wheel) {player_inventory.switch_item(mode != 0);}
+		else if (mode == 0) {building_action_key    = 1;} // 'q'
+		else if (mode == 1) {do_room_obj_pickup     = 1;} // 'e'
 		else if (mode == 2) {use_last_pickup_object = 1;} // 'E'
-		else                {building_action_key    = 1;} // 'q'
+		else if (mode == 3) {building_action_key    = 2;} // 'r'
+		else {assert(0);} // unsupported key/mode
+		show_bldg_pickup_crosshair = 1; // show crosshair on first pickup, too difficult to pick up objects without it
 	}
 	else { // building exterior/city/road/car action
-		if      (mode != 0) {city_action_key = 1;} // 'e'/'E'
-		else                {} // 'q'
+		if (mode == 1 || mode == 2) {city_action_key = 1;} // 'e'/'E'
+		else {} // 'q'/'r'
 	}
 }
 
