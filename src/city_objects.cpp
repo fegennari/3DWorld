@@ -11,22 +11,23 @@ extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 
 struct plot_divider_type_t {
-	bool is_occluder;
+	bool is_occluder, has_alpha_mask;
 	int tid;
-	float wscale, hscale; // width and height scales
+	float wscale, hscale, tscale; // width, height, and texture scales
 	colorRGBA color, map_color;
 	string tex_name;
 
-	plot_divider_type_t(string const &tn, float ws, float hs, bool ic, colorRGBA const &c, colorRGBA const &mc) :
-		is_occluder(ic), tid(-1), wscale(ws), hscale(hs), color(c), map_color(mc), tex_name(tn) {}
+	plot_divider_type_t(string const &tn, float ws, float hs, float ts, bool ic, bool ham, colorRGBA const &c, colorRGBA const &mc) :
+		is_occluder(ic), has_alpha_mask(ham), tid(-1), wscale(ws), hscale(hs), tscale(ts), color(c), map_color(mc), tex_name(tn) {}
 	colorRGBA get_avg_color() const {return ((tid >= 0) ? texture_color(tid) : map_color).modulate_with(color);}
 };
-enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
+enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_CHAINLINK, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
 
 plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
-	plot_divider_type_t("cblock2.jpg", 0.50, 2.5, 1, WHITE, GRAY    ), // wall
-	plot_divider_type_t("fence.jpg",   0.15, 2.0, 1, WHITE, LT_BROWN), // fence
-	plot_divider_type_t("hedges.jpg",  1.00, 1.6, 0, GRAY,  GREEN   )  // hedge - too short to be an occluder
+	plot_divider_type_t("cblock2.jpg", 0.50, 2.5, 1.0, 1, 0, WHITE, GRAY    ), // wall
+	plot_divider_type_t("fence.jpg",   0.15, 2.0, 1.0, 1, 0, WHITE, LT_BROWN), // fence
+	plot_divider_type_t("hedges.jpg",  1.00, 1.6, 1.0, 0, 0, GRAY,  GREEN   ), // hedge - too short to be an occluder
+	plot_divider_type_t("roads/chainlink_fence.png", 0.02, 1.8, 8.0, 0, 1, WHITE, GRAY) // chainlink fence with alpha mask
 };
 
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
@@ -167,17 +168,23 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 }
 
 /*static*/ void divider_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (shadow_only) return; // not textured
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
 	plot_divider_type_t &pdt(plot_divider_types[dstate.pass_ix]);
-	if (pdt.tid < 0) {pdt.tid = get_texture_by_name(pdt.tex_name);} // load/lookup texture if needed
+	if (shadow_only && !pdt.has_alpha_mask) return; // not textured
+	
+	if (pdt.tid < 0) {
+		unsigned const ncolors(pdt.has_alpha_mask ? 4 : 3);
+		int const use_mipmaps (pdt.has_alpha_mask ? 0 : 1); // disable mipmaps if this texture has an alpha mask because we need to keep binary alpha
+		pdt.tid = get_texture_by_name(pdt.tex_name, 0, 0, 1, 4.0, 1, use_mipmaps, ncolors); // load/lookup texture if needed, 4.0 aniso
+	}
 	select_texture(pdt.tid);
 }
 void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
-	dstate.draw_cube(qbd, bcube, color_wrapper(plot_divider_types[type].color), 1, 1.0/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
+	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
+	dstate.draw_cube(qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
 }
 
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water

@@ -590,7 +590,7 @@ void load_textures();
 unsigned get_loaded_textures_cpu_mem();
 unsigned get_loaded_textures_gpu_mem();
 int texture_lookup(std::string const &name);
-int get_texture_by_name(std::string const &name, bool is_normal_map=0, bool invert_y=0, int wrap_mir=1, float aniso=0.0, bool allow_compress=1, bool use_mipmaps=1, unsigned ncolors=3);
+int get_texture_by_name(std::string const &name, bool is_normal_map=0, bool invert_y=0, int wrap_mir=1, float aniso=0.0, bool allow_compress=1, int use_mipmaps=1, unsigned ncolors=3);
 unsigned load_cube_map_texture(std::string const &name);
 bool select_texture(int id);
 void update_player_bbb_texture(float extra_blood, bool recreate);
