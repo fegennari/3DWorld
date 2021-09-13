@@ -1887,6 +1887,14 @@ bool building_t::check_cube_contained_in_part(cube_t const &c) const {
 	return 0;
 }
 
+bool building_room_geom_t::cube_intersects_moved_obj(cube_t const &c) const {
+	for (auto i = moved_obj_ids.begin(); i != moved_obj_ids.end(); ++i) {
+		assert(*i < objs.size());
+		if (objs[*i].intersects(c)) return 1; // intersects a moved object
+	}
+	return 0;
+}
+
 tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
 	bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const
 {
@@ -1906,6 +1914,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 			door.pts[0][dim] = door.pts[1][dim] = pos + c.dz()*((dir ^ opens_out) ? 1.0 : -1.0);
 		}
 		else { // rotates to the side
+			bool const has_moved_objs(has_room_geom() && !interior->room_geom->moved_obj_ids.empty());
 			float const width(c.get_sz_dim(!dim)), signed_width(width*((dir ^ opens_out) ? 1.0 : -1.0));
 			float const offset(0.01*width*((dir ^ dim) ? 1.0 : -1.0)); // move slightly away from the wall to prevent z-fighting
 			door.pts[1-swap_sides][!dim] = door.pts[2+swap_sides][!dim] = door.pts[swap_sides][!dim] + offset; // 1,2=0+o / 0,3=1+o
@@ -1925,19 +1934,13 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 					is_bad |= has_bcube_int(test_bcube, interior->walls[!dim]);       // hits perp wall
 					is_bad |= interior->is_blocked_by_stairs_or_elevator(test_bcube); // hits stairs or elevator
 					
-					// check if the player moved an object that would block this door; this doesn't work perfectly because the door may move through the object when opening
-					if (!is_bad && has_room_geom() && interior->room_geom->modified_by_player) {
-						vector<room_object_t> const &objs(interior->room_geom->objs);
-
-						for (auto i = interior->room_geom->moved_obj_ids.begin(); i != interior->room_geom->moved_obj_ids.end(); ++i) {
-							assert(*i < objs.size());
-							if (objs[*i].intersects(test_bcube)) {is_bad = 1; break;} // intersects a moved object
-						}
+					// check if the player moved an object that would block this door
+					if (!is_bad && has_moved_objs) {
+						cube_t union_cube(test_bcube);
+						union_cube.union_with_cube(orig_door.get_bcube()); // include the full path from 90 degrees to ensure the door can be swung open
+						is_bad = interior->room_geom->cube_intersects_moved_obj(union_cube);
 					}
-					if (is_bad) {
-						door = orig_door; // revert
-						continue;
-					}
+					if (is_bad) {door = orig_door; continue;} // revert
 					break; // done
 				} // for angle
 			}

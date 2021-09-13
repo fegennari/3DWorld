@@ -1676,6 +1676,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		update_draw_state_for_room_object(item, building, 1);
 	}
 	else { // open or close the drawer/door
+		// TODO: check for blocking item by calling cube_intersects_moved_obj()
 		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
 		cube_t const &drawer(drawers[closest_obj_id]);
 		point const drawer_center(drawer.get_cube_center());
