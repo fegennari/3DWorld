@@ -1835,6 +1835,18 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_water_heater(room_object_t const &c) {
+	// TODO: add pipes, pan, label, etc.
+#if 1
+	get_metal_material(1, 0, 1).add_vcylin_to_verts(c, apply_light_color(c, LT_GRAY), 0, 1); // draw sides and top
+#else
+	float const height(c.dz()), radius(c.get_radius());
+	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/water_heater_label.png")), 1, 0, 1)); // shadows, small
+	side_mat.add_vcylin_to_verts(c, apply_light_color(c, LT_GRAY), 0, 0); // draw sides
+	get_metal_material(1, 0, 1).add_disk_to_verts(center, radius, 0, apply_light_color(c, GRAY)); // shadowed, specular metal; small=1
+#endif
+}
+
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	// Note: no alpha test is enabled in the shader when drawing this, so the holes in the material may not be drawn correctly against objects such as exterior walls
 	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png")), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
@@ -2424,6 +2436,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_SPRAYCAN: return (DK_GRAY*0.5 + color*0.5);
 	case TYPE_CRACK:    return ALPHA0; // transparent
 	case TYPE_FPLACE:   return texture_color(BRICK2_TEX).modulate_with(color);
+	case TYPE_WHEATER:  return LT_GRAY;
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(get_model_color());} // handle models

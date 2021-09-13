@@ -576,6 +576,7 @@ struct building_room_geom_t {
 	void add_tv_picture(room_object_t const &c);
 	void add_trashcan(room_object_t const &c);
 	void add_laundry_basket(room_object_t const &c);
+	void add_water_heater(room_object_t const &c);
 	void add_br_stall(room_object_t const &c);
 	void add_cubicle(room_object_t const &c, float tscale);
 	void add_sign(room_object_t const &c, bool inc_back, bool inc_text);
@@ -1070,6 +1071,7 @@ private:
 	void add_diningroom_objs (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_library_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
 	bool add_storage_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, bool is_basement);
+	bool add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	bool add_laundry_objs    (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start);
 	void add_pri_hall_objs   (rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt);
 	void place_book_on_obj   (rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, bool use_dim_dir);

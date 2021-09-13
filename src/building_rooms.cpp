@@ -1519,6 +1519,11 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	return 1; // it's always a storage room, even if it's empty
 }
 
+bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+	// TODO
+	return 0;
+}
+
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const front_clearance(get_min_front_clearance());
 	cube_t place_area(get_walkable_room_bounds(room));
@@ -2073,7 +2078,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0); // per-floor
-	bool added_bedroom(0), added_living(0), added_library(0), added_dining(0), added_laundry(0);
+	bool added_bedroom(0), added_living(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0);
 	light_ix_assign_t light_ix_assign;
 
 	if (rooms.size() > 1) { // choose best room assignments for required rooms; if a single room, skip this step
@@ -2389,6 +2394,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				else { // unassigned room of house on upper floor with added object/table
 					// this case is relatively rare, and we've already added a table, so it's too late to make this a bedroom/bathroom if can_be_bedroom_or_bathroom(*r, f)
 					r->assign_to((rgen.rand_bool() ? (room_type)RTYPE_PLAY : (room_type)RTYPE_ART), f); // play room or art room
+				}
+				if (is_basement && rgen.rand_bool() && !added_basement_utility) { // basement laundry, storage, or card room
+					added_basement_utility = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+					// special room type?
 				}
 			}
 			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !is_basement) { // add potted plants to some room types
