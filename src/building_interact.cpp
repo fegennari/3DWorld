@@ -1860,6 +1860,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 	if (mode == 1) {delta.negate();} // changes push to pull ('r' key vs 'e' key)
 	cube_t player_bcube;
 	player_bcube.set_from_sphere(at_pos, get_scaled_player_radius());
+	player_bcube.z1() -= camera_zh;
 
 	// attempt to move the object
 	for (unsigned mdir = 0; mdir < 3; ++mdir) { // X+Y, closer dim, further dim
@@ -1888,7 +1889,7 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 					for (unsigned n = 0; n < 5; ++n) {bad_placement |= cubes[n].intersects(moved_obj);}
 				}
 				else {bad_placement = i->intersects(moved_obj);}
-			}
+			} // for i
 			// Note: okay to skip expanded_objs because these should already be on/inside some other object; this allows us to move wine racks containing wine
 			if (bad_placement) continue; // intersects another object, try a smaller movement
 			bldg_obj_type_t type_flags(get_room_obj_type(obj));
