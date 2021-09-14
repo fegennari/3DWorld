@@ -244,7 +244,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	maybe_inv_rotate_pos_dir(closest_to, in_dir);
 	point const query_ray_end(closest_to + dmax*in_dir);
 
-	if (!player_in_closet) { // if the player is in the closet, only the closet door can be opened
+	if (!player_in_closet && mode == 0) { // if the player is in the closet, only the closet door can be opened
 		for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 			if (i->z1() > closest_to.z || i->z2() < closest_to.z) continue; // wrong floor, skip
 			point const center(i->get_cube_center());
@@ -264,12 +264,12 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			found_item = 1;
 		} // for i
 	}
-	if (interior->room_geom) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
+	if (has_room_geom()) { // check for closet doors in houses, bathroom stalls in office buildings, and other objects that can be interacted with
 		vector<room_object_t> &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
 		auto objs_end(interior->room_geom->get_stairs_start());
 		cube_t active_area;
 
-		// make a first pass over all the large objects to determinf if the player is inside one; in that case, the player can't reach out and interact with an object outside it
+		// make a first pass over all the large objects to determine if the player is inside one; in that case, the player can't reach out and interact with an object outside it
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (i->type != TYPE_STALL && i->type != TYPE_SHOWER && i->type != TYPE_ELEVATOR && !(i->type == TYPE_CLOSET && i->is_open())) continue; // TYPE_CUBICLE?
 			if (!i->contains_pt(closest_to)) continue;
@@ -287,7 +287,19 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				if (!active_area.is_all_zeros() && !i->intersects(active_area)) continue; // out of reach for the player
 				bool keep(0);
 				if (i->type == TYPE_BOX && !i->is_open()) {keep = 1;} // box can only be opened once; check first so that selection works for boxes in closets
-				else if (i->type == TYPE_CLOSET && in_dir.z < 0.5) {keep = 1;} // closet door can be opened; not looking up at the light
+				else if (i->type == TYPE_CLOSET) {
+					if (in_dir.z > 0.5) continue; // not looking up at the light
+
+					if (/*!i->is_open() &&*/ i->is_small_closet() && !interior->room_geom->moved_obj_ids.empty()) { // only applies to small closets
+						cube_t c_test(*i);
+						float const width(i->get_sz_dim(!i->dim)), wall_width(0.5*(width - 0.5*i->dz())); // see get_closet_cubes()
+						c_test.d[i->dim][ i->dir] += (i->dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
+						c_test.d[i->dim][!i->dir]  = i->d[i->dim][i->dir]; // back is flush with front of closet
+						c_test.expand_in_dim(!i->dim, -wall_width); // shrink to door width
+						if (interior->room_geom->cube_intersects_moved_obj(c_test)) continue; // blocked, can't open
+					}
+					keep = 1; // closet door can be opened
+				}
 				else if (!player_in_closet) {
 					if      (i->type == TYPE_TOILET || i->type == TYPE_URINAL) {keep = 1;} // toilet/urinal can be flushed
 					else if (i->type == TYPE_STALL && i->shape == SHAPE_CUBE && can_open_bathroom_stall(*i, closest_to, in_dir)) {keep = 1;} // cube bathroom stall can be opened
@@ -1638,6 +1650,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	room_object_t drawers_part;
 	vect_cube_t drawers; // or doors
 	bool const has_doors(is_counter(obj) || obj.type == TYPE_CABINET);
+	float drawer_extend(0.0); // signed, for drawers only
 
 	// Note: this is a messy solution and must match the drawing code, but it's unclear how else we can get the location of the drawers
 	if (has_doors) {get_cabinet_or_counter_doors(obj, drawers);}
@@ -1652,7 +1665,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 			drawers_part = get_dresser_middle(obj);
 			drawers_part.expand_in_dim(!obj.dim, -0.5*get_tc_leg_width(obj, 0.10));
 		}
-		get_drawer_cubes(drawers_part, drawers, 0); // front_only=0
+		drawer_extend = get_drawer_cubes(drawers_part, drawers, 0); // front_only=0
 	}
 	dmin_sq        = 0.0;
 	closest_obj_id = -1;
@@ -1676,9 +1689,12 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		update_draw_state_for_room_object(item, building, 1);
 	}
 	else { // open or close the drawer/door
-		// TODO: check for blocking item by calling cube_intersects_moved_obj()
-		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
 		cube_t const &drawer(drawers[closest_obj_id]);
+		cube_t c_test(drawer);
+		if (has_doors) {c_test.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*drawer.get_sz_dim(!obj.dim);} // expand outward by the width of the door
+		else {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
+		if (cube_intersects_moved_obj(c_test, closest_obj_id)) return 0; // blocked, can't open; ignore this object
+		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
 		point const drawer_center(drawer.get_cube_center());
 		if (has_doors) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}
 		else {gen_sound_thread_safe(SOUND_SLIDING, building.local_to_camera_space(drawer_center), 0.5);}
@@ -1686,9 +1702,6 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		
 		if (has_doors) { // expand any items in the cabinet so that the player can pick them up
 			// find any cabinets adjacent to this one in the other dim (inside corner) and ensure the opposing door is closed so that they don't intersect
-			cube_t c_test(drawer);
-			c_test.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*drawer.get_sz_dim(!obj.dim); // expand outward by the width of the door
-
 			for (auto i = objs.begin(); i != objs_end; ++i) {
 				if ((is_counter(obj) && !is_counter(*i)) || (obj.type == TYPE_CABINET && i->type != TYPE_CABINET)) continue; // wrong object type
 				if (i->dim == obj.dim) continue; // not opposing dim (also skips obj itself)
@@ -1806,9 +1819,6 @@ bool building_room_geom_t::add_room_object(room_object_t const &obj, building_t 
 	return 1;
 }
 
-// TODO:
-// * Block closet doors from opening
-// * Prevent drawers and cabinet doors from opening when blocked
 bool is_movable(room_object_t const &obj) {
 	if (obj.no_coll() || obj.type == TYPE_BLOCKER) return 0; // no blockers
 	bldg_obj_type_t const &bot(get_room_obj_type(obj));
@@ -1868,7 +1878,14 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 			for (auto i = objs.begin(); i != objs_end && !bad_placement; ++i) {
 				if (i == objs.begin() + closest_obj_id)      continue; // skip self
 				if (i->no_coll() || i->type == TYPE_BLOCKER) continue; // skip non-colliding objects and blockers that add clearance between objects as these won't block this object
-				bad_placement = i->intersects(moved_obj);
+				
+				if (i->type == TYPE_CLOSET && i->is_open() && i->is_small_closet()) { // check open closet door collision
+					cube_t cubes[5];
+					get_closet_cubes(*i, cubes, 1); // get cubes for walls and door; for_collision=1
+					cubes[4] = get_open_closet_door(*i, cubes[4]); // include open door
+					for (unsigned n = 0; n < 5; ++n) {bad_placement |= cubes[n].intersects(moved_obj);}
+				}
+				else {bad_placement = i->intersects(moved_obj);}
 			}
 			// Note: okay to skip expanded_objs because these should already be on/inside some other object; this allows us to move wine racks containing wine
 			if (bad_placement) continue; // intersects another object, try a smaller movement
@@ -1893,8 +1910,10 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 				} // for i
 			} // for vect_id
 			// mark doors as blocked
+			room_t const &room(get_room(obj.room_id));
+
 			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-				if (i->open) continue; // if the door is already open, it can't be blocked
+				if (i->open || !door_opens_inward(*i, room)) continue; // if the door is already open, or opens in the other direction, it can't be blocked
 				bool const inc_open(0), check_dirs(i->get_check_dirs());
 				if (is_cube_close_to_door(moved_obj, 0.0, inc_open, *i, check_dirs))              {i->blocked = 1; interior->door_state_updated = 1;} // newly blocked
 				else if (i->blocked && is_cube_close_to_door(obj, 0.0, inc_open, *i, check_dirs)) {i->blocked = 0; interior->door_state_updated = 1;} // newly unblocked
@@ -1916,11 +1935,10 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) const {
 	assert(interior);
 	room_t const &room(get_room(obj.room_id));
-	float const trim_thickness(get_trim_thickness());
 	
 	if (keep_in_room) {
 		cube_t place_area(room);
-		place_area.expand_by_xy(-0.99*trim_thickness); // shrink to exclude wall trim
+		place_area.expand_by_xy(-0.99*get_trim_thickness()); // shrink to exclude wall trim
 		if (!place_area.contains_cube(obj)) return 0; // outside the room
 	}
 	bool contained_in_part(0);
@@ -1934,9 +1952,8 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) c
 		if (has_bcube_int_no_adj(obj, interior->walls[d])) return 0;
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
-		bool const inc_open(i->open && door_opens_inward(*i, room)), check_dirs(i->get_check_dirs());
-		float const dmin(i->open ? 0.0 : trim_thickness); // use default door width when open and only the trim thickness when closed
-		if (is_cube_close_to_door(obj, dmin, inc_open, *i, check_dirs, !i->open)) return 0; // allow door to be blocked if closed
+		if (!i->open || !door_opens_inward(*i, room)) continue; // closed, or opens into the adjacent room, ignore
+		if (is_cube_close_to_door(obj, 0.0, 1, *i, i->get_check_dirs())) return 0;
 	}
 	if (has_bcube_int(obj, interior->stairwells) || has_bcube_int(obj, interior->elevators)) return 0;
 	return 1;

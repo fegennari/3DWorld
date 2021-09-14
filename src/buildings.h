@@ -628,7 +628,7 @@ struct building_room_geom_t {
 	// other functions
 	bool closet_light_is_on(cube_t const &closet) const;
 	int find_nearest_pickup_object(building_t const &building, point const &at_pos, vector3d const &in_dir, float range, float &obj_dist) const;
-	bool cube_intersects_moved_obj(cube_t const &c) const;
+	bool cube_intersects_moved_obj(cube_t const &c, int ignore_obj_id=-1) const;
 	bool open_nearest_drawer(building_t &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item);
 	void remove_object(unsigned obj_id, building_t &building);
 	bool player_pickup_object(building_t &building, point const &at_pos, vector3d const &in_dir);
@@ -1237,7 +1237,7 @@ void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5], bool is_desk);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]);
-void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only);
+float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only);
 float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors);
 void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors);
 cube_t get_elevator_car_panel(room_object_t const &c);

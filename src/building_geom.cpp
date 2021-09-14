@@ -383,9 +383,9 @@ bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float 
 
 cube_t get_closet_bcube_including_door(room_object_t const &c) {
 	if (c.type != TYPE_CLOSET || !c.is_open() || !c.is_small_closet()) return c;
-	cube_t bcube(c); // only applies to small closets with open doors; use the width of a standard interior door
+	cube_t bcube(c); // only applies to small closets with open doors
 	float const width(c.get_sz_dim(!c.dim)), wall_width(0.5*(width - 0.5*c.dz())); // see get_closet_cubes()
-	bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width);
+	bcube.d[c.dim][c.dir] += (c.dir ? 1.0f : -1.0f)*(width - 2.0f*wall_width); // extend outward
 	return bcube;
 }
 
@@ -1887,10 +1887,10 @@ bool building_t::check_cube_contained_in_part(cube_t const &c) const {
 	return 0;
 }
 
-bool building_room_geom_t::cube_intersects_moved_obj(cube_t const &c) const {
+bool building_room_geom_t::cube_intersects_moved_obj(cube_t const &c, int ignore_obj_id) const {
 	for (auto i = moved_obj_ids.begin(); i != moved_obj_ids.end(); ++i) {
 		assert(*i < objs.size());
-		if (objs[*i].intersects(c)) return 1; // intersects a moved object
+		if (int(*i) != ignore_obj_id && objs[*i].intersects(c)) return 1; // intersects a moved object
 	}
 	return 0;
 }

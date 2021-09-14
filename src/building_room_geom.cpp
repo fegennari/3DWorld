@@ -142,7 +142,7 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, boo
 	}
 }
 
-void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only) {
+float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only) {
 	drawers.clear();
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
@@ -178,6 +178,7 @@ void get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_o
 		} // for m
 		vpos += row_spacing;
 	} // for n
+	return drawer_extend; // signed
 }
 
 void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
