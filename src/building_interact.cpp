@@ -1166,14 +1166,14 @@ public:
 	bool  player_has_key () const {return has_key;}
 
 	bool can_open_door(door_t const &door) const {
-		if (door.blocked) {
-			print_text_onscreen("Door is blocked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
-			gen_sound_thread_safe_at_player(SOUND_DOOR_CLOSE, 1.0, 0.6);
-			return 0;
-		}
 		if (door.is_closed_and_locked() && !has_key) {
 			print_text_onscreen("Door is locked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
 			gen_sound_thread_safe_at_player(SOUND_CLICK, 1.0, 0.6);
+			return 0;
+		}
+		if (door.blocked) {
+			print_text_onscreen("Door is blocked", RED, 1.0, 2.0*TICKS_PER_SECOND, 0);
+			gen_sound_thread_safe_at_player(SOUND_DOOR_CLOSE, 1.0, 0.6);
 			return 0;
 		}
 		return 1;
