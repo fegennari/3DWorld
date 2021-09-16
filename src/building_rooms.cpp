@@ -2190,7 +2190,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		for (unsigned f = 0; f < num_floors; ++f, z += floor_height) {
 			room_center.z = z + fc_thick; // floor height
 			// top floor may have stairs connecting to upper stack
-			bool const top_floor(f+1 == num_floors), check_stairs((!is_house || has_basement()) && parts.size() > 1 && top_floor && r->z2() < bcube.z2()); // z2 check may not be effective
+			bool const top_floor(!is_basement && f+1 == num_floors);
+			bool const check_stairs((!is_house || has_basement()) && real_num_parts > 1 && top_floor && r->z2() < bcube.z2()); // z2 check may not be effective
 			bool is_lit(0), has_light(1), light_dim(room_dim), has_stairs(r->has_stairs_on_floor(f)), top_of_stairs(has_stairs && top_floor);
 
 			if ((!has_stairs && (f == 0 || top_floor) && interior->stairwells.size() > 1) || top_of_stairs) { // should this be outside the loop?
