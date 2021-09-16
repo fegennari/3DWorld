@@ -1520,7 +1520,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	float const height(get_window_vspace() - get_floor_thickness()), radius(0.2*height);
+	float const height(get_window_vspace() - get_floor_thickness()), radius(0.18*height);
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-radius);
 	vector<room_object_t> &objs(interior->room_geom->objs);
@@ -1544,7 +1544,7 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 		}
 		cube_t const c(get_cube_height_radius(center, radius, height));
 		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
-		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, dir, 0, tot_light_amt, SHAPE_CYLIN);
+		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CYLIN);
 		was_placed = 1;
 		break; // done
 	} // for n

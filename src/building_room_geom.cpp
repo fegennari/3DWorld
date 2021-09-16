@@ -1837,15 +1837,40 @@ void building_room_geom_t::add_trashcan(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_water_heater(room_object_t const &c) {
-	// TODO: add pipes, pan, label, etc.
-#if 1
-	get_metal_material(1, 0, 1).add_vcylin_to_verts(c, apply_light_color(c, LT_GRAY), 0, 1); // draw sides and top
-#else
-	float const height(c.dz()), radius(c.get_radius());
-	rgeom_mat_t &side_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/water_heater_label.png")), 1, 0, 1)); // shadows, small
-	side_mat.add_vcylin_to_verts(c, apply_light_color(c, LT_GRAY), 0, 0); // draw sides
-	get_metal_material(1, 0, 1).add_disk_to_verts(center, radius, 0, apply_light_color(c, GRAY)); // shadowed, specular metal; small=1
-#endif
+	float const height(c.dz()), radius(c.get_radius()), front_pos(c.d[c.dim][c.dir]), front_dir(c.dir ? 1.0 : -1.0), top_z(c.z1() + 0.8*height);
+	cube_t body(c), sticker(c), pan(c), top(c), exhaust(c), box, pipes[2];
+
+	for (unsigned d = 0; d < 2; ++d) {
+		point pt(c.xc(), c.yc(), 0.0); // zval will be set below
+		pt[!c.dim] += (d ? 1.0 : -1.0)*0.65*radius;
+		pipes[d].set_from_sphere(pt, 0.08*radius);
+		set_cube_zvals(pipes[d], top_z, c.z2());
+	}
+	pan .z1() = c.z1() + 0.001*height; // prevent z-fighting
+	pan .z2() = c.z1() + 0.05*height;
+	body.z2() = top.z1() = top_z - 0.02*height;
+	top .z2() = exhaust.z1() = top_z;
+	set_cube_zvals(sticker, (c.z1() + 0.30*height), (c.z1() + 0.60*height));
+	set_cube_zvals(box, (c.z1() + 0.14*height), (c.z1() + 0.2*height));
+	pan.expand_by_xy(0.05*radius);
+	top.expand_by_xy(0.01*radius);
+	sticker.expand_by_xy(0.005*radius);
+	exhaust.expand_by_xy(-0.78*radius); // shrink
+	set_wall_width(box, c.get_center_dim(!c.dim), 0.2*radius, !c.dim);
+	box.d[c.dim][!c.dir] = front_pos - front_dir*0.10*radius; // back  of box
+	box.d[c.dim][ c.dir] = front_pos + front_dir*0.12*radius; // front of box
+	rgeom_mat_t &metal_mat(get_metal_material(1, 0, 1));
+	metal_mat.add_vcylin_to_verts(body,    apply_light_color(c, GRAY   ), 0, 0, 0); // main body - draw sides only
+	metal_mat.add_vcylin_to_verts(pan,     apply_light_color(c, LT_GRAY), 1, 0, 1); // bottom pan - two sided, with bottom
+	metal_mat.add_vcylin_to_verts(top,     apply_light_color(c, DK_GRAY), 0, 1, 0); // top - draw top
+	metal_mat.add_vcylin_to_verts(exhaust, apply_light_color(c, LT_GRAY), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16); // ndiv=16
+	for (unsigned d = 0; d < 2; ++d) {metal_mat.add_vcylin_to_verts(pipes[d], apply_light_color(c, COPPER_C), 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0, 16);} // ndiv=16
+	get_untextured_material(1, 0, 1).add_cube_to_verts(box, apply_light_color(c, LT_GRAY)); // control box
+
+	if (c.room_id & 1) { // add sticker 50% of the time
+		rgeom_mat_t &sticker_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/water_heater_sticker.jpg")), 0, 0, 1)); // no shadows, small
+		sticker_mat.add_vcylin_to_verts(sticker, apply_light_color(c, LT_GRAY), 0, 0, 0); // sticker - draw sides only
+	}
 }
 
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
