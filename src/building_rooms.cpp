@@ -1520,8 +1520,35 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 }
 
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
-	// TODO
-	return 0;
+	float const height(get_window_vspace() - get_floor_thickness()), radius(0.2*height);
+	cube_t place_area(get_walkable_room_bounds(room));
+	place_area.expand_by(-radius);
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	point center(0.0, 0.0, zval);
+	bool was_placed(0);
+
+	for (unsigned n = 0; n < 14; ++n) { // make 14 attempts to place a water heater - one in each corner and 10 along the walls
+		bool const dim(rgen.rand_bool());
+		bool dir(0);
+
+		if (n < 4) { // corner
+			bool const xdir(rgen.rand_bool()), ydir(rgen.rand_bool());
+			dir = (dim ? ydir : xdir);
+			center.x = place_area.d[0][xdir];
+			center.y = place_area.d[1][ydir];
+		}
+		else { // wall
+			dir = rgen.rand_bool(); // choose a random wall
+			center[ dim] = place_area.d[dim][dir]; // against this wall
+			center[!dim] = rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1]);
+		}
+		cube_t const c(get_cube_height_radius(center, radius, height));
+		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
+		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, dir, 0, tot_light_amt, SHAPE_CYLIN);
+		was_placed = 1;
+		break; // done
+	} // for n
+	return was_placed;
 }
 
 bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
@@ -2376,7 +2403,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				// office, no cubicles or bathroom - try to make it a library (in rare cases)
 				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {r->assign_to(RTYPE_LIBRARY, f);}
 			}
-			if (r->get_room_type(f) == RTYPE_NOTSET) { // room type not yet set, attempt to assign it with an optional room type
+			bool const room_type_was_not_set(r->get_room_type(f) == RTYPE_NOTSET);
+
+			if (room_type_was_not_set) { // attempt to assign it with an optional room type
 				if (is_house && !is_basement && f == 0 && is_room_adjacent_to_ext_door(*r)) {r->assign_to(RTYPE_ENTRY, f);} // entryway if on first floor, has exterior door, and unassigned
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 				// else house
@@ -2395,10 +2424,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					// this case is relatively rare, and we've already added a table, so it's too late to make this a bedroom/bathroom if can_be_bedroom_or_bathroom(*r, f)
 					r->assign_to((rgen.rand_bool() ? (room_type)RTYPE_PLAY : (room_type)RTYPE_ART), f); // play room or art room
 				}
-				if (is_basement && rgen.rand_bool() && !added_basement_utility) { // basement laundry, storage, or card room
-					added_basement_utility = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
-					// special room type?
-				}
+			}
+			if (is_basement && rgen.rand_bool() && !added_basement_utility && (is_storage || room_type_was_not_set)) { // basement laundry, storage, or card room
+				added_basement_utility = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
+				// special room type?
 			}
 			if (!is_bathroom && !is_bedroom && !is_kitchen && !is_storage && !is_basement) { // add potted plants to some room types
 				// 0-2 for living/dining rooms, 50% chance for houses, 25% (first floor) / 10% (other floors) chance for offices
