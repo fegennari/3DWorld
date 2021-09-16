@@ -1527,7 +1527,7 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 	point center(0.0, 0.0, zval);
 	bool was_placed(0);
 
-	for (unsigned n = 0; n < 14; ++n) { // make 14 attempts to place a water heater - one in each corner and 10 along the walls
+	for (unsigned n = 0; n < 5; ++n) { // make 14 attempts to place a water heater - one in each corner and 1 along a random wall for variety
 		bool const dim(rgen.rand_bool());
 		bool dir(0);
 
@@ -2425,7 +2425,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					r->assign_to((rgen.rand_bool() ? (room_type)RTYPE_PLAY : (room_type)RTYPE_ART), f); // play room or art room
 				}
 			}
-			if (is_basement && rgen.rand_bool() && !added_basement_utility && (is_storage || room_type_was_not_set)) { // basement laundry, storage, or card room
+			if (is_basement && !added_basement_utility && !has_stairs && (is_storage || room_type_was_not_set) && rgen.rand_bool()) {
+				// basement laundry, storage, or card room; should this be placed before adding boxes to the floor of storage rooms?
 				added_basement_utility = add_basement_utility_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				// special room type?
 			}
