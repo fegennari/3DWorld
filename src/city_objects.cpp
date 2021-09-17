@@ -12,22 +12,35 @@ extern object_model_loader_t building_obj_model_loader;
 
 struct plot_divider_type_t {
 	bool is_occluder, has_alpha_mask;
-	int tid;
+	int tid, nm_tid;
 	float wscale, hscale, tscale; // width, height, and texture scales
 	colorRGBA color, map_color;
-	string tex_name;
+	string tex_name, nm_tex_name;
 
-	plot_divider_type_t(string const &tn, float ws, float hs, float ts, bool ic, bool ham, colorRGBA const &c, colorRGBA const &mc) :
-		is_occluder(ic), has_alpha_mask(ham), tid(-1), wscale(ws), hscale(hs), tscale(ts), color(c), map_color(mc), tex_name(tn) {}
+	plot_divider_type_t(string const &tn, string const &nm_tn, float ws, float hs, float ts, bool ic, bool ham, colorRGBA const &c, colorRGBA const &mc) :
+		is_occluder(ic), has_alpha_mask(ham), tid(-1), nm_tid(-1), wscale(ws), hscale(hs), tscale(ts), color(c), map_color(mc), tex_name(tn), nm_tex_name(nm_tn) {}
 	colorRGBA get_avg_color() const {return ((tid >= 0) ? texture_color(tid) : map_color).modulate_with(color);}
+
+	void pre_draw(bool shadow_only) {
+		if (shadow_only && !has_alpha_mask) return; // not textured
+
+		if (tid < 0 && !tex_name.empty()) {
+			unsigned const ncolors(has_alpha_mask ? 4 : 3);
+			int const use_mipmaps (has_alpha_mask ? 0 : 1); // disable mipmaps if this texture has an alpha mask because we need to keep binary alpha
+			tid = get_texture_by_name(tex_name, 0, 0, 1, 4.0, 1, use_mipmaps, ncolors); // load/lookup texture if needed, 4.0 aniso
+		}
+		if (nm_tid < 0 && !nm_tex_name.empty()) {nm_tid = get_texture_by_name(nm_tex_name, 1);} // load/lookup texture if needed
+		select_texture(tid);
+		select_multitex(nm_tid, 5); // TODO: normal maps not enabled in the shader, this is future work
+	}
 };
 enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_CHAINLINK, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
 
 plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
-	plot_divider_type_t("cblock2.jpg", 0.50, 2.5, 1.0, 1, 0, WHITE, GRAY    ), // wall
-	plot_divider_type_t("fence.jpg",   0.15, 2.0, 1.0, 1, 0, WHITE, LT_BROWN), // fence
-	plot_divider_type_t("hedges.jpg",  1.00, 1.6, 1.0, 0, 0, GRAY,  GREEN   ), // hedge - too short to be an occluder
-	plot_divider_type_t("roads/chainlink_fence.png", 0.02, 1.8, 8.0, 0, 1, WHITE, GRAY) // chainlink fence with alpha mask
+	plot_divider_type_t("cblock2.jpg", "normal_maps/cblock2_NRM.jpg", 0.50, 2.5, 1.0, 1, 0, WHITE, GRAY    ), // wall
+	plot_divider_type_t("fence.jpg",   "normal_maps/fence_NRM.jpg",   0.15, 2.0, 1.0, 1, 0, WHITE, LT_BROWN), // fence
+	plot_divider_type_t("hedges.jpg",  "", 1.00, 1.6, 1.0, 0, 0, GRAY, GREEN), // hedge - too short to be an occluder
+	plot_divider_type_t("roads/chainlink_fence.png", "", 0.02, 1.8, 8.0, 0, 1, WHITE, GRAY) // chainlink fence with alpha mask
 };
 
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
@@ -169,15 +182,7 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 
 /*static*/ void divider_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
-	plot_divider_type_t &pdt(plot_divider_types[dstate.pass_ix]);
-	if (shadow_only && !pdt.has_alpha_mask) return; // not textured
-	
-	if (pdt.tid < 0) {
-		unsigned const ncolors(pdt.has_alpha_mask ? 4 : 3);
-		int const use_mipmaps (pdt.has_alpha_mask ? 0 : 1); // disable mipmaps if this texture has an alpha mask because we need to keep binary alpha
-		pdt.tid = get_texture_by_name(pdt.tex_name, 0, 0, 1, 4.0, 1, use_mipmaps, ncolors); // load/lookup texture if needed, 4.0 aniso
-	}
-	select_texture(pdt.tid);
+	plot_divider_types[dstate.pass_ix].pre_draw(shadow_only);
 }
 void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
@@ -801,9 +806,14 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		float const dist_scales[4] = {0.1, 0.5, 0.3, 0.5};
 		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes don't use qbd
 	}
-	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
-	for (dstate.pass_ix = 0; dstate.pass_ix < DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge}
-		draw_objects(dividers, divider_groups, dstate, 0.2, shadow_only, 0); // dist_scale=0.2
+	if (!dividers.empty()) {
+		if (!shadow_only) {
+			// TODO: use normal maps if the player is near
+		}
+		// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
+		for (dstate.pass_ix = 0; dstate.pass_ix < DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge}
+			draw_objects(dividers, divider_groups, dstate, 0.2, shadow_only, 0); // dist_scale=0.2
+		}
 	}
 	dstate.pass_ix = 0; // reset back to 0
 }
