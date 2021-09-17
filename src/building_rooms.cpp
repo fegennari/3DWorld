@@ -1522,7 +1522,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	float const height(get_window_vspace() - get_floor_thickness()), radius(0.18*height);
 	cube_t place_area(get_walkable_room_bounds(room));
-	place_area.expand_by(-radius);
+	place_area.expand_by(-(1.05*radius + get_trim_thickness())); // account for the pan
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	point center(0.0, 0.0, zval);
 	bool was_placed(0);
@@ -1543,7 +1543,12 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 			center[!dim] = rgen.rand_uniform(place_area.d[!dim][0], place_area.d[!dim][1]);
 		}
 		cube_t const c(get_cube_height_radius(center, radius, height));
-		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c) || overlaps_other_room_obj(c, objs_start)) continue; // bad placement
+		if (is_cube_close_to_doorway(c, room, 0.0, !room.is_hallway) || interior->is_blocked_by_stairs_or_elevator(c)) continue;
+		cube_t c_exp(c);
+		c_exp.expand_by_xy(0.2*radius); // small keepout in XY
+		c_exp.d[dim][!dir] += (dir ? -1.0 : 1.0)*0.25*radius; // add more keepout in front where the controls are
+		c_exp.intersect_with_cube(room); // don't pick up objects on the other side of the wall
+		if (overlaps_other_room_obj(c_exp, objs_start)) continue; // check existing objects, in particular storage room boxes that will have already been placed
 		objs.emplace_back(c, TYPE_WHEATER, room_id, dim, !dir, 0, tot_light_amt, SHAPE_CYLIN);
 		was_placed = 1;
 		break; // done
