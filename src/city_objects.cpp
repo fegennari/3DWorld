@@ -555,7 +555,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 }
 
-void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
+void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
 	assert(plot_subdiv_sz > 0.0);
 	sub_plots.clear();
 	if (plot.is_park) return; // no dividers in parks
@@ -565,10 +565,13 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
 	float const sz_scale(0.06*city_params.road_width);
 	unsigned const dividers_start(dividers.size());
+	float const min_pool_spacing_to_plot_edge(0.5*city_params.road_width);
+	colorRGBA const pool_side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
 
 	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
+		// place plot dividers
 		unsigned const type(rgen.rand()%(DIV_NUM_TYPES + 1)); // use a consistent divider type for all sides of this plot
-		if (type >= DIV_NUM_TYPES) continue; // no divider for this plot
+		if (type >= DIV_NUM_TYPES) continue; // no divider for this plot; also, can't place a swimming pool here because it's not enclosed
 		// should we remove or move houses fences for divided sub-plots? I'm not sure how that would actually be possible at this point; or maybe skip dividers if the house has a fence?
 		plot_divider_type_t const &pdt(plot_divider_types[type]);
 		float const hwidth(0.5*sz_scale*pdt.wscale), z2(i->z1() + sz_scale*pdt.hscale);
@@ -587,7 +590,7 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 				c.intersect_with_cube_xy(place_area);
 				c.z2() = z2;
 				set_wall_width(c, div_pos, hwidth, dim); // centered on the edge of the plot
-					
+
 				if (dim == shrink_dim) {
 					c.translate_dim(dim, (dir ? -1.0 : 1.0)*hwidth); // move inside the plot so that edges line up
 					// clip to the sides to remove overlap; may not line up with a neibhgoring divider of a different type/width, but hopefully okay
@@ -611,15 +614,8 @@ void city_obj_placer_t::place_plot_dividers(road_plot_t const &plot, vect_cube_t
 				blockers .push_back(divider.bcube);
 			} // for dir
 		} // for dim
-	} // for i
-}
 
-void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
-	// assumes place_plot_dividers() has been called first to populate sub_plots
-	float const min_spacing_to_plot_edge(0.5*city_params.road_width);
-	colorRGBA const side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
-
-	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
+		// place swimming pools
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
 		if (rgen.rand_bool()) continue; // only add pools 50% of the time
 		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
@@ -629,8 +625,8 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
 
 		for (unsigned d = 0; d < 2; ++d) { // keep pools away from the edges of plots; applies to sub-plots on the corners
-			max_eq(pool_area.d[d][0], plot.d[d][0]+min_spacing_to_plot_edge);
-			min_eq(pool_area.d[d][1], plot.d[d][1]-min_spacing_to_plot_edge);
+			max_eq(pool_area.d[d][0], plot.d[d][0]+min_pool_spacing_to_plot_edge);
+			min_eq(pool_area.d[d][1], plot.d[d][1]-min_pool_spacing_to_plot_edge);
 		}
 		pool_area.expand_by_xy(-0.05*dmin); // small shrink to keep away from walls, fences, and hedges
 		vector3d pool_sz;
@@ -644,13 +640,13 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		point pool_llc;
 		pool_llc.z = i->z2();
 
-		for (unsigned n = 0; n < 10; ++n) { // make some attempts to generate a valid pool location
+		for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid pool location
 			for (unsigned d = 0; d < 2; ++d) {pool_llc[d] = rgen.rand_uniform(pool_area.d[d][0], pool_area.d[d][1]);}
 			cube_t pool(pool_llc, (pool_llc + pool_sz));
 			if (has_bcube_int_xy(pool, blockers, 0.08*dmin)) continue; // intersects some other object
 			float const grayscale(rgen.rand_uniform(0.7, 1.0));
 			float const water_white_comp(rgen.rand_uniform(0.1, 0.3)), extra_green(rgen.rand_uniform(0.2, 0.5)), lightness(rgen.rand_uniform(0.5, 0.8));
-			colorRGBA const color(above_ground ? side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
+			colorRGBA const color(above_ground ? pool_side_colors[rgen.rand()%5]: colorRGBA(grayscale, grayscale, grayscale));
 			colorRGBA const wcolor(lightness*water_white_comp, lightness*(water_white_comp + extra_green), lightness);
 			pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground), pools);
 			pool.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
@@ -740,10 +736,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			}
 			bcubes.push_back(dw);
 		} // for j
-		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {
-			place_plot_dividers(*i, bcubes, colliders, detail_rgen); // before placing trees
-			place_residential_plot_objects(*i, bcubes, colliders, detail_rgen);
-		}
+		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {place_residential_plot_objects(*i, bcubes, colliders, detail_rgen);} // before placing trees
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential);
 	} // for i
