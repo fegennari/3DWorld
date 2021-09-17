@@ -799,7 +799,7 @@ public:
 							float &lo(clip_d ? seg.dlo : seg.ilo), &hi(clip_d ? seg.dhi : seg.ihi);
 							if (lo > 0.01) {lo = ceil (lo*num_windows - window_h_border)/num_windows;} // if clipped on lo edge, round up   to nearest whole window
 							if (hi < 0.99) {hi = floor(hi*num_windows + window_h_border)/num_windows;} // if clipped on hi edge, round down to nearest whole window
-							if (hi - lo < 0.01) continue; // no space for a window after clip (optimization)
+							if (hi - lo < 0.01f) continue; // no space for a window after clip (optimization)
 						}
 						segs.emplace_back(seg);
 					} // for f
@@ -1143,10 +1143,21 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		ext_side_qv_range.start   = bdraw.get_num_verts (mat.wall_tex);
 
 		for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels, room parts only, no AO
-			colorRGBA const &color(is_basement(i) ? WHITE : wall_color); // basement walls are always white
-			bdraw.add_section(*this, 1, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // XY
+			if (!is_basement(i)) {bdraw.add_section(*this, 1, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0);} // XY
 		}
 		ext_side_qv_range.end = bdraw.get_num_verts(mat.wall_tex);
+
+		if (has_basement()) {
+			tid_nm_pair_t tp;
+
+			if ((mat_ix + parts.size()) & 1) { // randomly select one of two textures
+				tp = tid_nm_pair_t(CBLOCK_TEX, get_texture_by_name("normal_maps/cblock_NRM.jpg", 1), 1.0, 1.0);
+			}
+			else {
+				tp = tid_nm_pair_t(get_texture_by_name("cblock2.jpg"), get_texture_by_name("normal_maps/cblock2_NRM.jpg", 1), 1.0, 1.0);
+			}
+			bdraw.add_section(*this, 1, parts[basement_part_ix], tp, WHITE, 3, 0, 0, 1, 0); // XY, always white
+		}
 	}
 	if (get_interior && interior != nullptr) { // interior building parts
 		bdraw.begin_draw_range_capture();
@@ -1453,12 +1464,12 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 	cube_t const cont_part(get_part_containing_pt(only_cont_pt)); // part containing the point
 	
 	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) { // multiple cubes/parts/levels; include house garage/shed
-		colorRGBA const &color(is_basement(i) ? WHITE : wall_color); // basement walls are always white
+		if (is_basement(i)) continue; // skip basement walls because they have no windows
 
 		if (make_all_front || i->contains_pt(only_cont_pt) || // part containing the point
 			are_parts_stacked(*i, cont_part)) // stacked building parts, contained, draw as front in case player can see through stairs
 		{
-			bdraw_front.add_section(*this, 1, *i, mat.wall_tex, color, 3, 0, 0, 1, 0); // XY
+			bdraw_front.add_section(*this, 1, *i, mat.wall_tex, wall_color, 3, 0, 0, 1, 0); // XY
 			continue;
 		}
 		unsigned back_dim_mask(3), front_dim_mask(0); // enable dims: 1=x, 2=y, 4=z | disable cube faces: 8=x1, 16=x2, 32=y1, 64=y2, 128=z1, 256=z2
@@ -1480,14 +1491,14 @@ void building_t::get_split_int_window_wall_verts(building_draw_t &bdraw_front, b
 				if (i->d[!d][e] != cont_part.d[!d][e] && ((i->d[!d][e] < cont_part.d[!d][e]) ^ e)) {
 					cube_t back_clip_cube(*i);
 					front_clip_cube.d[!d][e] = back_clip_cube.d[!d][!e] = cont_part.d[!d][e]; // split point
-					bdraw_back.add_section(*this, 1, *i, mat.wall_tex, color, back_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
+					bdraw_back.add_section(*this, 1, *i, mat.wall_tex, wall_color, back_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &back_clip_cube);
 				}
 			}
 			back_dim_mask &= ~(1<<d); front_dim_mask |= (1<<d); // draw only the other dim as back and this dim as front
 			break;
 		} // for d
-		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, 1, *i, mat.wall_tex, color, back_dim_mask,  0, 0, 1, 0);}
-		if (front_dim_mask > 0) {bdraw_front.add_section(*this, 1, *i, mat.wall_tex, color, front_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
+		if (back_dim_mask  > 0) {bdraw_back .add_section(*this, 1, *i, mat.wall_tex, wall_color, back_dim_mask,  0, 0, 1, 0);}
+		if (front_dim_mask > 0) {bdraw_front.add_section(*this, 1, *i, mat.wall_tex, wall_color, front_dim_mask, 0, 0, 1, 0, 0.0, 0, 1.0, 0, &front_clip_cube);}
 	} // for i
 }
 
