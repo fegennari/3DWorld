@@ -61,7 +61,7 @@ void register_building_sound(point const &pos, float volume);
 void register_building_sound_at_player(float volume);
 
 // Note: called by the player; closest_to is in building space, not camera space
-bool building_t::toggle_room_light(point const &closest_to, bool sound_from_closest_to, int room_id) {
+bool building_t::toggle_room_light(point const &closest_to, bool sound_from_closest_to, int room_id, bool inc_lamps) {
 	if (!has_room_geom()) return 0; // error?
 
 	if (room_id < 0) { // caller has not provided a valid room_id, so determine it now
@@ -77,7 +77,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 	int closest_light(-1);
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
-		if (!i->is_light_type() || i->room_id != room_id) continue; // not a light, or the wrong room
+		if (!i->is_light_type() || (!inc_lamps && i->type == TYPE_LAMP) || i->room_id != room_id) continue; // not a light, or the wrong room
 		if (bool(i->flags & RO_FLAG_IN_CLOSET) != bool(player_in_closet)) continue; // while in the closet, player can only toggle closet lights and not room lights
 		if (i->flags & RO_FLAG_IN_ELEV) continue; // can't toggle elevator light
 		if (!room.is_sec_bldg && get_floor_for_zval(i->z1()) != get_floor_for_zval(closest_to.z)) continue; // wrong floor (skip garages and sheds)
@@ -412,7 +412,7 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, vec
 	}
 	else if (obj.type == TYPE_SWITCH) {
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
-		toggle_room_light(obj.get_cube_center(), 1, obj.room_id); // should select the correct light(s) for the room containing the switch
+		toggle_room_light(obj.get_cube_center(), 1, obj.room_id, 0); // should select the correct light(s) for the room containing the switch; exclude lamps
 		obj.flags       ^= RO_FLAG_OPEN; // toggle on/off
 		sound_scale      = 0.1;
 		update_draw_data = 1;
