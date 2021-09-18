@@ -940,7 +940,7 @@ class city_road_gen_t : public road_gen_base_t {
 			plot_xy.gen_adj_plots(plots);
 			//cout << "tile_to_block_map: " << tile_to_block_map.size() << ", tile_blocks: " << tile_blocks.size() << endl;
 		}
-		void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
+		void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars, bool &have_plot_dividers) {
 			city_obj_placer.clear();
 			city_obj_placer.set_plot_subdiv_sz(get_plot_subdiv_sz());
 			city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars, is_residential);
@@ -948,6 +948,7 @@ class city_road_gen_t : public road_gen_base_t {
 			add_tile_blocks(city_obj_placer.driveways, tile_to_block_map, TYPE_DRIVEWAY);
 			tile_to_block_map.clear(); // no longer needed
 			if (is_residential) {move_streetlights_to_not_overlap_driveways();}
+			have_plot_dividers |= !city_obj_placer.has_plot_dividers();
 		}
 		void add_streetlights() {
 			streetlights.clear();
@@ -1809,6 +1810,7 @@ class city_road_gen_t : public road_gen_base_t {
 	road_network_t global_rn; // connects cities together; no plots
 	road_draw_state_t dstate;
 	rand_gen_t rgen;
+	bool have_plot_dividers;
 
 	static float rgen_uniform(float val1, float val2, rand_gen_t &rgen) {return (val1 + (val2 - val1)*rgen.rand_float());}
 
@@ -1839,6 +1841,7 @@ class city_road_gen_t : public road_gen_base_t {
 	}
 
 public:
+	city_road_gen_t() : have_plot_dividers(0) {}
 	bool empty() const {return road_networks.empty();}
 	bool has_tunnels() const {return global_rn.has_tunnels();}
 	bool point_in_tunnel(point const &pos) const {return global_rn.point_in_tunnel(pos);}
@@ -2164,7 +2167,7 @@ public:
 		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->calc_ix_values(road_networks, global_rn, global_plot_id);}
 	}
 	void gen_parking_lots_and_place_objects(vector<car_t> &cars, bool have_cars) {
-		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_parking_lots_and_place_objects(cars, have_cars);}
+		for (auto i = road_networks.begin(); i != road_networks.end(); ++i) {i->gen_parking_lots_and_place_objects(cars, have_cars, have_plot_dividers);}
 	}
 	void get_city_bcubes(vect_cube_t &bcubes) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {bcubes.push_back(r->get_bcube());}
