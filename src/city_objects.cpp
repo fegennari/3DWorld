@@ -561,6 +561,16 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 }
 
+bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, unsigned prev_blockers_end, float expand, bool exp_dim) {
+	cube_t query_cube(cube);
+	query_cube.expand_in_dim(exp_dim, expand);
+
+	for (auto b = blockers.begin(); b != blockers.end()+prev_blockers_end; ++b) {
+		if (b->intersects_xy_no_adj(query_cube)) return 1;
+	}
+	return 0;
+}
+
 void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
 	assert(plot_subdiv_sz > 0.0);
 	sub_plots.clear();
@@ -570,15 +580,16 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	if (rgen.rand_bool()) {std::reverse(sub_plots.begin(), sub_plots.end());} // reverse half the time so that we don't prefer a divider in one side or the other
 	unsigned const shrink_dim(rgen.rand_bool()); // mostly arbitrary, could maybe even make this a constant 0
 	float const sz_scale(0.06*city_params.road_width);
-	unsigned const dividers_start(dividers.size());
+	unsigned const dividers_start(dividers.size()), prev_blockers_end(blockers.size());
 	float const min_pool_spacing_to_plot_edge(0.5*city_params.road_width);
 	colorRGBA const pool_side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
+	vect_cube_t bcubes;
 
 	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
 		// place plot dividers
-		unsigned const type(rgen.rand()%(DIV_NUM_TYPES + 1)); // use a consistent divider type for all sides of this plot
-		if (type >= DIV_NUM_TYPES) continue; // no divider for this plot; also, can't place a swimming pool here because it's not enclosed
-		// should we remove or move houses fences for divided sub-plots? I'm not sure how that would actually be possible at this point; or maybe skip dividers if the house has a fence?
+		unsigned const type(rgen.rand()%DIV_NUM_TYPES); // use a consistent divider type for all sides of this plot
+		if (type == DIV_CHAINLINK) continue; // chain link fence is not a primary divider - no divider for this plot; also, can't place a swimming pool here because it's not enclosed
+		// should we remove or move house fences for divided sub-plots? I'm not sure how that would actually be possible at this point; or maybe skip dividers if the house has a fence?
 		plot_divider_type_t const &pdt(plot_divider_types[type]);
 		float const hwidth(0.5*sz_scale*pdt.wscale), z2(i->z1() + sz_scale*pdt.hscale);
 		float const shrink_border(1.5*get_inner_sidewalk_width()); // needed for pedestrians to move along the edge of the plot; slightly larger to prevent collisions
@@ -617,21 +628,29 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					}
 					if (overlaps) continue; // overlaps a previous divider, skip this one
 				}
-				divider_t divider(c, type, dim, dir, skip_dims);
-				divider_groups.add_obj(divider, dividers);
-				colliders.push_back(divider.bcube);
-				blockers .push_back(divider.bcube);
+				divider_groups.add_obj(divider_t(c, type, dim, dir, skip_dims), dividers);
+				colliders.push_back(c);
+				blockers .push_back(c);
 			} // for dir
 		} // for dim
 
 		// place swimming pools
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
-		if (rgen.rand_bool()) continue; // only add pools 50% of the time
+		if (rgen.rand_float() < 0.25) continue; // only add pools 75% of the time
 		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
 		bool const above_ground(rgen.rand_bool());
+		bcubes.clear();
+		get_building_bcubes(*i, bcubes);
+		assert(bcubes.size() == 1); // there should be exactly one building/house in this sub-plot
+		cube_t const &house(bcubes.front());
 		cube_t pool_area(*i);
-		pool_area.d[dim][dir] = pool_area.get_center_dim(dim); // limit the pool to the back yard
+		pool_area.d[dim][dir] = house.d[dim][!dir]; // limit the pool to the back yard
+
+		for (unsigned d = 0; d < 2; ++d) {
+			if (i->d[!dim][d] == plot.d[!dim][d]) {pool_area.d[!dim][d] = house.d[!dim][d];} // adjacent to road - constrain to house projection so that side fence can be placed
+		}
 		float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
+		if (dmin < 0.75f*city_params.road_width) continue; // back yard is too small to add a pool
 
 		for (unsigned d = 0; d < 2; ++d) { // keep pools away from the edges of plots; applies to sub-plots on the corners
 			max_eq(pool_area.d[d][0], plot.d[d][0]+min_pool_spacing_to_plot_edge);
@@ -642,7 +661,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		pool_sz.z = (above_ground ? rgen.rand_uniform(0.08, 0.12)*city_params.road_width : 0.01f*dmin);
 
 		for (unsigned d = 0; d < 2; ++d) {
-			pool_sz[d] = ((above_ground && d == 1) ? pool_sz[0] : rgen.rand_uniform(0.4, 0.7)*dmin); // above_ground_cylin pools have square bcubes
+			pool_sz[d] = ((above_ground && d == 1) ? pool_sz[0] : rgen.rand_uniform(0.5, 0.7)*dmin); // above_ground_cylin pools have square bcubes
 			pool_area.d[d][1] -= pool_sz[d]; // shrink so that pool_area is where (x1, x2) can be placed
 		}
 		if (!pool_area.is_normalized()) continue; // pool area is too small; this can only happen due to shrink at plot edges
@@ -661,6 +680,40 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			pool.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
 			colliders.push_back(pool);
 			blockers .push_back(pool);
+			// add fences along the sides of the house to separate the back yard from the front yard
+			plot_divider_type_t const &fence_pdt(plot_divider_types[DIV_CHAINLINK]);
+			float const fence_hwidth(0.5*sz_scale*fence_pdt.wscale), fence_z2(i->z1() + sz_scale*fence_pdt.hscale);
+			float const expand(-1.5*sz_scale*plot_divider_types[DIV_HEDGE].wscale); // shrink by widest divider to avoid false intersection with orthogonal dividers
+
+			for (unsigned side = 0; side < 2; ++side) { // left/right
+				bool fence_dim(dim);
+				cube_t fence(*i);
+				fence.z2() = fence_z2;
+
+				if (i->d[!dim][side] == plot.d[!dim][side]) { // at the edge of the plot, wrap the fence around in the back yard instead
+					fence.d[dim][dir] = house.d[dim][!dir]; // starts at the back yard
+					set_wall_width(fence, house.d[!dim][side], fence_hwidth, !dim);
+					fence_dim ^= 1;
+					
+					if (is_placement_blocked(fence, blockers, prev_blockers_end, expand, !fence_dim)) { // Note: not trying midpoint because it can intersect an exterior door
+						float const pos(house.d[!dim][!side]);
+						if ((pos > pool.d[!dim][side]) ^ side) continue; // fence does not contain the pool
+						set_wall_width(fence, pos, fence_hwidth, !dim); // try back edge
+					}
+				}
+				else { // at the front of the house (TODO: what if house is L-shaped?)
+					fence.d[!dim][!side] = house.d[!dim][side]; // adjacent to the house
+					set_wall_width(fence, house.d[dim][dir], fence_hwidth, dim); // front edge of house
+
+					if (is_placement_blocked(fence, blockers, prev_blockers_end, expand, !fence_dim)) { // Note: not trying midpoint because it can intersect an exterior door
+						set_wall_width(fence, house.d[dim][!dir], fence_hwidth, dim); // try back edge
+					}
+				}
+				if (is_placement_blocked(fence, blockers, prev_blockers_end, expand, !fence_dim)) continue; // blocked by a driveway, etc.
+				divider_groups.add_obj(divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0), dividers); // Note: dir is unused in divider_t so doesn't have to be set correctly
+				colliders.push_back(fence);
+				blockers .push_back(fence);
+			} // for side
 			break; // success
 		} // for n
 	} // for i

@@ -1762,8 +1762,8 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 		assert(length > 0.0);
 		bool const first_side(rgen.rand_bool()); // not biased
 
-		if (rgen.rand_bool() && length > min_length) { // shorten a random amount if it's long enough
-			dw.d[dim][!dir] -= (dir ? -1.0 : 1.0)*min((length - min_length), hwidth*rgen.rand_uniform(1.0, 4.0));
+		if (length > min_length) { // shorten a random amount if it's long enough
+			dw.d[dim][!dir] -= (dir ? -1.0 : 1.0)*min((length - min_length), hwidth*rgen.rand_uniform(0.0, 4.0));
 		}
 		for (unsigned S = 0; S < 2; ++S) {
 			bool const s(bool(S) ^ first_side);
