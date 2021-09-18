@@ -599,10 +599,13 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 
 				if (dim == shrink_dim) {
 					c.translate_dim(dim, (dir ? -1.0 : 1.0)*hwidth); // move inside the plot so that edges line up
-					// clip to the sides to remove overlap; may not line up with a neibhgoring divider of a different type/width, but hopefully okay
+					// clip to the sides to remove overlap; may not line up with a neighboring divider of a different type/width, but hopefully okay
 					for (unsigned d = 0; d < 2; ++d) {
 						if (c.d[!dim][d] != plot.d[!dim][d]) {c.d[!dim][d] -= (d ? 1.0 : -1.0)*hwidth;}
 					}
+				}
+				else {
+					c.expand_in_dim(!dim, -0.001*hwidth); // fix for z-fighting
 				}
 				if (!back_of_plot) { // check for overlap of other plot dividers to the left and right
 					cube_t test_cube(c);
