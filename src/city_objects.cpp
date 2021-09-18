@@ -861,14 +861,9 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		float const dist_scales[4] = {0.1, 0.5, 0.3, 0.5};
 		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes don't use qbd
 	}
-	if (!dividers.empty()) {
-		if (!shadow_only) {
-			// TODO: use normal maps if the player is near
-		}
-		// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
-		for (dstate.pass_ix = 0; dstate.pass_ix < DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge}
-			draw_objects(dividers, divider_groups, dstate, 0.2, shadow_only, 0); // dist_scale=0.2
-		}
+	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
+	for (dstate.pass_ix = 0; dstate.pass_ix < DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge}
+		draw_objects(dividers, divider_groups, dstate, 0.2, shadow_only, 0); // dist_scale=0.2
 	}
 	dstate.pass_ix = 0; // reset back to 0
 }
