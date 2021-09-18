@@ -87,6 +87,7 @@ bool no_grass_under_buildings();
 bool check_buildings_no_grass(point const &pos);
 colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
 void building_gameplay_action_key(int mode, bool mouse_wheel);
+void get_tt_mesh_disable_cubes(vect_cube_t &bcubes);
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -3417,7 +3418,34 @@ void draw_tiled_terrain(int reflection_pass) {
 	if (disable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	// don't need to draw the bottom of the terrain when in the basement; for some reason the faces are backwards
 	if (player_in_basement)  {glEnable (GL_CULL_FACE); glCullFace(GL_FRONT);}
+#if 0
+	vect_cube_t cubes;
+	if (!reflection_pass) {get_tt_mesh_disable_cubes(cubes);}
+
+	if (!cubes.empty()) {
+		vector3d const xlate(get_tiled_terrain_model_xlate());
+		shader_t s;
+		s.begin_color_only_shader(WHITE);
+		setup_stencil_buffer_write();
+		glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
+		glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
+		quad_batch_draw qbd;
+
+		for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+			i->expand_by(0.01*i->dz()); // expand slightly to prevent z-fighting
+			if (camera_pdu.cube_visible(*i + xlate)) {draw_simple_cube(*i);} // Note: could batch into a single draw call if needed
+		}
+		end_stencil_write();
+		s.end_shader();
+		glEnable(GL_STENCIL_TEST);
+		glStencilFunc(GL_EQUAL, 0, ~0U); // keep if stencil bit has not been set by above pass
+		glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+	}
 	terrain_tile_draw.draw(reflection_pass);
+	if (!cubes.empty()) {glDisable(GL_STENCIL_TEST);}
+#else
+	terrain_tile_draw.draw(reflection_pass);
+#endif
 	if (player_in_basement)  {glDisable(GL_CULL_FACE); glCullFace(GL_BACK);}
 	if (disable_depth_clamp) {glEnable (GL_DEPTH_CLAMP);} // restore
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);

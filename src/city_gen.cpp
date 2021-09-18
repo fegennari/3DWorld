@@ -1116,6 +1116,9 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 0;
 		}
+		void get_tunnel_bcubes(vect_cube_t &bcubes) const {
+			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {bcubes.push_back(*i);}
+		}
 		template<typename T> bool check_tile_group_contains_pt_xy(vector<T> const &objs, point const &pos, unsigned type) const {
 			assert(type < NUM_RD_TYPES);
 			if (objs.empty()) return 0;
@@ -2188,6 +2191,7 @@ public:
 	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel(cube_t const &bcube) const {return global_rn.tile_contains_tunnel(bcube);}
+	void get_tunnel_bcubes   (vect_cube_t &bcubes) const {return global_rn.get_tunnel_bcubes   (bcubes);}
 
 	int get_color_at_xy(point const &pos, colorRGBA &color) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
@@ -2593,7 +2597,8 @@ public:
 		return ret;
 	}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
-	bool tile_contains_tunnel(cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
+	bool tile_contains_tunnel (cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
+	void get_get_tunnel_bcubes(vect_cube_t &bcubes) const {return road_gen.get_tunnel_bcubes  (bcubes);}
 
 	void destroy_in_radius(point const &pos, float radius) {
 		car_manager.destroy_cars_in_radius(pos, radius);
@@ -2718,6 +2723,7 @@ bool check_mesh_disable(point const &pos, float radius) {
 	return city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
 bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube + get_tt_xlate_val());}
+void get_tt_mesh_disable_cubes(vect_cube_t &bcubes) {return city_gen.get_get_tunnel_bcubes(bcubes);}
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
 bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
