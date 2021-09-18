@@ -1650,8 +1650,8 @@ bool is_valid_driveway_pos(cube_t const &driveway, cube_t const &bcube, vect_cub
 	}
 	return 1;
 }
-bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube, vect_cube_t const &avoid, vect_cube_t const &blockers,
-	vect_cube_t const &bcubes, vect_cube_t &driveways, rand_gen_t &rgen, float hwidth, bool dim, bool dir)
+bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube, cube_t const &sub_plot, vect_cube_t const &avoid,
+	vect_cube_t const &blockers, vect_cube_t const &bcubes, vect_cube_t &driveways, rand_gen_t &rgen, float hwidth, bool dim, bool dir)
 {
 	if (target.get_sz_dim(!dim) < 3.0*hwidth) return 0; // not wide enough for driveway
 	dw.d[dim][!dir] = target.d[dim][dir];
@@ -1663,6 +1663,7 @@ bool add_driveway_if_legal(cube_t &dw, cube_t const &target, cube_t const &bcube
 		if (has_bcube_int(dw, avoid))                  continue; // blocked, including adjacency
 		if (has_bcube_int_xy_no_adj(dw, blockers))     continue; // blocked
 		if (!is_valid_driveway_pos(dw, bcube, bcubes)) continue; // blocked
+		if (!sub_plot.contains_cube_xy(dw))            continue; // extends outside the plot
 		assert(dw.dx() > 0 && dw.dy() > 0); // strictly normalized in XY
 		driveways.push_back(dw);
 		return 1;
@@ -1752,9 +1753,9 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 		cube_t dw(plot); // copy zvals and dim/dir from plot
 
 		for (auto i = parts.begin(); i != get_real_parts_end(); ++i) {
-			if (add_driveway_if_legal(dw, *i, bcube, avoid, parts, bcubes, driveways, rgen, hwidth, dim, dir)) return 1;
+			if (add_driveway_if_legal(dw, *i, bcube, sub_plot, avoid, parts, bcubes, driveways, rgen, hwidth, dim, dir)) return 1;
 		}
-		if (add_driveway_if_legal(dw, bcube, bcube, avoid, vect_cube_t(), bcubes, driveways, rgen, hwidth, dim, dir)) return 1;
+		if (add_driveway_if_legal(dw, bcube, bcube, sub_plot, avoid, vect_cube_t(), bcubes, driveways, rgen, hwidth, dim, dir)) return 1;
 		// maybe it was too short? try to place to one side of the house or the other
 		dw.d[dim][!dir] = bcube.d[dim][!dir]; // extend up to far side of house
 		float const length(dw.get_sz_dim(dim)), min_length(3.0*hwidth);
