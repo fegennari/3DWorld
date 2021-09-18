@@ -2223,6 +2223,11 @@ public:
 			fgPushMatrix();
 			translate_to(xlate);
 			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
+
+			if (have_plot_dividers) { // enable normal maps for fences and walls; also applies to tunnels
+				dstate.set_enable_normal_map(1);
+				select_multitex(FLAT_NMAP_TEX, 5); // set flat normal map texture as the default
+			}
 			dstate.pre_draw(xlate, use_dlights, shadow_only, 1); // always_setup_shader=1
 			assert(dstate.s.is_setup());
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}

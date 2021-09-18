@@ -31,7 +31,10 @@ struct plot_divider_type_t {
 		}
 		if (nm_tid < 0 && !nm_tex_name.empty()) {nm_tid = get_texture_by_name(nm_tex_name, 1);} // load/lookup texture if needed
 		select_texture(tid);
-		select_multitex(nm_tid, 5); // TODO: normal maps not enabled in the shader, this is future work
+		if (nm_tid >= 0) {select_multitex(nm_tid, 5);} // bind normal map if it was specified
+	}
+	void post_draw(bool shadow_only) {
+		if (!shadow_only && nm_tid >= 0) {select_multitex(FLAT_NMAP_TEX, 5);} // restore default flat normal map
 	}
 };
 enum {DIV_WALL=0, DIV_FENCE, DIV_HEDGE, DIV_CHAINLINK, DIV_NUM_TYPES}; // types of plot dividers, with end terminator
@@ -99,7 +102,7 @@ void bench_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale,
 		if (!dim) {swap(pts[i].x, pts[i].y);}
 		pts[i] = ((pts[i] - c2)*scale + c1);
 	}
-	vector3d const normal(get_poly_norm(pts, 1)), delta((0.2*scale.x)*normal); // thickness = 0.4
+	vector3d const normal(get_poly_norm(pts, 1)), delta((0.2f*scale.x)*normal); // thickness = 0.4
 	UNROLL_4X(f[i_] = pts[i_] + delta;);
 	qbd.add_quad_pts(f, WHITE,  normal);
 	UNROLL_4X(b[i_] = pts[i_] - delta;);
@@ -183,6 +186,9 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 /*static*/ void divider_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
 	plot_divider_types[dstate.pass_ix].pre_draw(shadow_only);
+}
+/*static*/ void divider_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	plot_divider_types[dstate.pass_ix].post_draw(shadow_only);
 }
 void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass

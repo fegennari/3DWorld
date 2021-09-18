@@ -46,6 +46,7 @@ struct divider_t : public city_obj_t {
 	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, unsigned sd=0) :
 		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), type(type_), dim(dim_), dir(dir_), skip_dims(sd) {bcube = c;}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
 };
 
@@ -98,6 +99,7 @@ private:
 		draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0);
 public:
 	city_obj_placer_t() : num_spaces(0), filled_spaces(0), plot_subdiv_sz(0.0) {}
+	bool has_plot_dividers() const {return !dividers.empty();}
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential);

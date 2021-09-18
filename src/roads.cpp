@@ -1015,6 +1015,7 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 		draw_cube(qbd, c, cw_concrete, 0, tscale); // skip_bottom=0 in case there are overhangs due to steep cliffs
 		qbd.draw_and_clear();
 	} // for n
+	if (!shadow_only) {select_multitex(FLAT_NMAP_TEX, 5);} // restore flat normal map
 }
 
 void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, range_pair_t const &rp, bool shadow_only) {
