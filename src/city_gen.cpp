@@ -954,7 +954,7 @@ class city_road_gen_t : public road_gen_base_t {
 			streetlights.clear();
 			streetlights.reserve(4*plots.size()); // one on each side of each plot
 			// spacing from light pos to plot edge, relative to plot size (placed just outside the plot, so spacing is negative)
-			float const b(-(SIDEWALK_WIDTH*city_params.road_width - 0.5*streetlight_ns::get_streetlight_pole_radius())/city_params.road_spacing), a(1.0 - b);
+			float const b(-(SIDEWALK_WIDTH*city_params.road_width - 0.5f*streetlight_ns::get_streetlight_pole_radius())/city_params.road_spacing), a(1.0 - b);
 
 			for (auto i = plots.begin(); i != plots.end(); ++i) {
 				streetlights.emplace_back(point((a*i->x1() + b*i->x2()), (0.75*i->y1() + 0.25*i->y2()), i->z2()), -plus_x); // left   edge one   quarter  up
@@ -1115,9 +1115,6 @@ class city_road_gen_t : public road_gen_base_t {
 				if (i->contains_pt(pos)) return 1; // Note: checks z-val
 			}
 			return 0;
-		}
-		void get_tunnel_bcubes(vect_cube_t &bcubes) const {
-			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {bcubes.push_back(*i);}
 		}
 		template<typename T> bool check_tile_group_contains_pt_xy(vector<T> const &objs, point const &pos, unsigned type) const {
 			assert(type < NUM_RD_TYPES);
@@ -2191,7 +2188,6 @@ public:
 	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel(cube_t const &bcube) const {return global_rn.tile_contains_tunnel(bcube);}
-	void get_tunnel_bcubes   (vect_cube_t &bcubes) const {return global_rn.get_tunnel_bcubes   (bcubes);}
 
 	int get_color_at_xy(point const &pos, colorRGBA &color) const {
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
@@ -2598,7 +2594,6 @@ public:
 	}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel (cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
-	void get_get_tunnel_bcubes(vect_cube_t &bcubes) const {return road_gen.get_tunnel_bcubes  (bcubes);}
 
 	void destroy_in_radius(point const &pos, float radius) {
 		car_manager.destroy_cars_in_radius(pos, radius);
@@ -2723,7 +2718,6 @@ bool check_mesh_disable(point const &pos, float radius) {
 	return city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
 bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube + get_tt_xlate_val());}
-void get_tt_mesh_disable_cubes(vect_cube_t &bcubes) {return city_gen.get_get_tunnel_bcubes(bcubes);}
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
 bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}
 cube_t get_city_lights_bcube() {return city_gen.get_lights_bcube();}
