@@ -938,7 +938,7 @@ public:
 		}
 	}
 
-	void add_fence(building_t const &bg, cube_t const &fence, tid_nm_pair_t const &tex, colorRGBA const &color) {
+	void add_fence(building_t const &bg, cube_t const &fence, tid_nm_pair_t const &tex, colorRGBA const &color, bool mult_sections) {
 		bool const dim(fence.dy() < fence.dx()); // smaller/separating dim
 		float const length(fence.get_sz_dim(!dim)), height(fence.dz());
 		float const post_width(fence.get_sz_dim(dim)), post_hwidth(0.5*post_width), beam_hwidth(0.5*post_hwidth), beam_hheight(1.0*post_hwidth);
@@ -950,9 +950,10 @@ public:
 		beam.expand_in_dim( dim, (beam_hwidth - post_hwidth));
 		unsigned skip_ix(num_posts); // start at an invalid value
 
-		if (dim == 0) { // skip end post on the corner in dim=0 because it's duplicated with the corner post in the other dim
-			if      (fabs(bg.bcube.d[!dim][1] - fence.d[!dim][1]) < post_width) {beam.d[!dim][1] += post_hwidth; skip_ix = num_posts-1;} // skip last post
-			else if (fabs(bg.bcube.d[!dim][0] - fence.d[!dim][0]) < post_width) {beam.d[!dim][0] -= post_hwidth; skip_ix = 0;} // skip first post
+		if (mult_sections && dim == 0) { // skip end post on the corner in dim=0 because it's duplicated with the corner post in the other dim
+			float const dmin(post_width + (bg.has_chimney ? bg.get_chimney().get_sz_dim(!dim) : 0.0)); // include chimney width, which can increase the house bcube beyond the fence
+			if      (fabs(bg.bcube.d[!dim][1] - fence.d[!dim][1]) < dmin) {beam.d[!dim][1] += post_hwidth; skip_ix = num_posts-1;} // skip last post
+			else if (fabs(bg.bcube.d[!dim][0] - fence.d[!dim][0]) < dmin) {beam.d[!dim][0] -= post_hwidth; skip_ix = 0;} // skip first post
 		}
 		for (unsigned i = 0; i < num_posts; ++i) { // add posts
 			set_wall_width(post, (fence.d[!dim][0] + post_hwidth + i*post_spacing), post_hwidth, !dim);
@@ -1129,7 +1130,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), dcolor);
 		}
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
-			bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE);
+			bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE, (fences.size() > 1));
 		}
 		add_driveway_or_porch(bdraw, *this, driveway, LT_GRAY);
 		add_driveway_or_porch(bdraw, *this, porch,    LT_GRAY);
