@@ -617,7 +617,6 @@ float extend_fence_to_house(cube_t &fence, cube_t const &house, float fence_hwid
 	fence_end = house.d[!dim][side]; // adjacent to the house
 	set_wall_width(fence, house.d[dim][dir], fence_hwidth, dim);
 	// try to expand to the wall edge of two part houses by doing a line intersection query
-	bool coll(0);
 	point p1, p2;
 	p1.z     = p2.z    = fence.z1() + 0.25*fence_height; // slightly up from the bottom edge of the fence
 	p1[ dim] = p2[dim] = fence.d[dim][!dir]; // use the side that overlaps the house bcube
