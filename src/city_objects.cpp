@@ -185,14 +185,46 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 }
 
 /*static*/ void divider_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (dstate.pass_ix == DIV_NUM_TYPES) { // fence post pass - untextured
+		if (!shadow_only) {
+			select_texture(WHITE_TEX);
+			dstate.s.set_specular(0.8, 60.0); // specular metal surface
+		}
+		return;
+	}
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
 	plot_divider_types[dstate.pass_ix].pre_draw(shadow_only);
 }
 /*static*/ void divider_t::post_draw(draw_state_t &dstate, bool shadow_only) {
-	plot_divider_types[dstate.pass_ix].post_draw(shadow_only);
+	if (dstate.pass_ix == DIV_NUM_TYPES) { // fence post pass
+		if (!shadow_only) {dstate.s.clear_specular();}
+	}
+	else {plot_divider_types[dstate.pass_ix].post_draw(shadow_only);}
 }
 void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+	if (dstate.pass_ix == DIV_NUM_TYPES && type == DIV_CHAINLINK) { // add chainlink fence posts
+		if (!dstate.check_cube_visible(bcube, 1.5*dist_scale, shadow_only)) return;
+		float const length(bcube.get_sz_dim(!dim)), height(bcube.dz()), thickness(bcube.get_sz_dim(dim));
+		float const post_hwidth(1.5*thickness), post_width(2.0*post_hwidth), top_width(1.5*thickness);
+		unsigned const num_sections(ceil(0.3*length/height)), num_posts(num_sections + 1);
+		float const post_spacing((length - post_width)/num_sections);
+		color_wrapper cw(GRAY);
+		cube_t post(bcube), top(bcube); // copy dim and Z values
+		post.expand_in_dim(dim, 0.5f*(post_width - thickness)); // increase width to post_width
+		top .expand_in_dim(dim, 0.5f*(top_width  - thickness));
+		post.z2() += 0.025*height; // extend slightly above the top of the fence
+		set_wall_width(top, bcube.z2(), 0.5f*top_width, 2); // set height
+
+		// for now we draw posts as cubes rather than cylinders since it's faster and easier, because we can use the existing qbd
+		for (unsigned i = 0; i < num_posts; ++i) { // add posts
+			set_wall_width(post, (bcube.d[!dim][0] + post_hwidth + i*post_spacing), post_hwidth, !dim);
+			dstate.draw_cube(qbd, post, cw, 1);
+		}
+		dstate.draw_cube(qbd, top, cw, 1);
+		return;
+	}
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
+	if (type == DIV_CHAINLINK) {dist_scale *= 0.5;} // less visible
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
@@ -615,6 +647,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		plot_divider_type_t const &pdt(plot_divider_types[type]);
 		float const hwidth(0.5*sz_scale*pdt.wscale), z2(i->z1() + sz_scale*pdt.hscale);
 		float const shrink_border(1.5*get_inner_sidewalk_width()); // needed for pedestrians to move along the edge of the plot; slightly larger to prevent collisions
+		float translate_dist[2] = {0.0, 0.0};
 		unsigned const prev_dividers_end(dividers.size());
 		cube_t place_area(plot);
 		place_area.expand_by_xy(-shrink_border);
@@ -631,7 +664,8 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				set_wall_width(c, div_pos, hwidth, dim); // centered on the edge of the plot
 
 				if (dim == shrink_dim) {
-					c.translate_dim(dim, (dir ? -1.0 : 1.0)*hwidth); // move inside the plot so that edges line up
+					translate_dist[dir] = (dir ? -1.0 : 1.0)*hwidth;
+					c.translate_dim(dim, translate_dist[dir]); // move inside the plot so that edges line up
 					// clip to the sides to remove overlap; may not line up with a neighboring divider of a different type/width, but hopefully okay
 					for (unsigned d = 0; d < 2; ++d) {
 						if (c.d[!dim][d] != plot.d[!dim][d]) {c.d[!dim][d] -= (d ? 1.0 : -1.0)*hwidth;}
@@ -706,10 +740,14 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			plot_divider_type_t const &fence_pdt(plot_divider_types[DIV_CHAINLINK]);
 			float const fence_hwidth(0.5*sz_scale*fence_pdt.wscale), fence_height(sz_scale*fence_pdt.hscale), fence_z2(i->z1() + fence_height);
 			float const expand(-1.5*sz_scale*plot_divider_types[DIV_HEDGE].wscale); // shrink by widest divider to avoid false intersection with orthogonal dividers
+			cube_t subplot_shrunk(*i);
+			// translate so that fences line up with dividers; inexact if different width dividers are on each side
+			for (unsigned d = 0; d < 2; ++d) {subplot_shrunk.d[shrink_dim][d] += translate_dist[d];}
+			subplot_shrunk.expand_by_xy(-hwidth); // shrink by half width of surrounding dividers
 
 			for (unsigned side = 0; side < 2; ++side) { // left/right
 				bool fence_dim(dim);
-				cube_t fence(*i);
+				cube_t fence(subplot_shrunk);
 				fence.z2() = fence_z2;
 
 				if (i->d[!dim][side] == plot.d[!dim][side]) { // at the edge of the plot, wrap the fence around in the back yard instead
@@ -885,7 +923,8 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes don't use qbd
 	}
 	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
-	for (dstate.pass_ix = 0; dstate.pass_ix < DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge}
+	for (dstate.pass_ix = 0; dstate.pass_ix <= DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge, chainlink fence, chainlink fence posts}
+		if (dstate.pass_ix == DIV_CHAINLINK && shadow_only) continue; // chainlink fence not drawn in the shadow pass
 		draw_objects(dividers, divider_groups, dstate, 0.2, shadow_only, 0); // dist_scale=0.2
 	}
 	dstate.pass_ix = 0; // reset back to 0
