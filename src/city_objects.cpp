@@ -6,6 +6,7 @@
 #include "tree_3dw.h" // for tree_placer_t
 
 extern unsigned max_unique_trees;
+extern double camera_zh;
 extern tree_placer_t tree_placer;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
@@ -254,7 +255,9 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 		float const radius(get_radius()), xc(bcube.xc() + xlate.x), yc(bcube.yc() + xlate.y), z1(bcube.z1() + xlate.z), z2(bcube.z2() + xlate.z);
 		return sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw(point(xc, yc, z1), point(xc, yc, z2), radius, radius), cnorm); // checks sides
 	}
-	else {return city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);}
+	cube_t bcube_tall(bcube + xlate);
+	bcube_tall.z2() += CAMERA_RADIUS + camera_zh; // extend upward so that player collision detection works better
+	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 1, 0, cnorm);
 }
 
 
