@@ -252,7 +252,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dis
 	if (above_ground) { // cylindrical; bcube should be square in XY
 		point const camera_bs(camera_pdu.pos - dstate.xlate);
 		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc());
-		unsigned const ndiv(shadow_only ? 24 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, bcube.closest_pt(camera_bs))))));
+		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, bcube.closest_pt(camera_bs))))));
 
 		if (dstate.pass_ix == 2) { // draw sides
 			dstate.s.set_cur_color(color);
@@ -260,7 +260,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dis
 		}
 		else if (dstate.pass_ix == 3) { // draw water surface
 			dstate.s.set_cur_color(wcolor);
-			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, (bcube.z2() - 0.1*bcube.dz()))); // shift slightly below the top
+			draw_circle_normal(0.0, radius, ndiv, 0, point(xc, yc, (bcube.z2() - 0.1f*bcube.dz()))); // shift slightly below the top
 		}
 	}
 	else { // in-ground
