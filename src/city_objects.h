@@ -43,6 +43,7 @@ struct divider_t : public city_obj_t {
 	unsigned type;
 	bool dim, dir;
 	uint8_t skip_dims;
+	divider_t() : type(0), dim(0), dir(0), skip_dims(0) {}
 	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, unsigned sd=0) :
 		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), type(type_), dim(dim_), dir(dir_), skip_dims(sd) {bcube = c;}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
