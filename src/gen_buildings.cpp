@@ -939,19 +939,24 @@ public:
 	}
 
 	void add_fence(building_t const &bg, cube_t const &fence, tid_nm_pair_t const &tex, colorRGBA const &color) {
-		bool const dim(fence.dy() < fence.dx());
+		bool const dim(fence.dy() < fence.dx()); // smaller/separating dim
 		float const length(fence.get_sz_dim(!dim)), height(fence.dz());
 		float const post_width(fence.get_sz_dim(dim)), post_hwidth(0.5*post_width), beam_hwidth(0.5*post_hwidth), beam_hheight(1.0*post_hwidth);
 		unsigned const num_sections(ceil(0.3*length/height)), num_posts(num_sections + 1), num_beams(2); // could also use 3 beams
 		float const post_spacing((length - post_width)/num_sections), beam_spacing(height/(num_beams+0.5f));
 		cube_t post(fence); // copy dim and Z values
 		cube_t beam(fence); // copy dim and !dim values
-		beam.expand_in_dim(!dim, -post_width); // remove overlap with end posts
+		beam.expand_in_dim(!dim, -post_width); // remove overlap with end posts at both ends
 		beam.expand_in_dim( dim, (beam_hwidth - post_hwidth));
+		unsigned skip_ix(num_posts); // start at an invalid value
 
+		if (dim == 0) { // skip end post on the corner in dim=0 because it's duplicated with the corner post in the other dim
+			if      (fabs(bg.bcube.d[!dim][1] - fence.d[!dim][1]) < post_width) {beam.d[!dim][1] += post_hwidth; skip_ix = num_posts-1;} // skip last post
+			else if (fabs(bg.bcube.d[!dim][0] - fence.d[!dim][0]) < post_width) {beam.d[!dim][0] -= post_hwidth; skip_ix = 0;} // skip first post
+		}
 		for (unsigned i = 0; i < num_posts; ++i) { // add posts
 			set_wall_width(post, (fence.d[!dim][0] + post_hwidth + i*post_spacing), post_hwidth, !dim);
-			add_cube(bg, post, tex, color, 0, 7, 1, 0, 1); // skip bottom, ws_texture=1
+			if (i != skip_ix) {add_cube(bg, post, tex, color, 0, 7, 1, 0, 1);} // skip bottom, ws_texture=1
 		}
 		for (unsigned i = 0; i < num_beams; ++i) { // add beams
 			set_wall_width(beam, (fence.z1() + (i+1)*beam_spacing), beam_hheight, 2); // set beam zvals
