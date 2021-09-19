@@ -39,6 +39,8 @@ city road_border 10
 city slope_width 50
 city road_width 0.265
 city road_spacing 1.5
+city road_spacing_rand 0.0 # randomness added to road_spacing in fractional value
+city road_spacing_xy_add 0.0 # increased road spacing in X or Y in fractional value
 #city road_width 0.25 # 4 texels
 #city road_spacing 1.4375 # fixed pitch (1.485 for road_width of 0.265)
 city conn_road_seg_len 6.0 # also determines max length of bridges and tunnels

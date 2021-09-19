@@ -60,6 +60,12 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "road_spacing") {
 		if (!read_float(fp, road_spacing) || road_spacing < 0.0) {return read_error(str);}
 	}
+	else if (str == "road_spacing_rand") {
+		if (!read_float(fp, road_spacing_rand) || road_spacing_rand < 0.0) {return read_error(str);}
+	}
+	else if (str == "road_spacing_xy_add") {
+		if (!read_float(fp, road_spacing_xy_add) || road_spacing_xy_add < 0.0) {return read_error(str);}
+	}
 	else if (str == "conn_road_seg_len") {
 		if (!read_float(fp, conn_road_seg_len) || conn_road_seg_len <= 0.0) {return read_error(str);}
 	}

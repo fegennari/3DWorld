@@ -468,32 +468,28 @@ class city_road_gen_t : public road_gen_base_t {
 			tile_blocks.clear();
 			plot_colliders.clear();
 		}
-		bool gen_road_grid(float road_width, float road_spacing) {
-			if (city_params.road_width > 0.5*city_params.road_spacing) {
+		bool gen_road_grid(float road_width, vector2d const &road_spacing) {
+			if (road_width > 0.5*min(road_spacing.x, road_spacing.y)) {
 				cerr << "Error: City road_width should not be set larger than half the road spacing" << endl;
 				exit(1);
 			}
-			cube_t const &region(bcube); // use our bcube as the region to process
-			vector3d const size(region.get_size());
+			vector3d const size(bcube.get_size()); // use our bcube as the region to process
 			assert(size.x > 0.0 && size.y > 0.0);
-			//rand_gen_t rgen; rgen.set_state(int(123.0*region.x1()), int(456.0*region.y1())); road_spacing *= rgen.rand_uniform(0.8, 1.2); // add some random variation?
-			float const half_width(0.5*road_width), zval(region.z1() + ROAD_HEIGHT);
-			float const rx1(region.x1() + half_width), rx2(region.x2() - half_width), ry1(region.y1() + half_width), ry2(region.y2() - half_width); // shrink to include centerlines
-			float road_pitch_x(road_width + road_spacing), road_pitch_y(road_pitch_x);
+			float const half_width(0.5*road_width), zval(bcube.z1() + ROAD_HEIGHT);
+			float const rx1(bcube.x1() + half_width), rx2(bcube.x2() - half_width), ry1(bcube.y1() + half_width), ry2(bcube.y2() - half_width); // shrink to include centerlines
+			float road_pitch_x(road_width + road_spacing.x), road_pitch_y(road_width + road_spacing.y);
 			int const num_x_roads((rx2 - rx1)/road_pitch_x), num_y_roads((ry2 - ry1)/road_pitch_y);
 			road_pitch_x = 0.9999f*(rx2 - rx1)/num_x_roads; // auto-calculate, round down slightly to avoid FP error
 			road_pitch_y = 0.9999f*(ry2 - ry1)/num_y_roads;
-			//cout << "road pitch: " << road_pitch_x/DX_VAL << " " << road_pitch_y/DY_VAL << " road width: " << road_width/DX_VAL << " " << road_width/DY_VAL << endl;
-			//spacing = int((road_width + road_spacing)/DX_VAL)*DX_VAL - road_width;
 
 			// create a grid, for now; crossing roads will overlap
 			for (float x = rx1; x < rx2; x += road_pitch_x) {
-				roads.emplace_back(point(x, region.y1(), zval), point(x, region.y2(), zval), road_width, true);
+				roads.emplace_back(point(x, bcube.y1(), zval), point(x, bcube.y2(), zval), road_width, true);
 			}
 			unsigned const num_x(roads.size());
 
 			for (float y = ry1; y < ry2; y += road_pitch_y) {
-				roads.emplace_back(point(region.x1(), y, zval), point(region.x2(), y, zval), road_width, false);
+				roads.emplace_back(point(bcube.x1(), y, zval), point(bcube.x2(), y, zval), road_width, false);
 			}
 			unsigned const num_r(roads.size()), num_y(num_r - num_x);
 			if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads
@@ -1696,7 +1692,6 @@ class city_road_gen_t : public road_gen_base_t {
 				// find intersection before the driveway such that driving on the road exiting this intersection will encounter the driveway on the right
 				bool const dim(driveway.dim), dir(driveway.dir), extend_dir(dim ^ dir); // extend_dir is the direction of the last intersection before our right turn
 				float const dw_road_meet(driveway.d[dim][dir]); // point at which the road and driveway meet
-				//float const road_spacing(city_params.road_spacing); // is this accurate for all cities?
 				assert(!plots.empty());
 				float const road_spacing(plots.front().get_sz_dim(!dim)); // use actual segment length (should be the same across segments)
 				cube_t query_cube(driveway); // segment of road connected to driveway
@@ -1864,7 +1859,7 @@ public:
 	bool cube_overlaps_road_xy    (cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_road_xy    (c);}
 	bool cube_overlaps_pl_or_dw_xy(cube_t const &c, unsigned city_ix) const {return get_city(city_ix).cube_overlaps_pl_or_dw_xy(c);}
 
-	void gen_roads_and_plots(cube_t const &region, float road_width, float road_spacing, bool is_residential) {
+	void gen_roads_and_plots(cube_t const &region, float road_width, vector2d const &road_spacing, bool is_residential) {
 		//timer_t timer("Gen Roads"); // ~0.5ms
 		road_networks.push_back(road_network_t(region, road_networks.size(), is_residential));
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back(); return;}
@@ -2530,8 +2525,15 @@ public:
 			rand_gen_t rgen2; // don't use the built-in rgen to avoid affecting other state
 			rgen2.set_state(x1, y1+y2);
 			float const rp(params.residential_probability);
-			bool const is_residential((rp == 0.0) ? 0 : ((rp == 1.0) ? 1 : (rgen2.rand_float() < rp)));
-			road_gen.gen_roads_and_plots(pos_range, params.road_width, params.road_spacing, is_residential);
+			bool const is_residential((rp == 0.0) ? 0 : ((rp == 1.0) ? 1 : (rgen2.rand_float() < rp))), extra_spacing_dim(rgen2.rand_bool());
+			vector2d road_spacing;
+
+			for (unsigned d = 0; d < 2; ++d) {
+				road_spacing[d] = params.road_spacing;
+				if (params.road_spacing_rand   > 0.0) {road_spacing[d] *= 1.0 + params.road_spacing_rand*rgen2.rand_float();}
+				if (params.road_spacing_xy_add > 0.0 && bool(d) == extra_spacing_dim) {road_spacing[d] *= 1.0 + params.road_spacing_xy_add;}
+			}
+			road_gen.gen_roads_and_plots(pos_range, params.road_width, road_spacing, is_residential);
 		}
 		return 1;
 	}
