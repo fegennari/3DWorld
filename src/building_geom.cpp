@@ -639,7 +639,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	return had_coll;
 }
 
-// Note: p1/p2 are in building space
+// Note: p1/p2 are in building space; return value: 0=none, 1=side, 2=roof, 3=details
 unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t, vector<point> &points, bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const {
 	point p1r(p1), p2r(p2); // copy before clipping
 	if (!check_line_clip(p1r, p2r, bcube.d)) return 0; // no intersection
@@ -727,6 +727,11 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 	if (!no_coll_pt || !vert) { // vert line already tested building cylins/cubes, and marked coll roof, no need to test again unless we need correct coll_pt t-val
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
 			if (line_poly_intersect(p1r, p2r, i->pts, i->npts, i->get_norm(), tmin) && tmin < t) {t = tmin; coll = 2;} // roof quad
+		}
+	}
+	if (!vert) { // don't need to check fences for vertical collisions since they're horizontal blockers
+		for (auto i = fences.begin(); i != fences.end(); ++i) {
+			if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;} // counts as details cube
 		}
 	}
 	return coll; // Note: no collisions with windows or doors, since they're colinear with walls; no collision with interior for now
