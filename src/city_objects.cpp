@@ -230,6 +230,11 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scal
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
 	dstate.draw_cube(qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
 }
+bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	cube_t bcube_wide(bcube + xlate);
+	bcube_wide.expand_in_dim(dim, max(0.0f, 0.5f*(0.5f*building_t::get_scaled_player_radius() - bcube.get_sz_dim(dim)))); // make sure it's at least half player radius in thickness
+	return sphere_cube_int_update_pos(pos_, radius_, bcube_wide, p_last, 1, 0, cnorm);
+}
 
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
 /*static*/ void swimming_pool_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
