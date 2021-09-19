@@ -1423,6 +1423,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 					driveway.expand_in_dim(!pri_dim, -0.05*width); // shrink slightly to a bit narrower than the garage
 					driveway.d[pri_dim][!ddir] = driveway.d[pri_dim][ddir];
 					driveway.d[pri_dim][ ddir] += (ddir ? 1.0 : -1.0)*max(0.4*length, (has_r90_turn ? 1.2 : 0.9)*width); // set length extension, wider for 90 degree turn
+					if (!assigned_plot.is_all_zeros()) {driveway.intersect_with_cube_xy(assigned_plot);} // clip driveway to the assigned plot, if one was specified
 					//garage_dim = pri_dim;
 				}
 			}
@@ -1495,6 +1496,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 				driveway.z2() = garage.z1() + driveway_dz;
 				driveway.d[gdim][!gdir] = garage.d[gdim][gdir]; // start pos
 				driveway.d[gdim][ gdir] = garage.d[gdim][gdir] + (gdir ? 1.0 : -1.0)*0.4*garage.get_sz_dim(gdim); // extend outward
+				if (!assigned_plot.is_all_zeros()) {driveway.intersect_with_cube_xy(assigned_plot);} // clip driveway to the assigned plot, if one was specified
 			}
 		}
 		cube_t door(place_door(parts[door_part], door_dim, door_dir, door_height, door_center, door_pos, 0.25, DOOR_WIDTH_SCALE, 0, 0, rgen));
