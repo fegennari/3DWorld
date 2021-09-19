@@ -856,4 +856,5 @@ bool place_building_people(vect_building_place_t &locs, float radius, float spee
 void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir);
 void get_all_garages(vect_cube_t &garages);
 void get_all_city_helipads(vect_cube_t &helipads);
+bool check_city_building_line_coll_bs(point const &p1, point const &p2, point &p_int);
 void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax);

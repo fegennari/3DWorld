@@ -3352,6 +3352,13 @@ unsigned check_buildings_line_coll(point const &p1, point const &p2, float &t, u
 	unsigned const coll3(building_tiles.check_line_coll(p1x, p2x, t, ret_any_pt, 1)); // Note: does't take/set hit_bix
 	return (coll3 ? coll3 : (coll2 ? coll2 : coll1));
 }
+bool check_city_building_line_coll_bs(point const &p1, point const &p2, point &p_int) { // Note: p1/p2 are in building space
+	float t(1.0);
+	unsigned hit_bix(0); // unused
+	if (!building_creator_city.check_line_coll(p1, p2, t, hit_bix, 0, 0)) return 0; // ret_any_pt=0
+	p_int = p1 + t*(p2 - p1);
+	return 1;
+}
 void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) {
 	building_creator_city.update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
 	building_creator     .update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);

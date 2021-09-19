@@ -43,7 +43,7 @@ plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
 	plot_divider_type_t("cblock2.jpg", "normal_maps/cblock2_NRM.jpg", 0.50, 2.5, 1.0, 1, 0, WHITE, GRAY    ), // wall
 	plot_divider_type_t("fence.jpg",   "normal_maps/fence_NRM.jpg",   0.15, 2.0, 1.0, 1, 0, WHITE, LT_BROWN), // fence
 	plot_divider_type_t("hedges.jpg",  "", 1.00, 1.6, 1.0, 0, 0, GRAY, GREEN), // hedge - too short to be an occluder
-	plot_divider_type_t("roads/chainlink_fence.png", "", 0.02, 1.8, 8.0, 0, 1, WHITE, GRAY) // chainlink fence with alpha mask
+	plot_divider_type_t("roads/chainlink_fence.png", "", 0.02, 1.55, 8.0, 0, 1, WHITE, GRAY) // chainlink fence with alpha mask; can't be taller than other fence types in case it intersects
 };
 
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
@@ -561,14 +561,33 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 }
 
-bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, unsigned prev_blockers_end, float expand, bool exp_dim) {
+bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, cube_t const &exclude, unsigned prev_blockers_end, float expand, bool exp_dim) {
 	cube_t query_cube(cube);
 	query_cube.expand_in_dim(exp_dim, expand);
 
 	for (auto b = blockers.begin(); b != blockers.end()+prev_blockers_end; ++b) {
-		if (b->intersects_xy_no_adj(query_cube)) return 1;
+		if (*b != exclude && b->intersects_xy_no_adj(query_cube)) return 1;
 	}
 	return 0;
+}
+
+// dim=narrow dimension of fence; dir=house front/back dir in dimension dim; side=house left/right side in dimension !dim
+float extend_fence_to_house(cube_t &fence, cube_t const &house, float fence_hwidth, float fence_height, bool dim, bool dir, bool side) {
+	float &fence_end(fence.d[!dim][!side]);
+	fence_end = house.d[!dim][side]; // adjacent to the house
+	set_wall_width(fence, house.d[dim][dir], fence_hwidth, dim);
+	// try to expand to the wall edge of two part houses by doing a line intersection query
+	bool coll(0);
+	point p1, p2;
+	p1.z     = p2.z    = fence.z1() + 0.25*fence_height; // slightly up from the bottom edge of the fence
+	p1[ dim] = p2[dim] = fence.d[dim][!dir]; // use the side that overlaps the house bcube
+	p1[!dim] = fence_end - (side ? -1.0 : 1.0)*fence_hwidth; // pull back slightly so that the start point isn't exactly at the house edge
+	p2[!dim] = house.d[!dim][!side]; // end point is the opposite side of the house
+	point p_int;
+	if (!check_city_building_line_coll_bs(p1, p2, p_int)) return 0.0; // if this fails, house bcube must be wrong; should this be asserted?
+	float const dist(fabs(fence_end - p_int[!dim]));
+	fence_end = p_int[!dim];
+	return dist;
 }
 
 void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen) {
@@ -682,7 +701,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			blockers .push_back(pool);
 			// add fences along the sides of the house to separate the back yard from the front yard
 			plot_divider_type_t const &fence_pdt(plot_divider_types[DIV_CHAINLINK]);
-			float const fence_hwidth(0.5*sz_scale*fence_pdt.wscale), fence_z2(i->z1() + sz_scale*fence_pdt.hscale);
+			float const fence_hwidth(0.5*sz_scale*fence_pdt.wscale), fence_height(sz_scale*fence_pdt.hscale), fence_z2(i->z1() + fence_height);
 			float const expand(-1.5*sz_scale*plot_divider_types[DIV_HEDGE].wscale); // shrink by widest divider to avoid false intersection with orthogonal dividers
 
 			for (unsigned side = 0; side < 2; ++side) { // left/right
@@ -691,25 +710,26 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				fence.z2() = fence_z2;
 
 				if (i->d[!dim][side] == plot.d[!dim][side]) { // at the edge of the plot, wrap the fence around in the back yard instead
-					fence.d[dim][dir] = house.d[dim][!dir]; // starts at the back yard
-					set_wall_width(fence, house.d[!dim][side], fence_hwidth, !dim);
 					fence_dim ^= 1;
-					
-					if (is_placement_blocked(fence, blockers, prev_blockers_end, expand, !fence_dim)) { // Note: not trying midpoint because it can intersect an exterior door
-						float const pos(house.d[!dim][!side]);
-						if ((pos > pool.d[!dim][side]) ^ side) continue; // fence does not contain the pool
-						set_wall_width(fence, pos, fence_hwidth, !dim); // try back edge
-					}
-				}
-				else { // at the front of the house (TODO: what if house is L-shaped?)
-					fence.d[!dim][!side] = house.d[!dim][side]; // adjacent to the house
-					set_wall_width(fence, house.d[dim][dir], fence_hwidth, dim); // front edge of house
+					extend_fence_to_house(fence, house, fence_hwidth, fence_height, !dim, side, !dir);
 
-					if (is_placement_blocked(fence, blockers, prev_blockers_end, expand, !fence_dim)) { // Note: not trying midpoint because it can intersect an exterior door
-						set_wall_width(fence, house.d[dim][!dir], fence_hwidth, dim); // try back edge
+					if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {
+						// Note: can't safely move the fence to the middle of the house if it intersects the pooly because it may intersect or block a door
+						if ((house.d[!dim][!side] > pool.d[!dim][side]) ^ side) continue; // fence does not contain the pool
+						extend_fence_to_house(fence, house, fence_hwidth, fence_height, !dim, !side, dir); // try the back edge of the house
+						if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) continue; // blocked by a driveway, etc.
 					}
 				}
-				if (is_placement_blocked(fence, blockers, prev_blockers_end, expand, !fence_dim)) continue; // blocked by a driveway, etc.
+				else { // at the front of the house
+					float const ext_dist(extend_fence_to_house(fence, house, fence_hwidth, fence_height, dim, dir, side));
+
+					// Note: not trying midpoint because it can intersect an exterior door
+					if (ext_dist > 0.33*house.get_sz_dim(!dim) || is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) {
+						// front fence position is bad, or fence extension is too long (may block off the porch)
+						extend_fence_to_house(fence, house, fence_hwidth, fence_height, dim, !dir, side); // try the back edge of the house
+						if (is_placement_blocked(fence, blockers, house, prev_blockers_end, expand, !fence_dim)) continue; // blocked by a driveway, etc.
+					}
+				}
 				divider_groups.add_obj(divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0), dividers); // Note: dir is unused in divider_t so doesn't have to be set correctly
 				colliders.push_back(fence);
 				blockers .push_back(fence);
