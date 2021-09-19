@@ -21,6 +21,7 @@ Q 1 0.25 0.25 0.1 0.1 0.4 0.0   0.6 2.76 -0.08  -1 0 0  0 0 1 # platform with up
 y 5.0
 Y 0.38 -0.3
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
+X normal_maps/metal_plate_NRM.jpg
 metalness 1.0
 B 0.599 1.0  2.72 2.78  -0.4  -0.12
 metalness 0.0
@@ -242,7 +243,7 @@ B -5.5 -5.499  -1.202 -1.18  -0.29 -0.272 # blue-white
 
 y 5.0
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
-# X normal_maps/metal_plate_NRM.jpg # TODO
+X normal_maps/metal_plate_NRM.jpg
 metalness 1.0
 
 # doors/triggers
@@ -255,6 +256,7 @@ B -5.50 -5.25  -1.1  -1.0 -0.4  -0.12
 Q 1 0.08 0.08 0.1 -0.1 0.24 0.0   -5.25 -1.15 -0.3   1 0 0  0 0 0 # platform right - one shot
 B -5.25 -5.00  -1.1  -1.0 -0.4  -0.12
 Q 0
+X none
 # lights
 l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
 a 2 # destroyable/shatterable
@@ -282,6 +284,7 @@ trigger # disable trigger
 
 # bars/triggers
 l 0.8 1.0 1.0 1.0 1.0 metal_plate.jpg 1
+X normal_maps/metal_plate_NRM.jpg
 y 10.0
 r 0.8 80.0 # set specularity
 trigger -5.5 -1.191 -0.28  0.06 0.0 0.0 1 1 1 # player manual keycard 1 trigger
