@@ -1444,28 +1444,30 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 			tree_pos.z = ground_floor_z1;
 		}
 		if (type == 1 && (rand_num & 6) != 0 && !is_rotated()) { // L-shaped house, add a fence 75% of the time (skip rotated due to assert in clip_cube_to_parts())
-			// use the same dim as the shrunk house part for the full fence section; or should we use garage_dim?
+			// if stree_dim is set, make primary fence perpendicular; otherwise use same dim as shrunk house part for full fence section; or should we use garage_dim?
+			bool const fdim(street_dir ? pref_street_dim : dim), fdir((fdim == dim) ? dir2 : dir);
 			float const fence_thickness(0.08*door_height);
 			cube_t fence(bcube), fence2(bcube);
 			fence.z1() = fence2.z1() = ground_floor_z1;
 			fence.z2() = fence2.z2() = ground_floor_z1 + 0.65*door_height; // set fence height
-			fence.d[!dim][!dir2] = fence.d[!dim][dir2] + (dir2 ? -1.0 : 1.0)*fence_thickness;
+			fence.d[!fdim][!fdir] = fence.d[!fdim][fdir] + (fdir ? -1.0 : 1.0)*fence_thickness;
 			// we can calculate the exact location of the fence, but it depends on detail_type, garage/shed position, etc.,
 			// so it's easier to start with the entire edge and clip it by the house parts and optional garage/shed
 			clip_cube_to_parts(fence, cubes);
-			fence.expand_in_dim(dim, -0.01*door_height); // shrink slightly to avoid clipping through the exterior wall
+			fence.expand_in_dim(fdim, -0.01*door_height); // shrink slightly to avoid clipping through the exterior wall
 			fences.push_back(fence);
 
 			if ((rand_num & 6) != 2) { // 67% of the time
-				fence2.d[dim][!dir] = fence2.d[dim][dir] + (dir ? -1.0 : 1.0)*fence_thickness;
+				bool const fdir2((fdim == dim) ? dir : dir2);
+				fence2.d[fdim][!fdir2] = fence2.d[fdim][fdir2] + (fdir2 ? -1.0 : 1.0)*fence_thickness;
 				clip_cube_to_parts(fence2, cubes);
-				float const center_pt(fence2.get_center_dim(!dim)), gate_width(0.8*door_height);
+				float const center_pt(fence2.get_center_dim(!fdim)), gate_width(0.8*door_height);
 
 				for (unsigned d = 0; d < 2; ++d) { // split fence, add gap for gate, and add each segment if it's large enough
 					cube_t seg(fence2);
-					seg.d[!dim][d] = center_pt + (d ? -0.5f : 0.5f)*gate_width;
-					if (seg.get_sz_dim(!dim) < gate_width) continue; // too small
-					seg.expand_in_dim(!dim, -0.01*door_height); // shrink slightly to avoid clipping through the exterior wall
+					seg.d[!fdim][d] = center_pt + (d ? -0.5f : 0.5f)*gate_width;
+					if (seg.get_sz_dim(!fdim) < gate_width) continue; // too small
+					seg.expand_in_dim(!fdim, -0.01*door_height); // shrink slightly to avoid clipping through the exterior wall
 					fences.push_back(seg);
 				}
 			}
