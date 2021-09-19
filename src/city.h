@@ -498,7 +498,7 @@ struct bridge_t : public road_connector_t {
 	bridge_t(road_t const &road) : road_connector_t(road), make_bridge(0) {}
 	void add_streetlights() {road_connector_t::add_streetlights(4, 0, 0.05, get_start_z(), get_end_z());} // 4 per side
 	bool proc_sphere_coll(point &center, point const &prev, float sradius, float prev_frame_zval, vector3d const &xlate, vector3d *cnorm) const;
-	bool line_intersect(point const &p1, point const &p2, float &t) const {return 0;} // TODO
+	bool line_intersect(point const &p1, point const &p2, float &t) const;
 };
 
 struct tunnel_t : public road_connector_t {

@@ -649,6 +649,15 @@ bool bridge_t::proc_sphere_coll(point &center, point const &prev, float sradius,
 	return 1;
 }
 
+bool bridge_t::line_intersect(point const &p1, point const &p2, float &t) const {
+	float const size_scale(city_params.road_width), wall_width(0.05*size_scale), wall_height(0.1*size_scale);
+	cube_t road_surface(*this); // start from bcube
+	// set z1/z2 to include the road surface and guardrails; approximate since the bridge may be slightly sloped
+	set_cube_zvals(road_surface, (min(z1(), z2()) - wall_width - 0.25f*ROAD_HEIGHT), (max(z1(), z2()) + wall_height));
+	road_surface.expand_by_xy(wall_width);
+	return check_line_clip_update_t(p1, p2, t, road_surface);
+}
+
 
 void tunnel_t::init(point const &start, point const &end, float radius_, float end_length, bool dim) {
 	radius = radius_;
