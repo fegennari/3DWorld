@@ -1476,8 +1476,50 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for i
 			assert(0); // should never get here
 		}
+		unsigned find_road_for_car(car_t const &car, bool dim) const {
+			for (auto r = roads.begin(); r != roads.end(); ++r) { // similar to get_nearby_road_ix(), except checks cube overlap rather than point containment
+				if (r->dim != dim) continue; // wrong direction
+				if (r->intersects_xy(car.bcube)) {return (r - roads.begin());}
+			}
+			assert(0); // road not found - error
+			return 0;
+		}
+		bool car_must_wait_before_entering_road(car_t const &car, vector<car_t> const &cars, driveway_t const &driveway, float lookahead_time) const {
+			bool const dim(!driveway.dim), dir(driveway.dir ^ dim); // dim/dir of cars on the road we're entering
+			float const far_side(car.bcube.d[dim][dir]); // side of car not in danger of being hit
+			unsigned const road_ix(find_road_for_car(car, dim));
+			// the following logic is similar to ped_manager_t::has_nearby_car_on_road(), except it only considers one lane of the road
+			// since we don't have cars split out per-city here like we do in ped_mgr, we have to sort by city and then road
+			car_base_t ref_car; ref_car.cur_city = city_id; ref_car.cur_road = road_ix;
+			auto range_start(std::lower_bound(cars.begin(), cars.end(), ref_car, comp_car_city_then_road())); // binary search acceleration
+			auto closest_car(cars.end());
+
+			for (auto it = range_start; it != cars.end(); ++it) {
+				car_base_t const &c(*it);
+				if (c.cur_road != road_ix || c.cur_city != city_id) break; // different road or city, done
+				if (c.dir != dir) continue; // car is traveling on the other side of the road, ignore it
+				float const val(c.bcube.d[dim][!dir]); // back end of the car
+				if (dir) {if (val > far_side) break;   } // already passed the car, not a threat - done (cars are sorted in this dim)
+				else     {if (val < far_side) continue;} // already passed the car, not a threat - skip to next car
+				if (closest_car == cars.end()) {closest_car = it;} // first threatening car
+				else {
+					float const val2(closest_car->bcube.d[dim][!dir]); // back end of the other car
+					if (dir ? (val > val2) : (val < val2)) {closest_car = it;} // this car is closer
+				}
+				if (!dir) break; // no cars can be closer than this (cars are sorted in this dim)
+			} // for it
+			if (closest_car == cars.end()) return 0; // no car found, safe
+			car_base_t const &c(*closest_car);
+			float const near_side(car.bcube.d[dim][!dir]), front_pos(c.bcube.d[dim][dir]); // side of car in danger of being hit, and front of the closest cra
+			if ((front_pos > near_side) == dir)       return 1; // already intersects in dimension dim, must wait
+			if (c.turn_dir != TURN_NONE)              return 0; // car is turning; since it's already on this road, it must be turning off this road and can be ignored
+			if (c.stopped_at_light || c.is_stopped()) return 0; // stopped, maybe at a light; we could calculate the light change time like with peds, but maybe it's okay to not wait
+			// moving and not turning; assume it may be accelerating, and could reach max_speed by the time it passes near_side
+			float const travel_dist(lookahead_time*CAR_SPEED_SCALE*city_params.car_speed*c.max_speed); // conservative travel dist
+			return (fabs(front_pos - near_side) < travel_dist);
+		}
 	public:
-		void update_car(car_t &car, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
+		void update_car(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
 			
@@ -1494,7 +1536,11 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 				else { // car still in driveway, continue pulling/backing out
 					if (!driveway.contains_cube_xy(car.bcube)) { // partially out of the driveway/into the road
-						// TODO: check for intersection with other cars
+						if (car_must_wait_before_entering_road(car, cars, driveway, 2.0*TICKS_PER_SECOND)) { // lookahead_time=2.0s
+							car.decelerate_fast(); // is this needed?
+							return; // wait for the path to become clear
+						}
+						// TODO: logic to pull out into road
 					}
 					assert(car.dim == driveway.dim);
 					min_eq(car.cur_speed, 0.25f*car.max_speed); // clamp the speed to 25% of max
@@ -2297,10 +2343,10 @@ public:
 	}
 	road_network_t const &get_car_rn(car_base_t const &car) const {return road_network_t::get_car_rn(car, road_networks, global_rn);}
 	
-	void update_car(car_t &car, rand_gen_t &rgen) const {
+	void update_car(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen) const {
 		if (car.cur_city == NO_CITY_IX) return; // not in a city (in a garage), nothing to update
 		//update_car_seg_stats(car); // not needed - stats not yet used
-		get_car_rn(car).update_car(car, rgen, road_networks, global_rn);
+		get_car_rn(car).update_car(car, cars, rgen, road_networks, global_rn);
 		if (city_params.enable_car_path_finding) {update_car_dest(car);}
 	}
 	void update_car_seg_stats(car_base_t const &car) const {get_car_rn(car).update_car_seg_stats(car);}
@@ -2325,7 +2371,7 @@ void car_manager_t::add_car() {
 	if (road_gen.add_car(car, rgen)) {cars.push_back(car);}
 }
 void car_manager_t::update_cars() {
-	for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, rgen);} // run update logic
+	for (auto i = cars.begin(); i != cars.end(); ++i) {road_gen.update_car(*i, cars, rgen);} // run update logic
 }
 void car_manager_t::get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const {
 	start = cb->start; end = (cb+1)->start;

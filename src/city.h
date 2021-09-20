@@ -194,6 +194,11 @@ struct car_city_vect_t {
 struct comp_car_road {
 	bool operator()(car_base_t const &c1, car_base_t const &c2) const {return (c1.cur_road < c2.cur_road);}
 };
+struct comp_car_city_then_road {
+	bool operator()(car_base_t const &c1, car_base_t const &c2) const {
+		return ((c1.cur_city != c2.cur_city) ? (c1.cur_city < c2.cur_city) : (c1.cur_road < c2.cur_road));
+	}
+};
 struct comp_car_road_then_pos {
 	vector3d const &camera_pos;
 	comp_car_road_then_pos(vector3d const &camera_pos_) : camera_pos(camera_pos_) {}

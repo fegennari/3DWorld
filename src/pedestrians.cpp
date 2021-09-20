@@ -1000,7 +1000,7 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 			else     {if (val < pos_min) continue;} // already passed the ped, not a threat - skip to next car
 			if (closest_car == cars.end()) {closest_car = it;} // first threatening car
 			else {
-				float const val2(closest_car->bcube.d[dim][!dir]);
+				float const val2(closest_car->bcube.d[dim][!dir]); // back end of the other car
 				if (dir ? (val > val2) : (val < val2)) {closest_car = it;} // this car is closer
 			}
 			if (!dir) break; // no cars can be closer than this (cars are sorted in this dim)
