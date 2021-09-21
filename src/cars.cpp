@@ -1123,10 +1123,16 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 				draw_simple_cube(sel_car->bcube + xlate);
 
 				if (!sel_car->is_parked() && sel_car->dest_valid) { // draw destination of moving car
-					s.set_cur_color((sel_car->cur_road_type == TYPE_DRIVEWAY) ? CYAN : PURPLE);
-					cube_t dest_bcube(get_car_dest_bcube(*sel_car)); // isec or driveway
-					dest_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
-					draw_simple_cube(dest_bcube + xlate);
+					if (sel_car->dest_driveway >= 0) {
+						s.set_cur_color(CYAN);
+						cube_t dw_bcube(get_car_dest_bcube(*sel_car, 0)); // driveway
+						dw_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
+						draw_simple_cube(dw_bcube + xlate);
+					}
+					s.set_cur_color(PURPLE);
+					cube_t isec_bcube(get_car_dest_bcube(*sel_car, 1)); // isec
+					isec_bcube.z2() += 4.0*city_params.road_width; // increase height to make it more easily visible
+					draw_simple_cube(isec_bcube + xlate);
 				}
 				set_fill_mode(); // reset
 				s.end_shader();

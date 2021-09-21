@@ -282,7 +282,9 @@ struct driveway_t : public cube_t {
 	int car_ix; // driveway can old exactly one car; -1 = none
 	driveway_t() : dim(0), dir(0), in_use(0), plot_ix(0), car_ix(-1) {}
 	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), in_use(0), plot_ix(pix), car_ix(-1) {}
-	int get_cur_car() const {return (in_use ? car_ix : -1);} // if not in use, return -1/none even if car_ix hasn't been reset
+	float get_edge_at_road() const {return d[dim][dir];}
+	float get_length() const {return get_sz_dim(dim);}
+	int get_cur_car()  const {return (in_use ? car_ix : -1);} // if not in use, return -1/none even if car_ix hasn't been reset
 	void add_car(unsigned ix) {assert(!in_use); car_ix = ix; in_use = 1;}
 	tex_range_t get_tex_range(float ar) const;
 };
@@ -641,7 +643,7 @@ class car_manager_t { // and trucks and helicopters
 	road_isec_t const &get_car_isec(car_t const &car) const;
 	bool check_collision(car_t &c1, car_t &c2) const;
 	void register_car_at_city(car_t const &car);
-	cube_t const &get_car_dest_bcube(car_t const &car) const;
+	cube_t const &get_car_dest_bcube(car_t const &car, bool isec_only) const;
 	void add_car();
 	void get_car_ix_range_for_cube(vector<car_block_t>::const_iterator cb, cube_t const &bc, unsigned &start, unsigned &end) const;
 	void remove_destroyed_cars();

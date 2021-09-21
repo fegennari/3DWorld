@@ -1518,15 +1518,17 @@ class city_road_gen_t : public road_gen_base_t {
 			float const travel_dist(lookahead_time*CAR_SPEED_SCALE*city_params.car_speed*c.max_speed); // conservative travel dist
 			return (fabs(front_pos - near_side) < travel_dist);
 		}
+		driveway_t const &get_driveway(unsigned dix) const {
+			assert(dix < city_obj_placer.driveways.size());
+			return city_obj_placer.driveways[dix];
+		}
 	public:
 		void update_car(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
 			
 			if (car.cur_road_type == TYPE_DRIVEWAY) { // moving in a driveway
-				unsigned const dix(car.cur_seg);
-				assert(dix < city_obj_placer.driveways.size());
-				driveway_t const &driveway(city_obj_placer.driveways[dix]);
+				driveway_t const &driveway(get_driveway(car.cur_seg));
 
 				if (!driveway.intersects_xy(car.bcube)) { // car no longer in driveway
 					driveway.in_use = 0;
@@ -1544,7 +1546,8 @@ class city_road_gen_t : public road_gen_base_t {
 					}
 					assert(car.dim == driveway.dim);
 					min_eq(car.cur_speed, 0.25f*car.max_speed); // clamp the speed to 25% of max
-					car.in_reverse = (car.dir == driveway.dir); // back up if pointing away from the road
+					// |---> driveway dir=0, car dir=1
+					car.in_reverse = (car.dir != driveway.dir); // back up if pointing away from the road
 				}
 			}
 			if (car.in_isect()) {
@@ -1662,8 +1665,18 @@ class city_road_gen_t : public road_gen_base_t {
 
 					// use dest_seg.car_count to estimate traffic and route around?
 					if (car.dest_valid && car.cur_city != CONN_CITY_IX) { // Note: don't need to update dest logic on connector roads since there are no choices to make
-						point const dest_pos(car_rn.get_car_dest_isec_center(car, road_networks, global_rn));
-						vector3d const dest_dir(dest_pos - car.get_center());
+						vector3d dest_dir;
+						
+						if (car.dest_driveway >= 0 && car.cur_seg == car.dest_isec && car.cur_city == city_id) { // in the target intersection - drive toward the dest driveway
+							driveway_t const &driveway(get_driveway(car.dest_driveway));
+							point dest_pos(driveway.get_cube_center());
+							dest_pos[driveway.dim] = driveway.get_edge_at_road();
+							dest_dir = dest_pos - isec.get_cube_center();
+						}
+						else { // drive toward the destination intersection
+							point const dest_pos(car_rn.get_car_dest_isec_center(car, road_networks, global_rn));
+							dest_dir = dest_pos - car.get_center();
+						}
 						bool const pri_dim(fabs(dest_dir.x) < fabs(dest_dir.y)), pri_dir(dest_dir[pri_dim] > 0), sec_dir(dest_dir[!pri_dim] > 0);
 						unsigned best_score(0);
 
@@ -1682,7 +1695,7 @@ class city_road_gen_t : public road_gen_base_t {
 							if      (dim2 == pri_dim && dir2 == pri_dir) {score = 3;} // best score
 							else if (dim2 != pri_dim && dir2 == sec_dir) {score = 2;} // second best score
 							if (score > best_score) {best_score = score; car.turn_dir = tdir;}
-						} // for d
+						} // for tdir
 						assert(best_score > 0); // no dead end roads
 					}
 					else { // use random turn direction
@@ -1716,12 +1729,8 @@ class city_road_gen_t : public road_gen_base_t {
 		point get_car_dest_isec_center(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			return get_car_dest_isec(car, road_networks, global_rn).get_cube_center();
 		}
-		cube_t const &get_car_dest(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const { // isec or driveway
-			if (car.cur_road_type == TYPE_DRIVEWAY && car.dest_city == city_id) { // driveway in this city
-				assert(car.dest_driveway >= 0); // must be set/valid
-				assert(car.dest_driveway < (int)city_obj_placer.driveways.size());
-				return city_obj_placer.driveways[car.dest_driveway];
-			}
+		cube_t const &get_car_dest(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn, bool isec_only) const { // isec or driveway
+			if (!isec_only && car.dest_driveway >= 0 && car.dest_city == city_id) {return get_driveway(car.dest_driveway);} // driveway in this city
 			return get_car_dest_isec(car, road_networks, global_rn); // else assume we want andest intersection
 		}
 	private:
@@ -1735,12 +1744,13 @@ class city_road_gen_t : public road_gen_base_t {
 			return nullptr; // not found, caller can error check
 		}
 		bool select_avail_driveway(car_t &car, rand_gen_t &rgen) const { // consider destination driveways, since these are easier to handle than parking lots
-			if (city_obj_placer.driveways.empty()) return 0;
+			if (city_obj_placer.driveways.empty()) return 0; // not a residential city
 			
-			for (unsigned n = 0; n < 4; ++n) { // make 4 attempts to find a valid driveway
+			for (unsigned n = 0; n < 10; ++n) { // make 10 attempts to find a valid driveway
 				unsigned const dix(rgen.rand()%city_obj_placer.driveways.size());
-				driveway_t const &driveway(city_obj_placer.driveways[dix]);
+				driveway_t const &driveway(get_driveway(dix));
 				if (driveway.in_use) continue;
+				if (driveway.get_length() < 1.5*car.get_length()) continue; // driveway is too short
 				driveway.in_use   = 1;
 				car.dest_driveway = (unsigned short)dix;
 				// find intersection before the driveway such that driving on the road exiting this intersection will encounter the driveway on the right
@@ -1774,12 +1784,16 @@ class city_road_gen_t : public road_gen_base_t {
 			return 1;
 		}
 		bool car_at_dest(car_t const &car) const {
-			return get_isec_by_ix(car.dest_isec).contains_pt_xy(car.get_center());
+			if (car.dest_driveway < 0) {return get_isec_by_ix(car.dest_isec).contains_pt_xy(car.get_center());} // dest isec
+			cube_t const &driveway(get_driveway(car.dest_driveway));
+			cube_t bcube(car.bcube);
+			bcube.d[car.dim][!car.dir] -= (car.dir ? 1.0 : -1.0)*0.2*car.get_length(); // add some space behind the car
+			return driveway.contains_cube_xy(bcube);
 		}
 		road_isec_t const &get_isec_by_ix(unsigned ix) const {
 			for (unsigned n = 0; n < 3; ++n) {
 				unsigned const sz(isecs[n].size());
-				if (ix < sz) return isecs[n][ix];
+				if (ix < sz) {return isecs[n][ix];}
 				ix -= sz;
 			}
 			assert(0); // should never get here (invalid ix)
@@ -1903,7 +1917,7 @@ public:
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
 	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
-	cube_t const &get_car_dest_bcube(car_t const &car) const {return get_city(car.dest_city).get_car_dest(car, road_networks, global_rn);}
+	cube_t const &get_car_dest_bcube(car_t const &car, bool isec_only) const {return get_city(car.dest_city).get_car_dest(car, road_networks, global_rn, isec_only);}
 
 	cube_t get_city_bcube_for_cars(unsigned city_ix) const {
 		cube_t bcube(get_city_bcube(city_ix));
@@ -2372,7 +2386,7 @@ cube_t car_manager_t::get_cb_bcube(car_block_t const &cb ) const {
 road_isec_t const &car_manager_t::get_car_isec(car_t const &car) const {return road_gen.get_car_isec(car);}
 bool car_manager_t::check_collision(car_t &c1, car_t &c2)        const {return c1.check_collision(c2, road_gen);}
 void car_manager_t::register_car_at_city(car_t const &car) {road_gen.register_car_at_city(car.cur_city);}
-cube_t const &car_manager_t::get_car_dest_bcube(car_t const &car) const {return road_gen.get_car_dest_bcube(car);}
+cube_t const &car_manager_t::get_car_dest_bcube(car_t const &car, bool isec_only) const {return road_gen.get_car_dest_bcube(car, isec_only);}
 
 void car_manager_t::add_car() {
 	car_t car;
