@@ -39,6 +39,9 @@ template<typename S, typename T> void get_all_bcubes(vector<T> const &v, S &bcub
 
 bool is_night(float adj) {return (light_factor - adj < 0.5f);} // for car headlights and streetlights
 
+bool car_is_close_to_player(car_t const &car) { // for debugging
+	return dist_xy_less_than(get_camera_building_space(), car.get_center(), city_params.road_width);
+}
 
 void set_city_lighting_shader_opts(shader_t &s, cube_t const &lights_bcube, bool use_dlights, bool use_smap, float pcf_scale) {
 
@@ -1667,7 +1670,7 @@ class city_road_gen_t : public road_gen_base_t {
 					if (car.dest_valid && car.cur_city != CONN_CITY_IX) { // Note: don't need to update dest logic on connector roads since there are no choices to make
 						vector3d dest_dir;
 						
-						if (car.dest_driveway >= 0 && car.cur_seg == car.dest_isec && car.cur_city == city_id) { // in the target intersection - drive toward the dest driveway
+						if (car.dest_driveway >= 0 && is_car_at_dest_isec(car) && car.cur_city == city_id) { // in the target intersection - drive toward the dest driveway
 							driveway_t const &driveway(get_driveway(car.dest_driveway));
 							point dest_pos(driveway.get_cube_center());
 							dest_pos[driveway.dim] = driveway.get_edge_at_road();
@@ -1718,6 +1721,12 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 			}
 			assert(get_car_rn(car, road_networks, global_rn).get_road_bcube_for_car(car, global_rn).intersects_xy(car.bcube)); // sanity check
+		}
+		bool is_car_at_dest_isec(car_t const &car) const {
+			unsigned const isec_type(car.get_isec_type());
+			unsigned flat_isec_ix(car.cur_seg);
+			for (unsigned n = 0; n < isec_type; ++n) {flat_isec_ix += isecs[n].size();}
+			return (car.dest_isec == flat_isec_ix); // dest_isec is in flat space, while the current isec is defined by {cur_road_type, cur_seg)
 		}
 		road_isec_t const &get_car_dest_isec(car_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			if (car.dest_city == city_id) {return get_isec_by_ix(car.dest_isec);} // local destination within the current city
@@ -1772,7 +1781,7 @@ class city_road_gen_t : public road_gen_base_t {
 				}
 				cout << TXT(dim) << TXT(dir) << TXT(extend_dir) << TXT(road_spacing) << TXT(dw_road_meet) << TXT(driveway.str()) << TXT(query_cube.str()) << endl;
 				assert(0); // should never get here
-			}
+			} // for n
 			return 0; // failed
 		}
 	public:
