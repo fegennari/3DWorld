@@ -140,8 +140,8 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 	vec3 norm_dir = normalize(dir); // used for dlights
 	vec3 pos      = (vpos_c - scene_llc)/scene_scale;
 	float nsteps  = length(dir)/step_delta;
-	int num_steps = 1 + min(1000, int(nsteps)); // round up
-	float sd_ratio= max(1.0, nsteps/1000.0);
+	int num_steps = 1 + min(256, int(nsteps)); // round up
+	float sd_ratio= max(1.0, nsteps/256.0);
 	vec3 delta    = sd_ratio*dir/(nsteps*scene_scale);
 	float step_weight  = fract(nsteps);
 	float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
