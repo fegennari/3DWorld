@@ -164,7 +164,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 #if defined(SMOKE_SHADOW_MAP) && defined(USE_SHADOW_MAP)
 		if (enable_light0) {
 			tex_val.rgb  += sl_color * get_shadow_map_weight_light0_no_bias(cur_epos);
-			cur_epos.rgb += epos_delta;
+			cur_epos.xyz += epos_delta*step_weight;
 		}
 #endif // USE_SHADOW_MAP && SMOKE_SHADOW_MAP
 
