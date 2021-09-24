@@ -972,7 +972,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 	bool const use_tess(use_water_plane_tess());
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
 	shader_t s;
-	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
+	set_std_depth_func_with_eq(); // helps prevent Z-fighting
 
 	if (use_tess) {
 		glCullFace(camera_underwater ? GL_FRONT : GL_BACK);
@@ -993,7 +993,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 	s.add_uniform_float("depth_opacity_mult", ocean_depth_opacity_mult);
 	s.set_cur_color(WHITE);
 	draw_tiled_terrain_water(s, zval);
-	glDepthFunc(GL_LESS);
+	set_std_depth_func();
 	s.end_shader();
 
 	if (use_tess) {

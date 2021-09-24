@@ -2772,7 +2772,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			fgPopMatrix();
 			fgPushMatrix();
 			set_additive_blend_mode();
-			glDepthFunc(GL_LEQUAL);
+			set_std_depth_func_with_eq();
 			// FIXME: disable alpha testing to avoid artifacts at the shields boundary? but then we have potential alpha sort order problems
 			//ddata.shader.add_uniform_float("min_alpha", -1.0);
 			assert(last_hit <= SHIELDS_TIME);
@@ -2802,7 +2802,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			ddata.set_color(color_alpha);
 			draw_sphere_vbo_back_to_front(all_zeros, ssize, 3*ndiv/2, has_hit_dir); // partial sphere?
 			glDisable(GL_CULL_FACE);
-			glDepthFunc(GL_LESS);
+			set_std_depth_func();
 			set_std_blend_mode();
 			ddata.shader->enable();
 			if (has_hit_dir) {end_texture();}

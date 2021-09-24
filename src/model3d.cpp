@@ -2327,7 +2327,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 		for (iterator m = begin(); m != end(); ++m) {m->render(s, 0, 0, 1, 0, 3, 0, trans_op_mask, xlate);}
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		s.end_shader();
-		glDepthFunc(GL_LEQUAL);
+		set_std_depth_func_with_eq();
 	}
 	int const reflect_mode(any_planar_reflective ? 1 : (any_cube_map_reflective ? 2 : 0));
 	assert(!reflect_mode || xlate == all_zeros); // xlate not supported for reflections (and not used anyway)
@@ -2369,7 +2369,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, int trans_op_mas
 			} // ref_pass
 		} // sam_pass
 	} // bmap_pass
-	if (use_z_prepass) {glDepthFunc(GL_LESS);} // reset to default
+	if (use_z_prepass) {set_std_depth_func();} // reset to default
 }
 
 void model3ds::ensure_reflection_cube_maps() {

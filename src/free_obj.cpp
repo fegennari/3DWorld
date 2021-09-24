@@ -687,7 +687,7 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 			fgPopMatrix();
 			glStencilFunc(GL_EQUAL, 0, ~0U);
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-			glDepthFunc(GL_LEQUAL); // GL_EQUAL should be used, but there are more issues with z-fighting in this mode
+			set_std_depth_func_with_eq(); // GL_EQUAL should be used, but there are more issues with z-fighting in this mode
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
 			// draw second pass using stencil test
@@ -711,7 +711,7 @@ void free_obj::draw(shader_t &shader, vpc_shader_t &upc_shader) const { // view 
 				fgPopMatrix();
 				udd.shader->clear_color_e();
 			}
-			glDepthFunc(GL_LESS);
+			set_std_depth_func();
 		} // partial_shadow
 	} // pass
 }

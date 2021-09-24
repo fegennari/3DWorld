@@ -779,7 +779,7 @@ void road_draw_state_t::draw_unshadowed() {
 void road_draw_state_t::post_draw() {
 	draw_state_t::post_draw();
 	if (qbd_sl.empty()) return; // no stoplights to draw
-	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
+	set_std_depth_func_with_eq(); // helps prevent Z-fighting
 	shader_t s;
 
 	if (shadow_only) {s.begin_color_only_shader();}
@@ -789,7 +789,7 @@ void road_draw_state_t::post_draw() {
 	}
 	qbd_sl.draw_and_clear();
 	s.end_shader();
-	glDepthFunc(GL_LESS);
+	set_std_depth_func();
 }
 
 void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient

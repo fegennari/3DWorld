@@ -2294,7 +2294,7 @@ public:
 			//highres_timer_t timer(shadow_only ? "Draw City Shadows" : "Draw City"); // 1.1ms / 0.42ms shadows
 			fgPushMatrix();
 			translate_to(xlate);
-			glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
+			set_std_depth_func_with_eq(); // helps prevent Z-fighting
 
 			if (have_plot_dividers) { // enable normal maps for fences and walls; also applies to tunnels
 				dstate.set_enable_normal_map(1);
@@ -2305,7 +2305,7 @@ public:
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
 			global_rn.draw(dstate, shadow_only, 1); // connector road may have bridges, and therefore needs shadows
 			dstate.post_draw();
-			glDepthFunc(GL_LESS);
+			set_std_depth_func();
 			fgPopMatrix();
 		}
 		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate

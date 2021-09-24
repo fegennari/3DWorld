@@ -324,24 +324,20 @@ void disable_blend() {
 }
 
 
-void set_std_blend_mode() {
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-}
-
-void set_additive_blend_mode() {
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-}
+void set_std_blend_mode     () {glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);}
+void set_additive_blend_mode() {glBlendFunc(GL_SRC_ALPHA, GL_ONE);}
 
 
 void reset_fog() {
 	setup_linear_fog(GRAY, ((world_mode == WMODE_INF_TERRAIN) ? get_inf_terrain_fog_dist() : 2.5*Z_SCENE_SIZE*fog_dist_scale));
 }
 
+void set_std_depth_func        () {glDepthFunc(GL_LESS  );}
+void set_std_depth_func_with_eq() {glDepthFunc(GL_LEQUAL);}
 
 void set_gl_params() {
-
 	reset_fog();
-	glDepthFunc(GL_LESS);
+	set_std_depth_func();
 	set_std_blend_mode();
 	glEnable(GL_DEPTH_TEST);
 }
@@ -2244,7 +2240,11 @@ int main(int argc, char** argv) {
 	cout << ".GL Initialized." << endl;
 	uevent_advance_frame();
 	--frame_counter;
-	//glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE); // OpenGL 4.5 only
+
+	if (0) { // reversed Z-buffer; OpenGL 4.5 only
+		// see https://www.wedesoft.de/software/2021/09/20/reversed-z-rendering/
+		glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+	}
 	check_gl_error(7771);
 	load_textures();
 	load_flare_textures(); // Sun Flare

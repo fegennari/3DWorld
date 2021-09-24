@@ -2340,7 +2340,7 @@ public:
 				if (reflection_pass) {glDisable(GL_POLYGON_OFFSET_FILL);}
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				s.end_shader();
-				glDepthFunc(GL_LEQUAL);
+				set_std_depth_func_with_eq();
 			}
 			// Note: the best I can come up with is applying animations to both buildings and people, making sure to set animation_time to 0.0 for buildings;
 			// otherwise, we would need to switch between two different shaders every time we come across a building with people in it; not very clean, but seems to work
@@ -2443,7 +2443,7 @@ public:
 					} // for bi
 				} // for g
 			} // for i
-			if (ADD_ROOM_LIGHTS) {glDepthFunc(GL_LESS);} // restore
+			if (ADD_ROOM_LIGHTS) {set_std_depth_func();} // restore
 			glDisable(GL_CULL_FACE);
 
 			if (!reflection_pass) { // update once; non-interior buildings (such as city buildings) won't update this
@@ -2560,7 +2560,7 @@ public:
 				}
 			}
 		}
-		glDepthFunc(GL_LEQUAL);
+		set_std_depth_func_with_eq();
 		glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting on building windows
 
 		if (have_windows) { // draw windows, front facing only (not viewed from interior)
@@ -2640,7 +2640,7 @@ public:
 		}
 		if (!ext_door_draw.empty()) {setup_depth_clamp();} // restore
 		glCullFace(GL_BACK);
-		glDepthFunc(GL_LESS);
+		set_std_depth_func();
 		fgPopMatrix();
 		enable_dlight_bcubes = 0;
 

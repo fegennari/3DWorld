@@ -16,6 +16,8 @@ void enable_blend();
 void disable_blend();
 void set_std_blend_mode();
 void set_additive_blend_mode();
+void set_std_depth_func();
+void set_std_depth_func_with_eq();
 void set_array_client_state(bool va, bool tca, bool na, bool ca, bool actually_set_state=1);
 void reset_fog();
 void set_perspective_near_far(float near_clip, float far_clip, float aspect_ratio=0.0);
