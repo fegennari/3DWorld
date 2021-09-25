@@ -28,6 +28,7 @@ enum {SF_EYE = 0, SF_NOSE, SF_TONGUE, SF_HEADBAND, NUM_SMILEY_PARTS};
 struct bbox { // size = 20
 	float x1, y1, x2, y2;
 	int index;
+	bbox() : x1(0), y1(0), x2(0), y2(0), index(0) {}
 };
 
 
