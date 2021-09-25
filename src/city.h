@@ -172,6 +172,8 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 96
 	void park() {cur_speed = max_speed = 0.0;}
 	void stop() {cur_speed = 0.0;} // immediate stop
 	void move_by(float val) {bcube.d[dim][0] += val; bcube.d[dim][1] += val;}
+	bool maybe_apply_turn(float centerline);
+	void finish_90_degree_turn();
 	bool check_collision(car_t &c, road_gen_base_t const &road_gen);
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const;
 	bool front_intersects_car(car_t const &c) const;
