@@ -1553,6 +1553,37 @@ class city_road_gen_t : public road_gen_base_t {
 					car.in_reverse = (car.dir != driveway.dir); // back up if pointing away from the road
 				}
 			}
+			if (car.dest_driveway >= 0 && car.cur_city == city_id) {
+				driveway_t const &driveway(get_driveway(car.dest_driveway));
+				bool const dim(driveway.dim), dir(driveway.dir);
+
+				if (car.dim != dim) { // car is on a road perpendicular to the driveway, which may be the road connected to it
+					cube_t turn_area(driveway);
+					turn_area.d[dim][!dir]  = driveway.d[dim][dir]; // point where the driveway meets the road
+					turn_area.d[dim][ dir] += (dim ? 1.0 : -1.0)*city_params.road_width; // extend to cover the entire width of the road
+
+					if (car.bcube.intersects_xy(turn_area)) { // turn into driveway
+						bool const turn_dir(car.dir ^ dir ^ dim); // 0=left, 1=right
+
+						if (turn_dir == 0) { // left turn, check for oncoming cars and wait until clear; same logic as pulling/backing out of a driveway
+							if (car_must_wait_before_entering_road(car, cars, driveway, 2.0*TICKS_PER_SECOND)) { // lookahead_time=2.0s
+								car.decelerate_fast(); // is this needed?
+								return; // wait for the path to become clear
+							}
+						}
+						car.park(); return; // FIXME: remove when this works
+						float const centerline(driveway.get_center_dim(!dim));
+						car.turn_dir = (turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
+						car.maybe_apply_turn(centerline);
+
+						if (driveway.contains_cube_xy(car.bcube)) { // finished turn
+							car.finish_90_degree_turn();
+							car.park();
+						}
+						return; // ???
+					}
+				}
+			}
 			if (car.in_isect()) {
 				road_isec_t const &isec(get_car_isec(car));
 				isec.notify_waiting_car(car); // even if not stopped
@@ -1638,7 +1669,7 @@ class city_road_gen_t : public road_gen_base_t {
 					if (car.dest_valid && car.cur_city != CONN_CITY_IX) { // Note: don't need to update dest logic on connector roads since there are no choices to make
 						vector3d dest_dir;
 						
-						if (car.dest_driveway >= 0 && is_car_at_dest_isec(car) && car.cur_city == city_id) { // in the target intersection - drive toward the dest driveway
+						if (car.dest_driveway >= 0 && car.cur_city == city_id && is_car_at_dest_isec(car)) { // in the target intersection - drive toward the dest driveway
 							driveway_t const &driveway(get_driveway(car.dest_driveway));
 							point dest_pos(driveway.get_cube_center());
 							dest_pos[driveway.dim] = driveway.get_edge_at_road();
