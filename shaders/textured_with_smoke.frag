@@ -1,11 +1,12 @@
 #include <fresnel.part>
 
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
-uniform float step_delta, step_delta_shadow;
+uniform float step_delta;
 uniform sampler2D tex0;
 uniform sampler3D wet_noise_tex;
 uniform sampler2D sky_zval_tex;
 uniform sampler2D emissive_map; // only used when ENABLE_EMISSIVE_MAP
+uniform sampler2D blue_noise_tex; // used for smoke shadow maps
 uniform float min_alpha       = 0.0;
 uniform float water_depth     = 0.0;
 uniform float emissive_scale  = 0.0;
@@ -109,12 +110,12 @@ vec3 add_light0(in vec3 n, in float normal_sign, in vec4 base_color) {
 	if (lpos0 != vposl && nscale > 0.0) {
 		vec3 dir      = vposl - lpos0;
 		vec3 pos      = (lpos0 - scene_llc)/scene_scale;
-		float nsteps  = length(dir)/step_delta_shadow;
+		float nsteps  = length(dir)/step_delta;
 		int num_steps = 1 + min(100, int(nsteps)); // round up
 		float sd_ratio= max(1.0, nsteps/100.0);
-		vec3 delta    = normalize(dir)*sd_ratio*step_delta_shadow/scene_scale;
+		vec3 delta    = normalize(dir)*sd_ratio*step_delta/scene_scale;
 		float step_weight  = fract(nsteps);
-		float smoke_sscale = SMOKE_SCALE*sd_ratio*step_delta_shadow/half_dxy;
+		float smoke_sscale = SMOKE_SCALE*sd_ratio*step_delta/half_dxy;
 	
 		// smoke volume iteration using 3D texture, light0 to vposl
 		for (int i = 0; i < num_steps; ++i) {
@@ -148,6 +149,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 #if defined(SMOKE_SHADOW_MAP) && defined(USE_SHADOW_MAP)
 	vec4 cur_epos   = fg_ModelViewMatrix * vec4(vpos_c, 1.0);
 	vec3 epos_delta = fg_NormalMatrix * (delta * scene_scale); // eye space pos/delta
+	cur_epos.xyz   += texture(blue_noise_tex, gl_FragCoord.xy/textureSize(blue_noise_tex, 0)).r*epos_delta; // add blue noise offset to break up banding artifacts
 	const float smoke_albedo = 0.9;
 	vec3 sl_color   = smoke_albedo * fg_LightSource[0].diffuse.rgb;
 #endif

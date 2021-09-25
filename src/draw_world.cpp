@@ -347,7 +347,7 @@ void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
 
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7: shadow map,
-//                     8: specular map, 9: depth map/future gloss map (unused), 10: burn mask/sky_zval, 11: noise, 12: ground texture,
+//                     8: specular map, 9: depth map/future gloss map (unused), 10: burn mask/sky_zval, 11: noise, 12: landscape texture/blue noise,
 //                     13: depth, 14: reflection, 15: ripples/dlight bcubes, 16-31: dlight shadow maps
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t,
 //             3 = use vertex id for texture, 4 = use bent quad vertex id for texture, 5 = mix between tc and texgen using tc_texgen_mix
@@ -406,9 +406,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (use_gloss_map) {s.add_uniform_int("gloss_map", 9);}
 	if (triplanar_tex) {s.add_uniform_float("tex_scale", triplanar_texture_scale);}
 	common_shader_block_post(s, dlights, use_smap, smoke_en, indir_lighting, min_alpha);
-	float step_delta_scale((use_smoke_for_fog || get_smoke_at_pos(get_camera_pos())) ? 1.0 : 2.0);
-	s.add_uniform_float("step_delta_shadow", step_delta_scale*HALF_DXY);
-	if (volume_lighting && is_light_enabled(0)) {step_delta_scale *= 0.333f;} // 3 steps per texel for sun light on smoke volume
+	float const step_delta_scale((use_smoke_for_fog || get_smoke_at_pos(get_camera_pos())) ? 1.0 : 2.0);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
 	if (use_mvm) {upload_mvm_to_shader(s, "fg_ViewMatrix");}
 	
@@ -428,6 +426,10 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 			static int update_frame(0);
 			if (animate2 && frame_counter > update_frame) {fog_time += 0.001*fticks*wind; update_frame = frame_counter;} // fog moves with the wind (once per frame)
 			s.add_uniform_vector3d("fog_time", fog_time);
+		}
+		if (volume_lighting && use_smap && shadow_map_enabled()) {
+			s.add_uniform_int("blue_noise_tex", 12);
+			select_multitex(get_texture_by_name("noise/blue_noise.png"), 12);
 		}
 	}
 	if (use_burn_mask) {
