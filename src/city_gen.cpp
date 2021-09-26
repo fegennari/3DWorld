@@ -1692,11 +1692,17 @@ class city_road_gen_t : public road_gen_base_t {
 					if (car.dest_valid && car.cur_city != CONN_CITY_IX) { // Note: don't need to update dest logic on connector roads since there are no choices to make
 						vector3d dest_dir;
 						
-						if (dest_driveway_in_this_city(car) && is_car_at_dest_isec(car)) { // in the target intersection - drive toward the dest driveway
-							driveway_t const &driveway(get_driveway(car.dest_driveway));
-							point dest_pos(driveway.get_cube_center());
-							dest_pos[driveway.dim] = driveway.get_edge_at_road();
-							dest_dir = dest_pos - isec.get_cube_center();
+						if (is_car_at_dest_isec(car)) { // this intersection is our destination
+							if (dest_driveway_in_this_city(car)) { // drive toward the dest driveway
+								driveway_t const &driveway(get_driveway(car.dest_driveway));
+								point dest_pos(driveway.get_cube_center());
+								dest_pos[driveway.dim] = driveway.get_edge_at_road();
+								dest_dir = dest_pos - isec.get_cube_center();
+							}
+							else { // prefer to go straight, otherwise random
+								dest_dir[ dim] = (car.dir ? 1.0 : -1.0); // straight
+								dest_dir[!dim] = 0.1*(rgen.rand_bool() ? 1.0 : -1.0);
+							}
 						}
 						else { // drive toward the destination intersection
 							point const dest_pos(car_rn.get_car_dest_isec_center(car, road_networks, global_rn));
