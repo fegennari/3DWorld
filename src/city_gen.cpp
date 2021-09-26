@@ -12,6 +12,8 @@
 #include <cfloat> // for FLT_MAX
 
 bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edge discontinuity rather than amount of land that needs to be modified
+bool const CARS_ENTER_DRIVEWAYS     = 0; // not always correct
+bool const CARS_LEAVE_DRIEWAYS      = 0; // incomplete
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CITY_LIGHT_FALLOFF      = 0.2;
 
@@ -1553,7 +1555,8 @@ class city_road_gen_t : public road_gen_base_t {
 					return; // no other logic to run here
 				}
 				else { // leaving driveway
-					assert(0); // not yet implemented
+					assert(CARS_LEAVE_DRIEWAYS);
+
 					if (!driveway.intersects_xy(car.bcube)) { // car no longer in driveway
 						driveway.in_use = 0;
 						car.in_reverse  = 0;
@@ -1805,7 +1808,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	public:
 		bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
-			//if (select_avail_driveway(car, rgen)) return 1; // incomplete, not yet enabled
+			if (CARS_ENTER_DRIVEWAYS && select_avail_driveway(car, rgen)) return 1; // incomplete, not yet enabled
 			unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size()); // include 2-way, 3-way, and 4-way intersections
 			if (num_tot == 0) return 0; // no isecs to select
 			car.dest_isec = (unsigned short)(rgen.rand() % num_tot);
