@@ -26,6 +26,9 @@ float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(
 bool car_t::headlights_on() const { // no headlights when parked
 	return (!is_parked() && (in_tunnel || ((light_factor < (0.5 + HEADLIGHT_ON_RAND)) && is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed)))));
 }
+bool car_t::is_close_to_player() const { // for debugging
+	return dist_xy_less_than(get_camera_building_space(), get_center(), city_params.road_width);
+}
 
 void car_t::apply_scale(float scale) {
 	if (scale == 1.0) return; // no scale

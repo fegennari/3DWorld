@@ -158,6 +158,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 96
 	float get_max_lookahead_dist() const;
 	bool headlights_on() const;
 	float get_turn_rot_z(float dist_to_turn) const;
+	bool is_close_to_player() const;
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
 	void apply_scale(float scale);
 	void destroy();
