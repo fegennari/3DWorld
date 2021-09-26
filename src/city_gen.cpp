@@ -13,7 +13,7 @@
 
 bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edge discontinuity rather than amount of land that needs to be modified
 bool const CARS_ENTER_DRIVEWAYS     = 0; // not always correct
-bool const CARS_LEAVE_DRIEWAYS      = 0; // incomplete
+bool const CARS_LEAVE_DRIVEWAYS     = 0; // incomplete
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CITY_LIGHT_FALLOFF      = 0.2;
 
@@ -1555,7 +1555,7 @@ class city_road_gen_t : public road_gen_base_t {
 					return; // no other logic to run here
 				}
 				else { // leaving driveway
-					assert(CARS_LEAVE_DRIEWAYS);
+					assert(CARS_LEAVE_DRIVEWAYS);
 
 					if (!driveway.intersects_xy(car.bcube)) { // car no longer in driveway
 						driveway.in_use = 0;
@@ -1596,7 +1596,9 @@ class city_road_gen_t : public road_gen_base_t {
 								return; // wait for the path to become clear
 							}
 						}
-						min_eq(car.cur_speed, 0.25f*car.max_speed); // clamp the speed to 25% of max; should we decelerate instead?
+						float const target_speed(0.25f*car.max_speed); // 25% of max speed
+						if      (car.cur_speed < 0.9*target_speed) {car.accelerate();}
+						else if (car.cur_speed > 1.1*target_speed) {car.decelerate();}
 						float const centerline(driveway.get_center_dim(!dim));
 						car.turn_dir = (turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
 						car.maybe_apply_turn(centerline, 1); // for_driveway=1
