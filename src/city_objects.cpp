@@ -414,7 +414,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 	return has_parking;
 }
 
-// non-const because this sets driveway_t::car_ix
+// non-const because this sets driveway_t::car_ix through add_car()
 void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen) {
 	car_t car;
 	car.park();
@@ -446,7 +446,7 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 			if (car.bcube.intersects(c->bcube)) {intersects = 1; break;}
 		}
 		if (intersects) continue; // skip
-		i->add_car(cars.size());
+		i->in_use = 1;
 		cars.push_back(car);
 		plot_colliders[i->plot_ix].push_back(car.bcube); // prevent pedestrians from walking through this parked car
 	} // for i
