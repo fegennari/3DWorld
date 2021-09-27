@@ -103,6 +103,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "convert_model_files") {
 		if (!read_bool(fp, convert_model_files)) {return read_error(str);}
 	}
+	else if (str == "cars_use_driveways") {
+		if (!read_bool(fp, cars_use_driveways)) {return read_error(str);}
+	}
 	else if (str == "car_model") { // multiple car models
 		city_model_t car_model;
 		if (!car_model.read(fp)) {return read_error(str);}

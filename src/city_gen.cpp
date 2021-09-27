@@ -12,8 +12,6 @@
 #include <cfloat> // for FLT_MAX
 
 bool const CHECK_HEIGHT_BORDER_ONLY = 1; // choose building site to minimize edge discontinuity rather than amount of land that needs to be modified
-bool const CARS_ENTER_DRIVEWAYS     = 0; // not always correct
-bool const CARS_LEAVE_DRIVEWAYS     = 0; // incomplete
 float const CAR_LANE_OFFSET         = 0.15; // in units of road width
 float const CITY_LIGHT_FALLOFF      = 0.2;
 
@@ -1526,6 +1524,7 @@ class city_road_gen_t : public road_gen_base_t {
 			float const travel_dist(lookahead_time*CAR_SPEED_SCALE*city_params.car_speed*c.max_speed); // conservative travel dist
 			return (fabs(front_pos - near_side) < travel_dist);
 		}
+
 		bool dest_driveway_in_this_city(car_t const &car) const {
 			return (car.dest_driveway >= 0 && car.dest_city == city_id);
 		}
@@ -1533,84 +1532,86 @@ class city_road_gen_t : public road_gen_base_t {
 			assert(dix < city_obj_placer.driveways.size());
 			return city_obj_placer.driveways[dix];
 		}
+		bool car_check_for_road_clear_and_wait(car_t &car, vector<car_t> const &cars, driveway_t const &driveway) const {
+			if (!car_must_wait_before_entering_road(car, cars, driveway, 2.0*TICKS_PER_SECOND)) return 0; // lookahead_time=2.0s
+			car.decelerate_fast(); // is this needed?
+			return 1; // wait for the path to become clear
+		}
+
+		bool run_car_enter_driveway_logic(car_t &car, vector<car_t> const &cars) const {
+			driveway_t const &driveway(get_driveway(car.dest_driveway));
+			bool const dim(driveway.dim), dir(driveway.dir);
+			if (car.dim == dim) return 0; // car must be on a road perpendicular to the driveway, which may be the road connected to it
+			cube_t turn_area(driveway); // includes driveway and the road adjacent to it
+			turn_area.d[dim][ dir] += (dir ? 1.0 : -1.0)*city_params.road_width; // extend to cover the entire width of the road
+			if (!car.bcube.intersects_xy(turn_area)) return 0; // not yet crossed into turn area
+
+			if (car.turn_dir == TURN_NONE) {
+				if (car.prev_bcube.intersects_xy(turn_area)) return 0; // not yet turning, and in turn area last frame - too late to turn (likely car was spawned here)
+				bool const turn_dir(car.dir ^ dir ^ dim); // turn into driveway: 0=left, 1=right
+				car.turn_dir = (turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
+				car.begin_turn(); // capture car centerline before the turn
+			}
+			if (car.turn_dir == TURN_LEFT && car_check_for_road_clear_and_wait(car, cars, driveway)) return 1; // left turn, check for oncoming cars and wait until clear
+			float const target_speed(0.4f*car.max_speed); // 40% of max speed
+			if      (car.cur_speed < 0.9*target_speed) {car.maybe_accelerate();}
+			else if (car.cur_speed > 1.1*target_speed) {car.decelerate();}
+			float const centerline(driveway.get_center_dim(!dim));
+			car.maybe_apply_turn(centerline, 1); // for_driveway=1
+
+			if (car.turn_dir == TURN_NONE) { // turn has been completed, change to being in driveway even though we may not be onto the driveway yet
+				car.cur_road_type = TYPE_DRIVEWAY;
+				car.cur_road = (unsigned short)driveway.plot_ix; // store plot_ix in road field
+				car.cur_seg  = car.dest_driveway; // store driveway index in cur_seg
+			}
+			return 1;
+		}
+		bool run_car_in_driveway_logic(car_t &car, vector<car_t> const &cars) const {
+			// call this when the car begins to move: car.max_speed = choose_car_max_speed(rgen);
+			driveway_t const &driveway(get_driveway(car.cur_seg));
+			bool const dim(driveway.dim), dir(driveway.dir);
+
+			if (car.dest_driveway == (int)car.cur_seg) { // entering driveway
+				assert(car.dim == driveway.dim);
+				assert(car.dir != driveway.dir);
+				float const stop_pos(driveway.get_center_dim(dim)), car_center(car.bcube.get_center_dim(dim));
+
+				if ((car_center < stop_pos) == dir) { // reached the driveway center, stop
+					car.park();
+					//choose_new_car_dest(car, rgen); // should we wait for a while and then choose a new dest?
+				}
+				return 1; // no other logic to run here
+			}
+			// else leaving driveway
+			assert(city_params.cars_use_driveways);
+
+			if (!driveway.intersects_xy(car.bcube)) { // car no longer in driveway
+				driveway.in_use = 0;
+				car.in_reverse  = 0;
+				find_and_set_car_road_and_seg(car);
+			}
+			else { // car still in driveway, continue pulling/backing out
+				if (!driveway.contains_cube_xy(car.bcube)) { // partially out of the driveway/into the road
+					if (car_check_for_road_clear_and_wait(car, cars, driveway)) return 1;
+					// TODO: logic to pull out into road
+				}
+				assert(car.dim == dim);
+				min_eq(car.cur_speed, 0.25f*car.max_speed); // clamp the speed to 25% of max
+				// |---> driveway dir=0, car dir=1
+				car.in_reverse = (car.dir != dir); // back up if pointing away from the road
+			}
+			return 0;
+		}
 	public:
 		void update_car(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {
 			assert(car.cur_city == city_id);
 			if (car.is_parked()) return; // stopped, no update (for now)
 			
 			if (car.cur_road_type == TYPE_DRIVEWAY) { // moving in a driveway
-				// call this when the car begins to move: car.max_speed = choose_car_max_speed(rgen);
-				driveway_t const &driveway(get_driveway(car.cur_seg));
-				bool const dim(driveway.dim), dir(driveway.dir);
-
-				if (car.dest_driveway == (int)car.cur_seg) { // entering driveway
-					assert(car.dim == driveway.dim);
-					assert(car.dir != driveway.dir);
-					float const stop_pos(driveway.get_center_dim(dim)), car_center(car.bcube.get_center_dim(dim));
-					
-					if ((car_center < stop_pos) == dir) { // reached the driveway center, stop
-						car.park();
-						//choose_new_car_dest(car, rgen); // should we wait for a while and then choose a new dest?
-					}
-					return; // no other logic to run here
-				}
-				else { // leaving driveway
-					assert(CARS_LEAVE_DRIVEWAYS);
-
-					if (!driveway.intersects_xy(car.bcube)) { // car no longer in driveway
-						driveway.in_use = 0;
-						car.in_reverse  = 0;
-						find_and_set_car_road_and_seg(car);
-					}
-					else { // car still in driveway, continue pulling/backing out
-						if (!driveway.contains_cube_xy(car.bcube)) { // partially out of the driveway/into the road
-							if (car_must_wait_before_entering_road(car, cars, driveway, 2.0*TICKS_PER_SECOND)) { // lookahead_time=2.0s
-								car.decelerate_fast(); // is this needed?
-								return; // wait for the path to become clear
-							}
-							// TODO: logic to pull out into road
-						}
-						assert(car.dim == dim);
-						min_eq(car.cur_speed, 0.25f*car.max_speed); // clamp the speed to 25% of max
-						// |---> driveway dir=0, car dir=1
-						car.in_reverse = (car.dir != dir); // back up if pointing away from the road
-					}
-				}
+				if (run_car_in_driveway_logic(car, cars)) return;
 			}
 			if (dest_driveway_in_this_city(car)) {
-				driveway_t const &driveway(get_driveway(car.dest_driveway));
-				bool const dim(driveway.dim), dir(driveway.dir);
-
-				if (car.dim != dim) { // car is on a road perpendicular to the driveway, which may be the road connected to it
-					cube_t turn_area(driveway); // includes driveway and the road adjacent to it
-					//turn_area.d[dim][!dir]  = driveway.d[dim][dir]; // point where the driveway meets the road
-					turn_area.d[dim][ dir] += (dir ? 1.0 : -1.0)*city_params.road_width; // extend to cover the entire width of the road
-
-					if (car.bcube.intersects_xy(turn_area)) { // turn into driveway
-						if (car.turn_dir == TURN_NONE) {car.begin_turn();} // capture car centerline before the turn
-						bool const turn_dir(car.dir ^ dir ^ dim); // 0=left, 1=right
-
-						if (turn_dir == 0) { // left turn, check for oncoming cars and wait until clear; same logic as pulling/backing out of a driveway
-							if (car_must_wait_before_entering_road(car, cars, driveway, 2.0*TICKS_PER_SECOND)) { // lookahead_time=2.0s
-								car.decelerate_fast(); // is this needed?
-								return; // wait for the path to become clear
-							}
-						}
-						float const target_speed(0.25f*car.max_speed); // 25% of max speed
-						if      (car.cur_speed < 0.9*target_speed) {car.accelerate();}
-						else if (car.cur_speed > 1.1*target_speed) {car.decelerate();}
-						float const centerline(driveway.get_center_dim(!dim));
-						car.turn_dir = (turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
-						car.maybe_apply_turn(centerline, 1); // for_driveway=1
-
-						if (car.turn_dir == TURN_NONE) { // turn has been completed, change to being in driveway even though we may not be onto the driveway yet
-							car.cur_road_type = TYPE_DRIVEWAY;
-							car.cur_road = (unsigned short)driveway.plot_ix; // store plot_ix in road field
-							car.cur_seg  = car.dest_driveway; // store driveway index in cur_seg
-						}
-						return;
-					}
-				}
+				if (run_car_enter_driveway_logic(car, cars)) return;
 			}
 			if (car.in_isect()) {
 				road_isec_t const &isec(get_car_isec(car));
@@ -1627,7 +1628,8 @@ class city_road_gen_t : public road_gen_base_t {
 				if (car_can_go_now(car, global_rn)) {car.stopped_at_light = 0;} // can go now
 				else if (car.in_isect()) {stop_and_wait_car(car, rgen, road_networks, get_car_isec(car));} // Note: is_isect test allows cars to coast through lights when decel is very low
 				if (was_stopped) return; // no update needed
-			} else {car.maybe_accelerate();}
+			}
+			else {car.maybe_accelerate();}
 
 			cube_t const road_bcube(get_road_bcube_for_car(car));
 			if (!bcube.intersects_xy(car.prev_bcube)) {cout << car.str() << endl << road_bcube.str() << endl; assert(0);} // sanity check
@@ -1653,6 +1655,10 @@ class city_road_gen_t : public road_gen_base_t {
 				float const road_z(road_bcube.z2());
 				car.dz = 0.0;
 				set_cube_zvals(car.bcube, road_z, (road_z + car.height));
+			}
+			if (city_params.cars_use_driveways && car.turn_dir != TURN_NONE && !car.in_isect()) {
+				//cout << car.str() << TXT(car.prev_bcube.str()) << endl;
+				car.turn_dir = TURN_NONE; // hack to handle misbehaving cars turning into driveways (maybe missed the turn?)
 			}
 			if (car.turn_dir != TURN_NONE) {
 				assert(car.in_isect());
@@ -1816,7 +1822,7 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	public:
 		bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
-			if (CARS_ENTER_DRIVEWAYS && select_avail_driveway(car, rgen)) return 1; // incomplete, not yet enabled
+			if (city_params.cars_use_driveways && select_avail_driveway(car, rgen)) return 1; // incomplete, not yet enabled
 			unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size()); // include 2-way, 3-way, and 4-way intersections
 			if (num_tot == 0) return 0; // no isecs to select
 			car.dest_isec = (unsigned short)(rgen.rand() % num_tot);

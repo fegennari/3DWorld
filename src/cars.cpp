@@ -67,8 +67,8 @@ float car_t::get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len) const
 
 string car_t::str() const {
 	std::ostringstream oss;
-	oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXT(dz) << TXT(max_speed) << TXT(cur_speed)
-		<< TXTi(cur_road_type) << TXTi(color_id) << " bcube=" << bcube.str();
+	oss << "Car " << TXT(dim) << TXT(dir) << TXT(cur_city) << TXT(cur_road) << TXT(cur_seg) << TXTi(turn_dir) << TXT(dz)
+		<< TXT(max_speed) << TXT(cur_speed) << TXTi(cur_road_type) << TXTi(color_id) << " bcube=" << bcube.str();
 	return oss.str();
 }
 
