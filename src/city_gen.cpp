@@ -2680,7 +2680,8 @@ public:
 		car_manager.add_helicopters(hp_locs);
 		ped_manager.init(city_params.num_peds, city_params.num_building_peds); // must be after buildings are placed
 	}
-	void get_city_bcubes(vect_cube_t &bcubes) const {return road_gen.get_city_bcubes(bcubes);}
+	cube_t get_city_bcube(unsigned city_id) const {return road_gen.get_city_bcube(city_id);}
+	void get_city_bcubes(vect_cube_t &bcubes) const {road_gen.get_city_bcubes(bcubes);}
 	void get_all_road_bcubes(vect_cube_t &bcubes, bool connector_only) const {road_gen.get_all_road_bcubes(bcubes, connector_only);}
 	void get_all_plot_zones(vect_city_zone_t &zones) {road_gen.get_all_plot_zones(zones);} // caches plot_id_offset, so non-const
 
@@ -2788,6 +2789,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	city_gen.gen_cities(city_params);
 }
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
+cube_t get_city_bcube(unsigned city_id) {return city_gen.get_city_bcube(city_id);}
 void get_city_bcubes(vect_cube_t &bcubes) {city_gen.get_city_bcubes(bcubes);}
 void get_city_road_bcubes(vect_cube_t &bcubes, bool connector_only) {city_gen.get_all_road_bcubes(bcubes, connector_only);}
 void get_city_plot_zones(vect_city_zone_t &zones) {city_gen.get_all_plot_zones(zones);}
