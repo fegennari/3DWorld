@@ -14,6 +14,7 @@ extern float FAR_CLIP;
 extern double camera_zh;
 extern point pre_smap_player_pos;
 extern city_params_t city_params;
+extern object_model_loader_t building_obj_model_loader; // for umbrella model
 
 
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
@@ -1315,6 +1316,13 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 		//colorRGBA const &color((ped.retreat_time > 0.0) ? RED : ALPHA0);
 		colorRGBA const &color(ALPHA0); // A=0.0, leave unchanged
 		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, color, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
+
+		// draw umbrella if outside in the rain
+		if (!ped.in_building && is_rain_enabled() && !shadow_only && building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA)) {
+			cube_t u_bcube(bcube); // FIXME
+			if (enable_animations) {s.add_uniform_float("animation_time", 0.0);} // not animated
+			building_obj_model_loader.draw_model(s, ped.pos, u_bcube, dir_horiz, WHITE, xlate, OBJ_MODEL_UMBRELLA, shadow_only);
+		}
 	}
 	return 1;
 }
