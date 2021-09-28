@@ -129,7 +129,7 @@ bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
 		bcube += delta;
 	}
 	if (min(prev_val, cur_val) <= centerline && max(prev_val, cur_val) > centerline) { // crossed the lane centerline boundary
-		move_by(centerline - cur_val); // align to lane centerline
+		move_by(centerline - bcube.get_center_dim(dim)); // align to lane centerline, using the current position (post translate above)
 		vector3d const car_sz(bcube.get_size());
 		float const size_adj(0.5f*(car_sz[dim] - car_sz[!dim]));
 		vector3d expand(zero_vector);
@@ -151,13 +151,14 @@ bool car_t::must_wait_before_entering_road(vector<car_t> const &cars, driveway_t
 	// the following logic is similar to ped_manager_t::has_nearby_car_on_road(), except it only considers one lane of the road
 	// since we don't have cars split out per-city here like we do in ped_mgr, we have to sort by city and then road
 	car_base_t ref_car; ref_car.cur_city = cur_city; ref_car.cur_road = road_ix;
-	auto range_start(std::lower_bound(cars.begin(), cars.end(), ref_car, comp_car_city_then_road())); // binary search acceleration
+	auto range_start(std::lower_bound(cars.begin(), cars.end(), ref_car, comp_car_city_then_road())); // binary search acceleration to find the first car on the same city and road
 	auto closest_car(cars.end());
+	// TODO: what about checking for people on the sidewalk by the driveway?
 
 	for (auto it = range_start; it != cars.end(); ++it) {
 		car_t const &c(*it);
 		if (c.cur_road != road_ix || c.cur_city != cur_city) break; // different road or city, done
-		if (c.dir != rdir) continue; // car is traveling on the other side of the road, ignore it
+		if (c.dir != rdir) continue; // car is traveling on the side of the road that we're not entering, ignore it
 		assert(c.bcube != bcube); // must not be ourself
 		float const val(c.bcube.d[rdim][!rdir]); // back end of the car
 		if (rdir) {if (val > far_side) break;   } // car already passed us, not a threat - done (cars are sorted in this dim)
