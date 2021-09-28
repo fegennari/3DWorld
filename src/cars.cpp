@@ -196,8 +196,9 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 		bool const dw_turn_dir(dir ^ driveway.dir ^ driveway.dim); // turn into driveway: 0=left, 1=right
 		turn_dir = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
 		begin_turn(); // capture car centerline before the turn
+		// check for oncoming cars, wait until clear; only done at start of turn - if a car comes along mid-turn then we can't stop
+		if (turn_dir == TURN_LEFT && check_for_road_clear_and_wait(cars, driveway, cur_road)) return 1;
 	}
-	if (turn_dir == TURN_LEFT && check_for_road_clear_and_wait(cars, driveway, cur_road)) return 1; // check for oncoming cars, wait until clear
 	float const target_speed(0.4f*max_speed); // 40% of max speed
 	if      (cur_speed < 0.9*target_speed) {maybe_accelerate();}
 	else if (cur_speed > 1.1*target_speed) {decelerate();}
