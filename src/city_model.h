@@ -69,7 +69,7 @@ public:
 class object_model_loader_t : public city_model_loader_t {
 	city_model_t null_model;
 public:
-	unsigned num_models() const {return NUM_OBJ_MODELS;}
+	unsigned num_models() const;
 	city_model_t const &get_model(unsigned id) const;
 	city_model_t &get_model(unsigned id);
 };

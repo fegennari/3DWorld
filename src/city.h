@@ -68,7 +68,6 @@ struct city_params_t {
 	float car_speed, traffic_balance_val, new_city_prob, max_car_scale;
 	bool enable_car_path_finding, convert_model_files, cars_use_driveways;
 	vector<city_model_t> car_model_files, ped_model_files, hc_model_files;
-	city_model_t fire_hydrant_model_file;
 	// parking lots
 	unsigned min_park_spaces, min_park_rows;
 	float min_park_density, max_park_density;

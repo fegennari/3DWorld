@@ -152,6 +152,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 
 unsigned car_model_loader_t       ::num_models() const {return city_params.car_model_files.size();}
 unsigned helicopter_model_loader_t::num_models() const {return city_params.hc_model_files .size();}
+unsigned object_model_loader_t    ::num_models() const {return NUM_OBJ_MODELS;}
 
 city_model_t const &car_model_loader_t::get_model(unsigned id) const {
 	assert(id < num_models());
