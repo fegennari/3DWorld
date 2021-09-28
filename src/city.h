@@ -106,6 +106,7 @@ struct city_params_t {
 
 
 struct car_base_t;
+struct driveway_t;
 
 struct road_gen_base_t {
 	virtual cube_t get_bcube_for_car(car_base_t const &car) const = 0;
@@ -175,6 +176,9 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 96
 	void move_by(float val) {bcube.translate_dim(dim, val);}
 	void begin_turn() {turn_val = bcube.get_center_dim(!dim);}
 	bool maybe_apply_turn(float centerline, bool for_driveway);
+	bool must_wait_before_entering_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const;
+	bool check_for_road_clear_and_wait(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix);
+	bool run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const &driveway);
 	bool check_collision(car_t &c, road_gen_base_t const &road_gen);
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const;
 	bool front_intersects_car(car_t const &c) const;

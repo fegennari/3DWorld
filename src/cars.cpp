@@ -145,6 +145,73 @@ bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
 	return 1;
 }
 
+bool car_t::must_wait_before_entering_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const {
+	bool const rdim(!driveway.dim), rdir(driveway.dir ^ rdim); // dim/dir of cars on the road we're on or entering
+	float const far_side(bcube.d[rdim][rdir]); // side of car not in danger of being hit
+	// the following logic is similar to ped_manager_t::has_nearby_car_on_road(), except it only considers one lane of the road
+	// since we don't have cars split out per-city here like we do in ped_mgr, we have to sort by city and then road
+	car_base_t ref_car; ref_car.cur_city = cur_city; ref_car.cur_road = road_ix;
+	auto range_start(std::lower_bound(cars.begin(), cars.end(), ref_car, comp_car_city_then_road())); // binary search acceleration
+	auto closest_car(cars.end());
+
+	for (auto it = range_start; it != cars.end(); ++it) {
+		car_t const &c(*it);
+		if (c.cur_road != road_ix || c.cur_city != cur_city) break; // different road or city, done
+		if (c.dir != rdir) continue; // car is traveling on the other side of the road, ignore it
+		assert(c.bcube != bcube); // must not be ourself
+		float const val(c.bcube.d[rdim][!rdir]); // back end of the car
+		if (rdir) {if (val > far_side) break;   } // car already passed us, not a threat - done (cars are sorted in this dim)
+		else      {if (val < far_side) continue;} // car already passed us, not a threat - skip to next car
+		if (closest_car == cars.end()) {closest_car = it;} // first threatening car
+		else {
+			float const val2(closest_car->bcube.d[rdim][!rdir]); // back end of the other car
+			if (rdir ? (val > val2) : (val < val2)) {closest_car = it;} // this car is closer
+		}
+		if (!rdir) break; // no cars can be closer than this (cars are sorted in this dim)
+	} // for it
+	if (closest_car == cars.end()) return 0; // no car found, safe
+	car_t const &c(*closest_car);
+	float const near_side(bcube.d[rdim][!rdir]), front_pos(c.bcube.d[rdim][rdir]); // side of car in danger of being hit, and front of the closest car
+	if ((front_pos > near_side) == rdir)      return 1; // already intersects in dimension dim, must wait
+	if (c.turn_dir != TURN_NONE)              return 0; // car is turning; since it's already on this road, it must be turning off this road and can be ignored
+	if (c.stopped_at_light || c.is_stopped()) return 0; // stopped, maybe at a light; we could calculate the light change time like with peds, but maybe it's okay to not wait
+	// moving and not turning; assume it may be accelerating, and could reach max_speed by the time it passes near_side
+	float const travel_dist(lookahead_time*CAR_SPEED_SCALE*city_params.car_speed*c.max_speed); // conservative travel dist
+	return (fabs(front_pos - near_side) < travel_dist);
+}
+bool car_t::check_for_road_clear_and_wait(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix) {
+	if (!must_wait_before_entering_road(cars, driveway, road_ix, 2.0*TICKS_PER_SECOND)) return 0; // lookahead_time=2.0s
+	decelerate_fast(); // is this needed?
+	return 1; // wait for the path to become clear
+}
+
+bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const &driveway) {
+	if (dim == driveway.dim) return 0; // car must be on a road perpendicular to the driveway, which may be the road connected to it
+	cube_t turn_area(driveway); // includes driveway and the road adjacent to it
+	turn_area.d[driveway.dim][driveway.dir] += (driveway.dir ? 1.0 : -1.0)*city_params.road_width; // extend to cover the entire width of the road
+	if (!bcube.intersects_xy(turn_area)) return 0; // not yet crossed into turn area
+
+	if (turn_dir == TURN_NONE) {
+		if (prev_bcube.intersects_xy(turn_area)) return 0; // not yet turning, and in turn area last frame - too late to turn (likely car was spawned here)
+		bool const dw_turn_dir(dir ^ driveway.dir ^ driveway.dim); // turn into driveway: 0=left, 1=right
+		turn_dir = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
+		begin_turn(); // capture car centerline before the turn
+	}
+	if (turn_dir == TURN_LEFT && check_for_road_clear_and_wait(cars, driveway, cur_road)) return 1; // check for oncoming cars, wait until clear
+	float const target_speed(0.4f*max_speed); // 40% of max speed
+	if      (cur_speed < 0.9*target_speed) {maybe_accelerate();}
+	else if (cur_speed > 1.1*target_speed) {decelerate();}
+	float const centerline(driveway.get_center_dim(!driveway.dim));
+	maybe_apply_turn(centerline, 1); // for_driveway=1
+
+	if (turn_dir == TURN_NONE) { // turn has been completed, change to being in driveway even though we may not be onto the driveway yet
+		cur_road_type = TYPE_DRIVEWAY;
+		cur_road = (unsigned short)driveway.plot_ix; // store plot_ix in road field
+		cur_seg  = dest_driveway; // store driveway index in cur_seg
+	}
+	return 1;
+}
+
 point car_base_t::get_front(float dval) const {
 	point car_front(get_center());
 	car_front[dim] += (dir ? dval : -dval)*get_length(); // half length
@@ -159,7 +226,6 @@ void car_t::honk_horn_if_close() const {
 	point const pos(get_center());
 	if (dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 1.0)) {gen_sound(SOUND_HORN, pos);}
 }
-
 void car_t::honk_horn_if_close_and_fast() const {
 	if (cur_speed > 0.25*max_speed) {honk_horn_if_close();}
 }
