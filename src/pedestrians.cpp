@@ -1317,11 +1317,18 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 		colorRGBA const &color(ALPHA0); // A=0.0, leave unchanged
 		ped_model_loader.draw_model(s, ped.pos, bcube, dir_horiz, color, xlate, ped.model_id, shadow_only, low_detail, enable_animations);
 
-		// draw umbrella if outside in the rain
-		if (!ped.in_building && is_rain_enabled() && !shadow_only && building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA)) {
-			cube_t u_bcube(bcube); // FIXME
+		// draw umbrella 75% of the time if pedestrian is outside and in the rain
+		if (!ped.in_building && is_rain_enabled() && !shadow_only && (ped.ssn & 3) != 0 && building_obj_model_loader.is_model_valid(OBJ_MODEL_UMBRELLA)) {
+			vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_UMBRELLA));
+			float const ped_sz_scale(ped_model_loader.get_model(ped.model_id).scale), radius(0.5*bcube.dz()/ped_sz_scale);
+			point const center(bcube.get_cube_center() + 0.25*radius*dir_horiz);
+			cube_t u_bcube(center, center);
+			u_bcube.expand_by_xy(radius);
+			u_bcube.z1() -= 0.4*radius;
+			u_bcube.z2() += 0.8*radius;
 			if (enable_animations) {s.add_uniform_float("animation_time", 0.0);} // not animated
-			building_obj_model_loader.draw_model(s, ped.pos, u_bcube, dir_horiz, WHITE, xlate, OBJ_MODEL_UMBRELLA, shadow_only);
+			// the handle direction is always in -x and doesn't rotate with the ped because there's no option to do this transform
+			building_obj_model_loader.draw_model(s, u_bcube.get_cube_center(), u_bcube, plus_z, WHITE, xlate, OBJ_MODEL_UMBRELLA, shadow_only);
 		}
 	}
 	return 1;
