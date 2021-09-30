@@ -1324,8 +1324,8 @@ bool ped_manager_t::draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up co
 			point const center(bcube.get_cube_center() + 0.25*radius*dir_horiz);
 			cube_t u_bcube(center, center);
 			u_bcube.expand_by_xy(radius);
-			u_bcube.z1() -= 0.4*radius;
-			u_bcube.z2() += 0.8*radius;
+			u_bcube.z1() -= 0.35*radius;
+			u_bcube.z2() += 0.85*radius;
 			if (enable_animations) {s.add_uniform_float("animation_time", 0.0);} // not animated
 			// the handle direction is always in -x and doesn't rotate with the ped because there's no option to do this transform
 			building_obj_model_loader.draw_model(s, u_bcube.get_cube_center(), u_bcube, plus_z, WHITE, xlate, OBJ_MODEL_UMBRELLA, shadow_only);
