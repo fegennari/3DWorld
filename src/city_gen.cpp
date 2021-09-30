@@ -1257,7 +1257,6 @@ class city_road_gen_t : public road_gen_base_t {
 			ped.city = gen_rand_city(rgen, road_networks);
 			return road_networks[ped.city].gen_ped_pos(ped, rgen);
 		}
-		static float choose_car_max_speed(rand_gen_t &rgen) {return rgen.rand_uniform(0.66, 1.0);} // add some speed variation
 
 		bool add_car(car_t &car, rand_gen_t &rgen) const {
 			if (segs.empty()) return 0; // no segments to place car on
@@ -1268,7 +1267,7 @@ class city_road_gen_t : public road_gen_base_t {
 				road_seg_t const &seg(segs[seg_ix]); // chose a random segment
 				car.dim   = seg.dim;
 				car.dir   = rgen.rand_bool();
-				car.max_speed = choose_car_max_speed(rgen);
+				car.choose_max_speed(rgen);
 				car.cur_road  = seg.road_ix;
 				car.cur_seg   = seg_ix;
 				car.cur_road_type = TYPE_RSEG;
@@ -1498,8 +1497,8 @@ class city_road_gen_t : public road_gen_base_t {
 			return city_obj_placer.driveways[dix];
 		}
 
-		bool run_car_in_driveway_logic(car_t &car, vector<car_t> const &cars) const { // maybe this should eventually be a car_t member function?
-			// call this when the car begins to move: car.max_speed = choose_car_max_speed(rgen);
+		// maybe this should eventually be a car_t member function?
+		bool run_car_in_driveway_logic(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen) const {
 			driveway_t const &driveway(get_driveway(car.cur_seg));
 			bool const dim(driveway.dim), dir(driveway.dir);
 
@@ -1509,8 +1508,9 @@ class city_road_gen_t : public road_gen_base_t {
 				float const stop_pos(driveway.get_center_dim(dim)), car_center(car.bcube.get_center_dim(dim));
 
 				if ((car_center < stop_pos) == dir) { // reached the driveway center, stop
-					car.park();
-					//choose_new_car_dest(car, rgen); // should we wait for a while and then choose a new dest?
+					car.dest_valid = 0;
+					//car.park();
+					car.sleep(rgen);
 				}
 				return 1; // no other logic to run here
 			}
@@ -1527,11 +1527,13 @@ class city_road_gen_t : public road_gen_base_t {
 					unsigned const road_ix(find_road_for_car(car, !driveway.dim));
 					if (car.check_for_road_clear_and_wait(cars, driveway, road_ix)) return 1;
 					// TODO: logic to pull out into road
+					car.park(); // for now we park until this case is implemented
+					return 1;
 				}
 				assert(car.dim == dim);
-				min_eq(car.cur_speed, 0.25f*car.max_speed); // clamp the speed to 25% of max
 				// |---> driveway dir=0, car dir=1
 				car.in_reverse = (car.dir != dir); // back up if pointing away from the road
+				car.set_target_speed(car.in_reverse ? 0.2 : 0.3); // 20-30% of max speed
 			}
 			return 0;
 		}
@@ -1541,7 +1543,7 @@ class city_road_gen_t : public road_gen_base_t {
 			if (car.is_parked()) return; // stopped, no update (for now)
 			
 			if (car.cur_road_type == TYPE_DRIVEWAY) { // moving in a driveway
-				if (run_car_in_driveway_logic(car, cars)) return;
+				if (run_car_in_driveway_logic(car, cars, rgen)) return;
 			}
 			if (dest_driveway_in_this_city(car)) {
 				if (car.run_enter_driveway_logic(cars, get_driveway(car.dest_driveway))) return;

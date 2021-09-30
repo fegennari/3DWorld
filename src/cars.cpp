@@ -55,8 +55,8 @@ void car_t::destroy() { // Note: not calling create_explosion(), so no chain rea
 		gen_smoke(exp_pos, 1.0, rgen.rand_uniform(0.4, 0.6));
 	} // for n
 	gen_delayed_from_player_sound(SOUND_EXPLODE, pos, 1.0);
-	park();
 	destroyed = 1;
+	park();
 }
 
 float car_t::get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len) const { // should this depend on in_reverse?
@@ -75,7 +75,7 @@ string car_t::str() const {
 string car_t::label_str() const {
 	std::ostringstream oss;
 	oss << TXT(dim) << TXTn(dir) << TXT(cur_city) << TXT(cur_road) << TXTn(cur_seg) << TXT(dz) << TXTn(turn_val) << TXT(max_speed) << TXTn(cur_speed)
-		<< "wait_time=" << get_wait_time_secs() << "\n" << TXTin(cur_road_type)
+		<< "sleep=" << (wake_time != 0.0) << " wait_time=" << get_wait_time_secs() << "\n" << TXTin(cur_road_type)
 		<< TXTn(stopped_at_light) << TXTn(in_isect()) << "cars_in_front=" << count_cars_in_front() << "\n" << TXT(dest_city) << TXTn(dest_isec);
 	oss << "car=" << this << " car_in_front=" << car_in_front << endl; // debugging
 	return oss.str();
@@ -94,6 +94,12 @@ void car_t::move(float speed_mult) {
 	if (fabs(cur_pos - waiting_pos) > get_length()) {waiting_pos = cur_pos; reset_waiting();} // update when we move at least a car length
 }
 
+void car_t::set_target_speed(float speed_factor) {
+	float const target_speed(speed_factor*max_speed);
+	if      (cur_speed < 0.9*target_speed) {maybe_accelerate();}
+	else if (cur_speed > 1.1*target_speed) {decelerate();}
+}
+
 void car_t::maybe_accelerate(float mult) {
 	if (car_in_front) {
 		float const dist_sq(p2p_dist_xy_sq(get_center(), car_in_front->get_center())), length(get_length());
@@ -104,6 +110,18 @@ void car_t::maybe_accelerate(float mult) {
 		}
 	}
 	accelerate(mult);
+}
+
+void car_t::sleep(rand_gen_t &rgen) {
+	park();
+	if (destroyed) return;
+	wake_time = fticks + 0.1*rgen.rand_uniform(60, 120)*TICKS_PER_SECOND; // randomly wait 60-120s
+}
+bool car_t::maybe_wake(rand_gen_t &rgen) {
+	if (destroyed || wake_time == 0.0 || wake_time < tfticks) return 0; // continue to sleep
+	wake_time = 0.0;
+	choose_max_speed(rgen);
+	return 1;
 }
 
 bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
@@ -200,9 +218,7 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 		// check for oncoming cars, wait until clear; only done at start of turn - if a car comes along mid-turn then we can't stop
 		if (turn_dir == TURN_LEFT && check_for_road_clear_and_wait(cars, driveway, cur_road)) return 1;
 	}
-	float const target_speed(0.4f*max_speed); // 40% of max speed
-	if      (cur_speed < 0.9*target_speed) {maybe_accelerate();}
-	else if (cur_speed > 1.1*target_speed) {decelerate();}
+	set_target_speed(0.4); // 40% of max speed
 	float const centerline(driveway.get_center_dim(!driveway.dim));
 	maybe_apply_turn(centerline, 1); // for_driveway=1
 
@@ -917,7 +933,6 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	car_blocks.clear();
 	float const speed(CAR_SPEED_SCALE*car_speed*fticks);
 	bool saw_parked(0);
-	//unsigned num_on_conn_road(0);
 
 	for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
 		unsigned const cix(i - cars.begin());
@@ -930,6 +945,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		}
 		if (i->is_parked()) {
 			if (!saw_parked) {car_blocks.back().first_parked = cix; saw_parked = 1;}
+			i->maybe_wake(rgen);
 			continue; // no update for parked cars
 		}
 		i->move(speed);
@@ -957,7 +973,6 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 			for (auto ix = entering_city.begin(); ix != entering_city.end(); ++ix) {
 				if (*ix != unsigned(i - cars.begin())) {check_collision(*i, cars[*ix]);}
 			}
-			//++num_on_conn_road;
 		}
 		if (i->in_isect()) {
 			int const next_car(find_next_car_after_turn(*i)); // Note: calculates in i->car_in_front
@@ -997,7 +1012,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 		car_blocks_by_road.emplace_back(cars_by_road.size(), 0); // add terminator
 		cars_by_road.emplace_back(cube_t(), cars.size()); // add terminator
 	}
-	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << TXT(num_on_conn_road) << endl; // TESTING
+	//cout << TXT(cars.size()) << TXT(entering_city.size()) << TXT(in_isects.size()) << endl; // TESTING
 }
 
 // calculate max zval along line for buildings and terrain; this is not intended to be fast;

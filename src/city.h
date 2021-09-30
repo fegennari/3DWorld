@@ -127,7 +127,8 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 	unsigned short cur_city, cur_road, cur_seg;
 	float max_speed, cur_speed;
 
-	car_base_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(TYPE_RSEG), turn_dir(TURN_NONE), cur_city(0), cur_road(0), cur_seg(0), max_speed(0.0), cur_speed(0.0) {}
+	car_base_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(TYPE_RSEG), turn_dir(TURN_NONE),
+		cur_city(0), cur_road(0), cur_seg(0), max_speed(0.0), cur_speed(0.0) {}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
 	unsigned get_orient_in_isec() const {return (2*dim + (!dir));} // invert dir (incoming, not outgoing)
@@ -143,17 +144,18 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 	point get_front(float dval=0.5) const;
 };
 
-struct car_t : public car_base_t, public waiting_obj_t { // size = 96
+struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	cube_t prev_bcube;
 	bool entering_city, in_tunnel, dest_valid, destroyed, in_reverse;
 	unsigned char color_id, front_car_turn_dir, model_id;
 	unsigned short dest_city, dest_isec;
 	short dest_driveway; // -1 is unset
-	float height, dz, rot_z, turn_val, waiting_pos;
+	float height, dz, rot_z, turn_val, waiting_pos, wake_time;
 	car_t const *car_in_front;
 
-	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), in_reverse(0), color_id(0), front_car_turn_dir(TURN_UNSPEC),
-		model_id(0), dest_city(0), dest_isec(0), dest_driveway(-1), height(0.0), dz(0.0), rot_z(0.0), turn_val(0.0), waiting_pos(0.0), car_in_front(nullptr) {}
+	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), in_reverse(0), color_id(0),
+		front_car_turn_dir(TURN_UNSPEC), model_id(0), dest_city(0), dest_isec(0), dest_driveway(-1), height(0.0), dz(0.0), rot_z(0.0),
+		turn_val(0.0), waiting_pos(0.0), wake_time(0.0), car_in_front(nullptr) {}
 	bool is_valid() const {return !bcube.is_all_zeros();}
 	float get_max_lookahead_dist() const;
 	bool headlights_on() const;
@@ -165,13 +167,17 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 96
 	float get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len=0) const;
 	string str() const;
 	string label_str() const;
+	void choose_max_speed(rand_gen_t &rgen) {max_speed = rgen.rand_uniform(0.66, 1.0);} // add some speed variation
 	void move(float speed_mult);
+	void set_target_speed(float speed_factor);
 	void maybe_accelerate(float mult=0.02);
 	void accelerate(float mult=0.02) {cur_speed = min(get_max_speed(), (cur_speed + mult*fticks*max_speed));}
 	void decelerate(float mult=0.05) {cur_speed = max(0.0f, (cur_speed - mult*fticks*max_speed));}
 	void decelerate_fast() {decelerate(10.0);} // Note: large decel to avoid stopping in an intersection
 	void park() {cur_speed = max_speed = 0.0;}
 	void stop() {cur_speed = 0.0;} // immediate stop
+	void sleep(rand_gen_t &rgen);
+	bool maybe_wake(rand_gen_t &rgen);
 	void move_by(float val) {bcube.translate_dim(dim, val);}
 	void begin_turn() {turn_val = bcube.get_center_dim(!dim);}
 	bool maybe_apply_turn(float centerline, bool for_driveway);
