@@ -16,7 +16,8 @@ float const TERM_VELOCITY  = 1.0;
 float const OBJ_ELASTICITY = 0.8;
 float const ALERT_THRESH   = 0.08; // min sound alert level for AIs
 
-bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_in_elevator(0), city_action_key(0);
+bool do_room_obj_pickup(0), use_last_pickup_object(0), show_bldg_pickup_crosshair(0), player_near_toilet(0), player_in_elevator(0);
+bool city_action_key(0), can_do_building_action(0);
 int can_pickup_bldg_obj(0);
 float office_chair_rot_rate(0.0), cur_building_sound_level(0.0);
 carried_item_t player_held_object;
@@ -233,7 +234,8 @@ bool can_open_bathroom_stall(room_object_t const &stall, point const &pos, vecto
 	return (dot_product_ptv(dir, door_center, pos) > 0.0); // facing the stall door
 }
 
-bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode) { // called for the player
+// called for the player; mode: 0=normal, 1=pull
+bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only) {
 	if (!interior) return 0; // error?
 	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	float closest_dist_sq(0.0), t(0.0); // t is unused
@@ -330,13 +332,15 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				is_obj = found_item = 1;
 			} // for i
 		} // for vect_id
-		if (!player_in_closet && mode == 0) {
+		if (!player_in_closet && !check_only && mode == 0) {
 			float const drawer_dist(found_item ? sqrt(closest_dist_sq) : 2.5*CAMERA_RADIUS);
 			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist, 0)) return 0; // drawer is closer - open or close it
 		}
-		if (!found_item && !player_in_closet) {move_nearest_object(closest_to, in_dir, 3.0*CAMERA_RADIUS, mode);} // try to move an object instead
+		if (!found_item && !check_only && !player_in_closet) {move_nearest_object(closest_to, in_dir, 3.0*CAMERA_RADIUS, mode);} // try to move an object instead
 		if (!found_item) return 0; // no door or object found
 	}
+	if (check_only) return 1;
+
 	if (is_obj) { // interactive object
 		if (!interact_with_object(obj_ix, closest_to, in_dir)) return 0; // generate sound from the player height
 	}
@@ -1826,7 +1830,7 @@ bool is_movable(room_object_t const &obj) {
 	bldg_obj_type_t const &bot(get_room_obj_type(obj));
 	return (bot.weight >= 40.0 && !bot.attached); // heavy non-attached objects, including tables
 }
-bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode) {
+bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode) { // mode: 0=normal, 1=pull
 	assert(has_room_geom());
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
@@ -2431,7 +2435,7 @@ void building_gameplay_next_frame() {
 	// reset state for next frame
 	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
 	can_pickup_bldg_obj = 0;
-	do_room_obj_pickup  = city_action_key = 0;
+	do_room_obj_pickup  = city_action_key = can_do_building_action = 0;
 }
 
 void enter_building_gameplay_mode() {player_inventory.clear_all();}

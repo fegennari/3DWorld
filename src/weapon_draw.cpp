@@ -12,7 +12,7 @@ int player_dodgeball_id(-1);
 vector<int> weap_cobjs;
 set<int> scheduled_weapons;
 
-extern bool keep_beams, have_indir_smoke_tex, begin_motion, enable_translocator;
+extern bool keep_beams, have_indir_smoke_tex, begin_motion, enable_translocator, can_do_building_action;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, spectate;
 extern int num_smileys, left_handed, iticks, camera_view, UNLIMITED_WEAPONS, animate2, last_inventory_frame;
 extern float fticks, NEAR_CLIP, FAR_CLIP;
@@ -928,7 +928,8 @@ void add_weapon_lights(int shooter) {
 void show_crosshair(colorRGBA const &color, int in_zoom) {
 
 	float const scale((world_mode == WMODE_UNIVERSE) ? 0.25 : 1.0); // closer near clip for planets
-	float const xy1(0.0006*scale), xy2(0.0002*scale), zval(-0.05*scale);
+	float const xy_scale(scale*((can_do_building_action && !in_zoom) ? 1.5 : 1.0));
+	float const xy1(0.0006*xy_scale), xy2(0.0002*xy_scale), zval(-0.05*scale);
 	float const xy[8] = {-xy1, -xy2, xy1, xy2, 0.0, 0.0, 0.0, 0.0};
 	glDisable(GL_DEPTH_TEST);
 

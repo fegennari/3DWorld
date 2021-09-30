@@ -27,7 +27,7 @@ building_params_t global_building_params;
 building_t const *player_building(nullptr);
 
 extern bool start_in_inf_terrain, draw_building_interiors, flashlight_on, enable_use_temp_vbo, toggle_room_light;
-extern bool teleport_to_screenshot, enable_dlight_bcubes, player_in_elevator;
+extern bool teleport_to_screenshot, enable_dlight_bcubes, player_in_elevator, can_do_building_action;
 extern unsigned room_mirror_ref_tid;
 extern int rand_gen_index, display_mode, window_width, window_height, camera_surf_collide, animate2, building_action_key;
 extern float CAMERA_RADIUS, city_dlight_pcf_offset_scale, fticks, FAR_CLIP;
@@ -2436,7 +2436,8 @@ public:
 						}
 						// run any player interaction logic here
 						if (toggle_room_light  ) {b.toggle_room_light(camera_xlated);}
-						if (building_action_key) {b.apply_player_action_key(camera_xlated, cview_dir, (building_action_key-1));}
+						if (building_action_key) {b.apply_player_action_key(camera_xlated, cview_dir, (building_action_key-1), 0);} // check_only=0
+						else {can_do_building_action = b.apply_player_action_key(camera_xlated, cview_dir, 0, 1);} // mode=0, check_only=1
 						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
 						if (animate2) {b.update_player_interact_objects(camera_xlated, bi->ix, ped_ix);} // update dynamic objects if the player is in the building

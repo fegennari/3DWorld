@@ -957,7 +957,7 @@ struct building_t : public building_geom_t {
 	void add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix, occlusion_checker_noncity_t &oc, vect_cube_t &ped_bcubes, cube_t &lights_bcube);
 	bool toggle_room_light(point const &closest_to, bool sound_from_closest_to=0, int room_id=-1, bool inc_lamps=1);
 	void toggle_light_object(room_object_t const &light, point const &sound_pos);
-	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode);
+	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only=0);
 	bool move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode);
 	bool interact_with_object(unsigned obj_ix, point const &int_pos, vector3d const &int_dir);
 	bool adjust_blinds_state(unsigned obj_ix);
