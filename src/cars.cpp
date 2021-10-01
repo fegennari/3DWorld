@@ -114,8 +114,8 @@ void car_t::maybe_accelerate(float mult) {
 
 void car_t::sleep(rand_gen_t &rgen) {
 	park();
-	if (destroyed) return;
-	wake_time = fticks + 0.1*rgen.rand_uniform(60, 120)*TICKS_PER_SECOND; // randomly wait 60-120s
+	if (destroyed || wake_time > 0.0) return; // don't reset wake_time if already sleeping
+	wake_time = tfticks + rgen.rand_uniform(60, 120)*TICKS_PER_SECOND; // randomly wait 60-120s
 }
 bool car_t::maybe_wake(rand_gen_t &rgen) {
 	if (destroyed || wake_time == 0.0 || wake_time < tfticks) return 0; // continue to sleep
@@ -176,8 +176,8 @@ bool car_t::must_wait_before_entering_road(vector<car_t> const &cars, driveway_t
 	for (auto it = range_start; it != cars.end(); ++it) {
 		car_t const &c(*it);
 		if (c.cur_road != road_ix || c.cur_city != cur_city) break; // different road or city, done
-		if (c.dir != rdir) continue; // car is traveling on the side of the road that we're not entering, ignore it
-		assert(c.bcube != bcube); // must not be ourself
+		if (c.dir != rdir)    continue; // car is traveling on the side of the road that we're not entering, ignore it
+		if (c.bcube == bcube) continue; // skip ourself (this should be fixed when driveway leaving logic is finished
 		float const val(c.bcube.d[rdim][!rdir]); // back end of the car
 		if (rdir) {if (val > far_side) break;   } // car already passed us, not a threat - done (cars are sorted in this dim)
 		else      {if (val < far_side) continue;} // car already passed us, not a threat - skip to next car

@@ -1510,7 +1510,8 @@ class city_road_gen_t : public road_gen_base_t {
 				float const stop_pos(driveway.get_center_dim(dim)), car_center(car.bcube.get_center_dim(dim));
 
 				if ((car_center < stop_pos) == dir) { // reached the driveway center, stop
-					car.dest_valid = 0;
+					car.dest_valid    = 0;
+					car.dest_driveway = -1;
 					//car.park();
 					car.sleep(rgen);
 				}
