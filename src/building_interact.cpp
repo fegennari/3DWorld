@@ -332,9 +332,12 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 				is_obj = found_item = 1;
 			} // for i
 		} // for vect_id
-		if (!player_in_closet && !check_only && mode == 0) {
+		if (!player_in_closet && mode == 0) {
 			float const drawer_dist(found_item ? sqrt(closest_dist_sq) : 2.5*CAMERA_RADIUS);
-			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist, 0)) return 0; // drawer is closer - open or close it
+			
+			if (interior->room_geom->open_nearest_drawer(*this, closest_to, in_dir, drawer_dist, 0, check_only)) { // drawer is closer - open or close it
+				return (check_only ? 1 : 0); // check_only returns 1 here because this counts as interactive
+			}
 		}
 		if (!found_item && !check_only && !player_in_closet) {move_nearest_object(closest_to, in_dir, 3.0*CAMERA_RADIUS, mode);} // try to move an object instead
 		if (!found_item) return 0; // no door or object found
@@ -1469,7 +1472,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	float drawer_range(drawer_range_max), obj_dist(0.0);
 	int const obj_id(find_nearest_pickup_object(building, at_pos_rot, in_dir_rot, range, obj_dist));
 	if (obj_id >= 0) {min_eq(drawer_range, obj_dist);} // only include drawers that are closer than the pickup object
-	if (open_nearest_drawer(building, at_pos_rot, in_dir_rot, drawer_range_max, 1)) return 1; // try objects in drawers; pickup_item=1
+	if (open_nearest_drawer(building, at_pos_rot, in_dir_rot, drawer_range_max, 1, 0)) return 1; // try objects in drawers; pickup_item=1
 	if (obj_id < 0) return 0; // no object to pick up
 	room_object_t &obj(get_room_object_by_index(obj_id));
 
@@ -1629,7 +1632,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 
 bool is_counter(room_object_t const &obj) {return (obj.type == TYPE_COUNTER || obj.type == TYPE_KSINK);}
 
-bool building_room_geom_t::open_nearest_drawer(building_t &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item) {
+bool building_room_geom_t::open_nearest_drawer(building_t &building, point const &at_pos, vector3d const &in_dir, float range, bool pickup_item, bool check_only) {
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
@@ -1689,6 +1692,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		// Note: drawer cube passed in is not shrunk to the interior part, but that should be okay because we're not doing a line test against that object
 		room_object_t const item(get_item_in_drawer(obj, drawers[closest_obj_id], closest_obj_id));
 		if (item.type == TYPE_NONE) return 0; // no item
+		if (check_only) return 1;
 		if (!register_player_object_pickup(item, at_pos)) return 0;
 		obj.item_flags |= (1U << closest_obj_id); // flag item as taken
 		player_inventory.add_item(item);
@@ -1700,6 +1704,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		if (has_doors) {c_test.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*drawer.get_sz_dim(!obj.dim);} // expand outward by the width of the door
 		else {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
 		if (cube_intersects_moved_obj(c_test, closest_obj_id)) return 0; // blocked, can't open; ignore this object
+		if (check_only) return 1;
 		obj.drawer_flags ^= (1U << (unsigned)closest_obj_id); // toggle flag bit for selected drawer
 		point const drawer_center(drawer.get_cube_center());
 		if (has_doors) {building.play_door_open_close_sound(drawer_center, obj.is_open(), 0.5, 1.5);}

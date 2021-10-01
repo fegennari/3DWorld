@@ -46,6 +46,7 @@ string lighting_update_text;
 
 extern bool combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons, start_maximized, show_bldg_pickup_crosshair;
+extern bool can_do_building_action;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER, can_pickup_bldg_obj;
@@ -1034,7 +1035,7 @@ void display() {
 			show_crosshair(get_inf_terrain_mod_color(), do_zoom);
 		}
 		else if (world_mode == WMODE_INF_TERRAIN && show_bldg_pickup_crosshair) {
-			show_crosshair((can_pickup_bldg_obj ? ((can_pickup_bldg_obj == 2) ? RED : GREEN) : WHITE), can_pickup_bldg_obj);
+			show_crosshair((can_pickup_bldg_obj ? ((can_pickup_bldg_obj == 2) ? RED : GREEN) : (can_do_building_action ? CYAN : WHITE)), can_pickup_bldg_obj);
 		}
 		else if (world_mode == WMODE_GROUND && voxel_editing) {
 			show_crosshair(((voxel_editing == 2) ? RED : GREEN), do_zoom);
