@@ -1596,7 +1596,7 @@ class city_road_gen_t : public road_gen_base_t {
 			if (city_params.cars_use_driveways && car.turn_dir != TURN_NONE && !car.in_isect()) {
 				assert(dest_driveway_in_this_city(car));
 				cout << car.str() << TXT(car.prev_bcube.str()) << TXT(get_driveway(car.dest_driveway).str()) << endl;
-				car.turn_dir = TURN_NONE; // hack to handle misbehaving cars turning into driveways (maybe missed the turn?)
+				car.turn_dir = TURN_NONE; // hack to handle misbehaving cars turning into driveways (maybe missed the turn because it was blocked?)
 			}
 			if (car.turn_dir != TURN_NONE) {
 				assert(car.in_isect());

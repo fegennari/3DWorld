@@ -168,7 +168,7 @@ bool car_t::must_wait_before_entering_road(vector<car_t> const &cars, driveway_t
 	float const far_side(bcube.d[rdim][rdir]); // side of car not in danger of being hit
 	// the following logic is similar to ped_manager_t::has_nearby_car_on_road(), except it only considers one lane of the road
 	// since we don't have cars split out per-city here like we do in ped_mgr, we have to sort by city and then road
-	car_base_t ref_car; ref_car.cur_city = cur_city; ref_car.cur_road = road_ix;
+	car_base_t ref_car; ref_car.cur_city = cur_city; ref_car.cur_road = road_ix; ref_car.max_speed = 1.0; // so that it isn't treated as parked
 	auto range_start(std::lower_bound(cars.begin(), cars.end(), ref_car, comp_car_city_then_road())); // binary search acceleration to find the first car on the same city and road
 	auto closest_car(cars.end());
 	// TODO: what about checking for people on the sidewalk by the driveway?
@@ -213,10 +213,10 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 	if (turn_dir == TURN_NONE) {
 		if (prev_bcube.intersects_xy(turn_area)) return 0; // not yet turning, and in turn area last frame - too late to turn (likely car was spawned here)
 		bool const dw_turn_dir(dir ^ driveway.dir ^ driveway.dim); // turn into driveway: 0=left, 1=right
+		// if turning left: check for oncoming cars, wait until clear; only done at start of turn - if a car comes along mid-turn then we can't stop
+		if (!dw_turn_dir && check_for_road_clear_and_wait(cars, driveway, cur_road)) return 1;
 		turn_dir = (dw_turn_dir ? (uint8_t)TURN_RIGHT : (uint8_t)TURN_LEFT);
 		begin_turn(); // capture car centerline before the turn
-		// check for oncoming cars, wait until clear; only done at start of turn - if a car comes along mid-turn then we can't stop
-		if (turn_dir == TURN_LEFT && check_for_road_clear_and_wait(cars, driveway, cur_road)) return 1;
 	}
 	set_target_speed(0.4); // 40% of max speed
 	float const centerline(driveway.get_center_dim(!driveway.dim));
