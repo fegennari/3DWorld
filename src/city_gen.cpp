@@ -111,7 +111,9 @@ void draw_state_t::draw_and_clear_light_flares() {
 	if (light_psd.empty()) return; // no lights to draw
 	enable_blend();
 	set_additive_blend_mode();
+	glDepthMask(GL_FALSE); // disable depth write
 	light_psd.draw_and_clear(BLUR_TEX, 0.0, 0, 1, 0.005); // use geometry shader for unlimited point size
+	glDepthMask(GL_TRUE);
 	set_std_blend_mode();
 	disable_blend();
 }
