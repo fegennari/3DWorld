@@ -115,10 +115,10 @@ void car_t::maybe_accelerate(float mult) {
 void car_t::sleep(rand_gen_t &rgen) {
 	park();
 	if (destroyed || wake_time > 0.0) return; // don't reset wake_time if already sleeping
-	wake_time = tfticks + rgen.rand_uniform(60, 120)*TICKS_PER_SECOND; // randomly wait 60-120s
+	wake_time = (float)tfticks + rgen.rand_uniform(60, 120)*TICKS_PER_SECOND; // randomly wait 60-120s
 }
 bool car_t::maybe_wake(rand_gen_t &rgen) {
-	if (destroyed || wake_time == 0.0 || wake_time < tfticks) return 0; // continue to sleep
+	if (destroyed || wake_time == 0.0 || tfticks < wake_time) return 0; // continue to sleep
 	wake_time = 0.0;
 	choose_max_speed(rgen);
 	return 1;
