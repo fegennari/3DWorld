@@ -181,6 +181,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	void move_by(float val) {bcube.translate_dim(dim, val);}
 	void begin_turn() {turn_val = bcube.get_center_dim(!dim);}
 	bool maybe_apply_turn(float centerline, bool for_driveway);
+	void complete_turn_and_swap_dim();
 	bool must_wait_before_entering_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const;
 	bool check_for_road_clear_and_wait(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix);
 	bool run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const &driveway);

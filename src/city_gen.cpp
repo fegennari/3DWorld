@@ -1512,33 +1512,46 @@ class city_road_gen_t : public road_gen_base_t {
 				if ((car_center < stop_pos) == dir) { // reached the driveway center, stop
 					car.dest_valid    = 0;
 					car.dest_driveway = -1;
-					//car.park();
-					car.sleep(rgen);
+					car.sleep(rgen); // sleep rather than permanently parking
 				}
 				return 1; // no other logic to run here
 			}
 			// else leaving driveway
 			assert(city_params.cars_use_driveways);
 
-			if (!driveway.intersects_xy(car.bcube)) { // car no longer in driveway
-				driveway.in_use = 0;
-				car.in_reverse  = 0;
-				find_and_set_car_road_and_seg(car);
-			}
-			else { // car still in driveway, continue pulling/backing out
-				if (!driveway.contains_cube_xy(car.bcube)) { // partially out of the driveway/into the road
-					unsigned const road_ix(find_road_for_car(car, !driveway.dim));
-					if (car.check_for_road_clear_and_wait(cars, driveway, road_ix)) return 1;
-					// TODO: logic to pull out into road
-					car.park(); // for now we park until this case is implemented
-					return 1;
+			if (!driveway.intersects_xy(car.bcube)) { // car no longer in driveway, check if we've completed the turn
+				unsigned const road_ix(find_road_for_car(car, !driveway.dim));
+				float const road_center(roads[road_ix].get_center_dim(car.dim)), car_center(car.bcube.get_center_dim(car.dim));
+				float const centerline(road_center + (driveway.dir ? -1.0 : 1.0)*get_car_lane_offset());
+
+				if ((car_center < centerline) ^ driveway.dir) { // car center crossed lane centerline, time to complete turn and start moving forward along road
+					car.bcube.translate_dim(car.dim, (centerline - car_center)); // align exactly with centerline of lane
+					driveway.in_use = 0;
+					car.turn_dir    = (car.in_reverse ? (int)TURN_LEFT : (int)TURN_RIGHT); // always turn right when exiting the driveway/entering the road (left when backing out)
+					car.in_reverse  = 0;
+					car.complete_turn_and_swap_dim();
+					find_and_set_car_road_and_seg(car);
+					return 0; // then continue with car logic in update_car() below
 				}
-				assert(car.dim == dim);
-				// |---> driveway dir=0, car dir=1
-				car.in_reverse = (car.dir != dir); // back up if pointing away from the road
-				car.set_target_speed(car.in_reverse ? 0.2 : 0.3); // 20-30% of max speed
 			}
-			return 0;
+			// else car still in driveway, continue pulling/backing out
+			if (!driveway.contains_cube_xy(car.bcube)) { // partially out of the driveway/into the road
+				if (driveway.contains_cube_xy(car.prev_bcube)) { // was contained in driveway last frame - just entered
+					unsigned const road_ix(find_road_for_car(car, !driveway.dim));
+
+					if (car.check_for_road_clear_and_wait(cars, driveway, road_ix)) {
+						car.bcube = car.prev_bcube; // hack: move back to previous position so that we trigger this check again the next frame
+						car.decelerate();
+						return 1;
+					}
+				}
+				// TODO: logic to gradually pull/back out into road
+			}
+			assert(car.dim == dim);
+			// |---> driveway dir=0, car dir=1
+			car.in_reverse = (car.dir != dir); // back up if pointing away from the road
+			car.set_target_speed(car.in_reverse ? 0.2 : 0.3); // 20-30% of max speed
+			return 1; // no more car update logic
 		}
 	public:
 		void update_car(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen, vector<road_network_t> const &road_networks, road_network_t const &global_rn) const {

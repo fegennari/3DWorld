@@ -148,19 +148,22 @@ bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
 	}
 	if (min(prev_val, cur_val) <= centerline && max(prev_val, cur_val) > centerline) { // crossed the lane centerline boundary
 		move_by(centerline - bcube.get_center_dim(dim)); // align to lane centerline, using the current position (post translate above)
-		vector3d const car_sz(bcube.get_size());
-		float const size_adj(0.5f*(car_sz[dim] - car_sz[!dim]));
-		vector3d expand(zero_vector);
-		expand[dim] -= size_adj; expand[!dim] += size_adj;
-		bcube.expand_by(expand); // fix aspect ratio
-		if ((dim == 0) ^ (turn_dir == TURN_LEFT)) {dir ^= 1;}
-		dim     ^= 1;
-		rot_z    = 0.0;
-		turn_val = 0.0; // reset
-		turn_dir = TURN_NONE; // turn completed
-		entering_city = 0; // clear flag in case we turned into the city
+		complete_turn_and_swap_dim();
 	}
 	return 1;
+}
+void car_t::complete_turn_and_swap_dim() {
+	vector3d const car_sz(bcube.get_size());
+	float const size_adj(0.5f*(car_sz[dim] - car_sz[!dim]));
+	vector3d expand(zero_vector);
+	expand[dim] -= size_adj; expand[!dim] += size_adj;
+	bcube.expand_by(expand); // fix aspect ratio
+	if ((dim == 0) ^ (turn_dir == TURN_LEFT)) {dir ^= 1;}
+	dim     ^= 1;
+	rot_z    = 0.0;
+	turn_val = 0.0; // reset
+	turn_dir = TURN_NONE; // turn completed
+	entering_city = 0; // clear flag in case we turned into the city
 }
 
 bool car_t::must_wait_before_entering_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const {
