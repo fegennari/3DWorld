@@ -77,7 +77,7 @@ string car_t::str() const {
 string car_t::label_str() const {
 	std::ostringstream oss;
 	oss << TXT(dim) << TXTn(dir) << TXT(cur_city) << TXT(cur_road) << TXTn(cur_seg) << TXT(dz) << TXTn(turn_val) << TXT(max_speed) << TXTn(cur_speed)
-		<< "sleep=" << (wake_time != 0.0) << " wait_time=" << get_wait_time_secs() << "\n" << TXTin(cur_road_type)
+		<< "sleep=" << is_sleeping() << " wait_time=" << get_wait_time_secs() << "\n" << TXTin(cur_road_type)
 		<< TXTn(stopped_at_light) << TXTn(in_isect()) << "cars_in_front=" << count_cars_in_front() << "\n" << TXT(dest_city) << TXTn(dest_isec);
 	oss << "car=" << this << " car_in_front=" << car_in_front << endl; // debugging
 	return oss.str();
@@ -116,11 +116,11 @@ void car_t::maybe_accelerate(float mult) {
 
 void car_t::sleep(rand_gen_t &rgen) {
 	park();
-	if (destroyed || wake_time > 0.0) return; // don't reset wake_time if already sleeping
+	if (destroyed || is_sleeping()) return; // don't reset wake_time if already sleeping
 	wake_time = (float)tfticks + rgen.rand_uniform(60, 120)*TICKS_PER_SECOND; // randomly wait 60-120s
 }
 bool car_t::maybe_wake(rand_gen_t &rgen) {
-	if (destroyed || wake_time == 0.0 || tfticks < wake_time) return 0; // continue to sleep
+	if (destroyed || !is_sleeping() || tfticks < wake_time) return 0; // continue to sleep
 	wake_time = 0.0;
 	choose_max_speed(rgen);
 	return 1;
@@ -1232,7 +1232,7 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 			assert(end <= cars.size());
 
 			for (unsigned c = cb->start; c != end; ++c) {
-				if (only_parked && !cars[c].is_parked()) continue; // skip non-parked cars
+				if (only_parked && !(cars[c].is_parked() && !cars[c].is_sleeping())) continue; // skip non-parked cars
 				dstate.draw_car(cars[c], is_dlight_shadows, garages_pass);
 			}
 		} // for cb
