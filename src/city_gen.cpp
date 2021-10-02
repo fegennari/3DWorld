@@ -23,7 +23,7 @@ point pre_smap_player_pos(all_zeros);
 extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps, player_in_basement;
 extern int rand_gen_index, display_mode, animate2, draw_model;
 extern unsigned shadow_map_sz, cur_display_iter;
-extern float shadow_map_pcf_offset, cobj_z_bias, fticks;
+extern float shadow_map_pcf_offset, cobj_z_bias;
 extern vector<light_source> dl_sources;
 
 

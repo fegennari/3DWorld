@@ -20,6 +20,8 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
+float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
+
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
 float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 
@@ -934,7 +936,7 @@ void car_manager_t::next_frame(ped_manager_t const &ped_manager, float car_speed
 	}
 	entering_city.clear();
 	car_blocks.clear();
-	float const speed(CAR_SPEED_SCALE*car_speed*fticks);
+	float const speed(CAR_SPEED_SCALE*car_speed*get_clamped_fticks());
 	bool saw_parked(0);
 
 	for (auto i = cars.begin(); i != cars.end(); ++i) { // move cars
@@ -1053,9 +1055,9 @@ void helicopter_t::invalidate_tile_shadow_map(vector3d const &shadow_offset, boo
 void car_manager_t::helicopters_next_frame(float car_speed) {
 	if (helicopters.empty()) return;
 	//highres_timer_t timer("Helicopters Update");
-	float const elapsed_secs(fticks/TICKS_PER_SECOND);
+	float const clamp_fticks(get_clamped_fticks()), elapsed_secs(clamp_fticks/TICKS_PER_SECOND);
 	float const speed(2.0*CAR_SPEED_SCALE*car_speed); // helicopters are 2x faster than cars
-	float const takeoff_speed(0.2*speed), land_speed(0.2*speed), rotate_rate(0.02*fticks);
+	float const takeoff_speed(0.2*speed), land_speed(0.2*speed), rotate_rate(0.02*clamp_fticks);
 	float const shadow_thresh(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // ~1 tile
 	point const xlate(get_camera_coord_space_xlate()), camera_bs(camera_pdu.pos - xlate);
 	vector3d const shadow_dir(-get_light_pos().get_norm()); // primary light direction (sun/moon)
@@ -1116,7 +1118,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 				vector3d dir((helipad.bcube.get_cube_center() - i->get_landing_pt()).get_norm()); // direction to new dest helipad
 				dir.z = 0.0; // no tilt for now
 				// vertical takeoff
-				float const takeoff_dz(i->fly_zval - i->bcube.z1()), max_rise_dist(takeoff_speed*fticks), rise_dist(min(takeoff_dz, max_rise_dist));
+				float const takeoff_dz(i->fly_zval - i->bcube.z1()), max_rise_dist(takeoff_speed*clamp_fticks), rise_dist(min(takeoff_dz, max_rise_dist));
 				assert(takeoff_dz >= 0.0);
 				i->bcube += vector3d(0.0, 0.0, rise_dist);
 
@@ -1130,7 +1132,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 				}
 			}
 			else if (i->state == helicopter_t::STATE_LAND) {
-				float const land_dz(i->bcube.z1() - helipad.bcube.z2()), max_fall_dist(land_speed*fticks), fall_dist(min(land_dz, max_fall_dist));
+				float const land_dz(i->bcube.z1() - helipad.bcube.z2()), max_fall_dist(land_speed*clamp_fticks), fall_dist(min(land_dz, max_fall_dist));
 				assert(land_dz >= 0.0);
 				// vertical landing, no need to re-orient dir
 				i->bcube -= vector3d(0.0, 0.0, fall_dist);
@@ -1148,7 +1150,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 				assert(i->state == helicopter_t::STATE_FLY);
 				point const cur_pos(i->get_landing_pt()), dest_pos(helipad.bcube.get_cube_center());
 				cube_t dest(dest_pos);
-				vector3d const delta_pos(fticks*i->velocity); // distance of travel this frame
+				vector3d const delta_pos(clamp_fticks*i->velocity); // distance of travel this frame
 				dest.expand_by_xy(delta_pos.mag());
 			
 				if (dest.contains_pt_xy(cur_pos)) { // reached destination
@@ -1162,7 +1164,7 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 				}
 			}
 			if (i->velocity != zero_vector) {
-				i->blade_rot += 0.75*fticks; // rotate the blade; should this scale with velocity?
+				i->blade_rot += 0.75*clamp_fticks; // rotate the blade; should this scale with velocity?
 				if (i->blade_rot > TWO_PI) {i->blade_rot -= TWO_PI;} // keep rotation value small
 			}
 			// helicopter dynamic shadows look really neat, but significantly reduce framerate; enable with backslash key

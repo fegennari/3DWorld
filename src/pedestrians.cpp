@@ -562,7 +562,7 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 		float const dist(delta.mag());
 		if (dist > radius && dot_product_xy(vel, delta) < 0.01*speed*dist) {delta_dir = min(1.0f, 4.0f*delta_dir); return;} // rotate faster
 	}
-	float const timestep(fticks*get_speed_mult());
+	float const timestep(min(fticks, 4.0f)*get_speed_mult()); // clamp fticks to 100ms
 	pos       += timestep*vel;
 	anim_time += timestep*speed;
 }

@@ -1082,7 +1082,7 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 		state.next_path_pt(person, stay_on_one_floor, 1);
 		return AI_BEGIN_PATH;
 	}
-	float const max_dist(person.speed*speed_mult*fticks);
+	float const max_dist(person.speed*speed_mult*min(fticks, 4.0f)); // clamp fticks to 100ms
 	state.on_new_path_seg = 0; // clear flag for this frame
 	//person.following_player = can_target_player(state, person); // for debugging visualization
 
