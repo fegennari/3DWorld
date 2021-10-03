@@ -128,16 +128,17 @@ bool car_t::maybe_wake(rand_gen_t &rgen) {
 
 bool car_t::maybe_apply_turn(float centerline, bool for_driveway) {
 	bool const right_turn(turn_dir == TURN_RIGHT); // 0=left, 1=right
+	bool const tdir(dir ^ in_reverse); // direction of movement
 	point const car_center(get_center()), prev_center(prev_bcube.get_cube_center());
 	float const prev_val(prev_center[dim]), cur_val(car_center[dim]);
 	float const turn_radius_mult(for_driveway ? 1.0 : ((cur_road_type == TYPE_ISEC2) ? 2.0 : 1.0)); // larger turn radius for 2-way intersections (bends)
 	float const turn_radius((for_driveway ? 0.75 : 1.0)*(right_turn ? 0.15 : 0.25)*turn_radius_mult*city_params.road_width); // right turn has smaller radius; driveway has smaller radius
-	float const dist_to_turn(max(0.0f, (cur_val - centerline)*(dir ? -1.0f : 1.0f))); // Note: can be negative if we overshot the turn, so clamp to 0
+	float const dist_to_turn(max(0.0f, (cur_val - centerline)*(tdir ? -1.0f : 1.0f))); // Note: can be negative if we overshot the turn, so clamp to 0
 	if (dist_to_turn > turn_radius) return 0; // not yet time to turn
 	// Note: cars turn around their center points, not their front wheels, which looks odd
 	float const dist_from_turn_start(turn_radius - dist_to_turn);
 	float const dev(turn_radius - sqrt(max((turn_radius*turn_radius - dist_from_turn_start*dist_from_turn_start), 0.0f))); // clamp to 0 to avoid NAN due to FP error
-	float const new_center(turn_val + dev*((right_turn ^ dir ^ dim) ? 1.0 : -1.0));
+	float const new_center(turn_val + dev*((right_turn ^ tdir ^ dim) ? 1.0 : -1.0));
 	rot_z = (right_turn ? -1.0 : 1.0)*(1.0 - CLIP_TO_01(dist_to_turn/turn_radius));
 	bcube.translate_dim(!dim, (new_center - car_center[!dim])); // translate to new center point
 	vector3d const move_dir(get_center() - prev_center); // total movement from car + turn
@@ -242,7 +243,7 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 	if ((car_center < stop_pos) == driveway.dir) { // reached the driveway center, stop
 		dest_valid    = 0;
 		dest_driveway = -1;
-		sleep(rgen, 6.0); // sleep rather than permanently parking (TODO: make 60.0)
+		sleep(rgen, 60.0); // sleep for 60-120s rather than permanently parking
 	}
 }
 void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
@@ -255,8 +256,6 @@ void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
 }
 // returns 1 when the exit + turn are complete
 bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &driveway, float centerline, unsigned road_ix, rand_gen_t &rgen) {
-	float const car_center(bcube.get_center_dim(dim));
-
 	if (driveway.intersects_xy(bcube)) { // partially out of the driveway/into the road
 		if (driveway.contains_cube_xy(prev_bcube)) { // was contained in driveway last frame - just entered the road
 			if (check_for_road_clear_and_wait(cars, driveway, road_ix)) {
@@ -266,18 +265,12 @@ bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &d
 			}
 		}
 	}
-	else if ((car_center < centerline) ^ driveway.dir) { // car center crossed lane centerline, time to complete turn and start moving forward along road
-		bcube.translate_dim(dim, (centerline - car_center)); // align exactly with centerline of lane
+	bool const is_turning(maybe_apply_turn(centerline, 1)); // for_driveway=1
+
+	if (is_turning && turn_dir == TURN_NONE) { // turn has been completed
 		driveway.in_use = 0; // Note: in_use flag is mutable
 		in_reverse      = 0;
-		complete_turn_and_swap_dim();
-		return 1; // exit complete
-	}
-	if (in_reverse) { // backing out
-		// TODO: logic to gradually pull/back out into road
-	}
-	else { // pulling out - cars always pull into driveways and back out, so this case isn't yet tested
-		maybe_apply_turn(centerline, 1); // for_driveway=1
+		return 1; // driveway exit complete, continue forward
 	}
 	return 0;
 }
