@@ -153,27 +153,49 @@ void draw_state_t::draw_cube(quad_batch_draw &qbd, color_wrapper const &cw, poin
 	tex_range_t tr_top, tr_front, tr_right;
 
 	if (tscale > 0.0) { // compute texture s/t parameters from cube side lengths to get a 1:1 AR
-		tr_top   = tex_range_t(0.0, 0.0, tscale*(p[0] - p[1]).mag(), tscale*(p[2] - p[1]).mag());
-		tr_front = tex_range_t(0.0, 0.0, tscale*(p[0] - p[1]).mag(), tscale*(p[5] - p[1]).mag());
-		tr_right = tex_range_t(0.0, 0.0, tscale*(p[1] - p[2]).mag(), tscale*(p[6] - p[2]).mag());
+		float const ts01(tscale*p2p_dist(p[0], p[1])), ts12(tscale*p2p_dist(p[1], p[2])), ts15(tscale*p2p_dist(p[1], p[5]));
+		tr_top  .x2 = ts01; tr_top  .y2 = ts12;
+		tr_front.x2 = ts01; tr_front.y2 = ts15;
+		tr_right.x2 = ts12; tr_right.y2 = ts15;
 	}
 	if (!(skip_dims & 4)) { // Z
 		if (dot_product(cview_dir, top_n) > 0) {qbd.add_quad_pts(p+4, cw,  top_n, tr_top);} // top
 		else if (!skip_bottom)                 {qbd.add_quad_pts(p+0, cw, -top_n, tr_top);} // bottom - not always drawn
 	}
 	if (!(skip_dims & 1)) { // X
-		if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw,  front_n, tr_front);} // front
-		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n, tr_front);} // back
+		if (dot_product(cview_dir, front_n) > 0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw,  front_n, tr_front);} // back
+		else                                     {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw, -front_n, tr_front);} // front
 	}
 	if (!(skip_dims & 2)) { // Y
-		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n, tr_right);} // right
-		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // left
+		if (dot_product(cview_dir, right_n) > 0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw,  right_n, tr_right);} // left
+		else                                     {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw, -right_n, tr_right);} // right
 	}
 }
 void draw_state_t::draw_cube(quad_batch_draw &qbd, cube_t const &c, color_wrapper const &cw, bool skip_bottom, float tscale, unsigned skip_dims) const {
-	point pts[8];
-	set_cube_pts(c, 0, 0, pts);
-	draw_cube(qbd, cw, c.get_cube_center(), pts, skip_bottom, 0, tscale, skip_dims);
+	point p[8];
+	set_cube_pts(c, 0, 0, p);
+	//draw_cube(qbd, cw, c.get_cube_center(), p, skip_bottom, 0, tscale, skip_dims); // customized for axis aligned cube below
+	vector3d const cview_dir((camera_pdu.pos - xlate) - c.get_cube_center());
+	tex_range_t tr_top, tr_front, tr_right;
+
+	if (tscale > 0.0) { // compute texture s/t parameters from cube side lengths to get a 1:1 AR
+		float const ts01(tscale*c.dy()), ts12(tscale*c.dx()), ts15(tscale*c.dz());
+		tr_top  .x2 = ts01; tr_top  .y2 = ts12;
+		tr_front.x2 = ts01; tr_front.y2 = ts15;
+		tr_right.x2 = ts12; tr_right.y2 = ts15;
+	}
+	if (!(skip_dims & 4)) { // Z
+		if (cview_dir.z > 0.0) {qbd.add_quad_pts(p+4, cw,  plus_z, tr_top);} // top
+		else if (!skip_bottom) {qbd.add_quad_pts(p+0, cw, -plus_z, tr_top);} // bottom - not always drawn
+	}
+	if (!(skip_dims & 1)) { // X
+		if (cview_dir.x < 0.0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; qbd.add_quad_pts(pts, cw, -plus_x, tr_front);} // back
+		else                   {point const pts[4] = {p[2], p[3], p[7], p[6]}; qbd.add_quad_pts(pts, cw,  plus_x, tr_front);} // front
+	}
+	if (!(skip_dims & 2)) { // Y
+		if (cview_dir.y < 0.0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; qbd.add_quad_pts(pts, cw, -plus_y, tr_right);} // left
+		else                   {point const pts[4] = {p[3], p[0], p[4], p[7]}; qbd.add_quad_pts(pts, cw,  plus_y, tr_right);} // right
+	}
 }
 bool draw_state_t::add_light_flare(point const &flare_pos, vector3d const &n, colorRGBA const &color, float alpha, float radius) {
 	point pos(xlate + flare_pos);
