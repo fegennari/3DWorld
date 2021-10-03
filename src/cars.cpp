@@ -268,6 +268,7 @@ bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &d
 	bool const is_turning(maybe_apply_turn(centerline, 1)); // for_driveway=1
 
 	if (is_turning && turn_dir == TURN_NONE) { // turn has been completed
+		if (in_reverse) {decelerate_fast();} // pause before going forward
 		driveway.in_use = 0; // Note: in_use flag is mutable
 		in_reverse      = 0;
 		return 1; // driveway exit complete, continue forward
