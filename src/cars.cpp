@@ -114,10 +114,10 @@ void car_t::maybe_accelerate(float mult) {
 	accelerate(mult);
 }
 
-void car_t::sleep(rand_gen_t &rgen) {
+void car_t::sleep(rand_gen_t &rgen, float min_time_secs) {
 	park();
 	if (destroyed || is_sleeping()) return; // don't reset wake_time if already sleeping
-	wake_time = (float)tfticks + rgen.rand_uniform(60, 120)*TICKS_PER_SECOND; // randomly wait 60-120s
+	wake_time = (float)tfticks + rgen.rand_uniform(1.0, 2.0)*min_time_secs*TICKS_PER_SECOND; // randomly wait 1-2x min_time_secs
 }
 bool car_t::maybe_wake(rand_gen_t &rgen) {
 	if (destroyed || !is_sleeping() || tfticks < wake_time) return 0; // continue to sleep
@@ -233,6 +233,53 @@ bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const
 		cur_seg  = dest_driveway; // store driveway index in cur_seg
 	}
 	return 1;
+}
+void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
+	assert(dim == driveway.dim);
+	assert(dir != driveway.dir);
+	float const stop_pos(driveway.get_center_dim(driveway.dim)), car_center(bcube.get_center_dim(driveway.dim));
+
+	if ((car_center < stop_pos) == driveway.dir) { // reached the driveway center, stop
+		dest_valid    = 0;
+		dest_driveway = -1;
+		sleep(rgen, 6.0); // sleep rather than permanently parking (TODO: make 60.0)
+	}
+}
+void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
+	assert(dim == driveway.dim);
+	// |---> driveway dir=0, car dir=1
+	in_reverse = (dir != driveway.dir); // back up if pointing away from the road
+	turn_dir   = (in_reverse ? (int)TURN_LEFT : (int)TURN_RIGHT); // always turn right when exiting the driveway/entering the road (left when backing out)
+	set_target_speed(in_reverse ? 0.2 : 0.3); // 20-30% of max speed
+	begin_turn(); // capture car centerline before the turn
+}
+// returns 1 when the exit + turn are complete
+bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &driveway, float centerline, unsigned road_ix, rand_gen_t &rgen) {
+	float const car_center(bcube.get_center_dim(dim));
+
+	if (driveway.intersects_xy(bcube)) { // partially out of the driveway/into the road
+		if (driveway.contains_cube_xy(prev_bcube)) { // was contained in driveway last frame - just entered the road
+			if (check_for_road_clear_and_wait(cars, driveway, road_ix)) {
+				bcube = prev_bcube; // hack: move back to previous position so that we trigger this check again the next time we get here
+				sleep(rgen, 1.0); // wait 1-2s and try again
+				return 0;
+			}
+		}
+	}
+	else if ((car_center < centerline) ^ driveway.dir) { // car center crossed lane centerline, time to complete turn and start moving forward along road
+		bcube.translate_dim(dim, (centerline - car_center)); // align exactly with centerline of lane
+		driveway.in_use = 0; // Note: in_use flag is mutable
+		in_reverse      = 0;
+		complete_turn_and_swap_dim();
+		return 1; // exit complete
+	}
+	if (in_reverse) { // backing out
+		// TODO: logic to gradually pull/back out into road
+	}
+	else { // pulling out - cars always pull into driveways and back out, so this case isn't yet tested
+		maybe_apply_turn(centerline, 1); // for_driveway=1
+	}
+	return 0;
 }
 
 point car_base_t::get_front(float dval) const {

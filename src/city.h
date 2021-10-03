@@ -177,7 +177,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	void decelerate_fast() {decelerate(10.0);} // Note: large decel to avoid stopping in an intersection
 	void park() {cur_speed = max_speed = 0.0;}
 	void stop() {cur_speed = 0.0;} // immediate stop
-	void sleep(rand_gen_t &rgen);
+	void sleep(rand_gen_t &rgen, float min_time_secs);
 	bool maybe_wake(rand_gen_t &rgen);
 	void move_by(float val) {bcube.translate_dim(dim, val);}
 	void begin_turn() {turn_val = bcube.get_center_dim(!dim);}
@@ -186,6 +186,9 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	bool must_wait_before_entering_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const;
 	bool check_for_road_clear_and_wait(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix);
 	bool run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const &driveway);
+	void pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen);
+	void back_or_pull_out_of_driveway(driveway_t const &driveway);
+	bool exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &driveway, float centerline, unsigned road_ix, rand_gen_t &rgen);
 	bool check_collision(car_t &c, road_gen_base_t const &road_gen);
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) const;
 	bool front_intersects_car(car_t const &c) const;
