@@ -415,7 +415,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
-	unsigned const type_ix(rgen.rand() % 12); // 0-11
+	unsigned const type_ix(rgen.rand() % 11); // 0-10
 	room_object_t obj; // starts as no item
 
 	switch (type_ix) {
@@ -521,7 +521,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		// TODO
 		break;
 	}
-	case 11: // empty
+	case 11: // empty (not currently used)
 		break;
 	}
 	obj.flags    |= (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL);
