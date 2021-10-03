@@ -27,6 +27,7 @@ unsigned const NUM_PAPER_COLORS = 6;
 unsigned const NUM_SPCAN_COLORS = 10;
 unsigned const NUM_LAMP_COLORS  = 6;
 unsigned const NUM_TCAN_COLORS  = 6;
+unsigned const NUM_TAPE_COLORS  = 7;
 colorRGBA const book_colors [NUM_BOOK_COLORS ] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 colorRGBA const spcan_colors[NUM_SPCAN_COLORS] = {WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
 colorRGBA const lamp_colors[NUM_LAMP_COLORS]   = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
@@ -36,6 +37,7 @@ colorRGBA const pen_colors   [4] = {WHITE, BLACK, colorRGBA(0.2, 0.4, 1.0), RED}
 colorRGBA const pencil_colors[2] = {colorRGBA(1.0, 0.75, 0.25), colorRGBA(1.0, 0.5, 0.1)};
 colorRGBA const marker_colors[8] = {BLACK, RED, BLACK, BLUE, BLACK, GREEN, RED, PURPLE};
 colorRGBA const tcan_colors[NUM_TCAN_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
+colorRGBA const tape_colors[NUM_TAPE_COLORS] = {GRAY, GRAY, GRAY, GRAY, BLACK, BLACK, BLUE}; // gray duct tape is the most common
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
 
