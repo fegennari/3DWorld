@@ -2168,6 +2168,7 @@ public:
 		glEnable(GL_CULL_FACE); // slightly faster for interior shadow maps
 		vector<point> points; // reused temporary
 		building_draw_t ext_parts_draw; // roof and exterior walls
+		bool has_garage(0);
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
 			if (interior_shadow_maps) { // draw interior shadow maps
@@ -2181,6 +2182,7 @@ public:
 					for (auto bi = g->bc_ixs.begin(); bi != g->bc_ixs.end(); ++bi) {
 						building_t &b((*i)->get_building(bi->ix));
 						if (!b.interior || !b.bcube.contains_pt(lpos)) continue; // no interior or wrong building
+						has_garage |= b.has_a_garage();
 						(*i)->building_draw_interior.draw_quads_for_draw_range(s, b.interior->draw_range, 1); // shadow_only=1
 						b.add_split_roof_shadow_quads(ext_parts_draw);
 						b.draw_room_geom(s, oc, xlate, bi->ix, 1, 0, 1, 1); // shadow_only=1, inc_small=1, player_in_building=1 (draw everything, since shadow may be cached)
@@ -2224,6 +2226,7 @@ public:
 		if (!interior_shadow_maps) {glDisable(GL_CULL_FACE);}
 		s.end_shader();
 		fgPopMatrix();
+		if (has_garage) {draw_cars_in_garages(xlate, 1);} // only for building interior shadows, not city shadows
 	}
 	static bool check_tile_smap(bool shadow_only) {
 		return (!shadow_only && world_mode == WMODE_INF_TERRAIN && shadow_map_enabled());
@@ -2264,7 +2267,6 @@ public:
 
 		if (shadow_only) {
 			assert(!reflection_pass);
-			draw_cars_in_garages(xlate, 1);
 			multi_draw_shadow(xlate, bcs);
 			return;
 		}
