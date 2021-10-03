@@ -26,7 +26,7 @@ float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.
 float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
 
 bool car_t::headlights_on() const { // no headlights when parked
-	return (!is_parked() && (in_tunnel || ((light_factor < (0.5 + HEADLIGHT_ON_RAND)) && is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed)))));
+	return (engine_running && (in_tunnel || ((light_factor < (0.5 + HEADLIGHT_ON_RAND)) && is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed)))));
 }
 bool car_t::is_close_to_player() const { // for debugging
 	return dist_xy_less_than(get_camera_building_space(), get_center(), city_params.road_width);
@@ -58,6 +58,7 @@ void car_t::destroy() { // Note: not calling create_explosion(), so no chain rea
 	} // for n
 	gen_delayed_from_player_sound(SOUND_EXPLODE, pos, 1.0);
 	destroyed = 1;
+	engine_running = 0;
 	park();
 }
 
@@ -83,6 +84,10 @@ string car_t::label_str() const {
 	return oss.str();
 }
 
+void car_t::choose_max_speed(rand_gen_t &rgen) { // add some speed variation
+	max_speed = rgen.rand_uniform(0.66, 1.0);
+	engine_running = 1; // car starts up
+}
 void car_t::move(float speed_mult) {
 	prev_bcube = bcube;
 	if (destroyed || stopped_at_light || is_stopped()) return;
@@ -246,9 +251,10 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 	float const stop_pos(driveway.get_center_dim(driveway.dim)), car_center(bcube.get_center_dim(driveway.dim));
 
 	if ((car_center < stop_pos) == driveway.dir) { // reached the driveway center, stop
-		dest_valid    = 0;
-		dest_driveway = -1;
-		sleep(rgen, 60.0); // sleep for 60-120s rather than permanently parking
+		dest_valid     = 0;
+		dest_driveway  = -1;
+		engine_running = 0;
+		sleep(rgen, 6.0); // sleep for 60-120s rather than permanently parking
 	}
 }
 void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {

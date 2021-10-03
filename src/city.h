@@ -146,14 +146,14 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 36)
 
 struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	cube_t prev_bcube;
-	bool entering_city, in_tunnel, dest_valid, destroyed, in_reverse;
+	bool entering_city, in_tunnel, dest_valid, destroyed, in_reverse, engine_running;
 	unsigned char color_id, front_car_turn_dir, model_id;
 	unsigned short dest_city, dest_isec;
 	short dest_driveway; // -1 is unset
 	float height, dz, rot_z, turn_val, waiting_pos, wake_time;
 	car_t const *car_in_front;
 
-	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), in_reverse(0), color_id(0),
+	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), in_reverse(0), engine_running(0), color_id(0),
 		front_car_turn_dir(TURN_UNSPEC), model_id(0), dest_city(0), dest_isec(0), dest_driveway(-1), height(0.0), dz(0.0), rot_z(0.0),
 		turn_val(0.0), waiting_pos(0.0), wake_time(0.0), car_in_front(nullptr) {}
 	bool is_valid   () const {return !bcube.is_all_zeros();}
@@ -168,7 +168,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	float get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len=0) const;
 	string str() const;
 	string label_str() const;
-	void choose_max_speed(rand_gen_t &rgen) {max_speed = rgen.rand_uniform(0.66, 1.0);} // add some speed variation
+	void choose_max_speed(rand_gen_t &rgen);
 	void move(float speed_mult);
 	void set_target_speed(float speed_factor);
 	void maybe_accelerate(float mult=0.02);
