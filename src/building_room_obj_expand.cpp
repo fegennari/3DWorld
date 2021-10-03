@@ -415,7 +415,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	vector3d const sz(drawer.get_size()); // Note: drawer is the interior area
 	rand_gen_t rgen;
 	rgen.set_state((123*drawer_ix + 1), (456*c.room_id + 777*c.obj_id + 1));
-	unsigned const type_ix(rgen.rand() % 11); // 0-10
+	unsigned const type_ix(rgen.rand() % 12); // 0-11
 	room_object_t obj; // starts as no item
 
 	switch (type_ix) {
@@ -487,7 +487,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 
 		if (length < 0.9*sz[c.dim] && width < 0.9*sz[!c.dim]) { // if it can fit
 			obj = room_object_t(drawer, TYPE_MONEY, c.room_id, c.dim, c.dir);
-			obj.z2() = (obj.z1() + 0.01*length*((rgen.rand()%20) + 1)); // 1-20 bills
+			obj.z2() = (obj.z1() + 0.01f*length*((rgen.rand()%20) + 1)); // 1-20 bills
 			set_rand_pos_for_sz(obj, c.dim, length, width, rgen);
 		}
 		break;
@@ -516,7 +516,12 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		set_rand_pos_for_sz(obj, dim, length, diameter, rgen);
 		break;
 	}
-	case 10: // empty
+	case 10: // tape roll
+	{
+		// TODO
+		break;
+	}
+	case 11: // empty
 		break;
 	}
 	obj.flags    |= (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL);
@@ -558,7 +563,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 
 	// Note: the code below may invalidate the reference to box, so we can't use it after this point
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts at placing valid item(s) in this box
-		unsigned const obj_type(rgen.rand()%6); // {book, bottles, ball, paint can, spraypaint, toilet paper}
+		unsigned const obj_type(rgen.rand()%7); // {book, bottles, ball, paint can, spraypaint, toilet paper, tape}
 
 		if (obj_type == 0) { // books; can always be placed
 			unsigned const num_books(1 + (rgen.rand()&3)); // 1-4 books
@@ -621,6 +626,10 @@ void building_t::add_box_contents(room_object_t const &box) {
 				objs.emplace_back(*i, TYPE_TPROLL, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
 			}
 		}
+		else if (obj_type == 6) { // rolls of tape
+			// TODO: TYPE_TAPE
+		}
+		else {continue;} // empty box?
 		interior->room_geom->clear_static_small_vbos();
 		break; // if we got here, something was placed in the box
 	} // for n

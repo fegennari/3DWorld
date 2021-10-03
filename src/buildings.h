@@ -300,7 +300,7 @@ enum {
 	TYPE_WALL_TRIM, TYPE_RAILING, TYPE_CRATE, TYPE_BOX, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_SHOWER, TYPE_RDESK, TYPE_BOTTLE,
 	TYPE_WINE_RACK, TYPE_COMPUTER, TYPE_MWAVE, TYPE_PAPER, TYPE_BLINDS, TYPE_PEN, TYPE_PENCIL, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_HANGER_ROD,
 	TYPE_DRAIN, TYPE_MONEY, TYPE_PHONE, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_MARKER, TYPE_BUTTON, TYPE_CRACK, TYPE_SWITCH, TYPE_PLATE,
-	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER,
+	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE,
 	/* these next ones are all 3D models */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, NUM_ROBJ_TYPES};
@@ -404,7 +404,7 @@ struct room_object_t : public cube_t {
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
-	bool can_use        () const {return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL || type == TYPE_BOOK || type == TYPE_PHONE);} // excludes dynamic objects
+	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
 	bool can_place_onto () const;
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
@@ -589,6 +589,7 @@ struct building_room_geom_t {
 	void add_money(room_object_t const &c);
 	void add_phone(room_object_t const &c);
 	void add_tproll(room_object_t const &c);
+	void add_tape(room_object_t const &c);
 	static void add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat);
 	void add_spraycan(room_object_t const &c);
 	void add_button(room_object_t const &c);
@@ -656,6 +657,7 @@ private:
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects);
 	static void add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &objects);
 	static void add_vert_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0);
+	static void add_tape_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0);
 }; // building_room_geom_t
 
 struct elevator_t : public cube_t {

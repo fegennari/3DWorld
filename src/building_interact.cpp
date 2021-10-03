@@ -973,6 +973,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FPLACE    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   2000.0,"fireplace");
 	bldg_obj_types[TYPE_LBASKET   ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 12.0,  2.0,   "laundry basket");
 	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 2, 300.0, 500.0, "water heater");
+	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 1.0,   0.4,   "duct tape", 2000);
 	// player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -2007,6 +2008,9 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			if (!apply_paint(player_pos, cview_dir, obj.color, obj.type)) return 0;
 			player_inventory.mark_last_item_used();
 		}
+		else if (obj.type == TYPE_TAPE) {
+			// TODO
+		}
 		else if (obj.type == TYPE_BOOK) {
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
 			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
@@ -2228,6 +2232,9 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 	return 1;
 }
 
+bool room_object_t::can_use() const { // excludes dynamic objects
+	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE);
+}
 bool room_object_t::can_place_onto() const {
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||
 		type == TYPE_BRSINK || type == TYPE_BED || type == TYPE_BOX || type == TYPE_CRATE || type == TYPE_KEYBOARD || type == TYPE_BOOK);

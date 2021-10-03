@@ -523,6 +523,14 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 	holder_mat.add_cube_to_verts(plate, holder_color, zero_vector, ~get_face_mask(c.dim, c.dir)); // skip the face against the wall
 }
 
+void building_room_geom_t::add_tape_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio) {
+	// TODO: customize for tape
+	add_vert_tproll_to_material(c, mat, sz_ratio);
+}
+void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
+	add_tape_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
+}
+
 void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 	unsigned const dim(get_max_dim(c.get_size()));
 	bool const add_bottom(dim != 2); // if on its side

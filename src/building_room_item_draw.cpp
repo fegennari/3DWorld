@@ -549,6 +549,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_MONEY:     add_money (*i); break;
 		case TYPE_PHONE:     add_phone (*i); break;
 		case TYPE_TPROLL:    add_tproll(*i); break;
+		case TYPE_TAPE:      add_tape  (*i); break;
 		case TYPE_SPRAYCAN:  add_spraycan(*i); break;
 		case TYPE_CRACK:     add_crack (*i); break;
 		case TYPE_SWITCH:    add_switch(*i); break;
@@ -668,6 +669,9 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	}
 	else if (c.type == TYPE_TPROLL) { // apply get_player_cview_rot_matrix()?
 		add_vert_tproll_to_material(c, mat, c.get_remaining_capacity_ratio());
+	}
+	else if (c.type == TYPE_TAPE) {
+		add_tape_to_material(c, mat, c.get_remaining_capacity_ratio());
 	}
 	else if (c.type == TYPE_BOOK) {
 		static building_room_geom_t tmp_rgeom;
