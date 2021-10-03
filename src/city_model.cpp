@@ -67,7 +67,8 @@ bool city_model_loader_t::load_model_id(unsigned id) {
 	if (models_valid.empty()) {models_valid.resize(num_models(), 0);} // first call; start out invalid
 	if (models_valid[id]) return 1; // already loaded
 	city_model_t &model(get_model(id));
-	bool const skip_model(!have_buildings() && id < OBJ_MODEL_FHYDRANT); // building model, but no buildings, don't need to load
+	bool skip_model(!have_buildings() && id < OBJ_MODEL_FHYDRANT); // building model, but no buildings, don't need to load
+	skip_model |= (id == OBJ_MODEL_UMBRELLA && city_params.num_peds == 0); // don't need to load the umbrella model if there are no pedestrians
 
 	if (skip_model || model.fn.empty()) {
 		push_back(model3d(model.fn, tmgr)); // add a placeholder dummy model
