@@ -303,7 +303,7 @@ enum {
 	TYPE_WINE_RACK, TYPE_COMPUTER, TYPE_MWAVE, TYPE_PAPER, TYPE_BLINDS, TYPE_PEN, TYPE_PENCIL, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_HANGER_ROD,
 	TYPE_DRAIN, TYPE_MONEY, TYPE_PHONE, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_MARKER, TYPE_BUTTON, TYPE_CRACK, TYPE_SWITCH, TYPE_PLATE,
 	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE,
-	/* these next ones are all 3D models */
+	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
@@ -421,7 +421,7 @@ struct room_object_t : public cube_t {
 	int get_comp_monitor_tid() const;
 	int get_sheet_tid() const;
 	int get_paper_tid() const;
-	int get_model_id () const {return ((type == TYPE_MONITOR) ? OBJ_MODEL_TV : (type + OBJ_MODEL_TOILET - TYPE_TOILET));} // monitor has same model as TV
+	int get_model_id () const {assert(type >= TYPE_TOILET); return ((type == TYPE_MONITOR) ? OBJ_MODEL_TV : ((int)type + OBJ_MODEL_TOILET - TYPE_TOILET));} // monitor has same model as TV
 	void set_as_bottle(unsigned rand_id, unsigned max_type=NUM_BOTTLE_TYPES-1, bool no_empty=0);
 	colorRGBA get_color() const;
 	colorRGBA get_model_color() const;
