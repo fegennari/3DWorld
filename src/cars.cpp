@@ -169,9 +169,13 @@ void car_t::complete_turn_and_swap_dim() {
 	entering_city = 0; // clear flag in case we turned into the city
 }
 
-bool car_t::must_wait_before_entering_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const {
+bool car_t::must_wait_entering_or_crossing_road(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix, float lookahead_time) const {
+	bool const in_driveway(cur_road_type == TYPE_DRIVEWAY);
 	bool const rdim(!driveway.dim), rdir(driveway.dir ^ rdim); // dim/dir of cars on the road we're on or entering
-	float const far_side(bcube.d[rdim][rdir]); // side of car not in danger of being hit
+	float far_side (bcube.d[rdim][ rdir]); // side of car not in danger of being hit
+	float near_side(bcube.d[rdim][!rdir]); // side of car in danger of being hit
+	if (in_driveway) {far_side += (rdir ? 1.0 : -1.0)*get_length();} // if exiting a driveway, must leave space for the car to fit in the road
+	if (in_driveway && in_reverse) {near_side -= (rdir ? 1.0 : -1.0)*get_length();} // if backing out of driveway, we must have space to fit when fully backed out
 	// the following logic is similar to ped_manager_t::has_nearby_car_on_road(), except it only considers one lane of the road
 	// since we don't have cars split out per-city here like we do in ped_mgr, we have to sort by city and then road
 	car_base_t ref_car; ref_car.cur_city = cur_city; ref_car.cur_road = road_ix; ref_car.max_speed = 1.0; // so that it isn't treated as parked
@@ -183,10 +187,12 @@ bool car_t::must_wait_before_entering_road(vector<car_t> const &cars, driveway_t
 		car_t const &c(*it);
 		if (c.cur_road != road_ix || c.cur_city != cur_city) break; // different road or city, done
 		if (c.dir != rdir)    continue; // car is traveling on the side of the road that we're not entering, ignore it
-		if (c.bcube == bcube) continue; // skip ourself (this should be fixed when driveway leaving logic is finished
+		if (c.bcube == bcube) continue; // skip ourself (can occasionally get here, I think when the car is waiting for another car to pass)
 		float const val(c.bcube.d[rdim][!rdir]); // back end of the car
 		if (rdir) {if (val > far_side) break;   } // car already passed us, not a threat - done (cars are sorted in this dim)
 		else      {if (val < far_side) continue;} // car already passed us, not a threat - skip to next car
+		float const front_pos(c.bcube.d[rdim][rdir]); // front end of the car
+		if ((front_pos > near_side) == rdir) return 1; // already intersects in dimension dim, must wait
 		if (closest_car == cars.end()) {closest_car = it;} // first threatening car
 		else {
 			float const val2(closest_car->bcube.d[rdim][!rdir]); // back end of the other car
@@ -196,16 +202,15 @@ bool car_t::must_wait_before_entering_road(vector<car_t> const &cars, driveway_t
 	} // for it
 	if (closest_car == cars.end()) return 0; // no car found, safe
 	car_t const &c(*closest_car);
-	float const near_side(bcube.d[rdim][!rdir]), front_pos(c.bcube.d[rdim][rdir]); // side of car in danger of being hit, and front of the closest car
-	if ((front_pos > near_side) == rdir)      return 1; // already intersects in dimension dim, must wait
 	if (c.turn_dir != TURN_NONE)              return 0; // car is turning; since it's already on this road, it must be turning off this road and can be ignored
 	if (c.stopped_at_light || c.is_stopped()) return 0; // stopped, maybe at a light; we could calculate the light change time like with peds, but maybe it's okay to not wait
+	float const front_pos(c.bcube.d[rdim][rdir]); // front of the closest car
 	// moving and not turning; assume it may be accelerating, and could reach max_speed by the time it passes near_side
 	float const travel_dist(lookahead_time*CAR_SPEED_SCALE*city_params.car_speed*c.max_speed); // conservative travel dist
 	return (fabs(front_pos - near_side) < travel_dist);
 }
 bool car_t::check_for_road_clear_and_wait(vector<car_t> const &cars, driveway_t const &driveway, unsigned road_ix) {
-	if (!must_wait_before_entering_road(cars, driveway, road_ix, 2.0*TICKS_PER_SECOND)) return 0; // lookahead_time=2.0s
+	if (!must_wait_entering_or_crossing_road(cars, driveway, road_ix, 2.0*TICKS_PER_SECOND)) return 0; // lookahead_time=2.0s
 	decelerate_fast(); // is this needed?
 	return 1; // wait for the path to become clear
 }
@@ -273,6 +278,7 @@ bool car_t::exit_driveway_to_road(vector<car_t> const &cars, driveway_t const &d
 		in_reverse      = 0;
 		return 1; // driveway exit complete, continue forward
 	}
+	set_target_speed(in_reverse ? 0.25 : 0.35); // 25-35% of max speed
 	return 0;
 }
 

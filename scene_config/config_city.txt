@@ -64,7 +64,7 @@ city car_speed 10.0
 city traffic_balance_val 0.9
 city new_city_prob 0.5
 city enable_car_path_finding 1
-city cars_use_driveways 0 # cars can enter (and eventually leave) driveways
+city cars_use_driveways 1 # cars can enter (and eventually leave) driveways
 city convert_model_files 1
 # car_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
 city car_model ../models/cars/sports_car/sportsCar.model3d        1 22 -1 90  1 1.0 1.0  20 22
