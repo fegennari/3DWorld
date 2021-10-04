@@ -643,7 +643,8 @@ void building_t::add_box_contents(room_object_t const &box) {
 			unsigned color_ix(rgen.rand()); // random color
 
 			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
-				objs.emplace_back(*i, TYPE_TAPE, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
+				// dim/dir don't matter, so use 0; flag as RO_FLAG_IN_CLOSET so that we know that we don't need to draw the bottom (not in a drawer)
+				objs.emplace_back(*i, TYPE_TAPE, room_id, 0, 0, (flags | RO_FLAG_IN_CLOSET), light_amt, SHAPE_CYLIN);
 				objs.back().color = tape_colors[color_ix % NUM_TAPE_COLORS];
 			}
 		}
