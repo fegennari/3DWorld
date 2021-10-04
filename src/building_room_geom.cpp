@@ -1114,8 +1114,8 @@ cube_t get_elevator_car_panel(room_object_t const &c) {
 	float const width(c.get_sz_dim(!c.dim)), frame_width(0.2*width), panel_width(min(0.9f*frame_width, 0.25f*dz)), front_face(c.d[c.dim][c.dir] - signed_thickness);
 	cube_t panel(c);
 	panel.d[c.dim][ c.dir] = front_face; // flush front inner wall
-	panel.d[c.dim][!c.dir] = front_face - 0.1*signed_thickness; // set panel thickness
-	panel.d[!c.dim][0] = c.d[!c.dim][0] + 0.5*(frame_width - panel_width) + thickness; // edge near the wall
+	panel.d[c.dim][!c.dir] = front_face - 0.1f*signed_thickness; // set panel thickness
+	panel.d[!c.dim][0] = c.d[!c.dim][0] + 0.5f*(frame_width - panel_width) + thickness; // edge near the wall
 	panel.d[!c.dim][1] = panel.d[!c.dim][0] + panel_width - thickness; // edge near door
 	panel.z1() += 0.28*dz; panel.z2() -= 0.28*dz;
 	return panel;
@@ -1274,7 +1274,7 @@ void building_room_geom_t::add_picture(room_object_t const &c) { // also whitebo
 		get_untextured_material(1).add_cube_to_verts_untextured(ledge, GRAY, (1 << (2*(2-c.dim) + !c.dir))); // shadowed
 	}
 	else if (c.flags & RO_FLAG_RAND_ROT) { // apply a random rotation
-		float const angle(0.2*(fract(PI*c.obj_id + 1.61803*c.item_flags) - 0.5)); // random rotation based on obj_id and item flags
+		float const angle(0.2f*(fract(PI*c.obj_id + 1.61803f*c.item_flags) - 0.5f)); // random rotation based on obj_id and item flags
 		point rotate_pt(c.get_cube_center());
 		rotate_pt.z += 0.45*c.dz(); // rotate about a point near the top of the picture
 		vector3d normal(zero_vector);
@@ -1734,7 +1734,7 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 		if (no_mattress) { // mattress is gone, draw the slats on the bottom of the bed
 			unsigned const num_slats = 12;
 			unsigned const slat_skip_faces(get_skip_mask_for_xy(!c.dim));
-			float const side_width(0.08*width), slat_spacing(length/num_slats), slat_width(0.45*slat_spacing), slat_gap(0.5*(slat_spacing - slat_width));
+			float const side_width(0.08*width), slat_spacing(length/num_slats), slat_width(0.45*slat_spacing), slat_gap(0.5f*(slat_spacing - slat_width));
 			cube_t sides[2] = {frame, frame}, slat(frame);
 			sides[0].d[!c.dim][1] -= (width - side_width);
 			sides[1].d[!c.dim][0] += (width - side_width);
@@ -2281,7 +2281,7 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 
 		if (is_open) { // make this door open
 			door.d[ c.dim][c.dir] += dir_sign*(door_width - door_thick); // expand out to full width
-			door.d[!c.dim][!handle_side] -= (handle_side ? -1.0 : 1.0)*(door_width - door_thick); // shrink to correct thickness
+			door.d[!c.dim][!handle_side] -= (handle_side ? -1.0f : 1.0f)*(door_width - door_thick); // shrink to correct thickness
 		}
 		door_mat.add_cube_to_verts(door, door_color, tex_origin, door_skip_faces);
 		// add door handle
