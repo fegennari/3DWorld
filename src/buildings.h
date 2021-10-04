@@ -1242,7 +1242,7 @@ void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
 void get_table_cubes (room_object_t const &c, cube_t cubes[5], bool is_desk);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]);
-float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only);
+float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
 float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors);
 void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors);
 cube_t get_elevator_car_panel(room_object_t const &c);

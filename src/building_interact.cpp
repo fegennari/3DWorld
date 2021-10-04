@@ -1675,7 +1675,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 			drawers_part = get_dresser_middle(obj);
 			drawers_part.expand_in_dim(!obj.dim, -0.5*get_tc_leg_width(obj, 0.10));
 		}
-		drawer_extend = get_drawer_cubes(drawers_part, drawers, 0); // front_only=0
+		drawer_extend = get_drawer_cubes(drawers_part, drawers, 0, 1); // front_only=0, inside_only=1
 	}
 	dmin_sq        = 0.0;
 	closest_obj_id = -1;

@@ -144,7 +144,8 @@ void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, boo
 	}
 }
 
-float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only) {
+float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only) {
+	assert(!(front_only && inside_only)); // these options only apply to open drawers
 	drawers.clear();
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
@@ -174,7 +175,7 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 			if (c.drawer_flags & (1 << drawers.size())) { // make a drawer open
 				drawer.d[c.dim][c.dir] += drawer_extend;
 				if (front_only) {drawer.d[c.dim][!c.dir] += drawer_extend;} // translate the other side as well
-				else { // adjust to return interior part of the door for interaction
+				else if (inside_only) { // adjust to return interior part of the door for interaction
 					drawer.d[c.dim][ c.dir] -= sd_thick; // flush with object
 					drawer.d[c.dim][!c.dir] += 0.25f*sd_thick;
 					drawer.expand_in_dim(!c.dim, -0.08*drawer.get_sz_dim(!c.dim)); // subtract off width of sides
@@ -191,7 +192,7 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 
 void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tscale) { // or nightstand
 	vect_cube_t &drawers(get_temp_cubes());
-	get_drawer_cubes(c, drawers, 1); // front_only=1
+	get_drawer_cubes(c, drawers, 1, 0); // front_only=1, inside_only=0
 	assert(drawers.size() <= 16); // we only have 16 bits to store drawer flags
 	float const height(c.dz()), drawer_thick(0.05*height), handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
