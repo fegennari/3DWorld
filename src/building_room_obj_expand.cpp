@@ -518,7 +518,13 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 	}
 	case 10: // tape roll
 	{
-		// TODO
+		float const diameter(0.3*c.dz());
+
+		if (diameter < 0.9*min(sz.x, sz.y)) { // if it can fit
+			obj = room_object_t(drawer, TYPE_TAPE, c.room_id, 0, 0, 0, 1.0, SHAPE_CYLIN, tape_colors[rgen.rand() % NUM_TAPE_COLORS]); // dim/dir don't matter, so use 0
+			obj.z2() = (obj.z1() + 0.25*diameter); // set height
+			set_rand_pos_for_sz(obj, 0, diameter, diameter, rgen);
+		}
 		break;
 	}
 	case 11: // empty (not currently used)
@@ -619,15 +625,27 @@ void building_t::add_box_contents(room_object_t const &box) {
 			}
 		}
 		else if (obj_type == 5) { // toilet paper rolls
-			float const length(0.35*0.18*floor_spacing), radius(0.4*length);
-			if (!place_objects_in_box(c, obj_bcubes, radius, length)) continue; // can't fit any of this item
+			float const height(0.35*0.18*floor_spacing), radius(0.4*height);
+			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
 			
 			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
 				objs.emplace_back(*i, TYPE_TPROLL, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
 			}
 		}
 		else if (obj_type == 6) { // rolls of tape
-			// TODO: TYPE_TAPE
+			float height(0.032*floor_spacing), radius(1.25*height);
+
+			for (unsigned m = 0; m < 2; ++m) {
+				if (2.0*radius < 0.95*min(c.dx(), c.dy())) break; // size is okay
+				height *= 0.9; radius *= 0.9; // can't fit any, try making it smaller
+			}
+			if (!place_objects_in_box(c, obj_bcubes, radius, height)) continue; // can't fit any of this item
+			unsigned color_ix(rgen.rand()); // random color
+
+			for (auto i = obj_bcubes.begin(); i != obj_bcubes.end(); ++i) {
+				objs.emplace_back(*i, TYPE_TAPE, room_id, 0, 0, flags, light_amt, SHAPE_CYLIN);
+				objs.back().color = tape_colors[color_ix % NUM_TAPE_COLORS];
+			}
 		}
 		else {continue;} // empty box?
 		interior->room_geom->clear_static_small_vbos();

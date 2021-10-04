@@ -33,6 +33,8 @@ int get_paneling_nm_tid() {return get_texture_by_name("normal_maps/paneling_NRM.
 int get_blinds_tid     () {return get_texture_by_name("interiors/blinds.jpg", 1, 0, 1, 8.0);} // use high aniso
 int get_money_tid      () {return get_texture_by_name("interiors/dollar20.jpg");}
 int get_crack_tid(room_object_t const &obj) {return get_texture_by_name(((5*obj.obj_id + 7*obj.room_id) & 1) ? "interiors/cracked_glass2.jpg" : "interiors/cracked_glass.jpg");}
+int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
+int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
 
 colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_color(WOOD2_TEX));} // Note: uses default WOOD_COLOR, not the per-building random variant
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
@@ -488,25 +490,27 @@ void add_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 	square.d[c.dim][c.dir] = square.d[c.dim][!c.dir]; // shrink to zero thickness at outer edge
 	mat.add_cube_to_verts(square, tp_color, zero_vector, ~get_skip_mask_for_xy(c.dim)); // only draw front/back faces
 }
-void building_room_geom_t::add_vert_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio) {
+void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio, bool player_held) { // TP and tape
+	bool const is_tape(c.type == TYPE_TAPE);
 	cube_t hole(c);
-	hole.expand_by_xy(-0.3*c.dx());
+	hole.expand_by_xy(-(is_tape ? 0.24 : 0.3)*c.dx());
 	cube_t tube(hole);
 	mat.add_vcylin_to_verts(tube, apply_light_color(c, LT_BROWN), 0, 0, 1); // tube, sides only, two sided (only need inside)
 	if (sz_ratio == 0.0) return; // empty, tube only, don't need to draw the rest of the roll
 	cube_t roll(c);
 	if (sz_ratio < 1.0) {roll.expand_by_xy(-0.3*(1.0 - sz_ratio)*c.dx());} // partially used
 	hole.expand_in_dim(2, 0.0025*c.dz()); // expand slightly to avoid z-fighting
-	mat.add_vcylin_to_verts(hole, ALPHA0, 1, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // hole - top/bottom surface only to mask off the outer part of the roll
-	mat.add_vcylin_to_verts(roll, apply_light_color(c),  1, 1); // paper roll
+	// draw top/bottom surface only to mask off the outer part of the roll when held by the player; when resting on an object, draw the top surface only
+	mat.add_vcylin_to_verts(hole, ALPHA0, player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // hole
+	mat.add_vcylin_to_verts(roll, apply_light_color(c), 1, 1); // paper/plastic roll
 }
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 	if (c.flags & RO_FLAG_WAS_EXP) { // bare TP roll from a box
-		add_vert_tproll_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
+		add_vert_roll_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
 		return;
 	}
+	if (!(c.flags & RO_FLAG_TAKEN1)) {add_vert_roll_to_material(c, get_untextured_material(1, 0, 1));} // draw the roll if not taken
 	float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), length(c.get_sz_dim(!c.dim));
-	if (!(c.flags & RO_FLAG_TAKEN1)) {add_tproll_to_material(c, get_untextured_material(1, 0, 1));} // draw the roll if not taken
 	// draw the holder attached to the wall
 	rgeom_mat_t &holder_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
 	colorRGBA const holder_color(apply_light_color(c, GRAY));
@@ -522,13 +526,19 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 	holder_mat.add_ortho_cylin_to_verts(rod, holder_color, !c.dim, 0, 1);
 	holder_mat.add_cube_to_verts(plate, holder_color, zero_vector, ~get_face_mask(c.dim, c.dir)); // skip the face against the wall
 }
-
-void building_room_geom_t::add_tape_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio) {
-	// TODO: customize for tape
-	add_vert_tproll_to_material(c, mat, sz_ratio);
-}
 void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
-	add_tape_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
+	rgeom_mat_t &mat(get_untextured_material(1, 0, 1));
+	
+	if (c.flags & RO_FLAG_WAS_EXP) {
+		// if tape was in a drawer, then the hole won't properly blend with the wood under it, making the floor visible;
+		// draw a wood colored circle under the hole before drawing the roll to sort of cover this up (though it's not textured);
+		// this isn't necessary for boxes, but the color should be close enough to correct if we use box_tid
+		cube_t bot_fill(c);
+		bot_fill.expand_by_xy(-0.1*c.dx());
+		bot_fill.z2() -= 0.95*c.dz();
+		mat.add_vcylin_to_verts(bot_fill, apply_light_color(c, texture_color(get_box_tid())), 0, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // top side only
+	}
+	add_vert_roll_to_material(c, mat); // shadowed, small
 }
 
 void building_room_geom_t::add_spraycan_to_material(room_object_t const &c, rgeom_mat_t &mat) {
@@ -562,9 +572,6 @@ void building_room_geom_t::add_button(room_object_t const &c) {
 		get_untextured_material(0, 0, 1).add_cube_to_verts(frame, apply_light_color(c, DK_GRAY), all_zeros, ~get_face_mask(c.dim, !c.dir)); // small
 	}
 }
-
-int get_box_tid() {return get_texture_by_name("interiors/box.jpg");}
-int get_crate_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "interiors/crate2.jpg" : "interiors/crate.jpg");}
 
 void building_room_geom_t::add_crate(room_object_t const &c) { // is_small=1
 	// Note: draw as "small", not because crates are small, but because they're only added to windowless rooms and can't be easily seen from outside a building

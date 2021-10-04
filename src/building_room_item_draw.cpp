@@ -654,6 +654,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 
 /*static*/ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s) {
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time
+	bool needs_blend(0);
 
 	if (c.type == TYPE_SPRAYCAN || c.type == TYPE_MARKER) {
 		room_object_t c_rot(c);
@@ -667,11 +668,9 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		if (c.type == TYPE_SPRAYCAN) {add_spraycan_to_material(c_rot, mat);}
 		else {add_pen_pencil_marker_to_material(c_rot, mat);}
 	}
-	else if (c.type == TYPE_TPROLL) { // apply get_player_cview_rot_matrix()?
-		add_vert_tproll_to_material(c, mat, c.get_remaining_capacity_ratio());
-	}
-	else if (c.type == TYPE_TAPE) {
-		add_tape_to_material(c, mat, c.get_remaining_capacity_ratio());
+	else if (c.type == TYPE_TPROLL || c.type == TYPE_TAPE) { // apply get_player_cview_rot_matrix()?
+		add_vert_roll_to_material(c, mat, c.get_remaining_capacity_ratio(), 1); // player_held=1
+		needs_blend = 1;
 	}
 	else if (c.type == TYPE_BOOK) {
 		static building_room_geom_t tmp_rgeom;
@@ -697,9 +696,9 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
 	}
 	else {assert(0);}
-	if (c.type == TYPE_TPROLL) {enable_blend();}
+	if (needs_blend) {enable_blend();}
 	mat.upload_draw_and_clear(s);
-	if (c.type == TYPE_TPROLL) {disable_blend();}
+	if (needs_blend) {disable_blend();}
 }
 
 class water_draw_t {

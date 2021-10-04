@@ -658,8 +658,7 @@ private:
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects);
 	static void add_wine_rack_bottles(room_object_t const &c, vector<room_object_t> &objects);
-	static void add_vert_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0);
-	static void add_tape_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0);
+	static void add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio=1.0, bool player_held=0);
 }; // building_room_geom_t
 
 struct elevator_t : public cube_t {
