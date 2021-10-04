@@ -152,11 +152,11 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 	float const width(c.get_sz_dim(!c.dim)), depth(c.get_sz_dim(c.dim)), height(c.dz());
 	bool is_lg(width > 2.0*height);
 	unsigned const num_rows(2 + (rgen.rand() & 1)); // 2-3
-	float const row_spacing(height/num_rows), door_thick(0.05*height), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0);
+	float const row_spacing(height/num_rows), drawer_thick(0.05*height), border(0.1*row_spacing), dir_sign(c.dir ? 1.0 : -1.0), sd_thick(dir_sign*drawer_thick);
 	float const drawer_extend(((c.type == TYPE_DESK) ? 0.5 : 0.8)*dir_sign*depth);
 	cube_t d_row(c);
-	d_row.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir];
-	d_row.d[ c.dim][ c.dir] += dir_sign*door_thick; // expand out a bit
+	d_row.d[c.dim][!c.dir]  = c.d[c.dim][c.dir];
+	d_row.d[c.dim][ c.dir] += sd_thick; // expand out a bit
 	unsigned num_cols(1); // 1 for nightstand
 	float vpos(c.z1());
 
@@ -174,6 +174,12 @@ float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_
 			if (c.drawer_flags & (1 << drawers.size())) { // make a drawer open
 				drawer.d[c.dim][c.dir] += drawer_extend;
 				if (front_only) {drawer.d[c.dim][!c.dir] += drawer_extend;} // translate the other side as well
+				else { // adjust to return interior part of the door for interaction
+					drawer.d[c.dim][ c.dir] -= sd_thick; // flush with object
+					drawer.d[c.dim][!c.dir] += 0.25f*sd_thick;
+					drawer.expand_in_dim(!c.dim, -0.08*drawer.get_sz_dim(!c.dim)); // subtract off width of sides
+					drawer.z1() += 0.2*drawer.dz();
+				}
 			}
 			drawers.push_back(drawer);
 			hpos += col_spacing;
@@ -212,7 +218,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 			left.z2() = right.z2() = drawer_body.z2() - 0.1*dheight; // sides slightly shorter than the front and back
 			left .d[!c.dim][1]    -= 0.87*dwidth; // set width of left  side
 			right.d[!c.dim][0]    += 0.87*dwidth; // set width of right side
-			back.d[c.dim][ c.dir]  = c.d[c.dim][c.dir] + 0.25f*dir_sign*drawer_thick; // flush with front face and narrow
+			back.d[c.dim][c.dir]   = c.d[c.dim][c.dir] + 0.25f*dir_sign*drawer_thick; // flush with front face and narrow
 			unsigned const skip_mask_front_back(get_skip_mask_for_xy(c.dim));
 			colorRGBA const blr_color(drawer_color*0.4 + apply_wood_light_color(c)*0.4); // halfway between base and drawer colors, but slightly darker
 			// swap the texture orientation of drawers to make them stand out more

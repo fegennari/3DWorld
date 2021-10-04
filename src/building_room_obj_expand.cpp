@@ -527,9 +527,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 		}
 		break;
 	}
-	case 11: // empty (not currently used)
-		break;
-	}
+	} // end switch
 	obj.flags    |= (RO_FLAG_WAS_EXP | RO_FLAG_NOCOLL);
 	obj.light_amt = c.light_amt;
 	return obj;

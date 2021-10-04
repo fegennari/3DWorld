@@ -1687,11 +1687,11 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		if (dmin_sq == 0.0 || dsq < dmin_sq) {closest_obj_id = (i - drawers.begin()); dmin_sq = dsq;} // update if closest
 	}
 	if (closest_obj_id < 0) return 0; // no drawer
+	cube_t const &drawer(drawers[closest_obj_id]); // Note: drawer cube is the interior part
 	
 	if (pickup_item && !has_doors) { // pick up item in drawer rather than opening drawer; no pickup items behind doors yet
 		if (!(obj.drawer_flags & (1U << closest_obj_id))) return 0; // drawer is not open
-		// Note: drawer cube passed in is not shrunk to the interior part, but that should be okay because we're not doing a line test against that object
-		room_object_t const item(get_item_in_drawer(obj, drawers[closest_obj_id], closest_obj_id));
+		room_object_t const item(get_item_in_drawer(obj, drawer, closest_obj_id));
 		if (item.type == TYPE_NONE) return 0; // no item
 		if (check_only) return 1;
 		if (!register_player_object_pickup(item, at_pos)) return 0;
@@ -1700,7 +1700,6 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 		update_draw_state_for_room_object(item, building, 1);
 	}
 	else { // open or close the drawer/door
-		cube_t const &drawer(drawers[closest_obj_id]);
 		cube_t c_test(drawer);
 		if (has_doors) {c_test.d[obj.dim][obj.dir] += (obj.dir ? 1.0 : -1.0)*drawer.get_sz_dim(!obj.dim);} // expand outward by the width of the door
 		else {c_test.d[obj.dim][obj.dir] += drawer_extend;} // drawer
