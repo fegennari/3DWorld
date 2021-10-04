@@ -2008,7 +2008,9 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_TAPE) {
-			// TODO
+			point const dest(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
+			if (!apply_tape(dest, cview_dir, obj.dz(), obj.color)) return 0;
+			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_BOOK) {
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
@@ -2299,10 +2301,21 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	if (d1 == zero_vector) {d1 = plus_x;} else {d1.normalize();}
 	vector3d d2(cross_product(d1, plus_z));
 	if (d2 == zero_vector) {d2 = plus_y;} else {d2.normalize();}
-	interior->room_geom->decal_manager.tp_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
+	interior->room_geom->decal_manager.tp_tape_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
 	interior->room_geom->modified_by_player = 1; // make sure TP stays in this building
 	// Note: no damage done for TP
 	return 1;
+}
+
+bool building_t::apply_tape(point const &pos, vector3d const &dir, float width, colorRGBA const &color) {
+	assert(has_room_geom());
+	static point last_tape_pos;
+	// TODO: add tape
+	//interior->room_geom->decal_manager.tp_tape_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, color, normal);
+	interior->room_geom->modified_by_player = 1; // make sure tape stays in this building
+	last_tape_pos = pos;
+	// Note: no damage done for tape
+	return 0;
 }
 
 void building_t::add_blood_decal(point const &pos) {

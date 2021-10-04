@@ -981,10 +981,10 @@ void building_decal_manager_t::draw_building_interior_decals(bool player_in_buil
 	if (!player_in_building) return;
 	paint_draw[0].draw_paint(); // draw interior paint
 
-	if (!tp_qbd.empty()) { // toilet paper squares
+	if (!tp_tape_qbd.empty()) { // toilet paper squares and tape lines
 		glDisable(GL_CULL_FACE); // draw both sides
 		select_texture(WHITE_TEX);
-		tp_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
+		tp_tape_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
 		glEnable(GL_CULL_FACE);
 	}
 	if (!blood_qbd.empty()) {

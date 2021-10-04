@@ -506,7 +506,7 @@ struct paint_draw_t {
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
-	quad_batch_draw blood_qbd, tp_qbd;
+	quad_batch_draw blood_qbd, tp_tape_qbd;
 	void draw_building_interior_decals(bool player_in_building) const;
 };
 
@@ -1128,6 +1128,7 @@ private:
 	void set_bcube_from_rotated_cube(cube_t const &bc);
 	bool apply_paint(point const &pos, vector3d const &dir, colorRGBA const &color, room_object const obj_type) const;
 	bool apply_toilet_paper(point const &pos, vector3d const &dir, float half_width);
+	bool apply_tape(point const &pos, vector3d const &dir, float width, colorRGBA const &color);
 	void register_button_event(room_object_t const &button);
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
