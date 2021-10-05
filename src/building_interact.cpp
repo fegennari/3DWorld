@@ -692,7 +692,8 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 			c->translate(new_center - center);
 		}
 	} // for c
-	if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
+	if (maybe_update_tape(player_pos)) {}
+	else if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
 		maybe_use_last_pickup_room_object(player_pos);
 		use_last_pickup_object = 0; // reset for next frame
 	}
@@ -1134,6 +1135,19 @@ public:
 
 phone_manager_t phone_manager;
 
+struct tape_manager_t {
+	bool in_use;
+	vector<point> points;
+	point last_pos;
+	room_object_t tape;
+
+	tape_manager_t() : in_use(0) {}
+	void init(room_object_t const &tape_) {tape = tape_; in_use = 1;}
+	void clear() {points.clear(); tape = room_object_t(); in_use = 0;}
+};
+
+tape_manager_t tape_manager;
+
 class player_inventory_t { // manages player inventory, health, and other stats
 	vector<carried_item_t> carried; // interactive items the player is currently carrying
 	float cur_value, cur_weight, tot_value, tot_weight, damage_done, best_value, player_health, drunkenness, bladder, bladder_time, prev_player_zval;
@@ -1157,6 +1171,7 @@ public:
 		prev_in_building = has_key = 0;
 		phone_manager.disable();
 		carried.clear();
+		tape_manager.clear();
 	}
 	void clear_all() { // called on game mode init
 		tot_value = best_value = 0.0;
@@ -1191,6 +1206,7 @@ public:
 		if (dir) {std::rotate(carried.begin(), carried.begin()+1, carried.end());}
 		else     {std::rotate(carried.begin(), carried.end  ()-1, carried.end());}
 		gen_sound_thread_safe_at_player(SOUND_CLICK, 0.5);
+		tape_manager.clear();
 	}
 	void add_item(room_object_t const &obj) {
 		float health(0.0), drunk(0.0); // add these fields to bldg_obj_type_t?
@@ -1257,6 +1273,7 @@ public:
 					co.dim = co.dir = 0; // clear dim and dir
 					phone_manager.enable();
 				}
+				tape_manager.clear();
 			}
 			oss << ": value $";
 			if (value < 1.0 && value > 0.0) {oss << ((value < 0.1) ? "0.0" : "0.") << round_fp(100.0*value);} // make sure to print the leading/trailing zero for cents
@@ -1296,16 +1313,22 @@ public:
 		remove_last_item(); // drop the item - remove it from our inventory
 		return 1;
 	}
-	void mark_last_item_used() {
+	bool update_last_item_use_count(int val) { // val can be positive or negative
+		if (val == 0) return 1; // no change
 		assert(!carried.empty());
 		carried_item_t &obj(carried.back());
 		obj.flags |= RO_FLAG_USED;
 		unsigned const capacity(get_room_obj_type(obj).capacity);
 
 		if (capacity > 0) {
-			++obj.use_count;
-			if (obj.use_count >= capacity) {remove_last_item();} // remove after too many uses
+			max_eq(val, -int(obj.use_count)); // can't go negative
+			obj.use_count += val;
+			if (obj.use_count >= capacity) {remove_last_item(); return 0;} // remove after too many uses
 		}
+		return 1;
+	}
+	bool mark_last_item_used() {
+		return update_last_item_use_count(1);
 	}
 	void remove_last_item() {
 		assert(!carried.empty());
@@ -1318,10 +1341,12 @@ public:
 		max_eq(cur_value,  0.0f); // handle FP rounding error
 		max_eq(cur_weight, 0.0f);
 		carried.pop_back(); // Note: invalidates obj
+		tape_manager.clear();
 	}
 	void collect_items(bool keep_interactive) {
 		if (!keep_interactive) {has_key = 0;} // key only good for current building
 		phone_manager.disable(); // phones won't ring when taken out of their building, since the player can't switch to them anyway
+		tape_manager.clear();
 		if (carried.empty() && cur_weight == 0.0 && cur_value == 0.0) return; // nothing to add
 		float keep_value(0.0), keep_weight(0.0);
 
@@ -2008,9 +2033,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_TAPE) {
-			point const dest(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
-			if (!apply_tape(dest, cview_dir, obj.dz(), obj.color)) return 0;
-			player_inventory.mark_last_item_used();
+			tape_manager.init(obj);
 		}
 		else if (obj.type == TYPE_BOOK) {
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
@@ -2039,6 +2062,41 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	}
 	else {assert(0);}
 	last_use_time = tfticks;
+	return 1;
+}
+
+bool building_t::maybe_update_tape(point const &player_pos) {
+	if (!tape_manager.in_use) return 0;
+	assert(has_room_geom());
+	auto &decal_mgr(interior->room_geom->decal_manager);
+	room_object_t const &obj(tape_manager.tape);
+	float const thickness(obj.dz());
+	point const pos(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
+
+	if (tape_manager.points.empty()) { // first point
+		tape_manager.points.push_back(pos);
+		decal_mgr.commit_pend_tape_qbd(); // commit any previous tape
+		interior->room_geom->modified_by_player = 1; // make sure tape stays in this building
+	}
+	else {
+		point const last_pt(tape_manager.points.back());
+		vector3d const dir(pos - last_pt), zoff(0.5*thickness*plus_z);
+		vector3d normal(cross_product(dir, plus_z).get_norm());
+		point const pts[4] = {(last_pt - zoff), (last_pt + zoff), (pos + zoff), (pos - zoff)};
+		decal_mgr.pend_tape_qbd.clear();
+		decal_mgr.pend_tape_qbd.add_quad_pts(pts, obj.color, normal);
+		bool const add_new_pt = 0; // TODO: check building ray cast between last_pt and pos
+
+		if (add_new_pt) {
+			tape_manager.points.push_back(pos);
+			decal_mgr.commit_pend_tape_qbd();
+		}
+		// update use count based on length change
+		float const prev_dist(p2p_dist(last_pt, tape_manager.last_pos)), cur_dist(p2p_dist(last_pt, pos)), delta(cur_dist - prev_dist);
+		int const delta_use_count(round_fp(delta/thickness));
+		if (!player_inventory.update_last_item_use_count(delta_use_count)) {tape_manager.clear();} // check if we ran out of tape
+	}
+	tape_manager.last_pos = pos;
 	return 1;
 }
 
@@ -2305,17 +2363,6 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	interior->room_geom->modified_by_player = 1; // make sure TP stays in this building
 	// Note: no damage done for TP
 	return 1;
-}
-
-bool building_t::apply_tape(point const &pos, vector3d const &dir, float width, colorRGBA const &color) {
-	assert(has_room_geom());
-	static point last_tape_pos;
-	// TODO: add tape
-	//interior->room_geom->decal_manager.tp_tape_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, color, normal);
-	interior->room_geom->modified_by_player = 1; // make sure tape stays in this building
-	last_tape_pos = pos;
-	// Note: no damage done for tape
-	return 0;
 }
 
 void building_t::add_blood_decal(point const &pos) {

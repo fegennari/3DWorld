@@ -976,15 +976,20 @@ void paint_draw_t::draw_paint() const {
 	glDepthMask(GL_TRUE);
 }
 
+void building_decal_manager_t::commit_pend_tape_qbd() {
+	pend_tape_qbd.add_quads(tp_tape_qbd);
+	pend_tape_qbd.clear();
+}
 void building_decal_manager_t::draw_building_interior_decals(bool player_in_building) const {
 	paint_draw[1].draw_paint(); // draw exterior paint always - this will show up on windows (even when looking outside into another part of the same building)
 	if (!player_in_building) return;
 	paint_draw[0].draw_paint(); // draw interior paint
 
-	if (!tp_tape_qbd.empty()) { // toilet paper squares and tape lines
+	if (!tp_tape_qbd.empty() || !pend_tape_qbd.empty()) { // toilet paper squares and tape lines
 		glDisable(GL_CULL_FACE); // draw both sides
 		select_texture(WHITE_TEX);
 		tp_tape_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
+		pend_tape_qbd.draw();
 		glEnable(GL_CULL_FACE);
 	}
 	if (!blood_qbd.empty()) {
