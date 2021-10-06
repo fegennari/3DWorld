@@ -797,6 +797,7 @@ struct building_interior_t {
 		vector<room_object_t>::const_iterator self, vector3d &cnorm, float &hardness, int &obj_ix) const;
 	bool check_sphere_coll_walls_elevators_doors(building_t const &building, point &pos, point const &p_last, float radius,
 		float wall_test_extra_z, bool check_open_doors, vector3d *cnorm) const;
+	bool line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const;
 	void update_dynamic_draw_data() {assert(room_geom); room_geom->update_dynamic_draw_data();}
 	void get_avoid_cubes(vect_cube_t &avoid, float z1, float z2, float floor_thickness, bool same_as_player) const;
 };

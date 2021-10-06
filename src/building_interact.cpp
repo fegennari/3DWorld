@@ -974,7 +974,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_FPLACE    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   2000.0,"fireplace");
 	bldg_obj_types[TYPE_LBASKET   ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 12.0,  2.0,   "laundry basket");
 	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 2, 300.0, 500.0, "water heater");
-	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 1.0,   0.4,   "duct tape", 2000);
+	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 1.0,   0.4,   "duct tape", 1000);
 	// player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -2065,6 +2065,13 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	return 1;
 }
 
+void add_tape_quad(point const &p1, point const &p2, float height, colorRGBA const &color, quad_batch_draw &qbd) {
+	vector3d const dir(p2 - p1), zoff(0.5*height*plus_z);
+	vector3d normal(cross_product(dir, plus_z).get_norm());
+	point const pts[4] = {(p1 - zoff), (p1 + zoff), (p2 + zoff), (p2 - zoff)};
+	qbd.add_quad_pts(pts, color, normal);
+}
+
 bool building_t::maybe_update_tape(point const &player_pos) {
 	if (!tape_manager.in_use) return 0;
 	assert(has_room_geom());
@@ -2079,18 +2086,16 @@ bool building_t::maybe_update_tape(point const &player_pos) {
 		interior->room_geom->modified_by_player = 1; // make sure tape stays in this building
 	}
 	else {
-		point const last_pt(tape_manager.points.back());
-		vector3d const dir(pos - last_pt), zoff(0.5*thickness*plus_z);
-		vector3d normal(cross_product(dir, plus_z).get_norm());
-		point const pts[4] = {(last_pt - zoff), (last_pt + zoff), (pos + zoff), (pos - zoff)};
-		decal_mgr.pend_tape_qbd.clear();
-		decal_mgr.pend_tape_qbd.add_quad_pts(pts, obj.color, normal);
-		bool const add_new_pt = 0; // TODO: check building ray cast between last_pt and pos
+		point last_pt(tape_manager.points.back()), p_int;
 
-		if (add_new_pt) {
-			tape_manager.points.push_back(pos);
-			decal_mgr.commit_pend_tape_qbd();
+		if (interior->line_coll(*this, last_pt, pos, p_int)) {
+			tape_manager.points.push_back(p_int);
+			add_tape_quad(last_pt, p_int, thickness, obj.color, decal_mgr.tp_tape_qbd);
+			last_pt = p_int;
+			//decal_mgr.commit_pend_tape_qbd();
 		}
+		decal_mgr.pend_tape_qbd.clear();
+		add_tape_quad(last_pt, pos, thickness, obj.color, decal_mgr.pend_tape_qbd);
 		// update use count based on length change
 		float const prev_dist(p2p_dist(last_pt, tape_manager.last_pos)), cur_dist(p2p_dist(last_pt, pos)), delta(cur_dist - prev_dist);
 		int const delta_use_count(round_fp(delta/thickness));

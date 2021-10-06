@@ -639,6 +639,65 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	return had_coll;
 }
 
+bool get_line_clip_update_t(point const &p1, point const &p2, cube_t const &c, float t) {
+	float tmin(0.0), tmax(1.0);
+	if (get_line_clip(p1, p2, c.d, tmin, tmax) && tmin < t) {t = tmin; return 1;}
+	return 0;
+}
+bool get_line_clip_update_t(point const &p1, point const &p2, vect_cube_t const &cubes, float t) {
+	bool had_coll(0);
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {had_coll |= get_line_clip_update_t(p1, p2, *i, t);}
+	return had_coll;
+}
+
+bool building_interior_t::line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const {
+	bool had_coll(0);
+	float t(1.0);
+	get_line_clip_update_t(p1, p2, floors,   t);
+	get_line_clip_update_t(p1, p2, ceilings, t);
+	for (unsigned d = 0; d < 2; ++d) {get_line_clip_update_t(p1, p2, walls[d], t);}
+
+	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
+		// TODO: handle open elevator
+		had_coll |= get_line_clip_update_t(p1, p2, *e, t); // handle as a single blocking cube
+	} // for e
+	for (auto i = doors.begin(); i != doors.end(); ++i) {
+		if (i->open) {
+			cube_t door_bounds(*i);
+			door_bounds.expand_by_xy(i->get_width());
+			if (!check_line_clip(p1, p2, i->d)) continue; // check intersection with rough/conservative door bounds (optimization)
+			tquad_with_ix_t const door(building.set_door_from_cube(*i, i->dim, i->open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, i->open, 0, 0, i->hinge_side));
+			vector3d normal(door.get_norm());
+			// TODO: line intersect extruded polygon
+			continue;
+		}
+		had_coll |= get_line_clip_update_t(p1, p2, *i, t);
+	} // for i
+	if (room_geom) { // collision with room geometry
+		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
+			if (c->no_coll()) continue;
+			//if (c->type == TYPE_ELEVATOR) {} // special handling for elevators
+			//if (c->type == TYPE_RAILING) {}
+
+			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+				// TODO
+			}
+			else if (c->shape == SHAPE_SPHERE) { // sphere
+				// TODO
+			}
+			else if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
+				// TODO
+			}
+			//else if (c->type == TYPE_STALL || c->type == TYPE_SHOWER) {}
+			else { // assume it's a cube
+				had_coll |= get_line_clip_update_t(p1, p2, *c, t);
+			}
+		} // for c
+	}
+	if (had_coll) {p_int = p1 + t*(p2 - p1);}
+	return had_coll;
+}
+
 // Note: p1/p2 are in building space; return value: 0=none, 1=side, 2=roof, 3=details
 unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t, vector<point> &points, bool occlusion_only, bool ret_any_pt, bool no_coll_pt) const {
 	point p1r(p1), p2r(p2); // copy before clipping
@@ -707,7 +766,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 				} // for S
 			}
 		}
-		else if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; hit = 1;} // cube
+		else {hit |= get_line_clip_update_t(p1r, p2r, *i, t);} // cube
 
 		if (hit) {
 			if (occlusion_only) return 1; // early exit
@@ -722,7 +781,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 	if (occlusion_only) return 0;
 
 	for (auto i = details.begin(); i != details.end(); ++i) {
-		if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;} // details cube
+		if (get_line_clip_update_t(p1r, p2r, *i, t)) {coll = 3;} // details cube
 	}
 	if (!no_coll_pt || !vert) { // vert line already tested building cylins/cubes, and marked coll roof, no need to test again unless we need correct coll_pt t-val
 		for (auto i = roof_tquads.begin(); i != roof_tquads.end(); ++i) {
@@ -731,7 +790,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 	}
 	if (!vert) { // don't need to check fences for vertical collisions since they're horizontal blockers
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
-			if (get_line_clip(p1r, p2r, i->d, tmin, tmax) && tmin < t) {t = tmin; coll = 3;} // counts as details cube
+			if (get_line_clip_update_t(p1r, p2r, *i, t)) {coll = 3;} // counts as details cube
 		}
 	}
 	return coll; // Note: no collisions with windows or doors, since they're colinear with walls; no collision with interior for now
