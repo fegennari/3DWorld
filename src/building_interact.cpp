@@ -2068,8 +2068,10 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 void add_tape_quad(point const &p1, point const &p2, float height, colorRGBA const &color, quad_batch_draw &qbd) {
 	vector3d const dir(p2 - p1), zoff(0.5*height*plus_z);
 	vector3d normal(cross_product(dir, plus_z).get_norm());
-	point const pts[4] = {(p1 - zoff), (p1 + zoff), (p2 + zoff), (p2 - zoff)};
-	qbd.add_quad_pts(pts, color, normal);
+	point pts[4] = {(p1 - zoff), (p1 + zoff), (p2 + zoff), (p2 - zoff)};
+	qbd.add_quad_pts(pts, color,  normal);
+	swap(pts[1], pts[3]); // swap winding order and draw with reversed normal for two sided lighting
+	qbd.add_quad_pts(pts, color, -normal);
 }
 
 bool building_t::maybe_update_tape(point const &player_pos) {
@@ -2088,17 +2090,17 @@ bool building_t::maybe_update_tape(point const &player_pos) {
 	else {
 		point last_pt(tape_manager.points.back()), p_int;
 
-		if (interior->line_coll(*this, last_pt, pos, p_int)) {
+		if (!dist_less_than(last_pt, pos, thickness) && interior->line_coll(*this, last_pt, pos, p_int)) { // no short segments
+			p_int += 0.5*thickness*(pos - last_pt).get_norm(); // move past the object to avoid an intersection at the starting point on the next call
 			tape_manager.points.push_back(p_int);
-			add_tape_quad(last_pt, p_int, thickness, obj.color, decal_mgr.tp_tape_qbd);
+			add_tape_quad(last_pt, p_int, thickness, obj.color, decal_mgr.tape_qbd);
 			last_pt = p_int;
-			//decal_mgr.commit_pend_tape_qbd();
 		}
 		decal_mgr.pend_tape_qbd.clear();
 		add_tape_quad(last_pt, pos, thickness, obj.color, decal_mgr.pend_tape_qbd);
 		// update use count based on length change
 		float const prev_dist(p2p_dist(last_pt, tape_manager.last_pos)), cur_dist(p2p_dist(last_pt, pos)), delta(cur_dist - prev_dist);
-		int const delta_use_count(round_fp(delta/thickness));
+		int const delta_use_count(round_fp(0.5f*delta/thickness));
 		if (!player_inventory.update_last_item_use_count(delta_use_count)) {tape_manager.clear();} // check if we ran out of tape
 	}
 	tape_manager.last_pos = pos;
@@ -2364,7 +2366,7 @@ bool building_t::apply_toilet_paper(point const &pos, vector3d const &dir, float
 	if (d1 == zero_vector) {d1 = plus_x;} else {d1.normalize();}
 	vector3d d2(cross_product(d1, plus_z));
 	if (d2 == zero_vector) {d2 = plus_y;} else {d2.normalize();}
-	interior->room_geom->decal_manager.tp_tape_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
+	interior->room_geom->decal_manager.tp_qbd.add_quad_dirs(point(pos.x, pos.y, zval), d1*half_width, d2*half_width, WHITE, plus_z);
 	interior->room_geom->modified_by_player = 1; // make sure TP stays in this building
 	// Note: no damage done for TP
 	return 1;

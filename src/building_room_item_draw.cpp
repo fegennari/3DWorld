@@ -977,7 +977,7 @@ void paint_draw_t::draw_paint() const {
 }
 
 void building_decal_manager_t::commit_pend_tape_qbd() {
-	pend_tape_qbd.add_quads(tp_tape_qbd);
+	pend_tape_qbd.add_quads(tape_qbd);
 	pend_tape_qbd.clear();
 }
 void building_decal_manager_t::draw_building_interior_decals(bool player_in_building) const {
@@ -985,12 +985,16 @@ void building_decal_manager_t::draw_building_interior_decals(bool player_in_buil
 	if (!player_in_building) return;
 	paint_draw[0].draw_paint(); // draw interior paint
 
-	if (!tp_tape_qbd.empty() || !pend_tape_qbd.empty()) { // toilet paper squares and tape lines
+	if (!tp_qbd.empty()) { // toilet paper squares: double sided, lit from top
 		glDisable(GL_CULL_FACE); // draw both sides
 		select_texture(WHITE_TEX);
-		tp_tape_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
-		pend_tape_qbd.draw();
+		tp_qbd.draw(); // use a VBO for this if the player leaves the building and then comes back?
 		glEnable(GL_CULL_FACE);
+	}
+	if (!tape_qbd.empty() || !pend_tape_qbd.empty()) { // tape lines: single sided so that lighting works, both sides drawn independently
+		select_texture(WHITE_TEX);
+		tape_qbd.draw();
+		pend_tape_qbd.draw();
 	}
 	if (!blood_qbd.empty()) {
 		select_texture(BLOOD_SPLAT_TEX);
