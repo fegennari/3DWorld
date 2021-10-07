@@ -639,12 +639,12 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 	return had_coll;
 }
 
-bool get_line_clip_update_t(point const &p1, point const &p2, cube_t const &c, float t) {
+bool get_line_clip_update_t(point const &p1, point const &p2, cube_t const &c, float &t) {
 	float tmin(0.0), tmax(1.0);
 	if (get_line_clip(p1, p2, c.d, tmin, tmax) && tmin < t) {t = tmin; return 1;}
 	return 0;
 }
-bool get_line_clip_update_t(point const &p1, point const &p2, vect_cube_t const &cubes, float t) {
+bool get_line_clip_update_t(point const &p1, point const &p2, vect_cube_t const &cubes, float &t) {
 	bool had_coll(0);
 	for (auto i = cubes.begin(); i != cubes.end(); ++i) {had_coll |= get_line_clip_update_t(p1, p2, *i, t);}
 	return had_coll;
@@ -653,9 +653,9 @@ bool get_line_clip_update_t(point const &p1, point const &p2, vect_cube_t const 
 bool building_interior_t::line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const {
 	bool had_coll(0);
 	float t(1.0);
-	get_line_clip_update_t(p1, p2, floors,   t);
-	get_line_clip_update_t(p1, p2, ceilings, t);
-	for (unsigned d = 0; d < 2; ++d) {get_line_clip_update_t(p1, p2, walls[d], t);}
+	had_coll |= get_line_clip_update_t(p1, p2, floors,   t);
+	had_coll |= get_line_clip_update_t(p1, p2, ceilings, t);
+	for (unsigned d = 0; d < 2; ++d) {had_coll |= get_line_clip_update_t(p1, p2, walls[d], t);}
 
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
 		// TODO: handle open elevator
