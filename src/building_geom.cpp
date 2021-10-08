@@ -319,6 +319,11 @@ float room_object_t::get_radius() const {
 	assert(0); // cubes don't have a radius
 	return 0.0; // never gets here
 }
+cylinder_3dw room_object_t::get_cylinder() const {
+	float const radius(get_radius());
+	point const center(get_cube_center());
+	return cylinder_3dw(point(center.x, center.y, z1()), point(center.x, center.y, z2()), radius, radius);
+}
 
 // Note: returns bit vector for each cube that collides; supports up to 32 cubes
 unsigned check_cubes_collision(cube_t const *const cubes, unsigned num_cubes, point &pos, point const &p_last, float radius, vector3d *cnorm) {
@@ -452,9 +457,8 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 				if ((railing_zval - get_railing_height(*c)) > float(pos.z + camera_zh) || railing_zval < (pos.z - radius)) continue; // no Z collision
 			}
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
-				float const cradius(c->get_radius());
-				point const center(c->get_cube_center());
-				cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, (c->z2() + radius)), cradius, cradius); // extend upward by radius
+				cylinder_3dw cylin(c->get_cylinder());
+				cylin.p2.z += radius; // extend upward by radius
 				had_coll |= sphere_vert_cylin_intersect_with_ends(pos, xy_radius, cylin, cnorm);
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere
@@ -541,9 +545,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 		// add special handling for things like elevators, cubicles, and bathroom stalls? right now these are only in office buildings, where there are no dynamic objects
 
 		if (c->shape == SHAPE_CYLIN) { // vertical cylinder (including table)
-			float const cradius(c->get_radius());
-			point const center(c->get_cube_center());
-			cylinder_3dw const cylin(point(center.x, center.y, c->z1()), point(center.x, center.y, c->z2()), cradius, cradius);
+			cylinder_3dw const cylin(c->get_cylinder());
 
 			if (c->type == TYPE_TABLE) {
 				cylinder_3dw top(cylin), base(cylin);

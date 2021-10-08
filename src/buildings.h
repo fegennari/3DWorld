@@ -412,6 +412,7 @@ struct room_object_t : public cube_t {
 	unsigned get_bottle_type() const {return ((obj_id&63) % NUM_BOTTLE_TYPES);} // first 6 bits are bottle type
 	unsigned get_orient () const {return (2*dim + dir);}
 	float get_radius() const;
+	cylinder_3dw get_cylinder() const;
 	void toggle_lit_state() {flags ^= RO_FLAG_LIT;}
 	static bool enable_rugs();
 	static bool enable_pictures();
