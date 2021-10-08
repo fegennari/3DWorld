@@ -624,8 +624,8 @@ int line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1
 }
 
 
-// This one supports different radii at the ends and tests against a solid cylinder
-bool line_intersect_cylinder(point const &p1, point const &p2, cylinder_3dw const &c, bool check_ends) {
+// This one supports different radii at the ends and tests against a solid cylinder; t may be modified even if 0 is returned
+bool line_intersect_cylinder_with_t(point const &p1, point const &p2, cylinder_3dw const &c, bool check_ends, float &t) {
 
 	if (line_line_dist(p1, p2, c.p1, c.p2) > max(c.r1, c.r2)) return 0;
 	int npts(0);
@@ -638,7 +638,7 @@ bool line_intersect_cylinder(point const &p1, point const &p2, cylinder_3dw cons
 	float const denom(dot_product(norm, v1));
 
 	if (fabs(denom) > TOLERANCE) {
-		float const t(dot_product_ptv(norm, c.p1, p2)/denom); // check if point is inside cylinder - close to correct
+		t = dot_product_ptv(norm, c.p1, p2)/denom; // check if point is inside cylinder - close to correct
 
 		if ((t >= 0.0 && t <= 1.0) || point_in_cylinder(c.p1, c.p2, p1, c.r1, c.r2) || point_in_cylinder(c.p1, c.p2, p2, c.r1, c.r2)) {
 			vector3d const norm2(get_poly_norm(pts));
@@ -646,7 +646,6 @@ bool line_intersect_cylinder(point const &p1, point const &p2, cylinder_3dw cons
 		}
 	}
 	if (check_ends) {
-		float t; // unused
 		point const pt[2] = {p1, p2};
 		point const cp[2] = {c.p1, c.p2};
 		float const cr[2] = {c.r1, c.r2};
@@ -657,6 +656,12 @@ bool line_intersect_cylinder(point const &p1, point const &p2, cylinder_3dw cons
 		}
 	}
 	return 0;
+}
+
+// This one supports different radii at the ends and tests against a solid cylinder
+bool line_intersect_cylinder(point const &p1, point const &p2, cylinder_3dw const &c, bool check_ends) {
+	float t(0.0);
+	return line_intersect_cylinder_with_t(p1, p2, c, check_ends, t);
 }
 
 
