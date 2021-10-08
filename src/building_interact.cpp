@@ -258,7 +258,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 
 			if (!door_bcube.line_intersects(closest_to, query_ray_end)) { // if camera ray doesn't intersect the door frame, check for ray intersection with opened door
 				if (!i->open || (closest_to[i->dim] < i->d[i->dim][i->open_dir]) == i->open_dir) continue; // closed, or player not on the side the door opens to
-				tquad_with_ix_t const door(set_door_from_cube(*i, i->dim, i->open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, i->open, 0, 0, i->hinge_side));
+				tquad_with_ix_t const door(set_interior_door_from_cube(*i));
 				if (!line_poly_intersect(closest_to, query_ray_end, door.pts, door.npts, door.get_norm(), t)) continue; // test camera ray intersection with door plane
 			}
 			closest_dist_sq = dist_sq;

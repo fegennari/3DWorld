@@ -1022,6 +1022,7 @@ struct building_t : public building_geom_t {
 		bool dim, bool dir, bool opened, bool opens_out, bool exterior, bool on_stairs=0, bool hinge_side=0) const;
 	tquad_with_ix_t set_door_from_cube(cube_t const &c, bool dim, bool dir, unsigned type, float pos_adj,
 		bool exterior, bool opened, bool opens_out, bool opens_up, bool swap_sides) const;
+	tquad_with_ix_t set_interior_door_from_cube(door_t const &door) const;
 	void invalidate_nav_graph();
 	point local_to_camera_space(point const &pos) const;
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;

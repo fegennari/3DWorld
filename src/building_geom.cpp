@@ -621,7 +621,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			cube_t door_bounds(*i);
 			door_bounds.expand_by_xy(i->get_width());
 			if (!sphere_cube_intersect(pos, radius, door_bounds)) continue; // check intersection with rough/conservative door bounds (optimization)
-			tquad_with_ix_t const door(building.set_door_from_cube(*i, i->dim, i->open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, i->open, 0, 0, i->hinge_side));
+			tquad_with_ix_t const door(building.set_interior_door_from_cube(*i));
 			vector3d normal(door.get_norm());
 			if (dot_product_ptv(normal, pos, door.pts[0]) < 0.0) {normal.negate();} // use correct normal sign
 			float rdist, thick;
@@ -668,7 +668,7 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 			cube_t door_bounds(*i);
 			door_bounds.expand_by_xy(i->get_width());
 			if (!check_line_clip(p1, p2, i->d)) continue; // check intersection with rough/conservative door bounds (optimization)
-			tquad_with_ix_t const door(building.set_door_from_cube(*i, i->dim, i->open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, i->open, 0, 0, i->hinge_side));
+			tquad_with_ix_t const door(building.set_interior_door_from_cube(*i));
 			vector3d normal(door.get_norm());
 			// TODO: line intersect extruded polygon
 			continue;
@@ -2019,6 +2019,9 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 		}
 	}
 	return door;
+}
+tquad_with_ix_t building_t::set_interior_door_from_cube(door_t const &door) const {
+	return set_door_from_cube(door, door.dim, door.open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, door.open, 0, 0, door.hinge_side);
 }
 
 bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building, bool roof_access) { // exterior doors
