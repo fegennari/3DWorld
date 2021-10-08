@@ -651,10 +651,9 @@ bool get_line_clip_update_t(point const &p1, point const &p2, vect_cube_t const 
 	for (auto i = cubes.begin(); i != cubes.end(); ++i) {had_coll |= get_line_clip_update_t(p1, p2, *i, t);}
 	return had_coll;
 }
-
 bool building_interior_t::line_coll(building_t const &building, point const &p1, point const &p2, point &p_int) const {
 	bool had_coll(0);
-	float t(1.0);
+	float t(1.0), tmin(1.0);
 	had_coll |= get_line_clip_update_t(p1, p2, floors,   t);
 	had_coll |= get_line_clip_update_t(p1, p2, ceilings, t);
 	for (unsigned d = 0; d < 2; ++d) {had_coll |= get_line_clip_update_t(p1, p2, walls[d], t);}
@@ -671,33 +670,72 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 			tquad_with_ix_t const door(building.set_interior_door_from_cube(*i));
 			vector3d normal(door.get_norm());
 			// TODO: line intersect extruded polygon
-			continue;
 		}
-		had_coll |= get_line_clip_update_t(p1, p2, *i, t);
+		else {had_coll |= get_line_clip_update_t(p1, p2, *i, t);}
 	} // for i
-	if (room_geom) { // collision with room geometry
+	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
-			if (c->no_coll()) continue;
-			//if (c->type == TYPE_ELEVATOR) {} // special handling for elevators
-			//if (c->type == TYPE_RAILING) {}
+			if (c->no_coll() || c->type == TYPE_BLOCKER) continue;
 
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
-				// TODO
+				if (line_intersect_cylinder_with_t(p1, p2, c->get_cylinder(), 1, tmin) && tmin < t) {t = tmin; had_coll = 1;}
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere
-				// TODO
+				float const radius(c->get_radius());
+				if (sphere_test_comp(p1, c->get_cube_center(), (p1 - p2), radius*radius, tmin) && tmin < t) {t = tmin; had_coll = 1;}
 			}
-			else if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
-				// TODO
-			}
+			//else if (c->type == TYPE_ELEVATOR) {} // special handling for elevators
+			//else if (c->type == TYPE_RAILING) {}
+			//else if (c->type == TYPE_CLOSET) {} // special case to handle closet interiors
 			//else if (c->type == TYPE_STALL || c->type == TYPE_SHOWER) {}
-			else { // assume it's a cube
-				had_coll |= get_line_clip_update_t(p1, p2, *c, t);
-			}
+			else {had_coll |= get_line_clip_update_t(p1, p2, *c, t);} // assume it's a cube
 		} // for c
 	}
 	if (had_coll) {p_int = p1 + t*(p2 - p1);}
 	return had_coll;
+}
+
+void update_closest_pt(cube_t const &cube, point const &pos, point &closest, float &dmin_sq) {
+	point const cand(cube.closest_pt(pos));
+	float const dsq(p2p_dist_sq(pos, cand));
+	if (dmin_sq < 0.0 || dsq < dmin_sq) {closest = cand; dmin_sq = dsq;}
+}
+void update_closest_pt(vect_cube_t const &cubes, point const &pos, point &closest, float &dmin_sq) {
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {update_closest_pt(*c, pos, closest, dmin_sq);}
+}
+point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos) const {
+	float dmin_sq(-1.0); // start at an invalid value
+	point closest(pos); // start at pt - will keep this value if there are no objects
+	update_closest_pt(floors,   pos, closest, dmin_sq);
+	update_closest_pt(ceilings, pos, closest, dmin_sq);
+	for (unsigned d = 0; d < 2; ++d) {update_closest_pt(walls[d], pos, closest, dmin_sq);}
+	for (auto e = elevators.begin(); e != elevators.end(); ++e) {update_closest_pt(*e, pos, closest, dmin_sq);} // ignores open elevator doors
+
+	for (auto i = doors.begin(); i != doors.end(); ++i) {
+		if (i->open) {} // handle open doors? - closest point on extruded polygon
+		else {update_closest_pt(*i, pos, closest, dmin_sq);}
+	}
+	if (room_geom) { // check room geometry
+		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
+			if (c->no_coll() || c->type == TYPE_BLOCKER) continue;
+
+			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+				point const center(c->get_cube_center());
+				float const radius(c->get_radius()), dsq_xy(max(0.0f, (p2p_dist_xy_sq(pos, center) - radius*radius)));
+				float const zval(max(c->z1(), min(c->z2(), pos.z))), dz(pos.z - zval), dsq(dsq_xy + dz*dz);
+				if (dmin_sq < 0.0 || dsq < dmin_sq) {closest = point(center.x, center.y, zval) + radius*(point(pos.x, pos.y, 0.0) - point(center.x, center.y, 0.0)).get_norm(); dmin_sq = dsq;}
+			}
+			else if (c->shape == SHAPE_SPHERE) { // sphere
+				point const center(c->get_cube_center());
+				float const radius(c->get_radius()), dsq(max(0.0f, (p2p_dist_sq(pos, center) - radius*radius)));
+				if (dmin_sq < 0.0 || dsq < dmin_sq) {closest = center + radius*(pos - center).get_norm(); dmin_sq = dsq;}
+			}
+			//else if (c->type == TYPE_CLOSET) {} // special case to handle closet interiors?
+			else {update_closest_pt(*c, pos, closest, dmin_sq);} // assume it's a cube
+		} // for c
+	}
+	// what about exterior building walls?
+	return closest;
 }
 
 // Note: p1/p2 are in building space; return value: 0=none, 1=side, 2=roof, 3=details

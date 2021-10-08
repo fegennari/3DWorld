@@ -2082,8 +2082,13 @@ bool building_t::maybe_update_tape(point const &player_pos) {
 	float const thickness(obj.dz());
 	point const pos(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
 
-	if (tape_manager.points.empty()) { // first point
-		tape_manager.points.push_back(pos);
+	if (0) { // TODO: trigger this case when the tape roll is empty, the player switches items, or the player leaves the building
+		if (tape_manager.points.empty()) return 0; // no tape
+		point const end_pos(interior->find_closest_pt_on_obj_to_pos(*this, pos));
+		add_tape_quad(tape_manager.points.back(), end_pos, thickness, obj.color, decal_mgr.tape_qbd); // add final segment
+	}
+	else if (tape_manager.points.empty()) { // first point
+		tape_manager.points.push_back(interior->find_closest_pt_on_obj_to_pos(*this, pos)); // starting position for tape
 		decal_mgr.commit_pend_tape_qbd(); // commit any previous tape
 		interior->room_geom->modified_by_player = 1; // make sure tape stays in this building
 	}
@@ -2100,7 +2105,7 @@ bool building_t::maybe_update_tape(point const &player_pos) {
 		add_tape_quad(last_pt, pos, thickness, obj.color, decal_mgr.pend_tape_qbd);
 		// update use count based on length change
 		float const prev_dist(p2p_dist(last_pt, tape_manager.last_pos)), cur_dist(p2p_dist(last_pt, pos)), delta(cur_dist - prev_dist);
-		int const delta_use_count(round_fp(0.5f*delta/thickness));
+		int const delta_use_count(round_fp(0.5f*delta/thickness)); // TODO: fix drawing use count
 		if (!player_inventory.update_last_item_use_count(delta_use_count)) {tape_manager.clear();} // check if we ran out of tape
 	}
 	tape_manager.last_pos = pos;
