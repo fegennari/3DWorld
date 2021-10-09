@@ -2094,17 +2094,22 @@ bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 	room_object_t const &obj(tape_manager.tape);
 	float const thickness(obj.dz()), pad_dist(0.1*thickness);
 	point const pos(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
+	point sound_pos;
+	float sound_gain(0.0);
 
 	if (end_of_tape) { // add final tape
 		if (tape_manager.points.empty()) return 0; // no tape
 		decal_mgr.pend_tape_qbd.clear();
 		point const end_pos(interior->find_closest_pt_on_obj_to_pos(*this, pos, pad_dist, 1)); // no_ceil_floor=1
 		add_tape_quad(tape_manager.points.back(), end_pos, thickness, obj.color, decal_mgr.tape_qbd); // add final segment
+		sound_pos = end_pos; sound_gain = 1.0;
 	}
 	else if (tape_manager.points.empty()) { // first point
-		tape_manager.points.push_back(interior->find_closest_pt_on_obj_to_pos(*this, pos, pad_dist, 1)); // starting position for tape; no_ceil_floor=1
+		point const start_pos(interior->find_closest_pt_on_obj_to_pos(*this, pos, pad_dist, 1)); // starting position for tape; no_ceil_floor=1
+		tape_manager.points.push_back(start_pos);
 		decal_mgr.commit_pend_tape_qbd(); // commit any previous tape
 		interior->room_geom->modified_by_player = 1; // make sure tape stays in this building
+		sound_pos = start_pos; sound_gain = 1.0;
 	}
 	else {
 		point last_pt(tape_manager.points.back()), p_int;
@@ -2114,6 +2119,7 @@ bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 			tape_manager.points.push_back(p_int);
 			add_tape_quad(last_pt, p_int, thickness, obj.color, decal_mgr.tape_qbd);
 			last_pt = p_int;
+			//sound_pos = p_int; sound_gain = 0.1; // too noisy?
 		}
 		decal_mgr.pend_tape_qbd.clear();
 		add_tape_quad(last_pt, pos, thickness, obj.color, decal_mgr.pend_tape_qbd);
@@ -2121,6 +2127,10 @@ bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 		float const prev_dist(p2p_dist(last_pt, tape_manager.last_pos)), cur_dist(p2p_dist(last_pt, pos)), delta(cur_dist - prev_dist);
 		int const delta_use_count(round_fp(0.5f*delta/thickness));
 		if (!player_inventory.update_last_item_use_count(delta_use_count)) {tape_manager.clear();} // check if we ran out of tape
+	}
+	if (sound_gain > 0.0) { // play a tape sound
+		gen_sound_thread_safe(SOUND_TAPE, local_to_camera_space(sound_pos), sound_gain);
+		register_building_sound(sound_pos, 0.35*sound_gain);
 	}
 	tape_manager.last_pos = pos;
 	return 1;

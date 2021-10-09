@@ -150,6 +150,7 @@ public:
 		add_new_sound("flowingwater.wav");// SOUND_SINK
 		add_new_sound("metal_door.wav" ); // SOUND_METAL_DOOR
 		add_new_sound("phone_ring.wav" ); // SOUND_PHONE_RING
+		add_new_sound("tape.wav"       ); // SOUND_TAPE
 		cout << endl;
 
 		// create sources
