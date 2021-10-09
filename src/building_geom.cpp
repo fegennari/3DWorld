@@ -663,24 +663,8 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 		for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
 	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
-		if (i->open) {
-			cube_t door_bounds(*i);
-			door_bounds.expand_by_xy(i->get_width());
-			if (!check_line_clip(p1, p2, door_bounds.d)) continue; // check intersection with rough/conservative door bounds (optimization)
-			tquad_with_ix_t const door(building.set_interior_door_from_cube(*i));
-			vector3d const normal(door.get_norm()), v1(p2 - p1);
-			point pts[2][4];
-			gen_poly_planes(door.pts, door.npts, normal, i->get_width(), pts);
-			float const dp(dot_product(v1, normal));
-			bool const test_side(dp > 0.0);
-			
-			if (thick_poly_intersect(v1, p1, normal, pts, test_side, door.npts)) {
-				tmin = dot_product_ptv(normal, pts[test_side][0], p1)/dp; // calculate t, since thick_poly_intersect() doesn't return it
-				if (tmin > 0.0 && tmin < t) {t = tmin; had_coll = 1;}
-			}
-		}
-		else {had_coll |= get_line_clip_update_t(p1, p2, *i, t);}
-	} // for i
+		if (!i->open) {had_coll |= get_line_clip_update_t(p1, p2, *i, t);} // only check if closed
+	}
 	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
 			if ((c->no_coll() && c->type != TYPE_WALL_TRIM) || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // keep wall trim but skip blockers and elevators
@@ -698,7 +682,6 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 				float const radius(c->get_radius());
 				if (sphere_test_comp(p1, c->get_cube_center(), (p1 - p2), radius*radius, tmin) && tmin < t) {t = tmin; had_coll = 1;}
 			}
-			//else if (c->type == TYPE_RAILING) {}
 			//else if (c->type == TYPE_STALL || c->type == TYPE_SHOWER) {}
 			else {had_coll |= get_line_clip_update_t(p1, p2, *c, t);} // assume it's a cube
 		} // for c
