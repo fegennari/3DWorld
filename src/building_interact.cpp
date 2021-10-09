@@ -2078,16 +2078,17 @@ bool building_t::maybe_update_tape(point const &player_pos) {
 	assert(has_room_geom());
 	auto &decal_mgr(interior->room_geom->decal_manager);
 	room_object_t const &obj(tape_manager.tape);
-	float const thickness(obj.dz());
+	float const thickness(obj.dz()), pad_dist(0.1*thickness);
 	point const pos(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
 
 	if (0) { // TODO: trigger this case when the tape roll is empty, the player switches items, or the player leaves the building
 		if (tape_manager.points.empty()) return 0; // no tape
-		point const end_pos(interior->find_closest_pt_on_obj_to_pos(*this, pos, 1)); // no_ceil_floor=1
+		decal_mgr.pend_tape_qbd.clear();
+		point const end_pos(interior->find_closest_pt_on_obj_to_pos(*this, pos, pad_dist, 1)); // no_ceil_floor=1
 		add_tape_quad(tape_manager.points.back(), end_pos, thickness, obj.color, decal_mgr.tape_qbd); // add final segment
 	}
 	else if (tape_manager.points.empty()) { // first point
-		tape_manager.points.push_back(interior->find_closest_pt_on_obj_to_pos(*this, pos, 1)); // starting position for tape; no_ceil_floor=1
+		tape_manager.points.push_back(interior->find_closest_pt_on_obj_to_pos(*this, pos, pad_dist, 1)); // starting position for tape; no_ceil_floor=1
 		decal_mgr.commit_pend_tape_qbd(); // commit any previous tape
 		interior->room_geom->modified_by_player = 1; // make sure tape stays in this building
 	}

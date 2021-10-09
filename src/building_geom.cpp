@@ -699,28 +699,30 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 	return had_coll;
 }
 
-void update_closest_pt(cube_t const &cube, point const &pos, point &closest, float &dmin_sq) {
-	point const cand(cube.closest_pt(pos));
+void update_closest_pt(cube_t const &cube, point const &pos, point &closest, float pad_dist, float &dmin_sq) {
+	cube_t cube_pad(cube);
+	cube_pad.expand_by(pad_dist);
+	point const cand(cube_pad.closest_pt(pos));
 	float const dsq(p2p_dist_sq(pos, cand));
 	if (dmin_sq < 0.0 || dsq < dmin_sq) {closest = cand; dmin_sq = dsq;}
 }
-void update_closest_pt(vect_cube_t const &cubes, point const &pos, point &closest, float &dmin_sq) {
-	for (auto c = cubes.begin(); c != cubes.end(); ++c) {update_closest_pt(*c, pos, closest, dmin_sq);}
+void update_closest_pt(vect_cube_t const &cubes, point const &pos, point &closest, float pad_dist, float &dmin_sq) {
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {update_closest_pt(*c, pos, closest, pad_dist, dmin_sq);}
 }
-point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, bool no_ceil_floor) const {
+point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const {
 	float dmin_sq(-1.0); // start at an invalid value
 	point closest(pos); // start at pt - will keep this value if there are no objects
 
 	if (!no_ceil_floor) {
-		update_closest_pt(floors,   pos, closest, dmin_sq);
-		update_closest_pt(ceilings, pos, closest, dmin_sq);
+		update_closest_pt(floors,   pos, closest, pad_dist, dmin_sq);
+		update_closest_pt(ceilings, pos, closest, pad_dist, dmin_sq);
 	}
-	for (unsigned d = 0; d < 2; ++d) {update_closest_pt(walls[d], pos, closest, dmin_sq);}
-	for (auto e = elevators.begin(); e != elevators.end(); ++e) {update_closest_pt(*e, pos, closest, dmin_sq);} // ignores open elevator doors
+	for (unsigned d = 0; d < 2; ++d) {update_closest_pt(walls[d], pos, closest, pad_dist, dmin_sq);}
+	for (auto e = elevators.begin(); e != elevators.end(); ++e) {update_closest_pt(*e, pos, closest, pad_dist, dmin_sq);} // ignores open elevator doors
 
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		if (i->open) {} // handle open doors? - closest point on extruded polygon
-		else {update_closest_pt(*i, pos, closest, dmin_sq);}
+		else {update_closest_pt(*i, pos, closest, pad_dist, dmin_sq);}
 	}
 	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
@@ -730,20 +732,20 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 				cube_t cubes[5];
 				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
 				unsigned const n_end((c->is_open() && !c->is_small_closet()) ? 4U : 5U); // skip open doors for large closets since this case is more complex
-				for (unsigned n = 0; n < n_end; ++n) {update_closest_pt(cubes[n], pos, closest, dmin_sq);}
+				for (unsigned n = 0; n < n_end; ++n) {update_closest_pt(cubes[n], pos, closest, pad_dist, dmin_sq);}
 			}
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 				point const center(c->get_cube_center());
-				float const radius(c->get_radius()), dsq_xy(max(0.0f, (p2p_dist_xy_sq(pos, center) - radius*radius)));
-				float const zval(max(c->z1(), min(c->z2(), pos.z))), dz(pos.z - zval), dsq(dsq_xy + dz*dz);
+				float const radius(c->get_radius() + pad_dist), dsq_xy(max(0.0f, (p2p_dist_xy_sq(pos, center) - radius*radius)));
+				float const zval(max(c->z1()-pad_dist, min(c->z2()+pad_dist, pos.z))), dz(pos.z - zval), dsq(dsq_xy + dz*dz);
 				if (dmin_sq < 0.0 || dsq < dmin_sq) {closest = point(center.x, center.y, zval) + radius*(point(pos.x, pos.y, 0.0) - point(center.x, center.y, 0.0)).get_norm(); dmin_sq = dsq;}
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere
 				point const center(c->get_cube_center());
-				float const radius(c->get_radius()), dsq(max(0.0f, (p2p_dist_sq(pos, center) - radius*radius)));
+				float const radius(c->get_radius() + pad_dist), dsq(max(0.0f, (p2p_dist_sq(pos, center) - radius*radius)));
 				if (dmin_sq < 0.0 || dsq < dmin_sq) {closest = center + radius*(pos - center).get_norm(); dmin_sq = dsq;}
 			}
-			else {update_closest_pt(*c, pos, closest, dmin_sq);} // assume it's a cube
+			else {update_closest_pt(*c, pos, closest, pad_dist, dmin_sq);} // assume it's a cube
 		} // for c
 	}
 	// what about exterior building walls?
