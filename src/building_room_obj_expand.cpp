@@ -5,6 +5,7 @@
 #include "function_registry.h"
 #include "buildings.h"
 
+float const TAPE_HEIGHT_TO_RADIUS = 0.6;
 
 float get_lamp_width_scale();
 vect_cube_t &get_temp_cubes();
@@ -363,6 +364,20 @@ void building_room_geom_t::get_shelf_objects(room_object_t const &c_in, cube_t c
 			C.shape      = SHAPE_CUBE; // reset for next object type
 			C.item_flags = 0; // reset for next object type
 		}
+		// add tape rolls
+		float const tape_radius(0.22*z_step), tape_height(TAPE_HEIGHT_TO_RADIUS*tape_radius); // fixed size
+
+		if (min(c_sz.x, c_sz.y) > 3.0*tape_radius) { // add if shelf wide/deep enough
+			unsigned const num_tapes(((rgen.rand()%4) < 3) ? (rgen.rand() % 4) : 0); // 0-3, 75% chance
+			C.dir  = C.dim = 0;
+			C.type = TYPE_TAPE;
+
+			for (unsigned n = 0; n < num_tapes; ++n) {
+				gen_xy_pos_for_round_obj(C, S, tape_radius, tape_height, 1.25*tape_radius, rgen);
+				C.color = tape_colors[rgen.rand() % NUM_TAPE_COLORS]; // random color
+				add_if_not_intersecting(C, objects, cubes);
+			}
+		}
 	} // for s
 }
 
@@ -522,7 +537,7 @@ void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_ge
 
 		if (diameter < 0.9*min(sz.x, sz.y)) { // if it can fit
 			obj = room_object_t(drawer, TYPE_TAPE, c.room_id, 0, 0, 0, 1.0, SHAPE_CYLIN, tape_colors[rgen.rand() % NUM_TAPE_COLORS]); // dim/dir don't matter, so use 0
-			obj.z2() = (obj.z1() + 0.25*diameter); // set height
+			obj.z2() = (obj.z1() + 0.5f*TAPE_HEIGHT_TO_RADIUS*diameter); // set height
 			set_rand_pos_for_sz(obj, 0, diameter, diameter, rgen);
 		}
 		break;
@@ -631,7 +646,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 			}
 		}
 		else if (obj_type == 6) { // rolls of tape
-			float height(0.032*floor_spacing), radius(1.25*height);
+			float height(0.032*floor_spacing), radius(height/TAPE_HEIGHT_TO_RADIUS);
 
 			for (unsigned m = 0; m < 2; ++m) {
 				if (2.0*radius < 0.95*min(c.dx(), c.dy())) break; // size is okay
