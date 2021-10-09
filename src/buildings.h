@@ -979,7 +979,7 @@ struct building_t : public building_geom_t {
 	void register_player_exit_building () const;
 	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2) const;
 	bool maybe_use_last_pickup_room_object(point const &player_pos);
-	bool maybe_update_tape(point const &player_pos);
+	bool maybe_update_tape(point const &player_pos, bool end_of_tape);
 	void draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);

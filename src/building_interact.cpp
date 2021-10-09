@@ -692,11 +692,11 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 			c->translate(new_center - center);
 		}
 	} // for c
-	if (maybe_update_tape(player_pos)) {}
-	else if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
+	if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
 		maybe_use_last_pickup_room_object(player_pos);
 		use_last_pickup_object = 0; // reset for next frame
 	}
+	maybe_update_tape(player_pos, 0); // end_of_tape=0
 }
 
 bool building_interior_t::update_elevators(building_t const &building, point const &player_pos) { // Note: player_pos is in building space
@@ -1137,13 +1137,27 @@ phone_manager_t phone_manager;
 
 struct tape_manager_t {
 	bool in_use;
+	float last_toggle_time;
 	vector<point> points;
 	point last_pos;
 	room_object_t tape;
+	building_t *cur_building;
 
-	tape_manager_t() : in_use(0) {}
-	void init(room_object_t const &tape_) {tape = tape_; in_use = 1;}
-	void clear() {points.clear(); tape = room_object_t(); in_use = 0;}
+	tape_manager_t() : in_use(0), last_toggle_time(0.0), cur_building(nullptr) {}
+
+	void toggle_use(room_object_t const &tape_, building_t *building) {
+		if ((tfticks - last_toggle_time) < 0.5*TICKS_PER_SECOND) return; // don't toggle too many times per frame
+		last_toggle_time = tfticks;
+		if (in_use) {clear();} // end use
+		else {tape = tape_;	cur_building = building; in_use = 1;} // begin use
+	}
+	void clear() {
+		if (cur_building != nullptr) {cur_building->maybe_update_tape(last_pos, 1);} // end_of_tape=1
+		cur_building = nullptr;
+		points.clear();
+		tape = room_object_t();
+		in_use = 0;
+	}
 };
 
 tape_manager_t tape_manager;
@@ -2032,7 +2046,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 			player_inventory.mark_last_item_used();
 		}
 		else if (obj.type == TYPE_TAPE) {
-			tape_manager.init(obj);
+			tape_manager.toggle_use(obj, this);
 		}
 		else if (obj.type == TYPE_BOOK) {
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
@@ -2073,7 +2087,7 @@ void add_tape_quad(point const &p1, point const &p2, float height, colorRGBA con
 	qbd.add_quad_pts(pts, color, -normal);
 }
 
-bool building_t::maybe_update_tape(point const &player_pos) {
+bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 	if (!tape_manager.in_use) return 0;
 	assert(has_room_geom());
 	auto &decal_mgr(interior->room_geom->decal_manager);
@@ -2081,7 +2095,7 @@ bool building_t::maybe_update_tape(point const &player_pos) {
 	float const thickness(obj.dz()), pad_dist(0.1*thickness);
 	point const pos(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
 
-	if (0) { // TODO: trigger this case when the tape roll is empty, the player switches items, or the player leaves the building
+	if (end_of_tape) { // add final tape
 		if (tape_manager.points.empty()) return 0; // no tape
 		decal_mgr.pend_tape_qbd.clear();
 		point const end_pos(interior->find_closest_pt_on_obj_to_pos(*this, pos, pad_dist, 1)); // no_ceil_floor=1
@@ -2105,7 +2119,7 @@ bool building_t::maybe_update_tape(point const &player_pos) {
 		add_tape_quad(last_pt, pos, thickness, obj.color, decal_mgr.pend_tape_qbd);
 		// update use count based on length change
 		float const prev_dist(p2p_dist(last_pt, tape_manager.last_pos)), cur_dist(p2p_dist(last_pt, pos)), delta(cur_dist - prev_dist);
-		int const delta_use_count(round_fp(0.5f*delta/thickness)); // TODO: fix drawing use count
+		int const delta_use_count(round_fp(0.5f*delta/thickness));
 		if (!player_inventory.update_last_item_use_count(delta_use_count)) {tape_manager.clear();} // check if we ran out of tape
 	}
 	tape_manager.last_pos = pos;
