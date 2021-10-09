@@ -703,11 +703,14 @@ void update_closest_pt(cube_t const &cube, point const &pos, point &closest, flo
 void update_closest_pt(vect_cube_t const &cubes, point const &pos, point &closest, float &dmin_sq) {
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {update_closest_pt(*c, pos, closest, dmin_sq);}
 }
-point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos) const {
+point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, bool no_ceil_floor) const {
 	float dmin_sq(-1.0); // start at an invalid value
 	point closest(pos); // start at pt - will keep this value if there are no objects
-	update_closest_pt(floors,   pos, closest, dmin_sq);
-	update_closest_pt(ceilings, pos, closest, dmin_sq);
+
+	if (!no_ceil_floor) {
+		update_closest_pt(floors,   pos, closest, dmin_sq);
+		update_closest_pt(ceilings, pos, closest, dmin_sq);
+	}
 	for (unsigned d = 0; d < 2; ++d) {update_closest_pt(walls[d], pos, closest, dmin_sq);}
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) {update_closest_pt(*e, pos, closest, dmin_sq);} // ignores open elevator doors
 
