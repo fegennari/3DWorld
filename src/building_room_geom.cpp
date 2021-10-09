@@ -499,13 +499,14 @@ void add_tproll_to_material(room_object_t const &c, rgeom_mat_t &mat) {
 }
 void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rgeom_mat_t &mat, float sz_ratio, bool player_held) { // TP and tape
 	bool const is_tape(c.type == TYPE_TAPE);
+	float const hole_shrink(is_tape ? 0.24 : 0.3);
 	cube_t hole(c);
-	hole.expand_by_xy(-(is_tape ? 0.24 : 0.3)*c.dx());
+	hole.expand_by_xy(-hole_shrink*c.dx());
 	cube_t tube(hole);
 	mat.add_vcylin_to_verts(tube, apply_light_color(c, LT_BROWN), 0, 0, 1); // tube, sides only, two sided (only need inside)
 	if (sz_ratio == 0.0) return; // empty, tube only, don't need to draw the rest of the roll
 	cube_t roll(c);
-	if (sz_ratio < 1.0) {roll.expand_by_xy(-0.3*(1.0 - sz_ratio)*c.dx());} // partially used
+	if (sz_ratio < 1.0) {roll.expand_by_xy(-hole_shrink*(1.0 - sz_ratio)*c.dx());} // partially used
 	hole.expand_in_dim(2, 0.0025*c.dz()); // expand slightly to avoid z-fighting
 	// draw top/bottom surface only to mask off the outer part of the roll when held by the player; when resting on an object, draw the top surface only
 	mat.add_vcylin_to_verts(hole, ALPHA0, player_held, 1, 0, 0, 1.0, 1.0, 1.0, 1.0, 1); // hole
