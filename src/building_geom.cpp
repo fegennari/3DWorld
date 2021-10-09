@@ -658,9 +658,10 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 	for (unsigned d = 0; d < 2; ++d) {had_coll |= get_line_clip_update_t(p1, p2, walls[d], t);}
 
 	for (auto e = elevators.begin(); e != elevators.end(); ++e) {
-		// TODO: handle open elevator
-		had_coll |= get_line_clip_update_t(p1, p2, *e, t); // handle as a single blocking cube
-	} // for e
+		cube_t cubes[5];
+		unsigned const num_cubes(e->get_coll_cubes(cubes));
+		for (unsigned n = 0; n < num_cubes; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
+	}
 	for (auto i = doors.begin(); i != doors.end(); ++i) {
 		if (i->open) {
 			cube_t door_bounds(*i);
@@ -674,18 +675,22 @@ bool building_interior_t::line_coll(building_t const &building, point const &p1,
 	} // for i
 	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
-			if (c->no_coll() || c->type == TYPE_BLOCKER) continue;
+			if ((c->no_coll() && c->type != TYPE_WALL_TRIM) || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // keep wall trim but skip blockers and elevators
 
-			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+			if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
+				cube_t cubes[5];
+				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
+				unsigned const n_end((c->is_open() && !c->is_small_closet()) ? 4U : 5U); // skip open doors for large closets since this case is more complex
+				for (unsigned n = 0; n < n_end; ++n) {had_coll |= get_line_clip_update_t(p1, p2, cubes[n], t);}
+			}
+			else if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 				if (line_intersect_cylinder_with_t(p1, p2, c->get_cylinder(), 1, tmin) && tmin < t) {t = tmin; had_coll = 1;}
 			}
 			else if (c->shape == SHAPE_SPHERE) { // sphere
 				float const radius(c->get_radius());
 				if (sphere_test_comp(p1, c->get_cube_center(), (p1 - p2), radius*radius, tmin) && tmin < t) {t = tmin; had_coll = 1;}
 			}
-			//else if (c->type == TYPE_ELEVATOR) {} // special handling for elevators
 			//else if (c->type == TYPE_RAILING) {}
-			//else if (c->type == TYPE_CLOSET) {} // special case to handle closet interiors
 			//else if (c->type == TYPE_STALL || c->type == TYPE_SHOWER) {}
 			else {had_coll |= get_line_clip_update_t(p1, p2, *c, t);} // assume it's a cube
 		} // for c
@@ -719,8 +724,14 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 	}
 	if (room_geom) { // check room geometry
 		for (auto c = room_geom->objs.begin(); c != room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
-			if (c->no_coll() || c->type == TYPE_BLOCKER) continue;
+			if ((c->no_coll() && c->type != TYPE_WALL_TRIM) || c->type == TYPE_BLOCKER || c->type == TYPE_ELEVATOR) continue; // keep wall trim but skip blockers and elevators
 
+			if (c->type == TYPE_CLOSET) { // special case to handle closet interiors
+				cube_t cubes[5];
+				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
+				unsigned const n_end((c->is_open() && !c->is_small_closet()) ? 4U : 5U); // skip open doors for large closets since this case is more complex
+				for (unsigned n = 0; n < n_end; ++n) {update_closest_pt(cubes[n], pos, closest, dmin_sq);}
+			}
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 				point const center(c->get_cube_center());
 				float const radius(c->get_radius()), dsq_xy(max(0.0f, (p2p_dist_xy_sq(pos, center) - radius*radius)));
@@ -732,7 +743,6 @@ point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &build
 				float const radius(c->get_radius()), dsq(max(0.0f, (p2p_dist_sq(pos, center) - radius*radius)));
 				if (dmin_sq < 0.0 || dsq < dmin_sq) {closest = center + radius*(pos - center).get_norm(); dmin_sq = dsq;}
 			}
-			//else if (c->type == TYPE_CLOSET) {} // special case to handle closet interiors?
 			else {update_closest_pt(*c, pos, closest, dmin_sq);} // assume it's a cube
 		} // for c
 	}
