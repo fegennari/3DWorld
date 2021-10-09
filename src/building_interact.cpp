@@ -1919,7 +1919,6 @@ bool building_t::move_nearest_object(point const &at_pos, vector3d const &in_dir
 				if (i->type == TYPE_CLOSET && i->is_open() && i->is_small_closet()) { // check open closet door collision
 					cube_t cubes[5];
 					get_closet_cubes(*i, cubes, 1); // get cubes for walls and door; for_collision=1
-					cubes[4] = get_open_closet_door(*i, cubes[4]); // include open door
 					for (unsigned n = 0; n < 5; ++n) {bad_placement |= cubes[n].intersects(moved_obj);}
 				}
 				else {bad_placement = i->intersects(moved_obj);}

@@ -285,7 +285,8 @@ void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collisio
 	} // for d
 	doors.d[c.dim][ c.dir] -= (c.dir ? 1.0 : -1.0)*0.2*wall_thick; // shift in slightly
 	doors.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*(depth - 0.8*wall_thick); // make it narrow
-	cubes[4] = doors; // Note: this is for closed door; caller must handle open door
+	if (for_collision && c.is_open() && use_small_door) {cubes[4] = get_open_closet_door(c, doors);} // include open doors for small closets
+	else {cubes[4] = doors;} // return closed door cube; caller must handle open door
 }
 
 void add_quad_to_mat(rgeom_mat_t &mat, point const pts[4], float const ts[4], float const tt[4], color_wrapper const &cw) {
