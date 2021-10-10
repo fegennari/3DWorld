@@ -178,9 +178,9 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 			if (rgen.rand_float() < 0.67) { // maybe add a shirt to the hanger
 				room_object_t shirt(hanger);
 				shirt.expand_by_xy(0.01*hanger.dz()); // expand slightly to avoid z-fighting with hanger
-				shirt.expand_in_dim(c.dim, 0.06*c.dz()); // slightly wider
-				shirt.z2() -= 0.65*hanger.dz(); // top
-				shirt.z1() -= 0.32*c.dz(); // bottom
+				shirt.expand_in_dim(c.dim, 0.04*c.dz()); // slightly wider
+				shirt.z2() -= 0.55*hanger.dz(); // top
+				shirt.z1() -= 0.3*c.dz(); // bottom
 				objects.emplace_back(shirt, TYPE_SHIRT, c.room_id, c.dim, c.dir, flags, c.light_amt, SHAPE_CUBE, shirt_colors[rgen.rand()%NUM_SHIRT_COLORS]);
 			}
 		} // for i
