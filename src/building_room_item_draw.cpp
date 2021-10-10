@@ -559,6 +559,7 @@ void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> 
 		case TYPE_HANGER:    if (has_hanger_model()) {model_objs.push_back(*i);} break;
 		case TYPE_LBASKET:   add_laundry_basket(*i); break;
 		case TYPE_WHEATER:   add_water_heater  (*i); break; // small since this object is only added to basements
+		case TYPE_SHIRT:     add_shirt(*i); break;
 		default: break;
 		}
 	} // for i

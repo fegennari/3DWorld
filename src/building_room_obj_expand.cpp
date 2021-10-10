@@ -147,7 +147,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 	objects.push_back(hanger_rod);
 
 	// add hangers
-	unsigned const num_hangers(rgen.rand() % (c.is_small_closet() ? 5 : 9)); // 0-4/8
+	unsigned const num_hangers(rgen.rand() % (c.is_small_closet() ? 6 : 11)); // 0-5/10
 	float const wire_radius(0.25*hr_radius);
 
 	if (num_hangers > 0 && hanger_rod.get_sz_dim(!c.dim) > 10.0*wire_radius) {
@@ -158,9 +158,19 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 
 		for (unsigned i = 0; i < num_hangers; ++i) { // since hangers are so narrow, we probably don't need to check for intersections
 			float const pos(rgen.rand_uniform((hanger_rod.d[!c.dim][0] + wire_radius), (hanger_rod.d[!c.dim][1] - wire_radius)));
+			// TODO: not too close to other hangers
 			set_wall_width(hanger, pos, wire_radius, !c.dim);
 			objects.push_back(hanger);
-		}
+			
+			if (rgen.rand_float() < 0.67) { // maybe add a shirt to the hanger
+				room_object_t shirt(hanger);
+				shirt.expand_by_xy(0.01*hanger.dz()); // expand slightly to avoid z-fighting with hanger
+				shirt.expand_in_dim(c.dim, 0.06*c.dz()); // slightly wider
+				shirt.z2() -= 0.65*hanger.dz(); // top
+				shirt.z1() -= 0.32*c.dz(); // bottom
+				objects.emplace_back(shirt, TYPE_SHIRT, c.room_id, c.dim, c.dir, flags, c.light_amt, SHAPE_CUBE, shirt_colors[rgen.rand()%NUM_SHIRT_COLORS]);
+			}
+		} // for i
 	}
 }
 

@@ -29,6 +29,7 @@ unsigned const NUM_SPCAN_COLORS = 10;
 unsigned const NUM_LAMP_COLORS  = 6;
 unsigned const NUM_TCAN_COLORS  = 6;
 unsigned const NUM_TAPE_COLORS  = 7;
+unsigned const NUM_SHIRT_COLORS  = 13;
 colorRGBA const book_colors [NUM_BOOK_COLORS ] = {GRAY_BLACK, WHITE, LT_GRAY, GRAY, DK_GRAY, DK_BLUE, BLUE, LT_BLUE, DK_RED, RED, ORANGE, YELLOW, DK_GREEN, LT_BROWN, BROWN, DK_BROWN};
 colorRGBA const spcan_colors[NUM_SPCAN_COLORS] = {WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
 colorRGBA const lamp_colors[NUM_LAMP_COLORS]   = {WHITE, GRAY_BLACK, BROWN, LT_BROWN, DK_BROWN, OLIVE};
@@ -37,8 +38,9 @@ colorRGBA const paper_colors[NUM_PAPER_COLORS] = {WHITE, WHITE, WHITE, cream, cr
 colorRGBA const pen_colors   [4] = {WHITE, BLACK, colorRGBA(0.2, 0.4, 1.0), RED};
 colorRGBA const pencil_colors[2] = {colorRGBA(1.0, 0.75, 0.25), colorRGBA(1.0, 0.5, 0.1)};
 colorRGBA const marker_colors[8] = {BLACK, RED, BLACK, BLUE, BLACK, GREEN, RED, PURPLE};
-colorRGBA const tcan_colors[NUM_TCAN_COLORS] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
-colorRGBA const tape_colors[NUM_TAPE_COLORS] = {GRAY, GRAY, GRAY, GRAY, BKGRAY, BKGRAY, colorRGBA(0.2, 0.2, 1.0)}; // gray duct tape is the most common
+colorRGBA const tcan_colors [NUM_TCAN_COLORS ] = {BLUE, DK_GRAY, LT_GRAY, GRAY, BLUE, WHITE};
+colorRGBA const tape_colors [NUM_TAPE_COLORS ] = {GRAY, GRAY, GRAY, GRAY, BKGRAY, BKGRAY, colorRGBA(0.2, 0.2, 1.0)}; // gray duct tape is the most common
+colorRGBA const shirt_colors[NUM_SHIRT_COLORS] = {WHITE, WHITE, WHITE, BLACK, BLACK, GRAY, GRAY, RED, BLUE, GREEN, YELLOW, ORANGE, BROWN};
 colorRGBA const LAMP_COLOR(1.0, 0.8, 0.6); // soft white
 colorRGBA const WOOD_COLOR(0.9, 0.7, 0.5); // light brown, multiplies wood texture color; typical value to use
 
@@ -303,7 +305,7 @@ enum {
 	TYPE_WALL_TRIM, TYPE_RAILING, TYPE_CRATE, TYPE_BOX, TYPE_MIRROR, TYPE_SHELVES, TYPE_KEYBOARD, TYPE_SHOWER, TYPE_RDESK, TYPE_BOTTLE,
 	TYPE_WINE_RACK, TYPE_COMPUTER, TYPE_MWAVE, TYPE_PAPER, TYPE_BLINDS, TYPE_PEN, TYPE_PENCIL, TYPE_PAINTCAN, TYPE_LG_BALL, TYPE_HANGER_ROD,
 	TYPE_DRAIN, TYPE_MONEY, TYPE_PHONE, TYPE_TPROLL, TYPE_SPRAYCAN, TYPE_MARKER, TYPE_BUTTON, TYPE_CRACK, TYPE_SWITCH, TYPE_PLATE,
-	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE,
+	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE, TYPE_SHIRT,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
 	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, NUM_ROBJ_TYPES};
@@ -583,6 +585,7 @@ struct building_room_geom_t {
 	void add_trashcan(room_object_t const &c);
 	void add_laundry_basket(room_object_t const &c);
 	void add_water_heater(room_object_t const &c);
+	void add_shirt(room_object_t const &c);
 	void add_br_stall(room_object_t const &c);
 	void add_cubicle(room_object_t const &c, float tscale);
 	void add_sign(room_object_t const &c, bool inc_back, bool inc_text);

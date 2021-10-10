@@ -1901,6 +1901,12 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 	}
 }
 
+void building_room_geom_t::add_shirt(room_object_t const &c) { // is_small=1
+	//rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 1, 0, 1, 1)); // shadowed, small, transparent
+	rgeom_mat_t &mat(mats_plants.get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 1)); // shadowed
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, (get_skip_mask_for_xy(c.dim) | EF_Z12), 1); // front and back sides only, swap S/T
+}
+
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	// Note: no alpha test is enabled in the shader when drawing this, so the holes in the material may not be drawn correctly against objects such as exterior walls
 	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png")), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
