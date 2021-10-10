@@ -278,7 +278,7 @@ void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(shader_t &s, float zval);
 bool sphere_int_tiled_terrain(point &pos, float radius);
 bool check_player_tiled_terrain_collision();
-bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int);
+bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int, bool inc_trees=0);
 void change_inf_terrain_fire_mode(int val, bool mouse_wheel);
 void inf_terrain_fire_weapon();
 void inf_terrain_undo_hmap_mod();

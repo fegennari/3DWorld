@@ -2135,7 +2135,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 	if (world_mode == WMODE_INF_TERRAIN) {
 		point const pos2(pos + vcf*range);
-		intersect = line_intersect_tiled_mesh(pos, pos2, coll_pos); // check terrain
+		intersect = line_intersect_tiled_mesh(pos, pos2, coll_pos, 1); // check terrain; inc_trees=1
 		point p_int;
 		
 		if (line_intersect_city(pos, pos2, p_int)) { // check city (buildings and cars)

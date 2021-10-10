@@ -1975,35 +1975,42 @@ int tile_t::get_tid_under_point(point const &pos) const {
 }
 
 
-bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const {
+bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos, float inc_trees) const {
 
 	if (is_distant) return 0; // Note: this can be made to work, but won't work as-is
-	//if (!pine_trees .empty()) {} // TODO: check pine  trees with -= dtree_off.get_xlate()
-	//if (!decid_trees.empty()) {} // TODO: check decid trees with -= dtree_off.get_xlate()
 	point v1c(v1), v2c(v2); // clipped verts
-	if (!do_line_clip(v1c, v2c, get_mesh_bcube().d)) return 0;
-	// similar to mesh_intersector::line_intersect_surface_fast()
-	int const xp1(get_xpos(v1c.x) - x1 - xoff + xoff2), yp1(get_ypos(v1c.y) - y1 - yoff + yoff2);
-	int const xp2(get_xpos(v2c.x) - x1 - xoff + xoff2), yp2(get_ypos(v2c.y) - y1 - yoff + yoff2);
-	int const dx(xp2 - xp1), dy(yp2 - yp1), steps(max(1, max(abs(dx), abs(dy))));
-	double const dz((double)v2c.z - (double)v1c.z), xinc(dx/(double)steps), yinc(dy/(double)steps), zinc(dz/(double)steps);
-	double x(xp1), y(yp1), z(v1c.z - 0.1*fabs(zinc)); // z offset required to avoid problems with zval at bcube.z1
+	
+	if (do_line_clip(v1c, v2c, get_mesh_bcube().d)) {
+		// similar to mesh_intersector::line_intersect_surface_fast()
+		int const xp1(get_xpos(v1c.x) - x1 - xoff + xoff2), yp1(get_ypos(v1c.y) - y1 - yoff + yoff2);
+		int const xp2(get_xpos(v2c.x) - x1 - xoff + xoff2), yp2(get_ypos(v2c.y) - y1 - yoff + yoff2);
+		int const dx(xp2 - xp1), dy(yp2 - yp1), steps(max(1, max(abs(dx), abs(dy))));
+		double const dz((double)v2c.z - (double)v1c.z), xinc(dx/(double)steps), yinc(dy/(double)steps), zinc(dz/(double)steps);
+		double x(xp1), y(yp1), z(v1c.z - 0.1*fabs(zinc)); // z offset required to avoid problems with zval at bcube.z1
 
-	for (int k = 0; k <= steps; ++k) {
-		int const ix((int)x), iy((int)y);
+		for (int k = 0; k <= steps; ++k) {
+			int const ix((int)x), iy((int)y);
 
-		if (ix >= 0 && iy >= 0 && ix <= (int)size && iy <= (int)size && zvals[iy*zvsize + ix] > z) {
-			// Note: we use z instead of zvals here because zvals may be much too high if we enter this tile while the line is under the mesh
-			float const cur_t(((z - 0.5*zinc) - v1.z)/(double(v2.z) - double(v1.z))); // t relative to original v1, v2
+			if (ix >= 0 && iy >= 0 && ix <= (int)size && iy <= (int)size && zvals[iy*zvsize + ix] > z) {
+				// Note: we use z instead of zvals here because zvals may be much too high if we enter this tile while the line is under the mesh
+				float const cur_t(((z - 0.5*zinc) - v1.z)/(double(v2.z) - double(v1.z))); // t relative to original v1, v2
 
-			if (cur_t >= 0.0 && cur_t <= 1.0) {
-				xpos = x1 + ix;
-				ypos = y1 + iy;
-				t    = cur_t;
-				return 1;
+				if (cur_t >= 0.0 && cur_t <= 1.0) {
+					xpos = x1 + ix;
+					ypos = y1 + iy;
+					t    = cur_t;
+					return 1;
+				}
 			}
+			x += xinc; y += yinc; z += zinc;
 		}
-		x += xinc; y += yinc; z += zinc;
+	}
+	if (inc_trees) {
+		if (!pine_trees.empty()) {
+			vector3d const xlate(ptree_off.get_xlate());
+			if (pine_trees.line_intersect((v1 - xlate), (v2 - xlate), &t)) {return 1;}
+		}
+		//if (!decid_trees.empty()) {} // check decid trees with -= dtree_off.get_xlate()
 	}
 	return 0;
 }
@@ -3320,7 +3327,7 @@ int tile_draw_t::get_tid_under_point(point const &pos) const {
 }
 
 
-bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const {
+bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos, float inc_trees) const {
 
 	t = 2.0; // > 1.0
 	intersected_tile = nullptr;
@@ -3332,7 +3339,7 @@ bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t
 
 		// Note: could make this faster by passing tmin, tmax into line_intersect_mesh() here and using for early termination,
 		// but this code is plenty fast enough to do a single query each frame as it is
-		if (i->second->line_intersect_mesh(v1, v2, tn, new_xpos, new_ypos) && tn < t) {
+		if (i->second->line_intersect_mesh(v1, v2, tn, new_xpos, new_ypos, inc_trees) && tn < t) {
 			t = tn; xpos = new_xpos; ypos = new_ypos;
 			intersected_tile = i->second.get(); // constness?
 		}
@@ -3380,11 +3387,11 @@ colorRGBA get_inf_terrain_mod_color() {
 	return colors[inf_terrain_fire_mode];
 }
 
-bool line_intersect_tiled_mesh_get_tile(point const &v1, point const &v2, point &p_int, tile_t *&tile) {
+bool line_intersect_tiled_mesh_get_tile(point const &v1, point const &v2, point &p_int, tile_t *&tile, bool inc_trees) {
 
 	float t(0.0);
 	int xpos(0), ypos(0); // unused
-	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return 0;
+	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos, inc_trees)) return 0;
 	p_int = v1 + t*(v2 - v1);
 	return 1;
 }
@@ -3428,7 +3435,7 @@ void draw_tiled_terrain(int reflection_pass) {
 		point hit_pos;
 		tile_t *tile(nullptr);
 
-		if (line_intersect_tiled_mesh_get_tile(v1, v2, hit_pos, tile)) {
+		if (line_intersect_tiled_mesh_get_tile(v1, v2, hit_pos, tile, 0)) { // inc_trees=0
 			draw_single_colored_sphere(hit_pos, 0.1, N_SPHERE_DIV, RED);
 
 			// modification marker area rendered with a cylinder + stencil test to mask to mesh surface
@@ -3685,10 +3692,9 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 // *** heightmap modification and queries ***
 
 
-bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
-
+bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int, bool inc_trees) {
 	tile_t *tile(nullptr); // unused
-	return line_intersect_tiled_mesh_get_tile(v1, v2, p_int, tile);
+	return line_intersect_tiled_mesh_get_tile(v1, v2, p_int, tile, inc_trees);
 }
 
 void change_inf_terrain_fire_mode(int val, bool mouse_wheel) {
@@ -3747,7 +3753,7 @@ void inf_terrain_fire_weapon() {
 	float t(0.0); // unused
 	tile_t *tile(NULL);
 	int xpos(0), ypos(0);
-	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
+	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos, 0)) return; // inc_trees=0
 	// Note: update is slow when trees are enabled
 	unsigned shape(cur_brush_param.shape);
 	if (inf_terrain_fire_mode == FM_FLATTEN) {shape = ((shape == BSHAPE_CONST_SQ) ? (unsigned)BSHAPE_FLAT_SQ : (unsigned)BSHAPE_FLAT_CIR);} // enable a flattening shape

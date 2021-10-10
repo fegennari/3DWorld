@@ -403,7 +403,7 @@ public:
 	bool is_water_visible() const;
 	bool check_sphere_collision(point &pos, float sradius) const;
 	int get_tid_under_point(point const &pos) const;
-	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const;
+	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos, float inc_trees) const;
 }; // tile_t
 
 
@@ -490,7 +490,7 @@ public:
 	bool check_sphere_collision(point &pos, float radius) const;
 	bool check_player_collision() const;
 	int get_tid_under_point(point const &pos) const;
-	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const;
+	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos, float inc_trees) const;
 	float get_actual_zmin() const;
 	void add_or_remove_trees_at(point const &pos, float radius, bool add_trees, int brush_shape);
 	void add_or_remove_grass_at(point const &pos, float radius, bool add_grass, int brush_shape, float brush_weight);
