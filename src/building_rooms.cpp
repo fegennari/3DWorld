@@ -1588,7 +1588,7 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 			place_area.expand_by_xy(-radius); // leave a slight gap between laundry basket and wall
 			if (!place_area.is_strictly_normalized()) return 1; // no space for laundry basket (likely can't happen)
 			cube_t legal_area(get_part_for_room(room));
-			legal_area.expand_by_xy(-(1.0*floor_spacing + radius)); // keep away from part edge/exterior walls to avoid alpha mask drawing problems
+			legal_area.expand_by_xy(-(1.0*floor_spacing + radius)); // keep away from part edge/exterior walls to avoid alpha mask drawing problems (unless we use mats_amask)
 			point center;
 			center.z = zval + 0.002*floor_spacing; // slightly above the floor to avoid z-fighting
 

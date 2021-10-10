@@ -528,8 +528,8 @@ struct building_room_geom_t {
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<unsigned> moved_obj_ids;
-	// {large static, small static, dynamic, lights, plants, transparent, door} materials
-	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_plants, mats_alpha, mats_doors;
+	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
+	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
 	building_decal_manager_t decal_manager;
 
@@ -542,7 +542,7 @@ struct building_room_geom_t {
 	void clear_static_small_vbos();
 	void clear_and_recreate_lights() {lights_changed = 1;} // cache the state and apply the change later in case this is called from a different thread
 	unsigned get_num_verts() const {return (mats_static.count_all_verts() + mats_small.count_all_verts() + mats_dynamic.count_all_verts() +
-		mats_lights.count_all_verts() + mats_plants.count_all_verts() + mats_alpha.count_all_verts() + mats_doors.count_all_verts());}
+		mats_lights.count_all_verts() + mats_amask.count_all_verts() + mats_alpha.count_all_verts() + mats_doors.count_all_verts());}
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows=0, bool dynamic=0, bool small=0, bool transparent=0);
 	rgeom_mat_t &get_untextured_material(bool inc_shadows=0, bool dynamic=0, bool small=0, bool transparent=0) {
 		return get_material(tid_nm_pair_t(-1, 1.0, inc_shadows), inc_shadows, dynamic, small, transparent);

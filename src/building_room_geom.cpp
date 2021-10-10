@@ -1902,14 +1902,14 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 }
 
 void building_room_geom_t::add_shirt(room_object_t const &c) { // is_small=1
-	//rgeom_mat_t &mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 1, 0, 1, 1)); // shadowed, small, transparent
-	rgeom_mat_t &mat(mats_plants.get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 1)); // shadowed
-	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, (get_skip_mask_for_xy(c.dim) | EF_Z12), 1); // front and back sides only, swap S/T
+	rgeom_mat_t &mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 1)); // shadowed with alpha mask
+	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, (get_skip_mask_for_xy(c.dim) | EF_Z12), c.dim); // front and back sides only, swap S/T
 }
 
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {
 	// Note: no alpha test is enabled in the shader when drawing this, so the holes in the material may not be drawn correctly against objects such as exterior walls
 	rgeom_mat_t &tex_mat(get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png")), 1, 0, 1)); // inc_shadows=1, dynamic=0, small=1
+	//rgeom_mat_t &tex_mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name("interiors/plastic_mesh.png")), 1)); // shadowed with alpha mask - doesn't look as good, need min_alpha=0.0
 	cube_t bot(c), mid(c), top(c);
 	bot.z2() = mid.z1() = c.z1() + 0.12*c.dz();
 	mid.z2() = top.z1() = c.z2() - 0.12*c.dz();
@@ -2421,13 +2421,13 @@ void building_room_geom_t::add_potted_plant(room_object_t const &c, bool inc_pot
 		static vector<vert_norm_comp> points;
 		points.clear();
 		plant.create_leaf_points(points, 10.0, 1.5, 4); // plant_scale=10.0 seems to work well; more levels and rings
-		auto &leaf_verts(mats_plants.get_material(tid_nm_pair_t(plant.get_leaf_tid()), 1).quad_verts);
+		auto &leaf_verts(mats_amask.get_material(tid_nm_pair_t(plant.get_leaf_tid()), 1).quad_verts);
 		color_wrapper const leaf_cw(apply_light_color(c, plant.get_leaf_color()));
 		float const ts[4] = {0,1,1,0}, tt[4] = {0,0,1,1};
 		for (unsigned i = 0; i < points.size(); ++i) {leaf_verts.emplace_back(vert_norm_comp_tc(points[i], ts[i&3], tt[i&3]), leaf_cw);}
 		// draw plant stem
 		colorRGBA const stem_color(plant.get_stem_color());
-		mats_plants.get_material(get_tex_auto_nm(WOOD2_TEX), 1).add_cylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem
+		mats_amask.get_material(get_tex_auto_nm(WOOD2_TEX), 1).add_cylin_to_verts(point(cx, cy, base_pos.z), point(cx, cy, c.z2()), stem_radius, 0.0f, stem_color, 0, 0); // stem
 	}
 }
 

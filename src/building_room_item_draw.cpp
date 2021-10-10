@@ -423,7 +423,7 @@ void building_room_geom_t::clear_static_vbos() { // used to clear pictures
 }
 void building_room_geom_t::clear_static_small_vbos() {
 	mats_small.clear();
-	mats_plants.clear();
+	mats_amask.clear();
 }
 
 rgeom_mat_t &building_room_geom_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows, bool dynamic, bool small, bool transparent) {
@@ -502,13 +502,13 @@ void building_room_geom_t::create_static_vbos(building_t const &building) {
 
 void building_room_geom_t::create_small_static_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Small"); // 7.8ms, slow building at 26,16
-	mats_small .clear();
-	mats_plants.clear();
-	model_objs .clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
+	mats_small.clear();
+	mats_amask.clear();
+	model_objs.clear(); // currently model_objs are only created for small objects in drawers, so we clear this here
 	add_small_static_objs_to_verts(expanded_objs);
 	add_small_static_objs_to_verts(objs);
-	mats_small .create_vbos(building);
-	mats_plants.create_vbos(building);
+	mats_small.create_vbos(building);
+	mats_amask.create_vbos(building);
 }
 
 void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add) {
@@ -780,20 +780,20 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	if (inc_small) {
 		mats_small.draw(s, shadow_only, reflection_pass);
 
-		if (player_in_building) { // if we're not in the building, don't draw plants at all; without the special shader they won't look correct when drawn through windows
+		if (player_in_building) { // if we're not in the building, don't draw alpha mask materials at all; without the special shader they won't look correct when drawn through windows
 			if (shadow_only) {
-				shader_t plant_shader;
-				plant_shader.begin_simple_textured_shader(0.9); // need to use texture with alpha test
-				mats_plants.draw(s, 0, 0);
+				shader_t amask_shader;
+				amask_shader.begin_simple_textured_shader(0.9); // need to use texture with alpha test
+				mats_amask.draw(s, 0, 0);
 				s.make_current(); // switch back to the normal shader
 			}
 			else if (reflection_pass) {
-				mats_plants.draw(s, 0, 1);
+				mats_amask.draw(s, 0, 1);
 			}
 			else { // this is expensive: only enable for the current building and the main draw pass
-				shader_t plant_shader;
-				setup_building_draw_shader(plant_shader, 0.9, 1, 1, 0); // min_alpha=0.5, enable_indir=1, force_tsl=1, use_texgen=1
-				mats_plants.draw(plant_shader, 0, 0);
+				shader_t amask_shader;
+				setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0); // min_alpha=0.5, enable_indir=1, force_tsl=1, use_texgen=1
+				mats_amask.draw(amask_shader, 0, 0);
 				s.make_current(); // switch back to the normal shader
 			}
 		}
