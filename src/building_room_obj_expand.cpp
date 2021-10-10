@@ -155,11 +155,24 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 		hanger.type = TYPE_HANGER;
 		set_cube_zvals(hanger, (hanger_rod.z1() - 0.09*window_vspacing), (hanger_rod.z2() + 2.0*wire_radius));
 		hanger.expand_in_dim(c.dim, 0.09*window_vspacing); // set width
+		float const pos_min(hanger_rod.d[!c.dim][0] + wire_radius), pos_max(hanger_rod.d[!c.dim][1] - wire_radius);
+		float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/63.0);
+		uint64_t slots_used(0); // divide the space into 64 slots, initially all empty
 
 		for (unsigned i = 0; i < num_hangers; ++i) { // since hangers are so narrow, we probably don't need to check for intersections
-			float const pos(rgen.rand_uniform((hanger_rod.d[!c.dim][0] + wire_radius), (hanger_rod.d[!c.dim][1] - wire_radius)));
-			// TODO: not too close to other hangers
-			set_wall_width(hanger, pos, wire_radius, !c.dim);
+			unsigned slot_ix(0);
+			bool found_slot(0);
+			
+			for (unsigned n = 0; n < 10; ++n) { // 10 attempts to find an unused slot
+				slot_ix = rgen.rand()&63;
+				uint64_t const slot_mask(uint64_t(1) << slot_ix);
+				if (slots_used & slot_mask) continue;
+				slots_used |= slot_mask;
+				found_slot = 1;
+				break; // success
+			}
+			if (!found_slot) continue; // skip this hanger
+			set_wall_width(hanger, (pos_min + slot_ix*slot_spacing), wire_radius, !c.dim);
 			objects.push_back(hanger);
 			
 			if (rgen.rand_float() < 0.67) { // maybe add a shirt to the hanger
