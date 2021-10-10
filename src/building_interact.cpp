@@ -1089,7 +1089,7 @@ public:
 		else if (is_ringing) {
 			if (tfticks > stop_ring_time) {is_ringing = 0; schedule_next_ring();} // stop automatically
 			else if (tfticks > next_cycle_time) { // start a new ring cycle
-				gen_sound_thread_safe_at_player(SOUND_PHONE_RING, 1.0);
+				gen_sound_thread_safe_at_player(get_sound_id_for_file("phone_ring.wav"), 1.0);
 				register_building_sound_at_player(1.0);
 				next_cycle_time += 4.2*TICKS_PER_SECOND; // 4.2s between rings
 			}
@@ -2125,7 +2125,7 @@ bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 		if (!player_inventory.update_last_item_use_count(delta_use_count)) {tape_manager.clear();} // check if we ran out of tape
 	}
 	if (sound_gain > 0.0) { // play a tape sound
-		gen_sound_thread_safe(SOUND_TAPE, local_to_camera_space(sound_pos), sound_gain);
+		gen_sound_thread_safe(get_sound_id_for_file("tape.wav"), local_to_camera_space(sound_pos), sound_gain);
 		register_building_sound(sound_pos, 0.35*sound_gain);
 	}
 	tape_manager.last_pos = pos;
