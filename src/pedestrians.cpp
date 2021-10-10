@@ -259,8 +259,7 @@ bool path_finder_t::add_pts_around_cube_xy(path_t &path, path_t const &cur_path,
 	unsigned dest_cix(dir ? cix2 : cix1);
 	bool const move_dir((((dest_cix+1)&3) == (dir ? cix1 : cix2)) ? 0 : 1); // CCW/CW based on which dir moves around the other side of the cube
 	if (check_line_clip_xy(*p, ecorners[dest_cix], c.d)) return 0; // something bad happened (floating-point error?), fail
-	//if (!line_int_cubes_xy(*p, ecorners[dest_cix], avoid)) return 0; // TODO: should we test other avoid cubes that may be blocking the path?
-	if (!add_pt_to_path(ecorners[dest_cix], path)) return 0; // expanded corner
+	if (!add_pt_to_path(ecorners[dest_cix], path))       return 0; // expanded corner
 
 	if (check_line_clip_xy(n, ecorners[dest_cix], c.d)) { // no path to dest, add another point
 		if (move_dir) {dest_cix = (dest_cix+1)&3;} else {dest_cix = (dest_cix+3)&3;}
