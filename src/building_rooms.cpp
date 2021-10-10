@@ -967,7 +967,8 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 			hdim ^= 1;
 		} // for ar
 	}
-	if (is_house) { // place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
+	if (is_house && (!is_basement || rgen.rand_bool())) { // 50% of the time if in the basement
+		// place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
 		cube_t place_area_tub(room_bounds);
 		place_area_tub.expand_by(-get_trim_thickness()); // just enough to prevent z-fighting and intersecting the wall trim
 		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, 0.2, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4);
