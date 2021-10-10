@@ -582,7 +582,7 @@ void building_t::add_box_contents(room_object_t const &box) {
 
 	// Note: the code below may invalidate the reference to box, so we can't use it after this point
 	for (unsigned n = 0; n < 10; ++n) { // make up to 10 attempts at placing valid item(s) in this box
-		unsigned const obj_type(rgen.rand()%7); // {book, bottles, ball, paint can, spraypaint, toilet paper, tape}
+		unsigned const obj_type((n == 9) ? 0 : (rgen.rand()%7)); // {book, bottles, ball, paint can, spraypaint, toilet paper, tape, [box]}; place book on last iteration
 
 		if (obj_type == 0) { // books; can always be placed
 			unsigned const num_books(1 + (rgen.rand()&3)); // 1-4 books
@@ -660,6 +660,12 @@ void building_t::add_box_contents(room_object_t const &box) {
 				objs.emplace_back(*i, TYPE_TAPE, room_id, 0, 0, (flags | RO_FLAG_IN_CLOSET), light_amt, SHAPE_CYLIN);
 				objs.back().color = tape_colors[color_ix % NUM_TAPE_COLORS];
 			}
+		}
+		else if (obj_type == 7) { // nested box (not currently enabled)
+			cube_t box2(box);
+			box2.expand_by(-0.05*box.get_size()); // shrink by 10% in all dims
+			objs.emplace_back(box2, TYPE_BOX, room_id, box.dim, box.dir, (flags | (box.flags & ~RO_FLAG_OPEN)), light_amt);
+			objs.back().obj_id += rgen.rand();
 		}
 		else {continue;} // empty box?
 		interior->room_geom->clear_static_small_vbos();
