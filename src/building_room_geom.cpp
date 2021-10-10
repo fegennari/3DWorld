@@ -518,7 +518,7 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 		add_vert_roll_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
 		return;
 	}
-	if (!(c.flags & RO_FLAG_TAKEN1)) {add_vert_roll_to_material(c, get_untextured_material(1, 0, 1));} // draw the roll if not taken
+	if (!(c.flags & RO_FLAG_TAKEN1)) {add_tproll_to_material(c, get_untextured_material(1, 0, 1));} // draw the roll if not taken
 	float const radius(0.5*c.dz()), rod_shrink(-0.7*radius), length(c.get_sz_dim(!c.dim));
 	// draw the holder attached to the wall
 	rgeom_mat_t &holder_mat(get_metal_material(1, 0, 1)); // untextured, shadowed, small=1
