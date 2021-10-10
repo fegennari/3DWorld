@@ -237,7 +237,7 @@ bool can_open_bathroom_stall(room_object_t const &stall, point const &pos, vecto
 // called for the player; mode: 0=normal, 1=pull
 bool building_t::apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only) {
 	if (!interior) return 0; // error?
-	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
+	float const dmax(4.0*CAMERA_RADIUS), floor_spacing(get_window_vspace());
 	float closest_dist_sq(0.0), t(0.0); // t is unused
 	unsigned door_ix(0), obj_ix(0);
 	bool found_item(0), is_obj(0);
@@ -848,8 +848,6 @@ bool trace_ray_through_cubes(vect_cube_t const &cubes, point const &p1, point co
 	return 0; // ray has exited the cubes
 }
 bool building_t::check_line_intersect_doors(point const &p1, point const &p2) const {
-	float const wall_thickness(get_wall_thickness());
-
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->open) continue; // check only closed doors
 		if (i->get_true_bcube().line_intersects(p1, p2)) return 1;

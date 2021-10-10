@@ -737,7 +737,7 @@ unsigned building_t::check_line_coll(point const &p1, point const &p2, float &t,
 	}
 	float const pzmin(min(p1r.z, p2r.z)), pzmax(max(p1r.z, p2r.z));
 	bool const vert(p1r.x == p2r.x && p1r.y == p2r.y);
-	float tmin(0.0), tmax(1.0);
+	float tmin(0.0);
 	unsigned coll(0); // 0=none, 1=side, 2=roof, 3=details
 
 	for (auto i = parts.begin(); i != parts.end(); ++i) {
