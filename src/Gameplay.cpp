@@ -2774,6 +2774,7 @@ void player_state::update_sstate_game_frame(int i) {
 	}
 	fire_frame = max(0,    (fire_frame - iticks));
 	shields    = max(0.0f, (shields    - 0.01f*fticks));
+	if (world_mode != WMODE_GROUND) return;
 
 	// check temperature for too hot/too cold
 	obj_group const &objg(obj_groups[coll_id[SMILEY]]);

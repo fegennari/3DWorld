@@ -1023,9 +1023,9 @@ void display() {
 		final_draw(framerate);
 		purge_coll_freed(0); // optional
 		camera_flight = 0;
+		if (game_mode) {update_game_frame();} // even in TT mode
 
 		if (game_mode && world_mode == WMODE_GROUND) {
-			update_game_frame();
 			show_user_stats();
 			show_blood_on_camera();
 			show_crosshair(WHITE, do_zoom);
