@@ -201,6 +201,7 @@ bool small_tree_group::check_sphere_coll(point &center, float radius) const {
 // if t is non-NULL, calculate the point of intersection
 bool small_tree_group::line_intersect(point const &p1, point const &p2, float *t) const { // if t != NULL, it should start at 1.0 (the end of the line)
 
+	if (!all_bcube.is_zero_area() && !check_line_clip(p1, p2, all_bcube.d)) return 0;
 	bool coll(0);
 
 	for (const_iterator i = begin(); i != end(); ++i) {
@@ -886,7 +887,7 @@ bool small_tree::line_intersect(point const &p1, point const &p2, float *t) cons
 		else {
 			float t_new(0.0);
 			
-			if (line_intersect_trunc_cone(p1, p2, cylins[i].p1, cylins[i].p2, cylins[i].r1, cylins[i].r2, 0, t_new) && t_new < *t) {
+			if (line_intersect_trunc_cone(p1, p2, cylins[i].p2, cylins[i].p1, cylins[i].r2, cylins[i].r1, 0, t_new) && t_new < *t) { // r2 > r1
 				*t   = t_new; // would be more efficient if we could pass *t in as t_max
 				coll = 1;
 			}
