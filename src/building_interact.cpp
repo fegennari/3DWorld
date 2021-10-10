@@ -253,8 +253,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 			float const dist_sq(p2p_dist_sq(closest_to, center));
 			if (found_item && dist_sq >= closest_dist_sq) continue; // not the closest
 			if (!check_obj_dir_dist(closest_to, in_dir, *i, center, dmax)) continue; // door is not in the correct direction or too far away, skip
-			cube_t door_bcube(*i);
-			door_bcube.expand_in_dim(i->dim, 0.5*wall_thickness); // expand to nonzero area
+			cube_t const door_bcube(i->get_true_bcube()); // expand to nonzero area
 
 			if (!door_bcube.line_intersects(closest_to, query_ray_end)) { // if camera ray doesn't intersect the door frame, check for ray intersection with opened door
 				if (!i->open || (closest_to[i->dim] < i->d[i->dim][i->open_dir]) == i->open_dir) continue; // closed, or player not on the side the door opens to
@@ -853,9 +852,7 @@ bool building_t::check_line_intersect_doors(point const &p1, point const &p2) co
 
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->open) continue; // check only closed doors
-		cube_t door(*i);
-		door.expand_in_dim(i->dim, 0.5*wall_thickness); // increase door thickness
-		if (door.line_intersects(p1, p2)) return 1;
+		if (i->get_true_bcube().line_intersects(p1, p2)) return 1;
 	}
 	return 0;
 }

@@ -18,6 +18,7 @@ unsigned const NUM_STAIRS_PER_FLOOR_U = 16;
 float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
+float const DOOR_THICK_TO_WIDTH    = 0.04; // ratio of door thickness to width for doors opening to the side
 
 float const elevator_fc_thick_scale(1.005*0.5*FLOOR_THICK_VAL_OFFICE);
 
@@ -747,7 +748,9 @@ struct door_stack_t : public cube_t {
 	door_stack_t(cube_t const &c, bool dim_, bool dir, bool os=0, bool hs=0) :
 		cube_t(c), dim(dim_), open_dir(dir), hinge_side(hs), on_stairs(os) {assert(is_strictly_normalized());}
 	bool get_check_dirs() const {return (dim ^ open_dir ^ hinge_side ^ 1);}
-	float get_width() const {return get_sz_dim(!dim);}
+	float get_width    () const {return get_sz_dim(!dim);}
+	float get_thickness() const {return DOOR_THICK_TO_WIDTH*get_width();}
+	cube_t get_true_bcube() const {cube_t bc(*this); bc.expand_in_dim(dim, 0.5*get_thickness()); return bc;}
 };
 struct door_t : public door_stack_t {
 	bool open, locked, blocked;

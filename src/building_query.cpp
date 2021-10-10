@@ -591,7 +591,7 @@ bool building_interior_t::check_sphere_coll_walls_elevators_doors(building_t con
 			if (dot_product_ptv(normal, pos, door.pts[0]) < 0.0) {normal.negate();} // use correct normal sign
 			float rdist, thick;
 			
-			if (sphere_ext_poly_int_base(door.pts[0], normal, pos, radius, i->get_sz_dim(i->dim), thick, rdist)) {
+			if (sphere_ext_poly_int_base(door.pts[0], normal, pos, radius, i->get_thickness(), thick, rdist)) {
 				if (sphere_poly_intersect(door.pts, door.npts, pos, normal, rdist, thick)) {
 					pos += normal*(thick - rdist);
 					if (cnorm) {*cnorm = normal;}

@@ -1243,7 +1243,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 	bool const exclude_frame(door_type == tquad_with_ix_t::TYPE_HDOOR && !exterior && opened); // exclude the frame on open interior doors
 	unsigned const num_edges(opens_up ? 4 : 2);
 	int const tid(get_building_ext_door_tid(door_type));
-	float const thickness(opens_up ? 0.01*D.dz() : 0.02*D.get_sz_dim(!dim));
+	float const half_thickness(opens_up ? 0.01*D.dz() : 0.5*DOOR_THICK_TO_WIDTH*D.get_sz_dim(!dim));
 	unsigned const num_sides((door_type == tquad_with_ix_t::TYPE_BDOOR) ? 2 : 1); // double doors for office building exterior door
 	tid_nm_pair_t const tp(tid, -1, 1.0f/num_sides, ty);
 	colorRGBA const &color((exterior && !opens_up) ? door_color : WHITE); // garage doors are always white
@@ -1261,7 +1261,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 
 		for (unsigned d = 0; d < 2; ++d) {
 			tquad_with_ix_t door_side(door);
-			vector3d const offset((d ? -1.0 : 1.0)*thickness*normal);
+			vector3d const offset((d ? -1.0 : 1.0)*half_thickness*normal);
 			for (unsigned n = 0; n < 4; ++n) {door_side.pts[n] += offset;}
 
 			for (unsigned e = 0; e < num_edges; ++e) {

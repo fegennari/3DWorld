@@ -151,8 +151,7 @@ void building_t::gather_interior_cubes(vect_colored_cube_t &cc) const {
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
 		if (i->open) continue; // add only closed doors
-		cc.emplace_back(*i, WHITE);
-		cc.back().expand_in_dim(i->dim, 0.5*get_wall_thickness()); // increase door thickness
+		cc.emplace_back(i->get_true_bcube(), WHITE);
 	}
 	add_colored_cubes(interior->ceilings, mat.ceil_color .modulate_with(mat.ceil_tex .get_avg_color()), cc);
 	add_colored_cubes(interior->floors,   mat.floor_color.modulate_with(mat.floor_tex.get_avg_color()), cc);
