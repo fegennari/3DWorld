@@ -574,6 +574,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 	last_player_pos = player_pos;
 
 	for (auto c = interior->room_geom->objs.begin(); c != interior->room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
+		//if (player_in_closet && c->type == TYPE_SHIRT && sphere_cube_intersect(player_pos, player_radius, *c)) {} // shirt in a closet - make it swing back and forth?
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
 		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
 		assert(c->obj_id < interior->room_geom->obj_dstate.size());
