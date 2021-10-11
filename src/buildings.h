@@ -952,7 +952,9 @@ struct building_t : public building_geom_t {
 	void connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t const &part);
 	void gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcubes, unsigned building_ix);
 	void add_stairs_and_elevators(rand_gen_t &rgen);
+	int get_ext_door_dir(cube_t const &door_bcube, bool dim) const;
 	void add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive);
+	void add_doorbell(tquad_with_ix_t const &door);
 	void add_exterior_door_signs(rand_gen_t &rgen);
 	void gen_building_doors_if_needed(rand_gen_t &rgen);
 	void maybe_add_special_roof(rand_gen_t &rgen);

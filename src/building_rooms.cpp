@@ -3038,9 +3038,28 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	}
 }
 
+int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // erturn value of 2 means 'not found'
+	float const width(door_bcube.get_sz_dim(!dim));
+
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find part containing this door so that we can get the correct dir
+		if (is_basement(p)) continue; // skip the basement
+		if (p->z1() != ground_floor_z1) continue; // not ground floor
+		if (p->d[!dim][1] < door_bcube.d[!dim][1] || p->d[!dim][0] > door_bcube.d[!dim][0]) {continue;} // not contained in this dim
+		bool dir(0);
+		if      (fabs(p->d[dim][0] - door_bcube.d[dim][0]) < 0.1*width) return 0;
+		else if (fabs(p->d[dim][1] - door_bcube.d[dim][1]) < 0.1*width) return 1;
+	} // for p
+	cout << "Warning: Failed to find building exterior door: " << TXT(bcube.str()) << TXT(door_bcube.str()) << TXT(is_house) << endl; // debug printout
+	//assert(0); // never gets here (too strong?)
+	return 2; // not found
+}
+
 void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std::string const &text, colorRGBA const &color, bool emissive) {
 	cube_t const door_bcube(door.get_bcube());
 	bool const dim(door_bcube.dy() < door_bcube.dx());
+	int const dir_ret(get_ext_door_dir(door_bcube, dim));
+	if (dir_ret > 1) return; // not found, skip sign
+	bool dir(dir_ret != 0);
 	float const width(door_bcube.get_sz_dim(!dim)), height(door_bcube.dz());
 	cube_t c(door_bcube);
 
@@ -3053,37 +3072,43 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 	c.z1() = c.z2() - 0.05*height;
 	float const sign_width(0.8*text.size()*c.dz()), shrink(0.5f*(width - sign_width));
 	c.expand_in_dim(!dim, -shrink);
-	vector<room_object_t> &objs(interior->room_geom->objs);
+	if (!outside) {dir ^= 1; c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*height);} // move inside the building
+	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*height;
 
-	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) { // find part containing this door so that we can get the correct dir
-		if (is_basement(p)) continue; // skip the basement
-		if (p->z1() != ground_floor_z1) continue; // not ground floor
-		if (p->d[!dim][1] < door_bcube.d[!dim][1] || p->d[!dim][0] > door_bcube.d[!dim][0]) {continue;} // not contained in this dim
-		bool dir(0);
-		if      (fabs(p->d[dim][0] - door_bcube.d[dim][0]) < 0.1*width) {dir = 0;}
-		else if (fabs(p->d[dim][1] - door_bcube.d[dim][1]) < 0.1*width) {dir = 1;}
-		else {continue;} // wrong part
-		if (!outside) {dir ^= 1; c.translate_dim(dim, (dir ? 1.0 : -1.0)*0.1*height);} // move inside the building
-		c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.01*height;
-
-		if (outside) {
-			bool skip(0);
-			for (auto p2 = get_real_parts_end_inc_sec(); p2 != parts.end(); ++p2) {skip |= p2->intersects(c);}
-			if (skip) return; // sign intersects porch roof, skip this building
+	if (outside) {
+		for (auto p2 = get_real_parts_end_inc_sec(); p2 != parts.end(); ++p2) {
+			if (p2->intersects(c)) return; // sign intersects porch roof, skip this building
 		}
-		unsigned flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | (outside ? 0 : RO_FLAG_HANGING));
-		objs.emplace_back(c, TYPE_SIGN, 0, dim, dir, flags, 1.0, SHAPE_CUBE, color); // always lit; room_id is not valid
-		objs.back().obj_id = register_sign_text(text);
-		return; // done
-	} // for p
-	cout << "Warning: Failed to find building exterior door: " << TXT(bcube.str()) << TXT(door_bcube.str()) << TXT(is_house) << endl; // debug printout
-	//assert(0); // never gets here (too strong?)
+	}
+	unsigned flags(RO_FLAG_LIT | RO_FLAG_NOCOLL | (emissive ? RO_FLAG_EMISSIVE : 0) | (outside ? 0 : RO_FLAG_HANGING));
+	vector<room_object_t> &objs(interior->room_geom->objs);
+	objs.emplace_back(c, TYPE_SIGN, 0, dim, dir, flags, 1.0, SHAPE_CUBE, color); // always lit; room_id is not valid
+	objs.back().obj_id = register_sign_text(text);
+}
+
+void building_t::add_doorbell(tquad_with_ix_t const &door) {
+	cube_t const door_bcube(door.get_bcube());
+	bool const dim(door_bcube.dy() < door_bcube.dx());
+	int const dir_ret(get_ext_door_dir(door_bcube, dim));
+	if (dir_ret > 1) return; // not found, skip doorbell
+	bool dir(dir_ret != 0);
+	bool const side(dir ^ dim); // currently always to the right, which matches the door handle side
+	float const door_width(door_bcube.get_sz_dim(!dim)), half_width(0.016*door_width), half_height(1.8*half_width);
+	float const zval(door_bcube.z1() + 0.55*door_bcube.dz());
+	float const pos(door_bcube.d[!dim][side] + (side ? 1.0 : -1.0)*5.0*half_width);
+	cube_t c;
+	c.d[dim][0  ]  = c.d[dim][1] = door_bcube.d[dim][dir];
+	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.1*half_width;
+	set_cube_zvals(c, (zval - half_height), (zval + half_height));
+	set_wall_width(c, pos, half_width, !dim);
+	interior->room_geom->objs.emplace_back(c, TYPE_BUTTON, 0, dim, dir, (RO_FLAG_LIT | RO_FLAG_NOCOLL), 1.0, SHAPE_CYLIN); // always lit; room_id is not valid
 }
 
 void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
-	if (is_house) { // maybe add welcome sign
-		if (rgen.rand() % 5) return; // only 20% of houses have a welcome sign
+	if (is_house) { // maybe add welcome sign and add doorbell
 		assert(!doors.empty());
+		add_doorbell(doors.front());
+		if (rgen.rand() & 3) return; // only 25% of houses have a welcome sign
 		add_sign_by_door(doors.front(), 1, "Welcome", DK_BROWN, 0); // front door only, outside
 	}
 	else { // add exit signs
