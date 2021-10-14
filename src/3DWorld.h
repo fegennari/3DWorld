@@ -281,6 +281,8 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 		if (z == 0.0) {z = TOLERANCE;}
 		x = 1.0/x; y = 1.0/y; z = 1.0/z;
 	}
+	pointT inverse() const {return pointT(1.0/x, 1.0/y, 1.0/z);} // no divide by zero check
+
 	pointT get_norm() const {
 		T const vmag(mag());
 		return ((vmag < TOLERANCE) ? *this : pointT(x/vmag, y/vmag, z/vmag));
