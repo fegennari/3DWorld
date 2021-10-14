@@ -274,26 +274,28 @@ void hedge_draw_t::create(cube_t const &bc) {
 void hedge_draw_t::draw_and_clear(shader_t &s) {
 	if (empty()) return;
 	if (!vbo_valid()) {create(to_draw.front());}
-	pre_render();
 	select_texture(get_texture_by_name("pine2.jpg"));
 	enable_blend(); // slightly smoother, but a bit of background shows through
 	s.add_uniform_float("min_alpha", 0.5);
+	pre_render();
+	vector3d const sz_mult(bcube.get_size().inverse());
+	// we can almost use an instance_render here, but that requires changes to the shader or a custom shader
 
 	for (auto c = to_draw.begin(); c != to_draw.end(); ++c) {
 		bool const swap_dims((c->dx() < c->dy()) ^ (bcube.dx() < bcube.dy())); // wrong dim, rotate 90 degrees
 		vector3d sz(c->get_size());
 		if (swap_dims) {swap(sz.x, sz.y);}
 		fgPushMatrix();
-		translate_to(c->get_cube_center() - bcube.get_cube_center()); // align the center
+		translate_to(c->get_cube_center()); // align the center
 		if (swap_dims) {fgRotate(90.0, 0.0, 0.0, 1.0);}
-		scale_by(sz/bcube.get_size()); // scale to match the size
+		scale_by(sz_mult*sz); // scale to match the size
 		s.upload_mvm();
 		glDrawArrays(GL_TRIANGLES, 0, num_verts);
 		fgPopMatrix();
 	} // for c
+	post_render();
 	s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // restore to the default
 	disable_blend();
-	post_render();
 	to_draw.clear();
 }
 
