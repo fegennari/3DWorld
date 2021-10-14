@@ -229,11 +229,72 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scal
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
 	dstate.draw_cube(qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
+
+	if (!shadow_only && type == DIV_HEDGE && (bcube + dstate.xlate).closest_dist_less_than(camera_pdu.pos, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
+	}
 }
 bool divider_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	cube_t bcube_wide(bcube + xlate);
 	bcube_wide.expand_in_dim(dim, max(0.0f, 0.5f*(0.5f*building_t::get_scaled_player_radius() - bcube.get_sz_dim(dim)))); // make sure it's at least half player radius in thickness
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_wide, p_last, 1, 0, cnorm);
+}
+
+void hedge_draw_t::create(cube_t const &bc) {
+	bcube = bc - bc.get_cube_center(); // centered on the origin
+	unsigned const target_num_leaves(40000);
+	vector3d const sz(bcube.get_size());
+	float const leaf_sz(0.05*sz.z), surf_area(sz.x*sz.y + 2.0f*sz.z*(sz.x + sz.y));
+	float const side_areas[5] = {sz.y*sz.z, sz.y*sz.z, sz.x*sz.z, sz.x*sz.z, sz.x*sz.y};
+	rand_gen_t rgen;
+	quad_batch_draw qbd;
+	qbd.verts.reserve(6*target_num_leaves);
+
+	for (unsigned n = 0; n < 5; ++n) { // {+X, -X, +Y, -Y, +Z} sides
+		unsigned const dim(n>>1), dir(n&1), d1((dim+1)%3), d2((dim+2)%3);
+		unsigned const num_this_face(target_num_leaves*side_areas[n]/surf_area);
+		point pos;
+		pos[dim] = bcube.d[dim][!dir];
+
+		for (unsigned n = 0; n < num_this_face; ++n) {
+			pos[d1] = rgen.rand_uniform(bcube.d[d1][0], bcube.d[d1][1]);
+			pos[d2] = rgen.rand_uniform(bcube.d[d2][0], bcube.d[d2][1]);
+			vector3d const normal(rgen.signed_rand_vector_spherical().get_norm());
+			float const angle(TWO_PI*rgen.rand_float());
+			vector3d tangent;
+			rotate_vector3d(cross_product(normal, plus_x), normal, angle, tangent);
+			vector3d const binormal(cross_product(normal, tangent));
+			unsigned const ix(4*n);
+			qbd.add_quad_dirs(pos, leaf_sz*tangent, leaf_sz*binormal, WHITE, normal);
+		} // for n
+	} // for s
+	num_verts = qbd.verts.size();
+	create_and_upload(qbd.verts, 0, 1);
+}
+void hedge_draw_t::draw_and_clear(shader_t &s) {
+	if (empty()) return;
+	if (!vbo_valid()) {create(to_draw.front());}
+	pre_render();
+	select_texture(get_texture_by_name("pine2.jpg"));
+	enable_blend(); // slightly smoother, but a bit of background shows through
+	s.add_uniform_float("min_alpha", 0.5);
+
+	for (auto c = to_draw.begin(); c != to_draw.end(); ++c) {
+		bool const swap_dims((c->dx() < c->dy()) ^ (bcube.dx() < bcube.dy())); // wrong dim, rotate 90 degrees
+		vector3d sz(c->get_size());
+		if (swap_dims) {swap(sz.x, sz.y);}
+		fgPushMatrix();
+		translate_to(c->get_cube_center() - bcube.get_cube_center()); // align the center
+		if (swap_dims) {fgRotate(90.0, 0.0, 0.0, 1.0);}
+		scale_by(sz/bcube.get_size()); // scale to match the size
+		s.upload_mvm();
+		glDrawArrays(GL_TRIANGLES, 0, num_verts);
+		fgPopMatrix();
+	} // for c
+	s.add_uniform_float("min_alpha", DEF_CITY_MIN_ALPHA); // restore to the default
+	disable_blend();
+	post_render();
+	to_draw.clear();
 }
 
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
@@ -824,9 +885,10 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 			T const &obj(objs[i]);
 			if (dstate.check_sphere_visible(obj.pos, obj.radius)) {obj.draw(dstate, qbd, dist_scale, shadow_only);}
 		}
-		if (!qbd.empty()) { // we have something to draw
+		if (!qbd.empty() || !dstate.hedge_draw.empty()) { // we have something to draw
 			dstate.begin_tile(g->get_cube_center(), 1, 1); // will_emit_now=1, ensure_active=1
 			qbd.draw_and_clear(); // draw this group with current smap
+			dstate.hedge_draw.draw_and_clear(dstate.s);
 		}
 	} // for g
 	T::post_draw(dstate, shadow_only);

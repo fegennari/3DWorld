@@ -396,12 +396,25 @@ namespace stoplight_ns {
 	};
 } // end stoplight_ns
 
+class hedge_draw_t : public vao_manager_t {
+	unsigned num_verts;
+	cube_t bcube;
+	vect_cube_t to_draw;
+
+	void create(cube_t const &bc);
+public:
+	hedge_draw_t() : num_verts(0) {}
+	bool empty() const {return to_draw.empty();}
+	void add(cube_t const &bc) {to_draw.push_back(bc);}
+	void draw_and_clear(shader_t &s);
+};
 
 struct draw_state_t {
 	shader_t s;
 	vector3d xlate;
 	bool use_building_lights;
 	unsigned pass_ix;
+	hedge_draw_t hedge_draw;
 protected:
 	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
 	point_sprite_drawer_sized light_psd; // for car/traffic lights
