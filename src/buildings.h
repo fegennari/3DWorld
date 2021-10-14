@@ -19,6 +19,7 @@ float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
 float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 float const DOOR_THICK_TO_WIDTH    = 0.04; // ratio of door thickness to width for doors opening to the side
+float const DEF_CITY_MIN_ALPHA     = 0.01;
 
 float const elevator_fc_thick_scale(1.005*0.5*FLOOR_THICK_VAL_OFFICE);
 
