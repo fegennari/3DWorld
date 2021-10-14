@@ -1325,14 +1325,15 @@ void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
 }
 
 
-// Note: assumes cur_vbo is currently bound by the caller, and will leave it bound after the call
-void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo, int index_type, void const *const indices, unsigned first) { // indices can be NULL
+// Note: assumes cur_vbo is currently bound by the caller, and will leave it bound after the call; indices can be NULL
+void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo, int index_type, void const *const indices, unsigned first, unsigned cur_vao) {
 
 	if (inst_xforms.empty()) return;
 	assert(loc >= 0); // Note: could handle this case
 	void const *vbo_ptr(get_dynamic_vbo_ptr(inst_xforms.front().get_ptr(), inst_xforms.size()*sizeof(xform_matrix)));
 	shader_float_matrix_uploader<4,4>::enable(loc, 1, (float const *)vbo_ptr); // use hardware instancing
 	if (cur_vbo) {bind_vbo(cur_vbo);}
+	if (cur_vao) {bind_vao(cur_vao);}
 	
 	if (index_type != GL_NONE) { // indexed
 		glDrawElementsInstanced(prim_type, count, index_type, indices, inst_xforms.size());
