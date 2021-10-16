@@ -557,11 +557,11 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 		else if (city_params.cars_use_driveways) { // in a plot; check for cars if about to enter a driveway that's in use
 			dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, radius));
 
-			if (dw.driveway != nullptr && dw.driveway->in_use && !dw.driveway->contains_pt_xy(pos) && dw.driveway->contains_pt_xy(pos + fticks*dir*speed)) {
-				// crossing into a used driveway this frame; use next pos assuming we're not stopped
+			if (dw.driveway != nullptr && dw.driveway->in_use == 1 && !dw.driveway->contains_pt_xy(pos) && dw.driveway->contains_pt_xy(pos + fticks*dir*speed)) {
+				// crossing into a driveway used/reserved by a non-parked car this frame; use next pos assuming we're not stopped
 				car_base_t const *const car(ped_mgr.find_car_using_driveway(city, dw));
 
-				if (car != nullptr && !car->is_parked()) { // car using this driveway, not parked
+				if (car != nullptr && !car->is_parked()) { // car using this driveway, not parked (though there shouldn't be any parked cars returned)
 					bool const dim(dw.driveway->dim), dir(dw.driveway->dir);
 					cube_t query_cube(*dw.driveway);
 
@@ -1009,7 +1009,7 @@ car_base_t const *ped_manager_t::find_car_using_driveway(unsigned city_ix, dw_qu
 		for (unsigned dir = 0; dir < 2; ++dir) { // look both ways
 			auto const &cars(cv.cars[dim][dir]); // cars for this city, in this dim and dir
 			
-			for (auto c = cars.begin(); c != cars.end(); ++c) { // includes parked cars, entering or leaving the driveway
+			for (auto c = cars.begin(); c != cars.end(); ++c) { // includes cars entering or leaving the driveway (there should be no parked cars in this vector)
 				if (c->dest_driveway == (int)dw.dix || dw.driveway->intersects_xy(c->bcube)) return &(*c);
 			}
 		} // for dir

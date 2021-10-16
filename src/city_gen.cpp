@@ -1736,7 +1736,7 @@ class city_road_gen_t : public road_gen_base_t {
 				driveway_t const &driveway(get_driveway(dix));
 				if (driveway.in_use) continue;
 				if (driveway.get_length() < 1.5*car.get_length()) continue; // driveway is too short
-				driveway.in_use   = 1;
+				driveway.in_use   = 1; // temporarily in use
 				car.dest_driveway = (unsigned short)dix;
 				// find intersection before the driveway such that driving on the road exiting this intersection will encounter the driveway on the right
 				bool const dim(driveway.dim), dir(driveway.dir), extend_dir(dim ^ dir); // extend_dir is the direction of the last intersection before our right turn

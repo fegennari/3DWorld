@@ -295,7 +295,8 @@ struct road_seg_t : public road_t {
 
 struct driveway_t : public cube_t {
 	bool dim, dir; // direction to road; d[dim][dir] is the edge shared with the road
-	mutable bool in_use; // either reserves the spot, or a car is parked there; modified by car_manager in a different thread - must be mutable, maybe should be atomic
+	// in_use is modified by car_manager in a different thread - must be mutable, maybe should be atomic
+	mutable uint8_t in_use; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
 	unsigned plot_ix;
 	driveway_t() : dim(0), dir(0), in_use(0), plot_ix(0) {}
 	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), in_use(0), plot_ix(pix) {}
