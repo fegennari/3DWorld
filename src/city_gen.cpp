@@ -1837,6 +1837,22 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for b
 			return nullptr;
 		}
+		dw_query_t get_nearby_driveway(unsigned plot_ix, point const &pos, float dist) const {
+			if (!get_is_residential()) return dw_query_t(); // no driveways
+
+			// plot_ix isn't required, but it's likely faster to check the plot first in the iteration
+			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) { // iterate by tile, which is likely faster than iterating over driveways
+				if (!b->bcube.contains_pt_xy_exp(pos, dist)) continue;
+				range_pair_t const &rp(b->ranges[TYPE_DRIVEWAY]);
+				
+				for (unsigned i = rp.s; i < rp.e; ++i) {
+					driveway_t const &driveway(city_obj_placer.driveways[i]);
+					if (driveway.plot_ix != plot_ix) continue; // wrong plot (optimization)
+					if (driveway.contains_pt_xy_exp(pos, dist)) return dw_query_t(&driveway, i); // found
+				}
+			} // for b
+			return dw_query_t(); // driveway not found
+		}
 		bool mark_crosswalk_in_use(point const &pos, bool dim, bool dir) const {
 			road_isec_t const *isec(find_isec_containing_pt(pos, 1, 3)); // 2-way can be skipped because there's no light/crosswalk
 			if (isec == nullptr) return 0; // ped not at a crosswalk, maybe crossing in the middle of the street; this is okay for now, nothing else to do in this case
@@ -2361,6 +2377,10 @@ public:
 	road_isec_t const &get_car_isec(car_base_t const &car) const {return get_car_rn(car).get_car_isec(car);}
 	cube_t get_road_bcube_for_car(car_base_t const &car) const {return get_car_rn(car).get_road_bcube_for_car(car);}
 	virtual cube_t get_bcube_for_car(car_base_t const &car) const {return get_road_bcube_for_car(car);}
+	
+	dw_query_t get_nearby_driveway(unsigned city_ix, unsigned plot_ix, point const &pos, float dist) const {
+		return get_city(city_ix).get_nearby_driveway(plot_ix, pos, dist);
+	}
 }; // city_road_gen_t
 
 
@@ -2416,6 +2436,9 @@ void filter_dlights_to(vector<light_source> &lights, unsigned max_num, point con
 // Note: these ped_manager_t functions are defined here because they use road_gen
 road_plot_t const &ped_manager_t::get_city_plot_for_peds(unsigned city_ix, unsigned plot_ix) const {return road_gen.get_plot_from_global_id(city_ix, plot_ix);}
 road_isec_t const &ped_manager_t::get_car_isec(car_base_t const &car) const {return road_gen.get_car_isec(car);}
+dw_query_t ped_manager_t::get_nearby_driveway(unsigned city_ix, unsigned plot_ix, point const &pos, float dist) const {
+	return road_gen.get_nearby_driveway(city_ix, plot_ix, pos, dist);
+}
 bool ped_manager_t::is_city_residential(unsigned city_ix) const {return road_gen.is_city_residential(city_ix);}
 
 cube_t ped_manager_t::get_expanded_city_bcube_for_peds(unsigned city_ix) const {

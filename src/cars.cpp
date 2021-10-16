@@ -186,7 +186,7 @@ bool car_t::must_wait_entering_or_crossing_road(vector<car_t> const &cars, drive
 	car_base_t ref_car; ref_car.cur_city = cur_city; ref_car.cur_road = road_ix; ref_car.max_speed = 1.0; // so that it isn't treated as parked
 	auto range_start(std::lower_bound(cars.begin(), cars.end(), ref_car, comp_car_city_then_road())); // binary search acceleration to find the first car on the same city and road
 	auto closest_car(cars.end());
-	// TODO: what about checking for people on the sidewalk by the driveway?
+	// Note: checking for people on the sidewalk by the driveway is too difficult, so instead the people should check for cars before crossing driveways
 
 	for (auto it = range_start; it != cars.end(); ++it) {
 		car_t const &c(*it);

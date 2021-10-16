@@ -551,7 +551,28 @@ bool pedestrian_t::check_for_safe_road_crossing(ped_manager_t const &ped_mgr, cu
 
 void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube, float &delta_dir) {
 	if (!in_building) { // in the city
-		if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
+		if (in_the_road) {
+			if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
+		}
+		else if (city_params.cars_use_driveways) { // in a plot; check for cars if about to enter a driveway that's in use
+			dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, radius));
+
+			if (dw.driveway != nullptr && dw.driveway->in_use && !dw.driveway->contains_pt_xy(pos) && dw.driveway->contains_pt_xy(pos + fticks*dir*speed)) {
+				// crossing into a used driveway this frame; use next pos assuming we're not stopped
+				car_base_t const *const car(ped_mgr.find_car_using_driveway(city, dw));
+
+				if (car != nullptr && !car->is_parked()) { // car using this driveway, not parked
+					bool const dim(dw.driveway->dim), dir(dw.driveway->dir);
+					cube_t query_cube(*dw.driveway);
+
+					if (car->dest_driveway == (int)dw.dix && car->dim != dim) { // car turning/entering driveway
+						query_cube.d[ dim][dir] += (dir ? 1.0 : -1.0)*city_params.road_width; // extend across the entire road
+						query_cube.d[!dim][!car->dir] -= 1.0*(car->dir ? 1.0 : -1.0)*city_params.road_width; // extend for car lead distance
+					}
+					if (query_cube.intersects_xy(car->bcube)) {stop(); return;} // car entering or leaving driveway
+				}
+			}
+		}
 	}
 	reset_waiting();
 	if (is_stopped) {go();}
@@ -977,6 +998,23 @@ bool ped_manager_t::has_nearby_car(pedestrian_t const &ped, bool road_dim, float
 	if (road_ix < 0) return 0; // failed for some reason, assume the answer is no
 	// Note: we only use road_ix, not seg_ix, because we need to find cars that are in adjacent segments to the ped (and it's difficult to get seg_ix)
 	return has_nearby_car_on_road(ped, road_dim, (unsigned)road_ix, delta_time, dbg_cubes);
+}
+car_base_t const *ped_manager_t::find_car_using_driveway(unsigned city_ix, dw_query_t const &dw) const {
+	if (city_ix >= cars_by_city.size()) return nullptr; // no cars in this city?
+	assert(dw.driveway != nullptr);
+	car_city_vect_t const &cv(cars_by_city[city_ix]);
+
+	// this isn't very efficient because the driveway doesn't give us the car, the road, the dim, or the dir
+	for (unsigned dim = 0; dim < 2; ++dim) { // since we don't know if the car is pulling into, pulling out of, or backing out of the driveway, we must check both dims
+		for (unsigned dir = 0; dir < 2; ++dir) { // look both ways
+			auto const &cars(cv.cars[dim][dir]); // cars for this city, in this dim and dir
+			
+			for (auto c = cars.begin(); c != cars.end(); ++c) { // includes parked cars, entering or leaving the driveway
+				if (c->dest_driveway == (int)dw.dix || dw.driveway->intersects_xy(c->bcube)) return &(*c);
+			}
+		} // for dir
+	} // for dim
+	return nullptr; // not found
 }
 
 bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vect_cube_t *dbg_cubes) const {

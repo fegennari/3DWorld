@@ -120,15 +120,16 @@ struct waiting_obj_t {
 	float get_wait_time_secs() const {return (float(tfticks) - waiting_start)/TICKS_PER_SECOND;} // Note: only meaningful for cars stopped at lights or peds stopped at roads
 };
 
-struct car_base_t { // the part needed for the pedestrian interface (size = 36)
+struct car_base_t { // the part needed for the pedestrian interface (size = 48)
 	cube_t bcube;
 	bool dim, dir, stopped_at_light;
 	unsigned char cur_road_type, turn_dir;
 	unsigned short cur_city, cur_road, cur_seg;
+	short dest_driveway; // -1 is unset
 	float max_speed, cur_speed;
 
 	car_base_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(TYPE_RSEG), turn_dir(TURN_NONE),
-		cur_city(0), cur_road(0), cur_seg(0), max_speed(0.0), cur_speed(0.0) {}
+		cur_city(0), cur_road(0), cur_seg(0), dest_driveway(-1), max_speed(0.0), cur_speed(0.0) {}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}
 	unsigned get_orient_in_isec() const {return (2*dim + (!dir));} // invert dir (incoming, not outgoing)
@@ -149,12 +150,11 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	bool entering_city, in_tunnel, dest_valid, destroyed, in_reverse, engine_running;
 	unsigned char color_id, front_car_turn_dir, model_id;
 	unsigned short dest_city, dest_isec;
-	short dest_driveway; // -1 is unset
 	float height, dz, rot_z, turn_val, waiting_pos, wake_time;
 	car_t const *car_in_front;
 
 	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), in_reverse(0), engine_running(0), color_id(0),
-		front_car_turn_dir(TURN_UNSPEC), model_id(0), dest_city(0), dest_isec(0), dest_driveway(-1), height(0.0), dz(0.0), rot_z(0.0),
+		front_car_turn_dir(TURN_UNSPEC), model_id(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0),
 		turn_val(0.0), waiting_pos(0.0), wake_time(0.0), car_in_front(nullptr) {}
 	bool is_valid   () const {return !bcube.is_all_zeros();}
 	bool is_sleeping() const {return (wake_time > 0.0);}
@@ -302,6 +302,13 @@ struct driveway_t : public cube_t {
 	float get_edge_at_road() const {return d[dim][dir];}
 	float get_length() const {return get_sz_dim(dim);}
 	tex_range_t get_tex_range(float ar) const;
+};
+
+struct dw_query_t {
+	driveway_t const *const driveway;
+	unsigned dix;
+	dw_query_t() : driveway(nullptr), dix(0) {}
+	dw_query_t(driveway_t const *const driveway_, unsigned dix_) : driveway(driveway_), dix(dix_) {}
 };
 
 struct road_plot_t : public cube_t {
@@ -834,6 +841,8 @@ public:
 	path_finder_t path_finder;
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;
 	road_plot_t const &get_city_plot_for_peds(unsigned city_ix, unsigned plot_ix) const;
+	dw_query_t get_nearby_driveway(unsigned city_ix, unsigned plot_ix, point const &pos, float dist) const;
+	car_base_t const *find_car_using_driveway(unsigned city_ix, dw_query_t const &dw) const;
 	cube_t get_expanded_city_bcube_for_peds(unsigned city_ix) const;
 	cube_t get_expanded_city_plot_bcube_for_peds(unsigned city_ix, unsigned plot_ix) const;
 	bool is_city_residential(unsigned city_ix) const;
