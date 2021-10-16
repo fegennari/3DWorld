@@ -1793,10 +1793,13 @@ class city_road_gen_t : public road_gen_base_t {
 			//cout << TXT(city_id) << TXT(tot_road_len) << TXT(num_cars) << TXT(get_traffic_density()) << endl;
 			num_cars = 0;
 		}
+		static road_network_t const &get_city(unsigned city_ix, vector<road_network_t> const &road_networks, road_network_t const &global_rn) {
+			if (city_ix == CONN_CITY_IX) return global_rn;
+			assert(city_ix < road_networks.size());
+			return road_networks[city_ix];
+		}
 		static road_network_t const &get_car_rn(car_base_t const &car, vector<road_network_t> const &road_networks, road_network_t const &global_rn) {
-			if (car.cur_city == CONN_CITY_IX) return global_rn;
-			assert(car.cur_city < road_networks.size());
-			return road_networks[car.cur_city];
+			return get_city(car.cur_city, road_networks, global_rn);
 		}
 		void update_car_seg_stats(car_base_t const &car) const {
 			if (car.cur_road_type == TYPE_RSEG) {++get_car_seg(car).car_count;}
@@ -1896,11 +1899,7 @@ public:
 	bool has_tunnels() const {return global_rn.has_tunnels();}
 	bool point_in_tunnel(point const &pos) const {return global_rn.point_in_tunnel(pos);}
 
-	road_network_t const &get_city(unsigned city_ix) const {
-		if (city_ix == CONN_CITY_IX) {return global_rn;}
-		assert(city_ix < road_networks.size());
-		return road_networks[city_ix];
-	}
+	road_network_t const &get_city(unsigned city_ix) const {return road_network_t::get_city(city_ix, road_networks, global_rn);} // call the static function
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
 	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned global_plot_id) const {return get_city(city_ix).get_colliders_for_plot(global_plot_id);}
