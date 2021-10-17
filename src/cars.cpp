@@ -253,7 +253,7 @@ void car_t::pull_into_driveway(driveway_t const &driveway, rand_gen_t &rgen) {
 		dest_valid     = 0;
 		dest_driveway  = -1;
 		engine_running = 0;
-		sleep(rgen, 6.0); // sleep for 60-120s rather than permanently parking
+		sleep(rgen, 60.0); // sleep for 60-120s rather than permanently parking
 	}
 }
 void car_t::back_or_pull_out_of_driveway(driveway_t const &driveway) {
