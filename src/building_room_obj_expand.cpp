@@ -144,6 +144,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 	hanger_rod.z1() = c.z1() + 0.8*window_vspacing;
 	hanger_rod.z2() = hanger_rod.z1() + 2.0*hr_radius;
 	set_wall_width(hanger_rod, (0.45*c.d[c.dim][c.dir] + 0.55*c.d[c.dim][!c.dir]), hr_radius, c.dim); // move slightly toward the back
+	unsigned const hanger_rod_ix(objects.size());
 	objects.push_back(hanger_rod);
 
 	// add hangers
@@ -168,7 +169,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 				uint64_t const slot_mask(uint64_t(1) << slot_ix);
 				if (slots_used & slot_mask) continue;
 				slots_used |= slot_mask;
-				found_slot = 1;
+				found_slot  = 1;
 				break; // success
 			}
 			if (!found_slot) continue; // skip this hanger
@@ -176,14 +177,16 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 			objects.push_back(hanger);
 			
 			if (rgen.rand_float() < 0.67) { // maybe add a shirt to the hanger
+				objects.back().flags |= RO_FLAG_HANGING; // flag the hanger has having the shirt hanging on it
 				room_object_t shirt(hanger);
 				shirt.expand_by_xy(0.01*hanger.dz()); // expand slightly to avoid z-fighting with hanger
 				shirt.expand_in_dim(c.dim, 0.04*c.dz()); // slightly wider
 				shirt.z2() -= 0.55*hanger.dz(); // top
 				shirt.z1() -= 0.3*c.dz(); // bottom
-				objects.emplace_back(shirt, TYPE_SHIRT, c.room_id, c.dim, c.dir, flags, c.light_amt, SHAPE_CUBE, shirt_colors[rgen.rand()%NUM_SHIRT_COLORS]);
+				objects.emplace_back(shirt, TYPE_SHIRT, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, shirt_colors[rgen.rand()%NUM_SHIRT_COLORS]);
 			}
 		} // for i
+		objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and shirts
 	}
 }
 

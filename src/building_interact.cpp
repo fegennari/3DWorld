@@ -1651,6 +1651,15 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				for (unsigned n = 0; n < 3 && !intersects; ++n) {intersects |= cubes[n].line_intersects(p1c, p2c);}
 				if (!intersects) continue;
 			}
+			if (i->type == TYPE_HANGER_ROD) { // search for hangers and don't allow hanger rod to be taken until the hangers are all taken
+				bool has_hanger(0);
+
+				for (auto j = i+1; j != (i + i->item_flags); ++j) { // iterate over all objects hanging on the hanger rod and look for untaken hangers
+					if (j->type == TYPE_HANGER) {has_hanger = 1; break;}
+				}
+				if (has_hanger) continue;
+			}
+			if (i->type == TYPE_HANGER  && (i->flags & RO_FLAG_HANGING) && (i+1) != objs_end && (i+1)->type == TYPE_SHIRT) continue; // hanger with a shirt on it - must take shirt first
 			if (i->type == TYPE_MIRROR  && !i->is_house())                continue; // can only pick up mirrors from houses, not office buildings
 			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE)        continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED     && (i->flags & RO_FLAG_TAKEN3))   continue; // can only take pillow, sheets, and mattress - not the frame
