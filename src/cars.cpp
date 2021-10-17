@@ -222,8 +222,7 @@ bool car_t::check_for_road_clear_and_wait(vector<car_t> const &cars, driveway_t 
 
 bool car_t::run_enter_driveway_logic(vector<car_t> const &cars, driveway_t const &driveway) {
 	if (dim == driveway.dim) return 0; // car must be on a road perpendicular to the driveway, which may be the road connected to it
-	cube_t turn_area(driveway); // includes driveway and the road adjacent to it
-	turn_area.d[driveway.dim][driveway.dir] += (driveway.dir ? 1.0 : -1.0)*city_params.road_width; // extend to cover the entire width of the road
+	cube_t const turn_area(driveway.extend_across_road()); // includes driveway and the road adjacent to it
 	if (!bcube.intersects_xy(turn_area)) return 0; // not yet crossed into turn area
 
 	if (turn_dir == TURN_NONE) {

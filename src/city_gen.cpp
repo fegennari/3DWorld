@@ -1743,8 +1743,7 @@ class city_road_gen_t : public road_gen_base_t {
 				float const dw_road_meet(driveway.d[dim][dir]); // point at which the road and driveway meet
 				assert(!plots.empty());
 				float const road_spacing(plots.front().get_sz_dim(!dim)); // use actual segment length (should be the same across segments)
-				cube_t query_cube(driveway); // segment of road connected to driveway
-				query_cube.d[ dim][ dir] = dw_road_meet + (dir ? 1.0 : -1.0)*city_params.road_width; // edge of road opposite driveway
+				cube_t query_cube(driveway.extend_across_road()); // segment of road connected to driveway
 				query_cube.d[ dim][!dir] = dw_road_meet;
 				query_cube.d[!dim][extend_dir] += (extend_dir ? 1.0 : -1.0)*road_spacing; // extend out to include the adjacent intersection in this dim/dir, assuming driveway on a road seg
 				car.dest_isec = 0; // used as a loop index

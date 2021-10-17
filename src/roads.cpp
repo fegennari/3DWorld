@@ -63,8 +63,13 @@ tex_range_t parking_lot_t::get_tex_range(float ar) const { // ar is unused
 
 tex_range_t driveway_t::get_tex_range(float ar) const { // ar is unused
 	float txy[2] = {2.0, 2.0};
-	txy[dim] *= get_sz_dim(dim)/get_sz_dim(!dim); // ensure 1:1 texture scale
+	txy[dim] *= get_length()/get_width(); // ensure 1:1 texture scale
 	return tex_range_t(0.0, 0.0, txy[0], txy[1], 0, 0); // since the asphalt driveway texture isn't directional, we don't need to worry about swap_xy
+}
+cube_t driveway_t::extend_across_road() const {
+	cube_t dw_ext(*this); // includes driveway and the road adjacent to it
+	dw_ext.d[dim][dir] += (dir ? 1.0 : -1.0)*city_params.road_width;
+	return dw_ext;
 }
 
 namespace stoplight_ns {

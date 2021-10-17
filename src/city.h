@@ -301,7 +301,9 @@ struct driveway_t : public cube_t {
 	driveway_t() : dim(0), dir(0), in_use(0), plot_ix(0) {}
 	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), in_use(0), plot_ix(pix) {}
 	float get_edge_at_road() const {return d[dim][dir];}
-	float get_length() const {return get_sz_dim(dim);}
+	float get_length() const {return get_sz_dim( dim);}
+	float get_width () const {return get_sz_dim(!dim);}
+	cube_t extend_across_road() const;
 	tex_range_t get_tex_range(float ar) const;
 };
 
