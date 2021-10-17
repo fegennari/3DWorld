@@ -6,6 +6,14 @@
 #include "function_registry.h"
 #include <iostream>
 #include <assert.h>
+
+using namespace std;
+
+extern float CAMERA_RADIUS;
+
+#define ENABLE_OPENAL // comment this out to disable OpenAL sound support
+
+#ifdef ENABLE_OPENAL
 #ifdef _WIN32
 #include <al.h>
 #include <alc.h>
@@ -15,15 +23,11 @@
 #endif
 #include <AL/alut.h>
 
-using namespace std;
-
-
 unsigned const NUM_CHANNELS = 8;
 string const sounds_path("sounds/");
 
 extern bool disable_sound;
 extern int frame_counter, iticks;
-extern float CAMERA_RADIUS;
 
 float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {0.5, 0.1, 0.1, 0.1};
 float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0, 1.0};
@@ -226,18 +230,6 @@ bool check_and_print_alut_error() { // returns 1 on error
 		return 1;
 	}
 	return 0;
-}
-
-
-float sound_params_t::get_loudness() const {
-	return gain/max(SMALL_NUMBER, distance_to_camera(pos));
-}
-bool sound_params_t::read_from_file(FILE *fp) {
-	gain = 1.0; pitch = 1.0;
-	return (fscanf(fp, "%f%f%f%f%f", &pos.x, &pos.y, &pos.z, &gain, &pitch) >= 3); // pos.x pos.y pos.z [gain [pitch]]
-}
-void sound_params_t::write_to_cobj_file(std::ostream &out) const {
-	out << pos.raw_str() << " " << gain << " " << pitch << endl;
 }
 
 
@@ -455,7 +447,6 @@ bool source_manager_t::check_for_active_sound(point const &pos, float radius, fl
 
 
 void placed_sound_t::next_frame() {
-
 	if (disable_sound || !enabled()) return;
 	if (check_for_active_sound(params.pos, 0.1*CAMERA_RADIUS)) return; // assume this sound is already playing (not a perfect check, but it's easy)
 	if (sensor.enabled() && !sensor.check_active()) return;
@@ -465,20 +456,10 @@ void placed_sound_t::next_frame() {
 
 // listner code
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient) {
-
 	if (disable_sound) return;
 	alListenerfv(AL_POSITION,    &pos.x);
     alListenerfv(AL_VELOCITY,    &vel.x);
     alListenerfv(AL_ORIENTATION, &orient.at.x);
-}
-
-
-void set_openal_listener_as_player() {
-
-	// Note: velocity is zero for now because the actual player velocity is not constant,
-	// and passing it into the listener setup as a constant is incorrect
-	vector3d const cvel(zero_vector);
-	setup_openal_listener(get_camera_all(), cvel, openal_orient(get_vdir_all(), get_upv_all()));
 }
 
 
@@ -514,7 +495,6 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 	//PRINT_TIME("Play Sound");
 }
 
-
 void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener) { // delay in seconds
 
 	if (disable_sound) return;
@@ -528,30 +508,13 @@ void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, f
 	}
 }
 
-void gen_delayed_from_player_sound(unsigned id, point const &pos, float gain, float pitch) {
-
-	float const SPEED_OF_SOUND = 16.0; // in world units per second
-	float const dist(distance_to_camera(pos));
-	gen_delayed_sound(((dist < CAMERA_RADIUS) ? 0.0 : dist/SPEED_OF_SOUND), id, pos, gain, pitch);
-}
-
 void proc_delayed_and_placed_sounds() {
 	sound_manager.proc_delayed();
 	sound_manager.proc_placed();
 }
 
 
-void play_thunder(point const &pos, float gain, float delay) {
-	float const pitch(rand_uniform(0.8, 1.2)); // variable pitch
-	gen_delayed_sound(delay, ((rand()&1) ? (unsigned)SOUND_THUNDER : (unsigned)SOUND_THUNDER2), pos, gain, pitch);
-}
-
-void play_switch_weapon_sound() {gen_sound(SOUND_CLICK,  get_camera_pos(), 1.0, 0.7);}
-void play_switch_wmode_sound () {gen_sound(SOUND_RELOAD, get_camera_pos(), 1.0, 1.0);}
-
-
 void init_openal(int &argc, char** argv) {
-
 	if (disable_sound) return;
 
 	if (!alutInit(&argc, argv)) {
@@ -565,16 +528,62 @@ void init_openal(int &argc, char** argv) {
 	//openal_hello_world();
 }
 
-
 void exit_openal() {
 	if (!alutExit()) check_and_print_alut_error();
 }
 
+#else // !ENABLE_OPENAL
+
+void alut_sleep(float seconds) {} // FIXME
+unsigned get_sound_id_for_file(std::string const &fn) {return 0;}
+string const empty_str;
+string const &get_sound_name(unsigned id) {return empty_str;} // for writing to cobj file
+void set_sound_loop_state(unsigned id, bool play, float volume) {}
+bool check_for_active_sound(point const &pos, float radius, float min_gain) {return 0;}
+void add_placed_sound(string const &fn, sound_params_t const &params, sensor_t const &sensor) {}
+void write_placed_sounds_to_cobj_file(ostream &out) {}
+void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient) {}
+void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener, vector3d const &vel, bool skip_if_already_playing) {}
+void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener) {}
+void proc_delayed_and_placed_sounds() {}
+void init_openal(int &argc, char** argv) {}
+void exit_openal() {}
+
+#endif // ENABLE_OPENAL
+
+float sound_params_t::get_loudness() const {
+	return gain/max(SMALL_NUMBER, distance_to_camera(pos));
+}
+bool sound_params_t::read_from_file(FILE *fp) {
+	gain = 1.0; pitch = 1.0;
+	return (fscanf(fp, "%f%f%f%f%f", &pos.x, &pos.y, &pos.z, &gain, &pitch) >= 3); // pos.x pos.y pos.z [gain [pitch]]
+}
+void sound_params_t::write_to_cobj_file(std::ostream &out) const {
+	out << pos.raw_str() << " " << gain << " " << pitch << endl;
+}
+
+void play_switch_weapon_sound() {gen_sound(SOUND_CLICK,  get_camera_pos(), 1.0, 0.7);}
+void play_switch_wmode_sound () {gen_sound(SOUND_RELOAD, get_camera_pos(), 1.0, 1.0);}
+
+void gen_delayed_from_player_sound(unsigned id, point const &pos, float gain, float pitch) {
+	float const SPEED_OF_SOUND = 16.0; // in world units per second
+	float const dist(distance_to_camera(pos));
+	gen_delayed_sound(((dist < CAMERA_RADIUS) ? 0.0 : dist/SPEED_OF_SOUND), id, pos, gain, pitch);
+}
+
+void play_thunder(point const &pos, float gain, float delay) {
+	float const pitch(rand_uniform(0.8, 1.2)); // variable pitch
+	gen_delayed_sound(delay, ((rand()&1) ? (unsigned)SOUND_THUNDER : (unsigned)SOUND_THUNDER2), pos, gain, pitch);
+}
+
+void set_openal_listener_as_player() {
+	// Note: velocity is zero for now because the actual player velocity is not constant,
+	// and passing it into the listener setup as a constant is incorrect
+	vector3d const cvel(zero_vector);
+	setup_openal_listener(get_camera_all(), cvel, openal_orient(get_vdir_all(), get_upv_all()));
+}
 
 int read_sound_file(string const &name) {
 	if (name == "none" || name == "null") return -1; // no sound
 	return get_sound_id_for_file(name);
 }
-
-
-

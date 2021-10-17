@@ -448,7 +448,11 @@ void platform::write_to_cobj_file(std::ostream &out) const {
 
 	triggers.write_to_cobj_file(out);
 	sensor.write_to_cobj_file(out);
-	if (sound_id >= 0) {out << "sound_file " << get_sound_name(sound_id) << endl;}
+
+	if (sound_id >= 0) {
+		string const sound_name(get_sound_name(sound_id));
+		if (!sound_name.empty()) {out << "sound_file " << sound_name << endl;} // skip if sounds not enabled
+	}
 	// 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0 [update_light=0]]]
 	out << "Q 1 " << fspeed*TICKS_PER_SECOND << " " << rspeed*TICKS_PER_SECOND << " " << sdelay/TICKS_PER_SECOND << " " << rdelay/TICKS_PER_SECOND << " " << ext_dist << " " << act_dist
 		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << " " << update_light << " " << destroys << endl; // always enabled
