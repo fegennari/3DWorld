@@ -555,21 +555,29 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 			if (!check_for_safe_road_crossing(ped_mgr, plot_bcube, next_plot_bcube)) {stop(); return;}
 		}
 		else if (city_params.cars_use_driveways) { // in a plot; check for cars if about to enter a driveway that's in use
-			dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, radius));
+			float const sw_width(get_sidewalk_width());
+			dw_query_t const dw(ped_mgr.get_nearby_driveway(city, plot, pos, max(sw_width, radius)));
 
-			if (dw.driveway != nullptr && dw.driveway->in_use == 1 && !dw.driveway->contains_pt_xy(pos) && dw.driveway->contains_pt_xy(pos + fticks*dir*speed)) {
-				// crossing into a driveway used/reserved by a non-parked car this frame; use next pos assuming we're not stopped
-				car_base_t const *const car(ped_mgr.find_car_using_driveway(city, dw));
+			if (dw.driveway != nullptr && dw.driveway->in_use == 1) { // crossing into a driveway used/reserved by a non-parked car
+				bool const ddim(dw.driveway->dim), ddir(dw.driveway->dir);
+				cube_t dw_extend(*dw.driveway);
+				dw_extend.d[ddim][ddir] += (ddir ? 1.0 : -1.0)*sw_width; // extend to include the sidewalk
+				cube_t dw_wider(dw_extend);
+				dw_wider.expand_in_dim(!ddim, 0.25*dw.driveway->get_width());
 
-				if (car != nullptr && !car->is_parked()) { // car using this driveway, not parked (though there shouldn't be any parked cars returned)
-					bool const dim(dw.driveway->dim), dir(dw.driveway->dir);
-					cube_t query_cube(*dw.driveway);
+				// check for crossing the side (not end) of the driveway this frame; use next pos assuming we're not stopped
+				if (!dw_extend.contains_pt_xy(pos) && dw_wider.contains_pt_xy(pos) && dw_extend.contains_pt_xy(pos + 1.5f*fticks*dir*speed)) {
+					car_base_t const *const car(ped_mgr.find_car_using_driveway(city, dw));
 
-					if (car->dest_driveway == (int)dw.dix && car->dim != dim) { // car turning/entering driveway
-						query_cube.d[ dim][dir] += (dir ? 1.0 : -1.0)*city_params.road_width; // extend across the entire road
-						query_cube.d[!dim][!car->dir] -= 1.0*(car->dir ? 1.0 : -1.0)*city_params.road_width; // extend for car lead distance
+					if (car != nullptr && !car->is_parked()) { // car using this driveway, not parked (though there shouldn't be any parked cars returned, car should be null if parked)
+						cube_t query_cube(dw.driveway->extend_across_road());
+
+						if (car->dest_driveway == (int)dw.dix && car->dim != ddim) { // car turning/entering driveway
+							query_cube.d[!ddim][!car->dir] -= 1.0*(car->dir ? 1.0 : -1.0)*city_params.road_width; // extend for car lead distance
+						}
+						if (query_cube.intersects_xy(car->bcube)) {stop(); return;} // car entering or leaving driveway
+						// else should we flag the driveway as blocked so that cars don't pull into it?
 					}
-					if (query_cube.intersects_xy(car->bcube)) {stop(); return;} // car entering or leaving driveway
 				}
 			}
 		}
@@ -1003,14 +1011,16 @@ car_base_t const *ped_manager_t::find_car_using_driveway(unsigned city_ix, dw_qu
 	if (city_ix >= cars_by_city.size()) return nullptr; // no cars in this city?
 	assert(dw.driveway != nullptr);
 	car_city_vect_t const &cv(cars_by_city[city_ix]);
+	cube_t query_cube(dw.driveway->extend_across_road());
 
 	// this isn't very efficient because the driveway doesn't give us the car, the road, the dim, or the dir
 	for (unsigned dim = 0; dim < 2; ++dim) { // since we don't know if the car is pulling into, pulling out of, or backing out of the driveway, we must check both dims
 		for (unsigned dir = 0; dir < 2; ++dir) { // look both ways
 			auto const &cars(cv.cars[dim][dir]); // cars for this city, in this dim and dir
 			
-			for (auto c = cars.begin(); c != cars.end(); ++c) { // includes cars entering or leaving the driveway (there should be no parked cars in this vector)
-				if (c->dest_driveway == (int)dw.dix || dw.driveway->intersects_xy(c->bcube)) return &(*c);
+			for (auto c = cars.begin(); c != cars.end(); ++c) { // there should be no parked cars in this vector
+				if (c->dest_driveway == (int)dw.dix) return &(*c); // entering driveway (eventually)
+				if (c->cur_road_type == TYPE_DRIVEWAY && query_cube.intersects_xy(c->bcube)) return &(*c); // leaving driveway
 			}
 		} // for dir
 	} // for dim
