@@ -3045,7 +3045,6 @@ int building_t::get_ext_door_dir(cube_t const &door_bcube, bool dim) const { // 
 		if (is_basement(p)) continue; // skip the basement
 		if (p->z1() != ground_floor_z1) continue; // not ground floor
 		if (p->d[!dim][1] < door_bcube.d[!dim][1] || p->d[!dim][0] > door_bcube.d[!dim][0]) {continue;} // not contained in this dim
-		bool dir(0);
 		if      (fabs(p->d[dim][0] - door_bcube.d[dim][0]) < 0.1*width) return 0;
 		else if (fabs(p->d[dim][1] - door_bcube.d[dim][1]) < 0.1*width) return 1;
 	} // for p

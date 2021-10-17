@@ -264,7 +264,6 @@ void hedge_draw_t::create(cube_t const &bc) {
 			vector3d tangent;
 			rotate_vector3d(cross_product(normal, plus_x), normal, angle, tangent);
 			vector3d const binormal(cross_product(normal, tangent));
-			unsigned const ix(4*n);
 			qbd.add_quad_dirs(pos, leaf_sz*tangent, leaf_sz*binormal, WHITE, normal);
 		} // for n
 	} // for s
