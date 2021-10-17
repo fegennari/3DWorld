@@ -572,9 +572,16 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 	if (first_ped_ix >= 0) {get_ped_bcubes_for_building(first_ped_ix, building_ix, ped_bcubes);}
 	bool const player_is_moving(player_pos != last_player_pos);
 	last_player_pos = player_pos;
+	auto &objs(interior->room_geom->objs);
 
-	for (auto c = interior->room_geom->objs.begin(); c != interior->room_geom->objs.end(); ++c) { // check for other objects to collide with (including stairs)
-		//if (player_in_closet && c->type == TYPE_SHIRT && sphere_cube_intersect(player_pos, player_radius, *c)) {} // shirt in a closet - make it swing back and forth?
+	for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
+		if (0 && player_in_closet && c->type == TYPE_SHIRT && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
+			assert(c != objs.begin());
+			room_object_t &hanger(*(c-1)); // hanger is the previous object
+			assert(hanger.type == TYPE_HANGER);
+			c->flags |= RO_FLAG_ROTATING; hanger.flags |= RO_FLAG_ROTATING;
+			// TODO: make the shirt and hanger swing back and forth
+		}
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
 		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
 		assert(c->obj_id < interior->room_geom->obj_dstate.size());
