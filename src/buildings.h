@@ -514,7 +514,7 @@ struct building_decal_manager_t {
 	quad_batch_draw blood_qbd, tp_qbd, tape_qbd, pend_tape_qbd;
 
 	void commit_pend_tape_qbd();
-	void draw_building_interior_decals(bool player_in_building) const;
+	void draw_building_interior_decals(bool player_in_building, bool shadow_only) const;
 };
 
 struct building_room_geom_t {

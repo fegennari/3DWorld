@@ -867,7 +867,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		else {assert(0);}
 	}
 	// alpha blended, should be drawn near last
-	if (!shadow_only) {decal_manager.draw_building_interior_decals(player_in_building);} // draw decals in this building
+	decal_manager.draw_building_interior_decals(player_in_building, shadow_only); // draw decals in this building
 	
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
@@ -981,7 +981,14 @@ void building_decal_manager_t::commit_pend_tape_qbd() {
 	pend_tape_qbd.add_quads(tape_qbd);
 	pend_tape_qbd.clear();
 }
-void building_decal_manager_t::draw_building_interior_decals(bool player_in_building) const {
+void building_decal_manager_t::draw_building_interior_decals(bool player_in_building, bool shadow_only) const {
+	if (shadow_only) { // shadow pass, draw tape only
+		if (player_in_building) {
+			tape_qbd.draw(); // somewhat inefficient, since we have to send all the data for every light source
+			pend_tape_qbd.draw();
+		}
+		return;
+	}
 	paint_draw[1].draw_paint(); // draw exterior paint always - this will show up on windows (even when looking outside into another part of the same building)
 	if (!player_in_building) return;
 	paint_draw[0].draw_paint(); // draw interior paint
