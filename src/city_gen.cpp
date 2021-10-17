@@ -1524,6 +1524,7 @@ class city_road_gen_t : public road_gen_base_t {
 		bool run_car_in_driveway_logic(car_t &car, vector<car_t> const &cars, rand_gen_t &rgen) const {
 			assert(city_params.cars_use_driveways);
 			driveway_t const &driveway(get_driveway(car.cur_seg));
+			if (driveway.ped_count > 0) {car.sleep(rgen, 0.5); return 1;} // pedestrian(s) in driveway, stop and wait
 
 			if (car.dest_driveway == (int)car.cur_seg) { // entering driveway
 				car.pull_into_driveway(driveway, rgen);

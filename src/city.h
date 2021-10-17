@@ -297,9 +297,10 @@ struct driveway_t : public cube_t {
 	bool dim, dir; // direction to road; d[dim][dir] is the edge shared with the road
 	// in_use is modified by car_manager in a different thread - must be mutable, maybe should be atomic
 	mutable uint8_t in_use; // either reserves the spot, or a car is parked there; 1=temporary, 2=permanent
+	mutable uint8_t ped_count; // count of pedestrians in the driveway
 	unsigned plot_ix;
-	driveway_t() : dim(0), dir(0), in_use(0), plot_ix(0) {}
-	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), in_use(0), plot_ix(pix) {}
+	driveway_t() : dim(0), dir(0), in_use(0), ped_count(0), plot_ix(0) {}
+	driveway_t(cube_t const &c, bool dim_, bool dir_, unsigned pix) : cube_t(c), dim(dim_), dir(dir_), in_use(0), ped_count(0), plot_ix(pix) {}
 	float get_edge_at_road() const {return d[dim][dir];}
 	float get_length() const {return get_sz_dim( dim);}
 	float get_width () const {return get_sz_dim(!dim);}

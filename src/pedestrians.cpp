@@ -566,7 +566,13 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 				dw_wider.expand_in_dim(!ddim, 0.25*dw.driveway->get_width());
 
 				// check for crossing the side (not end) of the driveway this frame; use next pos assuming we're not stopped
-				if (!dw_extend.contains_pt_xy(pos) && dw_wider.contains_pt_xy(pos) && dw_extend.contains_pt_xy(pos + 1.5f*fticks*dir*speed)) {
+				if (dw_extend.contains_pt_xy(pos)) {
+					// Flag the driveway as blocked so that cars don't pull into it?
+					// But how do we unset the flag when we leave the driveway? Iterate over driveways and reset each frame? Must be thread safe.
+					// And would this deadlock if the car and ped are waiting on each other?
+					//++dw.driveway->ped_count; // if multiple peds are in the driveway, we need to increment a counter
+				}
+				else if (dw_wider.contains_pt_xy(pos) && dw_extend.contains_pt_xy(pos + 1.5f*fticks*dir*speed)) {
 					car_base_t const *const car(ped_mgr.find_car_using_driveway(city, dw));
 
 					if (car != nullptr && !car->is_parked()) { // car using this driveway, not parked (though there shouldn't be any parked cars returned, car should be null if parked)
@@ -576,7 +582,6 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 							query_cube.d[!ddim][!car->dir] -= 1.0*(car->dir ? 1.0 : -1.0)*city_params.road_width; // extend for car lead distance
 						}
 						if (query_cube.intersects_xy(car->bcube)) {stop(); return;} // car entering or leaving driveway
-						// else should we flag the driveway as blocked so that cars don't pull into it?
 					}
 				}
 			}
