@@ -3082,6 +3082,31 @@ public:
 		} // for b
 		return 0;
 	}
+	bool single_cube_visible_check(point const &pos, cube_t const &c) const {
+		if (empty()) return 1;
+		float const z(c.z2()); // top edge
+		point const pts[4] = {point(c.x1(), c.y1(), z), point(c.x2(), c.y1(), z), point(c.x2(), c.y2(), z), point(c.x1(), c.y2(), z)};
+		cube_t query_region(c);
+		query_region.union_with_pt(pos);
+		vector<point> temp_points; // could maybe reuse across calls if thread safe?
+
+		for (auto g = grid.begin(); g != grid.end(); ++g) {
+			if (g->bc_ixs.empty() || !g->bcube.intersects(query_region)) continue;
+
+			for (auto b = g->bc_ixs.begin(); b != g->bc_ixs.end(); ++b) {
+				if (!b->intersects(query_region)) continue;
+				building_t const &building(get_building(b->ix));
+				bool occluded(1);
+
+				for (unsigned i = 0; i < 4; ++i) {
+					float t(1.0); // start at end of line
+					if (!building.check_line_coll(pos, pts[i], t, temp_points, 1)) {occluded = 0; break;}
+				}
+				if (occluded) return 0;
+			} // for b
+		} // for g
+		return 1;
+	}
 }; // building_creator_t
 
 
@@ -3404,6 +3429,7 @@ void add_building_interior_lights(point const &xlate, cube_t &lights_bcube) {
 // cars + peds
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state) {building_creator_city.get_occluders(pdu, state);}
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state) {return building_creator_city.check_pts_occluded(pts, npts, state);}
+bool city_single_cube_visible_check(point const &pos, cube_t const &c) {return building_creator_city.single_cube_visible_check(pos, c);}
 cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bcube();}
 // used for pedestrians in cities
 cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}

@@ -1249,6 +1249,7 @@ inline float get_tc_leg_width(cube_t const &c, float width) {return 0.5f*width*(
 void get_city_plot_zones(vect_city_zone_t &zones);
 void get_city_building_occluders(pos_dir_up const &pdu, building_occlusion_state_t &state);
 bool check_city_pts_occluded(point const *const pts, unsigned npts, building_occlusion_state_t &state);
+bool city_single_cube_visible_check(point const &pos, cube_t const &c);
 cube_t get_building_lights_bcube();
 unsigned get_street_dir(cube_t const &inner, cube_t const &outer);
 cube_t get_open_closet_door(room_object_t const &c, cube_t const &closed_door);

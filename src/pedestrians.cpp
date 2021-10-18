@@ -581,7 +581,11 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 						if (car->dest_driveway == (int)dw.dix && car->dim != ddim) { // car turning/entering driveway
 							query_cube.d[!ddim][!car->dir] -= 1.0*(car->dir ? 1.0 : -1.0)*city_params.road_width; // extend for car lead distance
 						}
-						if (query_cube.intersects_xy(car->bcube)) {stop(); return;} // car entering or leaving driveway
+						if (query_cube.intersects_xy(car->bcube)) { // car entering or leaving driveway
+							//if (city_single_cube_visible_check(pos, car->bcube) {} // we could check this, but it's generally always true
+							stop();
+							return;
+						}
 					}
 				}
 			}

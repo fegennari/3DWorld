@@ -198,6 +198,7 @@ bool car_t::must_wait_entering_or_crossing_road(vector<car_t> const &cars, drive
 		else      {if (val < far_side) continue;} // car already passed us, not a threat - skip to next car
 		float const front_pos(c.bcube.d[rdim][rdir]); // front end of the car
 		if ((front_pos > near_side) == rdir) return 1; // already intersects in dimension dim, must wait
+		//if (!city_single_cube_visible_check(get_center(), c.bcube)) continue; // we could check this, but it's generally always true
 		if (closest_car == cars.end()) {closest_car = it;} // first threatening car
 		else {
 			float const val2(closest_car->bcube.d[rdim][!rdir]); // back end of the other car
