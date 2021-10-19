@@ -2,12 +2,12 @@
 // by Frank Gennari
 // 10/26/15
 #include "3DWorld.h"
-#include "openal_wrap.h" // for alut_sleep()
 #include <list>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <cstring> // for memcpy()
+#include <chrono>
 
 using namespace std;
 
@@ -16,6 +16,10 @@ unsigned const MAX_FRAMES_BUFFERED = 128;
 extern int window_width, window_height;
 extern unsigned video_framerate; // Note: should probably be either 30 or 60
 extern unsigned num_video_threads; // defaults to 0 = max
+
+void sleep_for_ms(unsigned milliseconds) {
+	std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+}
 
 void write_video();
 
@@ -98,7 +102,7 @@ class video_capture_t {
 		
 		while (buffer.num_pending_frames() > MAX_FRAMES_BUFFERED) { // sleep for 10ms until buffer is partially emptied
 			cout << "Waiting for video write buffer to empty" << endl;
-			alut_sleep(0.01);
+			sleep_for_ms(10);
 		}
 	}
 
@@ -147,7 +151,7 @@ public:
 		  return;
 		}
 		is_writing   = 1;
-		while (is_recording || !buffer.empty()) {buffer.write_frames(ffmpeg); alut_sleep(0.001);} // 1ms sleep
+		while (is_recording || !buffer.empty()) {buffer.write_frames(ffmpeg); sleep_for_ms(1);} // 1ms sleep
 #ifdef _WIN32
 		_pclose(ffmpeg);
 #else

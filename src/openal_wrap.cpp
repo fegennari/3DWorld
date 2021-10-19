@@ -216,8 +216,6 @@ bool check_for_active_sound(point const &pos, float radius, float min_gain) {ret
 void add_placed_sound(string const &fn, sound_params_t const &params, sensor_t const &sensor) {sound_manager.add_placed_sound(fn, params, sensor);}
 void write_placed_sounds_to_cobj_file(ostream &out) {sound_manager.write_placed_sounds_to_cobj_file(out);}
 
-void alut_sleep(float seconds) {alutSleep(seconds);}
-
 bool had_al_error  () {return (alGetError  () != AL_NO_ERROR);}
 bool had_alut_error() {return (alutGetError() != AL_NO_ERROR);}
 
@@ -348,8 +346,7 @@ void openal_source::rewind() const {alSourceRewind(source);}
 
 void openal_source::blocking_play() const {
 	play();
-	//if (buffer.time > 0.0) {alut_sleep(buffer.time); return;}
-	do {alut_sleep(0.01);} while (is_active()); // sleep 10ms
+	do {sleep_for_ms(10);} while (is_active()); // sleep 10ms
 }
 
 int get_source_state(unsigned source) {
@@ -534,7 +531,6 @@ void exit_openal() {
 
 #else // !ENABLE_OPENAL
 
-void alut_sleep(float seconds) {} // FIXME
 unsigned get_sound_id_for_file(std::string const &fn) {return 0;}
 string const empty_str;
 string const &get_sound_name(unsigned id) {return empty_str;} // for writing to cobj file

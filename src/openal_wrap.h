@@ -166,7 +166,6 @@ struct placed_sound_t {
 };
 
 
-void alut_sleep(float seconds);
 unsigned get_sound_id_for_file(std::string const &fn);
 std::string const &get_sound_name(unsigned id);
 void set_sound_loop_state(unsigned id, bool play, float volume=0.0);

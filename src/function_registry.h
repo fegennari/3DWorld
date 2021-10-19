@@ -1027,7 +1027,7 @@ bool any_cube_contains_pt_xy(vect_cube_t const &cubes, vector3d const &pos);
 bool line_int_cubes_xy(point const &p1, point const &p2, vect_cube_t const &cubes);
 bool remove_cube_if_contains_pt_xy(vect_cube_t &cubes, vector3d const &pos, unsigned start=0);
 
-void alut_sleep(float seconds); // this is generally useful for sleep so has been added here
+void sleep_for_ms(unsigned milliseconds);
 void checked_fclose(FILE *fp);
 
 #include "inlines.h"

@@ -288,7 +288,7 @@ class building_indir_light_mgr_t {
 	void wait_for_finish(bool force_kill) {
 		// Note: for now the time taken to process a light should be pretty fast so we just block until finished; set kill_thread=1 to be faster
 		if (force_kill) {kill_thread = 1;}
-		while (is_running) {alut_sleep(0.01);}
+		while (is_running) {sleep_for_ms(10);}
 		kill_thread = 0;
 	}
 	void update_volume_light_texture() { // full update, 6.6ms for z=128
