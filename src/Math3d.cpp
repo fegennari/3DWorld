@@ -1262,6 +1262,7 @@ template<typename T> void rotate_verts(vector<T> &verts, vector3d const &axis, f
 		vector3d const normal_in(v->get_norm()); // assumes norm_comp
 		vector3d normal_out;
 		matrix_mult(normal_in, normal_out, m); // rotate the normal
+		//normal_out.normalize(); // not needed?
 		v->set_norm(normal_out);
 	}
 }

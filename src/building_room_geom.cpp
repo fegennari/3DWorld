@@ -1903,7 +1903,13 @@ void building_room_geom_t::add_water_heater(room_object_t const &c) {
 
 void building_room_geom_t::add_shirt(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(mats_amask.get_material(tid_nm_pair_t(get_texture_by_name("interiors/teeshirt.png"), 0.0), 1)); // shadowed with alpha mask
+	unsigned const qv_start(mat.quad_verts.size());
 	mat.add_cube_to_verts(c, apply_light_color(c), zero_vector, (get_skip_mask_for_xy(c.dim) | EF_Z12), c.dim); // front and back sides only, swap S/T
+
+	if (c.flags & (RO_FLAG_ADJ_LO | RO_FLAG_ADJ_HI)) { // apply rotation
+		float const angle(((c.flags & RO_FLAG_ADJ_LO) ? -1.0 : 1.0)*0.08*TWO_PI);
+		rotate_verts(mat.quad_verts, plus_z, angle, c.get_cube_center(), qv_start);
+	}
 }
 
 void building_room_geom_t::add_laundry_basket(room_object_t const &c) {

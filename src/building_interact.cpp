@@ -572,16 +572,9 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 	if (first_ped_ix >= 0) {get_ped_bcubes_for_building(first_ped_ix, building_ix, ped_bcubes);}
 	bool const player_is_moving(player_pos != last_player_pos);
 	last_player_pos = player_pos;
-	auto &objs(interior->room_geom->objs);
+	auto &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);
 
 	for (auto c = objs.begin(); c != objs.end(); ++c) { // check for other objects to collide with (including stairs)
-		if (0 && player_in_closet && c->type == TYPE_SHIRT && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
-			assert(c != objs.begin());
-			room_object_t &hanger(*(c-1)); // hanger is the previous object
-			assert(hanger.type == TYPE_HANGER);
-			c->flags |= RO_FLAG_ROTATING; hanger.flags |= RO_FLAG_ROTATING;
-			// TODO: make the shirt and hanger swing back and forth
-		}
 		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
 		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
 		assert(c->obj_id < interior->room_geom->obj_dstate.size());
@@ -699,6 +692,23 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 			c->translate(new_center - center);
 		}
 	} // for c
+	if (player_in_closet) { // check for collisions with expanded objects in closets
+		bool updated_rot(0);
+
+		for (auto c = expanded_objs.begin(); c != expanded_objs.end(); ++c) {
+			if (c->type == TYPE_SHIRT && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
+				assert(c != objs.begin());
+				room_object_t &hanger(*(c-1)); // hanger is the previous object
+				assert(hanger.type == TYPE_HANGER);
+				bool const rot_dir(dot_product(c->get_dir(), (player_pos - c->get_cube_center())) < 0);
+				unsigned const orig_flags(c->flags), add_flag(rot_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI), rem_flag(rot_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
+				c->flags     |= add_flag; c->flags &= ~rem_flag;
+				hanger.flags |= RO_FLAG_ROTATING | add_flag; hanger.flags &= ~rem_flag;
+				updated_rot  |= (c->flags != orig_flags);
+			}
+		} // for c
+		if (updated_rot) {interior->room_geom->create_small_static_vbos(*this);} // play a sound as well?
+	}
 	if (use_last_pickup_object || (tt_fire_button_down && !flashlight_on)) { // use object not active, and not using fire key without flashlight (space bar)
 		maybe_use_last_pickup_room_object(player_pos);
 		use_last_pickup_object = 0; // reset for next frame
@@ -2534,11 +2544,16 @@ void building_gameplay_action_key(int mode, bool mouse_wheel) {
 	}
 }
 
-void building_gameplay_next_frame() {
-	if (office_chair_rot_rate != 0.0) { // update office chair rotation
-		office_chair_rot_rate *= exp(-0.05*fticks); // exponential slowdown
-		if (office_chair_rot_rate < 0.001) {office_chair_rot_rate = 0.0;} // stop rotating
+void attenuate_rate(float &v, float rate) {
+	if (v != 0.0) {
+		v *= exp(-rate*fticks); // exponential slowdown
+		if (fabs(v) < 0.001) {v = 0.0;} // stop moving
 	}
+}
+
+void building_gameplay_next_frame() {
+	attenuate_rate(office_chair_rot_rate, 0.05); // update office chair rotation
+
 	if (in_building_gameplay_mode()) { // run gameplay update logic
 		show_bldg_pickup_crosshair = 1;
 		// update sounds used by AI

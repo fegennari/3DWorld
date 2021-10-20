@@ -639,17 +639,27 @@ void building_room_geom_t::create_door_vbos(building_t const &building) {
 	mats_doors.create_vbos(building);
 }
 
-void rotate_dir_about_z(vector3d &dir, float rate) { // Note: assumes dir is normalized
-	if (rate == 0.0) return;
+void rotate_dir_about_z(vector3d &dir, float angle) { // Note: assumes dir is normalized
+	if (angle == 0.0) return;
 	assert(dir.z == 0.0); // dir must be in XY plane
-	float const new_angle(atan2(dir.y, dir.x) + rate*fticks);
+	float const new_angle(atan2(dir.y, dir.x) + angle);
 	dir.assign(cosf(new_angle), sinf(new_angle), 0.0);
 }
 void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	if (!(obj.flags & RO_FLAG_ROTATING)) return;
-	if (office_chair_rot_rate == 0.0) {obj.flags &= ~RO_FLAG_ROTATING; return;} // if no longer rotating, clear rotation bit
-	assert(obj.type == TYPE_OFF_CHAIR); // only office chairs are supported for now
-	rotate_dir_about_z(inst.dir, office_chair_rot_rate);
+
+	if (obj.type == TYPE_OFF_CHAIR) {
+		if (office_chair_rot_rate == 0.0) {obj.flags &= ~RO_FLAG_ROTATING; return;} // if no longer rotating, clear rotation bit
+		rotate_dir_about_z(inst.dir, office_chair_rot_rate*fticks);
+	}
+	else if (obj.type == TYPE_HANGER) {
+		inst.dir = obj.get_dir(); // reset before applying rotate
+		float const angle(((obj.flags & RO_FLAG_ADJ_LO) ? -1.0 : 1.0)*0.08*TWO_PI);
+		rotate_dir_about_z(inst.dir, -angle); // limited rotation angle
+	}
+	else {
+		assert(0); // unsupported object type
+	}
 }
 
 /*static*/ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s) {
