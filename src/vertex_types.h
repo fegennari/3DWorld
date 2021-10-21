@@ -8,6 +8,8 @@ struct vert_norm { // size = 24
 	vert_norm() {}
 	vert_norm(point const &v_, vector3d const &n_) : v(v_), n(n_) {}
 	void assign(point const &v_, vector3d const &n_) {v = v_; n = n_;}
+	void set_norm(vector3d const &n_) {n = n_;}
+	vector3d const &get_norm() const {return n;}
 	bool operator< (vert_norm const &p) const {return ((v == p.v) ? (n < p.n) : (v < p.v));}
 	bool operator==(vert_norm const &p) const {return (v == p.v && n == p.n);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
