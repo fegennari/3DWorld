@@ -38,7 +38,7 @@ void bind_frame_buffer_RGB() {
 	bind_2d_texture(frame_buffer_RGB_tid);
 }
 
-void draw_ortho_screen_space_quad() {
+void draw_ortho_screen_space_triangle() {
 
 	// setup matrices
 	fgMatrixMode(FG_PROJECTION);
@@ -68,10 +68,10 @@ void setup_depth_tex(shader_t &s, int tu_id) {
 	s.add_uniform_float("zfar",  FAR_CLIP);
 }
 
-void draw_white_quad_and_end_shader(shader_t &s) {
+void fill_screen_white_and_end_shader(shader_t &s) {
 
 	s.set_cur_color(WHITE);
-	draw_ortho_screen_space_quad();
+	draw_ortho_screen_space_triangle();
 	s.end_shader();
 }
 
@@ -89,7 +89,7 @@ void add_god_rays() {
 	s.add_uniform_color("sun_color", sun_color);
 	s.add_uniform_vector3d("sun_pos", world_space_to_screen_space(get_sun_pos()));
 	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
-	draw_white_quad_and_end_shader(s);
+	fill_screen_white_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
@@ -103,7 +103,7 @@ void add_ssao() {
 	//s.set_frag_shader("depth_utils.part+screen_space_ao_xenko"); // ported from HLSL, doesn't work
 	s.begin_shader();
 	setup_depth_tex(s, 0);
-	draw_white_quad_and_end_shader(s);
+	fill_screen_white_and_end_shader(s);
 }
 
 void add_color_only_effect(string const &frag_shader, float intensity=1.0, float time_scale=1.0, float pos_scale=0.0) {
@@ -122,7 +122,7 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0, float
 	select_multitex(NOISE_TEX, 1);
 	s.add_uniform_int("noise_tex", 1); // Note: used for heat waves effect, could be used for others
 	set_xy_step(s); // may not be used
-	draw_white_quad_and_end_shader(s);
+	fill_screen_white_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
@@ -144,7 +144,7 @@ void add_sphere_refract_effect(sphere_t const &sphere, float intensity) {
 	s.add_uniform_float("intensity", CLIP_TO_01(intensity)); // 1.0 at T=0, 0.0 at T=1
 	s.add_uniform_float("radius", sphere.radius/p2p_dist(get_camera_pos(), sphere.pos)); // divide distance/depth to convert to screen space radius
 	s.add_uniform_vector3d("center", center);
-	draw_white_quad_and_end_shader(s);
+	fill_screen_white_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
@@ -164,7 +164,7 @@ void add_depth_of_field(float focus_depth, float dof_val) {
 		s.add_uniform_int  ("dim_val",     (dim ? 1 : 0));
 		s.add_uniform_float("focus_depth", focus_depth);
 		s.add_uniform_float("dof_val",     dof_val);
-		draw_white_quad_and_end_shader(s);
+		fill_screen_white_and_end_shader(s);
 		color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 	}
 }
@@ -181,7 +181,7 @@ void add_2d_blur() {
 		s.add_uniform_int("frame_buffer_tex", 0);
 		set_xy_step(s);
 		s.add_uniform_int("dim_val", (dim ? 1 : 0));
-		draw_white_quad_and_end_shader(s);
+		fill_screen_white_and_end_shader(s);
 		color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 	}
 }
@@ -199,7 +199,7 @@ void add_bloom() {
 		s.add_uniform_int("frame_buffer_tex", 0);
 		set_xy_step(s);
 		s.add_uniform_int("dim_val", (dim ? 1 : 0));
-		draw_white_quad_and_end_shader(s);
+		fill_screen_white_and_end_shader(s);
 		color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 	}
 }
@@ -213,7 +213,7 @@ void add_2d_bloom() {
 	s.begin_shader();
 	s.add_uniform_int("frame_buffer_tex", 0);
 	set_xy_step(s);
-	draw_white_quad_and_end_shader(s);
+	fill_screen_white_and_end_shader(s);
 	color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 }
 
