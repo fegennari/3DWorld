@@ -180,7 +180,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 				objects.back().flags |= RO_FLAG_HANGING; // flag the hanger has having the shirt hanging on it
 				room_object_t shirt(hanger);
 				shirt.expand_by_xy(0.01*hanger.dz()); // expand slightly to avoid z-fighting with hanger
-				shirt.expand_in_dim(c.dim, 0.04*c.dz()); // slightly wider
+				shirt.expand_in_dim(c.dim, 0.045*c.dz()); // slightly wider
 				shirt.z2() -= 0.55*hanger.dz(); // top
 				shirt.z1() -= 0.3*c.dz(); // bottom
 				objects.emplace_back(shirt, TYPE_SHIRT, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, shirt_colors[rgen.rand()%NUM_SHIRT_COLORS]);
