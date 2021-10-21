@@ -336,12 +336,13 @@ void rgeom_mat_t::create_vbo_inner() {
 	num_ixs = indices.size();
 }
 
-void rgeom_mat_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
+// shadow_only: 0=non-shadow pass, 1=shadow pass, 2=shadow pass with alpha mask texture
+void rgeom_mat_t::draw(shader_t &s, int shadow_only, bool reflection_pass) {
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows (also applies to bathroom windows, which don't produce shadows)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	assert(num_verts > 0);
-	if (!shadow_only) {tex.set_gl(s);} // ignores texture scale for now
+	if (shadow_only != 1) {tex.set_gl(s);} // ignores texture scale for now; enable alpha texture for shadow pass
 	vao_mgr.create_and_upload(vector<vertex_t>(), vector<unsigned>(), shadow_only, 0, 1); // pass empty vectors because data is already uploaded; dynamic_level=0, setup_pointers=1
 	vao_mgr.pre_render(shadow_only);
 	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
@@ -379,7 +380,7 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 void building_materials_t::create_vbos(building_t const &building) {
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
 }
-void building_materials_t::draw(shader_t &s, bool shadow_only, bool reflection_pass) {
+void building_materials_t::draw(shader_t &s, int shadow_only, bool reflection_pass) {
 	//highres_timer_t timer("Draw Materials"); // 0.0168
 	static vector<iterator> text_mats;
 	text_mats.clear();
@@ -793,7 +794,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 			if (shadow_only) {
 				shader_t amask_shader;
 				amask_shader.begin_simple_textured_shader(0.9); // need to use texture with alpha test
-				mats_amask.draw(s, 0, 0);
+				mats_amask.draw(amask_shader, 2, 0); // shadow pass with alpha mask
 				s.make_current(); // switch back to the normal shader
 			}
 			else if (reflection_pass) {
@@ -801,7 +802,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 			}
 			else { // this is expensive: only enable for the current building and the main draw pass
 				shader_t amask_shader;
-				setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0); // min_alpha=0.5, enable_indir=1, force_tsl=1, use_texgen=1
+				setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0); // min_alpha=0.9, enable_indir=1, force_tsl=1, use_texgen=0
 				mats_amask.draw(amask_shader, 0, 0);
 				s.make_current(); // switch back to the normal shader
 			}

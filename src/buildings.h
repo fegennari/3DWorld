@@ -486,7 +486,7 @@ public:
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, vector3d const &skip_hemi_dir=zero_vector, xform_matrix const *const matrix=nullptr);
 	void create_vbo(building_t const &building);
 	void create_vbo_inner();
-	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
+	void draw(shader_t &s, int shadow_only, bool reflection_pass);
 	void upload_draw_and_clear(shader_t &s);
 };
 
@@ -495,7 +495,7 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	unsigned count_all_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos(building_t const &building);
-	void draw(shader_t &s, bool shadow_only, bool reflection_pass);
+	void draw(shader_t &s, int shadow_only, bool reflection_pass);
 	void upload_draw_and_clear(shader_t &s);
 };
 
