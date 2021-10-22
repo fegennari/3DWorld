@@ -151,7 +151,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 	unsigned const num_hangers(rgen.rand() % (c.is_small_closet() ? 6 : 11)); // 0-5/10
 	float const wire_radius(0.25*hr_radius);
 
-	if (num_hangers > 0 && hanger_rod.get_sz_dim(!c.dim) > 10.0*wire_radius) {
+	if (num_hangers > 0 && hanger_rod.get_sz_dim(!c.dim) > 10.0*wire_radius && has_hanger_model()) {
 		room_object_t hanger(hanger_rod);
 		hanger.type = TYPE_HANGER;
 		set_cube_zvals(hanger, (hanger_rod.z1() - 0.09*window_vspacing), (hanger_rod.z2() + 2.0*wire_radius));
