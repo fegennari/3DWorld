@@ -115,6 +115,7 @@ city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  
 city dryer_model ../models/interiors/dryer/Dryer.model3d  0 0 -1 0  0 1.0 1.0
 city key_model ../models/interiors/singlkey.model3d  0 0 -1 0  2 1.0 1.0 # swap X and Z
 city hanger_model ../models/interiors/clothes_hanger.model3d  0 0 0 0  1 1.0 1.0
+city teeshirt_model ../models/interiors/teeshirt/Hangers.obj  0 0 0 0  1 1.0 1.0
 
 city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 -1 0  1 1.0 1.0
 city umbrella_model ../models/umbrella/UmbrellaOpen.model3d  0 0 -1 270  0 1.0 1.0

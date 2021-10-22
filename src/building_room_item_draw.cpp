@@ -25,8 +25,9 @@ unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
 
-bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
-bool has_hanger_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HANGER);}
+bool has_key_3d_model  () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
+bool has_hanger_model  () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HANGER);}
+bool has_teeshirt_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_TEESHIRT);}
 
 colorRGBA room_object_t::get_model_color() const {return building_obj_model_loader.get_avg_color(get_model_id());}
 
@@ -653,7 +654,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		if (office_chair_rot_rate == 0.0) {obj.flags &= ~RO_FLAG_ROTATING; return;} // if no longer rotating, clear rotation bit
 		rotate_dir_about_z(inst.dir, office_chair_rot_rate*fticks);
 	}
-	else if (obj.type == TYPE_HANGER) {
+	else if (obj.type == TYPE_HANGER || obj.type == TYPE_TEESHIRT) {
 		inst.dir = obj.get_dir(); // reset before applying rotate
 		float const angle(((obj.flags & RO_FLAG_ADJ_LO) ? -1.0 : 1.0)*0.08*TWO_PI);
 		rotate_dir_about_z(inst.dir, -angle); // limited rotation angle
@@ -834,8 +835,11 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		bool const is_emissive(!shadow_only && obj.type == TYPE_LAMP && obj.is_lit());
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
+		bool const no_bfc(!disable_cull_face && obj.type == TYPE_TEESHIRT); // teeshirt model has two sided triangles/is not a closed surface
+		if (no_bfc) {glDisable(GL_CULL_FACE);}
 		// Note: lamps are the most common and therefore most expensive models to draw
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0);
+		if (no_bfc) {glEnable(GL_CULL_FACE);}
 		if (is_emissive) {s.set_color_e(BLACK);}
 		if (is_sink) {water_draw.add_water_for_sink(obj);}
 		obj_drawn = 1;

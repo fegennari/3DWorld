@@ -12,7 +12,7 @@ extern building_params_t global_building_params;
 
 string const model_opt_names[NUM_OBJ_MODELS] =
 {"toilet_model", "sink_model", "tub_model", "fridge_model", "stove_model", "tv_model", ""/*monitor*/, "couch_model", "office_chair_model", "urinal_model",
-"lamp_model", "washer_model", "dryer_model", "key_model", "hanger_model", "fire_hydrant_model", "umbrella_model"};
+"lamp_model", "washer_model", "dryer_model", "key_model", "hanger_model", "teeshirt_model", "fire_hydrant_model", "umbrella_model"};
 
 bool city_params_t::read_option(FILE *fp) {
 

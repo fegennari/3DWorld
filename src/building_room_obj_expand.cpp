@@ -159,6 +159,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 		float const pos_min(hanger_rod.d[!c.dim][0] + wire_radius), pos_max(hanger_rod.d[!c.dim][1] - wire_radius);
 		float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/63.0);
 		uint64_t slots_used(0); // divide the space into 64 slots, initially all empty
+		bool const use_model(has_teeshirt_model());
 
 		for (unsigned i = 0; i < num_hangers; ++i) { // since hangers are so narrow, we probably don't need to check for intersections
 			unsigned slot_ix(0);
@@ -183,7 +184,8 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 				shirt.expand_in_dim(c.dim, 0.045*c.dz()); // slightly wider
 				shirt.z2() -= 0.55*hanger.dz(); // top
 				shirt.z1() -= 0.3*c.dz(); // bottom
-				objects.emplace_back(shirt, TYPE_SHIRT, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, shirt_colors[rgen.rand()%NUM_SHIRT_COLORS]);
+				objects.emplace_back(shirt, (use_model ? TYPE_TEESHIRT : TYPE_SHIRT), c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING),
+					c.light_amt, SHAPE_CUBE, (use_model ? WHITE : shirt_colors[rgen.rand()%NUM_SHIRT_COLORS]));
 			}
 		} // for i
 		objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and shirts

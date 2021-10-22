@@ -2503,6 +2503,7 @@ colorRGBA room_object_t::get_color() const {
 	case TYPE_CRACK:    return ALPHA0; // transparent
 	case TYPE_FPLACE:   return texture_color(BRICK2_TEX).modulate_with(color);
 	case TYPE_WHEATER:  return LT_GRAY;
+	//case TYPE_TEESHIRT: return DK_GRAY;
 	default: return color; // TYPE_LIGHT, TYPE_TCAN, TYPE_BOOK, TYPE_BOTTLE, TYPE_PEN_PENCIL, etc.
 	}
 	if (is_obj_model_type()) {return color.modulate_with(get_model_color());} // handle models
