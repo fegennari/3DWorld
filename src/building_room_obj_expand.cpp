@@ -148,16 +148,17 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 	objects.push_back(hanger_rod);
 
 	// add hangers
-	unsigned const num_hangers(rgen.rand() % (c.is_small_closet() ? 6 : 11)); // 0-5/10
+	unsigned const num_hangers(rgen.rand() % (c.is_small_closet() ? 9 : 17)); // 0-8/16
 	float const wire_radius(0.25*hr_radius);
 
 	if (num_hangers > 0 && hanger_rod.get_sz_dim(!c.dim) > 10.0*wire_radius && has_hanger_model()) {
 		room_object_t hanger(hanger_rod);
 		hanger.type       = TYPE_HANGER;
-		hanger.item_flags = rgen.rand(); // choose a random hanger sub_model_id
+		hanger.item_flags = rgen.rand(); // choose a random hanger sub_model_id per-closet
 		set_cube_zvals(hanger, (hanger_rod.z1() - 0.09*window_vspacing), (hanger_rod.z2() + 2.0*wire_radius));
 		hanger.expand_in_dim(c.dim, 0.09*window_vspacing); // set width
-		float const pos_min(hanger_rod.d[!c.dim][0] + wire_radius), pos_max(hanger_rod.d[!c.dim][1] - wire_radius);
+		float const edge_spacing(max(2.0f*hr_radius, 0.05f*depth));
+		float const pos_min(hanger_rod.d[!c.dim][0] + edge_spacing), pos_max(hanger_rod.d[!c.dim][1] - edge_spacing);
 		float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/63.0);
 		uint64_t slots_used(0); // divide the space into 64 slots, initially all empty
 		bool const use_model(has_clothes_model());
