@@ -11,15 +11,17 @@
 struct city_model_t {
 
 	string fn;
-	bool valid, swap_xz, swap_yz;
+	bool valid, loaded, swap_xz, swap_yz;
 	int body_mat_id, fixed_color_id, recalc_normals; // recalc_normals: 0=no, 1=yes, 2=face_weight_avg
 	int blade_mat_id; // for helicopters
 	float xy_rot, lod_mult, scale; // xy_rot in degrees
 	vector<unsigned> shadow_mat_ids;
 
-	city_model_t() : valid(0), swap_xz(0), swap_yz(1), body_mat_id(-1), fixed_color_id(-1), recalc_normals(1), blade_mat_id(-1), xy_rot(0.0), lod_mult(1.0), scale(1.0) {}
+	city_model_t() : valid(0), loaded(0), swap_xz(0), swap_yz(1), body_mat_id(-1), fixed_color_id(-1), recalc_normals(1),
+		blade_mat_id(-1), xy_rot(0.0), lod_mult(1.0), scale(1.0) {}
 	city_model_t(string const &fn_, int bmid, int fcid, float rot, float dz_, float lm, vector<unsigned> const &smids) :
-		fn(fn_), valid(0), swap_xz(0), swap_yz(1), body_mat_id(bmid), fixed_color_id(fcid), recalc_normals(1), blade_mat_id(-1), xy_rot(rot), lod_mult(lm), scale(1.0), shadow_mat_ids(smids) {}
+		fn(fn_), valid(0), loaded(0), swap_xz(0), swap_yz(1), body_mat_id(bmid), fixed_color_id(fcid), recalc_normals(1),
+		blade_mat_id(-1), xy_rot(rot), lod_mult(lm), scale(1.0), shadow_mat_ids(smids) {}
 	bool read(FILE *fp, bool is_helicopter=0);
 	bool check_filename();
 };
@@ -27,7 +29,6 @@ struct city_model_t {
 
 class city_model_loader_t : public model3ds {
 protected:
-	vector<int> models_valid;
 	void ensure_models_loaded() {if (empty()) {load_models();}}
 public:
 	virtual ~city_model_loader_t() {}

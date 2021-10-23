@@ -56,8 +56,7 @@ colorRGBA city_model_loader_t::get_avg_color(unsigned id) {
 bool city_model_loader_t::is_model_valid(unsigned id) {
 	assert(id < num_models());
 	ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid
-	assert(id < models_valid.size());
-	return (models_valid[id] != 0);
+	return get_model(id).loaded;
 }
 
 void city_model_loader_t::load_models() {
@@ -65,9 +64,8 @@ void city_model_loader_t::load_models() {
 }
 bool city_model_loader_t::load_model_id(unsigned id) {
 	assert(id < num_models());
-	if (models_valid.empty()) {models_valid.resize(num_models(), 0);} // first call; start out invalid
-	if (models_valid[id]) return 1; // already loaded
 	city_model_t &model(get_model(id));
+	if (model.loaded) return 1; // already loaded
 	bool skip_model(!have_buildings() && id < OBJ_MODEL_FHYDRANT); // building model, but no buildings, don't need to load
 	skip_model |= (id == OBJ_MODEL_UMBRELLA && city_params.num_peds == 0); // don't need to load the umbrella model if there are no pedestrians
 
@@ -90,7 +88,7 @@ bool city_model_loader_t::load_model_id(unsigned id) {
 		unsigned const num_materials(max(m.num_materials(), size_t(1))); // max with 1 for unbound material
 		for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
 	}
-	models_valid[id] = 1;
+	model.loaded = 1;
 	return 1;
 }
 
