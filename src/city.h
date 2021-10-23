@@ -84,7 +84,7 @@ struct city_params_t {
 	float ped_speed;
 	bool ped_respawn_at_dest;
 	// buildings; maybe should be building params, but we have the model loading code here
-	city_model_t building_models[NUM_OBJ_MODELS];
+	vector<city_model_t> building_models[NUM_OBJ_MODELS]; // multiple model files per type
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0),
 		num_rr_tracks(0), park_rate(0), road_width(0.0), road_spacing(0.0), road_spacing_rand(0.0), road_spacing_xy_add(0.0), conn_road_seg_len(1000.0),

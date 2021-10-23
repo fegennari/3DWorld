@@ -746,6 +746,14 @@ public:
 
 water_draw_t water_draw;
 
+int room_object_t::get_model_id() const {
+	assert(type >= TYPE_TOILET);
+	if (type == TYPE_MONITOR) return OBJ_MODEL_TV; // monitor has same model as TV
+	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
+	if (type == TYPE_HANGER || type == TYPE_CLOTHES) {id += ((int)item_flags << 8);} // choose a sub_model_id for these types using bits 8-15
+	return id;
+}
+
 // Note: non-const because it creates the VBO
 void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)

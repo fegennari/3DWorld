@@ -40,10 +40,16 @@ bool city_model_t::check_filename() {
 }
 
 
+model3d &city_model_loader_t::get_model3d(unsigned id) {
+	city_model_t const &model(get_model(id));
+	assert(model.is_loaded());
+	assert((size_t)model.model3d_id < size());
+	return operator[](model.model3d_id);
+}
 vector3d city_model_loader_t::get_model_world_space_size(unsigned id) { // Note: may need to load model
 	if (!is_model_valid(id)) return zero_vector; // error?
 	city_model_t const &model_file(get_model(id));
-	vector3d sz(at(id).get_bcube().get_size());
+	vector3d sz(get_model3d(id).get_bcube().get_size());
 	if (model_file.swap_xz) {std::swap(sz.x, sz.z);}
 	if (model_file.swap_yz) {std::swap(sz.y, sz.z);}
 	if (round_fp(model_file.xy_rot/90.0) & 1) {std::swap(sz.x, sz.y);} // swap x/y for 90 and 270 degree rotations
@@ -51,55 +57,51 @@ vector3d city_model_loader_t::get_model_world_space_size(unsigned id) { // Note:
 }
 colorRGBA city_model_loader_t::get_avg_color(unsigned id) {
 	if (!is_model_valid(id)) return BLACK; // error?
-	return at(id).get_avg_color();
+	return get_model3d(id).get_avg_color();
 }
 bool city_model_loader_t::is_model_valid(unsigned id) {
-	assert(id < num_models());
 	ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid
-	return get_model(id).loaded;
+	return get_model(id).is_loaded();
 }
 
 void city_model_loader_t::load_models() {
 	for (unsigned i = 0; i < num_models(); ++i) {load_model_id(i);}
 }
-bool city_model_loader_t::load_model_id(unsigned id) {
-	assert(id < num_models());
-	city_model_t &model(get_model(id));
-	if (model.loaded) return 1; // already loaded
-	bool skip_model(!have_buildings() && id < OBJ_MODEL_FHYDRANT); // building model, but no buildings, don't need to load
-	skip_model |= (id == OBJ_MODEL_UMBRELLA && city_params.num_peds == 0); // don't need to load the umbrella model if there are no pedestrians
+void city_model_loader_t::load_model_id(unsigned id) {
+	unsigned const num_sub_models(get_num_sub_models(id));
 
-	if (skip_model || model.fn.empty()) {
-		push_back(model3d(model.fn, tmgr)); // add a placeholder dummy model
-		return 0;
-	}
-	int const def_tid(-1); // should this be a model parameter?
-	colorRGBA const def_color(WHITE); // should this be a model parameter?
+	for (unsigned sm = 0; sm < num_sub_models; ++sm) { // load all sub-models
+		city_model_t &model(get_model(id + (sm << 8)));
+		if (model.is_loaded()) continue; // already loaded (should never get here?)
+		bool skip_model(!have_buildings() && id < OBJ_MODEL_FHYDRANT); // building model, but no buildings, don't need to load
+		skip_model |= (id == OBJ_MODEL_UMBRELLA && city_params.num_peds == 0); // don't need to load the umbrella model if there are no pedestrians
+		if (skip_model || model.fn.empty()) continue;
+		int const def_tid(-1); // should this be a model parameter?
+		colorRGBA const def_color(WHITE); // should this be a model parameter?
+		model.model3d_id = size(); // set before adding the model
 
-	if (!load_model_file(model.fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, model.recalc_normals, 0, city_params.convert_model_files, 1)) {
-		cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model";
-		if (has_low_poly_model()) {cerr << " (will use default low poly model)";}
-		cerr << "." << endl;
-		push_back(model3d(model.fn, tmgr)); // add a placeholder dummy model
-		return 0;
-	}
-	if (model.shadow_mat_ids.empty()) { // empty shadow_mat_ids, create the list from all materials
-		model3d const &m(back());
-		unsigned const num_materials(max(m.num_materials(), size_t(1))); // max with 1 for unbound material
-		for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
-	}
-	model.loaded = 1;
-	return 1;
+		if (!load_model_file(model.fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, model.recalc_normals, 0, city_params.convert_model_files, 1)) {
+			cerr << "Error: Failed to read model file '" << model.fn << "'; Skipping this model";
+			if (has_low_poly_model()) {cerr << " (will use default low poly model)";}
+			cerr << "." << endl;
+			model.model3d_id = -1; // invalid
+			continue;
+		}
+		if (model.shadow_mat_ids.empty()) { // empty shadow_mat_ids, create the list from all materials
+			model3d const &m(back());
+			unsigned const num_materials(max(m.num_materials(), size_t(1))); // max with 1 for unbound material
+			for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
+		}
+	} // for sm
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
 	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations, unsigned skip_mat_mask)
 {
 	bool const is_valid(is_model_valid(model_id));
-	assert(is_valid);
-	assert(model_id < size()); // must be loaded
+	assert(is_valid); // must be loaded
 	city_model_t const &model_file(get_model(model_id));
-	model3d &model(at(model_id));
+	model3d &model(get_model3d(model_id));
 	if (!is_shadow_pass && model_file.body_mat_id >= 0 && color.A != 0.0) {model.set_color_for_material(model_file.body_mat_id, color);} // use custom color for body material
 	model.bind_all_used_tids();
 	cube_t const &bcube(model.get_bcube());
@@ -150,6 +152,13 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	select_texture(WHITE_TEX); // reset back to default/untextured
 }
 
+unsigned get_model_id(unsigned id) { // first 8 bits = model_id, second 8 bits = sub_model_id
+	unsigned const model_id(id & 0xFF);
+	assert(model_id < NUM_OBJ_MODELS);
+	return model_id;
+}
+unsigned get_sub_model_id(unsigned id) {return (id >> 8);}
+
 unsigned car_model_loader_t       ::num_models() const {return city_params.car_model_files.size();}
 unsigned helicopter_model_loader_t::num_models() const {return city_params.hc_model_files .size();}
 unsigned object_model_loader_t    ::num_models() const {return NUM_OBJ_MODELS;}
@@ -162,6 +171,7 @@ city_model_t &car_model_loader_t::get_model(unsigned id) {
 	assert(id < num_models());
 	return city_params.car_model_files[id];
 }
+
 city_model_t const &helicopter_model_loader_t::get_model(unsigned id) const {
 	assert(id < num_models());
 	return city_params.hc_model_files[id];
@@ -170,21 +180,28 @@ city_model_t &helicopter_model_loader_t::get_model(unsigned id) {
 	assert(id < num_models());
 	return city_params.hc_model_files[id];
 }
+
+unsigned object_model_loader_t::get_num_sub_models(unsigned id) const {
+	return city_params.building_models[get_model_id(id)].size();
+}
 city_model_t const &object_model_loader_t::get_model(unsigned id) const {
-	assert(id < NUM_OBJ_MODELS);
-	return city_params.building_models[id];
+	auto const &models(city_params.building_models[get_model_id(id)]);
+	if (models.empty()) return null_model;
+	return models[get_sub_model_id(id) % models.size()]; // sel_ix will wrap around if too large, which allows rand() to be passed in
 }
 city_model_t &object_model_loader_t::get_model(unsigned id) {
-	assert(id < NUM_OBJ_MODELS);
-	return city_params.building_models[id];
+	auto &models(city_params.building_models[get_model_id(id)]);
+	if (models.empty()) return null_model; // can get here for OBJ_MODEL_MONITOR
+	return models[get_sub_model_id(id) % models.size()]; // sel_ix will wrap around if too large, which allows rand() to be passed in
 }
 
 bool city_params_t::add_model(unsigned id, FILE *fp) {
 	assert(id < NUM_OBJ_MODELS);
-	city_model_t &model(building_models[id]);
-	if (model.valid) {cerr << "Warning: Duplicate model file '" << model.fn << "' will overwrite previous value" << endl;}
+	city_model_t model;
 	if (!model.read(fp)) return 0;
-	if (!model.check_filename()) {cerr << "Error: model file '" << model.fn << "' does not exist; skipping" << endl;} // nonfatal
+	bool const filename_valid(model.check_filename());
+	if (!filename_valid) {cerr << "Error: model file '" << model.fn << "' does not exist; skipping" << endl;} // nonfatal
+	if (filename_valid || building_models[id].empty()) {building_models[id].push_back(model);} // add if valid or the first model
 	return 1;
 }
 

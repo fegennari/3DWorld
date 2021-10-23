@@ -118,13 +118,13 @@ city key_model ../models/interiors/singlkey.model3d  0 0 -1 0  2 1.0 1.0 # swap 
 # closet objects
 #city hanger_model ../models/interiors/clothes_hanger.model3d  0 0 0 0  1 1.0 1.0
 city hanger_model   "../models/interiors/closet_items/Metal Wire Hanger.obj"  0 0 0 0  1 1.0 1.0
-#city hanger_model   "../models/interiors/closet_items/Plastic Bar Hanger.obj"  0 0 0 0  1 1.0 1.0
-#city hanger_model   "../models/interiors/closet_items/Plastic Hanger.obj"  0 0 0 0  1 1.0 1.0
-#city hanger_model   "../models/interiors/closet_items/Velvet Pants Hanger.obj"  0 0 0 0  1 1.0 1.0
-#city hanger_model   "../models/interiors/closet_items/Wooden Bar Hanger.obj"  0 0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Plastic Bar Hanger.obj"  0 0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Plastic Hanger.obj"  0 0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Velvet Pants Hanger.obj"  0 0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Wooden Bar Hanger.obj"  0 0 0 0  1 1.0 1.0
 city clothing_model "../models/interiors/closet_items/Shirt.obj"  0 0 0 0  1 1.0 1.0
-#city clothing_model "../models/interiors/closet_items/Long Shirt.obj"  0 0 0 0  1 1.0 1.0
-#city clothing_model "../models/interiors/closet_items/Pants.obj"  0 0 0 0  1 1.0 1.0
+city clothing_model "../models/interiors/closet_items/Long Shirt.obj"  0 0 0 0  1 1.0 1.0
+city clothing_model "../models/interiors/closet_items/Pants.obj"  0 0 0 0  1 1.0 1.0
 
 # city objects
 city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 -1 0  1 1.0 1.0

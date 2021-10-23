@@ -153,7 +153,8 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 
 	if (num_hangers > 0 && hanger_rod.get_sz_dim(!c.dim) > 10.0*wire_radius && has_hanger_model()) {
 		room_object_t hanger(hanger_rod);
-		hanger.type = TYPE_HANGER;
+		hanger.type       = TYPE_HANGER;
+		hanger.item_flags = rgen.rand(); // choose a random hanger sub_model_id
 		set_cube_zvals(hanger, (hanger_rod.z1() - 0.09*window_vspacing), (hanger_rod.z2() + 2.0*wire_radius));
 		hanger.expand_in_dim(c.dim, 0.09*window_vspacing); // set width
 		float const pos_min(hanger_rod.d[!c.dim][0] + wire_radius), pos_max(hanger_rod.d[!c.dim][1] - wire_radius);
@@ -188,6 +189,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 
 				if (use_model) {
 					objects.emplace_back(shirt, TYPE_CLOTHES, c.room_id, c.dim, c.dir, sflags, c.light_amt, SHAPE_CUBE, WHITE);
+					objects.back().item_flags = rgen.rand(); // choose a random clothing sub_model_id
 				}
 				else {
 					objects.emplace_back(shirt, TYPE_SHIRT, c.room_id, c.dim, c.dir, sflags, c.light_amt, SHAPE_CUBE, shirt_colors[rgen.rand()%NUM_SHIRT_COLORS]);
