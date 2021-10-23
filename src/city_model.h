@@ -47,31 +47,31 @@ public:
 
 class car_model_loader_t : public city_model_loader_t {
 public:
-	bool has_low_poly_model() {return 1;}
-	unsigned num_models() const;
-	city_model_t const &get_model(unsigned id) const;
-	city_model_t &get_model(unsigned id);
+	virtual bool has_low_poly_model() {return 1;}
+	virtual unsigned num_models() const;
+	virtual city_model_t const &get_model(unsigned id) const;
+	virtual city_model_t       &get_model(unsigned id);
 };
 
 class helicopter_model_loader_t : public city_model_loader_t {
 public:
-	unsigned num_models() const;
-	city_model_t const &get_model(unsigned id) const;
-	city_model_t &get_model(unsigned id);
+	virtual unsigned num_models() const;
+	virtual city_model_t const &get_model(unsigned id) const;
+	virtual city_model_t       &get_model(unsigned id);
 };
 
 class ped_model_loader_t : public city_model_loader_t {
 public:
-	unsigned num_models() const;
-	city_model_t const &get_model(unsigned id) const;
-	city_model_t &get_model(unsigned id);
+	virtual unsigned num_models() const;
+	virtual city_model_t const &get_model(unsigned id) const;
+	virtual city_model_t       &get_model(unsigned id);
 };
 
 class object_model_loader_t : public city_model_loader_t {
 	city_model_t null_model;
 public:
-	unsigned num_models() const;
-	city_model_t const &get_model(unsigned id) const;
-	city_model_t &get_model(unsigned id);
+	virtual unsigned num_models() const;
+	virtual city_model_t const &get_model(unsigned id) const;
+	virtual city_model_t       &get_model(unsigned id);
 };
 
