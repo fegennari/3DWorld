@@ -696,13 +696,13 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 		bool updated_rot(0);
 
 		for (auto c = expanded_objs.begin(); c != expanded_objs.end(); ++c) {
-			if ((c->type == TYPE_SHIRT || c->type == TYPE_TEESHIRT) && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
+			if ((c->type == TYPE_SHIRT || c->type == TYPE_CLOTHES) && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
 				assert(c != objs.begin());
 				room_object_t &hanger(*(c-1)); // hanger is the previous object
 				assert(hanger.type == TYPE_HANGER);
 				bool const rot_dir(dot_product(c->get_dir(), (player_pos - c->get_cube_center())) < 0);
 				unsigned const orig_flags(c->flags), add_flag(rot_dir ? RO_FLAG_ADJ_LO : RO_FLAG_ADJ_HI), rem_flag(rot_dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO);
-				c->flags     |= ((c->type == TYPE_TEESHIRT) ? RO_FLAG_ROTATING : 0) | add_flag;
+				c->flags     |= ((c->type == TYPE_CLOTHES) ? RO_FLAG_ROTATING : 0) | add_flag;
 				c->flags     &= ~rem_flag;
 				hanger.flags |= RO_FLAG_ROTATING | add_flag;
 				hanger.flags &= ~rem_flag;
@@ -1009,7 +1009,7 @@ void setup_bldg_obj_types() {
 	// keys are special because they're potentially either a small object or an object model (in a drawer)
 	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key"); // drawn as an object, not a model
 	bldg_obj_types[TYPE_HANGER    ] = bldg_obj_type_t(0, 0, 1, 0, 1, 2, 0.25,  0.05,  "clothes hanger");
-	bldg_obj_types[TYPE_TEESHIRT  ] = bldg_obj_type_t(0, 0, 1, 0, 1, 2, 10.0,  0.25,  "teeshirt");
+	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 1, 0, 1, 2, 10.0,  0.25,  "clothes"); // TODO: teeshirt, shirt, pants, etc.
 	//                                                pc ac pu at im ls value  weight  name [capacity]
 }
 
@@ -1681,7 +1681,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				if (has_hanger) continue;
 			}
 			if (i->type == TYPE_HANGER  && (i->flags & RO_FLAG_HANGING) && (i+1) != objs_end &&
-				((i+1)->type == TYPE_SHIRT || (i+1)->type == TYPE_TEESHIRT)) continue; // hanger with a shirt on it - must take shirt first
+				((i+1)->type == TYPE_SHIRT || (i+1)->type == TYPE_CLOTHES)) continue; // hanger with a shirt on it - must take shirt first
 			if (i->type == TYPE_MIRROR  && !i->is_house())                continue; // can only pick up mirrors from houses, not office buildings
 			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE)        continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED     && (i->flags & RO_FLAG_TAKEN3))   continue; // can only take pillow, sheets, and mattress - not the frame
