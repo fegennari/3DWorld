@@ -22,6 +22,7 @@ bool city_model_t::read(FILE *fp, bool is_helicopter) {
 	if (!read_float(fp, scale))   return 0;
 	if (!read_float(fp, lod_mult) || lod_mult < 0.0)  return 0;
 	if (is_helicopter && !read_int(fp, blade_mat_id)) return 0;
+	shadow_mat_ids.clear();
 	while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
 	swap_xz = bool(swap_xyz & 2);
 	swap_yz = bool(swap_xyz & 1);
@@ -183,6 +184,7 @@ city_model_t &object_model_loader_t::get_model(unsigned id) {
 bool city_params_t::add_model(unsigned id, FILE *fp) {
 	assert(id < NUM_OBJ_MODELS);
 	city_model_t &model(building_models[id]);
+	if (model.valid) {cerr << "Warning: Duplicate model file '" << model.fn << "' will overwrite previous value" << endl;}
 	if (!model.read(fp)) return 0;
 	if (!model.check_filename()) {cerr << "Error: model file '" << model.fn << "' does not exist; skipping" << endl;} // nonfatal
 	return 1;
