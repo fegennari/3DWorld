@@ -43,6 +43,7 @@ public:
 	float get_model_scale(unsigned id) const {return get_model(id).scale;}
 	vector3d get_model_world_space_size(unsigned id);
 	colorRGBA get_avg_color(unsigned id);
+	bool model_filename_contains(unsigned id, string const &str, string const &str2="") const;
 	bool is_model_valid(unsigned id);
 	void load_models();
 	void load_model_id(unsigned id);

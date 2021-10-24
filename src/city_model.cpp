@@ -61,6 +61,11 @@ colorRGBA city_model_loader_t::get_avg_color(unsigned id) {
 	if (!is_model_valid(id)) return BLACK; // error?
 	return get_model3d(id).get_avg_color();
 }
+bool city_model_loader_t::model_filename_contains(unsigned id, string const &str, string const &str2) const {
+	string const &fn(get_model(id).fn);
+	if (fn.find(str) != string::npos) return 1;
+	return (!str2.empty() && fn.find(str2) != string::npos);
+}
 bool city_model_loader_t::is_model_valid(unsigned id) {
 	ensure_models_loaded(); // I guess we have to load the models here to determine if they're valid
 	return get_model(id).is_loaded();
