@@ -158,7 +158,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 	objects.push_back(hanger_rod);
 
 	// add hangers and hanging clothes
-	unsigned const num_hangers(1 + (rgen.rand() % (c.is_small_closet() ? 9 : 17))); // 1-9/17
+	unsigned const num_hangers(c.is_small_closet() ? ((rgen.rand()%7) + 2) : ((rgen.rand()%13) + 4)); // 2-8 / 4-16
 	float const wire_radius(0.25*hr_radius);
 
 	if (num_hangers > 0 && hanger_rod.get_sz_dim(!c.dim) > 10.0*wire_radius && building_obj_model_loader.is_model_valid(OBJ_MODEL_HANGER)) {
@@ -201,8 +201,14 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 				float const scale(building_obj_model_loader.get_model_scale(cid));
 				if (scale != 0.0) {set_wall_width(shirt, shirt.zc(), 0.5*scale*shirt.dz(), 2);} // rescale zvals around the center
 				resize_model_cube_xy(shirt, shirt.get_center_dim(c.dim), shirt.get_center_dim(!c.dim), cid, c.dim);
-					
-				if (!is_pants && rgen.rand_bool()) { // 50% of shirts and randomly colored rather than colored + textured with the model
+				bool skip(0);
+
+				for (auto m = objects.begin()+hanger_rod_ix+1; m != objects.end(); ++m) { // skip if this object intersects a previous hanging clothing item
+					if (m->type == TYPE_CLOTHES && m->intersects(shirt)) {skip = 1; break;}
+				}
+				if (skip) continue;
+
+				if (!is_pants && rgen.rand_float() < 0.67) { // 67% of shirts and randomly colored rather than colored + textured with the model
 					shirt.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
 					shirt.flags |= RO_FLAG_UNTEXTURED;
 				}
