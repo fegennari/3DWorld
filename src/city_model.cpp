@@ -51,7 +51,7 @@ model3d &city_model_loader_t::get_model3d(unsigned id) {
 vector3d city_model_loader_t::get_model_world_space_size(unsigned id) { // Note: may need to load model
 	if (!is_model_valid(id)) return zero_vector; // error?
 	city_model_t const &model_file(get_model(id));
-	vector3d sz(get_model3d(id).get_bcube().get_size());
+	vector3d sz(get_model3d(id).get_bcube().get_size()*model_file.scale);
 	if (model_file.swap_xz) {std::swap(sz.x, sz.z);}
 	if (model_file.swap_yz) {std::swap(sz.y, sz.z);}
 	if (round_fp(model_file.xy_rot/90.0) & 1) {std::swap(sz.x, sz.y);} // swap x/y for 90 and 270 degree rotations
@@ -129,8 +129,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (model_file.swap_xz) {fgRotate(90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
 	if (model_file.swap_yz) {fgRotate(90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
 	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
-	point center(all_zeros);
-	UNROLL_3X(if (!(model_file.centered & (1<<i_))) {center[i_] = bcube_center[i_];}); // use centered bit mask to control which component is centered vs. translated
+	point center(bcube_center);
+	UNROLL_3X(if (model_file.centered & (1<<i_)) {center[i_] = 0.0;}); // use centered bit mask to control which component is centered vs. translated
 	translate_to(-center); // cancel out model local translate
 	bool const disable_cull_face_ths_obj(/*!is_shadow_pass &&*/ model_file.two_sided && glIsEnabled(GL_CULL_FACE));
 	if (disable_cull_face_ths_obj) {glDisable(GL_CULL_FACE);}

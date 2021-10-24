@@ -25,9 +25,7 @@ unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
 template< typename T > void gen_quad_ixs(vector<T> &ixs, unsigned size, unsigned ix_offset);
 
-bool has_key_3d_model () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
-bool has_hanger_model () {return building_obj_model_loader.is_model_valid(OBJ_MODEL_HANGER);}
-bool has_clothes_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES);}
+bool has_key_3d_model() {return building_obj_model_loader.is_model_valid(OBJ_MODEL_KEY);}
 
 colorRGBA room_object_t::get_model_color() const {return building_obj_model_loader.get_avg_color(get_model_id());}
 

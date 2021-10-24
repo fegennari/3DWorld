@@ -40,6 +40,7 @@ public:
 	virtual unsigned get_num_sub_models(unsigned id) const {return 1;}
 	virtual city_model_t const &get_model(unsigned id) const = 0;
 	virtual city_model_t &get_model(unsigned id) = 0;
+	float get_model_scale(unsigned id) const {return get_model(id).scale;}
 	vector3d get_model_world_space_size(unsigned id);
 	colorRGBA get_avg_color(unsigned id);
 	bool is_model_valid(unsigned id);
