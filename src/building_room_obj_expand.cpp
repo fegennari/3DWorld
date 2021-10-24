@@ -191,11 +191,11 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 			
 			if (rgen.rand_float() < 0.8) { // maybe add clothing to the hanger
 				objects.back().flags |= RO_FLAG_HANGING; // flag the hanger has having the shirt hanging on it
-				room_object_t shirt(hanger, TYPE_CLOTHES, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, WHITE); // or pants
+				room_object_t shirt(hanger, TYPE_SHIRT, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, WHITE); // or pants
 				shirt.z2() -= 0.55*hanger.dz(); // top
 				shirt.z1() -= 0.3*c.dz(); // bottom
 
-				if (use_model) {
+				if (use_model) { // clothes model
 					shirt.type       = TYPE_CLOTHES;
 					shirt.item_flags = rgen.rand(); // choose a random clothing sub_model_id
 					bool const is_pants((shirt.item_flags%3) == 2);
@@ -210,7 +210,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 						shirt.flags |= RO_FLAG_UNTEXTURED;
 					}
 				}
-				else {
+				else { // textured shirt cube/quads
 					shirt.expand_by_xy(0.01*hanger.dz()); // expand slightly to avoid z-fighting with hanger
 					shirt.expand_in_dim(c.dim, 0.045*c.dz()); // slightly wider
 					shirt.color = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
