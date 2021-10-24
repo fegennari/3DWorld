@@ -9,24 +9,26 @@ extern city_params_t city_params;
 
 bool city_model_t::read(FILE *fp, bool is_helicopter) {
 
-	// filename recalc_normals body_material_id fixed_color_id xy_rot swap_xy scale lod_mult <blade_mat_id for helicopter> [shadow_mat_ids]
+	// filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xy scale lod_mult <blade_mat_id for helicopter> [shadow_mat_ids]
 	assert(fp);
 	unsigned line_num(0), swap_xyz(0), shadow_mat_id(0); // Note: line_num is unused
 	fn = read_quoted_string(fp, line_num);
 	if (fn.empty()) return 0;
-	if (!read_int(fp, recalc_normals)) return 0; // 0,1,2
-	if (!read_int(fp, body_mat_id))    return 0;
-	if (!read_int(fp, fixed_color_id)) return 0;
-	if (!read_float(fp, xy_rot))  return 0;
-	if (!read_uint(fp, swap_xyz)) return 0; // {swap none, swap Y with Z, swap X with Z}
-	if (!read_float(fp, scale))   return 0;
+	if (!read_int  (fp, recalc_normals)) return 0; // 0,1,2
+	if (!read_bool (fp, two_sided))      return 0;
+	if (!read_int  (fp, centered))       return 0; // bit mask for {X, Y, Z}
+	if (!read_int  (fp, body_mat_id))    return 0;
+	if (!read_int  (fp, fixed_color_id)) return 0;
+	if (!read_float(fp, xy_rot))         return 0;
+	if (!read_uint(fp, swap_xyz))        return 0; // {swap none, swap Y with Z, swap X with Z}
+	if (!read_float(fp, scale))          return 0;
 	if (!read_float(fp, lod_mult) || lod_mult < 0.0)  return 0;
 	if (is_helicopter && !read_int(fp, blade_mat_id)) return 0;
 	shadow_mat_ids.clear();
 	while (read_uint(fp, shadow_mat_id)) {shadow_mat_ids.push_back(shadow_mat_id);}
 	swap_xz = bool(swap_xyz & 2);
 	swap_yz = bool(swap_xyz & 1);
-	valid = 1; // success
+	valid   = 1; // success
 	return 1;
 }
 
@@ -105,8 +107,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (!is_shadow_pass && model_file.body_mat_id >= 0 && color.A != 0.0) {model.set_color_for_material(model_file.body_mat_id, color);} // use custom color for body material
 	model.bind_all_used_tids();
 	cube_t const &bcube(model.get_bcube());
-	point const orig_camera_pos(camera_pdu.pos);
-	camera_pdu.pos += bcube.get_cube_center() - pos - xlate; // required for distance based LOD
+	point const orig_camera_pos(camera_pdu.pos), bcube_center(bcube.get_cube_center());
+	camera_pdu.pos += bcube_center - pos - xlate; // required for distance based LOD
 	bool const camera_pdu_valid(camera_pdu.valid);
 	camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 	// Note: in model space, front-back=z, left-right=x, top-bot=y (for model_file.swap_yz=1)
@@ -127,7 +129,11 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	if (model_file.swap_xz) {fgRotate(90.0, 0.0, 1.0, 0.0);} // swap X and Z dirs; models have up=X, but we want up=Z
 	if (model_file.swap_yz) {fgRotate(90.0, 1.0, 0.0, 0.0);} // swap Y and Z dirs; models have up=Y, but we want up=Z
 	uniform_scale(sz_scale); // scale from model space to the world space size of our target cube, using a uniform scale based on the averages of the x,y,z sizes
-	translate_to(-bcube.get_cube_center()); // cancel out model local translate
+	point center(all_zeros);
+	UNROLL_3X(if (!(model_file.centered & (1<<i_))) {center[i_] = bcube_center[i_];}); // use centered bit mask to control which component is centered vs. translated
+	translate_to(-center); // cancel out model local translate
+	bool const disable_cull_face_ths_obj(/*!is_shadow_pass &&*/ model_file.two_sided && glIsEnabled(GL_CULL_FACE));
+	if (disable_cull_face_ths_obj) {glDisable(GL_CULL_FACE);}
 
 	if (skip_mat_mask > 0) { // draw select materials
 		for (unsigned i = 0; i < model.num_materials(); ++i) {
@@ -146,6 +152,7 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 		model.render_materials(s, is_shadow_pass, 0, 0, 2, 3, 3, model.get_unbound_material(), rotation_t(),
 			nullptr, nullptr, is_shadow_pass, lod_mult, (is_shadow_pass ? 10.0 : 0.0)); // enable_alpha_mask=2 (both)
 	}
+	if (disable_cull_face_ths_obj) {glEnable(GL_CULL_FACE);} // restore previous value
 	fgPopMatrix();
 	camera_pdu.valid = camera_pdu_valid;
 	camera_pdu.pos   = orig_camera_pos;

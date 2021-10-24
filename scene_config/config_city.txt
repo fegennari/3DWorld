@@ -66,69 +66,69 @@ city new_city_prob 0.5
 city enable_car_path_finding 1
 city cars_use_driveways 1 # cars can enter (and eventually leave) driveways
 city convert_model_files 1
-# car_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
-city car_model ../models/cars/sports_car/sportsCar.model3d        1 22 -1 90  1 1.0 1.0  20 22
-city car_model ../models/cars/natla_car/natla_car.model3d         1 -1  2 90  1 1.0 0.5  1 # always GRAY (writing to model3d file inverts DDS textures)
-city car_model ../models/cars/speedCar/speedCar.model3d           1 -1  6 0   1 1.0 0.5  4 5 # always DK_BLUE (writing to model3d file inverts DDS textures)
-city car_model ../models/cars/Lamborghini/Lamborghini.model3d     1  2 -1 180 1 1.0 0.5  2 3 4
-city car_model ../models/cars/GCPD_Police_Car/GCPD_Police_Car.model3d 1 -1  1 90  1 1.0 0.2  0 1 # always GRAY_BLACK
-city car_model ../models/cars/bugatti/bugatti.model3d             1  0 -1 80  1 1.0 2.0  0 4 24 # Note: underside disabled for shadows model is already too many triangles, but need to include the windshield
-city car_model ../models/cars/Mercedes_Benz/Mercedes-Benz.model3d 1  0 -1 180 1 1.0 0.5  0 6 7
-city car_model ../models/cars/Rio/rio.model3d                     1  5 -1 270 1 1.0 0.5  1 5 # Note: shadow material 1 may be optional
-city car_model ../models/cars/Soarer/soarer.model3d               1  2 -1 90  1 1.0 0.5  2 5 8
-city car_model ../models/cars/Camaro/camaro2.model3d              1 24 -1 90  1 1.0 0.5  9 21 24
-city car_model ../models/cars/LowPolyTruck/truck.model3d          1 -1  2  0  1 1.6 0.5  3 4 5 6 16 17 20 24 # always GRAY
-city car_model ../models/cars/BMW/bmw.model3d                     1  0 -1 180 1 1.0 2.0  0 9 # Note: has emissive lights
-#city car_model ../models/cars/Bentley/Bentley.model3d            1   1 -1 90  1 1.0 0.5  1
+# car_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
+city car_model ../models/cars/sports_car/sportsCar.model3d        1 0 0  22 -1 90  1 1.0 1.0  20 22
+city car_model ../models/cars/natla_car/natla_car.model3d         1 0 0  -1  2 90  1 1.0 0.5  1 # always GRAY (writing to model3d file inverts DDS textures)
+city car_model ../models/cars/speedCar/speedCar.model3d           1 0 0  -1  6 0   1 1.0 0.5  4 5 # always DK_BLUE (writing to model3d file inverts DDS textures)
+city car_model ../models/cars/Lamborghini/Lamborghini.model3d     1 0 0   2 -1 180 1 1.0 0.5  2 3 4
+city car_model ../models/cars/GCPD_Police_Car/GCPD_Police_Car.model3d 1 0 0  -1  1 90  1 1.0 0.2  0 1 # always GRAY_BLACK
+city car_model ../models/cars/bugatti/bugatti.model3d             1 0 0   0 -1 80  1 1.0 2.0  0 4 24 # Note: underside disabled for shadows model is already too many triangles, but need to include the windshield
+city car_model ../models/cars/Mercedes_Benz/Mercedes-Benz.model3d 1 0 0   0 -1 180 1 1.0 0.5  0 6 7
+city car_model ../models/cars/Rio/rio.model3d                     1 0 0   5 -1 270 1 1.0 0.5  1 5 # Note: shadow material 1 may be optional
+city car_model ../models/cars/Soarer/soarer.model3d               1 0 0   2 -1 90  1 1.0 0.5  2 5 8
+city car_model ../models/cars/Camaro/camaro2.model3d              1 0 0  24 -1 90  1 1.0 0.5  9 21 24
+city car_model ../models/cars/LowPolyTruck/truck.model3d          1 0 0  -1  2  0  1 1.6 0.5  3 4 5 6 16 17 20 24 # always GRAY
+city car_model ../models/cars/BMW/bmw.model3d                     1 0 0   0 -1 180 1 1.0 2.0  0 9 # Note: has emissive lights
+#city car_model ../models/cars/Bentley/Bentley.model3d            1 0 0    1 -1 90  1 1.0 0.5  1
 use_model_lod_blocks 0 # doesn't really work on car model
 model_mat_lod_thresh 0.008
 allow_model3d_quads 1 # 0 is slightly faster for drawing but uses more memory (must recreate model3d files to change this)
 
-# helicopter_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult blade_mat_id [shadow_mat_ids]
-city helicopter_model ../models/cars/Helicopter/md500.3DS         1  0 0 90  0 2.0 1.0  -1 0  # always white color, no separate blade material, material 0 for shadows
-city helicopter_model ../models/cars/Helicopter_ka27/ka27.model3d 1  0 0 90  1 2.5 1.0   1 # always white color, materials are {body, prop blade}; prop blade rotates a bit off center
+# helicopter_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult blade_mat_id [shadow_mat_ids]
+city helicopter_model ../models/cars/Helicopter/md500.3DS         1 0 0   0 0 90  0 2.0 1.0  -1 0  # always white color, no separate blade material, material 0 for shadows
+city helicopter_model ../models/cars/Helicopter_ka27/ka27.model3d 1 0 0   0 0 90  1 2.5 1.0   1 # always white color, materials are {body, prop blade}; prop blade rotates a bit off center
 
 # pedestrians
 city num_peds 8000 # 10000 for city/6000 for residential
 city num_building_peds 55000 # 50000 for city/60000 for residential
 city ped_speed 0.001
 city ped_respawn_at_dest 1
-# ped_model: filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
-city ped_model ../models/people/muro/muro.model3d         1 0 -1 90  1 1.0  1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
-city ped_model ../models/people/Patrick/Patrick.model3d   1 0 -1 90  1 1.0  1.0  0
-city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 -1 90  1 0.8  1.0  0 # all one material
+# ped_model: filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
+city ped_model ../models/people/muro/muro.model3d         1 0 0  0 -1 90  1 1.0  1.0  0 1 # 0=body, 1=head; head can be omitted for faster shadows
+city ped_model ../models/people/Patrick/Patrick.model3d   1 0 0  0 -1 90  1 1.0  1.0  0
+city ped_model ../models/people/RUST/RUST_3d_Low1.model3d 1 0 0  0 -1 90  1 0.8  1.0  0 # all one material
 # MakeHuman models
-city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 -1 90  1 0.7 1.0  0 3
+city ped_model ../models/people/makehuman/Katie/Katie.model3d 1 0 0  0 -1 90  1 0.7 1.0  0 3
 
-# filename recalc_normals body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
-city toilet_model ../models/interiors/toilet/toilet.model3d  1 -1 -1 0  1 1.0 1.0  0
-city urinal_model ../models/interiors/urinal/urinal4.model3d  1 -1 -1 0  1 1.0 1.0  0
-city sink_model ../models/interiors/simple_sink.model3d  1 -1 -1 90  0 1.0 1.0
-city tub_model ../models/interiors/bathtub.model3d  1 -1 -1 90  1 1.0 1.0  2
-city fridge_model ../models/interiors/fridge/Fridge.model3d  1 -1 -1 90  1 1.0 1.0  0 1 2 3 4 5
-city stove_model ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 0 -1 90  1 1.0 1.0
-city tv_model "../models/interiors/SmartTV/Smart TV.model3d"  1 0 -1 90  1 1.0 1.0
-city couch_model ../models/interiors/couch/OBJ.model3d  1 0 -1 90  1 1.0 1.0
-city office_chair_model ../models/interiors/chairs/Free3d_office_chair1/Office_chair.model3d  1 0 -1 90  1 1.0 1.0
-city lamp_model ../models/interiors/lamp1.model3d  1 2 -1 0  1 1.0 1.0  0 # only draw the first material a-wire for the shadow pass
-city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  0 0 -1 90  1 1.0 1.0
-city dryer_model ../models/interiors/dryer/Dryer.model3d  0 0 -1 0  0 1.0 1.0
-city key_model ../models/interiors/singlkey.model3d  0 0 -1 0  2 1.0 1.0 # swap X and Z
+# filename recalc_normals two_sided centered body_material_id fixed_color_id xy_rot swap_xyz scale lod_mult [shadow_mat_ids]
+city toilet_model ../models/interiors/toilet/toilet.model3d     1 0 0  -1 -1 0  1 1.0 1.0  0
+city urinal_model ../models/interiors/urinal/urinal4.model3d    1 0 0  -1 -1 0  1 1.0 1.0  0
+city sink_model   ../models/interiors/simple_sink.model3d       1 0 0  -1 -1 90  0 1.0 1.0
+city tub_model    ../models/interiors/bathtub.model3d           1 0 0  -1 -1 90  1 1.0 1.0  2
+city fridge_model ../models/interiors/fridge/Fridge.model3d     1 0 0  -1 -1 90  1 1.0 1.0  0 1 2 3 4 5
+city stove_model  ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 0 0  0 -1 90  1 1.0 1.0
+city tv_model    "../models/interiors/SmartTV/Smart TV.model3d" 1 0 0  0 -1 90  1 1.0 1.0
+city couch_model  ../models/interiors/couch/OBJ.model3d         1 0 0  0 -1 90  1 1.0 1.0
+city office_chair_model ../models/interiors/chairs/Free3d_office_chair1/Office_chair.model3d  1 0 0  0 -1 90  1 1.0 1.0
+city lamp_model   ../models/interiors/lamp1.model3d             1 0 0  2 -1 0  1 1.0 1.0  0 # only draw the first material a-wire for the shadow pass
+city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  0 0 0  0 -1 90  1 1.0 1.0
+city dryer_model  ../models/interiors/dryer/Dryer.model3d       0 0 0  0 -1 0  0 1.0 1.0
+city key_model    ../models/interiors/singlkey.model3d          0 0 0  0 -1 0  2 1.0 1.0 # swap X and Z
 
 # closet objects
-#city hanger_model ../models/interiors/clothes_hanger.model3d  0 0 0 0  1 1.0 1.0
-city hanger_model   "../models/interiors/closet_items/Metal Wire Hanger.obj"  0 0 0 0  1 1.0 1.0
-city hanger_model   "../models/interiors/closet_items/Plastic Bar Hanger.obj"  0 0 0 0  1 1.0 1.0
-city hanger_model   "../models/interiors/closet_items/Plastic Hanger.obj"  0 0 0 0  1 1.0 1.0
-city hanger_model   "../models/interiors/closet_items/Velvet Pants Hanger.obj"  0 0 0 0  1 1.0 1.0
-city hanger_model   "../models/interiors/closet_items/Wooden Bar Hanger.obj"  0 0 0 0  1 1.0 1.0
-city clothing_model "../models/interiors/closet_items/Shirt.obj"  0 0 0 0  1 1.0 1.0
-city clothing_model "../models/interiors/closet_items/Long Shirt.obj"  0 0 0 0  1 1.0 1.0
-city clothing_model "../models/interiors/closet_items/Pants.obj"  0 0 0 0  1 1.0 1.0
+#city hanger_model  ../models/interiors/clothes_hanger.model3d                       0 0 0  0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Metal Wire Hanger.model3d"    0 0 0  0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Plastic Bar Hanger.model3d"   0 0 0  0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Plastic Hanger.model3d"       0 0 0  0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Velvet Pants Hanger.model3d"  0 0 0  0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Wooden Bar Hanger.model3d"    0 0 0  0 0 0  1 1.0 1.0
+city clothing_model "../models/interiors/closet_items/Shirt.model3d"                0 0 5  0 0 0  1 1.0 1.0 # XZ centered
+city clothing_model "../models/interiors/closet_items/Long Shirt.model3d"           0 1 5  0 0 0  1 1.0 1.0 # two sided, XZ centered
+city clothing_model "../models/interiors/closet_items/Pants.model3d"                0 1 0  0 0 0  1 1.0 1.0 # two sided
 
 # city objects
-city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 -1 0  1 1.0 1.0
-city umbrella_model ../models/umbrella/UmbrellaOpen.model3d  0 0 -1 270  0 1.0 1.0
+city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 0  0 -1 0  1 1.0 1.0
+city umbrella_model     ../models/umbrella/UmbrellaOpen.model3d      0 0 0  0 -1 270  0 1.0 1.0
 
 city max_lights 1024
 city max_shadow_maps 40
