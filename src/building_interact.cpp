@@ -696,7 +696,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 		bool updated_rot(0);
 
 		for (auto c = expanded_objs.begin(); c != expanded_objs.end(); ++c) {
-			if ((c->type == TYPE_SHIRT || c->type == TYPE_CLOTHES) && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
+			if (c->type == TYPE_CLOTHES && sphere_cube_intersect(player_pos, player_radius, *c)) { // shirt in a closet with the player
 				assert(c != objs.begin());
 				room_object_t &hanger(*(c-1)); // hanger is the previous object
 				assert(hanger.type == TYPE_HANGER);
@@ -990,7 +990,6 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_LBASKET   ] = bldg_obj_type_t(1, 1, 1, 0, 0, 2, 12.0,  2.0,   "laundry basket");
 	bldg_obj_types[TYPE_WHEATER   ] = bldg_obj_type_t(1, 1, 0, 1, 0, 2, 300.0, 500.0, "water heater");
 	bldg_obj_types[TYPE_TAPE      ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 2.0,   0.4,   "duct tape", 1000);
-	bldg_obj_types[TYPE_SHIRT     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 10.0,  0.25,  "shirt");
 	// player_coll, ai_coll, pickup, attached, is_model, lg_sm, value, weight, name [capacity]
 	// 3D models
 	bldg_obj_types[TYPE_TOILET    ] = bldg_obj_type_t(1, 1, 1, 1, 1, 0, 120.0, 88.0,  "toilet");
@@ -1680,8 +1679,7 @@ int building_room_geom_t::find_nearest_pickup_object(building_t const &building,
 				}
 				if (has_hanger) continue;
 			}
-			if (i->type == TYPE_HANGER  && (i->flags & RO_FLAG_HANGING) && (i+1) != objs_end &&
-				((i+1)->type == TYPE_SHIRT || (i+1)->type == TYPE_CLOTHES)) continue; // hanger with a shirt on it - must take shirt first
+			if (i->type == TYPE_HANGER  && (i->flags & RO_FLAG_HANGING) && (i+1) != objs_end && (i+1)->type == TYPE_CLOTHES) continue; // hanger with clothes - must take clothes first
 			if (i->type == TYPE_MIRROR  && !i->is_house())                continue; // can only pick up mirrors from houses, not office buildings
 			if (i->type == TYPE_TABLE   && i->shape == SHAPE_CUBE)        continue; // can only pick up short (TV) tables and cylindrical tables
 			if (i->type == TYPE_BED     && (i->flags & RO_FLAG_TAKEN3))   continue; // can only take pillow, sheets, and mattress - not the frame

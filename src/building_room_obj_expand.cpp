@@ -189,31 +189,22 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 			resize_model_cube_xy(hanger, hanger.get_center_dim(c.dim), (pos_min + slot_ix*slot_spacing), hid, c.dim);
 			objects.push_back(hanger);
 			
-			if (rgen.rand_float() < 0.8) { // maybe add clothing to the hanger
+			if (use_model && rgen.rand_float() < 0.8) { // maybe add clothing to the hanger
 				objects.back().flags |= RO_FLAG_HANGING; // flag the hanger has having the shirt hanging on it
-				room_object_t shirt(hanger, TYPE_SHIRT, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, WHITE); // or pants
+				room_object_t shirt(hanger, TYPE_CLOTHES, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, WHITE); // or pants
 				shirt.z2() -= 0.55*hanger.dz(); // top
 				shirt.z1() -= 0.3*c.dz(); // bottom
-
-				if (use_model) { // clothes model
-					shirt.type       = TYPE_CLOTHES;
-					shirt.item_flags = rgen.rand(); // choose a random clothing sub_model_id
-					bool const is_pants((shirt.item_flags%3) == 2);
-					if (is_pants && (hanger.item_flags%5) >= 3) {++shirt.item_flags;} // hack to avoid placing pants on bar hangers
-					unsigned const cid(shirt.get_model_id());
-					float const scale(building_obj_model_loader.get_model_scale(cid));
-					if (scale != 0.0) {set_wall_width(shirt, shirt.zc(), 0.5*scale*shirt.dz(), 2);} // rescale zvals around the center
-					resize_model_cube_xy(shirt, shirt.get_center_dim(c.dim), shirt.get_center_dim(!c.dim), cid, c.dim);
+				shirt.item_flags = rgen.rand(); // choose a random clothing sub_model_id
+				bool const is_pants((shirt.item_flags%3) == 2);
+				if (is_pants && (hanger.item_flags%5) >= 3) {++shirt.item_flags;} // hack to avoid placing pants on bar hangers
+				unsigned const cid(shirt.get_model_id());
+				float const scale(building_obj_model_loader.get_model_scale(cid));
+				if (scale != 0.0) {set_wall_width(shirt, shirt.zc(), 0.5*scale*shirt.dz(), 2);} // rescale zvals around the center
+				resize_model_cube_xy(shirt, shirt.get_center_dim(c.dim), shirt.get_center_dim(!c.dim), cid, c.dim);
 					
-					if (!is_pants && rgen.rand_bool()) { // 50% of shirts and randomly colored rather than colored + textured with the model
-						shirt.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
-						shirt.flags |= RO_FLAG_UNTEXTURED;
-					}
-				}
-				else { // textured shirt cube/quads
-					shirt.expand_by_xy(0.01*hanger.dz()); // expand slightly to avoid z-fighting with hanger
-					shirt.expand_in_dim(c.dim, 0.045*c.dz()); // slightly wider
-					shirt.color = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
+				if (!is_pants && rgen.rand_bool()) { // 50% of shirts and randomly colored rather than colored + textured with the model
+					shirt.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
+					shirt.flags |= RO_FLAG_UNTEXTURED;
 				}
 				objects.push_back(shirt);
 			}
