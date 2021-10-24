@@ -106,13 +106,13 @@ city urinal_model ../models/interiors/urinal/urinal4.model3d    1 0 0  -1 -1 0  
 city sink_model   ../models/interiors/simple_sink.model3d       1 0 0  -1 -1 90  0 1.0 1.0
 city tub_model    ../models/interiors/bathtub.model3d           1 0 0  -1 -1 90  1 1.0 1.0  2
 city fridge_model ../models/interiors/fridge/Fridge.model3d     1 0 0  -1 -1 90  1 1.0 1.0  0 1 2 3 4 5
-city stove_model  ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 0 0  0 -1 90  1 1.0 1.0
+city stove_model  ../models/interiors/stove/DB_Apps&Tech_04_13.model3d  1 1 0  0 -1 90  1 1.0 1.0 # two sided
 city tv_model    "../models/interiors/SmartTV/Smart TV.model3d" 1 0 0  0 -1 90  1 1.0 1.0
 city couch_model  ../models/interiors/couch/OBJ.model3d         1 0 0  0 -1 90  1 1.0 1.0
 city office_chair_model ../models/interiors/chairs/Free3d_office_chair1/Office_chair.model3d  1 0 0  0 -1 90  1 1.0 1.0
 city lamp_model   ../models/interiors/lamp1.model3d             1 0 0  2 -1 0  1 1.0 1.0  0 # only draw the first material a-wire for the shadow pass
 city washer_model ../models/interiors/washer/Washing_machine_MODEL_obj.model3d  0 0 0  0 -1 90  1 1.0 1.0
-city dryer_model  ../models/interiors/dryer/Dryer.model3d       0 0 0  0 -1 0  0 1.0 1.0
+city dryer_model  ../models/interiors/dryer/Dryer.model3d       0 1 0  0 -1 0  0 1.0 1.0 # two sided
 city key_model    ../models/interiors/singlkey.model3d          0 0 0  0 -1 0  2 1.0 1.0 # swap X and Z
 
 # closet objects
@@ -123,7 +123,7 @@ city hanger_model   "../models/interiors/closet_items/Plastic Hanger.model3d"   
 city hanger_model   "../models/interiors/closet_items/Velvet Pants Hanger.model3d"  0 0 0  0 0 0  1 1.0 1.0
 city hanger_model   "../models/interiors/closet_items/Wooden Bar Hanger.model3d"    0 0 0  0 0 0  1 1.0 1.0
 city clothing_model "../models/interiors/closet_items/Shirt.model3d"                0 0 5  0 0 0  1 1.0 1.0 # XZ centered
-city clothing_model "../models/interiors/closet_items/Long Shirt.model3d"           0 1 5  0 0 0  1 1.0 1.0 # two sided, XZ centered
+city clothing_model "../models/interiors/closet_items/Long Shirt.model3d"           0 0 5  0 0 0  1 1.0 1.0 # XZ centered
 city clothing_model "../models/interiors/closet_items/Pants.model3d"                0 1 0  0 0 0  1 1.0 1.0 # two sided
 
 # city objects
