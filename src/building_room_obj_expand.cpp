@@ -166,6 +166,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 		hanger.type       = TYPE_HANGER;
 		hanger.item_flags = rgen.rand(); // choose a random hanger sub_model_id per-closet
 		set_cube_zvals(hanger, (hanger_rod.z1() - 0.07*window_vspacing), (hanger_rod.z2() + 1.0*wire_radius));
+		unsigned const hid(hanger.get_model_id());
 		float const edge_spacing(max(4.0f*hr_radius, 0.1f*depth));
 		float const pos_min(hanger_rod.d[!c.dim][0] + edge_spacing), pos_max(hanger_rod.d[!c.dim][1] - edge_spacing);
 		float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/63.0);
@@ -185,7 +186,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 				break; // success
 			}
 			if (!found_slot) continue; // skip this hanger
-			resize_model_cube_xy(hanger, hanger.get_center_dim(c.dim), (pos_min + slot_ix*slot_spacing), hanger.get_model_id(), c.dim);
+			resize_model_cube_xy(hanger, hanger.get_center_dim(c.dim), (pos_min + slot_ix*slot_spacing), hid, c.dim);
 			objects.push_back(hanger);
 			
 			if (rgen.rand_float() < 0.8) { // maybe add clothing to the hanger
@@ -197,10 +198,11 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 				if (use_model) {
 					shirt.type       = TYPE_CLOTHES;
 					shirt.item_flags = rgen.rand(); // choose a random clothing sub_model_id
-					unsigned const id(shirt.get_model_id());
-					float const scale(building_obj_model_loader.get_model_scale(id));
+					if ((shirt.item_flags%3) == 2 && (hanger.item_flags%5) >= 3) {++shirt.item_flags;} // hack to avoid placing pants on bar hangers
+					unsigned const cid(shirt.get_model_id());
+					float const scale(building_obj_model_loader.get_model_scale(cid));
 					if (scale != 0.0) {set_wall_width(shirt, shirt.zc(), 0.5*scale*shirt.dz(), 2);} // rescale zvals around the center
-					resize_model_cube_xy(shirt, shirt.get_center_dim(c.dim), shirt.get_center_dim(!c.dim), id, c.dim);
+					resize_model_cube_xy(shirt, shirt.get_center_dim(c.dim), shirt.get_center_dim(!c.dim), cid, c.dim);
 				}
 				else {
 					shirt.expand_by_xy(0.01*hanger.dz()); // expand slightly to avoid z-fighting with hanger

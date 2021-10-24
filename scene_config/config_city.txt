@@ -118,9 +118,9 @@ city key_model    ../models/interiors/singlkey.model3d          0 0 0  0 -1 0  2
 # closet objects
 #city hanger_model  ../models/interiors/clothes_hanger.model3d                       0 0 0  0 0 0  1 1.0 1.0
 city hanger_model   "../models/interiors/closet_items/Metal Wire Hanger.model3d"    0 0 0  0 0 0  1 1.0 1.0
-city hanger_model   "../models/interiors/closet_items/Plastic Bar Hanger.model3d"   0 0 0  0 0 0  1 1.0 1.0
 city hanger_model   "../models/interiors/closet_items/Plastic Hanger.model3d"       0 0 0  0 0 0  1 1.0 1.0
 city hanger_model   "../models/interiors/closet_items/Velvet Pants Hanger.model3d"  0 0 0  0 0 0  1 1.0 1.0
+city hanger_model   "../models/interiors/closet_items/Plastic Bar Hanger.model3d"   0 0 0  0 0 0  1 1.0 1.0
 city hanger_model   "../models/interiors/closet_items/Wooden Bar Hanger.model3d"    0 0 0  0 0 0  1 1.0 1.0
 city clothing_model "../models/interiors/closet_items/Shirt.model3d"                0 0 5  0 0 0  1 1.0 1.0 # XZ centered
 city clothing_model "../models/interiors/closet_items/Long Shirt.model3d"           0 0 5  0 0 0  1 1.0 1.0 # XZ centered
