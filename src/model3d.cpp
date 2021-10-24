@@ -1744,12 +1744,26 @@ material_t *model3d::get_material_by_name(string const &name) {
 	return ((mat_ix < 0) ? nullptr : &materials[mat_ix]);
 }
 
-void model3d::set_color_for_material(unsigned mat_id, colorRGBA const &color) {
-	if (mat_id == materials.size()) {unbound_mat.color = color;} // unbound geom is material ID materials.size() (one past the end)
+colorRGBA model3d::set_color_for_material(unsigned mat_id, colorRGBA const &color) { // returns the original color
+	colorRGBA orig_color;
+
+	if (mat_id == materials.size()) { // unbound geom is material ID materials.size() (one past the end)
+		orig_color = unbound_mat.color;
+		unbound_mat.color = color;
+	}
 	else {
 		material_t &mat(get_material(mat_id));
+		orig_color = mat.kd;
 		mat.ka = mat.kd = color;
 	}
+	return orig_color;
+}
+
+int model3d::set_texture_for_material(unsigned mat_id, int tid) { // returns the original texture ID
+	int orig_tid(tid);
+	if (mat_id == materials.size()) {swap(orig_tid, unbound_mat.tid);} // unbound geom is material ID materials.size() (one past the end)
+	else {swap(orig_tid, get_material(mat_id).d_tid);}
+	return orig_tid;
 }
 
 

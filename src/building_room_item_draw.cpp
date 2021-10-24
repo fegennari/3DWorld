@@ -841,8 +841,9 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		bool const is_emissive(!shadow_only && obj.type == TYPE_LAMP && obj.is_lit());
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
+		bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
 		// Note: lamps are the most common and therefore most expensive models to draw
-		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0);
+		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0, 0, untextured);
 		if (is_emissive) {s.set_color_e(BLACK);}
 		if (is_sink) {water_draw.add_water_for_sink(obj);}
 		obj_drawn = 1;

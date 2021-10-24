@@ -562,7 +562,8 @@ public:
 	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 		unsigned bmap_pass_mask, int reflect_mode, int trans_op_mask, vector3d const &xlate);
 	material_t *get_material_by_name(string const &name);
-	void set_color_for_material(unsigned mat_id, colorRGBA const &color);
+	colorRGBA set_color_for_material(unsigned mat_id, colorRGBA const &color);
+	int set_texture_for_material(unsigned mat_id, int tid);
 	void ensure_reflection_cube_map();
 	cube_t get_single_transformed_bcube(vector3d const &xlate=zero_vector) const;
 	void setup_shadow_maps();

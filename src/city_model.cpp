@@ -98,13 +98,18 @@ void city_model_loader_t::load_model_id(unsigned id) {
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
-	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations, unsigned skip_mat_mask)
+	vector3d const &xlate, unsigned model_id, bool is_shadow_pass, bool low_detail, bool enable_animations, unsigned skip_mat_mask, bool untextured)
 {
 	bool const is_valid(is_model_valid(model_id));
 	assert(is_valid); // must be loaded
 	city_model_t const &model_file(get_model(model_id));
 	model3d &model(get_model3d(model_id));
-	if (!is_shadow_pass && model_file.body_mat_id >= 0 && color.A != 0.0) {model.set_color_for_material(model_file.body_mat_id, color);} // use custom color for body material
+	bool const use_custom_color  (!is_shadow_pass && model_file.body_mat_id >= 0 && color.A != 0.0);
+	bool const use_custom_texture(!is_shadow_pass && model_file.body_mat_id >= 0 && untextured);
+	colorRGBA orig_color;
+	int orig_tid(-1);
+	if (use_custom_color  ) {orig_color = model.set_color_for_material  (model_file.body_mat_id, color);} // use custom color for body material
+	if (use_custom_texture) {orig_tid   = model.set_texture_for_material(model_file.body_mat_id, -1);}
 	model.bind_all_used_tids();
 	cube_t const &bcube(model.get_bcube());
 	point const orig_camera_pos(camera_pdu.pos), bcube_center(bcube.get_cube_center());
@@ -157,6 +162,8 @@ void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t co
 	camera_pdu.valid = camera_pdu_valid;
 	camera_pdu.pos   = orig_camera_pos;
 	select_texture(WHITE_TEX); // reset back to default/untextured
+	if (use_custom_color  ) {model.set_color_for_material  (model_file.body_mat_id, orig_color);} // restore original color
+	if (use_custom_texture) {model.set_texture_for_material(model_file.body_mat_id, orig_tid  );} // restore original texture
 }
 
 unsigned get_model_id(unsigned id) { // first 8 bits = model_id, second 8 bits = sub_model_id

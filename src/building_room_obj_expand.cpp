@@ -198,11 +198,17 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 				if (use_model) {
 					shirt.type       = TYPE_CLOTHES;
 					shirt.item_flags = rgen.rand(); // choose a random clothing sub_model_id
-					if ((shirt.item_flags%3) == 2 && (hanger.item_flags%5) >= 3) {++shirt.item_flags;} // hack to avoid placing pants on bar hangers
+					bool const is_pants((shirt.item_flags%3) == 2);
+					if (is_pants && (hanger.item_flags%5) >= 3) {++shirt.item_flags;} // hack to avoid placing pants on bar hangers
 					unsigned const cid(shirt.get_model_id());
 					float const scale(building_obj_model_loader.get_model_scale(cid));
 					if (scale != 0.0) {set_wall_width(shirt, shirt.zc(), 0.5*scale*shirt.dz(), 2);} // rescale zvals around the center
 					resize_model_cube_xy(shirt, shirt.get_center_dim(c.dim), shirt.get_center_dim(!c.dim), cid, c.dim);
+					
+					if (!is_pants && rgen.rand_bool()) { // 50% of shirts and randomly colored rather than colored + textured with the model
+						shirt.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
+						shirt.flags |= RO_FLAG_UNTEXTURED;
+					}
 				}
 				else {
 					shirt.expand_by_xy(0.01*hanger.dz()); // expand slightly to avoid z-fighting with hanger
