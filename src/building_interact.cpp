@@ -40,6 +40,8 @@ bool player_can_open_door(door_t const &door);
 void show_key_icon();
 bool player_has_room_key();
 void register_broken_object(room_object_t const &obj);
+bool is_shirt_model(room_object_t const &obj);
+bool is_pants_model(room_object_t const &obj);
 
 bool in_building_gameplay_mode() {return (game_mode == 2);} // replaces dodgeball mode
 
@@ -1008,7 +1010,7 @@ void setup_bldg_obj_types() {
 	// keys are special because they're potentially either a small object or an object model (in a drawer)
 	bldg_obj_types[TYPE_KEY       ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.05,  "room key"); // drawn as an object, not a model
 	bldg_obj_types[TYPE_HANGER    ] = bldg_obj_type_t(0, 0, 1, 0, 1, 2, 0.25,  0.05,  "clothes hanger");
-	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 1, 0, 1, 2, 10.0,  0.25,  "clothes"); // TODO: teeshirt, shirt, pants, etc.
+	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 1, 0, 1, 2, 10.0,  0.25,  "clothes"); // teeshirt, shirt, pants, etc.
 	//                                                pc ac pu at im ls value  weight  name [capacity]
 }
 
@@ -1041,11 +1043,6 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 	if (obj.type == TYPE_TV       && (obj.flags & RO_FLAG_BROKEN )) {return bldg_obj_type_t(1, 1, 1, 0, 1, 1,  20.0, 70.0, "broken TV"   );}
 	if (obj.type == TYPE_MONITOR  && (obj.flags & RO_FLAG_BROKEN )) {return bldg_obj_type_t(1, 1, 1, 0, 1, 1,  10.0, 15.0, "broken computer monitor");}
 
-	if (obj.type == TYPE_LG_BALL) {
-		bldg_obj_type_t type(get_room_obj_type(obj));
-		type.name = ((obj.item_flags & 1) ? "basketball" : "soccer ball"); // use a more specific type name; all other fields are shared across balls
-		return type;
-	}
 	if (obj.type == TYPE_BOTTLE) {
 		bottle_params_t const &bparams(bottle_params[obj.get_bottle_type()]);
 		bldg_obj_type_t type(0, 0, 1, 0, 0, 2,  bparams.value, 1.0, bparams.name);
@@ -1057,7 +1054,17 @@ bldg_obj_type_t get_taken_obj_type(room_object_t const &obj) {
 		}
 		return type;
 	}
-	return get_room_obj_type(obj); // default value
+	// default value, name may be modified below
+	bldg_obj_type_t type(get_room_obj_type(obj));
+
+	if (obj.type == TYPE_LG_BALL) {
+		type.name = ((obj.item_flags & 1) ? "basketball" : "soccer ball"); // use a more specific type name; all other fields are shared across balls
+	}
+	else if (obj.type == TYPE_CLOTHES) {
+		if      (is_shirt_model(obj)) {type.name = "shirt";}
+		else if (is_pants_model(obj)) {type.name = "pants";}
+	}
+	return type;
 }
 rand_gen_t rgen_from_obj(room_object_t const &obj) {
 	rand_gen_t rgen;

@@ -21,6 +21,10 @@ void resize_model_cube_xy(cube_t &cube, float dim_pos, float not_dim_pos, unsign
 	set_wall_width(cube, not_dim_pos, 0.5*cube.dz()*sz.y/sz.z, !dim); // width
 }
 
+bool is_shirt_model     (room_object_t const &obj) {return building_obj_model_loader.model_filename_contains(obj.get_model_id(), "shirt", "Shirt");}
+bool is_pants_model     (room_object_t const &obj) {return building_obj_model_loader.model_filename_contains(obj.get_model_id(), "pants", "Pants");}
+bool is_bar_hanger_model(room_object_t const &obj) {return building_obj_model_loader.model_filename_contains(obj.get_model_id(), "bar hanger", "Bar Hanger");}
+
 bool add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &objects, vect_cube_t &cubes) {
 	if (has_bcube_int(obj, cubes)) return 0;
 	objects.push_back(obj);
@@ -191,28 +195,27 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 			
 			if (use_model && rgen.rand_float() < 0.8) { // maybe add clothing to the hanger
 				objects.back().flags |= RO_FLAG_HANGING; // flag the hanger has having the shirt hanging on it
-				room_object_t shirt(hanger, TYPE_CLOTHES, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, WHITE); // or pants
-				shirt.z2() -= 0.55*hanger.dz(); // top
-				shirt.z1() -= 0.3*c.dz(); // bottom
-				shirt.item_flags = rgen.rand(); // choose a random clothing sub_model_id
-				bool const is_pants((shirt.item_flags%3) == 2);
-				if (is_pants && (hanger.item_flags%5) >= 3) {++shirt.item_flags;} // hack to avoid placing pants on bar hangers
-				unsigned const cid(shirt.get_model_id());
+				room_object_t clothes(hanger, TYPE_CLOTHES, c.room_id, c.dim, c.dir, (flags | RO_FLAG_HANGING), c.light_amt, SHAPE_CUBE, WHITE);
+				clothes.z2() -= 0.55*hanger.dz(); // top
+				clothes.z1() -= 0.3*c.dz(); // bottom
+				clothes.item_flags = rgen.rand(); // choose a random clothing sub_model_id
+				if (is_pants_model(clothes) && is_bar_hanger_model(hanger)) {++clothes.item_flags;} // hack to avoid placing pants on bar hangers
+				unsigned const cid(clothes.get_model_id());
 				float const scale(building_obj_model_loader.get_model_scale(cid));
-				if (scale != 0.0) {set_wall_width(shirt, shirt.zc(), 0.5*scale*shirt.dz(), 2);} // rescale zvals around the center
-				resize_model_cube_xy(shirt, shirt.get_center_dim(c.dim), shirt.get_center_dim(!c.dim), cid, c.dim);
+				if (scale != 0.0) {set_wall_width(clothes, clothes.zc(), 0.5*scale*clothes.dz(), 2);} // rescale zvals around the center
+				resize_model_cube_xy(clothes, clothes.get_center_dim(c.dim), clothes.get_center_dim(!c.dim), cid, c.dim);
 				bool skip(0);
 
 				for (auto m = objects.begin()+hanger_rod_ix+1; m != objects.end(); ++m) { // skip if this object intersects a previous hanging clothing item
-					if (m->type == TYPE_CLOTHES && m->intersects(shirt)) {skip = 1; break;}
+					if (m->type == TYPE_CLOTHES && m->intersects(clothes)) {skip = 1; break;}
 				}
 				if (skip) continue;
 
-				if (!is_pants && rgen.rand_float() < 0.67) { // 67% of shirts and randomly colored rather than colored + textured with the model
-					shirt.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
-					shirt.flags |= RO_FLAG_UNTEXTURED;
+				if (is_shirt_model(clothes) && rgen.rand_float() < 0.67) { // 67% of shirts and randomly colored rather than colored + textured with the model
+					clothes.color  = shirt_colors[rgen.rand()%NUM_SHIRT_COLORS];
+					clothes.flags |= RO_FLAG_UNTEXTURED;
 				}
-				objects.push_back(shirt);
+				objects.push_back(clothes);
 			}
 		} // for i
 		objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and shirts
