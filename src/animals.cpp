@@ -100,15 +100,13 @@ bool fish_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile
 	gen_dir_vel(rgen, FISH_SPEED);
 	color   = WHITE;
 	enabled = 1;
-	//tile_off.set_from_xyoff2(); // Note: TT specific
 	return 1;
 }
 
 bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) { // Note: tile is unused
 
 	assert(range.is_strictly_normalized());
-	enabled = 0;
-	if (atmosphere < 0.5) return 0; // no atmosphere, no clouds, no birds
+	if (atmosphere < 0.5) {enabled = 0; return 0;} // no atmosphere, no clouds, no birds
 	pos     = rgen.gen_rand_cube_point(range);
 	radius  = BIRD_RADIUS*rgen.rand_uniform(0.6, 1.0);
 	gen_dir_vel(rgen, BIRD_SPEED);
@@ -116,7 +114,6 @@ bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile
 	time    = rgen.rand_uniform(0.0, 100.0); // start at random time offsets
 	enabled = 1;
 	flocking= 0;
-	//tile_off.set_from_xyoff2(); // Note: TT specific
 	return 1;
 }
 
@@ -353,26 +350,6 @@ template<typename A> void animal_group_t<A>::draw_animals(shader_t &s) const {
 	if (this->empty() || bcube.is_zero_area() || !camera_pdu.cube_visible(bcube + get_camera_coord_space_xlate())) return;
 	for (auto i = this->begin(); i != this->end(); ++i) {i->draw(s);}
 }
-
-
-void vect_fish_t::draw() const {
-
-	if (empty()) return;
-	shader_t s;
-	begin_draw(s);
-	draw_animals(s);
-	end_draw(s);
-}
-
-void vect_bird_t::draw() const {
-
-	if (empty() || !birds_active()) return;
-	shader_t s;
-	begin_draw(s);
-	draw_animals(s);
-	end_draw(s);
-}
-
 
 // explicit instantiations
 template class animal_group_t<fish_t>;

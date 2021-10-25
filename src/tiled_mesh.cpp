@@ -3228,7 +3228,7 @@ void tile_draw_t::draw_animals(bool reflection_pass) {
 	}
 	// draw fish
 	vect_fish_t::begin_draw(s);
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_fish(s, reflection_pass);} // doesn't work with birds above the mesh bcube
+	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_fish(s, reflection_pass);}
 	vect_fish_t::end_draw(s);
 }
 

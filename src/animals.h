@@ -30,12 +30,11 @@ protected:
 	bool enabled;
 	vector3d dir;
 	colorRGBA color;
-	//tile_offset_t tile_off;
 
 	int get_ndiv(point const &pos_) const;
 	void gen_dir_vel(rand_gen_t &rgen, float speed);
 public:
-	animal_t() : enabled(0), dir(zero_vector), color(BLACK) {}
+	animal_t() : enabled(0), color(BLACK) {}
 	void apply_force(vector3d const &force) {velocity += force;}
 	void apply_force_xy(vector3d const &force) {velocity.x += force.x; velocity.y += force.y;}
 	bool is_enabled() const {return enabled;}
@@ -89,15 +88,13 @@ public:
 
 struct vect_fish_t : public animal_group_t<fish_t> {
 	static void begin_draw(shader_t &s);
-	static void end_draw(shader_t &s);
-	void draw() const;
+	static void end_draw  (shader_t &s);
 };
 
 struct vect_bird_t : public animal_group_t<bird_t> {
 	void flock(tile_t const *const tile);
 	static void begin_draw(shader_t &s);
-	static void end_draw(shader_t &s);
-	void draw() const;
+	static void end_draw  (shader_t &s);
 };
 
 bool birds_active();
