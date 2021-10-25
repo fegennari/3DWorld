@@ -3221,10 +3221,17 @@ void tile_draw_t::draw_animals(bool reflection_pass) {
 
 	shader_t s;
 
-	if (birds_active()) { // draw birds
+	if (birds_active()) {
+		// draw birds
 		vect_bird_t::begin_draw(s);
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_birds(s, reflection_pass);}
 		vect_bird_t::end_draw(s);
+		// draw butterflies
+#if 0 // TODO: enable when implemented
+		vect_butterfly_t::begin_draw(s);
+		for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_bflies(s, reflection_pass);}
+		vect_butterfly_t::end_draw(s);
+#endif
 	}
 	// draw fish
 	vect_fish_t::begin_draw(s);

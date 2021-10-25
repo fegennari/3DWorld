@@ -184,6 +184,7 @@ private:
 	tile_cloud_manager_t clouds;
 	vect_fish_t fish;
 	vect_bird_t birds;
+	vect_butterfly_t bflies;
 
 	struct grass_block_t {
 		unsigned ix; // 0 is unused
@@ -381,13 +382,15 @@ public:
 	unsigned update_tile_clouds();
 
 	// *** animals ***
-	void add_animal(fish_t const &f) {fish.push_back (f);}
-	void add_animal(bird_t const &b) {birds.push_back(b);}
+	void add_animal(fish_t      const &f) {fish.push_back (f);}
+	void add_animal(bird_t      const &b) {birds.push_back(b);}
+	void add_animal(butterfly_t const &b) {bflies.push_back(b);}
 	template<typename A> void propagate_animals_to_neighbor_tiles(animal_group_t<A> &animals);
 	void update_animals();
 	void clear_animals() {fish.clear(); birds.clear();}
-	void draw_birds(shader_t &s, bool reflection_pass) const {birds.draw_animals(s);}
-	void draw_fish (shader_t &s, bool reflection_pass) const {if (!reflection_pass) {fish.draw_animals(s);}}
+	void draw_birds (shader_t &s, bool reflection_pass) const {birds.draw_animals(s);}
+	void draw_fish  (shader_t &s, bool reflection_pass) const {if (!reflection_pass) {fish.draw_animals(s);}}
+	void draw_bflies(shader_t &s, bool reflection_pass) const {if (!reflection_pass) {bflies.draw_animals(s);}}
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);

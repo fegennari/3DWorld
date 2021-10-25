@@ -117,6 +117,19 @@ bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile
 	return 1;
 }
 
+bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) { // Note: tile is unused
+
+	assert(range.is_strictly_normalized());
+	if (atmosphere < 0.5) {enabled = 0; return 0;} // no atmosphere, no clouds, no butterflies
+	//pos     = ;
+	//radius  = ;
+	//gen_dir_vel(rgen, ?);
+	color   = WHITE;
+	time    = rgen.rand_uniform(0.0, 100.0); // start at random time offsets
+	enabled = 1;
+	return 1;
+}
+
 
 bool fish_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 
@@ -220,6 +233,14 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 	} // for i
 }
 
+bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile is unused
+
+	if (!enabled || !animate2 || !birds_active()) return 0;
+	pos  += velocity*fticks;
+	time += fticks;
+	return 1;
+}
+
 
 bool animal_t::is_visible(point const &pos_, float vis_dist_scale) const {
 
@@ -286,6 +307,13 @@ void bird_t::draw(shader_t &s) const {
 	bind_vbo(0);
 }
 
+void butterfly_t::draw(shader_t &s) const {
+
+	point const pos_(get_draw_pos());
+	if (!is_visible(pos_, 0.15)) return;
+	animal_model_loader.draw_fish_model(s, pos_, radius, dir, color);
+}
+
 
 /*static*/ void vect_fish_t::begin_draw(shader_t &s) {
 	s.begin_simple_textured_shader(); // no lighting
@@ -295,12 +323,21 @@ void bird_t::draw(shader_t &s) const {
 	s.begin_color_only_shader();
 	enable_blend(); // for distance fog
 }
+/*static*/ void vect_butterfly_t::begin_draw(shader_t &s) {
+	s.begin_simple_textured_shader(); // no lighting
+	enable_blend(); // for distance fog
+}
+
 /*static*/ void vect_fish_t::end_draw(shader_t &s) {
 	disable_blend(); // for distance fog
 	s.add_uniform_color("color_modulate", WHITE); // reset
 	s.end_shader();
 }
 /*static*/ void vect_bird_t::end_draw(shader_t &s) {
+	disable_blend(); // for distance fog
+	s.end_shader();
+}
+/*static*/ void vect_butterfly_t::end_draw(shader_t &s) {
 	disable_blend(); // for distance fog
 	s.end_shader();
 }
@@ -354,4 +391,5 @@ template<typename A> void animal_group_t<A>::draw_animals(shader_t &s) const {
 // explicit instantiations
 template class animal_group_t<fish_t>;
 template class animal_group_t<bird_t>;
+template class animal_group_t<butterfly_t>;
 

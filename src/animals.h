@@ -64,6 +64,16 @@ public:
 	void draw(shader_t &s) const;
 };
 
+class butterfly_t : public animal_t {
+
+	float time;
+public:
+	butterfly_t() : time(0) {}
+	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
+	bool update(rand_gen_t &rgen, tile_t const *const tile);
+	void draw(shader_t &s) const;
+};
+
 
 class animal_group_base_t {
 protected:
@@ -93,6 +103,11 @@ struct vect_fish_t : public animal_group_t<fish_t> {
 
 struct vect_bird_t : public animal_group_t<bird_t> {
 	void flock(tile_t const *const tile);
+	static void begin_draw(shader_t &s);
+	static void end_draw  (shader_t &s);
+};
+
+struct vect_butterfly_t : public animal_group_t<butterfly_t> {
 	static void begin_draw(shader_t &s);
 	static void end_draw  (shader_t &s);
 };
