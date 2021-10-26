@@ -653,11 +653,13 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 			return;
 		}
 	}
-	at_crosswalk = in_the_road = 0; // reset state for next frame; these may be set back to 1 below
+	// reset state for next frame; these may be set back to 1 below; don't reset if we were collided with, since this will skip the check_inside_plot() call below
+	if (!collided) {at_crosswalk = in_the_road = 0;}
 	vect_cube_t const &colliders(ped_mgr.get_colliders_for_plot(city, plot));
 	bool outside_plot(0);
 
 	if (collided) {} // already collided with a previous ped this frame, handled below
+	// this call will set at_crosswalk and in_the_road
 	else if (!check_inside_plot(ped_mgr, prev_pos, plot_bcube, next_plot_bcube)) {collided = outside_plot = 1;} // outside the plot, treat as a collision with the plot bounds
 	else if (!is_valid_pos(colliders, at_dest, &ped_mgr)) {collided = 1;} // collided with a static collider
 	else if (check_road_coll(ped_mgr, plot_bcube, next_plot_bcube)) {collided = 1;} // collided with something in the road (stoplight, streetlight, etc.)
