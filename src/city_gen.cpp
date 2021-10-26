@@ -1762,7 +1762,8 @@ class city_road_gen_t : public road_gen_base_t {
 		}
 	public:
 		bool choose_new_car_dest(car_t &car, rand_gen_t &rgen) const {
-			if (city_params.cars_use_driveways && select_avail_driveway(car, rgen)) return 1; // incomplete, not yet enabled
+			// select a driveway if one is available and we're in the dest city; otherwise, select an intersection
+			if (city_params.cars_use_driveways && car.cur_city == car.dest_city && select_avail_driveway(car, rgen)) return 1;
 			unsigned const num_tot(isecs[0].size() + isecs[1].size() + isecs[2].size()); // include 2-way, 3-way, and 4-way intersections
 			if (num_tot == 0) return 0; // no isecs to select
 			car.dest_isec = (unsigned short)(rgen.rand() % num_tot);
