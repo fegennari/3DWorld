@@ -1387,12 +1387,19 @@ class city_road_gen_t : public road_gen_base_t {
 					assert(car.cur_road < road_to_city.size());
 					unsigned const city_ix(road_to_city[car.cur_road].id[car.dir]);
 					
-					if (car.in_isect() && city_ix != CONN_CITY_IX) {
+					if (car.in_isect() && city_ix != CONN_CITY_IX) { // moving into a city
+						unsigned const isec_type(car.get_isec_type());
 						road_network_t const &rn(road_networks[city_ix]);
-						vector<road_isec_t> const &isecs(rn.isecs[car.get_isec_type()]); // must be a 3-way or 4-way intersection
+						vector<road_isec_t> const &isecs(rn.isecs[isec_type]); // must be a 3-way or 4-way intersection
 						car.cur_city = city_ix;
-						assert(car.cur_seg  < isecs.size());
-						car.cur_road = isecs[car.cur_seg].rix_xy[2*(!car.dim) + 0]; // use the road in the other dim, since it must be within the new city (dir doesn't matter)
+						assert(car.cur_seg < isecs.size());
+						
+						if (isec_type == TYPE_ISEC4 && car.turn_dir == TURN_NONE) { // straight through a 4-way isec (but we may not have entered the isec yet, so turn_dir isn't valid)
+							car.cur_road = isecs[car.cur_seg].rix_xy[car.get_orient()];
+						}
+						else {
+							car.cur_road = isecs[car.cur_seg].rix_xy[2*(!car.dim) + 0]; // use the road in the other dim, since it must be within the new city (dir doesn't matter)
+						}
 						assert(car.cur_road < rn.roads.size());
 						car.entering_city = 1; // flag so that collision detection works
 					}

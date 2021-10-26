@@ -1043,6 +1043,7 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 
 	for (unsigned dir = 0; dir < 2; ++dir) { // look both ways before crossing
 		auto const &cars(cv.cars[dim][dir]); // cars for this city, in this dim and dir
+		// Note: this won't check for cars entering the city from a connector road, so we have to rely on the cars checking for peds in this case
 		car_base_t ref_car; ref_car.cur_city = ped.city; ref_car.cur_road = road_ix;
 		auto range_start(std::lower_bound(cars.begin(), cars.end(), ref_car, comp_car_road())); // binary search acceleration
 		float const speed_mult(CAR_SPEED_SCALE*city_params.car_speed), pos_min(pos[dim] - ped.radius), pos_max(pos[dim] + ped.radius);

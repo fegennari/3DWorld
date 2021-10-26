@@ -108,7 +108,7 @@ namespace stoplight_ns {
 
 		while (1) {
 			// cycle through all directions and find one where a car is waiting to go; this allows the traffic light to skip some green lights that aren't needed;
-			// however, it can lead to a light transitioning from green => yellow => green without going through red; this is difficult to fix with the current architecture
+			// TODO: however, it can lead to a light transitioning from green => yellow => green without going through red; this is difficult to fix with the current architecture
 			advance_state();
 			if (any_blocked()) break; // if some car is blocking the intersection in some dir, force all states (no skipped lights) to guarantee we can make progress
 			if (is_any_car_waiting_at_this_state()) break; // car is waiting at this state

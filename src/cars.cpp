@@ -960,8 +960,8 @@ bool car_manager_t::check_car_for_ped_colls(car_t &car) const {
 	auto const &peds(peds_by_road[car.cur_road]);
 	if (peds.empty()) return 0;
 	cube_t coll_area(car.bcube);
-	coll_area.d[car.dim][!car.dir] = coll_area.d[car.dim][car.dir]; // exclude the car itself
-	coll_area.d[car.dim][car.dir] += (car.dir ? 1.25 : -1.25)*car.get_length(); // extend the front
+	coll_area.d[ car.dim][!car.dir] = coll_area.d[car.dim][car.dir]; // exclude the car itself
+	coll_area.d[ car.dim][car.dir] += (car.dir ? 1.25 : -1.25)*car.get_length(); // extend the front
 	coll_area.d[!car.dim][0] -= 0.5*car.get_width();
 	coll_area.d[!car.dim][1] += 0.5*car.get_width();
 	static rand_gen_t rgen;
