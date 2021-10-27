@@ -24,15 +24,22 @@ bool birds_active() {return (light_factor >= 0.4);} // birds are only active whe
 
 class animal_model_loader_t : public model3ds { // currently for fish only
 
-	unsigned fish_id;
+	struct model_info_t {
+		bool invalid;
+		unsigned id;
+		model_info_t() : invalid(0), id(0) {}
+		bool is_loaded() const {return (id > 0);}
+		bool try_load () const {return (!is_loaded() && !invalid);}
+		void set_id(unsigned id_) {id = id_; invalid = (id == 0);}
+	};
+	model_info_t fish_info, bfly_info;
 
-public:
-	animal_model_loader_t() : fish_id(0) {}
-
-	unsigned load_model(string const &fn, int recalc_normals=1, colorRGBA const &def_color=WHITE, int def_tid=-1) {
+	unsigned load_model(string const &fn, colorRGBA const &def_color=WHITE, int def_tid=-1) {
 		unsigned const id(size());
+		bool const write_file    = 0;
+		int const recalc_normals = 0; // okay for loading model3d
 
-		if (!load_model_file(fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, recalc_normals, 0, 0, 1)) {
+		if (!load_model_file(fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, recalc_normals, 0, write_file, 1)) {
 			cerr << "Error: Failed to read model file '" << fn << "'" << endl;
 			exit(1);
 		}
@@ -56,22 +63,31 @@ public:
 		fgPopMatrix();
 		camera_pdu.valid = camera_pdu_valid;
 	}
+public:
+	bool load_fish_model() {
+		if (fish_info.try_load()) {fish_info.set_id(load_model("model_data/fish/fishOBJ.model3d"));} // load fish model if needed
+		return fish_info.is_loaded();
+	}
+	bool load_butterfly_model() {
+		if (bfly_info.try_load()) {bfly_info.set_id(load_model("../models/butterfly/butterfly.obj"));} // load butterfly model if needed
+		return bfly_info.is_loaded();
+	}
 	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
-		if (fish_id == 0) { // fish model not yet loaded
-			int const recalc_normals = 0; // okay for loading model3d
-			string const fish_model_fn( "model_data/fish/fishOBJ.model3d" ); // provide in config file?
-			fish_id = load_model(fish_model_fn, recalc_normals);
-		}
-		assert(fish_id > 0);
-		vector3d const fish_dir(-dir); // fish model faces in -x, and we want it to be in +x
 		rotation_t const local_rotate(plus_y, -45.0); // fish model is angled 45 degree upward, so need to rotate it back down
-		draw_model(fish_id, s, pos, radius, fish_dir, local_rotate, color, 0); // not shadow pass
+		// invert dir - fish model faces in -x, and we want it to be in +x
+		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, color, 0); // not shadow pass
+	}
+	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
+		draw_model(bfly_info.id, s, pos, radius, -dir, rotation_t(), color, 0); // not shadow pass
 	}
 };
 
 animal_model_loader_t animal_model_loader;
 
 void free_animal_context() {animal_model_loader.free_context();}
+
+bool fish_t     ::type_enabled() {return animal_model_loader.load_fish_model();}
+bool butterfly_t::type_enabled() {return animal_model_loader.load_butterfly_model();}
 
 
 void animal_t::gen_dir_vel(rand_gen_t &rgen, float speed) {
@@ -311,7 +327,7 @@ void butterfly_t::draw(shader_t &s) const {
 
 	point const pos_(get_draw_pos());
 	if (!is_visible(pos_, 0.15)) return;
-	animal_model_loader.draw_fish_model(s, pos_, radius, dir, color);
+	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, color);
 }
 
 
@@ -347,6 +363,7 @@ template<typename A> void animal_group_t<A>::gen(unsigned num, cube_t const &ran
 
 	generated = 1;
 	if (!range.is_strictly_normalized()) return; // if the range is empty or denormalized in z, mark as generated but skip
+	if (!A::type_enabled()) return; // model not loaded, etc.
 	rgen.set_state(long(1000*range.d[0][0]), long(1000*range.d[1][0])); // seed with x1, y1
 	this->reserve(this->size() + num); // optional
 

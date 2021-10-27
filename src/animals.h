@@ -47,6 +47,7 @@ class fish_t : public animal_t {
 	float get_mesh_zval_at_pos(tile_t const *const tile) const;
 	float get_half_height() const {return 0.4*radius;} // approximate
 public:
+	static bool type_enabled();
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void draw(shader_t &s) const;
@@ -58,6 +59,7 @@ class bird_t : public animal_t {
 	float time;
 public:
 	bird_t() : flocking(0), time(0) {}
+	static bool type_enabled() {return 1;} // no model, always enabled
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void apply_force_xy_const_vel(vector3d const &force);
@@ -69,6 +71,7 @@ class butterfly_t : public animal_t {
 	float time;
 public:
 	butterfly_t() : time(0) {}
+	static bool type_enabled();
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void draw(shader_t &s) const;
