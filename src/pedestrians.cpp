@@ -451,8 +451,9 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 			if (!in_cur_plot) { // went outside the current plot
 				cube_t union_plot_bcube(plot_bcube);
 				union_plot_bcube.union_with_cube(next_plot_bcube);
-				// if we went outside on the wrong side, go back inside the current plot
-				if (!union_plot_bcube.contains_pt_xy(pos)) {debug_state = 4; dest_pos = plot_bcube.closest_pt(pos);} else {debug_state = 5;}
+				// if we went outside on the wrong side, go back inside the current plot, or the union of the current and next plots if in the road
+				if (!union_plot_bcube.contains_pt_xy(pos)) {debug_state = 4; dest_pos = (in_the_road ? union_plot_bcube : plot_bcube).closest_pt(pos);}
+				else {debug_state = 5;}
 			}
 			dest_pos.z = pos.z; // same zval
 			return dest_pos;
