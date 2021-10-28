@@ -309,7 +309,8 @@ void car_t::honk_horn_if_close_and_fast() const {
 
 void car_t::on_alternate_turn_dir(rand_gen_t &rgen) {
 	honk_horn_if_close();
-	if ((rgen.rand()&3) == 0) {dest_valid = 0;} // 25% chance of choosing a new destination rather than driving in circles; will be in current city
+	// 25% chance of choosing a new destination rather than driving in circles; will be in current city
+	if (dest_driveway < 0 && (rgen.rand()&3) == 0) {dest_valid = 0;}
 }
 
 void car_t::register_adj_car(car_t &c) {
