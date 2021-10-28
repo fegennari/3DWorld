@@ -2616,7 +2616,7 @@ public:
 
 			for (unsigned d = 0; d < 2; ++d) {
 				road_spacing[d] = params.road_spacing;
-				if (params.road_spacing_rand   > 0.0) {road_spacing[d] *= 1.0 + params.road_spacing_rand*rgen2.rand_float();}
+				if (params.road_spacing_rand   > 0.0) {road_spacing[d] *= 1.0f + params.road_spacing_rand*rgen2.rand_float();}
 				if (params.road_spacing_xy_add > 0.0 && bool(d) == extra_spacing_dim) {road_spacing[d] *= 1.0 + params.road_spacing_xy_add;}
 			}
 			road_gen.gen_roads_and_plots(pos_range, params.road_width, road_spacing, is_residential);
