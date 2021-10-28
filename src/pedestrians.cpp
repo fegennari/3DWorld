@@ -1142,7 +1142,7 @@ void end_sphere_draw(bool &in_sphere_draw) {
 }
 
 void draw_colored_cube(cube_t const &c, colorRGBA const &color, shader_t &s) {
-	s.set_cur_color(PURPLE);
+	s.set_cur_color(color);
 	draw_simple_cube(c);
 }
 
