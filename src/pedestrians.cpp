@@ -404,17 +404,18 @@ cube_t get_avoid_area_for_plot(cube_t const &plot_bcube, float radius) {
 }
 
 // pedestrian_t
-point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr) const {
-	if (is_stopped && target_valid()) {return target_pos;} // stay the course (this case only needed for debug drawing)
+point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_plot_bcube, ped_manager_t const &ped_mgr, int &debug_state) const {
+	if (is_stopped && target_valid()) {debug_state = 0; return target_pos;} // stay the course (this case only needed for debug drawing)
 
 	if (plot == dest_plot) { // this plot contains our dest building/car
 		if (!at_dest && has_dest_bldg) { // not there yet
 			cube_t const dest_bcube(get_building_bcube(dest_bldg));
 			//if (dest_bcube.contains_pt_xy(pos)) {at_dest = 1;} // could set this here, but requiring a collision also works
 			point const dest_pos(dest_bcube.get_cube_center()); // target a door nearest pos?
+			debug_state = 1;
 			return point(dest_pos.x, dest_pos.y, pos.z); // same zval
 		}
-		else if (!at_dest && has_dest_car) {return point(dest_car_center.x, dest_car_center.y, pos.z);} // same zval
+		else if (!at_dest && has_dest_car) {debug_state = 2; return point(dest_car_center.x, dest_car_center.y, pos.z);} // same zval
 	}
 	else if (next_plot != plot) { // move toward next plot
 		if (!next_plot_bcube.contains_pt_xy(pos)) { // not yet crossed into the next plot
@@ -445,16 +446,18 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 					}
 				}
 				dest_pos = next_plot_bcube.closest_pt(pos_adj);
+				debug_state = 3;
 			}
 			if (!in_cur_plot) { // went outside the current plot
 				cube_t union_plot_bcube(plot_bcube);
 				union_plot_bcube.union_with_cube(next_plot_bcube);
-				if (!union_plot_bcube.contains_pt_xy(pos)) {dest_pos = plot_bcube.closest_pt(pos);} // went outside on the wrong side, go back inside the current plot
+				// if we went outside on the wrong side, go back inside the current plot
+				if (!union_plot_bcube.contains_pt_xy(pos)) {debug_state = 4; dest_pos = plot_bcube.closest_pt(pos);} else {debug_state = 5;}
 			}
 			dest_pos.z = pos.z; // same zval
 			return dest_pos;
-		}
-	}
+		} else {debug_state = 6;}
+	} else {debug_state = 7;}
 	return pos; // no dest
 }
 
@@ -666,7 +669,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 	else if (check_ped_ped_coll(ped_mgr, peds, pid, delta_dir)) {collided = 1;} // collided with another pedestrian
 	else { // no collisions
 		//cout << TXT(pid) << TXT(plot) << TXT(dest_plot) << TXT(next_plot) << TXT(at_dest) << TXT(delta_dir) << TXT((unsigned)stuck_count) << TXT(collided) << endl;
-		vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr));
+		int debug_state(0); // unused
+		vector3d dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state));
 
 		if (dest_pos != pos) {
 			bool update_path(0);
@@ -701,8 +705,9 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		vector3d new_dir;
 
 		if (++stuck_count > 8) {
+			int debug_state(0); // unused
 			if (target_valid()) {pos += (0.1*radius)*(target_pos - pos).get_norm();} // move toward target_pos if it's valid since this should be a good direction
-			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr) - pos).get_norm();} // move toward dest if stuck count is high
+			else if (stuck_count > 100) {pos += (0.1*radius)*(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state) - pos).get_norm();} // move toward dest if stuck count is high
 			else {pos += rgen.signed_rand_vector_spherical_xy()*(0.1*radius); } // shift randomly by 10% radius to get unstuck
 		}
 		if (ped_coll) {
@@ -1147,9 +1152,10 @@ void draw_colored_cube(cube_t const &c, colorRGBA const &color, shader_t &s) {
 }
 
 void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
+	int debug_state(0);
 	cube_t plot_bcube, next_plot_bcube;
 	get_plot_bcubes_inc_sidewalks(ped_mgr, plot_bcube, next_plot_bcube);
-	point const orig_dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr));
+	point const orig_dest_pos(get_dest_pos(plot_bcube, next_plot_bcube, ped_mgr, debug_state));
 	point dest_pos(orig_dest_pos);
 	if (dest_pos == pos) return; // no path, nothing to draw
 	vect_cube_t dbg_cubes;
@@ -1213,6 +1219,13 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	if (has_dest_bldg   ) {draw_colored_cube(get_building_bcube(dest_bldg), PURPLE, s);} // draw dest building bcube
 	if (collided        ) {draw_colored_cube(get_bcube(), RED, s);} // show marker if collided this frame
 	else if (in_the_road) {draw_colored_cube(get_bcube(), GREEN, s);}
+
+	if (1) {
+		colorRGBA const debug_colors[8] = {BLACK, WHITE, RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE};
+		cube_t c(get_bcube());
+		c.z1() = c.z2(); c.z2() += 0.5*get_height();
+		draw_colored_cube(c, debug_colors[debug_state], s);
+	}
 	set_fill_mode(); // reset
 	draw_verts(line_pts, GL_LINES);
 	s.end_shader();
