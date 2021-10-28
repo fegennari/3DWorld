@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\utils\openal-info.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{70CDACBA-40A6-3C05-94BE-60821ABCEE72}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

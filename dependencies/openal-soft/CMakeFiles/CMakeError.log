@@ -1,0 +1,229 @@
+Performing C++ SOURCE FILE Test HAVE_LIBATOMIC failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_60578.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  src.cxx
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D HAVE_LIBATOMIC /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_60578.dir\Debug\\" /Fd"cmTC_60578.dir\Debug\vc142.pdb" /external:W3 /Gd /TP /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\src.cxx"
+LINK : fatal error LNK1104: cannot open file 'atomic.lib' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_60578.vcxproj]
+
+
+Source file was:
+#include <atomic>
+std::atomic<int> foo{0};
+int main() { return foo.fetch_add(2); }
+Determining if the function __android_log_print exists in the log failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_e229e.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckFunctionExists.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=__android_log_print /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_e229e.dir\Debug\\" /Fd"cmTC_e229e.dir\Debug\vc142.pdb" /external:W3 /Gd /TC /errorReport:queue "E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.c"
+LINK : fatal error LNK1104: cannot open file 'log.lib' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_e229e.vcxproj]
+
+
+
+Performing C SOURCE FILE Test HAVE_MSSE2_SWITCH failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_722d3.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  src.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D HAVE_MSSE2_SWITCH /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_722d3.dir\Debug\\" /Fd"cmTC_722d3.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue  -msse2 "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\src.c"
+cl : command line warning D9002: ignoring unknown option '-msse2' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_722d3.vcxproj]
+  cmTC_722d3.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_722d3.exe
+
+
+Source file was:
+int main(void) { return 0; }
+Determining if the include file arm_neon.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_550d4.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_550d4.dir\Debug\\" /Fd"cmTC_550d4.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30133\include\arm_neon.h(21,1): fatal error C1189: #error:  This header is specific to ARM targets [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_550d4.vcxproj]
+
+
+
+Determining if the include file cpuid.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_d98c0.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_d98c0.dir\Debug\\" /Fd"cmTC_d98c0.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'cpuid.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_d98c0.vcxproj]
+
+
+
+Determining if the function pow exists in the m failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_e8c77.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckFunctionExists.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pow /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_e8c77.dir\Debug\\" /Fd"cmTC_e8c77.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.c"
+LINK : fatal error LNK1104: cannot open file 'm.lib' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_e8c77.vcxproj]
+
+
+
+Determining if the function clock_gettime exists in the rt failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_10d75.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckFunctionExists.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=clock_gettime /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_10d75.dir\Debug\\" /Fd"cmTC_10d75.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.c"
+LINK : fatal error LNK1104: cannot open file 'rt.lib' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_10d75.vcxproj]
+
+
+
+Determining if the include file dlfcn.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_c003a.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_c003a.dir\Debug\\" /Fd"cmTC_c003a.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'dlfcn.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_c003a.vcxproj]
+
+
+
+Determining if the function dlopen exists in the dl failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_a4223.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckFunctionExists.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=dlopen /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_a4223.dir\Debug\\" /Fd"cmTC_a4223.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.c"
+LINK : fatal error LNK1104: cannot open file 'dl.lib' [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_a4223.vcxproj]
+
+
+
+Determining if the posix_memalign exist failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_256b2.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckSymbolExists.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_256b2.dir\Debug\\" /Fd"cmTC_256b2.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckSymbolExists.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckSymbolExists.c(8,33): error C2065: 'posix_memalign': undeclared identifier [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_256b2.vcxproj]
+
+
+File E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <stdlib.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef posix_memalign
+  return ((int*)(&posix_memalign))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the proc_pidpath exist failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_10759.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckSymbolExists.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_10759.dir\Debug\\" /Fd"cmTC_10759.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckSymbolExists.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckSymbolExists.c(2,10): fatal error C1083: Cannot open include file: 'libproc.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_10759.vcxproj]
+
+
+File E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <libproc.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef proc_pidpath
+  return ((int*)(&proc_pidpath))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the getopt exist failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_2ea3a.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckSymbolExists.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_2ea3a.dir\Debug\\" /Fd"cmTC_2ea3a.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckSymbolExists.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckSymbolExists.c(2,10): fatal error C1083: Cannot open include file: 'unistd.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_2ea3a.vcxproj]
+
+
+File E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <unistd.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef getopt
+  return ((int*)(&getopt))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the include file pthread.h exists failed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_e1702.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_e1702.dir\Debug\\" /Fd"cmTC_e1702.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c(1,10): fatal error C1083: Cannot open include file: 'pthread.h': No such file or directory [E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\cmTC_e1702.vcxproj]
+
+
+

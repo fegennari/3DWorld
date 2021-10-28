@@ -1,0 +1,369 @@
+The system is: Windows - 10.0.19042 - AMD64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler:  
+Build flags: 
+Id flags:  
+
+The output was:
+0
+Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Build started 10/26/2021 11:02:06 PM.
+Project "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CompilerIdC\CompilerIdC.vcxproj" on node 1 (default targets).
+PrepareForBuild:
+  Creating directory "Debug\".
+  Creating directory "Debug\CompilerIdC.tlog\".
+InitializeBuildStatus:
+  Creating "Debug\CompilerIdC.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+ClCompile:
+  E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30133\bin\HostX64\x64\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc142.pdb" /external:W0 /Gd /TC /FC /errorReport:queue CMakeCCompilerId.c
+  CMakeCCompilerId.c
+Link:
+  E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30133\bin\HostX64\x64\link.exe /ERRORREPORT:QUEUE /OUT:".\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\CompilerIdC.lib" /MACHINE:X64 Debug\CMakeCCompilerId.obj
+  CompilerIdC.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CompilerIdC\CompilerIdC.exe
+PostBuildEvent:
+  for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
+  :VCEnd
+  CMAKE_C_COMPILER=E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64\cl.exe
+FinalizeBuildStatus:
+  Deleting file "Debug\CompilerIdC.tlog\unsuccessfulbuild".
+  Touching "Debug\CompilerIdC.tlog\CompilerIdC.lastbuildstate".
+Done Building Project "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CompilerIdC\CompilerIdC.vcxproj" (default targets).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.34
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+
+The C compiler identification is MSVC, found in "E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/3.15.3/CompilerIdC/CompilerIdC.exe"
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler:  
+Build flags: 
+Id flags:  
+
+The output was:
+0
+Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Build started 10/26/2021 11:02:08 PM.
+Project "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CompilerIdCXX\CompilerIdCXX.vcxproj" on node 1 (default targets).
+PrepareForBuild:
+  Creating directory "Debug\".
+  Creating directory "Debug\CompilerIdCXX.tlog\".
+InitializeBuildStatus:
+  Creating "Debug\CompilerIdCXX.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+ClCompile:
+  E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30133\bin\HostX64\x64\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc142.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+  CMakeCXXCompilerId.cpp
+Link:
+  E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30133\bin\HostX64\x64\link.exe /ERRORREPORT:QUEUE /OUT:".\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\CompilerIdCXX.lib" /MACHINE:X64 Debug\CMakeCXXCompilerId.obj
+  CompilerIdCXX.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CompilerIdCXX\CompilerIdCXX.exe
+PostBuildEvent:
+  for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+  :VCEnd
+  CMAKE_CXX_COMPILER=E:\Program Files (x86)\Microsoft Visual Studio\2019\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64\cl.exe
+FinalizeBuildStatus:
+  Deleting file "Debug\CompilerIdCXX.tlog\unsuccessfulbuild".
+  Touching "Debug\CompilerIdCXX.tlog\CompilerIdCXX.lastbuildstate".
+Done Building Project "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CompilerIdCXX\CompilerIdCXX.vcxproj" (default targets).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.88
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+
+The CXX compiler identification is MSVC, found in "E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/3.15.3/CompilerIdCXX/CompilerIdCXX.exe"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_d27ee.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  testCCompiler.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_d27ee.dir\Debug\\" /Fd"cmTC_d27ee.dir\Debug\vc142.pdb" /external:W3 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\testCCompiler.c"
+  cmTC_d27ee.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_d27ee.exe
+
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_3bc0d.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CMakeCCompilerABI.c
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_3bc0d.dir\Debug\\" /Fd"cmTC_3bc0d.dir\Debug\vc142.pdb" /external:W3 /Gd /TC /errorReport:queue "E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompilerABI.c"
+  cmTC_3bc0d.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_3bc0d.exe
+
+
+
+Determining if the CXX compiler works passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_10d4e.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  testCXXCompiler.cxx
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_10d4e.dir\Debug\\" /Fd"cmTC_10d4e.dir\Debug\vc142.pdb" /external:W3 /Gd /TP /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\testCXXCompiler.cxx"
+  cmTC_10d4e.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_10d4e.exe
+
+
+
+Detecting CXX compiler ABI info compiled with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_1b21f.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CMakeCXXCompilerABI.cpp
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_1b21f.dir\Debug\\" /Fd"cmTC_1b21f.dir\Debug\vc142.pdb" /external:W3 /Gd /TP /errorReport:queue "E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXCompilerABI.cpp"
+  cmTC_1b21f.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_1b21f.exe
+
+
+
+Performing C++ SOURCE FILE Test HAVE___RESTRICT succeeded with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_98bd7.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  src.cxx
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D HAVE___RESTRICT /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_98bd7.dir\Debug\\" /Fd"cmTC_98bd7.dir\Debug\vc142.pdb" /external:W3 /Gd /TP /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\src.cxx"
+  cmTC_98bd7.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_98bd7.exe
+
+
+Source file was:
+int *__restrict foo;
+int main() { return 0; }
+Performing C++ SOURCE FILE Test HAVE_PERMISSIVE_SWITCH succeeded with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_73342.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  src.cxx
+  cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D HAVE_PERMISSIVE_SWITCH /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_73342.dir\Debug\\" /Fd"cmTC_73342.dir\Debug\vc142.pdb" /external:W3 /Gd /TP /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\src.cxx"
+  cmTC_73342.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_73342.exe
+
+
+Source file was:
+int main() { return 0; }
+Determining if the include file xmmintrin.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_bc6c8.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_bc6c8.dir\Debug\\" /Fd"cmTC_bc6c8.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_bc6c8.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_bc6c8.exe
+
+
+
+Determining if the include file emmintrin.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_5fc61.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_5fc61.dir\Debug\\" /Fd"cmTC_5fc61.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_5fc61.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_5fc61.exe
+
+
+
+Determining if the include file pmmintrin.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_5d91a.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_5d91a.dir\Debug\\" /Fd"cmTC_5d91a.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_5d91a.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_5d91a.exe
+
+
+
+Determining if the include file smmintrin.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_6f42d.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_6f42d.dir\Debug\\" /Fd"cmTC_6f42d.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_6f42d.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_6f42d.exe
+
+
+
+Performing C SOURCE FILE Test HAVE_SSE_INTRINSICS succeeded with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_64665.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  src.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D HAVE_SSE_INTRINSICS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_64665.dir\Debug\\" /Fd"cmTC_64665.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\src.c"
+  cmTC_64665.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_64665.exe
+
+
+Source file was:
+#include <emmintrin.h>
+        int main() {_mm_pause(); return 0;}
+Determining if the include file malloc.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_7cb4e.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_7cb4e.dir\Debug\\" /Fd"cmTC_7cb4e.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_7cb4e.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_7cb4e.exe
+
+
+
+Determining if the include file intrin.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_d1259.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_d1259.dir\Debug\\" /Fd"cmTC_d1259.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_d1259.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_d1259.exe
+
+
+
+Determining if the include file guiddef.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_a0f2f.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_a0f2f.dir\Debug\\" /Fd"cmTC_a0f2f.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_a0f2f.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_a0f2f.exe
+
+
+
+Performing C SOURCE FILE Test HAVE_CPUID_INTRINSIC succeeded with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_426d7.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  src.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D HAVE_CPUID_INTRINSIC /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_426d7.dir\Debug\\" /Fd"cmTC_426d7.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\src.c"
+  cmTC_426d7.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_426d7.exe
+
+
+Source file was:
+#include <intrin.h>
+        int main()
+        {
+            int regs[4];
+            __cpuid(regs, 0);
+            return regs[0];
+        }
+Determining if the _aligned_malloc exist passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_99788.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckSymbolExists.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_99788.dir\Debug\\" /Fd"cmTC_99788.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckSymbolExists.c"
+  cmTC_99788.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_99788.exe
+
+
+File E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <malloc.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef _aligned_malloc
+  return ((int*)(&_aligned_malloc))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the include file dsound.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_85a3e.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_85a3e.dir\Debug\\" /Fd"cmTC_85a3e.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_85a3e.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_85a3e.exe
+
+
+
+Determining if the include file mmdeviceapi.h exists passed with the following output:
+Change Dir: E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/CMakeTmp
+
+Run Build Command(s):E:/Program Files (x86)/Microsoft Visual Studio/2019/MSBuild/Current/Bin/MSBuild.exe cmTC_1bc13.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=16.0 /v:m && Microsoft (R) Build Engine version 16.11.1+3e40a09f8 for .NET Framework
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.29.30136 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  CheckIncludeFile.c
+  cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\"Debug\"" /D _MBCS /Gm- /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_1bc13.dir\Debug\\" /Fd"cmTC_1bc13.dir\Debug\vc142.pdb" /external:W1 /Gd /TC /errorReport:queue "E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\CheckIncludeFile.c"
+  cmTC_1bc13.vcxproj -> E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\CMakeTmp\Debug\cmTC_1bc13.exe
+
+
+

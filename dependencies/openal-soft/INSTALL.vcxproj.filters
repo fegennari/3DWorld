@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\1a9283dcc835f956c9d4f17187939530\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{4DABB352-C8C8-3517-ABEC-5055DCC43F56}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

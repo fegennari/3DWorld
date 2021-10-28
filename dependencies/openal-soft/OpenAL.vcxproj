@@ -1,0 +1,640 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{9266AAEA-A180-38AA-9C7D-6C5C90BF4A40}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>OpenAL</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">OpenAL.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">OpenAL32</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">OpenAL.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">OpenAL32</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">OpenAL.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">OpenAL32</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">OpenAL.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">OpenAL32</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /w14640</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4268;4324;5030</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;RESTRICT=__restrict;_CRT_SECURE_NO_WARNINGS;CMAKE_INTDIR="Debug";OpenAL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;RESTRICT=__restrict;_CRT_SECURE_NO_WARNINGS;CMAKE_INTDIR=\"Debug\";OpenAL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>Debug\common.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/Debug/OpenAL32.lib</ImportLibrary>
+      <ProgramDataBaseFile>E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/Debug/OpenAL32.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /w14640</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ConformanceMode>true</ConformanceMode>
+      <DisableSpecificWarnings>4065;4268;4324;5030</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;RESTRICT=__restrict;_CRT_SECURE_NO_WARNINGS;CMAKE_INTDIR="Release";OpenAL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;RESTRICT=__restrict;_CRT_SECURE_NO_WARNINGS;CMAKE_INTDIR=\"Release\";OpenAL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>Release\common.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/Release/OpenAL32.lib</ImportLibrary>
+      <ProgramDataBaseFile>E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/Release/OpenAL32.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /w14640</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ConformanceMode>true</ConformanceMode>
+      <DisableSpecificWarnings>4065;4268;4324;5030</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;RESTRICT=__restrict;_CRT_SECURE_NO_WARNINGS;CMAKE_INTDIR="MinSizeRel";OpenAL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;RESTRICT=__restrict;_CRT_SECURE_NO_WARNINGS;CMAKE_INTDIR=\"MinSizeRel\";OpenAL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>MinSizeRel\common.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/MinSizeRel/OpenAL32.lib</ImportLibrary>
+      <ProgramDataBaseFile>E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/MinSizeRel/OpenAL32.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /w14640</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ConformanceMode>true</ConformanceMode>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4268;4324;5030</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;RESTRICT=__restrict;_CRT_SECURE_NO_WARNINGS;CMAKE_INTDIR="RelWithDebInfo";OpenAL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;AL_BUILD_LIBRARY;AL_ALEXT_PROTOTYPES;ALC_API=__declspec(dllexport);AL_API=__declspec(dllexport);_WIN32;NOMINMAX;RESTRICT=__restrict;_CRT_SECURE_NO_WARNINGS;CMAKE_INTDIR=\"RelWithDebInfo\";OpenAL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>RelWithDebInfo\common.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/RelWithDebInfo/OpenAL32.lib</ImportLibrary>
+      <ProgramDataBaseFile>E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/RelWithDebInfo/OpenAL32.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\28947e3bedc0e488edca27544c57df46\hrtf_default.h.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating hrtf_default.h</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+cd E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -D "INPUT_FILE=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/hrtf/Default HRTF.mhr" -D OUTPUT_FILE=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/hrtf_default.h -D VARIABLE_NAME=hrtf_default -P E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/cmake/bin2h.script.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\hrtf\Default HRTF.mhr;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\bin2h.script.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\hrtf_default.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating hrtf_default.h</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+cd E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -D "INPUT_FILE=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/hrtf/Default HRTF.mhr" -D OUTPUT_FILE=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/hrtf_default.h -D VARIABLE_NAME=hrtf_default -P E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/cmake/bin2h.script.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\hrtf\Default HRTF.mhr;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\bin2h.script.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\hrtf_default.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Generating hrtf_default.h</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+cd E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -D "INPUT_FILE=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/hrtf/Default HRTF.mhr" -D OUTPUT_FILE=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/hrtf_default.h -D VARIABLE_NAME=hrtf_default -P E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/cmake/bin2h.script.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\hrtf\Default HRTF.mhr;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\bin2h.script.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\hrtf_default.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Generating hrtf_default.h</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+cd E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft
+if %errorlevel% neq 0 goto :cmEnd
+E:
+if %errorlevel% neq 0 goto :cmEnd
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -D "INPUT_FILE=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/hrtf/Default HRTF.mhr" -D OUTPUT_FILE=E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/hrtf_default.h -D VARIABLE_NAME=hrtf_default -P E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/cmake/bin2h.script.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\hrtf\Default HRTF.mhr;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\bin2h.script.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\hrtf_default.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -SE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft -BE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft --check-stamp-file E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeCCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeCXXCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeRCCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeSystem.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\OpenALConfig.cmake.in;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindALSA.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindAudioIO.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindJACK.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindMySOFA.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindOSS.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindOpenSL.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindPortAudio.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindPulseAudio.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSDL2.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSndFile.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSoundIO.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\config.h.in;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\openal.pc.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompilerABI.c;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXCompilerABI.cpp;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCommonLanguageInclude.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCompilerIdDetection.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeConfigurableFile.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCXXCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompileFeatures.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompilerABI.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompilerId.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineRCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineSystem.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeFindBinUtils.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeGenericSystem.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeInitializeConfigs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeLanguageInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakePackageConfigHelpers.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeParseImplicitIncludeInfo.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeParseImplicitLinkInfo.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeRCCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeRCInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystem.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystemSpecificInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystemSpecificInitialize.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCXXCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCompilerCommon.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestRCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCCompilerFlag.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCSourceCompiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCXXCompilerFlag.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCXXSourceCompiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.c;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFile.c.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFile.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckLibraryExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckStructHasMember.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckSymbolExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ADSP-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ARMCC-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ARMClang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\AppleClang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Borland-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\CMakeCommonCompilerMacros.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Clang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Comeau-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Cray-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GHS-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GNU-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\HP-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IAR-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Intel-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-C.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\PGI-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\PathScale-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SCO-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\TI-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Watcom-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XL-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\zOS-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CompilerId\VS-10.vcxproj.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindGit.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPackageHandleStandardArgs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPackageMessage.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPkgConfig.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindThreads.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindZLIB.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\GNUInstallDirs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Internal\FeatureTesting.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-Determine-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC-C.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\WindowsPaths.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\SelectLibraryConfigurations.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\WriteBasicConfigVersionFile.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -SE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft -BE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft --check-stamp-file E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeCCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeCXXCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeRCCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeSystem.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\OpenALConfig.cmake.in;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindALSA.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindAudioIO.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindJACK.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindMySOFA.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindOSS.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindOpenSL.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindPortAudio.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindPulseAudio.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSDL2.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSndFile.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSoundIO.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\config.h.in;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\openal.pc.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompilerABI.c;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXCompilerABI.cpp;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCommonLanguageInclude.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCompilerIdDetection.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeConfigurableFile.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCXXCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompileFeatures.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompilerABI.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompilerId.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineRCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineSystem.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeFindBinUtils.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeGenericSystem.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeInitializeConfigs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeLanguageInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakePackageConfigHelpers.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeParseImplicitIncludeInfo.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeParseImplicitLinkInfo.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeRCCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeRCInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystem.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystemSpecificInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystemSpecificInitialize.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCXXCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCompilerCommon.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestRCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCCompilerFlag.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCSourceCompiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCXXCompilerFlag.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCXXSourceCompiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.c;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFile.c.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFile.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckLibraryExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckStructHasMember.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckSymbolExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ADSP-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ARMCC-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ARMClang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\AppleClang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Borland-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\CMakeCommonCompilerMacros.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Clang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Comeau-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Cray-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GHS-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GNU-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\HP-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IAR-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Intel-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-C.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\PGI-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\PathScale-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SCO-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\TI-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Watcom-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XL-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\zOS-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CompilerId\VS-10.vcxproj.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindGit.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPackageHandleStandardArgs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPackageMessage.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPkgConfig.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindThreads.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindZLIB.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\GNUInstallDirs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Internal\FeatureTesting.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-Determine-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC-C.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\WindowsPaths.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\SelectLibraryConfigurations.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\WriteBasicConfigVersionFile.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -SE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft -BE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft --check-stamp-file E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeCCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeCXXCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeRCCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeSystem.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\OpenALConfig.cmake.in;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindALSA.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindAudioIO.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindJACK.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindMySOFA.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindOSS.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindOpenSL.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindPortAudio.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindPulseAudio.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSDL2.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSndFile.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSoundIO.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\config.h.in;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\openal.pc.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompilerABI.c;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXCompilerABI.cpp;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCommonLanguageInclude.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCompilerIdDetection.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeConfigurableFile.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCXXCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompileFeatures.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompilerABI.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompilerId.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineRCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineSystem.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeFindBinUtils.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeGenericSystem.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeInitializeConfigs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeLanguageInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakePackageConfigHelpers.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeParseImplicitIncludeInfo.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeParseImplicitLinkInfo.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeRCCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeRCInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystem.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystemSpecificInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystemSpecificInitialize.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCXXCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCompilerCommon.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestRCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCCompilerFlag.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCSourceCompiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCXXCompilerFlag.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCXXSourceCompiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.c;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFile.c.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFile.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckLibraryExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckStructHasMember.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckSymbolExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ADSP-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ARMCC-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ARMClang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\AppleClang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Borland-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\CMakeCommonCompilerMacros.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Clang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Comeau-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Cray-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GHS-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GNU-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\HP-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IAR-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Intel-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-C.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\PGI-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\PathScale-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SCO-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\TI-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Watcom-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XL-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\zOS-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CompilerId\VS-10.vcxproj.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindGit.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPackageHandleStandardArgs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPackageMessage.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPkgConfig.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindThreads.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindZLIB.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\GNUInstallDirs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Internal\FeatureTesting.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-Determine-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC-C.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\WindowsPaths.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\SelectLibraryConfigurations.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\WriteBasicConfigVersionFile.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"E:\Program Files (x86)\CMake\bin\cmake.exe" -SE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft -BE:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft --check-stamp-file E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeCCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeCXXCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeRCCompiler.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\3.15.3\CMakeSystem.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\OpenALConfig.cmake.in;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindALSA.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindAudioIO.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindJACK.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindMySOFA.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindOSS.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindOpenSL.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindPortAudio.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindPulseAudio.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSDL2.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSndFile.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\cmake\FindSoundIO.cmake;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\config.h.in;E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\openal.pc.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCCompilerABI.c;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXCompilerABI.cpp;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCXXInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCommonLanguageInclude.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeCompilerIdDetection.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeConfigurableFile.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCXXCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompileFeatures.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompilerABI.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineCompilerId.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineRCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeDetermineSystem.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeFindBinUtils.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeGenericSystem.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeInitializeConfigs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeLanguageInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakePackageConfigHelpers.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeParseImplicitIncludeInfo.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeParseImplicitLinkInfo.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeRCCompiler.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeRCInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystem.cmake.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystemSpecificInformation.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeSystemSpecificInitialize.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCXXCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestCompilerCommon.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CMakeTestRCCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCCompilerFlag.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCSourceCompiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCXXCompilerFlag.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckCXXSourceCompiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.c;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckFunctionExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFile.c.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFile.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckIncludeFiles.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckLibraryExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckStructHasMember.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CheckSymbolExists.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ADSP-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ARMCC-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\ARMClang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\AppleClang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Borland-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Bruce-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\CMakeCommonCompilerMacros.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Clang-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Clang-DetermineCompilerInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Comeau-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Compaq-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Compaq-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Cray-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Embarcadero-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Fujitsu-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GHS-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GNU-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\GNU-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\HP-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\HP-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IAR-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IBMCPP-C-DetermineVersionInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\IBMCPP-CXX-DetermineVersionInternal.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Intel-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-C.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\MSVC-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\NVIDIA-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\OpenWatcom-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\PGI-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\PathScale-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SCO-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SDCC-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SunPro-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\SunPro-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\TI-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\TinyCC-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\VisualAge-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\VisualAge-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\Watcom-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XL-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XL-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XLClang-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\XLClang-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\zOS-C-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Compiler\zOS-CXX-DetermineCompiler.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\CompilerId\VS-10.vcxproj.in;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindGit.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPackageHandleStandardArgs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPackageMessage.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindPkgConfig.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindThreads.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\FindZLIB.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\GNUInstallDirs.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Internal\FeatureTesting.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-Determine-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC-C.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC-CXX.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows-MSVC.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\Windows.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\Platform\WindowsPaths.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\SelectLibraryConfigurations.cmake;E:\Program Files (x86)\CMake\share\cmake-3.15\Modules\WriteBasicConfigVersionFile.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\auxeffectslot.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\auxeffectslot.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\buffer.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\buffer.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effect.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effect.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\autowah.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/autowah.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\chorus.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/chorus.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\compressor.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/compressor.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\convolution.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/convolution.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\dedicated.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/dedicated.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\distortion.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/distortion.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\echo.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/echo.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\effects.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\equalizer.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/equalizer.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\fshifter.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/fshifter.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\modulator.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/modulator.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\null.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/null.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\pshifter.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/pshifter.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\reverb.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/reverb.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\effects\vmorpher.cpp">
+      <ObjectFileName>$(IntDir)/al/effects/vmorpher.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\error.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\event.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\event.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\extension.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\filter.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\filter.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\listener.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\listener.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\source.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\source.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\al\state.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\alc.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\alu.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\alu.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\alconfig.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\alconfig.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\context.cpp">
+      <ObjectFileName>$(IntDir)/alc/context.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\context.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\device.cpp">
+      <ObjectFileName>$(IntDir)/alc/device.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\device.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effectslot.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effectslot.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\base.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\autowah.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/autowah.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\chorus.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/chorus.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\compressor.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/compressor.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\convolution.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/convolution.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\dedicated.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/dedicated.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\distortion.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/distortion.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\echo.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/echo.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\equalizer.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/equalizer.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\fshifter.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/fshifter.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\modulator.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/modulator.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\null.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/null.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\pshifter.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/pshifter.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\reverb.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/reverb.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\effects\vmorpher.cpp">
+      <ObjectFileName>$(IntDir)/alc/effects/vmorpher.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\inprogext.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\panning.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\base.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\base.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\loopback.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\loopback.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\null.cpp">
+      <ObjectFileName>$(IntDir)/alc/backends/null.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\null.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\winmm.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\winmm.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\dsound.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\dsound.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\wasapi.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\wasapi.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\wave.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\alc\backends\wave.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\hrtf_default.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\ambdec.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\ambdec.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\ambidefs.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\ambidefs.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\async_event.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\bformatdec.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\bformatdec.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\bs2b.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\bs2b.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\bsinc_defs.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\bsinc_tables.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\bsinc_tables.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\bufferline.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\buffer_storage.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\buffer_storage.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\context.cpp">
+      <ObjectFileName>$(IntDir)/core/context.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\context.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\converter.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\converter.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\cpu_caps.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\cpu_caps.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\devformat.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\devformat.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\device.cpp">
+      <ObjectFileName>$(IntDir)/core/device.cpp.obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\device.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\except.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\except.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\filters\biquad.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\filters\biquad.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\filters\nfc.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\filters\nfc.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\filters\splitter.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\filters\splitter.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\fmt_traits.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\fmt_traits.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\fpu_ctrl.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\fpu_ctrl.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\front_stablizer.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\helpers.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\helpers.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\hrtf.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\hrtf.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\logging.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\logging.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mastering.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mastering.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\resampler_limits.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\uhjfilter.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\uhjfilter.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\uiddefs.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\voice.cpp" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\voice.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\voice_change.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer\defs.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer\hrtfbase.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer\hrtfdefs.h" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer\mixer_c.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer\mixer_sse.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer\mixer_sse2.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer\mixer_sse3.cpp" />
+    <ClCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\core\mixer\mixer_sse41.cpp" />
+    <ResourceCompile Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\resources\openal32.rc" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include\AL\al.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include\AL\alc.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include\AL\alext.h" />
+    <ClInclude Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\include\AL\efx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\ZERO_CHECK.vcxproj">
+      <Project>{CEA69A6E-AF5F-3EC9-8209-4773CB2A6C8E}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\build_version.vcxproj">
+      <Project>{65570BC1-060E-368C-A7B3-7AC5AB43CE51}</Project>
+      <Name>build_version</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="E:\Frank\Desktop\Frank\CS184\3DWorld_git\dependencies\openal-soft\common.vcxproj">
+      <Project>{A619AF2C-C827-31F5-9576-7AC1AD3C9D37}</Project>
+      <Name>common</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

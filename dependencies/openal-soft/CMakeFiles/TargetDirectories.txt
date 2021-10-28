@@ -1,0 +1,12 @@
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/INSTALL.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/build_version.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/OpenAL.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/common.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/openal-info.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/ex-common.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/altonegen.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/alrecord.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/ALL_BUILD.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/CMakeFiles/ZERO_CHECK.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/utils/alsoft-config/CMakeFiles/INSTALL.dir
+E:/Frank/Desktop/Frank/CS184/3DWorld_git/dependencies/openal-soft/utils/alsoft-config/CMakeFiles/ALL_BUILD.dir
