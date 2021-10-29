@@ -3,6 +3,7 @@ include config.txt
 ntrees 0
 num_birds_per_tile 0
 num_fish_per_tile 0
+num_bflies_per_tile 0
 clouds_per_tile 0.75
 grass_density 0
 cloud_height_offset -1.2
