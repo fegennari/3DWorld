@@ -452,7 +452,8 @@ point pedestrian_t::get_dest_pos(cube_t const &plot_bcube, cube_t const &next_pl
 				cube_t union_plot_bcube(plot_bcube);
 				union_plot_bcube.union_with_cube(next_plot_bcube);
 				// if we went outside on the wrong side, go back inside the current plot, or the union of the current and next plots if in the road
-				if (!union_plot_bcube.contains_pt_xy(pos)) {debug_state = 4; dest_pos = (in_the_road ? union_plot_bcube : plot_bcube).closest_pt(pos);}
+				float const exp(in_the_road ? radius : 0.0); // allow a bit of slack when crossing the road
+				if (!union_plot_bcube.contains_pt_xy_exp(pos, exp)) {debug_state = 4; dest_pos = (in_the_road ? union_plot_bcube : plot_bcube).closest_pt(pos);}
 				else {debug_state = 5;}
 			}
 			dest_pos.z = pos.z; // same zval
@@ -714,8 +715,8 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		if (ped_coll) {
 			assert(colliding_ped < peds.size());
 			vector3d const coll_dir(peds[colliding_ped].pos - pos);
-			new_dir = cross_product(vel, plus_z);
-			if (dot_product_xy(new_dir, coll_dir) > 0.0) {new_dir = -new_dir;} // orient away from the other ped
+			new_dir = cross_product(vel, plus_z); // right angle turn - using the tangent causes peds to get stuck together
+			if (dot_product_xy(new_dir, coll_dir) > 0.0) {new_dir.negate();} // orient away from the other ped
 		}
 		else if (outside_plot && !in_the_road && !plot_bcube.contains_pt_xy(pos)) { // attempt to re-enter the plot at the nearest point
 			point plot_pt(pos);
@@ -724,7 +725,7 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		}
 		else { // static object collision (should be rare if path_finder does a good job), or in_the_road (need this to get around traffic lights, etc.)
 			new_dir = rgen.signed_rand_vector_spherical_xy(); // try a random new direction
-			if (dot_product_xy(vel, new_dir) > 0.0) {new_dir *= -1.0;} // negate if pointing in the same dir
+			if (dot_product_xy(vel, new_dir) > 0.0) {new_dir.negate();} // negate if pointing in the same dir
 		}
 		if (new_dir != zero_vector) {set_velocity(new_dir);}
 		target_pos = all_zeros; // reset and force path finding to re-route from this new direction/pos
