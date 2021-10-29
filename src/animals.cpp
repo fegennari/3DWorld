@@ -60,6 +60,7 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		uniform_scale(radius / (0.5*bcube.max_len()));
 		translate_to(-bcube.get_cube_center()); // cancel out model local translate
 		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr);
+		s.add_uniform_color("color_modulate", WHITE); // reset
 		fgPopMatrix();
 		camera_pdu.valid = camera_pdu_valid;
 	}
@@ -285,6 +286,7 @@ void fish_t::draw(shader_t &s) const {
 	if (draw_color.alpha < 0.01) return;
 	if (draw_color.alpha < 0.1) {glDepthMask(GL_FALSE);} // disable depth writing to avoid alpha blend order problems
 	//draw_color = lerp(cur_fog_color, draw_color, alpha);
+	if (!s.is_setup()) {s.begin_simple_textured_shader();} // no lighting
 	animal_model_loader.draw_fish_model(s, pos_, radius, dir, draw_color);
 	if (draw_color.alpha < 0.1) {glDepthMask(GL_TRUE);}
 }
@@ -299,6 +301,7 @@ void bird_t::draw(shader_t &s) const {
 	float const dist(p2p_dist(pos_, get_camera_pos()));
 	float const alpha(CLIP_TO_01(2000.0f*radius/dist - 2.0f)); // 1.0 under half clip distance, after that linear falloff to zero
 	if (alpha < 0.01) return;
+	if (!s.is_setup()) {s.begin_color_only_shader();}
 	s.set_cur_color(colorRGBA(color, alpha));
 	int const ndiv(get_ndiv(pos_));
 	bind_draw_sphere_vbo(0, 0); // no textures or normals
@@ -327,35 +330,8 @@ void butterfly_t::draw(shader_t &s) const {
 
 	point const pos_(get_draw_pos());
 	if (!is_visible(pos_, 0.15)) return;
+	if (!s.is_setup()) {s.begin_simple_textured_shader(0.1, 1);} // alpha tested and lit
 	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, color);
-}
-
-
-/*static*/ void vect_fish_t::begin_draw(shader_t &s) {
-	s.begin_simple_textured_shader(); // no lighting
-	enable_blend(); // for distance fog
-}
-/*static*/ void vect_bird_t::begin_draw(shader_t &s) {
-	s.begin_color_only_shader();
-	enable_blend(); // for distance fog
-}
-/*static*/ void vect_butterfly_t::begin_draw(shader_t &s) {
-	s.begin_simple_textured_shader(); // no lighting
-	enable_blend(); // for distance fog
-}
-
-/*static*/ void vect_fish_t::end_draw(shader_t &s) {
-	disable_blend(); // for distance fog
-	s.add_uniform_color("color_modulate", WHITE); // reset
-	s.end_shader();
-}
-/*static*/ void vect_bird_t::end_draw(shader_t &s) {
-	disable_blend(); // for distance fog
-	s.end_shader();
-}
-/*static*/ void vect_butterfly_t::end_draw(shader_t &s) {
-	disable_blend(); // for distance fog
-	s.end_shader();
 }
 
 
@@ -363,12 +339,12 @@ template<typename A> void animal_group_t<A>::gen(unsigned num, cube_t const &ran
 
 	generated = 1;
 	if (!range.is_strictly_normalized()) return; // if the range is empty or denormalized in z, mark as generated but skip
-	if (!A::type_enabled()) return; // model not loaded, etc.
+	if (!A::type_enabled() || num == 0)  return; // model not valid/loaded, or no objects enabled
 	rgen.set_state(long(1000*range.d[0][0]), long(1000*range.d[1][0])); // seed with x1, y1
 	this->reserve(this->size() + num); // optional
 
 	for (unsigned n = 0; n < num; ++n) {
-		A animal;
+		A animal{};
 		if (animal.gen(rgen, range, tile)) {this->push_back(animal);} // only add if generation was successful
 	}
 	bcube = range; // initial value (approx)

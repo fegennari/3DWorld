@@ -3220,23 +3220,23 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 void tile_draw_t::draw_animals(bool reflection_pass) {
 
 	shader_t s;
+	enable_blend(); // for distance fog
 
-	if (birds_active()) {
+	if (birds_active()) { // day time - applies to birds and butterflies
 		// draw birds
-		vect_bird_t::begin_draw(s);
-		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_birds(s, reflection_pass);}
-		vect_bird_t::end_draw(s);
-		// draw butterflies
-#if 0 // TODO: enable when implemented
-		vect_butterfly_t::begin_draw(s);
-		for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_bflies(s, reflection_pass);}
-		vect_butterfly_t::end_draw(s);
-#endif
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_birds(s);}
+		s.end_shader();
+
+		if (!reflection_pass) { // draw butterflies
+			for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_bflies(s);}
+			s.end_shader();
+		}
 	}
-	// draw fish
-	vect_fish_t::begin_draw(s);
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_fish(s, reflection_pass);}
-	vect_fish_t::end_draw(s);
+	if (!reflection_pass) { // draw fish
+		for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_fish(s);}
+		s.end_shader();
+	}
+	disable_blend(); // for distance fog
 }
 
 void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
