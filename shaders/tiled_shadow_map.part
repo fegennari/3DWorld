@@ -8,12 +8,16 @@ float calc_light_scale(in vec3 vertex, in vec4 light_pos) {
 }
 #endif
 
-vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm, in vec4 ad_color, in float ambient_scale, in float diffuse_scale) {
+vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm_in, in vec4 ad_color, in float ambient_scale, in float diffuse_scale) {
 
 	vec3 color = vec3(0.0);
 	float smap_scale = 0.0;
+	vec3 eye_norm = eye_norm_in;
 #ifdef ENABLE_SHADOW_MAP
 	smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - length(epos.xyz)), 0.0, 1.0);
+#endif
+#ifdef TWO_SIDED_LIGHTING // needed for butterflies
+	if (!gl_FrontFacing) {eye_norm = -eye_norm;} // invert normal if back facing
 #endif
 	if (enable_light0) {
 		vec4 lpos    = fg_LightSource[0].position;

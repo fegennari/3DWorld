@@ -388,9 +388,9 @@ public:
 	template<typename A> void propagate_animals_to_neighbor_tiles(animal_group_t<A> &animals);
 	void update_animals();
 	void clear_animals() {fish.clear(); birds.clear(); bflies.clear();}
-	void draw_birds (shader_t &s) const {birds.draw_animals (s);}
-	void draw_fish  (shader_t &s) const {fish.draw_animals  (s);}
-	void draw_bflies(shader_t &s) const {bflies.draw_animals(s);}
+	void draw_birds (shader_t &s) const {birds.draw_animals (s, this);}
+	void draw_fish  (shader_t &s) const {fish.draw_animals  (s, this);}
+	void draw_bflies(shader_t &s) const {bflies.draw_animals(s, this);}
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
@@ -461,6 +461,8 @@ public:
 	void draw_shadow_pass(point const &lpos, tile_t *tile, bool decid_trees_only=0);
 	void draw_decid_tree_shadows() {draw_shadow_pass(camera_pdu.pos, nullptr, 1);}
 	void draw_water(shader_t &s, float zval) const;
+	static void billboard_tree_shader_setup(shader_t &s);
+	static void tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity, bool shadow_only, bool enable_dlights=0);
 private:
 	void draw_tiles(int reflection_pass, bool enable_shadow_map) const;
 	void draw_tiles_shadow_pass(point const &lpos, tile_t const *const tile);
@@ -472,8 +474,6 @@ private:
 	void draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool shadow_pass, bool reflection_pass, bool enable_smap, int xlate_loc);
 	void draw_pine_trees(bool reflection_pass, bool shadow_pass=0);
 	void draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass, bool shadow_pass, bool enable_smap);
-	static void billboard_tree_shader_setup(shader_t &s);
-	static void tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity, bool shadow_only, bool enable_dlights=0);
 	void draw_decid_trees(bool reflection_pass, bool shadow_pass=0);
 	void draw_scenery(bool reflection_pass, bool shadow_pass=0);
 	static void setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap, float dist_const_mult);

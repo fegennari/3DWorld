@@ -10,8 +10,10 @@
 
 float const FISH_RADIUS = 0.05;
 float const BIRD_RADIUS = 0.1;
+float const BFLY_RADIUS = 0.025;
 float const FISH_SPEED  = 0.002;
 float const BIRD_SPEED  = 0.05;
+float const BFLY_SPEED  = 0.005;
 
 extern bool water_is_lava;
 extern int window_width, animate2, display_mode;
@@ -45,24 +47,29 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		}
 		return id + 1;
 	}
-	void draw_model(unsigned id, shader_t &s, vector3d const &pos, float radius, vector3d const &dir, rotation_t const &local_rotate=rotation_t(), colorRGBA const &color=WHITE, bool is_shadow_pass=0) {
+	void draw_model(unsigned id, shader_t &s, vector3d const &pos, float radius, vector3d const &dir,
+		rotation_t const &local_rotate=rotation_t(), colorRGBA const &color=WHITE, bool is_shadow_pass=0, float lod_mult=1.0) {
 		assert(id > 0 && id-1 < size()); // Note: id is vector index offset by 1
-		bool const camera_pdu_valid(camera_pdu.valid);
-		camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 		s.add_uniform_color("color_modulate", color);
 		model3d &model(operator[](id-1));
 		model.bind_all_used_tids();
 		cube_t const &bcube(model.get_bcube());
+		point const orig_camera_pos(camera_pdu.pos), bcube_center(bcube.get_cube_center());
+		camera_pdu.pos += bcube_center - pos; // required for distance based LOD
+		bool const camera_pdu_valid(camera_pdu.valid);
+		camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 		fgPushMatrix();
 		translate_to(pos);
 		rotate_to_plus_x(dir);
 		local_rotate.apply_gl();
 		uniform_scale(radius / (0.5*bcube.max_len()));
-		translate_to(-bcube.get_cube_center()); // cancel out model local translate
-		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr);
+		translate_to(-bcube_center); // cancel out model local translate
+		camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
+		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr, nullptr, 0, lod_mult);
 		s.add_uniform_color("color_modulate", WHITE); // reset
 		fgPopMatrix();
 		camera_pdu.valid = camera_pdu_valid;
+		camera_pdu.pos   = orig_camera_pos;
 	}
 public:
 	bool load_fish_model() {
@@ -79,7 +86,8 @@ public:
 		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, color, 0); // not shadow pass
 	}
 	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
-		draw_model(bfly_info.id, s, pos, radius, -dir, rotation_t(), color, 0); // not shadow pass
+		rotation_t const local_rotate(plus_x, 90.0); // model has up=y, and we want up=z
+		draw_model(bfly_info.id, s, pos, radius, dir, local_rotate, color, 0); // not shadow pass, large lod_mult so that we see the legs
 	}
 };
 
@@ -96,7 +104,7 @@ void animal_t::gen_dir_vel(rand_gen_t &rgen, float speed) {
 	velocity = (speed*rgen.rand_uniform(0.6, 1.0))*dir;
 }
 
-float fish_t::get_mesh_zval_at_pos(tile_t const *const tile) const {
+float animal_t::get_mesh_zval_at_pos(tile_t const *const tile) const {
 	// use tile to interpolate z-value if present; faster, but should return a similar value to interpolate_mesh_zval()
 	if (tile) {return tile->get_zval_at(pos.x, pos.y, 1);} // in global space
 	return interpolate_mesh_zval((pos.x - DX_VAL*xoff2), (pos.y - DY_VAL*yoff2), 0.0, 1, 1); // in local camera space
@@ -107,7 +115,7 @@ bool fish_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile
 	assert(range.is_strictly_normalized());
 	enabled = 0;
 	if (water_is_lava || temperature <= W_FREEZE_POINT || temperature >= WATER_MAX_TEMP) return 0; // too hot/cold for fish
-	pos = rgen.gen_rand_cube_point(range);
+	pos = rgen.gen_rand_cube_point_xy(range);
 	float const mesh_height(get_mesh_zval_at_pos(tile)), depth(water_plane_z - mesh_height);
 	if (depth < 0.1) return 0; // no water
 	radius  = FISH_RADIUS*rgen.rand_uniform(0.4, 1.0);
@@ -120,7 +128,7 @@ bool fish_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile
 	return 1;
 }
 
-bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) { // Note: tile is unused
+bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) {
 
 	assert(range.is_strictly_normalized());
 	if (atmosphere < 0.5) {enabled = 0; return 0;} // no atmosphere, no clouds, no birds
@@ -134,14 +142,18 @@ bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile
 	return 1;
 }
 
+float get_butterfly_max_alt() {return 0.05f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
+float get_butterfly_min_alt() {return 0.10f*get_butterfly_max_alt();}
+
 bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) { // Note: tile is unused
 
 	assert(range.is_strictly_normalized());
 	if (atmosphere < 0.5) {enabled = 0; return 0;} // no atmosphere, no clouds, no butterflies
-	//pos     = ;
-	//radius  = ;
-	//gen_dir_vel(rgen, ?);
-	color   = WHITE;
+	pos     = rgen.gen_rand_cube_point_xy(range);
+	pos.z   = get_mesh_zval_at_pos(tile) + rgen.rand_uniform(get_butterfly_min_alt(), get_butterfly_max_alt()); // random amount above the mesh
+	radius  = BFLY_RADIUS*rgen.rand_uniform(0.8, 1.0);
+	gen_dir_vel(rgen, BFLY_SPEED);
+	color   = WHITE; // textured, not colored
 	time    = rgen.rand_uniform(0.0, 100.0); // start at random time offsets
 	enabled = 1;
 	return 1;
@@ -255,6 +267,10 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: 
 	if (!enabled || !animate2 || !birds_active()) return 0;
 	pos  += velocity*fticks;
 	time += fticks;
+	float const mh(get_mesh_zval_at_pos(tile)); // keep within the correct altitude range
+	min_eq(pos.z, (mh + get_butterfly_max_alt()));
+	max_eq(pos.z, (mh + get_butterfly_min_alt()));
+	// TODO: avoid buildings, etc.
 	return 1;
 }
 
@@ -272,7 +288,7 @@ int animal_t::get_ndiv(point const &pos_) const {
 
 point animal_t::get_draw_pos() const {return (pos + get_camera_coord_space_xlate());}
 
-void fish_t::draw(shader_t &s) const {
+void fish_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const { // Note: tile is unused, but could be used for shadows
 
 	point const pos_(get_draw_pos());
 	if (!is_visible(pos_, 0.15)) return;
@@ -291,7 +307,7 @@ void fish_t::draw(shader_t &s) const {
 	if (draw_color.alpha < 0.1) {glDepthMask(GL_TRUE);}
 }
 
-void bird_t::draw(shader_t &s) const {
+void bird_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const { // Note: tile is unused
 
 	if (!birds_active()) return;
 	point const pos_(get_draw_pos());
@@ -326,11 +342,20 @@ void bird_t::draw(shader_t &s) const {
 	bind_vbo(0);
 }
 
-void butterfly_t::draw(shader_t &s) const {
+void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const {
 
 	point const pos_(get_draw_pos());
-	if (!is_visible(pos_, 0.15)) return;
-	if (!s.is_setup()) {s.begin_simple_textured_shader(0.1, 1);} // alpha tested and lit
+	if (!is_visible(pos_, 0.4)) return;
+	
+	if (!s.is_setup()) {
+		s.set_prefix("#define TWO_SIDED_LIGHTING", 1); // FS
+		tile_draw_t::tree_branch_shader_setup(s, shadow_map_enabled(), 0, 0, 0);
+	}
+	if (first_draw && tile != nullptr) {
+		tile->bind_and_setup_shadow_map(s);
+		first_draw = 0;
+	}
+	// TODO: animate when moving?
 	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, color);
 }
 
@@ -376,9 +401,10 @@ template<typename A> void animal_group_t<A>::remove_disabled() {
 	this->erase(o, this->end());
 }
 
-template<typename A> void animal_group_t<A>::draw_animals(shader_t &s) const {
+template<typename A> void animal_group_t<A>::draw_animals(shader_t &s, tile_t const *const tile) const {
 	if (this->empty() || bcube.is_zero_area() || !camera_pdu.cube_visible(bcube + get_camera_coord_space_xlate())) return;
-	for (auto i = this->begin(); i != this->end(); ++i) {i->draw(s);}
+	bool first_draw(1);
+	for (auto i = this->begin(); i != this->end(); ++i) {i->draw(s, tile, first_draw);}
 }
 
 // explicit instantiations

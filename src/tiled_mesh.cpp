@@ -1703,9 +1703,7 @@ void tile_t::update_animals() {
 			propagate_animals_to_neighbor_tiles(birds);
 		}
 		if (!bflies.was_generated()) {
-			cube_t range(get_mesh_bcube_global());
-			range.z2() += 0.05*(X_SCENE_SIZE + Y_SCENE_SIZE); // slightly above the mesh
-			bflies.gen(num_birds_per_tile, range, this);
+			bflies.gen(num_birds_per_tile, get_mesh_bcube_global(), this);
 		}
 		else {
 			bflies.update(this);
