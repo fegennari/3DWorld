@@ -101,6 +101,7 @@ public:
 	vector3d signed_rand_vector_spherical_xy(float scale=1.0);
 	vector3d signed_rand_vector_spherical_noloop(float scale=1.0);
 	point gen_rand_cube_point(cube_t const &c);
+	point gen_rand_cube_point_xy(cube_t const &c, float z=0.0);
 };
 
 typedef rand_gen_template_t<rgen_core_t> rand_gen_t;

@@ -470,6 +470,11 @@ template<typename base> point rand_gen_template_t<base>::gen_rand_cube_point(cub
 	UNROLL_3X(pt[i_] = rand_uniform(c.d[i_][0], c.d[i_][1]););
 	return pt;
 }
+template<typename base> point rand_gen_template_t<base>::gen_rand_cube_point_xy(cube_t const &c, float z) {
+	point pt(0.0, 0.0, z);
+	UNROLL_2X(pt[i_] = rand_uniform(c.d[i_][0], c.d[i_][1]););
+	return pt;
+}
 
 
 // explicit template instantiations
