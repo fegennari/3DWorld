@@ -148,9 +148,12 @@ float get_butterfly_min_alt() {return 0.10f*get_butterfly_max_alt();}
 bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) { // Note: tile is unused
 
 	assert(range.is_strictly_normalized());
-	if (atmosphere < 0.5) {enabled = 0; return 0;} // no atmosphere, no clouds, no butterflies
+	enabled = 0;
+	if (atmosphere < 0.5) return 0; // no atmosphere, no clouds, no butterflies
 	pos     = rgen.gen_rand_cube_point_xy(range);
-	pos.z   = get_mesh_zval_at_pos(tile) + rgen.rand_uniform(get_butterfly_min_alt(), get_butterfly_max_alt()); // random amount above the mesh
+	float const mesh_height(get_mesh_zval_at_pos(tile));
+	if (mesh_height < water_plane_z) return 0; // no butterflies over water
+	pos.z   = mesh_height + rgen.rand_uniform(get_butterfly_min_alt(), get_butterfly_max_alt()); // random amount above the mesh
 	radius  = BFLY_RADIUS*rgen.rand_uniform(0.8, 1.0);
 	gen_dir_vel(rgen, BFLY_SPEED);
 	color   = WHITE; // textured, not colored
@@ -267,7 +270,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: 
 	if (!enabled || !animate2 || !birds_active()) return 0;
 	pos  += velocity*fticks;
 	time += fticks;
-	float const mh(get_mesh_zval_at_pos(tile)); // keep within the correct altitude range
+	float const mh(max(get_mesh_zval_at_pos(tile), water_plane_z)); // keep within the correct altitude range
 	min_eq(pos.z, (mh + get_butterfly_max_alt()));
 	max_eq(pos.z, (mh + get_butterfly_min_alt()));
 	// TODO: avoid buildings, etc.
