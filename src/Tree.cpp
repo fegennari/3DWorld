@@ -268,29 +268,23 @@ void tree::add_tree_collision_objects() {
 
 void tree::remove_collision_objects() {
 
-	for (unsigned i = 0; i < branch_cobjs.size(); i++) {
-		remove_reset_coll_obj(branch_cobjs[i]);
-	}
-	for (unsigned i = 0; i < leaf_cobjs.size(); i++) {
-		remove_reset_coll_obj(leaf_cobjs[i]);
-	}
+	for (unsigned i = 0; i < branch_cobjs.size(); i++) {remove_reset_coll_obj(branch_cobjs[i]);}
+	for (unsigned i = 0; i < leaf_cobjs  .size(); i++) {remove_reset_coll_obj(leaf_cobjs  [i]);}
 	branch_cobjs.clear();
-	leaf_cobjs.clear();
+	leaf_cobjs  .clear();
 }
-
 
 void tree_cont_t::remove_cobjs() {
-
-	for (iterator i = begin(); i != end(); ++i) {
-		i->remove_collision_objects();
-	}
+	for (iterator i = begin(); i != end(); ++i) {i->remove_collision_objects();}
 }
 
 
-bool tree::check_sphere_coll(point &center, float radius) const {
+bool tree::check_sphere_coll(point &center, float radius) const { // 10.7% of CPU time, 4.5x slower than scenery coll
 
-	float const trunk_radius(0.9*tdata().br_scale*tdata().base_radius);
-	float const trunk_height(max(tdata().sphere_radius, tdata().sphere_center_zoff)); // very approximate
+	tree_data_t const &td(tdata());
+	if (!td.branches_bcube.contains_pt_exp((center - tree_center), radius)) return 0; // optimization
+	float const trunk_radius(0.9*td.br_scale*td.base_radius);
+	float const trunk_height(max(td.sphere_radius, td.sphere_center_zoff)); // very approximate
 	cylinder_3dw const cylin(tree_center, tree_center+vector3d(0.0, 0.0, trunk_height), trunk_radius, trunk_radius);
 	return sphere_vert_cylin_intersect(center, radius, cylin);
 }
