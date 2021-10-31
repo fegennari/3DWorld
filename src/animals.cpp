@@ -21,6 +21,8 @@ extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height, 
 extern colorRGBA cur_fog_color;
 
 
+void do_xy_rotate_normal(float rot_sin, float rot_cos, point &pos);
+
 bool birds_active() {return (light_factor >= 0.4);} // birds are only active whe the sun is out
 
 enum {BF_BODY=0, BF_LWING, BF_RWING, BF_NUM_PARTS};
@@ -168,7 +170,7 @@ bool bird_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile
 	return 1;
 }
 
-float get_butterfly_max_alt() {return 0.05f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
+float get_butterfly_max_alt() {return 0.10f*(X_SCENE_SIZE + Y_SCENE_SIZE);}
 float get_butterfly_min_alt() {return 0.10f*get_butterfly_max_alt();}
 
 bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile) { // Note: tile is unused
@@ -291,21 +293,35 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 	} // for i
 }
 
+void update_accel(float &accel, rand_gen_t &rgen) {accel = min(1.0f, max(-1.0f, (accel + 0.25f*fticks*rgen.signed_rand_float())));}
+
 bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile is unused
 
 	if (!enabled || !animate2 || !birds_active()) return 0;
 	point const prev_pos(pos);
-	pos  += velocity*fticks;
-	time += fticks;
-	float const mh(max(get_mesh_zval_at_pos(tile), water_plane_z)); // keep within the correct altitude range
-	min_eq(pos.z, (mh + get_butterfly_max_alt()));
-	max_eq(pos.z, (mh + get_butterfly_min_alt()));
+	float const update_factor(0.01f*fticks);
+	update_accel(fwd_accel, rgen);
+	update_accel(rot_accel, rgen);
+	update_accel(alt_accel, rgen);
+	speed_factor = min(1.5f, max( 0.5f, (speed_factor + update_factor*fwd_accel)));
+	rot_rate     = min(1.0f, max(-1.0f, (rot_rate     + update_factor*rot_accel)));
+	alt_change   = min(1.0f, max(-1.0f, (alt_change   + update_factor*alt_accel)));
+	float const delta_t(speed_factor*fticks), vmag(velocity.mag());
+	float const rot_angle(0.0005*TWO_PI*delta_t*rot_rate);
+	do_xy_rotate_normal(sin(rot_angle), cos(rot_angle), dir);
+	velocity = (vmag/dir.mag())*dir;
+	pos   += velocity*delta_t;
+	time  += delta_t; // controls wing speed
+	pos.z += 0.5*alt_change*delta_t*radius;
+	float const zmin_val(max(get_mesh_zval_at_pos(tile), water_plane_z) + radius); // keep within the correct altitude range
+	min_eq(pos.z, (zmin_val + get_butterfly_max_alt()));
+	max_eq(pos.z, (zmin_val + get_butterfly_min_alt()));
 	vector3d cnorm;
 	
 	if (proc_city_sphere_coll(pos, prev_pos, 2.0*radius, prev_pos.z, 0, 1, &cnorm, 0)) { // use a larger radius for a buffer; check cars but not building interiors
 		calc_reflection_angle(dir, dir, cnorm); // reflect
 		dir.normalize();
-		velocity = dir*velocity.mag(); // change direction but preserve velocity
+		velocity = dir*vmag; // change direction but preserve velocity
 	}
 	else {
 		dir   = (pos - prev_pos); // align direction to velocity vector

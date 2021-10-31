@@ -57,7 +57,7 @@ class bird_t : public animal_t {
 	bool flocking;
 	float time;
 public:
-	bird_t() : flocking(0), time(0) {}
+	bird_t() : flocking(0), time(0.0) {}
 	static bool type_enabled() {return 1;} // no model, always enabled
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
@@ -67,9 +67,9 @@ public:
 
 class butterfly_t : public animal_t {
 
-	float time;
+	float time, speed_factor, rot_rate, alt_change, fwd_accel, rot_accel, alt_accel;
 public:
-	butterfly_t() : time(0) {}
+	butterfly_t() : time(0.0), speed_factor(1.0), rot_rate(0.0), alt_change(0.0), fwd_accel(0.0), rot_accel(0.0), alt_accel(0.0) {}
 	static bool type_enabled();
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
