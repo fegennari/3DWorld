@@ -1668,7 +1668,7 @@ void set_def_spec_map() {
 
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, int enable_alpha_mask,
 	unsigned bmap_pass_mask, int trans_op_mask, base_mat_t const &unbound_mat, rotation_t const &rot, point const *const xlate,
-	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist, bool skip_cull_face)
+	xform_matrix const *const mvm, bool force_lod, float model_lod_mult, float fixed_lod_dist, bool skip_cull_face, bool is_scaled)
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass), is_bmap_pass((bmap_pass_mask & 2) != 0);
 	if (is_normal_pass) {smap_data[rot].set_for_all_lights(shader, mvm);} // choose correct shadow map based on rotation
@@ -1699,7 +1699,10 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 		point pts[2] = {bcube.get_llc(), bcube.get_urc()};
 		rot.rotate_point(pts[0], -1.0); rot.rotate_point(pts[1], -1.0);
 		cube_t const bcube_rot(pts[0], pts[1]);
-		check_lod |= !bcube_rot.contains_pt(camera_pdu.pos);
+		// Note: this code assumes the model is in camera space and only rot is used to transform it;
+		// if the model is translated, it's up to the caller to translate camera_pdu.pos into model space for LOD to work;
+		// if the model is scaled, the containment test below is likely invalid, so we assume the camera is not inside the model and set check_lod=1
+		check_lod |= (is_scaled || !bcube_rot.contains_pt(camera_pdu.pos));
 		if (check_lod) {center = bcube_rot.get_cube_center();}
 	}
 	if (check_lod) {

@@ -17,7 +17,7 @@ float const BFLY_SPEED  = 0.005;
 
 extern bool water_is_lava;
 extern int window_width, animate2, display_mode;
-extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height;
+extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height, model_mat_lod_thresh;
 extern colorRGBA cur_fog_color;
 
 
@@ -54,22 +54,21 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		model3d &model(operator[](id-1));
 		model.bind_all_used_tids();
 		cube_t const &bcube(model.get_bcube());
-		point const orig_camera_pos(camera_pdu.pos), bcube_center(bcube.get_cube_center());
-		camera_pdu.pos += bcube_center - pos; // required for distance based LOD
+		point const bcube_center(bcube.get_cube_center());
+		float const sz_scale(radius / (0.5*bcube.max_len())), lod_dist(p2p_dist(get_camera_pos(), pos));
 		bool const camera_pdu_valid(camera_pdu.valid);
 		camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
+		lod_mult *= sz_scale/model_mat_lod_thresh; // model_mat_lod_thresh doesn't apply here, so divide to cancel it out
 		fgPushMatrix();
 		translate_to(pos);
 		rotate_to_plus_x(dir);
 		local_rotate.apply_gl();
-		uniform_scale(radius / (0.5*bcube.max_len()));
+		uniform_scale(sz_scale);
 		translate_to(-bcube_center); // cancel out model local translate
-		camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
-		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr, nullptr, 0, lod_mult);
+		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr, nullptr, 0, lod_mult, lod_dist, 0, 1); // scaled
 		s.add_uniform_color("color_modulate", WHITE); // reset
 		fgPopMatrix();
 		camera_pdu.valid = camera_pdu_valid;
-		camera_pdu.pos   = orig_camera_pos;
 	}
 public:
 	bool load_fish_model() {
@@ -87,7 +86,7 @@ public:
 	}
 	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
 		rotation_t const local_rotate(plus_x, 90.0); // model has up=y, and we want up=z
-		draw_model(bfly_info.id, s, pos, radius, dir, local_rotate, color, 0); // not shadow pass, large lod_mult so that we see the legs
+		draw_model(bfly_info.id, s, pos, radius, dir, local_rotate, color, 0, 1.5); // not shadow pass, custom lod_mult for legs
 	}
 };
 
