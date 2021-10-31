@@ -2306,9 +2306,9 @@ public:
 		}
 		bool const draw_interior(DRAW_WINDOWS_AS_HOLES && (have_windows || global_building_params.add_city_interiors) && draw_building_interiors);
 		bool const v(world_mode == WMODE_GROUND), indir(v), dlights(v), use_smap(v);
-		float const min_alpha = 0.0; // 0.0 to avoid alpha test
-		city_dlight_pcf_offset_scale = 0.67; // reduced for building interiors
-		enable_dlight_bcubes = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
+		float const min_alpha        = 0.0; // 0.0 to avoid alpha test
+		city_dlight_pcf_offset_scale = 0.6; // reduced for building interiors; below 0.6 and shadow edges are blocky, but above 0.6 clothes hangers have double shadows
+		enable_dlight_bcubes         = 1; // using light bcubes is both faster and more correct when shadow maps are not enabled
 		fgPushMatrix();
 		translate_to(xlate);
 		building_draw_t interior_wind_draw, ext_door_draw;
