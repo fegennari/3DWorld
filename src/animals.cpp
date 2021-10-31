@@ -315,18 +315,22 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	time  += delta_t; // controls wing speed
 	pos.z += 0.4*alt_change*delta_t*radius;
 	if (time > 600*TICKS_PER_SECOND && !is_visible(get_camera_space_pos(), 0.4)) {time = 0.0;} // reset every 10 min. if not visible
+	float const coll_radius(2.0*radius); // use a larger radius for a buffer
 	float const zmin_val(max(get_mesh_zval_at_pos(tile), water_plane_z) + radius); // keep within the correct altitude range
 	min_eq(pos.z, (zmin_val + get_butterfly_max_alt()));
 	max_eq(pos.z, (zmin_val + get_butterfly_min_alt()));
 	point cs_pos(get_camera_space_pos());
 	vector3d cnorm;
 	
-	// use a larger radius for a buffer; check cars but not building interiors
-	if (proc_city_sphere_coll(cs_pos, prev_cs_pos, 2.0*radius, prev_cs_pos.z, 0, 1, &cnorm, 0)) {
+	if (proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, 1, &cnorm, 0)) { // check cars but not building interiors
 		pos = cs_pos - get_camera_coord_space_xlate(); // back to world space
 		calc_reflection_angle(dir, dir, cnorm); // reflect
 		dir.normalize();
 		velocity = dir*vmag; // change direction but preserve velocity
+	}
+	else if (tile && tile->check_sphere_collision(cs_pos, coll_radius)) { // collision with tree or scenery
+		dir.negate(); // just negate the direction because we don't have the collision normal
+		velocity.negate();
 	}
 	else {
 		dir   = (pos - prev_pos); // align direction to velocity vector
