@@ -76,7 +76,7 @@ public:
 		return fish_info.is_loaded();
 	}
 	bool load_butterfly_model() {
-		if (bfly_info.try_load()) {bfly_info.set_id(load_model("../models/butterfly/butterfly.obj"));} // load butterfly model if needed
+		if (bfly_info.try_load()) {bfly_info.set_id(load_model("../models/butterfly/butterfly.model3d"));} // load butterfly model if needed
 		return bfly_info.is_loaded();
 	}
 	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
@@ -267,12 +267,24 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile is unused
 
 	if (!enabled || !animate2 || !birds_active()) return 0;
+	point const prev_pos(pos);
 	pos  += velocity*fticks;
 	time += fticks;
 	float const mh(max(get_mesh_zval_at_pos(tile), water_plane_z)); // keep within the correct altitude range
 	min_eq(pos.z, (mh + get_butterfly_max_alt()));
 	max_eq(pos.z, (mh + get_butterfly_min_alt()));
-	// TODO: avoid buildings, etc.
+	vector3d cnorm;
+	
+	if (proc_city_sphere_coll(pos, prev_pos, 2.0*radius, prev_pos.z, 0, 1, &cnorm, 0)) { // use a larger radius for a buffer; check cars but not building interiors
+		calc_reflection_angle(dir, dir, cnorm); // reflect
+		dir.normalize();
+		velocity = dir*velocity.mag(); // change direction but preserve velocity
+	}
+	else {
+		dir   = (pos - prev_pos); // align direction to velocity vector
+		dir.z = 0.0; // always level
+		dir.normalize();
+	}
 	return 1;
 }
 

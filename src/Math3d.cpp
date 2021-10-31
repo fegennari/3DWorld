@@ -26,8 +26,7 @@ float fix_angle(float angle) { // not sure if this is really necessary since sin
 }
 
 
-void calc_reflection_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm) {
-
+void calc_reflection_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm) { // Note: okay if v_inc and v_ref are the same vector
 	float const cos_t1(-dot_product(norm, v_inc));
 	v_ref = v_inc + norm*(2.0*cos_t1);
 }
