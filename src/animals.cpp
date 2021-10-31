@@ -102,7 +102,7 @@ public:
 		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, all_zeros, color, 0); // not shadow pass
 	}
 	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float rot_time, bool draw_body, colorRGBA const &color=WHITE) {
-		float rot_angle(45.0f*(sin(4.0*TWO_PI*rot_time) + 0.5)); // 4 flaps per second; more positive angle
+		float rot_angle(45.0f*(sin(5.0*TWO_PI*rot_time) + 0.5)); // 5 flaps per second; more positive angle
 		vector3d const model_xlate(0.0, 0.37*radius, 0.0); // translate so that the body centerline is at 0 in model coordinates, so up is Y
 
 		for (unsigned n = BF_LWING; n <= BF_RWING; ++n) { // draw wings
@@ -316,9 +316,11 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	pos.z += 0.4*alt_change*delta_t*radius;
 	if (time > 600*TICKS_PER_SECOND && !is_visible(get_camera_space_pos(), 0.4)) {time = 0.0;} // reset every 10 min. if not visible
 	float const coll_radius(2.0*radius); // use a larger radius for a buffer
-	float const zmin_val(max(get_mesh_zval_at_pos(tile), water_plane_z) + radius); // keep within the correct altitude range
-	min_eq(pos.z, (zmin_val + get_butterfly_max_alt()));
-	max_eq(pos.z, (zmin_val + get_butterfly_min_alt()));
+	float const zmin_val(max(get_mesh_zval_at_pos(tile), water_plane_z) + coll_radius); // keep within the correct altitude range
+	float const max_dz(5.0*vmag*fticks); // 5x nominal forward velocity
+	max_eq(pos.z, zmin_val); // required min altitude
+	min_eq(pos.z, max((pos.z - max_dz), (zmin_val + get_butterfly_max_alt())));
+	max_eq(pos.z, min((pos.z + max_dz), (zmin_val + get_butterfly_min_alt())));
 	point cs_pos(get_camera_space_pos());
 	vector3d cnorm;
 	
