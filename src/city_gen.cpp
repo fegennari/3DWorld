@@ -1066,7 +1066,7 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			get_bcubes_sphere_coll(tracks, out, query_pos, radius, xy_only, xlate);
 		}
-		bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const {
+		bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const { // pos is in camera space
 			vector3d const xlate(get_camera_coord_space_xlate());
 			float const dist(p2p_dist(pos, p_last));
 			if (!sphere_cube_intersect_xy(pos, (radius + dist), (bcube + xlate))) return 0;
@@ -2270,7 +2270,7 @@ public:
 		}
 		return global_rn.get_color_at_xy(pos, color);
 	}
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const {
+	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const { // pos is in camera space
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
 			if (r->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;
 		}
@@ -2669,7 +2669,7 @@ public:
 		road_gen.get_roads_sphere_coll(pos, radius, include_intersections, xy_only, out, out_bt);
 		get_driveway_sphere_coll_cubes(pos, radius, xy_only, out);
 	}
-	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm) const {
+	bool proc_city_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, bool inc_cars, vector3d *cnorm) const { // pos is in camera space
 		if (road_gen.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;
 		if (!inc_cars) return 0;
 		return car_manager.proc_sphere_coll(pos, p_last, radius, cnorm); // Note: doesn't really work well, at least for player collisions

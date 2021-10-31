@@ -1940,7 +1940,7 @@ void tile_t::draw_water(shader_t &s, float z) const {
 }
 
 
-bool tile_t::check_sphere_collision(point &pos, float sradius) const {
+bool tile_t::check_sphere_collision(point &pos, float sradius) const { // pos is in camera space
 
 	if (is_distant || !contains_point(pos)) return 0;
 	if (pos.z > get_tile_zmax() + sradius)  return 0; // sphere is completely above the tile

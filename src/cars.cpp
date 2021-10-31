@@ -779,7 +779,7 @@ void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) cons
 	}
 }
 
-bool car_manager_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
+bool car_manager_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const { // pos is in camera space
 	vector3d const xlate(get_camera_coord_space_xlate());
 	float const dist(p2p_dist(pos, p_last));
 
