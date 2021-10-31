@@ -38,8 +38,9 @@ public:
 	void apply_force(vector3d const &force) {velocity += force;}
 	void apply_force_xy(vector3d const &force) {velocity.x += force.x; velocity.y += force.y;}
 	bool is_enabled() const {return enabled;}
+	bool distance_check(point const &pos_, float vis_dist_scale) const;
 	bool is_visible(point const &pos_, float vis_dist_scale=1.0) const;
-	point get_draw_pos() const;
+	point get_camera_space_pos() const;
 };
 
 class fish_t : public animal_t {

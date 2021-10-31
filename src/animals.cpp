@@ -10,10 +10,10 @@
 
 float const FISH_RADIUS = 0.05;
 float const BIRD_RADIUS = 0.1;
-float const BFLY_RADIUS = 0.025;
+float const BFLY_RADIUS = 0.01;
 float const FISH_SPEED  = 0.002;
 float const BIRD_SPEED  = 0.05;
-float const BFLY_SPEED  = 0.005;
+float const BFLY_SPEED  = 0.003;
 
 extern bool water_is_lava;
 extern int window_width, animate2, display_mode;
@@ -101,8 +101,8 @@ public:
 		// invert dir - fish model faces in -x, and we want it to be in +x
 		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, all_zeros, color, 0); // not shadow pass
 	}
-	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float rot_time, colorRGBA const &color=WHITE) {
-		float rot_angle(40.0f*(sin(2.5*TWO_PI*rot_time) + 0.5)); // 2.5 flats per second; more positive
+	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float rot_time, bool draw_body, colorRGBA const &color=WHITE) {
+		float rot_angle(45.0f*(sin(4.0*TWO_PI*rot_time) + 0.5)); // 4 flaps per second; more positive angle
 		vector3d const model_xlate(0.0, 0.37*radius, 0.0); // translate so that the body centerline is at 0 in model coordinates, so up is Y
 
 		for (unsigned n = BF_LWING; n <= BF_RWING; ++n) { // draw wings
@@ -112,7 +112,7 @@ public:
 			// the result has a bit of clipping of wings through the body and each other, but maybe it's close enough
 			draw_model(bfly_info[n].id, s, pos, radius, dir, wing_rotate, model_xlate, color, 0);
 		}
-		if (dist_less_than(pos, get_camera_pos(), 200.0*radius)) { // draw body if close enough to the player
+		if (draw_body) {
 			rotation_t const body_rotate(plus_x, 90.0); // model has up=y, and we want up=z
 			draw_model(bfly_info[BF_BODY].id, s, pos, radius, dir, body_rotate, model_xlate, color, 0, 1.5); // not shadow pass, custom lod_mult for legs
 		}
@@ -194,7 +194,7 @@ bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const
 bool fish_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 
 	if (!enabled || !animate2) return 0;
-	point const camera(get_camera_pos()), pos_(get_draw_pos());
+	point const camera(get_camera_pos()), pos_(get_camera_space_pos());
 	if (!dist_less_than(pos_, camera, 200.0*radius)) return 1; // to far away to simulate (optimization)
 	if (pos.z - 1.1*get_half_height() < get_mesh_zval_at_pos(tile)) {enabled = 0; return 0;}
 	bool const chased(dist_less_than(pos_, camera, 15.0*radius));
@@ -242,6 +242,7 @@ bool bird_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile 
 	flocking = 0; // reset for next frame
 	pos  += velocity*fticks; // always moving
 	time += fticks;
+	if (time > 600*TICKS_PER_SECOND) {time = 0.0;} // reset every 10 min.
 	return 1;
 }
 
@@ -295,10 +296,10 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 
 void update_accel(float &accel, rand_gen_t &rgen) {accel = min(1.0f, max(-1.0f, (accel + 0.25f*fticks*rgen.signed_rand_float())));}
 
-bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: tile is unused
+bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 
 	if (!enabled || !animate2 || !birds_active()) return 0;
-	point const prev_pos(pos);
+	point const prev_pos(pos), prev_cs_pos(get_camera_space_pos());
 	float const update_factor(0.01f*fticks);
 	update_accel(fwd_accel, rgen);
 	update_accel(rot_accel, rgen);
@@ -312,13 +313,17 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: 
 	velocity = (vmag/dir.mag())*dir;
 	pos   += velocity*delta_t;
 	time  += delta_t; // controls wing speed
-	pos.z += 0.5*alt_change*delta_t*radius;
+	pos.z += 0.4*alt_change*delta_t*radius;
+	if (time > 600*TICKS_PER_SECOND && !is_visible(get_camera_space_pos(), 0.4)) {time = 0.0;} // reset every 10 min. if not visible
 	float const zmin_val(max(get_mesh_zval_at_pos(tile), water_plane_z) + radius); // keep within the correct altitude range
 	min_eq(pos.z, (zmin_val + get_butterfly_max_alt()));
 	max_eq(pos.z, (zmin_val + get_butterfly_min_alt()));
+	point cs_pos(get_camera_space_pos());
 	vector3d cnorm;
 	
-	if (proc_city_sphere_coll(pos, prev_pos, 2.0*radius, prev_pos.z, 0, 1, &cnorm, 0)) { // use a larger radius for a buffer; check cars but not building interiors
+	// use a larger radius for a buffer; check cars but not building interiors
+	if (proc_city_sphere_coll(cs_pos, prev_cs_pos, 2.0*radius, prev_cs_pos.z, 0, 1, &cnorm, 0)) {
+		pos = cs_pos - get_camera_coord_space_xlate(); // back to world space
 		calc_reflection_angle(dir, dir, cnorm); // reflect
 		dir.normalize();
 		velocity = dir*vmag; // change direction but preserve velocity
@@ -332,10 +337,12 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) { // Note: 
 }
 
 
+bool animal_t::distance_check(point const &pos_, float vis_dist_scale) const {
+	return dist_less_than(pos_, get_camera_pos(), 1000.0*vis_dist_scale*radius);
+}
 bool animal_t::is_visible(point const &pos_, float vis_dist_scale) const {
-
 	if (!enabled) return 0;
-	if (!dist_less_than(pos_, get_camera_pos(), 1000.0*vis_dist_scale*radius)) return 0;
+	if (!distance_check(pos_, vis_dist_scale)) return 0;
 	return sphere_in_camera_view(pos_, radius, 0);
 }
 
@@ -343,11 +350,11 @@ int animal_t::get_ndiv(point const &pos_) const {
 	return min(N_SPHERE_DIV, max(3, int(4.0*sqrt(radius*window_width/distance_to_camera(pos_)))));
 }
 
-point animal_t::get_draw_pos() const {return (pos + get_camera_coord_space_xlate());}
+point animal_t::get_camera_space_pos() const {return (pos + get_camera_coord_space_xlate());}
 
 void fish_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const { // Note: tile is unused, but could be used for shadows
 
-	point const pos_(get_draw_pos());
+	point const pos_(get_camera_space_pos());
 	if (!is_visible(pos_, 0.15)) return;
 	colorRGBA draw_color(color);
 	water_color_atten_at_pos(draw_color, pos_ - vector3d(0.0, 0.0, radius)); // move down slightly
@@ -366,8 +373,7 @@ void fish_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const
 
 void bird_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const { // Note: tile is unused
 
-	if (!birds_active()) return;
-	point const pos_(get_draw_pos());
+	point const pos_(get_camera_space_pos());
 	if (!is_visible(pos_, 1.0)) return;
 	// Note: birds use distance-based transparency rather than fog, because they may be against the blue sky above rather than the distant gray fog on the horizon;
 	// also, fog is modeled to be lower to the ground, and doesn't affect things like the sky, clouds, and sun
@@ -401,7 +407,7 @@ void bird_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const
 
 void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const {
 
-	point const pos_(get_draw_pos());
+	point const pos_(get_camera_space_pos());
 	if (!is_visible(pos_, 0.4)) return;
 	
 	if (!s.is_setup()) {
@@ -412,7 +418,8 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 		tile->bind_and_setup_shadow_map(s);
 		first_draw = 0;
 	}
-	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, color);
+	bool const draw_body(distance_check(pos_, 0.15)); // draw body if close enough to the player
+	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, draw_body, color);
 }
 
 
