@@ -23,6 +23,7 @@ extern colorRGBA cur_fog_color;
 
 bool birds_active() {return (light_factor >= 0.4);} // birds are only active whe the sun is out
 
+enum {BF_BODY=0, BF_LWING, BF_RWING, BF_NUM_PARTS};
 
 class animal_model_loader_t : public model3ds { // currently for fish only
 
@@ -34,8 +35,12 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		bool try_load () const {return (!is_loaded() && !invalid);}
 		void set_id(unsigned id_) {id = id_; invalid = (id == 0);}
 	};
-	model_info_t fish_info, bfly_info;
+	model_info_t fish_info, bfly_info[BF_NUM_PARTS];
 
+	model3d &get_model(unsigned id) {
+		assert(id > 0 && id-1 < size()); // Note: id is vector index offset by 1
+		return operator[](id-1);
+	}
 	unsigned load_model(string const &fn, colorRGBA const &def_color=WHITE, int def_tid=-1) {
 		unsigned const id(size());
 		bool const write_file    = 0;
@@ -47,15 +52,16 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		}
 		return id + 1;
 	}
-	void draw_model(unsigned id, shader_t &s, vector3d const &pos, float radius, vector3d const &dir,
-		rotation_t const &local_rotate=rotation_t(), colorRGBA const &color=WHITE, bool is_shadow_pass=0, float lod_mult=1.0) {
-		assert(id > 0 && id-1 < size()); // Note: id is vector index offset by 1
+	void draw_model(unsigned id, shader_t &s, vector3d const &pos, float radius, vector3d const &dir, rotation_t const &local_rotate,
+		vector3d const &model_center_offset, colorRGBA const &color=WHITE, bool is_shadow_pass=0, float lod_mult=1.0)
+	{
 		s.add_uniform_color("color_modulate", color);
-		model3d &model(operator[](id-1));
+		model3d &model(get_model(id));
 		model.bind_all_used_tids();
 		cube_t const &bcube(model.get_bcube());
-		point const bcube_center(bcube.get_cube_center());
-		float const sz_scale(radius / (0.5*bcube.max_len())), lod_dist(p2p_dist(get_camera_pos(), pos));
+		float const bcube_radius(0.5*bcube.max_len()), sz_scale(radius / bcube_radius);
+		float const lod_dist(p2p_dist(get_camera_pos(), pos));
+		vector3d const model_xlate(model_center_offset/sz_scale - bcube.get_cube_center());
 		bool const camera_pdu_valid(camera_pdu.valid);
 		camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 		lod_mult *= sz_scale/model_mat_lod_thresh; // model_mat_lod_thresh doesn't apply here, so divide to cancel it out
@@ -64,7 +70,7 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		rotate_to_plus_x(dir);
 		local_rotate.apply_gl();
 		uniform_scale(sz_scale);
-		translate_to(-bcube_center); // cancel out model local translate
+		translate_to(model_xlate); // cancel out model local translate
 		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr, nullptr, 0, lod_mult, lod_dist, 0, 1); // scaled
 		s.add_uniform_color("color_modulate", WHITE); // reset
 		fgPopMatrix();
@@ -72,21 +78,42 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 	}
 public:
 	bool load_fish_model() {
-		if (fish_info.try_load()) {fish_info.set_id(load_model("model_data/fish/fishOBJ.model3d"));} // load fish model if needed
+		if (fish_info.try_load()) {fish_info.set_id(load_model("model_data/fish/fishOBJ.model3d"));}
 		return fish_info.is_loaded();
 	}
 	bool load_butterfly_model() {
-		if (bfly_info.try_load()) {bfly_info.set_id(load_model("../models/butterfly/butterfly.model3d"));} // load butterfly model if needed
-		return bfly_info.is_loaded();
+		string const part_fns[BF_NUM_PARTS] = {"Butterfly Body", "Butterfly Left Wing", "Butterfly Right Wing"};
+		cube_t all_bcube;
+
+		for (unsigned n = 0; n < BF_NUM_PARTS; ++n) {
+			model_info_t &minfo(bfly_info[n]);
+			if (minfo.try_load()) {minfo.set_id(load_model("../models/butterfly/" + part_fns[n] + ".model3d"));}
+			if (!minfo.is_loaded()) return 0; // failed to load this part
+			all_bcube.assign_or_union_with_cube(back().get_bcube());
+		}
+		for (unsigned n = 0; n < BF_NUM_PARTS; ++n) {get_model(bfly_info[n].id).union_bcube_with(all_bcube);} // the entire model has one unified bcube
+		return 1; // success
 	}
 	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
 		rotation_t const local_rotate(plus_y, -45.0); // fish model is angled 45 degree upward, so need to rotate it back down
 		// invert dir - fish model faces in -x, and we want it to be in +x
-		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, color, 0); // not shadow pass
+		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, all_zeros, color, 0); // not shadow pass
 	}
-	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
-		rotation_t const local_rotate(plus_x, 90.0); // model has up=y, and we want up=z
-		draw_model(bfly_info.id, s, pos, radius, dir, local_rotate, color, 0, 1.5); // not shadow pass, custom lod_mult for legs
+	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float rot_time, colorRGBA const &color=WHITE) {
+		float rot_angle(40.0f*(sin(2.5*TWO_PI*rot_time) + 0.5)); // 2.5 flats per second; more positive
+		vector3d const model_xlate(0.0, 0.37*radius, 0.0); // translate so that the body centerline is at 0 in model coordinates, so up is Y
+
+		for (unsigned n = BF_LWING; n <= BF_RWING; ++n) { // draw wings
+			float const wing_sign((n == BF_LWING) ? 1.0 : -1.0);
+			rotation_t const wing_rotate(plus_x, (90.0f + wing_sign*rot_angle));
+			// this isn't perfect because in reality there are two wings on each side, and each of the four wings rotates about a slightly different point;
+			// the result has a bit of clipping of wings through the body and each other, but maybe it's close enough
+			draw_model(bfly_info[n].id, s, pos, radius, dir, wing_rotate, model_xlate, color, 0);
+		}
+		if (dist_less_than(pos, get_camera_pos(), 200.0*radius)) { // draw body if close enough to the player
+			rotation_t const body_rotate(plus_x, 90.0); // model has up=y, and we want up=z
+			draw_model(bfly_info[BF_BODY].id, s, pos, radius, dir, body_rotate, model_xlate, color, 0, 1.5); // not shadow pass, custom lod_mult for legs
+		}
 	}
 };
 
@@ -369,8 +396,7 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 		tile->bind_and_setup_shadow_map(s);
 		first_draw = 0;
 	}
-	// TODO: animate when moving?
-	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, color);
+	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, color);
 }
 
 
