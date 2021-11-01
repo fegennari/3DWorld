@@ -22,6 +22,7 @@ extern colorRGBA cur_fog_color;
 
 
 void do_xy_rotate_normal(float rot_sin, float rot_cos, point &pos);
+bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen);
 
 bool birds_active() {return (light_factor >= 0.4);} // birds are only active whe the sun is out
 

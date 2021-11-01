@@ -1135,6 +1135,12 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 0;
 		}
+		bool choose_pt_in_park(point &park_pos, rand_gen_t &rgen) const {
+			if (parks.empty()) return 0;
+			cube_t const &park(parks[rgen.rand() % parks.size()]); // select a random park
+			park_pos = rand_xy_pt_in_cube(park, get_sidewalk_width(), rgen);
+			return 1;
+		}
 		template<typename T> bool check_tile_group_contains_pt_xy(vector<T> const &objs, point const &pos, unsigned type) const {
 			assert(type < NUM_RD_TYPES);
 			if (objs.empty()) return 0;
@@ -2260,6 +2266,13 @@ public:
 	void get_roads_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) const {
 		global_rn.get_roads_sphere_coll(pos, radius, 1, xy_only, out, out_bt);
 	}
+	bool choose_pt_in_park(point const &pos, point &park_pos, rand_gen_t &rgen) const {
+		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
+			if (!r->get_bcube().contains_pt_xy(pos)) continue; // point not in this city
+			if (r->choose_pt_in_park(park_pos, rgen)) return 1;
+		}
+		return 0;
+	}
 	bool check_mesh_disable(point const &pos, float radius) const {return global_rn.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel(cube_t const &bcube) const {return global_rn.tile_contains_tunnel(bcube);}
 
@@ -2681,6 +2694,7 @@ public:
 		ret |= ped_manager.line_intersect_peds(p1x, p2x, t);
 		return ret;
 	}
+	bool choose_pt_in_park(point const &pos, point &park_pos, rand_gen_t &rgen) const {return road_gen.choose_pt_in_park(pos, park_pos, rgen);}
 	bool check_mesh_disable(point const &pos, float radius ) const {return road_gen.check_mesh_disable(pos, radius);}
 	bool tile_contains_tunnel (cube_t const &bcube) const {return road_gen.tile_contains_tunnel(bcube);}
 
@@ -2807,6 +2821,7 @@ bool check_mesh_disable(point const &pos, float radius) {
 	if (!have_cities()) return 0;
 	return city_gen.check_mesh_disable((pos + get_tt_xlate_val()), radius); // apply xlate for all static objects
 }
+bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen) {return city_gen.choose_pt_in_park(pos, park_pos, rgen);}
 bool tile_contains_tunnel(cube_t const &bcube) {return city_gen.tile_contains_tunnel(bcube + get_tt_xlate_val());}
 void destroy_city_in_radius(point const &pos, float radius) {city_gen.destroy_in_radius(pos, radius);}
 bool get_city_color_at_xy(float x, float y, colorRGBA &color) {return city_gen.get_color_at_xy(x, y, color);}

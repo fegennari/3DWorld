@@ -48,8 +48,6 @@ plot_divider_type_t plot_divider_types[DIV_NUM_TYPES] = {
 };
 
 void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
-float get_sidewalk_width();
-float get_inner_sidewalk_width();
 
 
 bool city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
