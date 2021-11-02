@@ -31,7 +31,7 @@ ground_effects_level 9
 #init_tree_mode 2 # small trees
 num_birds_per_tile 2
 num_fish_per_tile 15
-num_bflies_per_tile 0
+num_bflies_per_tile 5
 clouds_per_tile 0.5
 rgen_seed 21 # for universe mode
 

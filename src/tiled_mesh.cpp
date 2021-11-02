@@ -1705,8 +1705,9 @@ void tile_t::update_animals() {
 			birds.update(this);
 			propagate_animals_to_neighbor_tiles(birds);
 		}
-		if (!bflies.was_generated()) {
-			bflies.gen(num_birds_per_tile, get_mesh_bcube_global(), this);
+		if (weight_tid == 0) {} // weight texture not yet generated, don't add until we know if there's any grass
+		else if (!bflies.was_generated()) {
+			bflies.gen(num_bflies_per_tile, get_mesh_bcube_global(), this);
 		}
 		else {
 			bflies.update(this);
