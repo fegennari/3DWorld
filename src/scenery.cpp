@@ -776,11 +776,11 @@ void s_plant::add_cobjs() {
 	cpos2.z += 3.0*height/(36.0*height + 4.0);
 	bpos.z  -= 0.1*height;
 	coll_id  = add_coll_cylinder(cpos2, cpos, r2, radius, cobj_params(0.4, get_leaf_color(), 0, 0, NULL, 0, get_leaf_tid())); // leaves
-	coll_id2 = add_coll_cylinder(bpos, cpos, radius, 0.0, cobj_params(0.4, get_stem_color(), 0, 0, NULL, 0, WOOD_TEX)); // trunk
+	coll_id2 = add_coll_cylinder(bpos, cpos, radius, 0.0, cobj_params(0.4, get_stem_color(), 0, 0, NULL, 0, WOOD_TEX      )); // trunk
 }
 
 bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // used in tiled terrain mode
-	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.1*height), pos+point(0.0, 0.0, height), radius, radius));
+	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.1*height), get_top_pt(), radius, radius));
 }
 
 void s_plant::create_leaf_points(vector<vert_norm_comp> &points, float plant_scale, float nlevels_scale, unsigned nrings) const {
@@ -860,15 +860,16 @@ bool s_plant::is_shadowed() const {
 	return 1;
 }
 
+bool s_plant::is_water_plant() const {return (type >= (int)NUM_LAND_PLANT_TYPES);}
+
 void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
 
-	bool const is_water_plant(type >= (int)NUM_LAND_PLANT_TYPES);
-	if (world_mode == WMODE_INF_TERRAIN && is_water_plant && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
+	if (world_mode == WMODE_INF_TERRAIN && is_water_plant() && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, (height + radius), pos2)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	colorRGBA color(get_stem_color()*(shadowed ? SHADOW_VAL : 1.0));
-	if (is_water_plant && !shadow_only) {water_color_atten_at_pos(color, pos+xlate);}
+	if (is_water_plant() && !shadow_only) {water_color_atten_at_pos(color, pos+xlate);}
 	float const dist(distance_to_camera(pos2));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
@@ -877,7 +878,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 	else {
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_def_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
 		if (!shadow_only) {color.set_for_cur_shader();}
-		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, !shadow_only, 0, 0, nullptr, 6.0);
+		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), get_top_pt(), radius, 0.0, ndiv, !shadow_only, 0, 0, nullptr, 6.0);
 	}
 }
 
@@ -903,13 +904,12 @@ void s_plant::shader_state_t::set_wind_add(shader_t &s, float w_add) {
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const {
 
 	if (burn_amt == 1.0) return;
-	bool const is_water_plant(type >= (int)NUM_LAND_PLANT_TYPES);
-	if (world_mode == WMODE_INF_TERRAIN && is_water_plant && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
+	if (world_mode == WMODE_INF_TERRAIN && is_water_plant() && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, 0.5f*(height + radius), pos2)) return;
 	bool const shadowed((shadow_only || (ENABLE_PLANT_SHADOWS && shadow_map_enabled())) ? 0 : is_shadowed());
-	float const wind_scale(berries.empty() ? (is_water_plant ? 5.0 : 1.0) : 0.0); // no wind if this plant type has berries
-	bool const set_color(!shadow_only && (is_water_plant || burn_amt > 0.0));
+	float const wind_scale(berries.empty() ? (is_water_plant() ? 5.0 : 1.0) : 0.0); // no wind if this plant type has berries
+	bool const set_color(!shadow_only && (is_water_plant() || burn_amt > 0.0));
 	if (set_color) {state.set_color_scale(s, get_plant_color(xlate));}
 	if (shadowed) {state.set_normal_scale(s, 0.0);}
 	state.set_wind_scale(s, wind_scale);
@@ -1468,6 +1468,24 @@ void scenery_group::draw_fires(shader_t &s) const {
 void scenery_group::leafy_plant_coll(unsigned plant_ix, float energy) {
 	assert(plant_ix < leafy_plants.size());
 	leafy_plants[plant_ix].obj_collision(energy);
+}
+
+bool scenery_group::choose_butterfly_dest(point &dest, rand_gen_t &rgen) const {
+	unsigned const tot_plants(plants.size() + leafy_plants.size());
+	if (tot_plants == 0) return 0; // no plants
+	unsigned const plant_ix(rgen.rand() % tot_plants);
+
+	if (plant_ix < plants.size()) { // choose a plant
+		s_plant const &plant(plants[plant_ix]);
+		if (plant.is_water_plant() || plant.get_pos().z < water_plane_z) return 0; // butterfly can't land on an underwater plant, try again next time
+		dest = plant.get_top_pt();
+	}
+	else { // choose a leafy plant
+		leafy_plant const &plant(leafy_plants[plant_ix - plants.size()]);
+		if (plant.get_pos().z < water_plane_z) return 0; // butterfly can't land on an underwater plant, try again next time
+		dest = plant.get_top_pt();
+	}
+	return 1;
 }
 
 

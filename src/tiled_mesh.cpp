@@ -1406,7 +1406,6 @@ void tile_t::update_scenery() {
 	scenery.gen(x1+scenery_off.dxoff, y1+scenery_off.dyoff, x2+scenery_off.dxoff, y2+scenery_off.dyoff, vegetation*get_avg_veg(), 1);
 }
 
-
 void tile_t::draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_shadow_maps) {
 
 	if (!scenery.generated || get_scenery_dist_scale(reflection_pass) > 1.0) return;
@@ -1423,7 +1422,6 @@ void tile_t::draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool dra
 	cur_tile_trees = nullptr;
 }
 
-
 void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
 
 	bind_texture_tu(height_tid, 2);
@@ -1433,7 +1431,6 @@ void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
 	if (use_cloud_shadows) {s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));}
 	s.add_uniform_vector2d("xlate", vector2d(get_xval(x1 + xoff - xoff2), get_yval(y1 + yoff - yoff2)));
 }
-
 
 unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, bool enable_tess, int lt_loc) {
 
@@ -1492,7 +1489,6 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 	return num_drawn;
 }
 
-
 unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
 	if (!has_grass()) return 0; // no grass, no flowers
@@ -1504,6 +1500,13 @@ unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 	flowers.check_vbo();
 	flowers.draw_triangles(s);
 	return flowers.size();
+}
+
+bool tile_t::choose_butterfly_dest(point &dest, rand_gen_t &rgen) const {
+	if (!scenery.generated) return 0; // no scenery
+	if (!scenery.choose_butterfly_dest(dest, rgen)) return 0;
+	dest += scenery_off.get_xlate() - get_camera_coord_space_xlate(); // convert to world space
+	return 1;
 }
 
 

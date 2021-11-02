@@ -189,6 +189,8 @@ public:
 
 	s_plant() : coll_id2(-1), height(1.0) {}
 	virtual float get_bsphere_radius() const {return 0.5f*(height + radius);}
+	point get_top_pt() const {return pos + point(0.0, 0.0, height);}
+	bool is_water_plant() const;
 	bool operator<(s_plant const &p) const {return (type < p.type);}
 	colorRGBA const &get_leaf_color() const;
 	colorRGBA const &get_stem_color() const;
@@ -227,6 +229,7 @@ public:
 	int create(int x, int y, int use_xy, float minz, unsigned plant_ix_);
 	void create2(point const &pos_, float radius_, int type_, int calc_z, unsigned plant_ix_);
 	unsigned num_leaves() const {return leaves.size();}
+	point get_top_pt() const {return pos + point(0.0, 0.0, radius);}
 	void gen_points(vbo_vnt_block_manager_t &vbo_manager, vector<vert_norm_tc> const &sphere_verts);
 	void add_cobjs();
 	void obj_collision(float energy) {cur_motion_energy += energy;}
@@ -275,6 +278,7 @@ public:
 	void draw(bool shadow_only, vector3d const &xlate=zero_vector);
 	void draw_fires(shader_t &s) const;
 	void leafy_plant_coll(unsigned plant_ix, float energy);
+	bool choose_butterfly_dest(point &dest, rand_gen_t &rgen) const;
 	void write_plants_to_cobj_file(std::ostream &out) const;
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem() + leafy_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
 };
