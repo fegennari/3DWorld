@@ -305,6 +305,14 @@ void update_accel(float &accel, rand_gen_t &rgen) {accel = min(1.0f, max(-1.0f, 
 bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 
 	if (!enabled || !animate2 || !birds_active()) return 0;
+
+	if (sleep_time > 0.0) { // sleeping
+		sleep_time -= fticks;
+		if (sleep_time > 0.0) return 1; // still sleeping
+		sleep_time   = 0.0; // done sleeping
+		alt_change   = 0.5; // make sure we lift off into the air
+		explore_time = TICKS_PER_SECOND*rgen.rand_uniform(10.0, 30.0); // free roam for 10-30s; this allows us to cross into a different tile
+	}
 	point const prev_pos(pos), prev_cs_pos(get_camera_space_pos());
 	float const update_factor(0.01f*fticks);
 	update_accel(fwd_accel, rgen);
@@ -315,18 +323,39 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	alt_change   = min(1.0f, max(-1.0f, (alt_change   + update_factor*alt_accel)));
 	float const delta_t(speed_factor*fticks), vmag(velocity.mag());
 	float const rot_angle(0.0005*TWO_PI*delta_t*rot_rate);
+	vector3d const prev_dir(dir);
 	do_xy_rotate_normal(sin(rot_angle), cos(rot_angle), dir);
+	float min_alt_factor(1.0);
+
+	if (dest_valid) { // if we have a destination, bias our direction and altitude toward it based on how far away it is
+		vector3d dest_dir(cur_dest - pos);
+		float const freedom(dest_dir.xy_mag()/(100.0f*radius)); // freedom to choose altitude/dir based on horizontal distance to dest relative to radius
+		min_eq(min_alt_factor, freedom); // allow low altitude flight, assuming destination is near the ground
+		dest_dir.normalize();
+		float const prev_dp(dot_product(prev_dir, dest_dir)), cur_dp(dot_product(dir, dest_dir));
+		float const min_dest_dp = 0.5;
+		
+		if (cur_dp < min_dest_dp) { // face us toward our destination
+			if (prev_dp > min_dest_dp) {dir = prev_dir;} // revert to previous dir
+			else {dir = (dir + pow(0.1, delta_t)*dest_dir).get_norm();} // slowly merge to dest_dir
+		}
+		if (freedom < 4.0) { // getting within range, start to adjust altitude
+			float const correction_factor(1.0 - 0.5*min(0.5f*freedom, 1.0f));
+			alt_change = CLIP_TO_pm1(alt_change + 0.5f*correction_factor*SIGN(dest_dir.z));
+		}
+	}
 	velocity = (vmag/dir.mag())*dir;
 	pos   += velocity*delta_t;
 	time  += delta_t; // controls wing speed
 	pos.z += 0.4*alt_change*delta_t*radius;
 	if (time > 600*TICKS_PER_SECOND && !is_visible(get_camera_space_pos(), 0.4)) {time = 0.0;} // reset every 10 min. if not visible
 	float const coll_radius(2.0*radius); // use a larger radius for a buffer
-	float const zmin_val(max(get_mesh_zval_at_pos(tile), water_plane_z) + coll_radius); // keep within the correct altitude range
+	float const mesh_height(get_mesh_zval_at_pos(tile));
+	float const zmin_val(max(mesh_height, water_plane_z) + min_alt_factor*coll_radius); // keep within the correct altitude range
 	float const max_dz(5.0*vmag*fticks); // 5x nominal forward velocity
 	max_eq(pos.z, zmin_val); // required min altitude
+	max_eq(pos.z, min((pos.z + max_dz), (zmin_val + min_alt_factor*get_butterfly_min_alt())));
 	min_eq(pos.z, max((pos.z - max_dz), (zmin_val + get_butterfly_max_alt())));
-	max_eq(pos.z, min((pos.z + max_dz), (zmin_val + get_butterfly_min_alt())));
 	point cs_pos(get_camera_space_pos());
 	vector3d cnorm;
 	
@@ -347,7 +376,37 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		dir.z = 0.0; // always level
 		dir.normalize();
 	}
+	update_dest(rgen, tile);
 	return 1;
+}
+
+void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
+	if (explore_time > 0.0) { // roaming
+		explore_time -= fticks;
+		if (explore_time > 0.0) return; // still roaming
+		explore_time = 0.0; // done roaming
+	}
+	if (dest_valid) {
+		if (dist_less_than(pos, cur_dest, radius)) { // at destination
+			dest_valid = 0;
+			prev_dest  = cur_dest;
+			cur_dest   = pos;
+			sleep_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 5.0); // sleep for 1-5s
+		}
+		return; // no dest update
+	}
+	if (rgen.rand_float() < 0.9) return; // only look for a destination 10% of the time as an optimization
+	bool have_cand_dest(0);
+	if (have_cities() && rgen.rand_bool() && choose_pt_in_city_park(pos, cur_dest, rgen)) {have_cand_dest = 1;} // choose a city park
+	else if (tile && tile->choose_butterfly_dest(cur_dest, rgen)) {have_cand_dest = 1;} // choose a new destination within this tile
+	if (!have_cand_dest) return;
+	// Note: we're picky about the dest here; many dests will be rejected, and we'll get into this code again in a later frame; this gives butterflies more time to explore
+	if (cur_dest == prev_dest) return; // same as previous dest, ignore
+	if (dot_product_ptv(dir, cur_dest, pos) < 0.0) return; // behind us, ignore
+	float t(0.0); // unused
+	int xpos(0), ypos(0); // unused
+	if (tile && tile->line_intersect_mesh(get_camera_space_pos(), get_camera_space_dest(), t, xpos, ypos, 0)) return; // blocked by mesh; exclude pine trees
+	dest_valid = 1; // success
 }
 
 
@@ -363,8 +422,6 @@ bool animal_t::is_visible(point const &pos_, float vis_dist_scale) const {
 int animal_t::get_ndiv(point const &pos_) const {
 	return min(N_SPHERE_DIV, max(3, int(4.0*sqrt(radius*window_width/distance_to_camera(pos_)))));
 }
-
-point animal_t::get_camera_space_pos() const {return (pos + get_camera_coord_space_xlate());}
 
 void fish_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const { // Note: tile is unused, but could be used for shadows
 

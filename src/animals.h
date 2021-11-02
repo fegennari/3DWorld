@@ -40,7 +40,7 @@ public:
 	bool is_enabled() const {return enabled;}
 	bool distance_check(point const &pos_, float vis_dist_scale) const;
 	bool is_visible(point const &pos_, float vis_dist_scale=1.0) const;
-	point get_camera_space_pos() const;
+	point get_camera_space_pos() const {return (pos + get_camera_coord_space_xlate());}
 };
 
 class fish_t : public animal_t {
@@ -70,12 +70,17 @@ public:
 
 class butterfly_t : public animal_t {
 
-	float time, speed_factor, rot_rate, alt_change, fwd_accel, rot_accel, alt_accel;
+	bool dest_valid;
+	float time, sleep_time, explore_time, speed_factor, rot_rate, alt_change, fwd_accel, rot_accel, alt_accel;
+	point cur_dest, prev_dest;
 public:
-	butterfly_t() : time(0.0), speed_factor(1.0), rot_rate(0.0), alt_change(0.0), fwd_accel(0.0), rot_accel(0.0), alt_accel(0.0) {}
+	butterfly_t() : dest_valid(0), time(0.0), sleep_time(0.0), explore_time(0.0),
+		speed_factor(1.0), rot_rate(0.0), alt_change(0.0), fwd_accel(0.0), rot_accel(0.0), alt_accel(0.0) {}
 	static bool type_enabled();
 	static bool can_place_in_tile(tile_t const *const tile);
+	point get_camera_space_dest() const {return (cur_dest + get_camera_coord_space_xlate());}
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
+	void update_dest(rand_gen_t &rgen, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void draw(shader_t &s, tile_t const *const tile, bool &first_draw) const;
 };
