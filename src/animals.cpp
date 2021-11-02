@@ -476,10 +476,13 @@ void bird_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const
 	bind_vbo(0);
 }
 
+bool debug_animal_draw() {return (display_mode & 0x10);}
+
 void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const {
 
+	bool const debug_dest(dest_valid && debug_animal_draw()); // TESTING
 	point const pos_(get_camera_space_pos());
-	if (!is_visible(pos_, 0.4)) return;
+	if (!debug_dest && !is_visible(pos_, 0.4)) return;
 	
 	if (!s.is_setup()) {
 		s.set_prefix("#define TWO_SIDED_LIGHTING", 1); // FS
@@ -491,6 +494,15 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 	}
 	bool const draw_body(distance_check(pos_, 0.15)); // draw body if close enough to the player
 	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, draw_body, color);
+
+	if (debug_dest) { // debug draw line to destination
+		point const cs_dest(get_camera_space_dest());
+		vector<vert_color> line_pts;
+		line_pts.emplace_back(pos_, RED);
+		line_pts.emplace_back(cs_dest, RED);
+		draw_verts(line_pts, GL_LINES);
+		draw_sphere_vbo(cs_dest, radius, 16, 0);
+	}
 }
 
 
@@ -538,7 +550,8 @@ template<typename A> void animal_group_t<A>::remove_disabled() {
 }
 
 template<typename A> void animal_group_t<A>::draw_animals(shader_t &s, tile_t const *const tile) const {
-	if (this->empty() || bcube.is_zero_area() || !camera_pdu.cube_visible(bcube + get_camera_coord_space_xlate())) return;
+	if (this->empty() || bcube.is_zero_area()) return;
+	if (!debug_animal_draw() && !camera_pdu.cube_visible(bcube + get_camera_coord_space_xlate())) return;
 	bool first_draw(1);
 	for (auto i = this->begin(); i != this->end(); ++i) {i->draw(s, tile, first_draw);}
 }
