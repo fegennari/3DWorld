@@ -48,6 +48,7 @@ class fish_t : public animal_t {
 	float get_half_height() const {return 0.4*radius;} // approximate
 public:
 	static bool type_enabled();
+	static bool can_place_in_tile(tile_t const *const tile);
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void draw(shader_t &s, tile_t const *const tile, bool &first_draw) const;
@@ -60,6 +61,7 @@ class bird_t : public animal_t {
 public:
 	bird_t() : flocking(0), time(0.0) {}
 	static bool type_enabled() {return 1;} // no model, always enabled
+	static bool can_place_in_tile(tile_t const *const tile) {return 1;} // always allowed
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void apply_force_xy_const_vel(vector3d const &force);
@@ -72,6 +74,7 @@ class butterfly_t : public animal_t {
 public:
 	butterfly_t() : time(0.0), speed_factor(1.0), rot_rate(0.0), alt_change(0.0), fwd_accel(0.0), rot_accel(0.0), alt_accel(0.0) {}
 	static bool type_enabled();
+	static bool can_place_in_tile(tile_t const *const tile);
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void draw(shader_t &s, tile_t const *const tile, bool &first_draw) const;

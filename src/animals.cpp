@@ -17,7 +17,7 @@ float const BFLY_SPEED  = 0.003;
 
 extern bool water_is_lava;
 extern int window_width, animate2, display_mode;
-extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height, model_mat_lod_thresh;
+extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height, model_mat_lod_thresh, zmax_est;
 extern colorRGBA cur_fog_color;
 
 
@@ -124,8 +124,12 @@ animal_model_loader_t animal_model_loader;
 
 void free_animal_context() {animal_model_loader.free_context();}
 
+// static functions for animal types
 bool fish_t     ::type_enabled() {return animal_model_loader.load_fish_model();}
 bool butterfly_t::type_enabled() {return animal_model_loader.load_butterfly_model();}
+
+bool fish_t     ::can_place_in_tile(tile_t const *const tile) {return tile->has_water();}
+bool butterfly_t::can_place_in_tile(tile_t const *const tile) {return (!tile->all_water() && tile->has_grass());} // only spawn over grass
 
 
 void animal_t::gen_dir_vel(rand_gen_t &rgen, float speed) {
@@ -182,6 +186,7 @@ bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const
 	pos     = rgen.gen_rand_cube_point_xy(range);
 	float const mesh_height(get_mesh_zval_at_pos(tile));
 	if (mesh_height < water_plane_z) return 0; // no butterflies over water
+	if (get_rel_height(mesh_height, -zmax_est, zmax_est) > 0.6) return 0; // maybe not necessary, since we know the tile must contain some grass
 	pos.z   = mesh_height + rgen.rand_uniform(get_butterfly_min_alt(), get_butterfly_max_alt()); // random amount above the mesh
 	radius  = BFLY_RADIUS*rgen.rand_uniform(0.8, 1.0);
 	gen_dir_vel(rgen, BFLY_SPEED);
@@ -434,9 +439,11 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 
 template<typename A> void animal_group_t<A>::gen(unsigned num, cube_t const &range, tile_t const *const tile) { // Note: okay if nonempty
 
+	assert(tile);
 	generated = 1;
 	if (!range.is_strictly_normalized()) return; // if the range is empty or denormalized in z, mark as generated but skip
 	if (!A::type_enabled() || num == 0)  return; // model not valid/loaded, or no objects enabled
+	if (!A::can_place_in_tile(tile))     return; // tile not valid for this object
 	rgen.set_state(long(1000*range.d[0][0]), long(1000*range.d[1][0])); // seed with x1, y1
 	this->reserve(this->size() + num); // optional
 

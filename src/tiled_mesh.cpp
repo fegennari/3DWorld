@@ -3696,12 +3696,12 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 		flowers.clear_within((pos - flower_xlate), rradius, is_square);
 	}
 	if (!add_grass && has_grass()) { // increases edit time slightly but decreased draw time slightly
-		bool has_any_grass(0);
+		bool has_grass(0);
 
 		for (unsigned i = 0; i < num_texels; ++i) {
-			if (weight_data[4*i + grass_tex_ix] > 0) {has_any_grass = 1; break;}
+			if (weight_data[4*i + grass_tex_ix] > 0) {has_grass = 1; break;}
 		}
-		if (!has_any_grass) {grass_blocks.clear();} // clear all grass blocks when there is no more grass
+		if (!has_grass) {grass_blocks.clear();} // clear all grass blocks when there is no more grass
 	}
 	create_or_update_weight_tex();
 	calc_avg_mesh_color(); // optional
