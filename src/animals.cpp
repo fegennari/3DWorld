@@ -331,7 +331,9 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		dir.normalize();
 		velocity = dir*vmag; // change direction but preserve velocity
 	}
-	else if (tile && tile->check_sphere_collision(cs_pos, coll_radius)) { // collision with tree or scenery
+	else if ((mesh_height < water_plane_z - 0.5*get_butterfly_max_alt()) || // over deep water
+		(tile && tile->check_sphere_collision(cs_pos, coll_radius))) // collision with tree or scenery
+	{
 		dir.negate(); // just negate the direction because we don't have the collision normal
 		velocity.negate();
 	}
