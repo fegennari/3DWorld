@@ -684,6 +684,7 @@ void s_stump::add_cobjs() {
 }
 
 bool s_stump::check_sphere_coll(point &center, float sphere_radius) const {
+	if (!dist_less_than(center, pos, (max(height, max(radius, radius2)) + sphere_radius))) return 0; // sphere-sphere coll optimization
 	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.2*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
@@ -780,6 +781,7 @@ void s_plant::add_cobjs() {
 }
 
 bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // used in tiled terrain mode
+	if (!dist_less_than(center, pos, (0.5f*(height + radius) + sphere_radius))) return 0; // sphere-sphere coll optimization
 	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.1*height), get_top_pt(), radius, radius));
 }
 
