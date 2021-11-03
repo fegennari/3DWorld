@@ -1187,14 +1187,13 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material;
 		// however, it might make sense to use ka instead of ke when ke is not specified?
 		shader.set_cur_color(get_ad_color());
-		geom.render(shader, 0, xlate);
+		geom    .render(shader, 0, xlate);
 		geom_tan.render(shader, 0, xlate);
 		shader.clear_color_e();
-		if (ke != BLACK) {shader.set_color_e(BLACK);}
 		if (ns > 0.0)    {shader.clear_specular();}
 		if (need_blend)  {disable_blend();}
-		if (set_ref_ix)  {shader.add_uniform_float("refract_ix", 1.0);}
-		if (metalness >= 0.0) {shader.add_uniform_float("metalness", 0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
+		if (set_ref_ix)       {shader.add_uniform_float("refract_ix",   1.0);}
+		if (metalness >= 0.0) {shader.add_uniform_float("metalness",    0.0);} // if metalness was specified, reset to the default of 0.0 for the next material
 		if (bmap_disabled)    {shader.add_uniform_float("bump_map_mag", 1.0);} // reset back to default
 	}
 }
