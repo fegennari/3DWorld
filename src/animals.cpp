@@ -306,12 +306,12 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 
 	if (!enabled || !animate2 || !birds_active()) return 0;
 
-	if (sleep_time > 0.0) { // sleeping
-		sleep_time -= fticks;
-		if (sleep_time > 0.0) return 1; // still sleeping
-		sleep_time   = 0.0; // done sleeping
+	if (rest_time > 0.0) { // resting
+		rest_time   -= fticks;
+		if (rest_time > 0.0) return 1; // still resting
+		rest_time    = 0.0; // done resting
 		alt_change   = 0.5; // make sure we lift off into the air
-		explore_time = TICKS_PER_SECOND*rgen.rand_uniform(10.0, 30.0); // free roam for 10-30s; this allows us to cross into a different tile
+		explore_time = TICKS_PER_SECOND*rgen.rand_uniform(15.0, 30.0); // free roam for 15-30s; this allows us to cross into a different tile
 	}
 	point const prev_pos(pos), prev_cs_pos(get_camera_space_pos());
 	float const update_factor(0.01f*fticks);
@@ -333,14 +333,16 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		min_eq(min_alt_factor, freedom); // allow low altitude flight, assuming destination is near the ground
 		dest_dir.normalize();
 		float const prev_dp(dot_product(prev_dir, dest_dir)), cur_dp(dot_product(dir, dest_dir));
-		float const min_dest_dp = 0.5;
+		correction_factor = (1.0 - 0.5*min(0.5f*freedom, 1.0f)); // [0.5, 1.0]
 		
-		if (cur_dp < min_dest_dp) { // face us toward our destination
-			if (prev_dp > min_dest_dp) {dir = prev_dir;} // revert to previous dir
-			else {dir = (dir + pow(0.1, delta_t)*dest_dir).get_norm();} // slowly merge to dest_dir
+		if (cur_dp < correction_factor) { // face us toward our destination
+			if (prev_dp >= correction_factor) {dir = prev_dir;} // revert to previous dir
+			else { // slowly merge to dest_dir
+				float const blend(pow(0.1, delta_t)*correction_factor);
+				dir = ((1.0 - blend)*dir + blend*dest_dir).get_norm();
+			}
 		}
 		if (freedom < 4.0) { // getting within range, start to adjust altitude
-			float const correction_factor(1.0 - 0.5*min(0.5f*freedom, 1.0f));
 			alt_change = CLIP_TO_pm1(alt_change + 0.5f*correction_factor*SIGN(dest_dir.z));
 		}
 	}
@@ -363,15 +365,17 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		pos = cs_pos - get_camera_coord_space_xlate(); // back to world space
 		calc_reflection_angle(dir, dir, cnorm); // reflect
 		dir.normalize();
-		velocity = dir*vmag; // change direction but preserve velocity
+		velocity   = dir*vmag; // change direction but preserve velocity
+		dest_valid = 0; // choose a new destination, in case this one is blocked by a building
 	}
 	else if ((mesh_height < water_plane_z - 0.5*get_butterfly_max_alt()) || // over deep water
-		(tile && tile->check_sphere_collision(cs_pos, coll_radius))) // collision with tree or scenery
+		// check collision with tree or scenery; skip if close to the dest to avoid colliding with the dest object
+		(tile && (!dest_valid || !dist_less_than(pos, cur_dest, 2.0*radius)) && tile->check_sphere_collision(cs_pos, coll_radius)))
 	{
 		dir.negate(); // just negate the direction because we don't have the collision normal
 		velocity.negate();
 	}
-	else {
+	else if (pos != prev_pos) {
 		dir   = (pos - prev_pos); // align direction to velocity vector
 		dir.z = 0.0; // always level
 		dir.normalize();
@@ -391,7 +395,7 @@ void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
 			dest_valid = 0;
 			prev_dest  = cur_dest;
 			cur_dest   = pos;
-			sleep_time = TICKS_PER_SECOND*rgen.rand_uniform(1.0, 5.0); // sleep for 1-5s
+			rest_time  = TICKS_PER_SECOND*rgen.rand_uniform(5.0, 10.0); // rest for 5-10s
 		}
 		return; // no dest update
 	}
