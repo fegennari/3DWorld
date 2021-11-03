@@ -500,10 +500,12 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, draw_body, color);
 
 	if (debug_dest) { // debug draw line to destination
+		colorRGBA const color(blend_color(RED, BLUE, (2.0*correction_factor - 1.0), 0));
 		point const cs_dest(get_camera_space_dest());
-		vector<vert_color> line_pts;
-		line_pts.emplace_back(pos_, RED);
-		line_pts.emplace_back(cs_dest, RED);
+		vector<vert_norm_color> line_pts;
+		line_pts.emplace_back(pos_,    plus_z, color);
+		line_pts.emplace_back(cs_dest, plus_z, color);
+		select_texture(WHITE_TEX);
 		draw_verts(line_pts, GL_LINES);
 		draw_sphere_vbo(cs_dest, radius, 16, 0);
 	}
