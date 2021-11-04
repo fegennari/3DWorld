@@ -300,7 +300,7 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 	} // for i
 }
 
-void update_accel(float &accel, rand_gen_t &rgen) {accel = min(1.0f, max(-1.0f, (accel + 0.25f*fticks*rgen.signed_rand_float())));}
+void update_accel(float &accel, rand_gen_t &rgen) {accel = CLIP_TO_pm1(accel + 0.25f*fticks*rgen.signed_rand_float());}
 
 bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 
@@ -344,13 +344,19 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 			}
 		}
 		if (dest_alignment > 0.5) { // getting within range, start to adjust altitude
-			alt_change = CLIP_TO_pm1(alt_change + 0.5f*(dest_alignment - 0.5f)*SIGN(dest_dir.z)*min(1.0f*fabs(dest_dir.z)/radius, 1.0f));
+			float const v(dest_alignment - 0.5);
+			alt_change = CLIP_TO_pm1(alt_change + 2.0f*v*v*SIGN(dest_dir.z)*min(fabs(dest_dir.z)/radius, 1.0f));
 		}
 	}
+	else {
+		dest_alignment = 0.0;
+	}
+	float const delta_z(0.4*alt_change*delta_t*radius);
 	velocity = (vmag/dir.mag())*dir;
 	pos   += velocity*delta_t;
 	time  += delta_t; // controls wing speed
-	pos.z += 0.4*alt_change*delta_t*radius;
+	if (dest_alignment > 0.75 && fabs(pos.z - cur_dest.z) < fabs(delta_z)) {pos.z = cur_dest.z;} // use exact alignment if possible
+	else {pos.z += delta_z;}
 	if (time > 600*TICKS_PER_SECOND && !is_visible(get_camera_space_pos(), 0.4)) {time = 0.0;} // reset every 10 min. if not visible
 	float const coll_radius(2.0*radius); // use a larger radius for a buffer
 	float const mesh_height(get_mesh_zval_at_pos(tile));
@@ -374,8 +380,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		explore_time = TICKS_PER_SECOND*rgen.rand_uniform(2.0, 5.0); // explore a bit more to get out from between the buildings
 	}
 	else if ((mesh_height < water_plane_z - 0.5*get_butterfly_max_alt()) || // over deep water
-		// check collision with tree or scenery; skip if close to the dest to avoid colliding with the dest object
-		(!skip_tile_int_check && tile && tile->check_sphere_collision(cs_pos, coll_radius)))
+		(!skip_tile_int_check && tile && tile->check_sphere_collision(cs_pos, coll_radius))) // check collision with trees and scenery
 	{
 		dir.negate(); // just negate the direction because we don't have the collision normal
 		velocity.negate();
@@ -406,10 +411,11 @@ void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
 	}
 	dest_bsphere.radius = 0.0;
 	if (rgen.rand_float() < 0.9) return; // only look for a destination 10% of the time as an optimization
-	bool have_cand_dest(0);
-	if (have_cities() && rgen.rand_bool() && choose_pt_in_city_park(pos, cur_dest, rgen)) {have_cand_dest = 1;} // choose a city park
-	else if (tile && tile->choose_butterfly_dest(cur_dest, dest_bsphere, rgen)) {have_cand_dest = 1;} // choose a new destination within this tile
-	if (!have_cand_dest) return;
+	if (have_cities() && rgen.rand_bool() && choose_pt_in_city_park(pos, cur_dest, rgen)) {} // choose a city park
+	else if (tile && tile->choose_butterfly_dest(cur_dest, dest_bsphere, rgen)) { // choose a new destination within this tile
+		cur_dest.z -= 0.5*radius; // shift slightly downward since the body is below the butterfly center
+	}
+	else {return;} // no dest
 	// Note: we're picky about the dest here; many dests will be rejected, and we'll get into this code again in a later frame; this gives butterflies more time to explore
 	if (cur_dest == prev_dest) return; // same as previous dest, ignore
 	if (dot_product_ptv(dir, cur_dest, pos) < 0.0) return; // behind us, ignore
