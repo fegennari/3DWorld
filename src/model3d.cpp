@@ -1157,7 +1157,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			tmgr.bind_texture(tex_id);
 			has_binary_alpha = tmgr.has_binary_alpha(tex_id);
 		}
-		else {
+		else if (tex_id != -2) { // Note: the special tid of -2 is used to indicate the caller has already bound the correct texture, so we should not bind a texture here
 			select_texture((default_tid >= 0) ? default_tid : WHITE_TEX); // no texture specified - use white texture
 		}
 		if (use_bump_map()) {

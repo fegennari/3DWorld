@@ -432,7 +432,7 @@ struct material_t : public material_params_t {
 	bool use_spec_map() const;
 	unsigned get_gpu_mem() const {return (geom.get_gpu_mem() + geom_tan.get_gpu_mem());}
 	void finalize() {geom.finalize(); geom_tan.finalize();}
-	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
+	int get_render_texture() const {return ((d_tid >= 0 || a_tid < 0) ? d_tid : a_tid);} // return diffuse texture unless ambient texture is specified but diffuse texture is not
 	bool get_needs_alpha_test() const {return (alpha_tid >= 0 || might_have_alpha_comp);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || get_needs_alpha_test());}
 	void compute_area_per_tri();
