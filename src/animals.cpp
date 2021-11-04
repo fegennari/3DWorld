@@ -521,6 +521,13 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 		draw_verts(line_pts, GL_LINES);
 		draw_sphere_vbo(cs_dest, radius, 16, 0);
 	}
+	if (display_mode & 0x20) {
+		if (path.empty() || !dist_less_than(pos, path.back(), 2.0*radius)) {path.push_back(pos);}
+		select_texture(WHITE_TEX);
+		s.set_cur_color(WHITE);
+		for (auto const &p : path) {draw_sphere_vbo((p + get_camera_coord_space_xlate()), 0.25*radius, 8, 0);}
+	}
+	else {path.clear();}
 }
 
 
