@@ -278,7 +278,7 @@ public:
 	void draw(bool shadow_only, vector3d const &xlate=zero_vector);
 	void draw_fires(shader_t &s) const;
 	void leafy_plant_coll(unsigned plant_ix, float energy);
-	bool choose_butterfly_dest(point &dest, rand_gen_t &rgen) const;
+	bool choose_butterfly_dest(point &dest, sphere_t &plant_bsphere, rand_gen_t &rgen) const;
 	void write_plants_to_cobj_file(std::ostream &out) const;
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem() + leafy_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
 };

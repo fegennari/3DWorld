@@ -1472,7 +1472,7 @@ void scenery_group::leafy_plant_coll(unsigned plant_ix, float energy) {
 	leafy_plants[plant_ix].obj_collision(energy);
 }
 
-bool scenery_group::choose_butterfly_dest(point &dest, rand_gen_t &rgen) const {
+bool scenery_group::choose_butterfly_dest(point &dest, sphere_t &plant_bsphere, rand_gen_t &rgen) const {
 	unsigned const tot_plants(plants.size() + leafy_plants.size());
 	if (tot_plants == 0) return 0; // no plants
 	unsigned const plant_ix(rgen.rand() % tot_plants);
@@ -1481,11 +1481,13 @@ bool scenery_group::choose_butterfly_dest(point &dest, rand_gen_t &rgen) const {
 		s_plant const &plant(plants[plant_ix]);
 		if (plant.is_water_plant() || plant.get_pos().z < water_plane_z) return 0; // butterfly can't land on an underwater plant, try again next time
 		dest = plant.get_top_pt();
+		plant_bsphere = sphere_t(plant.get_pos(), plant.get_bsphere_radius());
 	}
 	else { // choose a leafy plant
 		leafy_plant const &plant(leafy_plants[plant_ix - plants.size()]);
 		if (plant.get_pos().z < water_plane_z) return 0; // butterfly can't land on an underwater plant, try again next time
 		dest = plant.get_top_pt();
+		plant_bsphere = sphere_t(plant.get_pos(), plant.get_bsphere_radius());
 	}
 	return 1;
 }

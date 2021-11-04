@@ -329,21 +329,22 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 
 	if (dest_valid) { // if we have a destination, bias our direction and altitude toward it based on how far away it is
 		vector3d dest_dir(cur_dest - pos);
-		float const freedom(dest_dir.xy_mag()/(100.0f*radius)); // freedom to choose altitude/dir based on horizontal distance to dest relative to radius
-		min_eq(min_alt_factor, freedom); // allow low altitude flight, assuming destination is near the ground
+		float const rel_xy_dist(dest_dir.xy_mag()/radius);
+		dest_alignment = 1.0 - min(0.005f*rel_xy_dist, 1.0f); // [0.0, 1.0]
+		min_eq(min_alt_factor, 0.1f*rel_xy_dist); // allow low altitude flight, assuming destination is near the ground
 		dest_dir.normalize();
 		float const prev_dp(dot_product(prev_dir, dest_dir)), cur_dp(dot_product(dir, dest_dir));
-		correction_factor = (1.0 - 0.5*min(0.5f*freedom, 1.0f)); // [0.5, 1.0]
+		float const min_dp(0.5 + 0.5*dest_alignment); // [0.5, 1.0]
 		
-		if (cur_dp < correction_factor) { // face us toward our destination
-			if (prev_dp >= correction_factor) {dir = prev_dir;} // revert to previous dir
+		if (cur_dp < min_dp) { // face us toward our destination
+			if (prev_dp >= min_dp) {dir = prev_dir;} // revert to previous dir
 			else { // slowly merge to dest_dir
-				float const blend(pow(0.1, delta_t)*correction_factor);
+				float const blend(pow(0.1, delta_t)*min_dp);
 				dir = ((1.0 - blend)*dir + blend*dest_dir).get_norm();
 			}
 		}
-		if (freedom < 4.0) { // getting within range, start to adjust altitude
-			alt_change = CLIP_TO_pm1(alt_change + 0.5f*correction_factor*SIGN(dest_dir.z));
+		if (dest_alignment > 0.5) { // getting within range, start to adjust altitude
+			alt_change = CLIP_TO_pm1(alt_change + 0.5f*(dest_alignment - 0.5f)*SIGN(dest_dir.z)*min(1.0f*fabs(dest_dir.z)/radius, 1.0f));
 		}
 	}
 	velocity = (vmag/dir.mag())*dir;
@@ -360,17 +361,21 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	min_eq(pos.z, max((pos.z - max_dz), (zmin_val + get_butterfly_max_alt())));
 	point cs_pos(get_camera_space_pos());
 	vector3d cnorm;
+	// skip tile scenery intersection check if close to the destination or within the dest plant bsphere
+	bool const skip_tile_int_check(dest_valid && (dist_less_than(pos, cur_dest, 2.0*radius) ||
+		(dest_bsphere.radius > 0.0 && dist_less_than(pos, dest_bsphere.pos, (coll_radius + dest_bsphere.radius)))));
 	
 	if (proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, 1, &cnorm, 0)) { // check cars but not building interiors
 		pos = cs_pos - get_camera_coord_space_xlate(); // back to world space
 		calc_reflection_angle(dir, dir, cnorm); // reflect
 		dir.normalize();
-		velocity   = dir*vmag; // change direction but preserve velocity
-		dest_valid = 0; // choose a new destination, in case this one is blocked by a building
+		velocity     = dir*vmag; // change direction but preserve velocity
+		dest_valid   = 0; // choose a new destination, in case this one is blocked by a building
+		explore_time = TICKS_PER_SECOND*rgen.rand_uniform(2.0, 5.0); // explore a bit more to get out from between the buildings
 	}
 	else if ((mesh_height < water_plane_z - 0.5*get_butterfly_max_alt()) || // over deep water
 		// check collision with tree or scenery; skip if close to the dest to avoid colliding with the dest object
-		(tile && (!dest_valid || !dist_less_than(pos, cur_dest, 2.0*radius)) && tile->check_sphere_collision(cs_pos, coll_radius)))
+		(!skip_tile_int_check && tile && tile->check_sphere_collision(cs_pos, coll_radius)))
 	{
 		dir.negate(); // just negate the direction because we don't have the collision normal
 		velocity.negate();
@@ -385,10 +390,10 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 }
 
 void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
-	if (explore_time > 0.0) { // roaming
+	if (explore_time > 0.0) { // exploring
 		explore_time -= fticks;
-		if (explore_time > 0.0) return; // still roaming
-		explore_time = 0.0; // done roaming
+		if (explore_time > 0.0) return; // still exploring
+		explore_time = 0.0; // done exploring, find a destination
 	}
 	if (dest_valid) {
 		if (dist_less_than(pos, cur_dest, radius)) { // at destination
@@ -399,10 +404,11 @@ void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
 		}
 		return; // no dest update
 	}
+	dest_bsphere.radius = 0.0;
 	if (rgen.rand_float() < 0.9) return; // only look for a destination 10% of the time as an optimization
 	bool have_cand_dest(0);
 	if (have_cities() && rgen.rand_bool() && choose_pt_in_city_park(pos, cur_dest, rgen)) {have_cand_dest = 1;} // choose a city park
-	else if (tile && tile->choose_butterfly_dest(cur_dest, rgen)) {have_cand_dest = 1;} // choose a new destination within this tile
+	else if (tile && tile->choose_butterfly_dest(cur_dest, dest_bsphere, rgen)) {have_cand_dest = 1;} // choose a new destination within this tile
 	if (!have_cand_dest) return;
 	// Note: we're picky about the dest here; many dests will be rejected, and we'll get into this code again in a later frame; this gives butterflies more time to explore
 	if (cur_dest == prev_dest) return; // same as previous dest, ignore
@@ -500,7 +506,7 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, draw_body, color);
 
 	if (debug_dest) { // debug draw line to destination
-		colorRGBA const color(blend_color(RED, BLUE, (2.0*correction_factor - 1.0), 0));
+		colorRGBA const color(blend_color(RED, BLUE, dest_alignment, 0));
 		point const cs_dest(get_camera_space_dest());
 		vector<vert_norm_color> line_pts;
 		line_pts.emplace_back(pos_,    plus_z, color);

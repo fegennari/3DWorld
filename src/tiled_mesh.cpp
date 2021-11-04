@@ -1502,10 +1502,12 @@ unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 	return flowers.size();
 }
 
-bool tile_t::choose_butterfly_dest(point &dest, rand_gen_t &rgen) const {
+bool tile_t::choose_butterfly_dest(point &dest, sphere_t &plant_bsphere, rand_gen_t &rgen) const {
 	if (!scenery.generated) return 0; // no scenery
-	if (!scenery.choose_butterfly_dest(dest, rgen)) return 0;
-	dest += scenery_off.get_xlate() - get_camera_coord_space_xlate(); // convert to world space
+	if (!scenery.choose_butterfly_dest(dest, plant_bsphere, rgen)) return 0;
+	vector3d const xlate(scenery_off.get_xlate() - get_camera_coord_space_xlate());
+	dest += xlate; // convert to world space
+	plant_bsphere.pos += xlate;
 	return 1;
 }
 

@@ -376,7 +376,7 @@ public:
 	void pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const;
 	unsigned draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, bool enable_tess, int lt_loc);
 	unsigned draw_flowers(shader_t &s, bool use_cloud_shadows);
-	bool choose_butterfly_dest(point &dest, rand_gen_t &rgen) const;
+	bool choose_butterfly_dest(point &dest, sphere_t &plant_bsphere, rand_gen_t &rgen) const;
 
 	// *** clouds ***
 	void get_cloud_draw_list(cloud_draw_list_t &clouds_to_draw) const {clouds.get_draw_list(clouds_to_draw, mzmin, mzmax);}

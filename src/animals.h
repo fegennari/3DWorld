@@ -71,11 +71,12 @@ public:
 class butterfly_t : public animal_t {
 
 	bool dest_valid;
-	float time, rest_time, explore_time, speed_factor, rot_rate, alt_change, fwd_accel, rot_accel, alt_accel, correction_factor;
+	float time, rest_time, explore_time, speed_factor, rot_rate, alt_change, fwd_accel, rot_accel, alt_accel, dest_alignment;
 	point cur_dest, prev_dest;
+	sphere_t dest_bsphere;
 public:
 	butterfly_t() : dest_valid(0), time(0.0), rest_time(0.0), explore_time(0.0), speed_factor(1.0), rot_rate(0.0),
-		alt_change(0.0), fwd_accel(0.0), rot_accel(0.0), alt_accel(0.0), correction_factor(0.0) {}
+		alt_change(0.0), fwd_accel(0.0), rot_accel(0.0), alt_accel(0.0), dest_alignment(0.0) {}
 	static bool type_enabled();
 	static bool can_place_in_tile(tile_t const *const tile);
 	point get_camera_space_dest() const {return (cur_dest + get_camera_coord_space_xlate());}
