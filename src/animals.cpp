@@ -56,7 +56,7 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		return id + 1;
 	}
 	void draw_model(unsigned id, shader_t &s, vector3d const &pos, float radius, vector3d const &dir, rotation_t const &local_rotate,
-		vector3d const &model_center_offset, colorRGBA const &color=WHITE, bool use_custom_tid=0, bool is_shadow_pass=0, float lod_mult=1.0)
+		bool cancel_local_translate, colorRGBA const &color=WHITE, bool use_custom_tid=0, bool is_shadow_pass=0, float lod_mult=1.0)
 	{
 		if (color != WHITE) {s.add_uniform_color("color_modulate", color);}
 		model3d &model(get_model(id));
@@ -64,7 +64,6 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		cube_t const &bcube(model.get_bcube());
 		float const bcube_radius(0.5*bcube.max_len()), sz_scale(radius / bcube_radius);
 		float const lod_dist(p2p_dist(get_camera_pos(), pos));
-		vector3d const model_xlate(model_center_offset/sz_scale - bcube.get_cube_center());
 		bool const camera_pdu_valid(camera_pdu.valid);
 		camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 		lod_mult *= sz_scale/model_mat_lod_thresh; // model_mat_lod_thresh doesn't apply here, so divide to cancel it out
@@ -76,6 +75,7 @@ class animal_model_loader_t : public model3ds { // currently for fish only
 		rotate_to_plus_x(dir);
 		local_rotate.apply_gl();
 		uniform_scale(sz_scale);
+		if (cancel_local_translate) {translate_to(-bcube.get_cube_center());}
 		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, 3, model.get_unbound_material(), rotation_t(), nullptr, nullptr, 0, lod_mult, lod_dist, 0, 1); // scaled
 		if (use_custom_tid) {model.set_texture_for_material(custom_tex_mat_id, orig_tid);} // restore original value
 		if (color != WHITE) {s.add_uniform_color("color_modulate", WHITE);} // reset
@@ -103,11 +103,10 @@ public:
 	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
 		rotation_t const local_rotate(plus_y, -45.0); // fish model is angled 45 degree upward, so need to rotate it back down
 		// invert dir - fish model faces in -x, and we want it to be in +x
-		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, all_zeros, color); // not shadow pass
+		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, 1, color); // not shadow pass, cancel local translate
 	}
 	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float rot_time, bool draw_body, colorRGBA const &color_in=WHITE) {
 		float rot_angle(45.0f*(sin(5.0*TWO_PI*rot_time) + 0.5)); // 5 flaps per second; more positive angle
-		vector3d const model_xlate(0.0, 0.37*radius, 0.0); // translate so that the body centerline is at 0 in model coordinates, so up is Y
 		colorRGBA const color(color_in, 1.0); // make alpha 1.0
 		bool const use_custom_tid(color_in != WHITE);
 
@@ -119,11 +118,11 @@ public:
 			rotation_t const wing_rotate(plus_x, (90.0f + wing_sign*rot_angle));
 			// this isn't perfect because in reality there are two wings on each side, and each of the four wings rotates about a slightly different point;
 			// the result has a bit of clipping of wings through the body and each other, but maybe it's close enough
-			draw_model(bfly_info[n].id, s, pos, radius, dir, wing_rotate, model_xlate, color, use_custom_tid);
+			draw_model(bfly_info[n].id, s, pos, radius, dir, wing_rotate, 0, color, use_custom_tid);
 		}
 		if (draw_body) {
 			rotation_t const body_rotate(plus_x, 90.0); // model has up=y, and we want up=z
-			draw_model(bfly_info[BF_BODY].id, s, pos, radius, dir, body_rotate, model_xlate, WHITE, 0, 0, 1.5); // not shadow pass, custom lod_mult for legs
+			draw_model(bfly_info[BF_BODY].id, s, pos, radius, dir, body_rotate, 0, WHITE, 0, 0, 1.5); // not shadow pass, custom lod_mult for legs
 		}
 	}
 };
