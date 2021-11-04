@@ -10,14 +10,14 @@
 
 float const FISH_RADIUS = 0.05;
 float const BIRD_RADIUS = 0.1;
-float const BFLY_RADIUS = 0.01;
+float const BFLY_RADIUS = 0.015;
 float const FISH_SPEED  = 0.002;
 float const BIRD_SPEED  = 0.05;
-float const BFLY_SPEED  = 0.003;
+float const BFLY_SPEED  = 0.0045;
 
 extern bool water_is_lava;
 extern int window_width, animate2, display_mode;
-extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height, model_mat_lod_thresh, zmax_est;
+extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height, model_mat_lod_thresh, zmax_est, tree_scale;
 extern colorRGBA cur_fog_color;
 
 
@@ -188,8 +188,8 @@ bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const
 	if (mesh_height < water_plane_z) return 0; // no butterflies over water
 	if (get_rel_height(mesh_height, -zmax_est, zmax_est) > 0.6) return 0; // maybe not necessary, since we know the tile must contain some grass
 	pos.z   = mesh_height + rgen.rand_uniform(get_butterfly_min_alt(), get_butterfly_max_alt()); // random amount above the mesh
-	radius  = BFLY_RADIUS*rgen.rand_uniform(0.8, 1.0);
-	gen_dir_vel(rgen, BFLY_SPEED);
+	radius  = BFLY_RADIUS*rgen.rand_uniform(0.8, 1.0)/tree_scale; // scale with tree size
+	gen_dir_vel(rgen, BFLY_SPEED/tree_scale);
 	color   = WHITE; // textured, not colored
 	time    = rgen.rand_uniform(0.0, 100.0); // start at random time offsets
 	enabled = 1;
