@@ -1678,7 +1678,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflec
 	}
 
 	// render geom that was not bound to a material
-	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0 && (trans_op_mask & 1)) { // enabled, not in bump map only pass; assume opaque
+	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0 && (trans_op_mask & 1) && !unbound_geom.empty()) { // enabled, not in bump map only pass; assume opaque
 		if (is_normal_pass) { // cur_ub_tid texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
 			assert(unbound_mat.tid >= 0);
 			select_texture(unbound_mat.tid);
