@@ -202,6 +202,7 @@ bool butterfly_t::gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const
 	color   = colors[rgen.rand()%NUM_COLORS];
 	//color   = WHITE; // textured, not colored
 	time    = rgen.rand_uniform(0.0, 100.0); // start at random time offsets
+	gender  = rgen.rand_bool(); // 50% male, 50% female
 	enabled = 1;
 	return 1;
 }
@@ -421,6 +422,7 @@ void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
 	}
 	dest_bsphere.radius = 0.0;
 	if (rgen.rand_float() < 0.9) return; // only look for a destination 10% of the time as an optimization
+	// TODO: find a mate of the opposite gender?
 	if (have_cities() && rgen.rand_bool() && choose_pt_in_city_park(pos, cur_dest, rgen)) {} // choose a city park
 	else if (tile && tile->choose_butterfly_dest(cur_dest, dest_bsphere, rgen)) { // choose a new destination within this tile
 		cur_dest.z -= 0.5*radius; // shift slightly downward since the body is below the butterfly center
@@ -529,13 +531,16 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 		line_pts.emplace_back(cs_dest, plus_z, color);
 		select_texture(WHITE_TEX);
 		draw_verts(line_pts, GL_LINES);
-		draw_sphere_vbo(cs_dest, radius, 16, 0);
+		s.set_cur_color(GREEN);
+		draw_sphere_vbo(cs_dest, 0.5*radius, 16, 0);
 	}
-	if (display_mode & 0x20) {
+	if (display_mode & 0x20) { // debug draw path as spheres
 		if (path.empty() || !dist_less_than(pos, path.back(), 2.0*radius)) {path.push_back(pos);}
 		select_texture(WHITE_TEX);
 		s.set_cur_color(WHITE);
+		begin_sphere_draw(0); // untextured
 		for (auto const &p : path) {draw_sphere_vbo((p + get_camera_coord_space_xlate()), 0.25*radius, 8, 0);}
+		end_sphere_draw();
 	}
 	else {path.clear();}
 }
@@ -576,12 +581,6 @@ template<typename A> void animal_group_t<A>::remove(unsigned ix) {
 	assert(ix < this->size());
 	std::swap(this->operator[](ix), this->back());
 	this->pop_back();
-}
-
-template<typename A> void animal_group_t<A>::remove_disabled() {
-	auto i(this->begin()), o(i);
-	for (; i != this->end(); ++i) {if (i->is_enabled()) {*(o++) = *i;}}
-	this->erase(o, this->end());
 }
 
 template<typename A> void animal_group_t<A>::draw_animals(shader_t &s, tile_t const *const tile) const {

@@ -70,13 +70,13 @@ public:
 
 class butterfly_t : public animal_t {
 
-	bool dest_valid;
+	bool dest_valid, gender; // 0=male, 1=female
 	float time, rest_time, explore_time, speed_factor, rot_rate, alt_change, fwd_accel, rot_accel, alt_accel, dest_alignment;
 	point cur_dest, prev_dest;
 	sphere_t dest_bsphere;
 	mutable vector<point> path;
 public:
-	butterfly_t() : dest_valid(0), time(0.0), rest_time(0.0), explore_time(0.0), speed_factor(1.0), rot_rate(0.0),
+	butterfly_t() : dest_valid(0), gender(0), time(0.0), rest_time(0.0), explore_time(0.0), speed_factor(1.0), rot_rate(0.0),
 		alt_change(0.0), fwd_accel(0.0), rot_accel(0.0), alt_accel(0.0), dest_alignment(0.0) {}
 	static bool type_enabled();
 	static bool can_place_in_tile(tile_t const *const tile);
@@ -104,7 +104,6 @@ public:
 	void gen(unsigned num, cube_t const &range, tile_t const *const tile);
 	void update(tile_t const *const tile);
 	void remove(unsigned ix);
-	void remove_disabled();
 	void draw_animals(shader_t &s, tile_t const *const tile) const;
 	void clear() {vector<A>::clear(); generated = 0;}
 };
