@@ -554,7 +554,7 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 	if (!enabled) return;
 	point const pos_(get_camera_space_pos());
 	bool const visible(is_visible(pos_, 0.4));
-	bool const debug_lines(dest_valid && debug_animal_draw()), debug_spheres(display_mode & 0x20);
+	bool const debug_lines(debug_animal_draw()), debug_spheres(display_mode & 0x20);
 	if (!debug_lines && !debug_spheres && !visible) return;
 	
 	if (!s.is_setup()) {
@@ -570,18 +570,25 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 		animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, draw_body, color);
 	}
 	if (debug_lines) { // debug draw line to destination
-		colorRGBA const color(blend_color((is_mating ? YELLOW : RED), (is_mating ? ORANGE : BLUE), dest_alignment, 0));
-		point const cs_dest(get_camera_space_dest());
 		vector<vert_norm_color> line_pts;
-		line_pts.emplace_back(pos_,    plus_z, color);
-		line_pts.emplace_back(cs_dest, plus_z, color);
 		select_texture(WHITE_TEX);
-		draw_verts(line_pts, GL_LINES);
 
-		if (!is_mating) { // draw destination point
-			s.set_cur_color(GREEN);
-			draw_sphere_vbo(cs_dest, 0.5*radius, 16, 0);
+		if (dest_valid) {
+			colorRGBA const color(blend_color((is_mating ? YELLOW : RED), (is_mating ? ORANGE : BLUE), dest_alignment, 0));
+			point const cs_dest(get_camera_space_dest());
+			line_pts.emplace_back(pos_,    plus_z, color);
+			line_pts.emplace_back(cs_dest, plus_z, color);
+
+			if (!is_mating) { // draw destination point
+				s.set_cur_color(GREEN);
+				draw_sphere_vbo(cs_dest, 0.5*radius, 16, 0);
+			}
 		}
+		if (rest_time == 0) { // not resting; draw line pointing in current direction
+			line_pts.emplace_back( pos_, plus_z, GREEN);
+			line_pts.emplace_back((pos_ + 4.0*radius*dir), plus_z, GREEN);
+		}
+		draw_verts(line_pts, GL_LINES);
 	}
 	if (debug_spheres && distance_check(pos_, 1.0)) { // debug draw path as spheres
 		if (path.empty() || !dist_less_than(pos, path.back(), 2.0*radius)) {path.push_back(pos);}
