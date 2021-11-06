@@ -1712,6 +1712,7 @@ void tile_t::update_animals() {
 			bflies.gen(num_bflies_per_tile, get_mesh_bcube_global(), this);
 		}
 		else {
+			bflies.run_mating(this);
 			bflies.update(this);
 			propagate_animals_to_neighbor_tiles(bflies);
 		}

@@ -24,7 +24,8 @@ extern colorRGBA cur_fog_color;
 void do_xy_rotate_normal(float rot_sin, float rot_cos, point &pos);
 bool choose_pt_in_city_park(point const &pos, point &park_pos, rand_gen_t &rgen);
 
-bool birds_active() {return (light_factor >= 0.4);} // birds are only active whe the sun is out
+bool birds_active     () {return (light_factor >= 0.4);} // birds are only active whe the sun is out
+bool debug_animal_draw() {return (display_mode & 0x10);}
 
 enum {BF_BODY=0, BF_LWING, BF_RWING, BF_NUM_PARTS};
 
@@ -272,6 +273,15 @@ void bird_t::apply_force_xy_const_vel(vector3d const &force) {
 	flocking = 1;
 }
 
+void get_adj_tiles(tile_t const *const tile, tile_t *adj_tiles[9]) {
+	tile_xy_pair const tp(tile->get_tile_xy_pair());
+	unsigned ix(0);
+
+	for (int dy = -1; dy <= 1; ++dy) {
+		for (int dx = -1; dx <= 1; ++dx) {adj_tiles[ix++] = get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy));}
+	}
+}
+
 void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 
 	// see https://www.blog.drewcutchins.com/blog/2018-8-16-flocking
@@ -279,13 +289,9 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 	float const neighbor_dist(0.5*get_tile_width()), nd_sq(neighbor_dist*neighbor_dist);
 	float const sep_dist_sq(0.2*nd_sq), cohesion_dist_sq(0.3*nd_sq), align_dist_sq(0.25*nd_sq);
 	float const mass(100.0), sep_strength(0.05), cohesion_strength(0.05), align_strength(0.5);
-	tile_xy_pair const tp(tile->get_tile_xy_pair());
 	tile_t *adj_tiles[9] = {0};
-	unsigned ix(0);
+	get_adj_tiles(tile, adj_tiles);
 
-	for (int dy = -1; dy <= 1; ++dy) {
-		for (int dx = -1; dx <= 1; ++dx) {adj_tiles[ix++] = get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy));}
-	}
 	for (auto i = this->begin(); i != this->end(); ++i) {
 		if (!i->is_enabled()) continue;
 		vector3d avg_pos(zero_vector), avg_vel(zero_vector), tot_force(zero_vector);
@@ -324,6 +330,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		alt_change   = 0.5; // make sure we lift off into the air
 		explore_time = TICKS_PER_SECOND*rgen.rand_uniform(15.0, 30.0); // free roam for 15-30s; this allows us to cross into a different tile
 	}
+	mate_time = max(0.0f, (mate_time - fticks));
 	point const prev_pos(pos), prev_cs_pos(get_camera_space_pos());
 	float const update_factor(0.01f*fticks);
 	update_accel(fwd_accel, rgen);
@@ -379,7 +386,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	point cs_pos(get_camera_space_pos());
 	vector3d cnorm;
 	// skip tile scenery intersection check if close to the destination or within the dest plant bsphere
-	bool const skip_tile_int_check(dest_valid && (dist_less_than(pos, cur_dest, 2.0*radius) ||
+	bool const skip_tile_int_check(dest_valid && !is_mating && (dist_less_than(pos, cur_dest, 2.0*radius) ||
 		(dest_bsphere.radius > 0.0 && dist_less_than(pos, dest_bsphere.pos, (coll_radius + dest_bsphere.radius)))));
 	
 	if (proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, 1, &cnorm, 0)) { // check cars but not building interiors
@@ -412,17 +419,17 @@ void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
 		explore_time = 0.0; // done exploring, find a destination
 	}
 	if (dest_valid) {
-		if (dist_less_than(pos, cur_dest, radius)) { // at destination
-			dest_valid = 0;
+		if (dist_less_than(pos, cur_dest, radius)) { // at destination, including mating
+			if (is_mating) {mate_time = TICKS_PER_SECOND*rgen.rand_uniform(15.0, 30.0);} // done mating, wait before mating again
+			else           {rest_time = TICKS_PER_SECOND*rgen.rand_uniform( 5.0, 10.0);} // rest for 5-10s if not mating
 			prev_dest  = cur_dest;
 			cur_dest   = pos;
-			rest_time  = TICKS_PER_SECOND*rgen.rand_uniform(5.0, 10.0); // rest for 5-10s
+			dest_valid = is_mating = 0;
 		}
 		return; // no dest update
 	}
 	dest_bsphere.radius = 0.0;
 	if (rgen.rand_float() < 0.9) return; // only look for a destination 10% of the time as an optimization
-	// TODO: find a mate of the opposite gender?
 	if (have_cities() && rgen.rand_bool() && choose_pt_in_city_park(pos, cur_dest, rgen)) {} // choose a city park
 	else if (tile && tile->choose_butterfly_dest(cur_dest, dest_bsphere, rgen)) { // choose a new destination within this tile
 		cur_dest.z -= 0.5*radius; // shift slightly downward since the body is below the butterfly center
@@ -435,6 +442,44 @@ void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
 	int xpos(0), ypos(0); // unused
 	if (tile && tile->line_intersect_mesh(get_camera_space_pos(), get_camera_space_dest(), t, xpos, ypos, 0)) return; // blocked by mesh; exclude pine trees
 	dest_valid = 1; // success
+}
+
+bool butterfly_t::can_mate_with(butterfly_t const &b) const {return (gender != b.gender && color == b.color);} // different gender and same color
+
+void vect_butterfly_t::run_mating(tile_t const *const tile) {
+	tile_t *adj_tiles[9] = {0};
+	get_adj_tiles(tile, adj_tiles);
+	float const mate_dmax(0.75f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // 0.75 tile
+
+	for (auto i = this->begin(); i != this->end(); ++i) {
+		if (!i->is_enabled() || i->mate_time > 0.0 || i->rest_time > 0) continue; // skip if waiting to mate or resting
+		if (!debug_animal_draw() && rgen.rand_float() < 0.9) continue; // only run 10% of the time; skip this optimization for smooth debug draw
+		if (i->is_mating) {i->dest_valid = i->is_mating = 0;} // reset for this iteration
+		float dmin_sq(mate_dmax*mate_dmax);
+
+		for (unsigned adj_ix = 0; adj_ix < 9; ++adj_ix) {
+			tile_t *const adj_tile(adj_tiles[adj_ix]);
+			if (!adj_tile) continue;
+			vect_butterfly_t &bflies(adj_tile->get_bflies());
+
+			for (auto j = bflies.begin(); j != bflies.end(); ++j) {
+				if (!j->is_enabled() || i == j || !i->can_mate_with(*j)) continue; // skip self or same gender
+				if (j->rest_time > 0) continue; // skip another butterfly resting on a plant
+				float const dxy_sq(p2p_dist_xy_sq(i->pos, j->pos)); // Note: ignores zval
+				if (dxy_sq > dmin_sq) continue; // not closer
+				if ((j->cur_dest != i->pos) && dot_product_ptv(i->dir, j->pos, i->pos) < 0.0) continue; // behind us, ignore unless this one wants to mate us (works half the time)
+				point const cs_pos(i->get_camera_space_pos()), cs_dest(j->get_camera_space_pos());
+				float t(0.0); // unused
+				int xpos(0), ypos(0); // unused
+				// check both tiles (approximate)
+				if (                        tile->line_intersect_mesh(cs_pos, cs_dest, t, xpos, ypos, 0)) continue; // blocked by mesh; exclude pine trees
+				if (adj_tile != tile && adj_tile->line_intersect_mesh(cs_pos, cs_dest, t, xpos, ypos, 0)) continue; // blocked by mesh; exclude pine trees
+				i->cur_dest  = j->pos;
+				i->is_mating = i->dest_valid = 1;
+				dmin_sq      = dxy_sq;
+			} // for j
+		} // for adj_ix
+	} // for i
 }
 
 
@@ -504,37 +549,41 @@ void bird_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const
 	bind_vbo(0);
 }
 
-bool debug_animal_draw() {return (display_mode & 0x10);}
-
 void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const {
 
-	bool const debug_dest(dest_valid && debug_animal_draw()); // TESTING
+	if (!enabled) return;
 	point const pos_(get_camera_space_pos());
-	if (!debug_dest && !is_visible(pos_, 0.4)) return;
+	bool const visible(is_visible(pos_, 0.4));
+	bool const debug_lines(dest_valid && debug_animal_draw()), debug_spheres(display_mode & 0x20);
+	if (!debug_lines && !debug_spheres && !visible) return;
 	
 	if (!s.is_setup()) {
 		s.set_prefix("#define TWO_SIDED_LIGHTING", 1); // FS
 		tile_draw_t::tree_branch_shader_setup(s, shadow_map_enabled(), 0, 0, 0);
 	}
-	if (first_draw && tile != nullptr) {
-		tile->bind_and_setup_shadow_map(s);
-		first_draw = 0;
+	if (visible) { // draw butterfly
+		if (first_draw && tile != nullptr) {
+			tile->bind_and_setup_shadow_map(s);
+			first_draw = 0;
+		}
+		bool const draw_body(distance_check(pos_, 0.15)); // draw body if close enough to the player
+		animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, draw_body, color);
 	}
-	bool const draw_body(distance_check(pos_, 0.15)); // draw body if close enough to the player
-	animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, draw_body, color);
-
-	if (debug_dest) { // debug draw line to destination
-		colorRGBA const color(blend_color(RED, BLUE, dest_alignment, 0));
+	if (debug_lines) { // debug draw line to destination
+		colorRGBA const color(blend_color((is_mating ? YELLOW : RED), (is_mating ? ORANGE : BLUE), dest_alignment, 0));
 		point const cs_dest(get_camera_space_dest());
 		vector<vert_norm_color> line_pts;
 		line_pts.emplace_back(pos_,    plus_z, color);
 		line_pts.emplace_back(cs_dest, plus_z, color);
 		select_texture(WHITE_TEX);
 		draw_verts(line_pts, GL_LINES);
-		s.set_cur_color(GREEN);
-		draw_sphere_vbo(cs_dest, 0.5*radius, 16, 0);
+
+		if (!is_mating) { // draw destination point
+			s.set_cur_color(GREEN);
+			draw_sphere_vbo(cs_dest, 0.5*radius, 16, 0);
+		}
 	}
-	if (display_mode & 0x20) { // debug draw path as spheres
+	if (debug_spheres && distance_check(pos_, 1.0)) { // debug draw path as spheres
 		if (path.empty() || !dist_less_than(pos, path.back(), 2.0*radius)) {path.push_back(pos);}
 		select_texture(WHITE_TEX);
 		s.set_cur_color(WHITE);

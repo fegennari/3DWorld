@@ -68,21 +68,26 @@ public:
 	void draw(shader_t &s, tile_t const *const tile, bool &first_draw) const;
 };
 
+struct vect_butterfly_t;
+
 class butterfly_t : public animal_t {
 
-	bool dest_valid, gender; // 0=male, 1=female
-	float time, rest_time, explore_time, speed_factor, rot_rate, alt_change, fwd_accel, rot_accel, alt_accel, dest_alignment;
+	bool dest_valid, is_mating, gender; // 0=male, 1=female
+	float time, rest_time, mate_time, explore_time, speed_factor, rot_rate, alt_change, fwd_accel, rot_accel, alt_accel, dest_alignment;
 	point cur_dest, prev_dest;
 	sphere_t dest_bsphere;
 	mutable vector<point> path;
+
+	void update_dest(rand_gen_t &rgen, tile_t const *const tile);
 public:
-	butterfly_t() : dest_valid(0), gender(0), time(0.0), rest_time(0.0), explore_time(0.0), speed_factor(1.0), rot_rate(0.0),
-		alt_change(0.0), fwd_accel(0.0), rot_accel(0.0), alt_accel(0.0), dest_alignment(0.0) {}
+	friend struct vect_butterfly_t;
+	butterfly_t() : dest_valid(0), is_mating(0), gender(0), time(0.0), rest_time(0.0), mate_time(0.0), explore_time(0.0), speed_factor(1.0),
+		rot_rate(0.0), alt_change(0.0), fwd_accel(0.0), rot_accel(0.0), alt_accel(0.0), dest_alignment(0.0) {}
 	static bool type_enabled();
 	static bool can_place_in_tile(tile_t const *const tile);
+	bool can_mate_with(butterfly_t const &b) const;
 	point get_camera_space_dest() const {return (cur_dest + get_camera_coord_space_xlate());}
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);
-	void update_dest(rand_gen_t &rgen, tile_t const *const tile);
 	bool update(rand_gen_t &rgen, tile_t const *const tile);
 	void draw(shader_t &s, tile_t const *const tile, bool &first_draw) const;
 };
@@ -114,7 +119,9 @@ struct vect_bird_t : public animal_group_t<bird_t> {
 	void flock(tile_t const *const tile);
 };
 
-struct vect_butterfly_t : public animal_group_t<butterfly_t> {};
+struct vect_butterfly_t : public animal_group_t<butterfly_t> {
+	void run_mating(tile_t const *const tile);
+};
 
 bool birds_active();
 

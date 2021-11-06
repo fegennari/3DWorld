@@ -228,7 +228,8 @@ public:
 	void set_last_occluded(bool val) {last_occluded = val; last_occluded_frame = frame_counter;}
 	bool was_last_occluded  () const {return (last_occluded_frame == frame_counter &&  last_occluded);}
 	bool was_last_unoccluded() const {return (last_occluded_frame == frame_counter && !last_occluded);}
-	vect_bird_t &get_birds() {return birds;} // for flocking
+	vect_bird_t      &get_birds () {return birds; } // for flocking
+	vect_butterfly_t &get_bflies() {return bflies;} // for mating
 
 	// all of these are in the current camera's local coordinate space (based on xoff/yoff/xoff2/yoff2)
 	point get_center() const {
