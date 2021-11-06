@@ -452,7 +452,7 @@ void vect_butterfly_t::run_mating(tile_t const *const tile) {
 	float const mate_dmax(0.75f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // 0.75 tile
 
 	for (auto i = this->begin(); i != this->end(); ++i) {
-		if (!i->is_enabled() || i->mate_time > 0.0 || i->rest_time > 0) continue; // skip if waiting to mate or resting
+		if (!i->is_enabled() || i->mate_time > 0.0 || i->rest_time > 0 || i->explore_time > 0) continue; // skip if waiting to mate, resting, or exploring
 		if (!debug_animal_draw() && rgen.rand_float() < 0.9) continue; // only run 10% of the time; skip this optimization for smooth debug draw
 		if (i->is_mating) {i->dest_valid = i->is_mating = 0;} // reset for this iteration
 		float dmin_sq(mate_dmax*mate_dmax);
