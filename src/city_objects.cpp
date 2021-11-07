@@ -848,11 +848,12 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		// place swimming pools
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
 		if (rgen.rand_float() < 0.1) continue; // add pools 90% of the time
+		bcubes.clear();
+		if (have_buildings()) {get_building_bcubes(*i, bcubes);}
+		if (bcubes.empty()) continue; // no house, skip adding swimming pool
+		assert(bcubes.size() == 1); // there should be exactly one building/house in this sub-plot
 		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
 		bool const above_ground(rgen.rand_bool());
-		bcubes.clear();
-		get_building_bcubes(*i, bcubes);
-		assert(bcubes.size() == 1); // there should be exactly one building/house in this sub-plot
 		cube_t const &house(bcubes.front());
 		cube_t pool_area(*i);
 		pool_area.d[dim][dir] = house.d[dim][!dir]; // limit the pool to the back yard
