@@ -312,7 +312,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dis
 	if (above_ground) { // cylindrical; bcube should be square in XY
 		point const camera_bs(camera_pdu.pos - dstate.xlate);
 		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc());
-		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, bcube.closest_pt(camera_bs))))));
+		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
 
 		if (dstate.pass_ix == 2) { // draw sides
 			dstate.s.set_cur_color(color);
@@ -349,6 +349,7 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dis
 }
 bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (above_ground) {
+		if (!sphere_cube_intersect((pos_ - xlate), radius_, bcube)) return 0; // optimization
 		float const radius(get_radius()), xc(bcube.xc() + xlate.x), yc(bcube.yc() + xlate.y), z1(bcube.z1() + xlate.z), z2(bcube.z2() + xlate.z);
 		return sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw(point(xc, yc, z1), point(xc, yc, z2), radius, radius), cnorm); // checks sides
 	}
