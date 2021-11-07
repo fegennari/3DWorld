@@ -176,6 +176,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 		float const pos_delta(pos_max - pos_min), slot_spacing(pos_delta/63.0);
 		uint64_t slots_used(0); // divide the space into 64 slots, initially all empty
 		bool const use_model(building_obj_model_loader.is_model_valid(OBJ_MODEL_CLOTHES));
+		bool const mix_hangers(rgen.rand_bool());
 
 		for (unsigned i = 0; i < num_hangers; ++i) { // since hangers are so narrow, we probably don't need to check for intersections
 			unsigned slot_ix(0);
@@ -217,6 +218,7 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 				}
 				objects.push_back(clothes);
 			}
+			if (mix_hangers && (rgen.rand()&7) == 0) {hanger.item_flags = rgen.rand();} // switch to a new hanger type occasionally
 		} // for i
 		objects[hanger_rod_ix].item_flags = uint16_t(objects.size() - hanger_rod_ix); // number of objects hanging on the hanger rod, including hangers and shirts
 	}
