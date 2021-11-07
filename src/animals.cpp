@@ -394,7 +394,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		calc_reflection_angle(dir, dir, cnorm); // reflect
 		dir.normalize();
 		velocity     = dir*vmag; // change direction but preserve velocity
-		dest_valid   = 0; // choose a new destination, in case this one is blocked by a building
+		dest_valid   = is_mating = 0; // choose a new destination, in case this one is blocked by a building
 		explore_time = TICKS_PER_SECOND*rgen.rand_uniform(2.0, 5.0); // explore a bit more to get out from between the buildings
 	}
 	else if ((mesh_height < water_plane_z - 0.5*get_butterfly_max_alt()) || // over deep water
@@ -561,11 +561,11 @@ void butterfly_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) 
 		s.set_prefix("#define TWO_SIDED_LIGHTING", 1); // FS
 		tile_draw_t::tree_branch_shader_setup(s, shadow_map_enabled(), 0, 0, 0);
 	}
+	if (first_draw && tile != nullptr) {
+		tile->bind_and_setup_shadow_map(s);
+		first_draw = 0;
+	}
 	if (visible) { // draw butterfly
-		if (first_draw && tile != nullptr) {
-			tile->bind_and_setup_shadow_map(s);
-			first_draw = 0;
-		}
 		bool const draw_body(distance_check(pos_, 0.15)); // draw body if close enough to the player
 		animal_model_loader.draw_butterfly_model(s, pos_, radius, dir, time/TICKS_PER_SECOND, draw_body, color);
 	}
