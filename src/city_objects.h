@@ -65,6 +65,16 @@ struct swimming_pool_t : public city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
+struct power_pole_t : public city_obj_t { // Note: pos is the center point on the ground and radius is the pole radius; not a bsphere
+	bool dim; // direction the wires run
+
+	power_pole_t(point const &pos_, float radius_, float height, bool dim_);
+	float get_bar_extend() const {return 8.0*radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
+};
+
 class city_obj_groups_t : public vector<cube_with_ix_t> {
 	map<uint64_t, vector<unsigned> > by_tile;
 public:
@@ -82,7 +92,8 @@ private:
 	vector<fire_hydrant_t> fire_hydrants;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
-	city_obj_groups_t bench_groups, planter_groups, fire_hydrant_groups, divider_groups, pool_groups; // index is last object in group
+	vector<power_pole_t> ppoles;
+	city_obj_groups_t bench_groups, planter_groups, fire_hydrant_groups, divider_groups, pool_groups, ppole_groups; // index is last object in group
 	quad_batch_draw qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
 	unsigned num_spaces, filled_spaces;
@@ -98,7 +109,7 @@ private:
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
-		draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd=0);
+		draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw=0);
 public:
 	city_obj_placer_t() : num_spaces(0), filled_spaces(0), plot_subdiv_sz(0.0) {}
 	bool has_plot_dividers() const {return !dividers.empty();}

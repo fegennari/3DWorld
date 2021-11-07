@@ -357,6 +357,33 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 1, 0, cnorm);
 }
 
+power_pole_t::power_pole_t(point const &pos_, float radius_, float height, bool dim_) : city_obj_t(pos_, radius_), dim(dim_) {
+	bcube.set_from_point(pos);
+	bcube.z2() += height;
+	bcube.expand_in_dim( dim, radius);
+	bcube.expand_in_dim(!dim, get_bar_extend());
+}
+/*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_texture(WOOD2_TEX);}
+}
+void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
+	point const camera_bs(camera_pdu.pos - dstate.xlate);
+	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, bcube.closest_pt(camera_bs))))));
+	draw_fast_cylinder(pos, point(pos.x, pos.y, bcube.z2()), radius, 0.8*radius, ndiv, 1, 4); // textured, with top
+	cube_t cbar;
+	cbar.z1() = bcube.z1() + 0.9*bcube.dz();
+	cbar.z2() = cbar .z1() + 0.9*radius;
+	set_wall_width(cbar, pos[ dim], 0.4*radius,        dim);
+	set_wall_width(cbar, pos[!dim], get_bar_extend(), !dim);
+	dstate.draw_cube(qbd, cbar, color_wrapper(WHITE), 1, 0.0); // draw all sides
+}
+bool power_pole_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (!sphere_cube_intersect(pos_, radius_, bcube)) return 0; // optimization
+	// for now we only check the pole itself rather than the cross bar
+	return sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw(pos, point(pos.x, pos.y, bcube.z2()), radius, 0.8*radius), cnorm); // check pole
+}
+
 
 bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen) {
 	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
@@ -659,6 +686,10 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			planter_groups.add_obj(tree_planter_t(*i, planter_radius, planter_height), planters); // no colliders for planters; pedestrians avoid the trees instead
 		}
 	}
+	// place power poles if a residential neighborhood
+	if (is_residential) {
+		// TODO
+	}
 }
 
 bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, cube_t const &exclude, unsigned prev_blockers_end, float expand, bool exp_dim) {
@@ -868,7 +899,7 @@ void city_obj_placer_t::add_house_driveways(road_plot_t const &plot, vect_cube_t
 }
 
 template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
-	draw_state_t &dstate, float dist_scale, bool shadow_only, bool not_using_qbd)
+	draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw)
 {
 	if (objs.empty()) return;
 	T::pre_draw(dstate, shadow_only);
@@ -877,7 +908,7 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 
 	for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
 		if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling for group
-		if (not_using_qbd) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // must setup shader and tile shadow map before drawing
+		if (has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // must setup shader and tile shadow map before drawing
 		assert(start_ix <= g->ix && g->ix <= objs.size());
 
 		for (unsigned i = start_ix; i < g->ix; ++i) {
@@ -885,7 +916,7 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 			if (dstate.check_sphere_visible(obj.pos, obj.radius)) {obj.draw(dstate, qbd, dist_scale, shadow_only);}
 		}
 		if (!qbd.empty() || !dstate.hedge_draw.empty()) { // we have something to draw
-			dstate.begin_tile(g->get_cube_center(), 1, 1); // will_emit_now=1, ensure_active=1
+			if (!has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // will_emit_now=1, ensure_active=1
 			qbd.draw_and_clear(); // draw this group with current smap
 			dstate.hedge_draw.draw_and_clear(dstate.s);
 		}
@@ -894,8 +925,8 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 }
 
 void city_obj_placer_t::clear() {
-	parking_lots.clear(); benches.clear(); planters.clear(); fire_hydrants.clear(); driveways.clear(); dividers.clear(); pools.clear();
-	bench_groups.clear(); planter_groups.clear(); fire_hydrant_groups.clear(); divider_groups.clear(); pool_groups.clear();
+	parking_lots.clear(); benches.clear(); planters.clear(); fire_hydrants.clear(); driveways.clear(); dividers.clear(); pools.clear(); ppoles.clear();
+	bench_groups.clear(); planter_groups.clear(); fire_hydrant_groups.clear(); divider_groups.clear(); pool_groups.clear(); ppole_groups.clear();
 	num_spaces = filled_spaces = 0;
 }
 
@@ -945,10 +976,12 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	fire_hydrant_groups.create_groups(fire_hydrants);
 	divider_groups.create_groups(dividers);
 	pool_groups.create_groups(pools);
+	ppole_groups.create_groups(ppoles);
 
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(bench_groups.size()) << TXT(planters.size()) << TXT(planter_groups.size()) << TXT(fire_hydrants.size())
-			 << TXT(fire_hydrant_groups.size()) << TXT(dividers.size()) << TXT(divider_groups.size()) << TXT(pools.size()) << TXT(pool_groups.size()) << endl;
+			 << TXT(fire_hydrant_groups.size()) << TXT(dividers.size()) << TXT(divider_groups.size()) << TXT(pools.size()) << TXT(pool_groups.size())
+			 << TXT(ppoles.size()) << TXT(ppole_groups.size()) << endl;
 	}
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
@@ -985,7 +1018,8 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
-	draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.12, not_using_qbd=1
+	draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
+	draw_objects(ppoles,        ppole_groups,        dstate, 0.16, shadow_only, 1); // dist_scale=0.16, has_immediate_draw=1
 			
 	if (!shadow_only) { // low profile, not drawn in shadow pass
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt, stone}
@@ -995,7 +1029,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	for (dstate.pass_ix = 0; dstate.pass_ix < 4; ++dstate.pass_ix) { // {in-ground walls, in-ground water, above ground sides, above ground water}
 		if (shadow_only && dstate.pass_ix <= 1) continue; // only above ground pools are drawn in the shadow pass; water surface is drawn to prevent light leaks, but maybe should extend z1 lower
 		float const dist_scales[4] = {0.1, 0.5, 0.3, 0.5};
-		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes don't use qbd
+		draw_objects(pools, pool_groups, dstate, dist_scales[dstate.pass_ix], shadow_only, (dstate.pass_ix > 1)); // final 2 passes use immediate draw rather than qbd
 	}
 	// Note: not the most efficient solution, as it required processing blocks and binding shadow maps multiple times
 	for (dstate.pass_ix = 0; dstate.pass_ix <= DIV_NUM_TYPES; ++dstate.pass_ix) { // {wall, fence, hedge, chainlink fence, chainlink fence posts}
@@ -1017,6 +1051,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, float 
 	if (proc_vector_sphere_coll(fire_hydrants, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(dividers,      pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pools,         pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(ppoles,        pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it
 	return 0;
 }
@@ -1030,6 +1065,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	check_vector_line_intersect(fire_hydrants, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
 	check_vector_line_intersect(dividers,      p1, p2, t, ret);
 	check_vector_line_intersect(pools,         p1, p2, t, ret);
+	check_vector_line_intersect(ppoles,        p1, p2, t, ret); // inaccurate, could be customized if needed
 	return ret;
 }
 
@@ -1100,6 +1136,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 			return 1;
 		}
 	} // for i
+	// TODO: ppoles?
 	return 0;
 }
 
