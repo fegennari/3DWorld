@@ -415,7 +415,7 @@ cylin_vertex_buffer_t cylin_vertex_buffer;
 void begin_cylin_vertex_buffering() {cylin_vertex_buffer.begin_buffering();}
 void flush_cylin_vertex_buffer   () {cylin_vertex_buffer.draw_and_clear_buffers();}
 
-
+// draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = pt1 end, 4 = pt2 end
 void add_cylin_ends(float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends,
 	vector3d const &v12, point const ce[2], point const &xlate, vector_point_norm const &vpn)
 {

@@ -358,11 +358,18 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 1, 0, cnorm);
 }
 
-power_pole_t::power_pole_t(point const &pos_, float radius_, float height, bool dim_) : city_obj_t(pos_, radius_), dim(dim_) {
-	bcube.set_from_point(pos);
+power_pole_t::power_pole_t(point const &base_, float pole_radius_, float height, uint8_t dims_) : dims(dims_), pole_radius(pole_radius_), base(base_) {
+	bcube.set_from_point(base);
 	bcube.z2() += height;
-	bcube.expand_in_dim( dim, radius);
-	bcube.expand_in_dim(!dim, get_bar_extend());
+	pos    = bcube.get_cube_center();
+	radius = bcube.get_bsphere_radius();
+	for (unsigned d = 0; d < 2; ++d) {bcube.expand_in_dim(d, (has_dim_set(d) ? pole_radius : get_bar_extend()));} // add bar if dim bit not set
+}
+cube_t power_pole_t::get_ped_occluder() const {
+	cube_t occluder(base);
+	occluder.z2() = bcube.z2();
+	occluder.expand_by_xy(pole_radius/SQRT2); // take inner radius to reduce the occluder side for the pedestrian
+	return occluder;
 }
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(WOOD2_TEX);}
@@ -370,19 +377,49 @@ power_pole_t::power_pole_t(point const &pos_, float radius_, float height, bool 
 void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
-	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, bcube.closest_pt(camera_bs))))));
-	draw_fast_cylinder(pos, point(pos.x, pos.y, bcube.z2()), radius, 0.8*radius, ndiv, 1, 4); // textured, with top
+	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
+	color_wrapper const cw(LT_BROWN); // darken the wood color
+	float const ndiv_inv(1.0/ndiv), top_radius(pole_radius); // top_radius=0.8*pole_radius?
+	float const vert_tscale = 10.0;
+	point const ce[2] = {base, get_top()};
+	vector3d v12; // will be plus_z
+	vector_point_norm const &vpn(gen_cylinder_data(ce, pole_radius, top_radius, ndiv, v12));
+	vert_norm_tc_color const center(ce[1], plus_z, 0.5, 0.5, cw);
+	vert_norm_tc_color quad_pts[4];
+	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
+
+	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
+		for (unsigned j = 0; j < 2; ++j) {
+			unsigned const S(i + j), s(S%ndiv);
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+			point const &p1(vpn.p[(s<<1)+!j]), &p2(vpn.p[(s<<1)+j]);
+			float const tt(S*ndiv_inv); // texture is R90
+			quad_pts[2*j+0].assign(p1, normal,    j *vert_tscale, tt, cw.c);
+			quad_pts[2*j+1].assign(p2, normal, (1-j)*vert_tscale, tt, cw.c);
+		}
+		for (unsigned n = 0; n < 6; ++n) {qbd.verts.push_back(quad_pts[ixs[n]]);}
+		// draw top triangle
+		unsigned const I((i+1)%ndiv);
+		qbd.verts.push_back(center);
+		qbd.verts.emplace_back(vpn.p[(i<<1)+1], plus_z, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
+		qbd.verts.emplace_back(vpn.p[(I<<1)+1], plus_z, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
+	} // for i
 	cube_t cbar;
 	cbar.z1() = bcube.z1() + 0.9*bcube.dz();
-	cbar.z2() = cbar .z1() + 0.9*radius;
-	set_wall_width(cbar, pos[ dim], 0.4*radius,        dim);
-	set_wall_width(cbar, pos[!dim], get_bar_extend(), !dim);
-	dstate.draw_cube(qbd, cbar, color_wrapper(WHITE), 1, 0.0); // draw all sides
+	cbar.z2() = cbar .z1() + 0.7*pole_radius;
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (!has_dim_set(d)) continue;
+		set_wall_width(cbar, (base[d] + 0.9*pole_radius), 0.4*pole_radius, d); // offset
+		set_wall_width(cbar, base[!d], get_bar_extend(), !d);
+		dstate.draw_cube(qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
+		// TODO: draw the three wires
+	}
 }
 bool power_pole_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	if (!sphere_cube_intersect(pos_, radius_, bcube)) return 0; // optimization
+	if (!sphere_cube_intersect((pos_ - xlate), radius_, bcube)) return 0; // optimization
 	// for now we only check the pole itself rather than the cross bar
-	return sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw(pos, point(pos.x, pos.y, bcube.z2()), radius, 0.8*radius), cnorm); // check pole
+	return sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw((base + xlate), (get_top() + xlate), pole_radius, pole_radius), cnorm); // check pole using the base radius
 }
 
 
@@ -689,7 +726,28 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place power poles if a residential neighborhood
 	if (is_residential) {
-		// TODO
+		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(0.9*road_width);
+		float xspace(plot.dx() + road_width), yspace(plot.dy() + road_width); // == city_params.road_spacing?
+		// FIXME: move in toward the plot center so that they don't block pedestrians - but then they can block driveways;
+		// if we move them into the road then they block traffic light crosswalks, so I think traffic lights need to be moved a bit
+		float const pp_x(plot.x2() + 0.12*road_width), pp_y(plot.y2() + 0.12*road_width);
+		point pts[3]; // one on the corner and two on each side
+		for (unsigned i = 0; i < 3; ++i) {pts[i].assign(pp_x, pp_y, plot.z2());} // start at plot upper corner
+		pts[1].x -= 0.5*xspace;
+		pts[2].y -= 0.5*yspace;
+		unsigned const dims[3] = {3, 1, 2};
+		unsigned const pp_start(ppoles.size());
+		for (unsigned i = 0; i < 3; ++i) {ppole_groups.add_obj(power_pole_t(pts[i], pole_radius, height, dims[i]), ppoles);}
+
+		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power pole there
+			pts[1].x -= 0.5*xspace;
+			ppole_groups.add_obj(power_pole_t(pts[1], pole_radius, height, dims[1]), ppoles);
+		}
+		if (plot.ypos == 0) { // no -y neighbor plot, but need to add the power pole there
+			pts[2].y -= 0.5*yspace;
+			ppole_groups.add_obj(power_pole_t(pts[2], pole_radius, height, dims[2]), ppoles);
+		}
+		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}
 }
 
@@ -1020,7 +1078,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
-	draw_objects(ppoles,        ppole_groups,        dstate, 0.16, shadow_only, 1); // dist_scale=0.16, has_immediate_draw=1
+	draw_objects(ppoles,        ppole_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 			
 	if (!shadow_only) { // low profile, not drawn in shadow pass
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt, stone}

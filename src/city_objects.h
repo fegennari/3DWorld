@@ -65,11 +65,16 @@ struct swimming_pool_t : public city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
-struct power_pole_t : public city_obj_t { // Note: pos is the center point on the ground and radius is the pole radius; not a bsphere
-	bool dim; // direction the wires run
+struct power_pole_t : public city_obj_t {
+	uint8_t dims; // bit mask for direction the wires run
+	float pole_radius;
+	point base;
 
-	power_pole_t(point const &pos_, float radius_, float height, bool dim_);
-	float get_bar_extend() const {return 8.0*radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
+	power_pole_t(point const &base_, float pole_radius_, float height, uint8_t dims_);
+	bool has_dim_set(unsigned d) const {return (dims & (1<<d));}
+	float get_bar_extend() const {return 8.0*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
+	point get_top() const {return point(base.x, base.y, bcube.z2());}
+	cube_t get_ped_occluder() const;
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
