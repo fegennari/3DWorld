@@ -747,13 +747,25 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			if (i == 1) {base.y += extra_offset;} // shift the pole off the sidewalk and off toward the road to keep it out of the way of pdestrians
 			ppole_groups.add_obj(power_pole_t(base, pts[i], pole_radius, height, dims[i]), ppoles);
 		}
-		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power pole there
-			pts[1].x -= 0.5*xspace;
-			ppole_groups.add_obj(power_pole_t(pts[1], pts[1], pole_radius, height, dims[1]), ppoles);
+		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power poles there
+			unsigned const pole_ixs[2] = {0, 2};
+
+			for (unsigned i = 0; i < 2; ++i) {
+				point &pt(pts[pole_ixs[i]]);
+				pt.x -= xspace;
+				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, dims[pole_ixs[i]]), ppoles);
+			}
 		}
-		if (plot.ypos == 0) { // no -y neighbor plot, but need to add the power pole there
-			pts[2].y -= 0.5*yspace;
-			ppole_groups.add_obj(power_pole_t(pts[2], pts[2], pole_radius, height, dims[2]), ppoles);
+		if (plot.ypos == 0) { // no -y neighbor plot, but need to add the power poles there
+			unsigned const pole_ixs[2] = {0, 1};
+
+			for (unsigned i = 0; i < 2; ++i) {
+				point &pt(pts[pole_ixs[i]]);
+				pt.y -= yspace;
+				point base(pt);
+				if (i == 1) {base.y += extra_offset;}
+				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, dims[pole_ixs[i]]), ppoles);
+			}
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}
