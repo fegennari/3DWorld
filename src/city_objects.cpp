@@ -358,8 +358,10 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 1, 0, cnorm);
 }
 
-power_pole_t::power_pole_t(point const &base_, float pole_radius_, float height, uint8_t dims_) : dims(dims_), pole_radius(pole_radius_), base(base_) {
-	bcube.set_from_point(base);
+power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, uint8_t dims_) :
+	dims(dims_), pole_radius(pole_radius_), base(base_), center(center_)
+{
+	bcube.set_from_point(center);
 	bcube.z2() += height;
 	pos    = bcube.get_cube_center();
 	radius = bcube.get_bsphere_radius();
@@ -384,7 +386,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 	point const ce[2] = {base, get_top()};
 	vector3d v12; // will be plus_z
 	vector_point_norm const &vpn(gen_cylinder_data(ce, pole_radius, top_radius, ndiv, v12));
-	vert_norm_tc_color const center(ce[1], plus_z, 0.5, 0.5, cw);
+	vert_norm_tc_color const circle_center(ce[1], plus_z, 0.5, 0.5, cw);
 	vert_norm_tc_color quad_pts[4];
 	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
@@ -400,7 +402,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 		for (unsigned n = 0; n < 6; ++n) {qbd.verts.push_back(quad_pts[ixs[n]]);}
 		// draw top triangle
 		unsigned const I((i+1)%ndiv);
-		qbd.verts.push_back(center);
+		qbd.verts.push_back(circle_center);
 		qbd.verts.emplace_back(vpn.p[(i<<1)+1], plus_z, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
 		qbd.verts.emplace_back(vpn.p[(I<<1)+1], plus_z, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
 	} // for i
@@ -410,8 +412,8 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!has_dim_set(d)) continue;
-		set_wall_width(cbar, (base[d] + 0.9*pole_radius), 0.4*pole_radius, d); // offset
-		set_wall_width(cbar, base[!d], get_bar_extend(), !d);
+		set_wall_width(cbar, (center[d] + 0.9*pole_radius), 0.4*pole_radius, d); // offset
+		set_wall_width(cbar, center[!d], get_bar_extend(), !d);
 		dstate.draw_cube(qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
 		// TODO: draw the three wires
 	}
@@ -728,24 +730,30 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	if (is_residential) {
 		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(0.9*road_width);
 		float xspace(plot.dx() + road_width), yspace(plot.dy() + road_width); // == city_params.road_spacing?
-		// FIXME: move in toward the plot center so that they don't block pedestrians - but then they can block driveways;
-		// if we move them into the road then they block traffic light crosswalks, so I think traffic lights need to be moved a bit
-		float const pp_x(plot.x2() + 0.12*road_width), pp_y(plot.y2() + 0.12*road_width);
-		point pts[3]; // one on the corner and two on each side
+		// we can move in toward the plot center so that they don't block pedestrians, but then they can block driveways;
+		// if we move them into the road, then they block traffic light crosswalks;
+		// so we move them toward the road in an assymetic way and allow the pole to be not centered with the wires
+		float const offset(0.075*road_width), extra_offset(0.045*road_width); // assymmetric offset to match the aspect ratio of stoplights
+		float const pp_x(plot.x2() + offset + extra_offset), pp_y(plot.y2() + offset);
+		point pts[3]; // one on the corner and two on each side: {corner, x, y}
 		for (unsigned i = 0; i < 3; ++i) {pts[i].assign(pp_x, pp_y, plot.z2());} // start at plot upper corner
 		pts[1].x -= 0.5*xspace;
 		pts[2].y -= 0.5*yspace;
 		unsigned const dims[3] = {3, 1, 2};
 		unsigned const pp_start(ppoles.size());
-		for (unsigned i = 0; i < 3; ++i) {ppole_groups.add_obj(power_pole_t(pts[i], pole_radius, height, dims[i]), ppoles);}
 
+		for (unsigned i = 0; i < 3; ++i) {
+			point base(pts[i]);
+			if (i == 1) {base.y += extra_offset;} // shift the pole off the sidewalk and off toward the road to keep it out of the way of pdestrians
+			ppole_groups.add_obj(power_pole_t(base, pts[i], pole_radius, height, dims[i]), ppoles);
+		}
 		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power pole there
 			pts[1].x -= 0.5*xspace;
-			ppole_groups.add_obj(power_pole_t(pts[1], pole_radius, height, dims[1]), ppoles);
+			ppole_groups.add_obj(power_pole_t(pts[1], pts[1], pole_radius, height, dims[1]), ppoles);
 		}
 		if (plot.ypos == 0) { // no -y neighbor plot, but need to add the power pole there
 			pts[2].y -= 0.5*yspace;
-			ppole_groups.add_obj(power_pole_t(pts[2], pole_radius, height, dims[2]), ppoles);
+			ppole_groups.add_obj(power_pole_t(pts[2], pts[2], pole_radius, height, dims[2]), ppoles);
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}

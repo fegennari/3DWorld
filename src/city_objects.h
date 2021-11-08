@@ -68,9 +68,9 @@ struct swimming_pool_t : public city_obj_t {
 struct power_pole_t : public city_obj_t {
 	uint8_t dims; // bit mask for direction the wires run
 	float pole_radius;
-	point base;
+	point base, center; // base of the pole and center of wires/bcube
 
-	power_pole_t(point const &base_, float pole_radius_, float height, uint8_t dims_);
+	power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, uint8_t dims_);
 	bool has_dim_set(unsigned d) const {return (dims & (1<<d));}
 	float get_bar_extend() const {return 8.0*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
