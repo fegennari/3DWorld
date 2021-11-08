@@ -38,6 +38,7 @@ tree_4th_branches 1
 nleaves_scale 1.0
 tree_lod_scale 0.24 0.2 0.24 0.2
 tt_grass_scale_factor 0.25
+num_bflies_per_tile 2
 
 fast_water_reflect 1
 tiled_terrain_only 1
