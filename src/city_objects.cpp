@@ -367,6 +367,12 @@ power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_
 	pos    = bcube.get_cube_center();
 	radius = bcube.get_bsphere_radius();
 	for (unsigned d = 0; d < 2; ++d) {bcube.expand_in_dim(d, (has_dim_set(d) ? pole_radius : get_bar_extend()));} // add bar if dim bit not set
+	bcube_with_wires = bcube; // cache for visibility query; could also recompute on each call
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (!at_line_end[d] && has_dim_set(d)) {bcube_with_wires.d[d][0] -= pole_spacing[d];} // extend to include wires
+	}
+	bsphere_radius = bcube_with_wires.furthest_dist_to_pt(pos);
 }
 cube_t power_pole_t::get_ped_occluder() const {
 	cube_t occluder(base);
@@ -378,53 +384,64 @@ cube_t power_pole_t::get_ped_occluder() const {
 	if (!shadow_only) {select_texture(WOOD2_TEX);}
 }
 void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
-	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
+	float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
+	if (!bcube.closest_dist_less_than(camera_bs, dmax)) return;
+	if (!camera_pdu.cube_visible((shadow_only ? bcube : bcube_with_wires) + dstate.xlate)) return;
 	color_wrapper const black(BLACK), cw(LT_BROWN); // darken the wood color
-	float const ndiv_inv(1.0/ndiv), top_radius(pole_radius); // top_radius=0.8*pole_radius?
-	float const vert_tscale = 10.0;
-	point const ce[2] = {base, get_top()};
-	vector3d v12; // will be plus_z
-	vector_point_norm const &vpn(gen_cylinder_data(ce, pole_radius, top_radius, ndiv, v12));
-	vert_norm_tc_color const circle_center(ce[1], plus_z, 0.5, 0.5, cw);
-	vert_norm_tc_color quad_pts[4];
-	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
+	bool const pole_visible(camera_pdu.cube_visible(bcube + dstate.xlate));
 
-	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
-		for (unsigned j = 0; j < 2; ++j) {
-			unsigned const S(i + j), s(S%ndiv);
-			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-			point const &p1(vpn.p[(s<<1)+!j]), &p2(vpn.p[(s<<1)+j]);
-			float const tt(S*ndiv_inv); // texture is R90
-			quad_pts[2*j+0].assign(p1, normal,    j *vert_tscale, tt, cw.c);
-			quad_pts[2*j+1].assign(p2, normal, (1-j)*vert_tscale, tt, cw.c);
-		}
-		for (unsigned n = 0; n < 6; ++n) {qbd.verts.push_back(quad_pts[ixs[n]]);}
-		// draw top triangle
-		unsigned const I((i+1)%ndiv);
-		qbd.verts.push_back(circle_center);
-		qbd.verts.emplace_back(vpn.p[(i<<1)+1], plus_z, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
-		qbd.verts.emplace_back(vpn.p[(I<<1)+1], plus_z, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
-	} // for i
+	if (pole_visible) {
+		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
+		float const ndiv_inv(1.0/ndiv), top_radius(pole_radius); // top_radius=0.8*pole_radius?
+		float const vert_tscale = 10.0;
+		point const ce[2] = {base, get_top()};
+		vector3d v12; // will be plus_z
+		vector_point_norm const &vpn(gen_cylinder_data(ce, pole_radius, top_radius, ndiv, v12));
+		vert_norm_tc_color const circle_center(ce[1], plus_z, 0.5, 0.5, cw);
+		vert_norm_tc_color quad_pts[4];
+		unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
+
+		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
+			for (unsigned j = 0; j < 2; ++j) {
+				unsigned const S(i + j), s(S%ndiv);
+				vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+				point const &p1(vpn.p[(s<<1)+!j]), &p2(vpn.p[(s<<1)+j]);
+				float const tt(S*ndiv_inv); // texture is R90
+				quad_pts[2*j+0].assign(p1, normal,    j *vert_tscale, tt, cw.c);
+				quad_pts[2*j+1].assign(p2, normal, (1-j)*vert_tscale, tt, cw.c);
+			}
+			for (unsigned n = 0; n < 6; ++n) {qbd.verts.push_back(quad_pts[ixs[n]]);}
+			// draw top triangle
+			unsigned const I((i+1)%ndiv);
+			qbd.verts.push_back(circle_center);
+			qbd.verts.emplace_back(vpn.p[(i<<1)+1], plus_z, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
+			qbd.verts.emplace_back(vpn.p[(I<<1)+1], plus_z, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
+		} // for i
+	}
 	for (unsigned d = 0; d < 2; ++d) {
-		if (!has_dim_set(d)) continue;
+		if (!has_dim_set(d)) continue; // no wires in this dim
 		cube_t cbar;
-		cbar.z1() = bcube.z1() + (d ? 0.86 : 0.94)*bcube.dz(); // stagger the heights in X vs. Y so that wires don't intersect on poles that have them in both dims
+		cbar.z1() = bcube.z1() + (d ? 0.90 : 0.96)*bcube.dz(); // stagger the heights in X vs. Y so that wires don't intersect on poles that have them in both dims
 		cbar.z2() = cbar .z1() + 0.7*pole_radius;
 		set_wall_width(cbar, (center[ d] + 0.9*pole_radius), 0.4*pole_radius, d); // offset
 		set_wall_width(cbar,  center[!d], get_bar_extend(), !d);
-		dstate.draw_cube(qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
+		
+		if (pole_visible && (shadow_only || cbar.closest_dist_less_than(camera_bs, 0.5*dmax))) { // could test cbar cube visible, but unclear if that's faster
+			dstate.draw_cube(qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
+		}
 		if (at_line_end[d] || shadow_only) continue; // no wires; skip wires for shadow pass since they don't show up reliably
-		// draw the three wires
-		// TODO: cylinders when close, cubes when far; black, don't need normals/tcs/colors; indexed triangles
-		// TODO: distance cutoff and view frustum culling
+		cube_t wires_bcube(cbar);
+		wires_bcube.d[d][0] -= pole_spacing[d];
+		if ((!shadow_only && !wires_bcube.closest_dist_less_than(camera_bs, 0.4*dmax)) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
+		// draw the three wires in this dim
 		float const wire_radius(0.08*pole_radius), wire_spacing(0.75*get_bar_extend());
+		float const offsets[3] = {-wire_spacing, -0.25f*wire_spacing, wire_spacing}; // offset from the center to avoid intersecting the pole
 
 		for (unsigned n = 0; n < 3; ++n) {
 			point p1;
 			p1[ d] = cbar.get_center_dim(d);
-			p1[!d] = center[!d] + (float(n) - 1.0f)*wire_spacing; // FIXME: not exactly on center to avoid hitting the pole
+			p1[!d] = center[!d] + offsets[n]; // set wire spacing
 			p1.z   = cbar.z2() + wire_radius; // resting on top of the bar; should maybe add a standoff
 			point p2(p1);
 			p2[d] -= pole_spacing[d];
@@ -432,7 +449,8 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 			wire.expand_in_dim(!d, wire_radius);
 			wire.expand_in_dim(2,  wire_radius);
 			unsigned const wire_skip_dims(1 << d); // skip ends that meet the bars
-			dstate.draw_cube(qbd, wire, black, wire_skip_dims);
+			// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
+			dstate.draw_cube(qbd, wire, black, 0, 0.0, wire_skip_dims); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
 		} // for n
 	} // for d
 }
@@ -677,7 +695,7 @@ template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs) {
 
 		for (auto i = g->second.begin(); i != g->second.end(); ++i) {
 			assert(*i < objs.size());
-			group.assign_or_union_with_cube(objs[*i].bcube);
+			group.assign_or_union_with_cube(objs[*i].get_outer_bcube());
 			new_objs.push_back(objs[*i]);
 		}
 		sort(new_objs.begin()+group_start, new_objs.end());
@@ -747,7 +765,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	// place power poles if a residential neighborhood
 	if (is_residential) {
 		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(0.9*road_width);
-		float xspace(plot.dx() + road_width), yspace(plot.dy() + road_width), xyspace[2] = {0.5*xspace, 0.5*yspace}; // == city_params.road_spacing?
+		float xspace(plot.dx() + road_width), yspace(plot.dy() + road_width), xyspace[2] = {0.5f*xspace, 0.5f*yspace}; // == city_params.road_spacing?
 		// we can move in toward the plot center so that they don't block pedestrians, but then they can block driveways;
 		// if we move them into the road, then they block traffic light crosswalks;
 		// so we move them toward the road in an assymetic way and allow the pole to be not centered with the wires
@@ -1014,7 +1032,7 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 
 		for (unsigned i = start_ix; i < g->ix; ++i) {
 			T const &obj(objs[i]);
-			if (dstate.check_sphere_visible(obj.pos, obj.radius)) {obj.draw(dstate, qbd, dist_scale, shadow_only);}
+			if (dstate.check_sphere_visible(obj.pos, obj.get_bsphere_radius(shadow_only))) {obj.draw(dstate, qbd, dist_scale, shadow_only);}
 		}
 		if (!qbd.empty() || !dstate.hedge_draw.empty()) { // we have something to draw
 			if (!has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // will_emit_now=1, ensure_active=1
@@ -1120,7 +1138,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
-	draw_objects(ppoles,        ppole_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
+	draw_objects(ppoles,        ppole_groups,        dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 			
 	if (!shadow_only) { // low profile, not drawn in shadow pass
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt, stone}

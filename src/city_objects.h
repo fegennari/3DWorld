@@ -11,6 +11,8 @@ struct city_obj_t : public sphere_t {
 	city_obj_t() {}
 	city_obj_t(point const &pos_, float radius_) : sphere_t(pos_, radius_) {}
 	bool operator<(city_obj_t const &b) const {return (bcube.x1() < b.bcube.x1());} // sort by bcube x1
+	cube_t const &get_outer_bcube() const {return bcube;}
+	float get_bsphere_radius(bool shadow_only) const {return radius;}
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default, can be overridden in derived class
 };
@@ -68,13 +70,16 @@ struct swimming_pool_t : public city_obj_t {
 struct power_pole_t : public city_obj_t {
 	bool at_line_end[2];
 	uint8_t dims; // bit mask for direction the wires run
-	float pole_radius, pole_spacing[2];
+	float pole_radius, bsphere_radius, pole_spacing[2];
 	point base, center; // base of the pole and center of wires/bcube
+	cube_t bcube_with_wires;
 
 	power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float pole_spacing_[2], uint8_t dims_, bool at_line_end_[2]);
 	bool has_dim_set(unsigned d) const {return (dims & (1<<d));}
 	float get_bar_extend() const {return 8.0*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
+	float get_bsphere_radius(bool shadow_only) const {return (shadow_only ? radius : bsphere_radius);} // non-shadow pass includes wires bsphere radius
+	cube_t const &get_outer_bcube() const {return bcube_with_wires;}
 	cube_t get_ped_occluder() const;
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
