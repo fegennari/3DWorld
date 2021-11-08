@@ -2493,6 +2493,7 @@ int ped_manager_t::get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool ro
 
 // path finding
 bool ped_manager_t::choose_dest_building_or_parked_car(pedestrian_t &ped) { // modifies rgen, non-const
+	unsigned const prev_dest_plot(ped.dest_plot);
 	ped.has_dest_bldg = ped.has_dest_car = ped.at_dest = 0; // will choose a new dest
 
 	if (city_params.num_cars == 0 || (rgen.rand() & 3) != 0) { // choose a dest building 75% of the time, 100% of the time if there are no cars
@@ -2500,11 +2501,12 @@ bool ped_manager_t::choose_dest_building_or_parked_car(pedestrian_t &ped) { // m
 	}
 	if (city_params.num_cars > 0 && !ped.has_dest_bldg) { // chose a dest parked car 25% of the time, or if choosing a dest building failed
 		ped.has_dest_car = choose_dest_parked_car(ped.city, ped.dest_plot, ped.dest_bldg, ped.dest_car_center);
-		if (!ped.has_dest_car) return 0;
-		ped.dest_plot = road_gen.get_city(ped.city).encode_plot_id(ped.dest_plot);
+		if (ped.has_dest_car) {ped.dest_plot = road_gen.get_city(ped.city).encode_plot_id(ped.dest_plot);}
 	}
+	bool const has_valid_dest(ped.has_dest_bldg || ped.has_dest_car);
+	if (!has_valid_dest && prev_dest_plot > 0) {ped.dest_plot = prev_dest_plot;} // if a dest plot was selected, restore its value to prevent randomly jumping between plots each frame
 	ped.next_plot = get_next_plot(ped);
-	return 1;
+	return has_valid_dest;
 }
 void ped_manager_t::choose_new_ped_plot_pos(pedestrian_t &ped) {
 	if (city_params.ped_respawn_at_dest) { // respawn
