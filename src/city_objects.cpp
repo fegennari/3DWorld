@@ -358,9 +358,10 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 1, 0, cnorm);
 }
 
-power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, uint8_t dims_) :
+power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float pole_spacing_[2], uint8_t dims_, bool at_line_end_[2]) :
 	dims(dims_), pole_radius(pole_radius_), base(base_), center(center_)
 {
+	UNROLL_2X(pole_spacing[i_] = pole_spacing_[i_]; at_line_end[i_] = at_line_end_[i_];)
 	bcube.set_from_point(center);
 	bcube.z2() += height;
 	pos    = bcube.get_cube_center();
@@ -380,7 +381,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
 	unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
-	color_wrapper const cw(LT_BROWN); // darken the wood color
+	color_wrapper const black(BLACK), cw(LT_BROWN); // darken the wood color
 	float const ndiv_inv(1.0/ndiv), top_radius(pole_radius); // top_radius=0.8*pole_radius?
 	float const vert_tscale = 10.0;
 	point const ce[2] = {base, get_top()};
@@ -406,17 +407,34 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 		qbd.verts.emplace_back(vpn.p[(i<<1)+1], plus_z, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
 		qbd.verts.emplace_back(vpn.p[(I<<1)+1], plus_z, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
 	} // for i
-	cube_t cbar;
-	cbar.z1() = bcube.z1() + 0.9*bcube.dz();
-	cbar.z2() = cbar .z1() + 0.7*pole_radius;
-
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!has_dim_set(d)) continue;
-		set_wall_width(cbar, (center[d] + 0.9*pole_radius), 0.4*pole_radius, d); // offset
-		set_wall_width(cbar, center[!d], get_bar_extend(), !d);
+		cube_t cbar;
+		cbar.z1() = bcube.z1() + (d ? 0.86 : 0.94)*bcube.dz(); // stagger the heights in X vs. Y so that wires don't intersect on poles that have them in both dims
+		cbar.z2() = cbar .z1() + 0.7*pole_radius;
+		set_wall_width(cbar, (center[ d] + 0.9*pole_radius), 0.4*pole_radius, d); // offset
+		set_wall_width(cbar,  center[!d], get_bar_extend(), !d);
 		dstate.draw_cube(qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
-		// TODO: draw the three wires
-	}
+		if (at_line_end[d] || shadow_only) continue; // no wires; skip wires for shadow pass since they don't show up reliably
+		// draw the three wires
+		// TODO: cylinders when close, cubes when far; black, don't need normals/tcs/colors; indexed triangles
+		// TODO: distance cutoff and view frustum culling
+		float const wire_radius(0.08*pole_radius), wire_spacing(0.75*get_bar_extend());
+
+		for (unsigned n = 0; n < 3; ++n) {
+			point p1;
+			p1[ d] = cbar.get_center_dim(d);
+			p1[!d] = center[!d] + (float(n) - 1.0f)*wire_spacing; // FIXME: not exactly on center to avoid hitting the pole
+			p1.z   = cbar.z2() + wire_radius; // resting on top of the bar; should maybe add a standoff
+			point p2(p1);
+			p2[d] -= pole_spacing[d];
+			cube_t wire(p1, p2);
+			wire.expand_in_dim(!d, wire_radius);
+			wire.expand_in_dim(2,  wire_radius);
+			unsigned const wire_skip_dims(1 << d); // skip ends that meet the bars
+			dstate.draw_cube(qbd, wire, black, wire_skip_dims);
+		} // for n
+	} // for d
 }
 bool power_pole_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	if (!sphere_cube_intersect((pos_ - xlate), radius_, bcube)) return 0; // optimization
@@ -729,7 +747,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	// place power poles if a residential neighborhood
 	if (is_residential) {
 		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(0.9*road_width);
-		float xspace(plot.dx() + road_width), yspace(plot.dy() + road_width); // == city_params.road_spacing?
+		float xspace(plot.dx() + road_width), yspace(plot.dy() + road_width), xyspace[2] = {0.5*xspace, 0.5*yspace}; // == city_params.road_spacing?
 		// we can move in toward the plot center so that they don't block pedestrians, but then they can block driveways;
 		// if we move them into the road, then they block traffic light crosswalks;
 		// so we move them toward the road in an assymetic way and allow the pole to be not centered with the wires
@@ -745,7 +763,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		for (unsigned i = 0; i < 3; ++i) {
 			point base(pts[i]);
 			if (i == 1) {base.y += extra_offset;} // shift the pole off the sidewalk and off toward the road to keep it out of the way of pdestrians
-			ppole_groups.add_obj(power_pole_t(base, pts[i], pole_radius, height, dims[i]), ppoles);
+			bool at_line_end[2] = {0, 0};
+			ppole_groups.add_obj(power_pole_t(base, pts[i], pole_radius, height, xyspace, dims[i], at_line_end), ppoles); // at_line_end=0
 		}
 		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power poles there
 			unsigned const pole_ixs[2] = {0, 2};
@@ -753,7 +772,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			for (unsigned i = 0; i < 2; ++i) {
 				point &pt(pts[pole_ixs[i]]);
 				pt.x -= xspace;
-				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, dims[pole_ixs[i]]), ppoles);
+				bool at_line_end[2] = {1, 0};
+				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, xyspace, dims[pole_ixs[i]], at_line_end), ppoles); // at_line_end=1
 			}
 		}
 		if (plot.ypos == 0) { // no -y neighbor plot, but need to add the power poles there
@@ -764,7 +784,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				pt.y -= yspace;
 				point base(pt);
 				if (i == 1) {base.y += extra_offset;}
-				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, dims[pole_ixs[i]]), ppoles);
+				bool at_line_end[2] = {0, 1};
+				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, xyspace, dims[pole_ixs[i]], at_line_end), ppoles); // at_line_end=1
 			}
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
@@ -1216,7 +1237,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 			return 1;
 		}
 	} // for i
-	// TODO: ppoles?
+	// Note: ppoles are skipped for now
 	return 0;
 }
 
