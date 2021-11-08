@@ -36,6 +36,7 @@ protected:
 public:
 	virtual ~city_model_loader_t() {}
 	virtual bool has_low_poly_model() {return 0;}
+	virtual bool can_skip_model(unsigned id) const {return 0;}
 	virtual unsigned num_models() const = 0;
 	virtual unsigned get_num_sub_models(unsigned id) const {return 1;}
 	virtual city_model_t const &get_model(unsigned id) const = 0;
@@ -78,6 +79,7 @@ class object_model_loader_t : public city_model_loader_t {
 public:
 	virtual unsigned num_models() const;
 	virtual unsigned get_num_sub_models(unsigned id) const;
+	virtual bool can_skip_model(unsigned id) const;
 	virtual city_model_t const &get_model(unsigned id) const;
 	virtual city_model_t       &get_model(unsigned id);
 };

@@ -80,9 +80,7 @@ void city_model_loader_t::load_model_id(unsigned id) {
 	for (unsigned sm = 0; sm < num_sub_models; ++sm) { // load all sub-models
 		city_model_t &model(get_model(id + (sm << 8)));
 		if (model.is_loaded()) continue; // already loaded (should never get here?)
-		bool skip_model(!have_buildings() && id < OBJ_MODEL_FHYDRANT); // building model, but no buildings, don't need to load
-		skip_model |= (id == OBJ_MODEL_UMBRELLA && city_params.num_peds == 0); // don't need to load the umbrella model if there are no pedestrians
-		if (skip_model || model.fn.empty()) continue;
+		if (can_skip_model(id) || model.fn.empty()) continue;
 		int const def_tid(-1); // should this be a model parameter?
 		colorRGBA const def_color(WHITE); // should this be a model parameter?
 		model.model3d_id = size(); // set before adding the model
@@ -100,6 +98,12 @@ void city_model_loader_t::load_model_id(unsigned id) {
 			for (unsigned j = 0; j < num_materials; ++j) {model.shadow_mat_ids.push_back(j);} // add them all
 		}
 	} // for sm
+}
+
+bool object_model_loader_t::can_skip_model(unsigned id) const {
+	if (!have_buildings() && id < OBJ_MODEL_FHYDRANT) return 1; // building model, but no buildings, don't need to load
+	if (id == OBJ_MODEL_UMBRELLA && city_params.num_peds == 0) return 1; // don't need to load the umbrella model if there are no pedestrians
+	return 0;
 }
 
 void city_model_loader_t::draw_model(shader_t &s, vector3d const &pos, cube_t const &obj_bcube, vector3d const &dir, colorRGBA const &color,
