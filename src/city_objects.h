@@ -70,11 +70,12 @@ struct swimming_pool_t : public city_obj_t {
 struct power_pole_t : public city_obj_t {
 	bool at_line_end[2];
 	uint8_t dims; // bit mask for direction the wires run
-	float pole_radius, bsphere_radius, pole_spacing[2];
+	float pole_radius, bsphere_radius, wires_offset, pole_spacing[2];
 	point base, center; // base of the pole and center of wires/bcube
 	cube_t bcube_with_wires;
 
-	power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float pole_spacing_[2], uint8_t dims_, bool at_line_end_[2]);
+	power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
+		float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[2]);
 	bool has_dim_set(unsigned d) const {return (dims & (1<<d));}
 	float get_bar_extend() const {return 8.0*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
@@ -133,6 +134,7 @@ public:
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;
+	void move_to_not_intersect_driveway(point &pos, float radius, bool dim) const;
 };
 
 inline uint64_t get_tile_id_for_cube(cube_t const &c) {return get_tile_id_containing_point_no_xyoff(c.get_cube_center());}

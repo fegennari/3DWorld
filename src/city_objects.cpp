@@ -358,8 +358,9 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 1, 0, cnorm);
 }
 
-power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float pole_spacing_[2], uint8_t dims_, bool at_line_end_[2]) :
-	dims(dims_), pole_radius(pole_radius_), base(base_), center(center_)
+power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
+	float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[2]) :
+	dims(dims_), pole_radius(pole_radius_), wires_offset(wires_offset_), base(base_), center(center_)
 {
 	UNROLL_2X(pole_spacing[i_] = pole_spacing_[i_]; at_line_end[i_] = at_line_end_[i_];)
 	bcube.set_from_point(center);
@@ -370,7 +371,9 @@ power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_
 	bcube_with_wires = bcube; // cache for visibility query; could also recompute on each call
 
 	for (unsigned d = 0; d < 2; ++d) {
-		if (!at_line_end[d] && has_dim_set(d)) {bcube_with_wires.d[d][0] -= pole_spacing[d];} // extend to include wires
+		if (at_line_end[d] || !has_dim_set(d)) continue;
+		bcube_with_wires.d[d][0] -= pole_spacing[d]; // extend to include wires
+		bcube_with_wires.translate_dim(d, wires_offset); // Note: wires_offset should be 0 for poles that have both wire dims enabled
 	}
 	bsphere_radius = bcube_with_wires.furthest_dist_to_pt(pos);
 }
@@ -432,17 +435,17 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 		}
 		if (at_line_end[d] || shadow_only) continue; // no wires; skip wires for shadow pass since they don't show up reliably
 		cube_t wires_bcube(cbar);
-		wires_bcube.d[d][0] -= pole_spacing[d];
+		UNROLL_2X(wires_bcube.d[d][i_] = bcube_with_wires.d[d][i_];)
 		if ((!shadow_only && !wires_bcube.closest_dist_less_than(camera_bs, 0.4*dmax)) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
 		// draw the three wires in this dim
 		float const wire_radius(0.08*pole_radius), wire_spacing(0.75*get_bar_extend());
 		float const offsets[3] = {-wire_spacing, -0.25f*wire_spacing, wire_spacing}; // offset from the center to avoid intersecting the pole
+		point p1;
+		p1[d] = cbar.get_center_dim(d) + wires_offset;
+		p1.z  = cbar.z2() + wire_radius; // resting on top of the bar; should maybe add a standoff
 
 		for (unsigned n = 0; n < 3; ++n) {
-			point p1;
-			p1[ d] = cbar.get_center_dim(d);
 			p1[!d] = center[!d] + offsets[n]; // set wire spacing
-			p1.z   = cbar.z2() + wire_radius; // resting on top of the bar; should maybe add a standoff
 			point p2(p1);
 			p2[d] -= pole_spacing[d];
 			cube_t wire(p1, p2);
@@ -765,7 +768,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	// place power poles if a residential neighborhood
 	if (is_residential) {
 		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(0.9*road_width);
-		float xspace(plot.dx() + road_width), yspace(plot.dy() + road_width), xyspace[2] = {0.5f*xspace, 0.5f*yspace}; // == city_params.road_spacing?
+		float const xspace(plot.dx() + road_width), yspace(plot.dy() + road_width); // == city_params.road_spacing?
+		float const xyspace[2] = {0.5f*xspace, 0.5f*yspace};
 		// we can move in toward the plot center so that they don't block pedestrians, but then they can block driveways;
 		// if we move them into the road, then they block traffic light crosswalks;
 		// so we move them toward the road in an assymetic way and allow the pole to be not centered with the wires
@@ -779,10 +783,19 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		unsigned const pp_start(ppoles.size());
 
 		for (unsigned i = 0; i < 3; ++i) {
-			point base(pts[i]);
-			if (i == 1) {base.y += extra_offset;} // shift the pole off the sidewalk and off toward the road to keep it out of the way of pdestrians
-			bool at_line_end[2] = {0, 0};
-			ppole_groups.add_obj(power_pole_t(base, pts[i], pole_radius, height, xyspace, dims[i], at_line_end), ppoles); // at_line_end=0
+			point pos(pts[i]);
+			float wires_offset(0.0);
+
+			if (i > 0 && !driveways.empty()) {
+				bool const dim(i == 2);
+				float const prev_val(pos[dim]);
+				move_to_not_intersect_driveway(pos, (pole_radius + get_sidewalk_width()), dim);
+				wires_offset = prev_val - pos[dim];
+			}
+			point base(pos);
+			if (i == 1) {base.y += extra_offset;} // shift the pole off the sidewalk and off toward the road to keep it out of the way of pedestrians
+			bool const at_line_end[2] = {0, 0};
+			ppole_groups.add_obj(power_pole_t(base, pos, pole_radius, height, wires_offset, xyspace, dims[i], at_line_end), ppoles); // at_line_end=0
 		}
 		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power poles there
 			unsigned const pole_ixs[2] = {0, 2};
@@ -790,8 +803,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			for (unsigned i = 0; i < 2; ++i) {
 				point &pt(pts[pole_ixs[i]]);
 				pt.x -= xspace;
-				bool at_line_end[2] = {1, 0};
-				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, xyspace, dims[pole_ixs[i]], at_line_end), ppoles); // at_line_end=1
+				bool const at_line_end[2] = {1, 0};
+				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], at_line_end), ppoles); // at_line_end=1
 			}
 		}
 		if (plot.ypos == 0) { // no -y neighbor plot, but need to add the power poles there
@@ -802,8 +815,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				pt.y -= yspace;
 				point base(pt);
 				if (i == 1) {base.y += extra_offset;}
-				bool at_line_end[2] = {0, 1};
-				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, xyspace, dims[pole_ixs[i]], at_line_end), ppoles); // at_line_end=1
+				bool const at_line_end[2] = {0, 1};
+				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], at_line_end), ppoles); // at_line_end=1
 			}
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
@@ -1275,6 +1288,19 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vect_cube_t &occlud
 			if (dist_less_than(pdu.pos, d->bcube.closest_pt(pdu.pos), dmax) && pdu.cube_visible(d->bcube)) {occluders.push_back(d->bcube);}
 		}
 	} // for i
+}
+
+void city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius, bool dim) const {
+	cube_t test_cube;
+	test_cube.set_from_sphere(pos, radius);
+
+	// Note: this could be accelerated by iterating by plot, but this seems to already be fast enough (< 1ms)
+	for (auto d = driveways.begin(); d != driveways.end(); ++d) {
+		if (!d->intersects_xy(test_cube)) continue;
+		bool const dir((d->d[dim][1] - pos[dim]) < (pos[dim] - d->d[dim][0]));
+		pos[dim] = d->d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*city_params.road_width;
+		break; // maybe we should check for an adjacent driveway, but that would be rare and moving could result in oscillation
+	}
 }
 
 
