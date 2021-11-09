@@ -68,14 +68,14 @@ struct swimming_pool_t : public city_obj_t {
 };
 
 struct power_pole_t : public city_obj_t {
-	bool at_line_end[2];
+	bool at_line_end[4];
 	uint8_t dims; // bit mask for direction the wires run
 	float pole_radius, bsphere_radius, wires_offset, pole_spacing[2];
 	point base, center; // base of the pole and center of wires/bcube
 	cube_t bcube_with_wires;
 
 	power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
-		float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[2]);
+		float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[4]);
 	bool has_dim_set(unsigned d) const {return (dims & (1<<d));}
 	float get_bar_extend() const {return 8.0*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
@@ -108,7 +108,7 @@ private:
 	city_obj_groups_t bench_groups, planter_groups, fire_hydrant_groups, divider_groups, pool_groups, ppole_groups; // index is last object in group
 	quad_batch_draw qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
-	unsigned num_spaces, filled_spaces;
+	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;
 	float plot_subdiv_sz;
 	
 	struct cube_by_x1 {
@@ -123,7 +123,7 @@ private:
 	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
 		draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw=0);
 public:
-	city_obj_placer_t() : num_spaces(0), filled_spaces(0), plot_subdiv_sz(0.0) {}
+	city_obj_placer_t() : num_spaces(0), filled_spaces(0), num_x_plots(0), num_y_plots(0), plot_subdiv_sz(0.0) {}
 	bool has_plot_dividers() const {return !dividers.empty();}
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
