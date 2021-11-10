@@ -391,7 +391,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 	float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
 	if (!bcube.closest_dist_less_than(camera_bs, dmax)) return;
 	if (!camera_pdu.cube_visible((shadow_only ? bcube : bcube_with_wires) + dstate.xlate)) return;
-	color_wrapper const black(BLACK), cw(LT_BROWN), white(WHITE); // darken the wood color
+	color_wrapper const black(BLACK), white(WHITE), gray(GRAY), cw(LT_BROWN); // darken the wood color
 	bool const pole_visible(camera_pdu.cube_visible(bcube + dstate.xlate));
 	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
@@ -399,39 +399,59 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
 		float const ndiv_inv(1.0/ndiv), top_radius(pole_radius); // top_radius=0.8*pole_radius?
 		float const vert_tscale = 10.0;
-		point const ce[2] = {base, get_top()};
+		point ce[2] = {base, get_top()};
 		vector3d v12; // will be plus_z
 		vector_point_norm const &vpn(gen_cylinder_data(ce, pole_radius, top_radius, ndiv, v12));
-		vert_norm_tc_color const circle_center(ce[1], plus_z, 0.5, 0.5, cw);
 		vert_norm_tc_color quad_pts[4];
 
 		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
 			for (unsigned j = 0; j < 2; ++j) {
 				unsigned const S(i + j), s(S%ndiv);
 				vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-				point const &p1(vpn.p[(s<<1)+!j]), &p2(vpn.p[(s<<1)+j]);
 				float const tt(S*ndiv_inv); // texture is R90
-				quad_pts[2*j+0].assign(p1, normal,    j *vert_tscale, tt, cw.c);
-				quad_pts[2*j+1].assign(p2, normal, (1-j)*vert_tscale, tt, cw.c);
+				quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal,    j *vert_tscale, tt, cw.c);
+				quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, (1-j)*vert_tscale, tt, cw.c);
 			}
 			for (unsigned n = 0; n < 6; ++n) {qbd.verts.push_back(quad_pts[ixs[n]]);}
-			// draw top triangle
-			unsigned const I((i+1)%ndiv);
-			qbd.verts.push_back(circle_center);
+			unsigned const I((i+1)%ndiv); // draw top triangle
+			qbd.verts.emplace_back(ce[1], plus_z, 0.5, 0.5, cw);
 			qbd.verts.emplace_back(vpn.p[(i<<1)+1], plus_z, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
 			qbd.verts.emplace_back(vpn.p[(I<<1)+1], plus_z, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
 		} // for i
+		if (dims == 3 && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
+			float const tf_radius(2.0*pole_radius), pole_height(bcube.dz()), tf_height(0.1*pole_height);
+			ce[0].z = base.z  + 0.77*pole_height;
+			ce[1].z = ce[0].z + tf_height;
+			ce[0].x = ce[1].x = base.x;
+			ce[0].y = ce[1].y = base.y + tf_radius + pole_radius; // offset in +y
+			vector_point_norm const &vpn(gen_cylinder_data(ce, tf_radius, tf_radius, ndiv, v12));
+
+			for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
+				for (unsigned j = 0; j < 2; ++j) {
+					unsigned const S(i + j), s(S%ndiv);
+					vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]);
+					quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal, 0, 0, gray.c);
+					quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, 0, 0, gray.c);
+				}
+				for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.push_back(quad_pts[ixs[n]]);}
+				unsigned const I((i+1)%ndiv); // draw top triangle
+				untex_qbd.verts.emplace_back(ce[1], plus_z, 0, 0, gray);
+				untex_qbd.verts.emplace_back(vpn.p[(i<<1)+1], plus_z, 0, 0, gray);
+				untex_qbd.verts.emplace_back(vpn.p[(I<<1)+1], plus_z, 0, 0, gray);
+			} // for i
+		}
 	}
-	float const wire_radius(0.08*pole_radius), wire_spacing(0.75*get_bar_extend()), standoff_height(0.3*pole_radius), standoff_radius(0.225*pole_radius);
+	float const wire_radius(0.08*pole_radius), wire_spacing(0.75*get_bar_extend()), standoff_height(0.3*pole_radius), standoff_radius(0.2*pole_radius);
 	point wire_pts[3][2];
 	unsigned wire_mask(0);
+	bool drew_wires(0);
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!has_dim_set(d)) continue; // no wires in this dim
 		cube_t cbar;
 		cbar.z1() = bcube.z1() + (d ? 0.90 : 0.96)*bcube.dz(); // stagger the heights in X vs. Y so that wires don't intersect on poles that have them in both dims
 		cbar.z2() = cbar .z1() + 0.7*pole_radius;
-		set_wall_width(cbar, (center[ d] + 0.9*pole_radius), 0.4*pole_radius, d); // offset
+		set_wall_width(cbar, (center[ d] + 1.3*pole_radius), 0.3*pole_radius, d); // offset
 		set_wall_width(cbar,  center[!d], get_bar_extend(), !d);
 		float const offsets[3] = {-wire_spacing, -0.3f*wire_spacing, wire_spacing}; // offset from the center to avoid intersecting the pole
 		point p1;
@@ -441,14 +461,14 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		if (pole_visible && (shadow_only || cbar.closest_dist_less_than(camera_bs, 0.5*dmax))) { // could test cbar cube visible, but unclear if that's faster
 			dstate.draw_cube(qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
 
-			if (!shadow_only && cbar.closest_dist_less_than(camera_bs, 0.25*dmax)) { // draw insulator standoffs
+			if (!shadow_only && cbar.closest_dist_less_than(camera_bs, 0.1*dmax)) { // draw insulator standoffs
 				for (unsigned n = 0; n < 3; ++n) {
 					p1[!d] = center[!d] + offsets[n]; // set wire spacing
 					wire_pts[n][d] = p1 + vector3d(0.0, 0.0, (standoff_height + wire_radius));
 
 					if (n == 1 && d == 1) { // offset middle wire from standoff to avoid clipping through pole
-						if      (!at_line_end[1]) {wire_pts[n][1].y -= 1.2*pole_radius;}
-						else if (!at_line_end[0]) {wire_pts[n][0].x -= 1.2*pole_radius;}
+						if      (!at_line_end[1]) {wire_pts[n][1].y = wire_pts[n][0].y;}
+						else if (!at_line_end[0]) {wire_pts[n][0].x = wire_pts[n][1].x;}
 						else {} // I guess it clips through the pole in this case
 					}
 					cube_t standoff(p1, p1);
@@ -477,8 +497,9 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
 			dstate.draw_cube(untex_qbd, wire, black, 0, 0.0, wire_skip_dims); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
 		} // for n
+		drew_wires = 1;
 	} // for d
-	if (wire_mask == 3) { // both dims set, connect X and Y wires
+	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.3*dmax)) { // both dims set, connect X and Y wires
 		for (unsigned n = 0; n < 3; ++n) {
 			unsigned const ndiv(4);
 			vector3d v12;
