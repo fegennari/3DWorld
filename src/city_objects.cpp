@@ -359,11 +359,10 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 }
 
 power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
-	float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[4]) :
+	float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[2]) :
 	dims(dims_), pole_radius(pole_radius_), wires_offset(wires_offset_), base(base_), center(center_)
 {
-	UNROLL_2X(pole_spacing[i_] = pole_spacing_[i_];)
-	UNROLL_4X(at_line_end [i_] = at_line_end_ [i_];)
+	UNROLL_2X(pole_spacing[i_] = pole_spacing_[i_]; at_line_end[i_] = at_line_end_[i_];)
 	bcube.set_from_point(center);
 	bcube.z2() += height;
 	pos    = bcube.get_cube_center();
@@ -469,7 +468,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 			cube_t wire(p1, p2);
 			wire.expand_in_dim(!d, wire_radius);
 			wire.expand_in_dim(2,  wire_radius);
-			unsigned const wire_skip_dims(at_line_end[d+2] ? 0 : (1 << d)); // skip ends that meet the bars unless at the positive end of the wire
+			unsigned const wire_skip_dims(0); // can set to (1<<d) for non-edge wires, but it's too difficult to properly track this
 			// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
 			dstate.draw_cube(qbd, wire, black, 0, 0.0, wire_skip_dims); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
 		} // for n
@@ -812,7 +811,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		pts[2].y -= 0.5*yspace;
 		unsigned const dims[3] = {3, 1, 2};
 		unsigned const pp_start(ppoles.size());
-		bool const at_line_beg[2] = {(plot.xpos+1 == num_x_plots), (plot.ypos+1 == num_y_plots)};
 
 		for (unsigned i = 0; i < 3; ++i) {
 			point pos(pts[i]);
@@ -826,7 +824,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			}
 			point base(pos);
 			if (i == 1) {base.y += extra_offset;} // shift the pole off the sidewalk and off toward the road to keep it out of the way of pedestrians
-			bool const at_line_end[4] = {0, 0, at_line_beg[0], at_line_beg[1]};
+			bool const at_line_end[2] = {0, 0};
 			ppole_groups.add_obj(power_pole_t(base, pos, pole_radius, height, wires_offset, xyspace, dims[i], at_line_end), ppoles);
 		}
 		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power poles there
@@ -835,7 +833,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			for (unsigned i = 0; i < 2; ++i) {
 				point pt(pts[pole_ixs[i]]);
 				pt.x -= xspace;
-				bool const at_line_end[4] = {1, 0, 0, at_line_beg[1]};
+				bool const at_line_end[2] = {1, 0};
 				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], at_line_end), ppoles);
 			}
 		}
@@ -847,7 +845,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				pt.y -= yspace;
 				point base(pt);
 				if (i == 1) {base.y += extra_offset;}
-				bool const at_line_end[4] = {0, 1, at_line_beg[0], 0};
+				bool const at_line_end[2] = {0, 1};
 				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], at_line_end), ppoles);
 			}
 		}
@@ -856,7 +854,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			pt.x -= xspace;
 			pt.y -= yspace;
 			point base(pt);
-			bool const at_line_end[4] = {1, 1, 0, 0};
+			bool const at_line_end[2] = {1, 1};
 			ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[0], at_line_end), ppoles);
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
@@ -1116,7 +1114,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	bool const add_parking_lots(have_cars && !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 	float const sidewalk_width(get_sidewalk_width());
 
-	for (auto i = plots.begin(); i != plots.end(); ++i) {
+	for (auto i = plots.begin(); i != plots.end(); ++i) { // calculate num_x_plots and num_y_plots; these were used for power poles, but are no longer used
 		max_eq(num_x_plots, i->xpos+1U);
 		max_eq(num_y_plots, i->ypos+1U);
 	}
