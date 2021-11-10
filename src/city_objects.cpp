@@ -62,7 +62,7 @@ void bench_t::calc_bcube() {
 /*static*/ void bench_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
 }
-void bench_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+void bench_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 
 	cube_t cubes[] = { // Note: taken from mapx/bench.txt
@@ -122,7 +122,7 @@ tree_planter_t::tree_planter_t(point const &pos_, float radius_, float height) :
 /*static*/ void tree_planter_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? (int)DIRT_TEX : get_texture_by_name("roads/sidewalk.jpg"));}
 }
-void tree_planter_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+void tree_planter_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 	color_wrapper const cw(LT_GRAY);
 	cube_t dirt(bcube);
@@ -161,7 +161,7 @@ fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, v
 	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
 	city_obj_t::post_draw(dstate, shadow_only);
 }
-void fire_hydrant_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const { // Note: qbd is unused
+void fire_hydrant_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const { // Note: qbds are unused
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 
 	if (!shadow_only && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
@@ -199,7 +199,7 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 	}
 	else {plot_divider_types[dstate.pass_ix].post_draw(shadow_only);}
 }
-void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (dstate.pass_ix == DIV_NUM_TYPES && type == DIV_CHAINLINK) { // add chainlink fence posts
 		if (!dstate.check_cube_visible(bcube, 1.5*dist_scale, shadow_only)) return;
 		float const length(bcube.get_sz_dim(!dim)), height(bcube.dz()), thickness(bcube.get_sz_dim(dim));
@@ -305,7 +305,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 		else {assert(0);}
 	}
 }
-void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if ((dstate.pass_ix > 1) ^ above_ground) return; // not drawn in this pass
 	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
 
@@ -386,7 +386,7 @@ cube_t power_pole_t::get_ped_occluder() const {
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(WOOD2_TEX);}
 }
-void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const {
+void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
 	float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
 	if (!bcube.closest_dist_less_than(camera_bs, dmax)) return;
@@ -454,7 +454,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 					cube_t standoff(p1, p1);
 					standoff.z2() += standoff_height;
 					standoff.expand_by_xy(standoff_radius);
-					dstate.draw_cube(qbd, standoff, white, 1, 1.0E-6); // skip_bottom=1; set texture scale to map to a single texel for a solid color
+					dstate.draw_cube(untex_qbd, standoff, white, 1); // skip_bottom=1; untextured
 				} // for n
 				wire_mask |= (1 << d); // mark wires as drawn in this dim
 			}
@@ -475,7 +475,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 			wire.expand_in_dim(2,  wire_radius);
 			unsigned const wire_skip_dims(0); // can set to (1<<d) for non-edge wires, but it's too difficult to properly track this
 			// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
-			dstate.draw_cube(qbd, wire, black, 0, 0.0, wire_skip_dims); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
+			dstate.draw_cube(untex_qbd, wire, black, 0, 0.0, wire_skip_dims); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
 		} // for n
 	} // for d
 	if (wire_mask == 3) { // both dims set, connect X and Y wires
@@ -487,7 +487,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 			for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
 				unsigned const in((i+1)%ndiv);
 				unsigned const pt_ixs[4] = {(i<<1)+1, (i<<1), (in<<1), (in<<1)+1};
-				for (unsigned n = 0; n < 6; ++n) {qbd.verts.emplace_back(vpn.p[pt_ixs[ixs[n]]], plus_z, 0, 0, black.c);}
+				for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.emplace_back(vpn.p[pt_ixs[ixs[n]]], plus_z, 0, 0, black.c);}
 			} // for i
 		} // for n
 	}
@@ -1079,7 +1079,7 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 	if (objs.empty()) return;
 	T::pre_draw(dstate, shadow_only);
 	unsigned start_ix(0);
-	assert(qbd.empty());
+	assert(qbd.empty() && untex_qbd.empty());
 
 	for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
 		if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling for group
@@ -1088,12 +1088,18 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 
 		for (unsigned i = start_ix; i < g->ix; ++i) {
 			T const &obj(objs[i]);
-			if (dstate.check_sphere_visible(obj.pos, obj.get_bsphere_radius(shadow_only))) {obj.draw(dstate, qbd, dist_scale, shadow_only);}
+			if (dstate.check_sphere_visible(obj.pos, obj.get_bsphere_radius(shadow_only))) {obj.draw(dstate, qbd, untex_qbd, dist_scale, shadow_only);}
 		}
-		if (!qbd.empty() || !dstate.hedge_draw.empty()) { // we have something to draw
+		if (!qbd.empty() || !untex_qbd.empty() || !dstate.hedge_draw.empty()) { // we have something to draw
 			if (!has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // will_emit_now=1, ensure_active=1
 			qbd.draw_and_clear(); // draw this group with current smap
 			dstate.hedge_draw.draw_and_clear(dstate.s);
+
+			if (!untex_qbd.empty()) {
+				if (!shadow_only) {select_texture(WHITE_TEX);}
+				untex_qbd.draw_and_clear();
+				if (!shadow_only) {T::pre_draw(dstate, shadow_only);} // re-setup for next tile
+			}
 		}
 	} // for g
 	T::post_draw(dstate, shadow_only);

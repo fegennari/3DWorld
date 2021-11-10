@@ -22,13 +22,13 @@ struct bench_t : public city_obj_t {
 	bench_t() : dim(0), dir(0) {}
 	void calc_bcube();
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 };
 
 struct tree_planter_t : public city_obj_t {
 	tree_planter_t(point const &pos_, float radius_, float height);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 };
 
 struct fire_hydrant_t : public city_obj_t {
@@ -37,7 +37,7 @@ struct fire_hydrant_t : public city_obj_t {
 	fire_hydrant_t(point const &pos_, float radius_, float height, vector3d const &orient_);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -50,7 +50,7 @@ struct divider_t : public city_obj_t {
 		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), type(type_), dim(dim_), dir(dir_), skip_dims(sd) {bcube = c;}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -63,7 +63,7 @@ struct swimming_pool_t : public city_obj_t {
 	float get_radius() const {assert(above_ground); return 0.25f*(bcube.dx() + bcube.dy());}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -83,7 +83,7 @@ struct power_pole_t : public city_obj_t {
 	cube_t const &get_outer_bcube() const {return bcube_with_wires;}
 	cube_t get_ped_occluder() const;
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
-	void draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_scale, bool shadow_only) const;
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
@@ -106,7 +106,7 @@ private:
 	vector<swimming_pool_t> pools;
 	vector<power_pole_t> ppoles;
 	city_obj_groups_t bench_groups, planter_groups, fire_hydrant_groups, divider_groups, pool_groups, ppole_groups; // index is last object in group
-	quad_batch_draw qbd;
+	quad_batch_draw qbd, untex_qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
 	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;
 	float plot_subdiv_sz;
