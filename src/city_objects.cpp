@@ -367,7 +367,7 @@ power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_
 	bcube.z2() += height;
 	pos    = bcube.get_cube_center();
 	radius = bcube.get_bsphere_radius();
-	for (unsigned d = 0; d < 2; ++d) {bcube.expand_in_dim(d, (has_dim_set(d) ? pole_radius : get_bar_extend()));} // add bar if dim bit not set
+	for (unsigned d = 0; d < 2; ++d) {bcube.expand_in_dim(d, (has_dim_set(d) ? get_bar_extend() : pole_radius));} // add bar if dim bit not set
 	bcube_with_wires = bcube; // cache for visibility query; could also recompute on each call
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -445,7 +445,12 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, float dist_s
 				for (unsigned n = 0; n < 3; ++n) {
 					p1[!d] = center[!d] + offsets[n]; // set wire spacing
 					wire_pts[n][d] = p1 + vector3d(0.0, 0.0, (standoff_height + wire_radius));
-					if (n == 1 && d == 1) {wire_pts[n][d].y += (at_line_end[d] ? 1.2 : -1.2)*pole_radius;} // offset middle wire from standoff to avoid clipping through pole
+
+					if (n == 1 && d == 1) { // offset middle wire from standoff to avoid clipping through pole
+						if      (!at_line_end[1]) {wire_pts[n][1].y -= 1.2*pole_radius;}
+						else if (!at_line_end[0]) {wire_pts[n][0].x -= 1.2*pole_radius;}
+						else {} // I guess it clips through the pole in this case
+					}
 					cube_t standoff(p1, p1);
 					standoff.z2() += standoff_height;
 					standoff.expand_by_xy(standoff_radius);
