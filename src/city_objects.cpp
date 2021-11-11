@@ -425,6 +425,8 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			ce[0].x = ce[1].x = base.x;
 			ce[0].y = ce[1].y = base.y + tf_radius + pole_radius; // offset in +y
 			vector_point_norm const &vpn(gen_cylinder_data(ce, tf_radius, tf_radius, ndiv, v12));
+			bool const draw_top(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
+			vector3d const tb_normal(draw_top ? plus_z : -plus_z);
 
 			for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
 				for (unsigned j = 0; j < 2; ++j) {
@@ -435,9 +437,9 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 				}
 				for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.push_back(quad_pts[ixs[n]]);}
 				unsigned const I((i+1)%ndiv); // draw top triangle
-				untex_qbd.verts.emplace_back(ce[1], plus_z, 0, 0, gray);
-				untex_qbd.verts.emplace_back(vpn.p[(i<<1)+1], plus_z, 0, 0, gray);
-				untex_qbd.verts.emplace_back(vpn.p[(I<<1)+1], plus_z, 0, 0, gray);
+				untex_qbd.verts.emplace_back(ce[draw_top], tb_normal, 0, 0, gray);
+				untex_qbd.verts.emplace_back(vpn.p[(i<<1)+draw_top], tb_normal, 0, 0, gray);
+				untex_qbd.verts.emplace_back(vpn.p[(I<<1)+draw_top], tb_normal, 0, 0, gray);
 			} // for i
 		}
 	}
