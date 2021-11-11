@@ -389,7 +389,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	bool const skip_tile_int_check(dest_valid && !is_mating && (dist_less_than(pos, cur_dest, 2.0*radius) ||
 		(dest_bsphere.radius > 0.0 && dist_less_than(pos, dest_bsphere.pos, (coll_radius + dest_bsphere.radius)))));
 	
-	if (proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, 1, &cnorm, 0)) { // check cars but not building interiors
+	if (proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, 0, &cnorm, 0)) { // skip building interiors (shouldn't be there) and cars (too slow)
 		pos = cs_pos - get_camera_coord_space_xlate(); // back to world space
 		calc_reflection_angle(dir, dir, cnorm); // reflect
 		dir.normalize();
