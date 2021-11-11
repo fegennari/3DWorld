@@ -365,6 +365,7 @@ road_isec_t::road_isec_t(cube_t const &c, int rx, int ry, unsigned char conn_, b
 	else if (conn == 5 || conn == 6  || conn == 9  || conn == 10) {num_conn = 2;} // 2-way
 	else {assert(0);}
 	stoplight.init(num_conn, conn);
+	z2() += stoplight_ns::stoplight_max_height(); // include stoplights in Z-range
 }
 
 tex_range_t road_isec_t::get_tex_range(float ar) const {
@@ -464,7 +465,7 @@ bool road_isec_t::check_sphere_coll(point const &pos, float radius) const { // u
 
 bool road_isec_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const {
 	if (num_conn == 2) return 0; // no stoplights
-	if (!sphere_cube_intersect_xy(pos, (radius + dist), (*this + xlate))) return 0;
+	if (!sphere_cube_intersect(pos, (radius + dist), (*this + xlate))) return 0;
 
 	for (unsigned n = 0; n < 4; ++n) {
 		if (!(conn & (1<<n))) continue; // no road in this dir
@@ -481,9 +482,7 @@ bool check_line_clip_update_t(point const &p1, point const &p2, float &t, cube_t
 
 bool road_isec_t::line_intersect(point const &p1, point const &p2, float &t) const {
 	if (num_conn == 2) return 0; // no stoplights
-	cube_t c(*this); // deep copy
-	c.z2() += stoplight_ns::stoplight_max_height();
-	if (!c.line_intersects(p1, p2)) return 0;
+	if (!line_intersects(p1, p2)) return 0;
 	bool ret(0);
 
 	for (unsigned n = 0; n < 4; ++n) {
@@ -509,9 +508,7 @@ void road_isec_t::draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, poin
 
 void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const {
 	if (num_conn == 2) return; // no stoplights
-	cube_t sl_bcube(*this);
-	sl_bcube.z2() += 0.276*city_params.road_width; // add max stoplight height
-	if (!dstate.check_cube_visible(sl_bcube, 0.16, shadow_only)) return; // dist_scale=0.16
+	if (!dstate.check_cube_visible(*this, 0.16, shadow_only)) return; // dist_scale=0.16
 	point const center(get_cube_center() + dstate.xlate);
 	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 	vector3d const cview_dir(camera_pdu.pos - center);

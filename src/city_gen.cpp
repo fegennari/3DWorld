@@ -1577,10 +1577,9 @@ class city_road_gen_t : public road_gen_base_t {
 			cube_t const road_bcube(get_road_bcube_for_car(car));
 			if (!bcube.intersects_xy(car.prev_bcube)) {cout << car.str() << endl << road_bcube.str() << endl; assert(0);} // sanity check
 			bool const dim(car.dim);
-			float const road_dz(road_bcube.dz());
 			car.in_tunnel = point_in_tunnel(car.get_center());
 
-			if (road_dz != 0.0) { // car on connector road
+			if (car.cur_road_type == TYPE_RSEG && road_bcube.z1() != road_bcube.z2()) { // car on connector road
 				assert(car.cur_road_type == TYPE_RSEG);
 				assert(car.cur_city == CONN_CITY_IX);
 				bool const slope(get_car_seg(car).slope);
@@ -1590,12 +1589,12 @@ class city_road_gen_t : public road_gen_base_t {
 				float const t((car_pos - road_bcube.d[dim][0])/road_len); // car pos along road in (0.0, 1.0)
 				float const road_z(road_bcube.d[2][slope] + t*(road_bcube.d[2][!slope] - road_bcube.d[2][slope]));
 				float const car_len(car.get_length());
-				car.dz = ((slope ^ car.dir) ? 1.0 : -1.0)*road_dz*(car_len/road_len);
+				car.dz = ((slope ^ car.dir) ? 1.0 : -1.0)*road_bcube.dz()*(car_len/road_len);
 				car.bcube.z1() = road_z - 0.5*fabs(car.dz);
 				car.bcube.z2() = road_z + 0.5*fabs(car.dz) + car.height;
 			}
 			else if (car.dz != 0.0) { // car moving from connector road to level city
-				float const road_z(road_bcube.z2());
+				float const road_z(road_bcube.z1());
 				car.dz = 0.0;
 				set_cube_zvals(car.bcube, road_z, (road_z + car.height));
 			}
@@ -1660,6 +1659,7 @@ class city_road_gen_t : public road_gen_base_t {
 							point const dest_pos(car_rn.get_car_dest_isec_center(car, road_networks, global_rn));
 							dest_dir = dest_pos - car.get_center();
 						}
+						dest_dir.z = 0.0; // always level
 						bool const pri_dim(fabs(dest_dir.x) < fabs(dest_dir.y)), pri_dir(dest_dir[pri_dim] > 0), sec_dir(dest_dir[!pri_dim] > 0);
 						unsigned best_score(0);
 
