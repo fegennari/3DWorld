@@ -447,6 +447,7 @@ void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
 bool butterfly_t::can_mate_with(butterfly_t const &b) const {return (gender != b.gender && color == b.color);} // different gender and same color
 
 void vect_butterfly_t::run_mating(tile_t const *const tile) {
+	if (!animate2 || this->empty()) return;
 	tile_t *adj_tiles[9] = {0};
 	get_adj_tiles(tile, adj_tiles);
 	float const mate_dmax(0.75f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // 0.75 tile
