@@ -872,9 +872,9 @@ bool small_tree::check_sphere_coll(point &center, float radius) const {
 }
 
 
-bool small_tree::line_intersect(point const &p1, point const &p2, float *t) const {
+bool small_tree::line_intersect(point const &p1, point const &p2, float *t) const { // for tiled terrain mode
 
-	assert(is_pine_tree()); // Note: can work on other tree types, but it's more complex, and we only need pine trees in tiled terrain mode
+	if (!is_pine_tree()) return 0; // Note: can work on other tree types such as palms, but it's more complex
 	vector3d const dirh(get_rot_dir()*height);
 	cylinder_3dw const cylins[2] = {trunk_cylin, cylinder_3dw((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0)};
 	bool coll(0);
