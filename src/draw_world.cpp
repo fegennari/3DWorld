@@ -1948,8 +1948,11 @@ void draw_compass_and_alt() { // and temperature
 	int const octant(int(((cview_dir.y < 0) ? (360.0 - theta) : theta)/45.0 + 22.5)&7);
 	sprintf(text, "%s", dirs[octant].c_str());
 	draw_text(YELLOW, 0.005*aspect_ratio, -0.01, -0.02, text);
-	sprintf(text, "Temp: %iC", int(temperature));
-	draw_text(YELLOW, 0.007*aspect_ratio, -0.01, -0.02, text);
+
+	if (temperature != 20.0) { // only show temperature if it's moved off the default of 20.0
+		sprintf(text, "Temp: %iC", int(temperature));
+		draw_text(YELLOW, 0.007*aspect_ratio, -0.01, -0.02, text);
+	}
 }
 
 
