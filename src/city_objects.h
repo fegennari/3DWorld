@@ -101,11 +101,11 @@ public: // road network needs access to parking lots and driveways for drawing
 private:
 	vector<bench_t> benches;
 	vector<tree_planter_t> planters;
-	vector<fire_hydrant_t> fire_hydrants;
+	vector<fire_hydrant_t> fhydrants;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
 	vector<power_pole_t> ppoles;
-	city_obj_groups_t bench_groups, planter_groups, fire_hydrant_groups, divider_groups, pool_groups, ppole_groups; // index is last object in group
+	city_obj_groups_t bench_groups, planter_groups, fhydrant_groups, divider_groups, pool_groups, ppole_groups; // index is last object in group
 	quad_batch_draw qbd, untex_qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
 	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;

@@ -789,7 +789,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				vector3d orient(zero_vector);
 				orient[!dim] = (dir ? 1.0 : -1.0); // oriented perpendicular to the road
 				fire_hydrant_t const fire_hydrant(pos, radius, height, orient);
-				fire_hydrant_groups.add_obj(fire_hydrant, fire_hydrants);
+				fhydrant_groups.add_obj(fire_hydrant, fhydrants);
 				colliders.push_back(fire_hydrant.bcube);
 			} // for dir
 		} // for dim
@@ -1129,8 +1129,8 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 }
 
 void city_obj_placer_t::clear() {
-	parking_lots.clear(); benches.clear(); planters.clear(); fire_hydrants.clear(); driveways.clear(); dividers.clear(); pools.clear(); ppoles.clear();
-	bench_groups.clear(); planter_groups.clear(); fire_hydrant_groups.clear(); divider_groups.clear(); pool_groups.clear(); ppole_groups.clear();
+	parking_lots.clear(); benches.clear(); planters.clear(); fhydrants.clear(); driveways.clear(); dividers.clear(); pools.clear(); ppoles.clear();
+	bench_groups.clear(); planter_groups.clear(); fhydrant_groups.clear(); divider_groups.clear(); pool_groups.clear(); ppole_groups.clear();
 	num_spaces = filled_spaces = 0;
 }
 
@@ -1179,16 +1179,16 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	} // for i
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
-	bench_groups.create_groups(benches);
-	planter_groups.create_groups(planters);
-	fire_hydrant_groups.create_groups(fire_hydrants);
-	divider_groups.create_groups(dividers);
-	pool_groups.create_groups(pools);
-	ppole_groups.create_groups(ppoles);
+	bench_groups   .create_groups(benches);
+	planter_groups .create_groups(planters);
+	fhydrant_groups.create_groups(fhydrants);
+	divider_groups .create_groups(dividers);
+	pool_groups    .create_groups(pools);
+	ppole_groups   .create_groups(ppoles);
 
 	if (0) { // debug info printing
-		cout << TXT(benches.size()) << TXT(bench_groups.size()) << TXT(planters.size()) << TXT(planter_groups.size()) << TXT(fire_hydrants.size())
-			 << TXT(fire_hydrant_groups.size()) << TXT(dividers.size()) << TXT(divider_groups.size()) << TXT(pools.size()) << TXT(pool_groups.size())
+		cout << TXT(benches.size()) << TXT(bench_groups.size()) << TXT(planters.size()) << TXT(planter_groups.size()) << TXT(fhydrants.size())
+			 << TXT(fhydrant_groups.size()) << TXT(dividers.size()) << TXT(divider_groups.size()) << TXT(pools.size()) << TXT(pool_groups.size())
 			 << TXT(ppoles.size()) << TXT(ppole_groups.size()) << endl;
 	}
 	if (add_parking_lots) {
@@ -1225,9 +1225,9 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
-	draw_objects(benches,       bench_groups,        dstate, 0.16, shadow_only, 0); // dist_scale=0.16
-	draw_objects(fire_hydrants, fire_hydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
-	draw_objects(ppoles,        ppole_groups,        dstate, 0.20, shadow_only, 0); // dist_scale=0.20
+	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
+	draw_objects(fhydrants, fhydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
+	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 			
 	if (!shadow_only) { // low profile, not drawn in shadow pass
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt, stone}
@@ -1265,11 +1265,11 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 }
 bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const { // pos in in camera space
 	vector3d const xlate(get_camera_coord_space_xlate());
-	if (proc_vector_sphere_coll(benches,       bench_groups,        pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(fire_hydrants, fire_hydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(dividers,      divider_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(pools,         pool_groups,         pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(ppoles,        ppole_groups,        pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(benches,   bench_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(fhydrants, fhydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(dividers,  divider_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(pools,     pool_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(ppoles,    ppole_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it
 	return 0;
 }
@@ -1285,11 +1285,11 @@ template<typename T> void check_vector_line_intersect(vector<T> const &objs, cit
 }
 bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &t) const { // Note: nothing to do for parking lots or tree_planters; p1/p2 in world space
 	bool ret(0);
-	check_vector_line_intersect(benches,       bench_groups,        p1, p2, t, ret);
-	check_vector_line_intersect(fire_hydrants, fire_hydrant_groups, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
-	check_vector_line_intersect(dividers,      divider_groups,      p1, p2, t, ret);
-	check_vector_line_intersect(pools,         pool_groups,         p1, p2, t, ret);
-	check_vector_line_intersect(ppoles,        ppole_groups,        p1, p2, t, ret); // inaccurate, could be customized if needed
+	check_vector_line_intersect(benches,   bench_groups,    p1, p2, t, ret);
+	check_vector_line_intersect(fhydrants, fhydrant_groups, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
+	check_vector_line_intersect(dividers,  divider_groups,  p1, p2, t, ret);
+	check_vector_line_intersect(pools,     pool_groups,     p1, p2, t, ret);
+	check_vector_line_intersect(ppoles,    ppole_groups,    p1, p2, t, ret); // inaccurate, could be customized if needed
 	return ret;
 }
 
@@ -1322,11 +1322,11 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	start_ix = 0;
 
 	if (!skip_in_road) { // fire hydrants are now placed on the edges of the road, so they're not inside plots and are skipped here
-		for (auto i = fire_hydrant_groups.begin(); i != fire_hydrant_groups.end(); start_ix = i->ix, ++i) {
+		for (auto i = fhydrant_groups.begin(); i != fhydrant_groups.end(); start_ix = i->ix, ++i) {
 			if (!i->contains_pt_xy(pos)) continue;
-			assert(start_ix <= i->ix && i->ix <= fire_hydrants.size());
+			assert(start_ix <= i->ix && i->ix <= fhydrants.size());
 
-			for (auto b = fire_hydrants.begin()+start_ix; b != fire_hydrants.begin()+i->ix; ++b) {
+			for (auto b = fhydrants.begin()+start_ix; b != fhydrants.begin()+i->ix; ++b) {
 				if (pos.x < b->bcube.x1()) break; // fire_hydrants are sorted by x1, no fire_hydrant after this can match
 				if (dist_xy_less_than(pos, b->pos, b->radius)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;} // orange/yellow color
 			}
