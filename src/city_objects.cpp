@@ -745,7 +745,7 @@ template<typename T> void city_obj_groups_t::add_obj(T const &obj, vector<T> &ob
 	by_tile[get_tile_id_for_cube(obj.bcube)].push_back(objs.size());
 	objs.push_back(obj);
 }
-template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs) {
+template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs, cube_t &all_objs_bcube) {
 	vector<T> new_objs;
 	new_objs.reserve(objs.size());
 	reserve(by_tile.size()); // the number of actual groups
@@ -762,6 +762,7 @@ template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs) {
 		sort(new_objs.begin()+group_start, new_objs.end());
 		group.ix = new_objs.size();
 		push_back(group);
+		all_objs_bcube.assign_or_union_with_cube(group);
 	} // for g
 	objs.swap(new_objs);
 	by_tile.clear(); // no longer needed
@@ -1131,6 +1132,7 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 void city_obj_placer_t::clear() {
 	parking_lots.clear(); benches.clear(); planters.clear(); fhydrants.clear(); driveways.clear(); dividers.clear(); pools.clear(); ppoles.clear();
 	bench_groups.clear(); planter_groups.clear(); fhydrant_groups.clear(); divider_groups.clear(); pool_groups.clear(); ppole_groups.clear();
+	all_objs_bcube.set_to_zeros();
 	num_spaces = filled_spaces = 0;
 }
 
@@ -1179,12 +1181,12 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	} // for i
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
-	bench_groups   .create_groups(benches);
-	planter_groups .create_groups(planters);
-	fhydrant_groups.create_groups(fhydrants);
-	divider_groups .create_groups(dividers);
-	pool_groups    .create_groups(pools);
-	ppole_groups   .create_groups(ppoles);
+	bench_groups   .create_groups(benches,   all_objs_bcube);
+	planter_groups .create_groups(planters,  all_objs_bcube);
+	fhydrant_groups.create_groups(fhydrants, all_objs_bcube);
+	divider_groups .create_groups(dividers,  all_objs_bcube);
+	pool_groups    .create_groups(pools,     all_objs_bcube);
+	ppole_groups   .create_groups(ppoles,    all_objs_bcube);
 
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(bench_groups.size()) << TXT(planters.size()) << TXT(planter_groups.size()) << TXT(fhydrants.size())
@@ -1263,8 +1265,8 @@ template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_ob
 	} // for g
 	return 0;
 }
-bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const { // pos in in camera space
-	vector3d const xlate(get_camera_coord_space_xlate());
+bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const { // pos in in camera space
+	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos,p_last)), (all_objs_bcube + xlate))) return 0;
 	if (proc_vector_sphere_coll(benches,   bench_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(fhydrants, fhydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(dividers,  divider_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
@@ -1284,6 +1286,7 @@ template<typename T> void check_vector_line_intersect(vector<T> const &objs, cit
 	}
 }
 bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &t) const { // Note: nothing to do for parking lots or tree_planters; p1/p2 in world space
+	if (!all_objs_bcube.line_intersects(p1, p2)) return 0;
 	bool ret(0);
 	check_vector_line_intersect(benches,   bench_groups,    p1, p2, t, ret);
 	check_vector_line_intersect(fhydrants, fhydrant_groups, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much

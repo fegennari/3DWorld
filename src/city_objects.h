@@ -91,7 +91,7 @@ class city_obj_groups_t : public vector<cube_with_ix_t> {
 	map<uint64_t, vector<unsigned> > by_tile;
 public:
 	template<typename T> void add_obj(T const &obj, vector<T> &objs);
-	template<typename T> void create_groups(vector<T> &objs);
+	template<typename T> void create_groups(vector<T> &objs, cube_t &all_objs_bcube);
 };
 
 class city_obj_placer_t {
@@ -108,6 +108,7 @@ private:
 	city_obj_groups_t bench_groups, planter_groups, fhydrant_groups, divider_groups, pool_groups, ppole_groups; // index is last object in group
 	quad_batch_draw qbd, untex_qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
+	cube_t all_objs_bcube;
 	unsigned num_spaces, filled_spaces, num_x_plots, num_y_plots;
 	float plot_subdiv_sz;
 	
@@ -130,7 +131,7 @@ public:
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential);
 	static bool subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, unsigned parent_plot_ix, vect_city_zone_t &sub_plots);
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);
-	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const;
+	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	bool get_color_at_xy(point const &pos, colorRGBA &color, bool skip_in_road) const;
 	void get_occluders(pos_dir_up const &pdu, vect_cube_t &occluders) const;

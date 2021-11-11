@@ -1081,7 +1081,7 @@ class city_road_gen_t : public road_gen_base_t {
 			if ((pos.z - xlate.z - radius < bcube.z2()) + (streetlight_ns::get_streetlight_height())) { // below the level of the streetlights
 				if (proc_streetlight_sphere_coll(pos, radius, xlate, cnorm)) return 1;
 			}
-			if (city_obj_placer.proc_sphere_coll(pos, p_last, radius, cnorm)) return 1;
+			if (city_obj_placer.proc_sphere_coll(pos, p_last, xlate, radius, cnorm)) return 1;
 			
 			if (0 && plot_coll) { // no other collisions - return collision with plot or road - doesn't work correctly for bouncing balls
 				if (cnorm) {*cnorm = plus_z;}
@@ -1092,15 +1092,16 @@ class city_road_gen_t : public road_gen_base_t {
 		bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: xlate has already been applied
 			cube_t c(bcube); // deep copy
 			c.z2() += stoplight_ns::stoplight_max_height();
-			if (!c.line_intersects(p1, p2)) return 0;
 			bool ret(0);
-
-			for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
-				for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
+			
+			if (c.line_intersects(p1, p2)) { // z2 too small for streetlights?
+				for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
+					for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
+				}
+				for (auto i = bridges.begin(); i != bridges.end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
+				for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
+				ret |= line_intersect_streetlights(p1, p2, t);
 			}
-			for (auto i = bridges.begin(); i != bridges.end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
-			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
-			ret |= line_intersect_streetlights(p1, p2, t);
 			ret |= city_obj_placer.line_intersect(p1, p2, t);
 			return ret;
 		}
