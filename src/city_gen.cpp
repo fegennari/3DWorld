@@ -1057,9 +1057,7 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			get_bcubes_sphere_coll(tracks, out, query_pos, radius, xy_only, xlate);
 		}
-		bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const { // pos is in camera space
-			vector3d const xlate(get_camera_coord_space_xlate());
-			float const dist(p2p_dist(pos, p_last));
+		bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float dist, float radius, float prev_frame_zval, vector3d *cnorm) const { // pos in camera space
 			if (!sphere_cube_intersect_xy(pos, (radius + dist), (bcube + xlate))) return 0;
 			bool plot_coll(0);
 			
@@ -2276,10 +2274,13 @@ public:
 		return global_rn.get_color_at_xy(pos, color);
 	}
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, float prev_frame_zval, vector3d *cnorm) const { // pos is in camera space
+		vector3d const xlate(get_camera_coord_space_xlate());
+		float const dist(p2p_dist(pos, p_last));
+
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {
-			if (r->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm)) return 1;
+			if (r->proc_sphere_coll(pos, p_last, xlate, dist, radius, prev_frame_zval, cnorm)) return 1;
 		}
-		return global_rn.proc_sphere_coll(pos, p_last, radius, prev_frame_zval, cnorm); // needed for bridges and tunnels
+		return global_rn.proc_sphere_coll(pos, p_last, xlate, dist, radius, prev_frame_zval, cnorm); // needed for bridges and tunnels
 	}
 	bool line_intersect(point const &p1, point const &p2, float &t) const {
 		bool ret(0);
