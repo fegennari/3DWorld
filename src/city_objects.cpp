@@ -1245,33 +1245,49 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	dstate.pass_ix = 0; // reset back to 0
 }
 
-template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, point &pos, point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm) {
-	for (auto i = objs.begin(); i != objs.end(); ++i) { // Note: could use bench_groups
-		if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
-	}
+template<typename T> bool proc_vector_sphere_coll(vector<T> const &objs, city_obj_groups_t const &groups, point &pos,
+	point const &p_last, float radius, vector3d const &xlate, vector3d *cnorm)
+{
+	point const pos_bs(pos + xlate);
+	unsigned start_ix(0);
+
+	for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
+		if (!sphere_cube_intersect(pos_bs, radius, *g)) continue;
+		assert(start_ix <= g->ix && g->ix <= objs.size());
+
+		for (auto i = objs.begin()+start_ix; i != objs.begin()+g->ix; ++i) {
+			if (i->proc_sphere_coll(pos, p_last, radius, xlate, cnorm)) return 1;
+		}
+	} // for g
 	return 0;
 }
-bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const {
+bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d *cnorm) const { // pos in in camera space
 	vector3d const xlate(get_camera_coord_space_xlate());
-	if (proc_vector_sphere_coll(benches,       pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(fire_hydrants, pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(dividers,      pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(pools,         pos, p_last, radius, xlate, cnorm)) return 1;
-	if (proc_vector_sphere_coll(ppoles,        pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(benches,       bench_groups,        pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(fire_hydrants, fire_hydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(dividers,      divider_groups,      pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(pools,         pool_groups,         pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(ppoles,        ppole_groups,        pos, p_last, radius, xlate, cnorm)) return 1;
 	// Note: no coll with tree_planters because the tree coll should take care of it
 	return 0;
 }
 
-template<typename T> void check_vector_line_intersect(vector<T> const &objs, point const &p1, point const &p2, float &t, bool &ret) {
-	for (auto i = objs.begin(); i != objs.end(); ++i) {ret |= check_line_clip_update_t(p1, p2, t, i->bcube);} // check bounding cube
+template<typename T> void check_vector_line_intersect(vector<T> const &objs, city_obj_groups_t const &groups, point const &p1, point const &p2, float &t, bool &ret) {
+	unsigned start_ix(0);
+
+	for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
+		if (!check_line_clip(p1, p2, g->d)) continue;
+		assert(start_ix <= g->ix && g->ix <= objs.size());
+		for (auto i = objs.begin()+start_ix; i != objs.begin()+g->ix; ++i) {ret |= check_line_clip_update_t(p1, p2, t, i->bcube);}
+	}
 }
-bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &t) const { // Note: nothing to do for parking lots or tree_planters
+bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &t) const { // Note: nothing to do for parking lots or tree_planters; p1/p2 in world space
 	bool ret(0);
-	check_vector_line_intersect(benches,       p1, p2, t, ret);
-	check_vector_line_intersect(fire_hydrants, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
-	check_vector_line_intersect(dividers,      p1, p2, t, ret);
-	check_vector_line_intersect(pools,         p1, p2, t, ret);
-	check_vector_line_intersect(ppoles,        p1, p2, t, ret); // inaccurate, could be customized if needed
+	check_vector_line_intersect(benches,       bench_groups,        p1, p2, t, ret);
+	check_vector_line_intersect(fire_hydrants, fire_hydrant_groups, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
+	check_vector_line_intersect(dividers,      divider_groups,      p1, p2, t, ret);
+	check_vector_line_intersect(pools,         pool_groups,         p1, p2, t, ret);
+	check_vector_line_intersect(ppoles,        ppole_groups,        p1, p2, t, ret); // inaccurate, could be customized if needed
 	return ret;
 }
 
