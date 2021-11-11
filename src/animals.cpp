@@ -385,11 +385,16 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	min_eq(pos.z, max((pos.z - max_dz), (zmin_val + get_butterfly_max_alt())));
 	point cs_pos(get_camera_space_pos());
 	vector3d cnorm;
+	// skip collision checks 7/8 times when not visible to the player (optimization); prev_cs_pos won't be accurate, but collisions should be close enough;
+	// we could cache the prev_pos from the most recent collision check, but there would be a jump when the butterfly moves to a new tile or the player's origin is shifted
+	unsigned const update_ix(gender + 2*(dir.x < 0) + 4*(dir.y < 0)); // 0-8 based on somewhat random but uniformly distributed state
+	bool const skip_coll_check(((update_ix + frame_counter)&7) && !is_visible(cs_pos, 0.4));
 	// skip tile scenery intersection check if close to the destination or within the dest plant bsphere
 	bool const skip_tile_int_check(dest_valid && !is_mating && (dist_less_than(pos, cur_dest, 2.0*radius) ||
 		(dest_bsphere.radius > 0.0 && dist_less_than(pos, dest_bsphere.pos, (coll_radius + dest_bsphere.radius)))));
 	
-	if (proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, 0, &cnorm, 0)) { // skip building interiors (shouldn't be there) and cars (too slow)
+	// skip building interiors (shouldn't be there) and cars (too slow)
+	if (!skip_coll_check && proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, 0, &cnorm, 0)) {
 		pos = cs_pos - get_camera_coord_space_xlate(); // back to world space
 		calc_reflection_angle(dir, dir, cnorm); // reflect
 		dir.normalize();
@@ -398,7 +403,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		explore_time = TICKS_PER_SECOND*rgen.rand_uniform(2.0, 5.0); // explore a bit more to get out from between the buildings
 	}
 	else if ((mesh_height < water_plane_z - 0.5*get_butterfly_max_alt()) || // over deep water
-		(!skip_tile_int_check && tile && tile->check_sphere_collision(cs_pos, coll_radius))) // check collision with trees and scenery
+		(!skip_tile_int_check && !skip_coll_check && tile && tile->check_sphere_collision(cs_pos, coll_radius))) // check collision with trees and scenery
 	{
 		dir.negate(); // just negate the direction because we don't have the collision normal
 		velocity.negate();
