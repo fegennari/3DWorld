@@ -1678,9 +1678,7 @@ template<typename A> void tile_t::propagate_animals_to_neighbor_tiles(animal_gro
 void tile_t::update_animals() {
 
 	if (!ENABLE_ANIMALS) return;
-	//timer_t timer("Update Animals");
-
-	// FIXME: animals are in global space, rather than camera local space like everything else;
+	// Note: animals are in global space, rather than camera local space like everything else;
 	// this means that there will be FP errors when the player is far from the origin - but since fish and birds are "distant" objects, that may be okay;
 	// using camera space is more difficult due to all of update code interacting with the rest of the scene, which is in global space;
 	// also, animals can move between tiles, which complicates the math (since adjacent tiles may create their animals in a different starting camera space)
@@ -2127,7 +2125,7 @@ void tile_draw_t::free_compute_shader() {
 
 float tile_draw_t::update(float &min_camera_dist) { // view-independent updates; returns terrain zmin
 
-	//timer_t timer("TT Update");
+	//highres_timer_t timer("TT Update");
 	unsigned const max_tile_gen_per_frame = 16; // higher = less overall gen time (more parallel), but longer wait for first render
 	unsigned const max_cpu_tiles          = 3; // 0 = GPU only
 	unsigned const max_defer_tiles        = 8; // 0 = disable
