@@ -9,7 +9,9 @@ float const DOOR_WIDTH_SCALE = 0.5;
 
 cube_t grass_exclude1, grass_exclude2;
 
-extern float grass_width, CAMERA_RADIUS;
+extern bool begin_motion;
+extern int animate2;
+extern float grass_width, CAMERA_RADIUS, fticks;
 extern building_params_t global_building_params;
 
 
@@ -545,6 +547,16 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 	parts.push_back(c);
 	add_cube_top(c, roof_tquads, (unsigned)tquad_with_ix_t::TYPE_CCAP); // add top quad to cap chimney (also updates bcube to contain chimney)
 	return 1;
+}
+
+void building_t::maybe_gen_chimney_smoke() const {
+	if (!has_chimney || !animate2 || !begin_motion) return; // activate with 'b' key
+	static rand_gen_t smoke_rgen;
+	if (smoke_rgen.rand_float() > 4.0f*fticks/TICKS_PER_SECOND) return; // randomly spawn every so often
+	cube_t const &chimney(get_chimney());
+	point const center(chimney.xc(), chimney.yc(), chimney.z2());
+	gen_arb_smoke(center, GRAY, vector3d(0.0, 0.0, 0.75), 0.25*smoke_rgen.rand_uniform(0.015, 0.025),
+		smoke_rgen.rand_uniform(0.5, 0.7), smoke_rgen.rand_uniform(0.5, 0.75), 0.0, NO_SOURCE, SMOKE, 1, 1.0, 1);
 }
 
 void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {

@@ -2391,6 +2391,7 @@ public:
 						if (reflection_pass && !b.bcube.contains_pt_xy(camera_xlated)) continue; // not the correct building
 						if (!b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
+						if (b.has_chimney) {b.maybe_gen_chimney_smoke();}
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						if (!camera_near_building && !b.has_windows()) continue; // player is outside a windowless building (city office building)
 						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated)); // player is within the building's bcube
