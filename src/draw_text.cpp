@@ -222,7 +222,7 @@ void popup_text_t::draw() const {
 class book_title_gen_t {
 	vector<string> titles, authors;
 	string empty_str;
-	bool loaded;
+	bool loaded = 0;
 
 	void maybe_split_long_str(string &str, unsigned max_len) {
 		unsigned const len(str.size());
@@ -241,10 +241,8 @@ public:
 		std::ifstream in(fn.c_str());
 		if (!in.good()) return;
 		string line;
-		unsigned num_lines(0);
 
 		while (std::getline(in, line)) {
-			++num_lines;
 			size_t const split_pos(line.find(" by ")); // line is expected to be in the format "<title> by <author>"
 			if (split_pos == string::npos) continue; // bad line, skip
 			if (split_len > 0 && split_pos > 2*split_len) continue; // title is too long, skip
