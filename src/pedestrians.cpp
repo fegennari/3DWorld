@@ -3,6 +3,7 @@
 // 12/6/18
 #include "city.h"
 #include "shaders.h"
+#include <fstream>
 
 float const CROSS_SPEED_MULT = 1.8; // extra speed multiplier when crossing the road
 float const CROSS_WAIT_TIME  = 60.0; // in seconds
@@ -20,10 +21,50 @@ extern object_model_loader_t building_obj_model_loader; // for umbrella model
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
 bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos);
 
+class person_name_gen_t {
+	bool loaded = 0;
+	vector<string> male_names, female_names;
+
+	static void load_from_file(string const &fn, vector<string> &names) {
+		std::ifstream in(fn.c_str());
+		if (!in.good()) return;
+		string line;
+
+		while (std::getline(in, line)) {
+			if (!line.empty() && line.front() != '#') {names.push_back(line);}
+		}
+	}
+	void ensure_names_loaded() {
+		if (loaded) return;
+		load_from_file("text_data/male_names.txt",   male_names  );
+		load_from_file("text_data/female_names.txt", female_names);
+		loaded = 1; // mark as loaded whether or not reading succeeds
+	}
+public:
+	string gen_name(unsigned id, bool is_female, bool inc_first, bool inc_last) {
+		assert(inc_first || inc_last);
+		ensure_names_loaded();
+		rand_gen_t rgen;
+		rgen.set_state(id+456, id+123); // use ssn as name rand gen seed
+		rgen.rand_mix();
+		string name;
+
+		if (inc_first) {
+			vector<string> const &names(is_female ? female_names : male_names);
+			if (!names.empty()) {name += names[rgen.rand()%names.size()];}
+		}
+		if (inc_last) {
+			if (!name.empty()) {name += " ";} // add a space between first and last names
+			name += gen_random_name(rgen); // borrow the universe name generator to assign silly names
+		}
+		return name;
+	}
+};
+
+person_name_gen_t person_name_gen;
+
 string pedestrian_t::get_name() const {
-	rand_gen_t rgen;
-	rgen.set_state(ssn, 123); // use ssn as name rand gen seed
-	return gen_random_name(rgen); // for now, borrow the universe name generator to assign silly names
+	return person_name_gen.gen_name(ssn, is_female, 1, 1); // use ssn as name rand gen seed; include both first and last name
 }
 string pedestrian_t::str() const { // Note: no label_str()
 	std::ostringstream oss;
@@ -828,8 +869,10 @@ void ped_manager_t::init(unsigned num_city, unsigned num_building) {
 void ped_manager_t::assign_ped_model(pedestrian_t &ped) { // Note: non-const, modifies rgen
 	unsigned const num_models(ped_model_loader.num_models());
 	if (num_models == 0) {ped.model_id = 0; return;} // will be unused
-	ped.model_id = rgen.rand()%num_models;
-	ped.radius  *= ped_model_loader.get_model(ped.model_id).scale;
+	ped.model_id  = rgen.rand()%num_models;
+	float const scale(ped_model_loader.get_model(ped.model_id).scale);
+	ped.radius   *= scale;
+	ped.is_female = (scale <= 0.75); // somewhat of a hack, but works with current set of models because Katie kid model is the only female with a scale of 0.7
 	assert(ped.radius > 0.0); // no zero/negative model scales
 }
 
