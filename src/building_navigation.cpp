@@ -728,10 +728,12 @@ int building_t::choose_dest_room(building_ai_state_t &state, pedestrian_t &perso
 		float const height(0.7*get_window_vspace()), radius(COLL_RADIUS_SCALE*person.radius);
 		static vect_cube_t avoid; // reuse across frames/people
 		get_avoid_cubes(person.pos.z, height, radius, avoid, 0); // following_player=0
-		interior->nav_graph->find_valid_pt_in_room(avoid, radius, height, person.pos.z, get_room(loc.room_ix), rgen, dest_pos); // if center is not valid, choose a valid point
-		person.target_pos.x = dest_pos.x; person.target_pos.y = dest_pos.y;
-		state.goal_type = GOAL_TYPE_ROOM;
-		return 1;
+		
+		if (interior->nav_graph->find_valid_pt_in_room(avoid, radius, height, person.pos.z, get_room(loc.room_ix), rgen, dest_pos)) { // if center is not valid, choose a valid point
+			person.target_pos.x = dest_pos.x; person.target_pos.y = dest_pos.y;
+			state.goal_type = GOAL_TYPE_ROOM;
+			return 1;
+		}
 	}
 	return 2; // failed, but can retry
 }
