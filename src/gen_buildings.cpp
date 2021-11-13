@@ -1067,16 +1067,19 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				else if (i->y2() >= bcube.y2()) {dim_mask |= 32;}
 				tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
 				bdraw.add_section(*this, 0, *i, tp, side_color, dim_mask, 0, 0, is_house, 0); // XY exterior walls
-
-				if (i->dx() > parts.back().dx() || i->dy() > parts.back().dy()) { // draw top of fireplace exterior - should this be sloped?
-					bdraw.add_section(*this, 0, *i, tp, side_color, 4, 1, 0, 1, 0); // only top
-				}
+				bdraw.add_section(*this, 0, *i, tp, side_color, 4, 1, 0, 1, 0); // draw top of fireplace exterior, even if not wider than the chimney - should it be sloped?
 				continue;
 			}
 			else if (has_chimney && (i+1 == parts.end())) { // chimney
 				tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
 				bdraw.add_section(*this, 0, *i, tp, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
-				bdraw.add_section(*this, 0, *i, tp, side_color, 4, 1, 0, 1, 0); // only top
+				float const wall_width(0.25*min(i->dx(), i->dy()));
+				cube_t hole(*i);
+				hole.expand_by_xy(-wall_width);
+				cube_t sides[4]; // {-y, +y, -x, +x}
+				subtract_cube_xy(*i, hole, sides);
+				unsigned const face_masks[4] = {127-64, 127-32, 127-16, 127-8}; // enable XYZ but skip all but {+y, -y, +x, -x} in XY
+				for (unsigned n = 0; n < 4; ++n) {bdraw.add_section(*this, 0, sides[n], tp, side_color, face_masks[n], 1, 0, 1, 0);} // skip bottom
 				continue;
 			}
 			bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
