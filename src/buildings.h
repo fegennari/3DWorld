@@ -278,7 +278,7 @@ struct building_geom_t { // describes the physical shape of a building
 
 struct tquad_with_ix_t : public tquad_t {
 	// roof, roof access cover, wall, chimney cap, house door, building door, garage door, interior door, roof door
-	enum {TYPE_ROOF=0, TYPE_ROOF_ACC, TYPE_WALL, TYPE_CCAP, TYPE_HDOOR, TYPE_BDOOR, TYPE_GDOOR, TYPE_IDOOR, TYPE_IDOOR2, TYPE_RDOOR, TYPE_HELIPAD, TYPE_SOLAR, TYPE_TRIM};
+	enum {TYPE_ROOF=0, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_GDOOR, TYPE_IDOOR, TYPE_IDOOR2, TYPE_RDOOR, TYPE_HELIPAD, TYPE_SOLAR, TYPE_TRIM};
 	bool is_exterior_door() const {return (type == TYPE_HDOOR || type == TYPE_BDOOR || type == TYPE_GDOOR || type == TYPE_RDOOR);}
 	bool is_interior_door() const {return (type == TYPE_IDOOR || type == TYPE_IDOOR2);}
 
@@ -855,8 +855,8 @@ struct building_t : public building_geom_t {
 	unsigned mat_ix;
 	uint8_t hallway_dim, real_num_parts, roof_type; // main hallway dim: 0=x, 1=y, 2=none
 	uint8_t street_dir; // encoded as 2*dim + dir + 1; 0 is unassigned
-	int8_t open_door_ix, basement_part_ix;
-	bool is_house, has_chimney, has_garage, has_shed, has_int_garage, has_courtyard, has_complex_floorplan, has_helipad, has_ac, has_int_fplace;
+	int8_t open_door_ix, basement_part_ix, has_chimney; // has_chimney: 0=none, 1=interior, 2=exterior with fireplace
+	bool is_house, has_garage, has_shed, has_int_garage, has_courtyard, has_complex_floorplan, has_helipad, has_ac, has_int_fplace;
 	colorRGBA side_color, roof_color, detail_color, door_color, wall_color;
 	cube_t bcube, pri_hall, driveway, porch, assigned_plot;
 	vect_cube_t parts, fences;
@@ -870,11 +870,11 @@ struct building_t : public building_geom_t {
 	friend class building_indir_light_mgr_t;
 
 	building_t(unsigned mat_ix_=0) : mat_ix(mat_ix_), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), street_dir(0), open_door_ix(-1),
-		basement_part_ix(-1), is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0),
+		basement_part_ix(-1), has_chimney(0), is_house(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0),
 		has_helipad(0), has_ac(0), has_int_fplace(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE),
 		ao_bcz2(0.0), ground_floor_z1(0.0) {}
 	building_t(building_geom_t const &bg) : building_geom_t(bg), mat_ix(0), hallway_dim(2), real_num_parts(0), roof_type(ROOF_TYPE_FLAT), street_dir(0), open_door_ix(-1),
-		basement_part_ix(-1), is_house(0), has_chimney(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0),
+		basement_part_ix(-1), has_chimney(0), is_house(0), has_garage(0), has_shed(0), has_int_garage(0), has_courtyard(0), has_complex_floorplan(0), has_helipad(0),
 		has_ac(0), has_int_fplace(0), side_color(WHITE), roof_color(WHITE), detail_color(BLACK), door_color(WHITE), wall_color(WHITE), ao_bcz2(0.0), ground_floor_z1(0.0) {}
 	static float get_scaled_player_radius();
 	static float get_min_front_clearance() {return 2.05f*get_scaled_player_radius();} // slightly larger than the player diameter
@@ -910,8 +910,8 @@ struct building_t : public building_geom_t {
 	vect_cube_t::const_iterator get_real_parts_end() const {return (parts.begin() + real_num_parts);}
 	vect_cube_t::const_iterator get_real_parts_end_inc_sec() const {return (get_real_parts_end() + has_sec_bldg());}
 	cube_t const &get_sec_bldg () const {assert(has_sec_bldg()); assert(real_num_parts < parts.size()); return parts[real_num_parts];}
-	cube_t const &get_chimney  () const {assert(has_chimney && parts.size() > 1); return parts.back();}
-	cube_t const &get_fireplace() const {assert(has_chimney && parts.size() > 2); return parts[parts.size()-2];}
+	cube_t const &get_chimney  () const {assert(has_chimney == 2 && parts.size() > 1); return parts.back();}
+	cube_t const &get_fireplace() const {assert(has_chimney == 2 && parts.size() > 2); return parts[parts.size()-2];}
 	void end_add_parts() {assert(parts.size() < 256); real_num_parts = uint8_t(parts.size());}
 	cube_t get_coll_bcube() const;
 

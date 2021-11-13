@@ -356,7 +356,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 		dim = (tquad.pts[0].x == tquad.pts[1].x);
 		if (world_mode != WMODE_INF_TERRAIN) {tex_off = (dim ? yoff2*DY_VAL : xoff2*DX_VAL);}
 	}
-	else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
+	else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_ROOF_ACC) { // roof cap
 		float const denom(0.5f*(bcube.dx() + bcube.dy()));
 		tsx = tex.tscale_x/denom; tsy = tex.tscale_y/denom;
 	}
@@ -376,7 +376,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 			vert.t[0] = (vert.v[dim] + tex_off)*tsx; // use nonzero width dim
 			vert.t[1] = (vert.v.z - bcube.z1())*tsy;
 		}
-		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF || tquad.type == tquad_with_ix_t::TYPE_CCAP) { // roof or chimney cap
+		else if (tquad.type == tquad_with_ix_t::TYPE_ROOF) { // roof cap
 			vert.t[0] = (vert.v.x - bcube.x1())*tsx; // varies from 0.0 and bcube x1 to 1.0 and bcube x2
 			vert.t[1] = (vert.v.y - bcube.y1())*tsy; // varies from 0.0 and bcube y1 to 1.0 and bcube y2
 		}
@@ -807,7 +807,7 @@ public:
 				else {
 					segs.push_back(wall_seg_t()); // single seg
 				}
-				if (clip_windows && bg.has_chimney) { // remove windows blocked by the chimney; there can be at most one segment
+				if (clip_windows && bg.has_chimney == 2) { // remove windows blocked by the chimney; there can be at most one segment
 					cube_t block(bg.get_chimney());
 					block.union_with_cube(bg.get_fireplace()); // merge with fireplace
 
@@ -951,7 +951,7 @@ public:
 		unsigned skip_ix(num_posts); // start at an invalid value
 
 		if (mult_sections && dim == 0) { // skip end post on the corner in dim=0 because it's duplicated with the corner post in the other dim
-			float const dmin(post_width + (bg.has_chimney ? bg.get_chimney().get_sz_dim(!dim) : 0.0)); // include chimney width, which can increase the house bcube beyond the fence
+			float const dmin(post_width + ((bg.has_chimney == 2) ? bg.get_chimney().get_sz_dim(!dim) : 0.0)); // include chimney width, can increase the house bcube beyond the fence
 			if      (fabs(bg.bcube.d[!dim][1] - fence.d[!dim][1]) < dmin) {beam.d[!dim][1] += post_hwidth; skip_ix = num_posts-1;} // skip last post
 			else if (fabs(bg.bcube.d[!dim][0] - fence.d[!dim][0]) < dmin) {beam.d[!dim][0] -= post_hwidth; skip_ix = 0;} // skip first post
 		}
@@ -1058,15 +1058,28 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		
 		for (auto i = parts.begin(); i != parts.end(); ++i) { // multiple cubes/parts/levels - no AO for houses
 			if (is_basement(i)) continue; // don't need to draw the basement exterior walls since they should be underground
-			unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
 			
-			if (has_chimney && (i+2 == parts.end())) { // skip inside face of fireplace (optimization); needs to be draw as part of the interior instead
+			if (has_chimney == 2 && (i+2 == parts.end())) { // fireplace; skip inside face (optimization); needs to be draw as part of the interior instead
+				unsigned dim_mask(3); // disable faces: 8=x1, 16=x2, 32=y1, 64=y2
 				if      (i->x1() <= bcube.x1()) {dim_mask |= 16;} // Note: may not work on rotated buildings
 				else if (i->x2() >= bcube.x2()) {dim_mask |=  8;}
 				else if (i->y1() <= bcube.y1()) {dim_mask |= 64;}
 				else if (i->y2() >= bcube.y2()) {dim_mask |= 32;}
+				tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
+				bdraw.add_section(*this, 0, *i, tp, side_color, dim_mask, 0, 0, is_house, 0); // XY exterior walls
+
+				if (i->dx() > parts.back().dx() || i->dy() > parts.back().dy()) { // draw top of fireplace exterior - should this be sloped?
+					bdraw.add_section(*this, 0, *i, tp, side_color, 4, 1, 0, 1, 0); // only top
+				}
+				continue;
 			}
-			bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, dim_mask, 0, 0, is_house, 0); // XY exterior walls
+			else if (has_chimney && (i+1 == parts.end())) { // chimney
+				tid_nm_pair_t const tp(mat.side_tex.get_scaled_version(2.0)); // smaller bricks
+				bdraw.add_section(*this, 0, *i, tp, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
+				bdraw.add_section(*this, 0, *i, tp, side_color, 4, 1, 0, 1, 0); // only top
+				continue;
+			}
+			bdraw.add_section(*this, 1, *i, mat.side_tex, side_color, 3, 0, 0, is_house, 0); // XY exterior walls
 			bool skip_top((!need_top_roof && (is_house || i+1 == parts.end())) || is_basement(i)); // don't add the flat roof for the top part in this case
 			// skip the bottom of stacked cubes (not using ground_floor_z1); need to draw the porch roof, so test i->dz()
 			bool const is_stacked(num_sides == 4 && i->z1() > bcube.z1() && i->dz() > 0.5f*get_window_vspace());
@@ -2391,7 +2404,7 @@ public:
 						if (reflection_pass && !b.bcube.contains_pt_xy(camera_xlated)) continue; // not the correct building
 						if (!b.bcube.closest_dist_less_than(camera_xlated, ddist_scale*room_geom_draw_dist)) continue; // too far away
 						if (!camera_pdu.cube_visible(b.bcube + xlate)) continue; // VFC
-						if (b.has_chimney) {b.maybe_gen_chimney_smoke();}
+						b.maybe_gen_chimney_smoke();
 						bool const camera_near_building(b.bcube.contains_pt_xy_exp(camera_xlated, door_open_dist));
 						if (!camera_near_building && !b.has_windows()) continue; // player is outside a windowless building (city office building)
 						bool const player_in_building_bcube(b.bcube.contains_pt_xy(camera_xlated)); // player is within the building's bcube

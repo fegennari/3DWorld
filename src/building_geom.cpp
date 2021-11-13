@@ -406,7 +406,7 @@ bool building_t::is_valid_door_pos(cube_t const &door, float door_width) const {
 	for (auto d = doors.begin(); d != doors.end(); ++d) {
 		if (test_cube.intersects(d->get_bcube())) return 0;
 	}
-	if (has_chimney && test_cube.intersects(get_fireplace())) return 0; // too close to fireplace (Note: door is actually placed first, so this likely has no effect)
+	if (has_chimney == 2 && test_cube.intersects(get_fireplace())) return 0; // too close to fireplace (Note: door is actually placed first, likely has no effect)
 	return 1;
 }
 
@@ -530,8 +530,7 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 			}
 			parts.push_back(fplace); // Note: invalidates part
 			if (rgen.rand_bool()) {c.d[!dim][0] = fplace.d[!dim][0]; c.d[!dim][1] = fplace.d[!dim][1];} // widen chimney to include entire fireplace (for more modern houses)
-			else {add_cube_top(fplace, roof_tquads, (unsigned)tquad_with_ix_t::TYPE_CCAP);} // add top tquad - should this be sloped?
-			has_chimney = 1; // only used for exterior chimney
+			has_chimney = 2; // flag as exterior chimney
 			break; // done
 		} // for n
 		if (!has_chimney) return 0; // failed to place
@@ -541,16 +540,17 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 		c.d[dim][!dir]  = c.d[dim][dir] + (dir ? -1.0 : 1.0)*chimney_depth;
 		c.d[dim][ dir] += (dir ? -1.0 : 1.0)*0.01*sz2; // slight shift from edge of house to avoid z-fighting
 		c.z1() = c.z2();
+		has_chimney = 1; // flag as interior chimney
 	}
 	chimney_height -= 0.4f*abs(shift); // lower it if it's not at the peak of the roof
 	c.z2() += max(chimney_height, 0.75f*window_vspace); // make it at least 3/4 a story in height
 	parts.push_back(c);
-	add_cube_top(c, roof_tquads, (unsigned)tquad_with_ix_t::TYPE_CCAP); // add top quad to cap chimney (also updates bcube to contain chimney)
+	max_eq(bcube.z2(), c.z2()); // update bcube to contain chimney
 	return 1;
 }
 
 void building_t::maybe_gen_chimney_smoke() const {
-	if (!has_chimney || !has_int_fplace || !animate2 || !begin_motion) return; // only if there's an interior fireplace; activate with 'b' key
+	if (has_chimney != 2 || !has_int_fplace || !animate2 || !begin_motion) return; // only if there's an interior fireplace; activate with 'b' key
 	if (int(24534*bcube.x1()) & 1) return; // only 50% of houses have chimney smoke; use position as random seed
 	static rand_gen_t smoke_rgen;
 	if (smoke_rgen.rand_float() > 4.0f*fticks/TICKS_PER_SECOND) return; // randomly spawn every so often
@@ -1024,7 +1024,7 @@ bool building_t::maybe_add_house_driveway(cube_t const &plot, vect_cube_t &drive
 	float const hwidth(0.8*get_window_vspace()*rgen.rand_uniform(0.9, 1.1));
 	avoid = fences;
 	if (!porch.is_all_zeros()) {avoid.push_back(porch);}
-	if (has_chimney) {avoid.push_back(get_fireplace());} // avoid placing the driveway across from the chimney/fireplace
+	if (has_chimney == 2) {avoid.push_back(get_fireplace());} // avoid placing the driveway across from the chimney/fireplace
 	if (tree_pos != all_zeros) {avoid.push_back(cube_t()); avoid.back().set_from_sphere(tree_pos, hwidth);} // assume tree diameter is similar to driveway width
 	cube_t ac_unit;
 	
