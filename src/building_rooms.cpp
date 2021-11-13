@@ -751,6 +751,7 @@ bool building_t::add_bed_to_room(rand_gen_t &rgen, room_t const &room, vect_cube
 
 // Note: modified blockers rather than using it; fireplace must be the first placed object
 bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &blockers, float zval, unsigned room_id, float tot_light_amt) {
+	if (has_int_fplace) return 0; // already added an interior fireplace
 	// Note: the first part of the code below is run on every first floor room and will duplicate work, so it may be better to factor it out somehow
 	cube_t fireplace(get_fireplace()); // make a copy of the exterior fireplace that will be converted to an interior fireplace
 	bool dim(0), dir(0);
@@ -777,6 +778,7 @@ bool building_t::maybe_add_fireplace_to_room(room_t const &room, vect_cube_t &bl
 	blocker.d[dim][ dir] = fireplace.d[dim][!dir]; // flush with the front of the fireplace
 	objs.emplace_back(blocker, TYPE_BLOCKER, room_id, dim, dir, RO_FLAG_INVIS);
 	blockers.push_back(fireplace_ext); // add as a blocker if it's not already there
+	has_int_fplace = 1;
 	return 1;
 }
 

@@ -550,7 +550,8 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 }
 
 void building_t::maybe_gen_chimney_smoke() const {
-	if (!has_chimney || !animate2 || !begin_motion) return; // activate with 'b' key
+	if (!has_chimney || !has_int_fplace || !animate2 || !begin_motion) return; // only if there's an interior fireplace; activate with 'b' key
+	if (int(24534*bcube.x1()) & 1) return; // only 50% of houses have chimney smoke; use position as random seed
 	static rand_gen_t smoke_rgen;
 	if (smoke_rgen.rand_float() > 4.0f*fticks/TICKS_PER_SECOND) return; // randomly spawn every so often
 	cube_t const &chimney(get_chimney());
