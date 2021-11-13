@@ -358,6 +358,35 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 1, 0, cnorm);
 }
 
+void add_virt_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], float r1, float r2, color_wrapper const &cw,
+	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0)
+{
+	// added as individual triangles; would be more efficient to use indexed triangles
+	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
+	vector3d v12; // will be plus_z
+	vector_point_norm const &vpn(gen_cylinder_data(ce, r1, r2, ndiv, v12));
+	vert_norm_tc_color quad_pts[4];
+
+	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
+		for (unsigned j = 0; j < 2; ++j) {
+			unsigned const S(i + j), s(S%ndiv);
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+			float const ts(S*tss);
+			quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal, (swap_ts_tt ?      j *tst : ts), (swap_ts_tt ? ts :      j *tst), cw.c);
+			quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, (swap_ts_tt ? (1.0-j)*tst : ts), (swap_ts_tt ? ts : (1.0-j)*tst), cw.c);
+		}
+		for (unsigned d = 0; d < 2; ++d) { // draw bottom and top triangle(s)
+			if (!(draw_top_bot & (1<<d))) continue;
+			for (unsigned n = 0; n < 6; ++n) {verts.push_back(quad_pts[ixs[n]]);}
+			unsigned const I((i+1)%ndiv);
+			vector3d const normal(d ? plus_z : -plus_z);
+			verts.emplace_back(ce[d], normal, 0.5, 0.5, cw);
+			verts.emplace_back(vpn.p[(i<<1)+d], normal, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
+			verts.emplace_back(vpn.p[(I<<1)+d], normal, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
+		}
+	} // for i
+}
+
 power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
 	float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[2]) :
 	dims(dims_), pole_radius(pole_radius_), wires_offset(wires_offset_), base(base_), center(center_)
@@ -396,54 +425,23 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
 	if (pole_visible) {
-		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(4.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
+		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
 		float const ndiv_inv(1.0/ndiv), top_radius(pole_radius); // top_radius=0.8*pole_radius?
 		float const vert_tscale = 10.0;
 		point ce[2] = {base, get_top()};
-		vector3d v12; // will be plus_z
-		vector_point_norm const &vpn(gen_cylinder_data(ce, pole_radius, top_radius, ndiv, v12));
-		vert_norm_tc_color quad_pts[4];
+		add_virt_cylin_as_tris(qbd.verts, ce, pole_radius, top_radius, cw, ndiv, 2, vert_tscale, ndiv_inv, 1); // draw top; swap_ts_tt=1
 
-		for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
-			for (unsigned j = 0; j < 2; ++j) {
-				unsigned const S(i + j), s(S%ndiv);
-				vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-				float const tt(S*ndiv_inv); // texture is R90
-				quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal,    j *vert_tscale, tt, cw.c);
-				quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, (1-j)*vert_tscale, tt, cw.c);
-			}
-			for (unsigned n = 0; n < 6; ++n) {qbd.verts.push_back(quad_pts[ixs[n]]);}
-			unsigned const I((i+1)%ndiv); // draw top triangle
-			qbd.verts.emplace_back(ce[1], plus_z, 0.5, 0.5, cw);
-			qbd.verts.emplace_back(vpn.p[(i<<1)+1], plus_z, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
-			qbd.verts.emplace_back(vpn.p[(I<<1)+1], plus_z, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
-		} // for i
 		if (dims == 3 && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
 			float const tf_radius(2.0*pole_radius), pole_height(bcube.dz()), tf_height(0.1*pole_height);
 			ce[0].z = base.z  + 0.77*pole_height;
 			ce[1].z = ce[0].z + tf_height;
 			ce[0].x = ce[1].x = base.x;
 			ce[0].y = ce[1].y = base.y + tf_radius + pole_radius; // offset in +y
-			vector_point_norm const &vpn(gen_cylinder_data(ce, tf_radius, tf_radius, ndiv, v12));
 			bool const draw_top(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
-			vector3d const tb_normal(draw_top ? plus_z : -plus_z);
-
-			for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
-				for (unsigned j = 0; j < 2; ++j) {
-					unsigned const S(i + j), s(S%ndiv);
-					vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]);
-					quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal, 0, 0, gray.c);
-					quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, 0, 0, gray.c);
-				}
-				for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.push_back(quad_pts[ixs[n]]);}
-				unsigned const I((i+1)%ndiv); // draw top triangle
-				untex_qbd.verts.emplace_back(ce[draw_top], tb_normal, 0, 0, gray);
-				untex_qbd.verts.emplace_back(vpn.p[(i<<1)+draw_top], tb_normal, 0, 0, gray);
-				untex_qbd.verts.emplace_back(vpn.p[(I<<1)+draw_top], tb_normal, 0, 0, gray);
-			} // for i
+			add_virt_cylin_as_tris(untex_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top ? 2 : 1));
 		}
 	}
-	float const wire_radius(0.08*pole_radius), wire_spacing(0.75*get_bar_extend()), standoff_height(0.3*pole_radius), standoff_radius(0.2*pole_radius);
+	float const wire_radius(0.08*pole_radius), wire_spacing(0.75*get_bar_extend()), standoff_height(0.3*pole_radius), standoff_radius(0.25*pole_radius);
 	point wire_pts[3][2];
 	unsigned wire_mask(0);
 	bool drew_wires(0);
@@ -473,10 +471,9 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 						else if (!at_line_end[0]) {wire_pts[n][0].x = wire_pts[n][1].x;}
 						else {} // I guess it clips through the pole in this case
 					}
-					cube_t standoff(p1, p1);
-					standoff.z2() += standoff_height;
-					standoff.expand_by_xy(standoff_radius);
-					dstate.draw_cube(untex_qbd, standoff, white, 1); // skip_bottom=1; untextured
+					point ce[2] = {p1, p1};
+					ce[1].z += standoff_height;
+					add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, 2); // truncated cone; draw top
 				} // for n
 				wire_mask |= (1 << d); // mark wires as drawn in this dim
 			}
@@ -507,7 +504,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			vector3d v12;
 			vector_point_norm const &vpn(gen_cylinder_data(wire_pts[n], wire_radius, wire_radius, ndiv, v12));
 
-			for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
+			for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads()
 				unsigned const in((i+1)%ndiv);
 				unsigned const pt_ixs[4] = {(i<<1)+1, (i<<1), (in<<1), (in<<1)+1};
 				for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.emplace_back(vpn.p[pt_ixs[ixs[n]]], plus_z, 0, 0, black.c);}
