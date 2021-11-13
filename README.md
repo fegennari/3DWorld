@@ -10,6 +10,7 @@ It has the following features:
 * Procedural universe generator with galaxies, stars, planets, moons, etc.
 * Procedural voxel 3D terrain generation with realtime user editing
 * Terrain generator including various noise functions, erosion, realtime user editing, heightmap read/write
+* Procedural building, road, and city generation
 * Physics simulation for primitive object types and others (> 10K dynamic objects)
 * Realtime day/night cycle with weather (rain, snow, hail, wind, lightning)
 * Physically based materials with reflection and refraction
@@ -24,7 +25,7 @@ It has the following features:
 I converted the project from svn to git at commit 6607.
 Most of the code is written in C++, with GLSL for shaders.
 This is intended to be a cross-platform project.
-A Microsoft Visual Studio 2019 project file is included.
+Microsoft Visual Studio 2019 and 2022 project files are included.
 A linux/gcc makefile is also included, but is more experimental. See README.linux for more details.
 The project should build under gcc on linux with some work, but it's been a while since I tried this.
 I have an old makefile that is out of date, but may not take too much work to fixup and make it usable.
@@ -55,14 +56,12 @@ If you want to use these, you'll need to copy the directories to the root direct
 Note that many of these dependencies are old and could be replaced with newer libraries. I've been concentrating on adding content and I'm not too interested in this.
 Freeglut should probably be replaced with SDL, the last 4 image libraries with DevIL, and maybe assimp can be used for model loading.
 
-If you want to build 3DWorld, you'll need to download and build these dependencies somewhere and change the project settings to use them.
-I just copy these into the current directory and have these files ignored by git/svn.
-I currently use a 32-bit MS Visual Studio 2019 Community build target for 3DWorld.
-It should compile in 64-bit mode, but I couldn't find compatible 64-bit debug libraries for OpenAL,
-and a few of the other dependencies didn't build cleanly in 64-bit mode.
+If you want to build 3DWorld, you can use the projects in the dependencies/ folder, or download and build them yourself and change the project settings to use them.
+I currently use a 32-bit MS Visual Studio 2022 Community build target for 3DWorld, but it should work with MSVS 2019 as well if you use 3DWorld_msvs2019.vcxproj.
+It should compile and run in 64-bit mode if you copy the DLLs from the lib64/ folder into the root of the repo and make some other project settings changes.
 
 If you have linux, you can try to build using the provided makefile. The file README.linux should be helpful.
-I've gotten 3DWorld to build and mostly run on Ubuntu 18.04 with gcc 7.
+I've gotten 3DWorld to build and mostly run on Ubuntu 18.04 with gcc 7 and Ubuntu 20.04 with gcc 9.
 
 3DWorld takes a config filename on the command line. If not found, it reads defaults.txt and uses any config file(s) listed there.
 Some of these congig files include models such as the Sponza Atrium, Stanford Dragon, sportscar, etc.
@@ -72,10 +71,10 @@ http://casual-effects.com/data/
 
 System requirements:
 * Windows 7/8/10 (Runs on Windows 7, but I've only built on 8 and 10). Linux when using the makefile with gcc.
-* Microsoft Visual Studio 2019 (or newer?). The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
+* Microsoft Visual Studio 2019 or 2022. The professional or community version is needed for OpenMP support. You can also try to use gcc on linux.
 * A relatively new generation of Nvidia or ATI GPU (Runs on my laptop with Intel graphics, but at 12-20 FPS)
 * At least 4GB system memory for the larger scenes
-* At least 2GB GPU memory for the larger scenes
+* At least 4GB GPU memory for the larger scenes
 
 Troubleshooting:
 It seems like some systems require an OpenGL core context. This can be selected by adding "use_core_context 1" in the config file.
