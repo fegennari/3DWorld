@@ -156,7 +156,7 @@ void ship_cylinder::draw_cylin(unsigned ndiv, bool textured, float tex_scale_len
 void ship_cube::draw(unsigned ndiv) const { // ndiv is unused
 
 	point pt;
-	float sz[3];
+	float sz[3] = {};
 
 	for (unsigned i = 0; i < 3; ++i) {
 		pt[i] = 0.5f*(d[i][0] + d[i][1]);
@@ -624,7 +624,7 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 		vadd_rand(delta, 0.25*dmag);
 		delta *= dmag/delta.mag(); // normalize
 		colorRGBA c[2];
-		float w[2];
+		float w[2] = {};
 		
 		for (unsigned d = 0; d < 2; ++d) {
 			blend_color(c[d], ALPHA0, LITN_C, (i+d)*ns_inv, 1);

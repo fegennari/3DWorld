@@ -2944,7 +2944,7 @@ void check_asteroid_belt_coll(std::shared_ptr<uasteroid_belt> asteroid_belt, poi
 bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &result, point &coll, vector3d dir, point start,
 	float dist, float line_radius, bool include_asteroids) const
 {
-	int cell_status(1), cs[3];
+	int cell_status(1), cs[3] = {};
 	float rdist(0.0), ldist(0.0), t(0.0);
 	vector3d c1, c2, val, tv, step;
 

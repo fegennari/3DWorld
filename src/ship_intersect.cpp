@@ -197,7 +197,7 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 
 	if (xy_sq > r_sq) {
 		double const term1(-ro*x0/xy_sq), term2(y0*sqrt(xy_sq - r_sq)/xy_sq);
-		double dmin(0.0), d[4];
+		double dmin(0.0), d[4] = {};
 		unsigned pmin[2] = {0, 0};
 		upos_point_type tpts[4];
 
@@ -255,7 +255,7 @@ bool ship_bounded_cylinder::sphere_intersect(point const &sc, float sr, point co
 void ship_bounded_cylinder::get_bounding_sphere(point &c, float &r) const {
 	
 	point center[2];
-	float radius[2];
+	float radius[2] = {};
 	ship_cylinder::get_bounding_sphere(center[0], radius[0]);
 	bcube.get_bounding_sphere(center[1], radius[1]);
 	bool const rmin(radius[1] < radius[0]);

@@ -388,7 +388,7 @@ bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, uns
 		ret.ypos = y;
 		return 1;
 	}
-	unsigned const dim((level&1) ^ dir0 ^ !bool(nlevels&1)), xv(x << (dim^1)), yv(y << dim);
+	unsigned const dim((level&1) ^ dir0 ^ (!bool(nlevels&1))), xv(x << (dim^1)), yv(y << dim);
 	unsigned const i0(dim ? (v1.y > v2.y) : (v1.x > v2.x)); // determine which bin to examine first
 
 	for (unsigned i = 0; i < 2; ++i) {

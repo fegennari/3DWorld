@@ -1104,7 +1104,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 	}
 	for (iterator i = begin(); i != end(); ++i) {
 		unsigned const ix(i - begin());
-		unsigned bnds[3][2];
+		unsigned bnds[3][2] = {};
 
 		for (unsigned d = 0; d < 3; ++d) {
 			bnds[d][0] = max(0, min((int)AF_GRID_SZ-1, int((i->pos[d] - i->radius - (pos[d] - radius))*mult)));

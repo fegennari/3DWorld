@@ -198,7 +198,7 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 	assert((1U<<size_p2) == size); // size must be a power of 2
 	assert(surface != nullptr);
 	unsigned const table_size(MAX_TEXTURE_SIZE << 1); // larger is more accurate
-	static float xtable[TOT_NUM_SINES*table_size], ytable[TOT_NUM_SINES*table_size];
+	static float xtable[TOT_NUM_SINES*table_size] = {}, ytable[TOT_NUM_SINES*table_size] = {};
 	surface->setup(size, max(water, lava), 1); // use_heightmap=1
 	unsigned const num_sines(surface->num_sines);
 	float const *const rdata(surface->rdata);
@@ -224,7 +224,7 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 		float const phi((float(i)/(size-1))*PI);
 		float const sin_phi((i == int(size-1)) ? 0.0 : sinf(phi)), zval((i == int(size-1)) ? -1.0 : cosf(phi));
 		float sin_s(0.0), cos_s(1.0);
-		float ztable[TOT_NUM_SINES];
+		float ztable[TOT_NUM_SINES] = {};
 
 		for (unsigned k = 0; k < num_sines; ++k) { // create z table
 			unsigned const index2(NUM_SINE_PARAMS*k);

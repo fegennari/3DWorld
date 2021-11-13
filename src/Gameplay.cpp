@@ -2267,7 +2267,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				}
 				if (decal_tid >= 0) {gen_decal(decal_pos, decal_radius, coll_norm, decal_tid, cindex, dcolor, is_glass, 1);} // inherit partial glass color
 
-				if (coll_norm.z > -0.5 && !is_glass && ((is_laser & (rand()&1)) || wtype == W_M16)) { // create small dust clouds/smoke at hit locations
+				if (coll_norm.z > -0.5 && !is_glass && ((is_laser && (rand()&1)) || wtype == W_M16)) { // create small dust clouds/smoke at hit locations
 					point const smoke_pos(coll_pos + decal_radius*coll_norm);
 					vector3d const smoke_vel(vector3d(0.1*coll_norm.x, 0.1*coll_norm.y, 0.1));
 					gen_arb_smoke(smoke_pos, WHITE, smoke_vel, 0.2*decal_radius, 1.0, (is_laser ? 1.0 : 0.5), 0.0, shooter, SMOKE, 0, 0.01);

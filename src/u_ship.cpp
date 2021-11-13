@@ -1821,7 +1821,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 			} while (deltas[i] == deltas[i-1]);
 		}
 		for (unsigned i = 0; i < segments; ++i) {
-			float bw[2];
+			float bw[2] = {};
 			point pt[2];
 			colorRGBA c[2];
 

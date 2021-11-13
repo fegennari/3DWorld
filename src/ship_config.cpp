@@ -390,7 +390,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 		case CMD_MESH_PARAMS: // <enum ship_id> <bool deform> <bool remove> <bool expand> <bool uniform_expand> <bool trans>
 			{
 				if (!read_ship_type(type)) return 0;
-				bool params[5];
+				bool params[5] = {};
 				for (unsigned i = 0; i < 5; ++i) {
 					if (!(cfg >> params[i])) return 0;
 				}
@@ -487,7 +487,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 				float rgen_dist, fc_stray_dist(0.0);
 				point pos;
 				string name;
-				unsigned counts[NUM_US_CLASS];
+				unsigned counts[NUM_US_CLASS] = {};
 				if (!read_string(cfg, name)) return 0;
 				if (!(cfg >> multiplier))    return 0;
 				if (!read_enum(align_m,  align,     "alignment"))   return 0;
@@ -758,7 +758,7 @@ bool ship_defs_file_reader::read_string(ifstream &in, string &str) { // can be c
 		cerr << "Error: Bad stream while reading string." << endl;
 		return 0;
 	}
-	int c;
+	int c(0);
 	do {c = in.get();} while (c == ' ' || c == '\t' || c == '\n');
 
 	if (c != '"') {
@@ -1108,7 +1108,7 @@ void choose_n_random_sclasses(vector<unsigned> &sclasses, int align, unsigned nu
 
 	assert(align < NUM_ALIGNMENT);
 	if (num == 0) return;
-	unsigned psum[NUM_US_CLASS];
+	unsigned psum[NUM_US_CLASS] = {};
 	unsigned const prob_table_ix(initial ? 1 : (rand_spawned ? 2 : 0));
 
 	for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
