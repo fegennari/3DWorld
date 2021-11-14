@@ -27,6 +27,7 @@ struct norm_comp { // size = 4
 	void set_ortho_norm(unsigned dim, bool dir) {assert(dim < 3); set_norm_to_zero(); n[dim] = (dir ? 127 : -128);}
 	void set_norm(norm_comp const &n_) {UNROLL_3X(n[i_] = n_.n[i_];)}
 	void set_norm(vector3d const &n_) {UNROLL_3X(n[i_] = char(max(-128, min(127, int(127.0*n_[i_]))));)}
+	void set_norm(char const n_[3]) {UNROLL_3X(n[i_] = n_[i_];)}
 	void set_norm_no_clamp(vector3d const &n_) {UNROLL_3X(n[i_] = int(127.0*n_[i_]);)}
 	vector3d get_norm() const {return vector3d(n[0]/127.0, n[1]/127.0, n[2]/127.0);}
 	void invert_normal() {UNROLL_3X(n[i_] = ((n[i_] == -128) ? 127 : ((n[i_] == 127) ? -128 : -n[i_]));)} // careful to not wraparound for -128 => 128
@@ -155,7 +156,8 @@ struct color_wrapper { // size = 4, can be used in a union
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));) c[3] = 255;}
 	void set_c4(colorRGBA const &c_) {UNROLL_4X(c[i_]  = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
 	void add_c4(colorRGBA const &c_) {UNROLL_4X(c[i_] += (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
-	void copy_color(color_wrapper const &cw) {c[0] = cw.c[0]; c[1] = cw.c[1]; c[2] = cw.c[2]; c[3] = cw.c[3];}
+	void copy_color(color_wrapper const &cw) {UNROLL_4X(c[i_] = cw.c[i_];)}
+	void copy_color(unsigned char const *const c_, bool has_alpha=0) {UNROLL_3X(c[i_] = c_[i_];) c[3] = (has_alpha ? c_[3] : 255);}
 	colorRGB  get_c3() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	colorRGBA get_c4() const {return colorRGBA(get_c3(), c[3]/255.0);}
 	static bool is_compressed() {return 1;}
@@ -199,7 +201,7 @@ struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 	vert_norm_color(vert_norm const &vn, colorRGBA const &c_) : vert_norm(vn) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const     &c_) : vert_norm(v_, n_) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, unsigned char const *c_) : vert_norm(v_, n_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
-	void assign(point const &v_, vector3d const &n_, color_wrapper const &cw) {v = v_; n = n_; color_wrapper::operator=(cw);}
+	void assign(point const &v_, vector3d const &n_, color_wrapper const &cw) {v = v_; n = n_; copy_color(cw);}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
 
@@ -211,11 +213,15 @@ struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // s
 	vert_norm_comp_color(vert_norm_comp const &vn, color_wrapper const &cw) : vert_norm_comp(vn), color_wrapper(cw) {}
 	vert_norm_comp_color(point const &v_, vector3d const &n_, colorRGBA const &c_) : vert_norm_comp(v_, n_) {set_c4(c_);}
 	vert_norm_comp_color(point const &v_, vector3d const &n_, color_wrapper const &cw) : vert_norm_comp(v_, n_), color_wrapper(cw) {}
-	void assign(point const &v_, vector3d const &n_, unsigned char const *const c_) {
-		v = v_; set_norm(n_); c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
+	vert_norm_comp_color(point const &v_, norm_comp const &n_, color_wrapper const &cw) : vert_norm_comp(v_, n_), color_wrapper(cw) {}
+	void assign(point const &v_, vector3d const &n_, unsigned char const *const c_, bool has_alpha=0) {
+		v = v_; set_norm(n_); copy_color(c_, has_alpha);
 	}
-	void assign(point const &v_, char const *const n_, unsigned char const *const c_) {
-		v = v_; n[0] = n_[0]; n[1] = n_[1]; n[2] = n_[2]; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
+	void assign(point const &v_, char const *const n_, unsigned char const *const c_, bool has_alpha=0) {
+		v = v_; set_norm(n_); copy_color(c_, has_alpha);
+	}
+	void assign(point const &v_, norm_comp const &n_, color_wrapper const &c_) {
+		v = v_; set_norm(n_); copy_color(c_);
 	}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
@@ -235,7 +241,7 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 	vert_norm_tc_color(vert_norm const &vn, float ts, float tt, color_wrapper const &cw) : vert_norm_tc(vn, ts, tt), color_wrapper(cw) {}
 	vert_norm_tc_color(vert_norm_tc const &vntc, color_wrapper const &cw) : vert_norm_tc(vntc), color_wrapper(cw) {}
 	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0) {
-		v = v_; n = n_; t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = (has_alpha ? c_[3] : 255);
+		v = v_; n = n_; t[0] = ts; t[1] = tt; copy_color(c_, has_alpha);
 	}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
@@ -255,8 +261,8 @@ struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper 
 	vert_norm_comp_tc_color() {}
 	vert_norm_comp_tc_color(vert_norm_comp_tc const &vntc, color_wrapper const &cw) : vert_norm_comp_tc(vntc), color_wrapper(cw) {}
 	vert_norm_comp_tc_color(point const &v_, norm_comp const &n_, float ts, float tt, color_wrapper const &cw) : vert_norm_comp_tc(v_, n_, ts, tt), color_wrapper(cw) {}
-	template<typename T> void assign(point const &v_, T const &n_, float ts, float tt, unsigned char const *const c_) { // T can be vector3d or norm_comp
-		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
+	template<typename T> void assign(point const &v_, T const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0) { // T can be vector3d or norm_comp
+		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; copy_color(c_, has_alpha);
 	}
 	template<typename T> void assign(point const &v_, T const &n_, float ts, float tt, color_wrapper const &cw) { // T can be vector3d or norm_comp
 		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; copy_color(cw);
@@ -269,8 +275,8 @@ struct vert_norm_comp_tc_comp_color : public vert_norm_comp_tc_comp, public colo
 	typedef vert_norm_tc non_color_class;
 	vert_norm_comp_tc_comp_color() {}
 	vert_norm_comp_tc_comp_color(vert_norm_comp_tc_comp const &vntc, color_wrapper const &cw) : vert_norm_comp_tc_comp(vntc), color_wrapper(cw) {}
-	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_) {
-		v = v_; set_norm(n_); t[0] = 32767*ts; t[1] = 32767*tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
+	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0) {
+		v = v_; set_norm(n_); t[0] = 32767*ts; t[1] = 32767*tt; copy_color(c_, has_alpha);
 	}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 };
