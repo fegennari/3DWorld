@@ -461,11 +461,13 @@ void vect_butterfly_t::run_mating(tile_t const *const tile) {
 		if (!i->is_enabled() || i->mate_time > 0.0 || i->rest_time > 0 || i->explore_time > 0) continue; // skip if waiting to mate, resting, or exploring
 		if (!debug_animal_draw() && rgen.rand_float() < 0.9) continue; // only run 10% of the time; skip this optimization for smooth debug draw
 		if (i->is_mating) {i->dest_valid = i->is_mating = 0;} // reset for this iteration
+		point const cs_pos(i->get_camera_space_pos());
 		float dmin_sq(mate_dmax*mate_dmax);
 
 		for (unsigned adj_ix = 0; adj_ix < 9; ++adj_ix) {
 			tile_t *const adj_tile(adj_tiles[adj_ix]);
 			if (!adj_tile) continue;
+			if (!adj_tile->get_mesh_bcube().closest_dist_xy_less_than(cs_pos, mate_dmax)) continue; // tile is too far away
 			vect_butterfly_t &bflies(adj_tile->get_bflies());
 
 			for (auto j = bflies.begin(); j != bflies.end(); ++j) {
