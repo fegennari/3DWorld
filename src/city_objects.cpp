@@ -5,6 +5,7 @@
 #include "city_objects.h"
 #include "tree_3dw.h" // for tree_placer_t
 
+extern int display_mode;
 extern unsigned max_unique_trees;
 extern double camera_zh;
 extern tree_placer_t tree_placer;
@@ -427,10 +428,11 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 
 	if (pole_visible) {
 		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(1.5f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
+		unsigned const pole_ndiv(min(ndiv, 24U));
 		float const vert_tscale = 10.0;
 		point ce[2] = {base, get_top()};
 		bool const draw_top(ce[1].z < camera_bs.z);
-		add_virt_cylin_as_tris(qbd.verts, ce, pole_radius, pole_radius, cw, ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/ndiv, 1); // draw top; swap_ts_tt=1
+		add_virt_cylin_as_tris(qbd.verts, ce, pole_radius, pole_radius, cw, pole_ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/pole_ndiv, 1); // swap_ts_tt=1
 
 		if (dims == 3 && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
 			float const tf_radius(2.0*pole_radius), pole_height(bcube.dz()), tf_height(0.1*pole_height);
