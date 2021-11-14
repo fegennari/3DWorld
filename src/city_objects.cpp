@@ -12,6 +12,9 @@ extern tree_placer_t tree_placer;
 extern city_params_t city_params;
 extern object_model_loader_t building_obj_model_loader;
 
+unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
+
+
 struct plot_divider_type_t {
 	bool is_occluder, has_alpha_mask;
 	int tid, nm_tid;
@@ -363,7 +366,6 @@ void add_virt_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2]
 	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0)
 {
 	// added as individual triangles; would be more efficient to use indexed triangles
-	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 	vector3d v12; // will be plus_z
 	vector_point_norm const &vpn(gen_cylinder_data(ce, r1, r2, ndiv, v12));
 	vert_norm_tc_color quad_pts[4];
@@ -376,7 +378,7 @@ void add_virt_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2]
 			quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal, (swap_ts_tt ?      j *tst : ts), (swap_ts_tt ? ts :      j *tst), cw.c);
 			quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, (swap_ts_tt ? (1.0-j)*tst : ts), (swap_ts_tt ? ts : (1.0-j)*tst), cw.c);
 		}
-		for (unsigned n = 0; n < 6; ++n) {verts.push_back(quad_pts[ixs[n]]);}
+		for (unsigned n = 0; n < 6; ++n) {verts.push_back(quad_pts[q2t_ixs[n]]);}
 
 		for (unsigned d = 0; d < 2; ++d) { // draw bottom and top triangle(s)
 			if (!(draw_top_bot & (1<<d))) continue;
@@ -414,8 +416,53 @@ cube_t power_pole_t::get_ped_occluder() const {
 	occluder.expand_by_xy(pole_radius/SQRT2); // take inner radius to reduce the occluder side for the pedestrian
 	return occluder;
 }
+cube_t power_pole_t::calc_cbar(bool d) const {
+	cube_t cbar;
+	cbar.z1() = bcube.z1() + (d ? 0.90 : 0.96)*bcube.dz(); // stagger the heights in X vs. Y so that wires don't intersect on poles that have them in both dims
+	cbar.z2() = cbar .z1() + 0.7*pole_radius;
+	set_wall_width(cbar, (center[ d] + 1.3*pole_radius), 0.3*pole_radius, d); // offset
+	set_wall_width(cbar,  center[!d], get_bar_extend(), !d);
+	return cbar;
+}
+point power_pole_t::get_nearest_connection_point(point const &to_pos) const {
+	float dmin_sq(0.0);
+	point ret(to_pos); // start at to_pos; will return this if no wires can be connected to
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (!has_dim_set(d) || at_line_end[d]) continue; // no wires in this dim
+		float const wire_radius(get_wire_radius()), wire_spacing(0.75*get_bar_extend()), standoff_height(0.3*pole_radius);
+		cube_t const cbar(calc_cbar(d));
+		cube_t wires_bcube;
+		wires_bcube.z1() = cbar.z2() + standoff_height;
+		wires_bcube.z2() = wires_bcube.z1() + 2.0*wire_radius;
+		wires_bcube.d[d][0] = center[d] - pole_spacing[d];
+		wires_bcube.d[d][1] = center[d];
+		set_wall_width(wires_bcube, center[!d], wire_spacing, !d);
+		point const closest_pos(wires_bcube.closest_pt(to_pos));
+		float const dsq(p2p_dist_sq(to_pos, closest_pos));
+		if (dmin_sq == 0.0 || dsq < dmin_sq) {ret = closest_pos; dmin_sq = dsq;}
+	} // for d
+	return ret;
+}
+void power_pole_t::add_wire(point const &p1, point const &p2) {
+	wires.emplace_back(p1, p2);
+	bcube_with_wires.union_with_sphere(p1, get_wire_radius());
+	bcube_with_wires.union_with_sphere(p2, get_wire_radius());
+	bsphere_radius = bcube_with_wires.furthest_dist_to_pt(pos); // recompute
+}
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(WOOD2_TEX);}
+}
+void draw_wire(point const pts[2], float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd) {
+	unsigned const ndiv(4);
+	vector3d v12;
+	vector_point_norm const &vpn(gen_cylinder_data(pts, radius, radius, ndiv, v12));
+
+	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads()
+		unsigned const in((i+1)%ndiv);
+		unsigned const pt_ixs[4] = {(i<<1)+1, (i<<1), (in<<1), (in<<1)+1};
+		for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.emplace_back(vpn.p[pt_ixs[q2t_ixs[n]]], plus_z, 0, 0, cw.c);}
+	} // for i
 }
 void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
@@ -424,7 +471,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 	if (!camera_pdu.cube_visible((shadow_only ? bcube : bcube_with_wires) + dstate.xlate)) return;
 	color_wrapper const black(BLACK), white(WHITE), gray(GRAY), cw(LT_BROWN); // darken the wood color
 	bool const pole_visible(camera_pdu.cube_visible(bcube + dstate.xlate));
-	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
+	cube_t tf_bcube;
 
 	if (pole_visible) {
 		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(1.5f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
@@ -442,21 +489,19 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			ce[0].y = ce[1].y = base.y + tf_radius + pole_radius; // offset in +y
 			bool const draw_top(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
 			add_virt_cylin_as_tris(untex_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top ? 2 : 1));
+			tf_bcube.set_from_points(ce, 2);
+			tf_bcube.expand_by_xy(tf_radius);
 		}
 	}
-	float const wire_radius(0.08*pole_radius), wire_spacing(0.75*get_bar_extend()), standoff_height(0.3*pole_radius), standoff_radius(0.25*pole_radius);
+	float const wire_radius(get_wire_radius()), wire_spacing(0.75*get_bar_extend()), standoff_height(0.3*pole_radius), standoff_radius(0.25*pole_radius);
 	point wire_pts[3][2];
 	unsigned wire_mask(0);
 	bool drew_wires(0);
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!has_dim_set(d)) continue; // no wires in this dim
-		cube_t cbar;
-		cbar.z1() = bcube.z1() + (d ? 0.90 : 0.96)*bcube.dz(); // stagger the heights in X vs. Y so that wires don't intersect on poles that have them in both dims
-		cbar.z2() = cbar .z1() + 0.7*pole_radius;
-		set_wall_width(cbar, (center[ d] + 1.3*pole_radius), 0.3*pole_radius, d); // offset
-		set_wall_width(cbar,  center[!d], get_bar_extend(), !d);
 		float const offsets[3] = {-wire_spacing, -0.3f*wire_spacing, wire_spacing}; // offset from the center to avoid intersecting the pole
+		cube_t const cbar(calc_cbar(d));
 		point p1;
 		p1[d] = cbar.get_center_dim(d) + wires_offset;
 		p1.z  = cbar.z2(); // resting on top of the bar
@@ -492,6 +537,9 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 				} // for n
 				wire_mask |= (1 << d); // mark wires as drawn in this dim
 			}
+			if (!tf_bcube.is_all_zeros()) {
+				// TODO: connect wire to transformer
+			}
 		}
 		if (at_line_end[d] || shadow_only) continue; // no wires; skip wires for shadow pass since they don't show up reliably
 		cube_t wires_bcube(cbar);
@@ -513,17 +561,10 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		drew_wires = 1;
 	} // for d
 	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.35*dmax)) { // both dims set, connect X and Y wires
-		for (unsigned n = 0; n < 3; ++n) {
-			unsigned const ndiv(4);
-			vector3d v12;
-			vector_point_norm const &vpn(gen_cylinder_data(wire_pts[n], wire_radius, wire_radius, ndiv, v12));
-
-			for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads()
-				unsigned const in((i+1)%ndiv);
-				unsigned const pt_ixs[4] = {(i<<1)+1, (i<<1), (in<<1), (in<<1)+1};
-				for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.emplace_back(vpn.p[pt_ixs[ixs[n]]], plus_z, 0, 0, black.c);}
-			} // for i
-		} // for n
+		for (unsigned n = 0; n < 3; ++n) {draw_wire(wire_pts[n], wire_radius, black, untex_qbd);}
+	}
+	if (!shadow_only && !wires.empty() && bcube_with_wires.closest_dist_less_than(camera_bs, 0.35*dmax)) {
+		for (auto &w : wires) {draw_wire(w.pts, wire_radius, black, untex_qbd);}
 	}
 }
 bool power_pole_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
@@ -1234,6 +1275,22 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 			sub_plots.emplace_back(c, 0.0, 0, 1, get_street_dir(c, plot), 1, parent_plot_ix, max_floors); // cube, zval, park, res, sdir, capacity, ppix, nf; will favor x-dim for corner plots
 		}
 	} // for y
+	return 1;
+}
+
+bool city_obj_placer_t::connect_power_to_building(point const &at_pos) {
+	float dmin_sq(0.0);
+	unsigned best_pole(0);
+	point best_pos;
+
+	for (auto p = ppoles.begin(); p != ppoles.end(); ++p) {
+		point const cur_pos(p->get_nearest_connection_point(at_pos));
+		if (cur_pos == at_pos) continue; // bad point
+		float const dsq(p2p_dist_sq(at_pos, cur_pos));
+		if (dmin_sq == 0.0 || dsq < dmin_sq) {best_pos = cur_pos; dmin_sq = dsq; best_pole = (p - ppoles.begin());}
+	}
+	if (dmin_sq == 0.0) return 0; // failed (no power poles?)
+	ppoles[best_pole].add_wire(at_pos, best_pos);
 	return 1;
 }
 
