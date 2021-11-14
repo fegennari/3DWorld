@@ -288,12 +288,14 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 	if (!animate2 || this->empty()) return;
 	float const neighbor_dist(0.5*get_tile_width()), nd_sq(neighbor_dist*neighbor_dist);
 	float const sep_dist_sq(0.2*nd_sq), cohesion_dist_sq(0.3*nd_sq), align_dist_sq(0.25*nd_sq);
+	float const dmax(sqrt(max(sep_dist_sq, max(cohesion_dist_sq, align_dist_sq))));
 	float const mass(100.0), sep_strength(0.05), cohesion_strength(0.05), align_strength(0.5);
 	tile_t *adj_tiles[9] = {0};
 	get_adj_tiles(tile, adj_tiles);
 
 	for (auto i = this->begin(); i != this->end(); ++i) {
 		if (!i->is_enabled()) continue;
+		point const cs_pos(i->get_camera_space_pos());
 		vector3d avg_pos(zero_vector), avg_vel(zero_vector), tot_force(zero_vector);
 		unsigned pcount(0), vcount(0);
 
@@ -301,6 +303,7 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 			tile_t *const adj_tile(adj_tiles[adj_ix]);
 			if (!adj_tile) continue;
 			vect_bird_t &birds(adj_tile->get_birds());
+			if (!birds.empty() && adj_tile != tile && !adj_tile->get_mesh_bcube().closest_dist_xy_less_than(cs_pos, dmax)) continue; // tile is too far away
 
 			for (auto j = birds.begin(); j != birds.end(); ++j) {
 				if (!j->is_enabled()) continue;
@@ -467,8 +470,8 @@ void vect_butterfly_t::run_mating(tile_t const *const tile) {
 		for (unsigned adj_ix = 0; adj_ix < 9; ++adj_ix) {
 			tile_t *const adj_tile(adj_tiles[adj_ix]);
 			if (!adj_tile) continue;
-			if (!adj_tile->get_mesh_bcube().closest_dist_xy_less_than(cs_pos, mate_dmax)) continue; // tile is too far away
 			vect_butterfly_t &bflies(adj_tile->get_bflies());
+			if (!bflies.empty() && adj_tile != tile && !adj_tile->get_mesh_bcube().closest_dist_xy_less_than(cs_pos, mate_dmax)) continue; // tile is too far away
 
 			for (auto j = bflies.begin(); j != bflies.end(); ++j) {
 				if (!j->is_enabled() || i == j || !i->can_mate_with(*j)) continue; // skip self or same gender
