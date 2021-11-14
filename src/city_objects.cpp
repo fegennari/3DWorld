@@ -425,7 +425,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
 	if (pole_visible) {
-		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
+		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(1.5f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
 		float const ndiv_inv(1.0/ndiv), top_radius(pole_radius); // top_radius=0.8*pole_radius?
 		float const vert_tscale = 10.0;
 		point ce[2] = {base, get_top()};
@@ -461,7 +461,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		if (pole_visible && (shadow_only || cbar.closest_dist_less_than(camera_bs, 0.5*dmax))) { // could test cbar cube visible, but unclear if that's faster
 			dstate.draw_cube(qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
 
-			if (!shadow_only && cbar.closest_dist_less_than(camera_bs, 0.1*dmax)) { // draw insulator standoffs
+			if (!shadow_only && cbar.closest_dist_less_than(camera_bs, 0.15*dmax)) { // draw insulator standoffs
 				for (unsigned n = 0; n < 3; ++n) {
 					p1[!d] = center[!d] + offsets[n]; // set wire spacing
 					wire_pts[n][d] = p1 + vector3d(0.0, 0.0, (standoff_height + wire_radius));
@@ -481,7 +481,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		if (at_line_end[d] || shadow_only) continue; // no wires; skip wires for shadow pass since they don't show up reliably
 		cube_t wires_bcube(cbar);
 		UNROLL_2X(wires_bcube.d[d][i_] = bcube_with_wires.d[d][i_];)
-		if ((!shadow_only && !wires_bcube.closest_dist_less_than(camera_bs, 0.4*dmax)) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
+		if ((!shadow_only && !wires_bcube.closest_dist_less_than(camera_bs, 0.45*dmax)) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
 		// draw the three wires in this dim
 		p1.z += standoff_height + wire_radius; // resting on top of the standoff
 
@@ -498,7 +498,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		} // for n
 		drew_wires = 1;
 	} // for d
-	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.3*dmax)) { // both dims set, connect X and Y wires
+	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.35*dmax)) { // both dims set, connect X and Y wires
 		for (unsigned n = 0; n < 3; ++n) {
 			unsigned const ndiv(4);
 			vector3d v12;
