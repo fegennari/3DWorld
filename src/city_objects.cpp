@@ -375,9 +375,10 @@ void add_virt_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2]
 			quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal, (swap_ts_tt ?      j *tst : ts), (swap_ts_tt ? ts :      j *tst), cw.c);
 			quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, (swap_ts_tt ? (1.0-j)*tst : ts), (swap_ts_tt ? ts : (1.0-j)*tst), cw.c);
 		}
+		for (unsigned n = 0; n < 6; ++n) {verts.push_back(quad_pts[ixs[n]]);}
+
 		for (unsigned d = 0; d < 2; ++d) { // draw bottom and top triangle(s)
 			if (!(draw_top_bot & (1<<d))) continue;
-			for (unsigned n = 0; n < 6; ++n) {verts.push_back(quad_pts[ixs[n]]);}
 			unsigned const I((i+1)%ndiv);
 			vector3d const normal(d ? plus_z : -plus_z);
 			verts.emplace_back(ce[d], normal, 0.5, 0.5, cw);
@@ -426,10 +427,10 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 
 	if (pole_visible) {
 		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(1.5f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
-		float const ndiv_inv(1.0/ndiv), top_radius(pole_radius); // top_radius=0.8*pole_radius?
 		float const vert_tscale = 10.0;
 		point ce[2] = {base, get_top()};
-		add_virt_cylin_as_tris(qbd.verts, ce, pole_radius, top_radius, cw, ndiv, 2, vert_tscale, ndiv_inv, 1); // draw top; swap_ts_tt=1
+		bool const draw_top(ce[1].z < camera_bs.z);
+		add_virt_cylin_as_tris(qbd.verts, ce, pole_radius, pole_radius, cw, ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/ndiv, 1); // draw top; swap_ts_tt=1
 
 		if (dims == 3 && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
 			float const tf_radius(2.0*pole_radius), pole_height(bcube.dz()), tf_height(0.1*pole_height);
@@ -462,6 +463,8 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			dstate.draw_cube(qbd, cbar, cw, 0, 0.8/cbar.dz()); // draw all sides
 
 			if (!shadow_only && cbar.closest_dist_less_than(camera_bs, 0.15*dmax)) { // draw insulator standoffs
+				unsigned verts_start(untex_qbd.verts.size()), verts_end(0);
+
 				for (unsigned n = 0; n < 3; ++n) {
 					p1[!d] = center[!d] + offsets[n]; // set wire spacing
 					wire_pts[n][d] = p1 + vector3d(0.0, 0.0, (standoff_height + wire_radius));
@@ -471,9 +474,19 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 						else if (!at_line_end[0]) {wire_pts[n][0].x = wire_pts[n][1].x;}
 						else {} // I guess it clips through the pole in this case
 					}
-					point ce[2] = {p1, p1};
-					ce[1].z += standoff_height;
-					add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, 2); // truncated cone; draw top
+					if (n == 0) { // first vert, draw a cylinder
+						point ce[2] = {p1, p1};
+						ce[1].z += standoff_height;
+						bool const draw_top(ce[1].z < camera_bs.z);
+						add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, (draw_top ? 2 : 0)); // truncated cone
+						verts_end = untex_qbd.verts.size();
+					}
+					else { // next vert, copy and translate the previous cylinder
+						for (unsigned v = verts_start; v < verts_end; ++v) {
+							untex_qbd.verts.push_back(untex_qbd.verts[v]);
+							untex_qbd.verts.back().v[!d] += (offsets[n] - offsets[0]);
+						}
+					}
 				} // for n
 				wire_mask |= (1 << d); // mark wires as drawn in this dim
 			}
@@ -492,9 +505,8 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			cube_t wire(p1, p2);
 			wire.expand_in_dim(!d, wire_radius);
 			wire.expand_in_dim(2,  wire_radius);
-			unsigned const wire_skip_dims(0); // can set to (1<<d) for non-edge wires, but it's too difficult to properly track this
 			// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
-			dstate.draw_cube(untex_qbd, wire, black, 0, 0.0, wire_skip_dims); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
+			dstate.draw_cube(untex_qbd, wire, black, 0, 0.0, 0); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
 		} // for n
 		drew_wires = 1;
 	} // for d
