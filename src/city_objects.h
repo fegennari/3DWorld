@@ -6,6 +6,18 @@
 
 #include "city.h"
 
+struct untex_tri_draw_t {
+	vector<vert_norm_comp_tc_color> verts; // Note: must have tex coords to work with the shader, even if they're all zero
+	vector<unsigned> indices;
+
+	bool empty() const {return verts.empty();}
+	void add_quad_pts(point const pts[4], color_wrapper const &cw, norm_comp const &n);
+	void add_cube(cube_t const &c, color_wrapper const &cw, vector3d const &xlate);
+	void add_virt_cylin(point const ce[2], float r1, float r2, color_wrapper const &cw, unsigned ndiv, unsigned draw_top_bot);
+	void draw() const {draw_verts(verts, GL_TRIANGLES);}
+	void draw_and_clear() {draw(); verts.clear();}
+};
+
 struct city_obj_t : public sphere_t {
 	cube_t bcube;
 	city_obj_t() {}

@@ -367,7 +367,7 @@ void add_virt_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2]
 	vector_point_norm const &vpn(gen_cylinder_data(ce, r1, r2, ndiv, v12));
 	vert_norm_tc_color quad_pts[4];
 
-	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color and R90 tex coords
+	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
 		for (unsigned j = 0; j < 2; ++j) {
 			unsigned const S(i + j), s(S%ndiv);
 			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
@@ -384,6 +384,52 @@ void add_virt_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2]
 			verts.emplace_back(ce[d], normal, 0.5, 0.5, cw);
 			verts.emplace_back(vpn.p[(i<<1)+d], normal, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
 			verts.emplace_back(vpn.p[(I<<1)+d], normal, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
+		}
+	} // for i
+}
+
+void untex_tri_draw_t::add_quad_pts(point const pts[4], color_wrapper const &cw, norm_comp const &n) {
+	verts.emplace_back(pts[0], n, 0, 0, cw);
+	verts.emplace_back(pts[2], n, 0, 0, cw);
+	verts.emplace_back(pts[1], n, 0, 0, cw);
+	verts.emplace_back(pts[0], n, 0, 0, cw);
+	verts.emplace_back(pts[3], n, 0, 0, cw);
+	verts.emplace_back(pts[2], n, 0, 0, cw);
+}
+void untex_tri_draw_t::add_cube(cube_t const &c, color_wrapper const &cw, vector3d const &xlate) {
+	point p[8];
+	draw_state_t::set_cube_pts(c, 0, 0, p);
+	vector3d const cview_dir((camera_pdu.pos - xlate) - c.get_cube_center());
+	if (cview_dir.z > 0.0) {add_quad_pts(p+4, cw,  plus_z);} // top
+	else                   {add_quad_pts(p+0, cw, -plus_z);} // bottom
+	if (cview_dir.x < 0.0) {point const pts[4] = {p[0], p[1], p[5], p[4]}; add_quad_pts(pts, cw, -plus_x);} // back
+	else                   {point const pts[4] = {p[2], p[3], p[7], p[6]}; add_quad_pts(pts, cw,  plus_x);} // front
+	if (cview_dir.y < 0.0) {point const pts[4] = {p[1], p[2], p[6], p[5]}; add_quad_pts(pts, cw, -plus_y);} // left
+	else                   {point const pts[4] = {p[3], p[0], p[4], p[7]}; add_quad_pts(pts, cw,  plus_y);} // right
+}
+void untex_tri_draw_t::add_virt_cylin(point const ce[2], float r1, float r2, color_wrapper const &cw, unsigned ndiv, unsigned draw_top_bot) {
+	// added as individual triangles; would be more efficient to use indexed triangles
+	unsigned const ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
+	vector3d v12; // will be plus_z
+	vector_point_norm const &vpn(gen_cylinder_data(ce, r1, r2, ndiv, v12));
+	vert_norm_comp_tc_color quad_pts[4];
+
+	for (unsigned i = 0; i < ndiv; ++i) {
+		for (unsigned j = 0; j < 2; ++j) {
+			unsigned const S(i + j), s(S%ndiv);
+			norm_comp const normal((vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]).get_norm());
+			quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal, 0, 0, cw);
+			quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, 0, 0, cw);
+		}
+		for (unsigned n = 0; n < 6; ++n) {verts.push_back(quad_pts[ixs[n]]);}
+
+		for (unsigned d = 0; d < 2; ++d) { // draw bottom and top triangle(s)
+			if (!(draw_top_bot & (1<<d))) continue;
+			unsigned const I((i+1)%ndiv);
+			norm_comp const normal(d ? plus_z : -plus_z);
+			verts.emplace_back(ce[d], normal, 0, 0, cw);
+			verts.emplace_back(vpn.p[(i<<1)+d], normal, 0, 0, cw);
+			verts.emplace_back(vpn.p[(I<<1)+d], normal, 0, 0, cw);
 		}
 	} // for i
 }
