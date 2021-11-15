@@ -1011,6 +1011,7 @@ int get_building_bcube_contains_pos(point const &pos);
 bool check_buildings_ped_coll(point const &pos, float radius, unsigned plot_id, unsigned &building_id);
 bool select_building_in_plot(unsigned plot_id, unsigned rand_val, unsigned &building_id);
 void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes);
+void get_building_power_points(cube_t const &xy_range, vector<point> &ppts);
 bool get_buildings_line_hit_color(point const &p1, point const &p2, colorRGBA &color);
 bool have_buildings();
 unsigned get_buildings_gpu_mem_usage();

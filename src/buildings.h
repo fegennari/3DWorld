@@ -934,6 +934,7 @@ struct building_t : public building_geom_t {
 		float door_center_shift, float width_scale, bool can_fail, bool opens_up, rand_gen_t &rgen) const;
 	void gen_house(cube_t const &base, rand_gen_t &rgen);
 	bool maybe_add_house_driveway(cube_t const &plot, vect_cube_t &driveways, unsigned building_ix) const;
+	bool get_power_point(vector<point> &ppts) const;
 	void add_solar_panels(rand_gen_t &rgen);
 	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building, bool roof_access=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
@@ -1113,6 +1114,7 @@ private:
 	bool can_be_bathroom(room_t const &room) const;
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
+	tquad_with_ix_t const &find_main_roof_tquad(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim();
 	unsigned count_num_int_doors(room_t const &room) const;

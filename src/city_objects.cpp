@@ -1254,6 +1254,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
 		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential);
 	} // for i
+	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}
 	for (auto i = plot_colliders.begin(); i != plot_colliders.end(); ++i) {sort(i->begin(), i->end(), cube_by_x1());}
 	bench_groups   .create_groups(benches,   all_objs_bcube);
@@ -1315,6 +1316,14 @@ bool city_obj_placer_t::connect_power_to_building(point const &at_pos) {
 	if (dmin_sq == 0.0) return 0; // failed (no power poles?)
 	ppoles[best_pole].add_wire(at_pos, best_pos);
 	return 1;
+}
+void city_obj_placer_t::connect_power_to_buildings(vector<road_plot_t> const &plots) {
+	if (plots.empty() || ppoles.empty() || !have_buildings()) return;
+	cube_t all_plots_bcube(plots.front());
+	for (auto p = plots.begin()+1; p != plots.end(); ++p) {all_plots_bcube.union_with_cube(*p);} // query all buildings in the entire city rather than per-plot
+	vector<point> ppts;
+	get_building_power_points(all_plots_bcube, ppts);
+	for (auto p = ppts.begin(); p != ppts.end(); ++p) {connect_power_to_building(*p);}
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {

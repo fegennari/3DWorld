@@ -1100,8 +1100,8 @@ void building_t::maybe_add_basement(rand_gen_t &rgen) { // currently for houses 
 	++real_num_parts;
 }
 
-void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
-	if (roof_tquads.empty()) return; // not a house?
+tquad_with_ix_t const &building_t::find_main_roof_tquad(rand_gen_t &rgen, bool skip_if_has_other_obj) const {
+	assert(!roof_tquads.empty());
 	unsigned best_tquad(0);
 	float best_zmax(0.0), best_area(0.0);
 
@@ -1109,26 +1109,64 @@ void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
 		if (r->type != tquad_with_ix_t::TYPE_ROOF) continue; // only include roofs
 		if (r->npts != 4) continue; // only quads, skip triangles
 		float const zmax(max(max(r->pts[0].z, r->pts[1].z), max(r->pts[2].z, r->pts[3].z))), area(polygon_area(r->pts, r->npts));
-		
+
 		// determine the best candidate so far; use a random value to break ties
 		if (best_area == 0.0 || zmax > best_zmax || (zmax == best_zmax && area > best_area) || (zmax == best_zmax && area == best_area && rgen.rand_bool())) {
-			cube_t bcube(r->get_bcube());
-			bcube.expand_by(-0.1*bcube.get_size()); // shrink by 10% (upper bound of approx solar panel area)
-			bool valid(1);
+			if (skip_if_has_other_obj) {
+				cube_t bcube(r->get_bcube());
+				bcube.expand_by(-0.1*bcube.get_size()); // shrink by 10% (upper bound of approx solar panel area)
+				bool valid(1);
 
-			for (auto r2 = roof_tquads.begin(); r2 != roof_tquads.end(); ++r2) { // check other objects, including anything on the roof that's not part of the roof
-				if (r2 == r) continue; // skip self
-				if (r2->type == tquad_with_ix_t::TYPE_ROOF && r2->npts == 3) continue; // skip roof triangles as they won't intersect the adjacent quad
-				if (r2->get_bcube().intersects(bcube)) {valid = 0; break;}
+				for (auto r2 = roof_tquads.begin(); r2 != roof_tquads.end(); ++r2) { // check other objects, including anything on the roof that's not part of the roof
+					if (r2 == r) continue; // skip self
+					if (r2->type == tquad_with_ix_t::TYPE_ROOF && r2->npts == 3) continue; // skip roof triangles as they won't intersect the adjacent quad
+					if (r2->get_bcube().intersects(bcube)) {valid = 0; break;}
+				}
+				if (!valid) continue; // intersects another roof section, skip
 			}
-			if (!valid) continue; // intersects another roof section, skip
 			best_zmax  = zmax;
 			best_area  = area;
 			best_tquad = (r - roof_tquads.begin());
 		}
-	}
+	} // for r
 	assert(best_tquad < roof_tquads.size());
-	tquad_with_ix_t const &roof(roof_tquads[best_tquad]);
+	return roof_tquads[best_tquad];
+}
+
+bool building_t::get_power_point(vector<point> &ppts) const {
+	if (!is_house || roof_tquads.empty()) return 0; // houses only for now
+	static rand_gen_t rgen; // used for tie breaker when both sides of the roof are symmetric
+	tquad_with_ix_t const &roof(find_main_roof_tquad(rgen, 0)); // skip_if_has_other_obj=0
+	assert(roof.npts == 4);
+	float zmax(0.0);
+	unsigned ridge_ix(0);
+
+	for (unsigned n = 0; n < 4; ++n) {
+		if (n == 0 || roof.pts[n].z > zmax) {zmax = roof.pts[n].z; ridge_ix = n;}
+	}
+	assert(ridge_ix < 3);
+	unsigned ridge_ix2(ridge_ix + 1); // assume next point
+	if (ridge_ix == 0 && roof.pts[ridge_ix2].z != zmax) {ridge_ix2 = 3;} // wraps around from 3 => 0
+	point const &p1(roof.pts[ridge_ix]), &p2(roof.pts[ridge_ix2]);
+	assert(p2.z == zmax); // there must be a ridge of two adjacent points at max height
+
+	if (street_dir) {
+		bool const street_dim((street_dir-1) >> 1), pref_dir((street_dir-1)&1);
+		
+		if (p1[street_dim] != p2[street_dim]) { // choose the point closest to the street as it will likely also be closest to the power lines
+			ppts.push_back(((p1[street_dim] < p2[street_dim]) ^ pref_dir) ? p1 : p2);
+			return 1;
+		}
+	}
+	float const ridge_pos(rgen.rand_uniform(0.1, 0.9)); // select a random point along the ridge, not too close to the edge to avoid the chimney
+	ppts.push_back((1.0 - ridge_pos)*p1 + ridge_pos*p2); // interpolate along the ridgeline
+	return 1;
+}
+
+void building_t::add_solar_panels(rand_gen_t &rgen) { // for houses
+	if (roof_tquads.empty()) return; // not a house?
+	tquad_with_ix_t const &roof(find_main_roof_tquad(rgen, 1)); // skip_if_has_other_obj
+	assert(roof.npts == 4);
 	cube_t const roof_bcube(roof.get_bcube());
 	float const thickness(0.075*get_window_vspace());
 	vector3d const normal(roof.get_norm()), bias(thickness*normal); // slightly above the roof
