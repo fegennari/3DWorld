@@ -521,7 +521,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		float const offsets[3] = {-wire_spacing, -0.3f*wire_spacing, wire_spacing}; // offset from the center to avoid intersecting the pole
 		cube_t const cbar(calc_cbar(d));
 		point p1;
-		p1[d] = cbar.get_center_dim(d) + wires_offset;
+		p1[d] = cbar.get_center_dim(d);
 		p1.z  = cbar.z2(); // resting on top of the bar
 		
 		if (pole_visible && (shadow_only || cbar.closest_dist_less_than(camera_bs, 0.5*dmax))) { // could test cbar cube visible, but unclear if that's faster
@@ -569,7 +569,8 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		UNROLL_2X(wires_bcube.d[d][i_] = bcube_with_wires.d[d][i_];)
 		if ((!shadow_only && !wires_bcube.closest_dist_less_than(camera_bs, 0.45*dmax)) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
 		// draw the three wires in this dim
-		p1.z += standoff_height + wire_radius; // resting on top of the standoff
+		p1[d] += wires_offset; // offset wires in case the pole was moved to avoid a driveway
+		p1.z  += standoff_height + wire_radius; // resting on top of the standoff
 
 		for (unsigned n = 0; n < 3; ++n) {
 			p1[!d] = center[!d] + offsets[n]; // set wire spacing
