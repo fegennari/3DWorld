@@ -453,6 +453,7 @@ void power_pole_t::add_wire(point const &p1, point const &p2) {
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(WOOD2_TEX);}
 }
+
 void draw_wire(point const pts[2], float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd) {
 	unsigned const ndiv(4);
 	vector3d v12;
@@ -463,6 +464,23 @@ void draw_wire(point const pts[2], float radius, color_wrapper const &cw, quad_b
 		unsigned const pt_ixs[4] = {(i<<1)+1, (i<<1), (in<<1), (in<<1)+1};
 		for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.emplace_back(vpn.p[pt_ixs[q2t_ixs[n]]], plus_z, 0, 0, cw.c);}
 	} // for i
+}
+void draw_standoff(point const &p1, point const &camera_bs, float height, float radius, float delta_offset, bool dim, bool is_first,
+	unsigned verts_start, unsigned &verts_end, color_wrapper const &cw, quad_batch_draw &untex_qbd)
+{
+	if (is_first) { // first vert, draw a cylinder
+		point ce[2] = {p1, p1};
+		ce[1].z += height;
+		bool const draw_top(ce[1].z < camera_bs.z);
+		add_virt_cylin_as_tris(untex_qbd.verts, ce, radius, 0.75*radius, cw, 16, (draw_top ? 2 : 0)); // truncated cone
+		verts_end = untex_qbd.verts.size();
+	}
+	else { // next vert, copy and translate the previous cylinder
+		for (unsigned v = verts_start; v < verts_end; ++v) {
+			untex_qbd.verts.push_back(untex_qbd.verts[v]);
+			untex_qbd.verts.back().v[!dim] += delta_offset;
+		}
+	}
 }
 void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
@@ -486,7 +504,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			ce[0].z = base.z  + 0.77*pole_height;
 			ce[1].z = ce[0].z + tf_height;
 			ce[0].x = ce[1].x = base.x;
-			ce[0].y = ce[1].y = base.y + tf_radius + pole_radius; // offset in +y
+			ce[0].y = ce[1].y = base.y + (at_line_end[1] ? 1.0 : -1.0)*(tf_radius + pole_radius); // offset in -y, +y at end (so that wires across above it)
 			bool const draw_top(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
 			add_virt_cylin_as_tris(untex_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top ? 2 : 1));
 			tf_bcube.set_from_points(ce, 2);
@@ -513,7 +531,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 				unsigned verts_start(untex_qbd.verts.size()), verts_end(0);
 
 				for (unsigned n = 0; n < 3; ++n) {
-					p1[!d] = center[!d] + offsets[n]; // set wire spacing
+					p1[!d] = center[!d] + offsets[n]; // set wire offset
 					wire_pts[n][d] = p1 + vector3d(0.0, 0.0, (standoff_height + wire_radius));
 
 					if (n == 1 && d == 1) { // offset middle wire from standoff to avoid clipping through pole
@@ -521,24 +539,29 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 						else if (!at_line_end[0]) {wire_pts[n][0].x = wire_pts[n][1].x;}
 						else {} // I guess it clips through the pole in this case
 					}
-					if (n == 0) { // first vert, draw a cylinder
-						point ce[2] = {p1, p1};
-						ce[1].z += standoff_height;
-						bool const draw_top(ce[1].z < camera_bs.z);
-						add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, (draw_top ? 2 : 0)); // truncated cone
-						verts_end = untex_qbd.verts.size();
-					}
-					else { // next vert, copy and translate the previous cylinder
-						for (unsigned v = verts_start; v < verts_end; ++v) {
-							untex_qbd.verts.push_back(untex_qbd.verts[v]);
-							untex_qbd.verts.back().v[!d] += (offsets[n] - offsets[0]);
-						}
-					}
+					float const delta_offset(offsets[n] - offsets[0]);
+					draw_standoff(p1, camera_bs, standoff_height, standoff_radius, delta_offset, d, (n == 0), verts_start, verts_end, white, untex_qbd);
 				} // for n
 				wire_mask |= (1 << d); // mark wires as drawn in this dim
 			}
-			if (!tf_bcube.is_all_zeros()) {
-				// TODO: connect wire to transformer
+			if (d == 1 && !tf_bcube.is_all_zeros()) { // connect wire to transformer if running in y dim
+				float const spacing(0.3*tf_bcube.get_sz_dim(!d));
+				point const tf_top_center(tf_bcube.xc(), tf_bcube.yc(), tf_bcube.z2());
+
+				for (unsigned n = 0; n < 3; ++n) {
+					point const pts[2] = {point(center.x+offsets[n], tf_top_center.y, p1.z+standoff_height+wire_radius),
+						(tf_top_center + vector3d((n - 1.0)*spacing, 0.0, standoff_height-0.5f*wire_radius))}; // top wire, bottom transformer
+					draw_wire(pts, wire_radius, black, untex_qbd);
+				}
+				if (!shadow_only && tf_bcube.closest_dist_less_than(camera_bs, 0.1*dmax)) { // draw insulator standoffs
+					unsigned verts_start(untex_qbd.verts.size()), verts_end(0);
+
+					for (unsigned n = 0; n < 3; ++n) {
+						point const p2((tf_top_center.x + (n - 1.0)*spacing), tf_top_center.y, tf_top_center.z);
+						draw_standoff(p2, camera_bs, standoff_height, standoff_radius, n*spacing, d, (n == 0), verts_start, verts_end, white, untex_qbd);
+					}
+					wire_mask |= (1 << d); // mark wires as drawn in this dim
+				}
 			}
 		}
 		if (at_line_end[d] || shadow_only) continue; // no wires; skip wires for shadow pass since they don't show up reliably
