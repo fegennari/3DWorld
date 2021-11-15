@@ -430,6 +430,14 @@ point power_pole_t::get_nearest_connection_point(point const &to_pos) const {
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!has_dim_set(d) || at_line_end[d]) continue; // no wires in this dim
+#if 1
+		float const wire_radius(get_wire_radius()), wire_height(0.7*bcube.dz());
+		point pw(center);
+		pw[!d] += pole_radius + wire_radius; // on the side of the pole
+		pw.z   += 0.7*bcube.dz();
+		cube_t wires_bcube(pw, pw);
+		wires_bcube.d[d][0] -= pole_spacing[d]; // extend to the adjacent pole
+#else
 		float const wire_radius(get_wire_radius()), wire_spacing(0.75*get_bar_extend()), standoff_height(0.3*pole_radius);
 		cube_t const cbar(calc_cbar(d));
 		cube_t wires_bcube;
@@ -438,6 +446,8 @@ point power_pole_t::get_nearest_connection_point(point const &to_pos) const {
 		wires_bcube.d[d][0] = center[d] - pole_spacing[d];
 		wires_bcube.d[d][1] = center[d];
 		set_wall_width(wires_bcube, center[!d], wire_spacing, !d);
+#endif
+		wires_bcube.translate_dim(d, wires_offset); // offset wires in case the pole was moved to avoid a driveway
 		point const closest_pos(wires_bcube.closest_pt(to_pos));
 		float const dsq(p2p_dist_sq(to_pos, closest_pos));
 		if (dmin_sq == 0.0 || dsq < dmin_sq) {ret = closest_pos; dmin_sq = dsq;}
@@ -463,7 +473,15 @@ void draw_wire(point const pts[2], float radius, color_wrapper const &cw, quad_b
 		unsigned const in((i+1)%ndiv);
 		unsigned const pt_ixs[4] = {(i<<1)+1, (i<<1), (in<<1), (in<<1)+1};
 		for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.emplace_back(vpn.p[pt_ixs[q2t_ixs[n]]], plus_z, 0, 0, cw.c);}
-	} // for i
+	}
+}
+void draw_ortho_wire(point const &p, float radius, float const pole_spacing[2], bool d, color_wrapper const &cw, draw_state_t &dstate, quad_batch_draw &untex_qbd) {
+	cube_t wire(p, p);
+	wire.d[d][0] -= pole_spacing[d]; // extend to the adjacent pole
+	wire.expand_in_dim(!d, radius);
+	wire.expand_in_dim(2,  radius);
+	// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
+	dstate.draw_cube(untex_qbd, wire, cw, 0); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
 }
 void draw_standoff(point const &p1, point const &camera_bs, float height, float radius, float delta_offset, bool dim, bool is_first,
 	unsigned verts_start, unsigned &verts_end, color_wrapper const &cw, quad_batch_draw &untex_qbd)
@@ -568,20 +586,19 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		cube_t wires_bcube(cbar);
 		UNROLL_2X(wires_bcube.d[d][i_] = bcube_with_wires.d[d][i_];)
 		if ((!shadow_only && !wires_bcube.closest_dist_less_than(camera_bs, 0.45*dmax)) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
-		// draw the three wires in this dim
+		// draw the three top wires and one bottom wire in this dim
 		p1[d] += wires_offset; // offset wires in case the pole was moved to avoid a driveway
 		p1.z  += standoff_height + wire_radius; // resting on top of the standoff
 
-		for (unsigned n = 0; n < 3; ++n) {
+		for (unsigned n = 0; n < 3; ++n) { // top wires
 			p1[!d] = center[!d] + offsets[n]; // set wire spacing
-			point p2(p1);
-			p2[d] -= pole_spacing[d];
-			cube_t wire(p1, p2);
-			wire.expand_in_dim(!d, wire_radius);
-			wire.expand_in_dim(2,  wire_radius);
-			// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
-			dstate.draw_cube(untex_qbd, wire, black, 0, 0.0, 0); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
-		} // for n
+			draw_ortho_wire(p1, wire_radius, pole_spacing, d, black, dstate, untex_qbd);
+		}
+		// bottom wire
+		point pw(p1);
+		pw[!d] = center[!d] + pole_radius + wire_radius; // on the side of the pole
+		pw.z   = base.z  + 0.74*bcube.dz();
+		draw_ortho_wire(pw, wire_radius, pole_spacing, d, black, dstate, untex_qbd);
 		drew_wires = 1;
 	} // for d
 	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.35*dmax)) { // both dims set, connect X and Y wires
