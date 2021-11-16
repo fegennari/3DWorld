@@ -585,47 +585,53 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 				}
 			}
 		}
-		if (at_line_end[d] || shadow_only) continue; // no wires; skip wires for shadow pass since they don't show up reliably
-		float const bot_wires_zval(base.z + 0.74*bcube.dz());
-		cube_t wires_bcube(cbar);
-		min_eq(wires_bcube.z1(), bot_wires_zval); // include lower wires
-		UNROLL_2X(wires_bcube.d[d][i_] = bcube_with_wires.d[d][i_];)
-		if ((!shadow_only && !wires_bcube.closest_dist_less_than(camera_bs, 0.45*dmax)) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
-		// draw the three top wires and one bottom wire in this dim
-		p1[d] += wires_offset; // offset wires in case the pole was moved to avoid a driveway
-		p1.z  += standoff_height + wire_radius; // resting on top of the standoff
-
-		for (unsigned n = 0; n < 3; ++n) { // top wires
-			p1[!d] = center[!d] + offsets[n]; // set wire spacing
-			draw_ortho_wire(p1, wire_radius, pole_spacing[d], d, black, dstate, untex_qbd);
-		}
-		// bottom wire: split the difference between the offset corner and street power poles and attach to different sides of the poles
+		if (shadow_only) continue; // skip wires for shadow pass since they don't show up reliably
 		bool const is_offset(center[!d] != base[!d]);
 		float const sep_dist(0.5*get_power_pole_offset()), offset_sign(is_offset ? -1.0 : 1.0);
-		float const wire_extend(sep_dist - pole_radius - 0.5*cbar.get_sz_dim(d)); // extends to fill the gap between the outer wire at the standoffs and the wire ending at cbar
-		point pw(p1);
-		pw[!d] = base[!d] + offset_sign*sep_dist; // on the side of the pole
-		pw.z   = bot_wires_zval;
-		pw[d] += wire_extend; // extend slightly to meet the crossing wire
-		float const bot_wire_spacing(pole_spacing[d] + wire_extend - 2.0*wire_radius); // spans the pole spacing, plus the extra offset, minus the overlap at both ends
-		draw_ortho_wire(pw, wire_radius, bot_wire_spacing, d, black, dstate, untex_qbd);
-		
-		if (pole_visible && bcube.closest_dist_less_than(camera_bs, 0.15*dmax)) { // bottom standoff
-			pw[d] = base[d]; // reset to the center of the pole
-			point ce[2] = {pw, pw};
+		float const bot_wire_zval(base.z + 0.74*bcube.dz()), bot_wire_pos(base[!d] + offset_sign*sep_dist);
+
+		if (!at_line_end[d]) { // no wires at end pole
+			cube_t wires_bcube(cbar);
+			min_eq(wires_bcube.z1(), bot_wire_zval); // include lower wires
+			UNROLL_2X(wires_bcube.d[d][i_] = bcube_with_wires.d[d][i_];)
+			if (!wires_bcube.closest_dist_less_than(camera_bs, 0.45*dmax) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
+			// draw the three top wires and one bottom wire in this dim
+			p1[d] += wires_offset; // offset wires in case the pole was moved to avoid a driveway
+			p1.z  += standoff_height + wire_radius; // resting on top of the standoff
+
+			for (unsigned n = 0; n < 3; ++n) { // top wires
+				p1[!d] = center[!d] + offsets[n]; // set wire spacing
+				draw_ortho_wire(p1, wire_radius, pole_spacing[d], d, black, dstate, untex_qbd);
+			}
+			// bottom wire: split the difference between the offset corner and street power poles and attach to different sides of the poles
+			float const wire_extend(sep_dist - pole_radius - 0.5*cbar.get_sz_dim(d)); // extend to fill the gap between the outer wire at standoffs and wire ending at cbar
+			point pw;
+			pw[!d] = bot_wire_pos; // on the side of the pole
+			pw.z   = bot_wire_zval;
+			pw[d]  = p1[d] + wire_extend; // extend slightly to meet the crossing wire
+			//float const bot_wire_spacing(pole_spacing[d] + wire_extend - 2.0*wire_radius); // spans pole spacing, plus extra offset, minus overlap at both ends
+			float const bot_wire_spacing(pole_spacing[d] + sep_dist + wire_radius); // overlap with next wire if there is one, extend past standoff at last pole
+			draw_ortho_wire(pw, wire_radius, bot_wire_spacing, d, black, dstate, untex_qbd);
+			drew_wires = 1;
+		}
+		if (pole_visible && bcube.closest_dist_less_than(camera_bs, 0.15*dmax)) { // bottom standoff, even if there's no wire (because it will extend on end pole)
+			point pb;
+			pb[ d] = base[d]; // reset to the center of the pole
+			pb[!d] = bot_wire_pos;
+			pb.z   = bot_wire_zval;
+			point ce[2] = {pb, pb};
 			ce[1][!d] -= offset_sign*wire_radius; // end attached to the wire
 			ce[0][!d]  = base[!d] + 0.96*offset_sign*pole_radius; // end attached to the pole, slightly offset into the pole
 			bool const draw_end((ce[1][!d] < camera_bs[!d]) ^ is_offset);
 			add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, (draw_end ? 2 : 0)); // truncated cone
 
 			if (d == 1 && !tf_bcube.is_all_zeros()) { // vertical wire up to transformer
-				point const tf_bot(pw.x, tf_bcube.yc(), tf_bcube.z1());
+				point const tf_bot(pb.x, tf_bcube.yc(), tf_bcube.z1());
 				point vwire_pts[2] = {tf_bot, tf_bot};
-				vwire_pts[0].z = pw.z;
+				vwire_pts[0].z = pb.z;
 				draw_wire(vwire_pts, wire_radius, black, untex_qbd);
 			}
 		}
-		drew_wires = 1;
 	} // for d
 	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.35*dmax)) { // both dims set, connect X and Y wires
 		for (unsigned n = 0; n < 3; ++n) {draw_wire(wire_pts[n], wire_radius, black, untex_qbd);}
