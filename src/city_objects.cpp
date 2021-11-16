@@ -14,6 +14,8 @@ extern object_model_loader_t building_obj_model_loader;
 
 unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
+float get_power_pole_offset() {return 0.045*city_params.road_width;}
+
 
 struct plot_divider_type_t {
 	bool is_occluder, has_alpha_mask;
@@ -57,6 +59,8 @@ void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways);
 bool city_obj_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
 	return sphere_cube_int_update_pos(pos_, radius_, (bcube + xlate), p_last, 1, 0, cnorm);
 }
+
+// benches
 
 void bench_t::calc_bcube() {
 	bcube.set_from_point(pos);
@@ -118,6 +122,8 @@ void bench_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &
 	}
 }
 
+// tree planters
+
 tree_planter_t::tree_planter_t(point const &pos_, float radius_, float height) : city_obj_t(pos_, radius_) {
 	bcube.set_from_point(pos);
 	bcube.expand_by_xy(radius);
@@ -150,6 +156,8 @@ void tree_planter_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch
 		}
 	}
 }
+
+// fire hydrants
 
 fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, vector3d const &orient_) : city_obj_t(pos_, radius_), cylin_radius(radius), orient(orient_) {
 	bcube.set_from_sphere(*this);
@@ -185,6 +193,8 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 	if (cnorm) {*cnorm = coll_norm;}
 	return 1;
 }
+
+// plot dividers
 
 /*static*/ void divider_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (dstate.pass_ix == DIV_NUM_TYPES) { // fence post pass - untextured
@@ -300,6 +310,8 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 	to_draw.clear();
 }
 
+// swimming pools
+
 // passes: 0=in-ground walls, 1=in-ground water, 2=above ground sides, 3=above ground water
 /*static*/ void swimming_pool_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {
@@ -361,6 +373,8 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 	bcube_tall.z2() += CAMERA_RADIUS + camera_zh; // extend upward so that player collision detection works better
 	return sphere_cube_int_update_pos(pos_, radius_, bcube_tall, p_last, 1, 0, cnorm);
 }
+
+// power poles
 
 void add_virt_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], float r1, float r2, color_wrapper const &cw,
 	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0)
@@ -430,23 +444,12 @@ point power_pole_t::get_nearest_connection_point(point const &to_pos) const {
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!has_dim_set(d) || at_line_end[d]) continue; // no wires in this dim
-#if 1
 		float const wire_radius(get_wire_radius()), wire_height(0.7*bcube.dz());
 		point pw(center);
-		pw[!d] += pole_radius + wire_radius; // on the side of the pole
-		pw.z   += 0.7*bcube.dz();
+		pw[!d] = base[!d] + ((center[!d] != base[!d]) ? -1.0 : 1.0)*0.5*get_power_pole_offset(); // on the side of the pole
+		pw.z  += 0.74*bcube.dz(); // must match value used in drawing
 		cube_t wires_bcube(pw, pw);
 		wires_bcube.d[d][0] -= pole_spacing[d]; // extend to the adjacent pole
-#else
-		float const wire_radius(get_wire_radius()), wire_spacing(0.75*get_bar_extend()), standoff_height(0.3*pole_radius);
-		cube_t const cbar(calc_cbar(d));
-		cube_t wires_bcube;
-		wires_bcube.z1() = cbar.z2() + standoff_height;
-		wires_bcube.z2() = wires_bcube.z1() + 2.0*wire_radius;
-		wires_bcube.d[d][0] = center[d] - pole_spacing[d];
-		wires_bcube.d[d][1] = center[d];
-		set_wall_width(wires_bcube, center[!d], wire_spacing, !d);
-#endif
 		wires_bcube.translate_dim(d, wires_offset); // offset wires in case the pole was moved to avoid a driveway
 		point const closest_pos(wires_bcube.closest_pt(to_pos));
 		float const dsq(p2p_dist_sq(to_pos, closest_pos));
@@ -475,9 +478,9 @@ void draw_wire(point const pts[2], float radius, color_wrapper const &cw, quad_b
 		for (unsigned n = 0; n < 6; ++n) {untex_qbd.verts.emplace_back(vpn.p[pt_ixs[q2t_ixs[n]]], plus_z, 0, 0, cw.c);}
 	}
 }
-void draw_ortho_wire(point const &p, float radius, float const pole_spacing[2], bool d, color_wrapper const &cw, draw_state_t &dstate, quad_batch_draw &untex_qbd) {
+void draw_ortho_wire(point const &p, float radius, float pole_spacing, bool d, color_wrapper const &cw, draw_state_t &dstate, quad_batch_draw &untex_qbd) {
 	cube_t wire(p, p);
-	wire.d[d][0] -= pole_spacing[d]; // extend to the adjacent pole
+	wire.d[d][0] -= pole_spacing; // extend to the adjacent pole
 	wire.expand_in_dim(!d, radius);
 	wire.expand_in_dim(2,  radius);
 	// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
@@ -583,7 +586,9 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			}
 		}
 		if (at_line_end[d] || shadow_only) continue; // no wires; skip wires for shadow pass since they don't show up reliably
+		float const bot_wires_zval(base.z + 0.74*bcube.dz());
 		cube_t wires_bcube(cbar);
+		min_eq(wires_bcube.z1(), bot_wires_zval); // include lower wires
 		UNROLL_2X(wires_bcube.d[d][i_] = bcube_with_wires.d[d][i_];)
 		if ((!shadow_only && !wires_bcube.closest_dist_less_than(camera_bs, 0.45*dmax)) || !camera_pdu.cube_visible(wires_bcube + dstate.xlate)) continue; // wires distance/VFC
 		// draw the three top wires and one bottom wire in this dim
@@ -592,13 +597,34 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 
 		for (unsigned n = 0; n < 3; ++n) { // top wires
 			p1[!d] = center[!d] + offsets[n]; // set wire spacing
-			draw_ortho_wire(p1, wire_radius, pole_spacing, d, black, dstate, untex_qbd);
+			draw_ortho_wire(p1, wire_radius, pole_spacing[d], d, black, dstate, untex_qbd);
 		}
-		// bottom wire
+		// bottom wire: split the difference between the offset corner and street power poles and attach to different sides of the poles
+		bool const is_offset(center[!d] != base[!d]);
+		float const sep_dist(0.5*get_power_pole_offset()), offset_sign(is_offset ? -1.0 : 1.0);
+		float const wire_extend(sep_dist - pole_radius - 0.5*cbar.get_sz_dim(d)); // extends to fill the gap between the outer wire at the standoffs and the wire ending at cbar
 		point pw(p1);
-		pw[!d] = center[!d] + pole_radius + wire_radius; // on the side of the pole
-		pw.z   = base.z  + 0.74*bcube.dz();
-		draw_ortho_wire(pw, wire_radius, pole_spacing, d, black, dstate, untex_qbd);
+		pw[!d] = base[!d] + offset_sign*sep_dist; // on the side of the pole
+		pw.z   = bot_wires_zval;
+		pw[d] += wire_extend; // extend slightly to meet the crossing wire
+		float const bot_wire_spacing(pole_spacing[d] + wire_extend - 2.0*wire_radius); // spans the pole spacing, plus the extra offset, minus the overlap at both ends
+		draw_ortho_wire(pw, wire_radius, bot_wire_spacing, d, black, dstate, untex_qbd);
+		
+		if (pole_visible && bcube.closest_dist_less_than(camera_bs, 0.15*dmax)) { // bottom standoff
+			pw[d] = base[d]; // reset to the center of the pole
+			point ce[2] = {pw, pw};
+			ce[1][!d] -= offset_sign*wire_radius; // end attached to the wire
+			ce[0][!d]  = base[!d] + 0.96*offset_sign*pole_radius; // end attached to the pole, slightly offset into the pole
+			bool const draw_end((ce[1][!d] < camera_bs[!d]) ^ is_offset);
+			add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, (draw_end ? 2 : 0)); // truncated cone
+
+			if (d == 1 && !tf_bcube.is_all_zeros()) { // vertical wire up to transformer
+				point const tf_bot(pw.x, tf_bcube.yc(), tf_bcube.z1());
+				point vwire_pts[2] = {tf_bot, tf_bot};
+				vwire_pts[0].z = pw.z;
+				draw_wire(vwire_pts, wire_radius, black, untex_qbd);
+			}
+		}
 		drew_wires = 1;
 	} // for d
 	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.35*dmax)) { // both dims set, connect X and Y wires
@@ -925,7 +951,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		// we can move in toward the plot center so that they don't block pedestrians, but then they can block driveways;
 		// if we move them into the road, then they block traffic light crosswalks;
 		// so we move them toward the road in an assymetic way and allow the pole to be not centered with the wires
-		float const offset(0.075*road_width), extra_offset(0.045*road_width); // assymmetric offset to match the aspect ratio of stoplights
+		float const offset(0.075*road_width), extra_offset(get_power_pole_offset()); // assymmetric offset to match the aspect ratio of stoplights
 		float const pp_x(plot.x2() + offset + extra_offset), pp_y(plot.y2() + offset);
 		point pts[3]; // one on the corner and two on each side: {corner, x, y}
 		for (unsigned i = 0; i < 3; ++i) {pts[i].assign(pp_x, pp_y, plot.z2());} // start at plot upper corner
