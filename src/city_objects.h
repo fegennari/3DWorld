@@ -133,7 +133,7 @@ private:
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
 		draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw=0);
-	bool connect_power_to_building(point const &at_pos);
+	bool connect_power_to_point(point const &at_pos);
 	void connect_power_to_buildings(vector<road_plot_t> const &plots);
 public:
 	city_obj_placer_t() : num_spaces(0), filled_spaces(0), num_x_plots(0), num_y_plots(0), plot_subdiv_sz(0.0) {}
@@ -141,6 +141,7 @@ public:
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential);
+	void move_and_connect_streetlights(streetlights_t &sl);
 	static bool subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, unsigned parent_plot_ix, vect_city_zone_t &sub_plots);
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);
 	bool proc_sphere_coll(point &pos, point const &p_last, vector3d const &xlate, float radius, vector3d *cnorm) const;

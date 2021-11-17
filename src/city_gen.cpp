@@ -966,7 +966,7 @@ class city_road_gen_t : public road_gen_base_t {
 			add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
 			add_tile_blocks(city_obj_placer.driveways, tile_to_block_map, TYPE_DRIVEWAY);
 			tile_to_block_map.clear(); // no longer needed
-			if (is_residential) {move_streetlights_to_not_overlap_driveways();}
+			city_obj_placer.move_and_connect_streetlights(*this);
 			have_plot_dividers |= !city_obj_placer.has_plot_dividers();
 		}
 		void add_streetlights() {
@@ -982,12 +982,6 @@ class city_road_gen_t : public road_gen_base_t {
 				streetlights.emplace_back(point((0.75*i->x1() + 0.25*i->x2()), (a*i->y2() + b*i->y1()), i->z2()),  plus_y); // top    edge one   quarter  right
 			}
 			sort_streetlights_by_yx();
-		}
-		void move_streetlights_to_not_overlap_driveways() {
-			for (auto s = streetlights.begin(); s != streetlights.end(); ++s) {
-				bool const dim(s->dir.y == 0.0); // direction to move in
-				city_obj_placer.move_to_not_intersect_driveway(s->pos, 0.25*city_params.road_width, dim);
-			}
 		}
 		void get_road_bcubes(vect_cube_t &bcubes) const {
 			get_all_bcubes(roads,  bcubes);

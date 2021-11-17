@@ -1360,7 +1360,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	return 1;
 }
 
-bool city_obj_placer_t::connect_power_to_building(point const &at_pos) {
+bool city_obj_placer_t::connect_power_to_point(point const &at_pos) {
 	float dmin_sq(0.0);
 	unsigned best_pole(0);
 	point best_pos;
@@ -1381,7 +1381,33 @@ void city_obj_placer_t::connect_power_to_buildings(vector<road_plot_t> const &pl
 	for (auto p = plots.begin()+1; p != plots.end(); ++p) {all_plots_bcube.union_with_cube(*p);} // query all buildings in the entire city rather than per-plot
 	vector<point> ppts;
 	get_building_power_points(all_plots_bcube, ppts);
-	for (auto p = ppts.begin(); p != ppts.end(); ++p) {connect_power_to_building(*p);}
+	for (auto p = ppts.begin(); p != ppts.end(); ++p) {connect_power_to_point(*p);}
+}
+
+void city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius, bool dim) const {
+	cube_t test_cube;
+	test_cube.set_from_sphere(pos, radius);
+
+	// Note: this could be accelerated by iterating by plot, but this seems to already be fast enough (< 1ms)
+	for (auto d = driveways.begin(); d != driveways.end(); ++d) {
+		if (!d->intersects_xy(test_cube)) continue;
+		bool const dir((d->d[dim][1] - pos[dim]) < (pos[dim] - d->d[dim][0]));
+		pos[dim] = d->d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*city_params.road_width;
+		break; // maybe we should check for an adjacent driveway, but that would be rare and moving could result in oscillation
+	}
+}
+void city_obj_placer_t::move_and_connect_streetlights(streetlights_t &sl) {
+	for (auto s = sl.streetlights.begin(); s != sl.streetlights.end(); ++s) {
+		if (!driveways.empty()) { // move to avoid driveways
+			bool const dim(s->dir.y == 0.0); // direction to move in
+			move_to_not_intersect_driveway(s->pos, 0.25*city_params.road_width, dim);
+		}
+		if (!ppoles.empty()) { // connect power
+			point top(s->get_lpos());
+			top.z += 1.05f*streetlight_ns::light_radius*city_params.road_width; // top of light
+			connect_power_to_point(top);
+		}
+	} // for s
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
@@ -1541,19 +1567,6 @@ void city_obj_placer_t::get_occluders(pos_dir_up const &pdu, vect_cube_t &occlud
 			if (dist_less_than(pdu.pos, d->bcube.closest_pt(pdu.pos), dmax) && pdu.cube_visible(d->bcube)) {occluders.push_back(d->bcube);}
 		}
 	} // for i
-}
-
-void city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius, bool dim) const {
-	cube_t test_cube;
-	test_cube.set_from_sphere(pos, radius);
-
-	// Note: this could be accelerated by iterating by plot, but this seems to already be fast enough (< 1ms)
-	for (auto d = driveways.begin(); d != driveways.end(); ++d) {
-		if (!d->intersects_xy(test_cube)) continue;
-		bool const dir((d->d[dim][1] - pos[dim]) < (pos[dim] - d->d[dim][0]));
-		pos[dim] = d->d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*city_params.road_width;
-		break; // maybe we should check for an adjacent driveway, but that would be rare and moving could result in oscillation
-	}
 }
 
 
