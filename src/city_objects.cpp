@@ -626,10 +626,18 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, (draw_end ? 2 : 0)); // truncated cone
 
 			if (d == 1 && !tf_bcube.is_all_zeros()) { // vertical wire up to transformer
-				point const tf_bot(pb.x, tf_bcube.yc(), tf_bcube.z1());
-				point vwire_pts[2] = {tf_bot, tf_bot};
-				vwire_pts[0].z = pb.z;
-				draw_wire(vwire_pts, wire_radius, black, untex_qbd);
+				point const tf_conn_pt(pb.x, (tf_bcube.yc() - 0.5f*tf_bcube.dy()), (tf_bcube.z1() + 0.9*tf_bcube.dz())); // along the side near the top
+				cube_t wire(tf_conn_pt, tf_conn_pt);
+				wire.z1()  = pb.z + wire_radius; // meet the top of the lower wire
+				wire.z2() += wire_radius; // span entire standoff
+				wire.expand_by_xy(wire_radius);
+				dstate.draw_cube(untex_qbd, wire, black, 1); // skip bottom
+				// standoff for wire
+				point ce[2] = {tf_conn_pt, tf_conn_pt};
+				vector3d const so_dir(-1.0, 1.0, 0.0);
+				ce[0] += 0.4*pole_radius*so_dir;
+				ce[1] += 0.5*wire_radius*so_dir;
+				add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, 2); // truncated cone with end
 			}
 		}
 	} // for d
