@@ -90,7 +90,7 @@ public:
 	float get_bsphere_radius(bool shadow_only) const {return (shadow_only ? radius : bsphere_radius);} // non-shadow pass includes wires bsphere radius
 	cube_t const &get_outer_bcube() const {return bcube_with_wires;}
 	cube_t get_ped_occluder() const;
-	point get_nearest_connection_point(point const &to_pos) const;
+	point get_nearest_connection_point(point const &to_pos, bool near_power_pole) const;
 	void add_wire(point const &p1, point const &p2);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
@@ -133,7 +133,7 @@ private:
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
 		draw_state_t &dstate, float dist_scale, bool shadow_only, bool has_immediate_draw=0);
-	bool connect_power_to_point(point const &at_pos);
+	bool connect_power_to_point(point const &at_pos, bool near_power_pole);
 	void connect_power_to_buildings(vector<road_plot_t> const &plots);
 public:
 	city_obj_placer_t() : num_spaces(0), filled_spaces(0), num_x_plots(0), num_y_plots(0), plot_subdiv_sz(0.0) {}

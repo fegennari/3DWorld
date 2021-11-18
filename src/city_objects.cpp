@@ -438,26 +438,31 @@ cube_t power_pole_t::calc_cbar(bool d) const {
 	set_wall_width(cbar,  center[!d], get_bar_extend(), !d);
 	return cbar;
 }
-point power_pole_t::get_nearest_connection_point(point const &to_pos) const {
+point power_pole_t::get_nearest_connection_point(point const &to_pos, bool near_power_pole) const {
 	float dmin_sq(0.0);
 	point ret(to_pos); // start at to_pos; will return this if no wires can be connected to
 
 	for (unsigned d = 0; d < 2; ++d) {
 		if (!has_dim_set(d) || at_line_end[d]) continue; // no wires in this dim
-		float const wire_radius(get_wire_radius()), wire_height(0.7*bcube.dz());
 		point pw(center);
 		pw[!d] = base[!d] + ((center[!d] != base[!d]) ? -1.0 : 1.0)*0.5*get_power_pole_offset(); // on the side of the pole
 		pw.z  += 0.74*bcube.dz(); // must match value used in drawing
 		cube_t wires_bcube(pw, pw);
 		wires_bcube.d[d][0] -= pole_spacing[d]; // extend to the adjacent pole
 		wires_bcube.translate_dim(d, wires_offset); // offset wires in case the pole was moved to avoid a driveway
-		point const closest_pos(wires_bcube.closest_pt(to_pos));
-		float const dsq(p2p_dist_sq(to_pos, closest_pos));
-		if (dmin_sq == 0.0 || dsq < dmin_sq) {ret = closest_pos; dmin_sq = dsq;}
+		point conn_pos(wires_bcube.closest_pt(to_pos)); // will be directly across with conn_pos[d] = to_pos[d]
+		
+		if (near_power_pole) { // off to the side of the pole
+			// offset by an additional value based on distance so that wires coming from different points intersect at different places
+			float const run_delta(to_pos[d] - base[d]);
+			conn_pos[d] = base[d] + SIGN(run_delta)*pole_radius*(2.0 + 4.0*fabs(run_delta)/pole_spacing[d]);
+		}
+		float const dsq(p2p_dist_sq(to_pos, conn_pos));
+		if (dmin_sq == 0.0 || dsq < dmin_sq) {ret = conn_pos; dmin_sq = dsq;}
 	} // for d
 	return ret;
 }
-void power_pole_t::add_wire(point const &p1, point const &p2) {
+void power_pole_t::add_wire(point const &p1, point const &p2) { // Note: p1 connects to building or streetlight; p2 connects to wires on pole
 	wires.emplace_back(p1, p2);
 	bcube_with_wires.union_with_sphere(p1, get_wire_radius());
 	bcube_with_wires.union_with_sphere(p2, get_wire_radius());
@@ -1360,13 +1365,13 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	return 1;
 }
 
-bool city_obj_placer_t::connect_power_to_point(point const &at_pos) {
+bool city_obj_placer_t::connect_power_to_point(point const &at_pos, bool near_power_pole) {
 	float dmin_sq(0.0);
 	unsigned best_pole(0);
 	point best_pos;
 
 	for (auto p = ppoles.begin(); p != ppoles.end(); ++p) {
-		point const cur_pos(p->get_nearest_connection_point(at_pos));
+		point const cur_pos(p->get_nearest_connection_point(at_pos, near_power_pole));
 		if (cur_pos == at_pos) continue; // bad point
 		float const dsq(p2p_dist_sq(at_pos, cur_pos));
 		if (dmin_sq == 0.0 || dsq < dmin_sq) {best_pos = cur_pos; dmin_sq = dsq; best_pole = (p - ppoles.begin());}
@@ -1381,7 +1386,7 @@ void city_obj_placer_t::connect_power_to_buildings(vector<road_plot_t> const &pl
 	for (auto p = plots.begin()+1; p != plots.end(); ++p) {all_plots_bcube.union_with_cube(*p);} // query all buildings in the entire city rather than per-plot
 	vector<point> ppts;
 	get_building_power_points(all_plots_bcube, ppts);
-	for (auto p = ppts.begin(); p != ppts.end(); ++p) {connect_power_to_point(*p);}
+	for (auto p = ppts.begin(); p != ppts.end(); ++p) {connect_power_to_point(*p, 1);} // near_power_pole=1
 }
 
 void city_obj_placer_t::move_to_not_intersect_driveway(point &pos, float radius, bool dim) const {
@@ -1405,7 +1410,7 @@ void city_obj_placer_t::move_and_connect_streetlights(streetlights_t &sl) {
 		if (!ppoles.empty()) { // connect power
 			point top(s->get_lpos());
 			top.z += 1.05f*streetlight_ns::light_radius*city_params.road_width; // top of light
-			connect_power_to_point(top);
+			connect_power_to_point(top, 0); // near_power_pole=0 because it may be too far away
 		}
 	} // for s
 }
