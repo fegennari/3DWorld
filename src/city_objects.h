@@ -79,8 +79,9 @@ class power_pole_t : public city_obj_t {
 	cube_t bcube_with_wires;
 	vector<wire_t> wires; // in addition to the normal connector wires
 
-	float get_wire_radius() const {return 0.08*pole_radius;}
-	float get_bar_extend () const {return 8.00*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
+	float get_wire_radius  () const {return 0.08*pole_radius;}
+	float get_bar_extend   () const {return 8.00*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
+	float get_vwire_spacing() const {return 0.25*get_bar_extend();}
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
 	bool has_dim_set(unsigned d) const {return (dims & (1<<d));}
 	cube_t calc_cbar(bool d) const;
