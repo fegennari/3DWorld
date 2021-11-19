@@ -761,6 +761,8 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	static unsigned num_geom_this_frame(0); // used to limit per-frame geom gen time; doesn't apply to shadow pass, in case shadows are cached
 	if (frame_counter > last_frame) {num_geom_this_frame = 0; last_frame = frame_counter;}
 	bool const can_update_geom(shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME); // must be consistent for static and small geom
+	point const camera_bs(camera_pdu.pos - xlate);
+	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
 
 	if (materials_invalid) { // set in set_obj_lit_state_to()
 		clear_materials();
@@ -783,16 +785,16 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 		create_small_static_vbos(building);
 		++num_geom_this_frame;
 	}
-	if (mats_lights .empty()) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
-	if (mats_dynamic.empty()) {create_dynamic_vbos(building);} // create dynamic materials if needed (no limit)
-	if (mats_doors  .empty()) {create_door_vbos   (building);} // create door    materials if needed (no limit)
+	if (draw_lights && mats_lights .empty()) {create_lights_vbos (building);} // create lights  materials if needed (no limit)
+	if (inc_small   && mats_dynamic.empty()) {create_dynamic_vbos(building);} // create dynamic materials if needed (no limit); drawn with small objects
+	if (mats_doors.empty()) {create_door_vbos(building);} // create door materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
-	mats_static .draw(s, shadow_only, reflection_pass);
-	mats_lights .draw(s, shadow_only, reflection_pass);
-	mats_dynamic.draw(s, shadow_only, reflection_pass);
+	mats_static .draw(s, shadow_only, reflection_pass); // this is the slowest call
+	if (draw_lights) {mats_lights .draw(s, shadow_only, reflection_pass);}
+	if (inc_small  ) {mats_dynamic.draw(s, shadow_only, reflection_pass);}
 	mats_doors  .draw(s, shadow_only, reflection_pass);
-
+	
 	if (inc_small) {
 		mats_small.draw(s, shadow_only, reflection_pass);
 
@@ -818,7 +820,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	indexed_vao_manager_with_shadow_t::post_render();
 	bool const disable_cull_face(0); // better but slower?
 	if (disable_cull_face) {glDisable(GL_CULL_FACE);}
-	point const camera_bs(camera_pdu.pos - xlate), building_center(building.bcube.get_cube_center());
+	point const building_center(building.bcube.get_cube_center());
 	bool const is_rotated(building.is_rotated());
 	oc.set_exclude_bix(building_ix);
 	bool obj_drawn(0);
