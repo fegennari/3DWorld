@@ -52,8 +52,9 @@ void tid_nm_pair_t::set_gl(shader_t &s) const {
 	else if (tid == REFLECTION_TEXTURE_ID) {
 		if (bind_reflection_shader()) return;
 	} else {select_texture(tid);}
-	select_multitex(get_nm_tid(), 5);
-	s.add_uniform_float("bump_map_mag", ((get_nm_tid() == FLAT_NMAP_TEX) ? 0.0 : 1.0)); // enable or disable normal map (only ~25% of calls have a normal map)
+	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
+	if (has_normal_map) {select_multitex(get_nm_tid(), 5);} // else we set bump_map_mag=0.0
+	s.add_uniform_float("bump_map_mag", (has_normal_map ? 1.0 : 0.0)); // enable or disable normal map (only ~25% of calls have a normal map); TODO: cache location
 	if (emissive > 0.0) {s.add_uniform_float("emissive_scale", emissive);} // enable emissive
 	if (spec_mag > 0  ) {s.set_specular(spec_mag/255.0, shininess);}
 }
