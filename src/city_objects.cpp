@@ -376,35 +376,6 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 
 // power poles
 
-void add_virt_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], float r1, float r2, color_wrapper const &cw,
-	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0)
-{
-	// added as individual triangles; would be more efficient to use indexed triangles
-	vector3d v12; // will be plus_z
-	vector_point_norm const &vpn(gen_cylinder_data(ce, r1, r2, ndiv, v12));
-	vert_norm_tc_color quad_pts[4];
-
-	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
-		for (unsigned j = 0; j < 2; ++j) {
-			unsigned const S(i + j), s(S%ndiv);
-			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-			float const ts(S*tss);
-			quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal, (swap_ts_tt ?      j *tst : ts), (swap_ts_tt ? ts :      j *tst), cw.c);
-			quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, (swap_ts_tt ? (1.0-j)*tst : ts), (swap_ts_tt ? ts : (1.0-j)*tst), cw.c);
-		}
-		for (unsigned n = 0; n < 6; ++n) {verts.push_back(quad_pts[q2t_ixs[n]]);}
-
-		for (unsigned d = 0; d < 2; ++d) { // draw bottom and top triangle(s)
-			if (!(draw_top_bot & (1<<d))) continue;
-			unsigned const I((i+1)%ndiv);
-			vector3d const normal(d ? plus_z : -plus_z);
-			verts.emplace_back(ce[d], normal, 0.5, 0.5, cw);
-			verts.emplace_back(vpn.p[(i<<1)+d], normal, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
-			verts.emplace_back(vpn.p[(I<<1)+d], normal, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
-		}
-	} // for i
-}
-
 power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
 	float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[2]) :
 	dims(dims_), pole_radius(pole_radius_), wires_offset(wires_offset_), base(base_), center(center_)
@@ -472,6 +443,34 @@ void power_pole_t::add_wire(point const &p1, point const &p2) { // Note: p1 conn
 	if (!shadow_only) {select_texture(WOOD2_TEX);}
 }
 
+void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], float r1, float r2, color_wrapper const &cw,
+	unsigned ndiv, unsigned draw_top_bot, float tst=1.0, float tss=1.0, bool swap_ts_tt=0)
+{
+	// added as individual triangles; would be more efficient to use indexed triangles
+	vector3d v12; // will be plus_z
+	vector_point_norm const &vpn(gen_cylinder_data(ce, r1, r2, ndiv, v12));
+	vert_norm_tc_color quad_pts[4];
+
+	for (unsigned i = 0; i < ndiv; ++i) { // similar to gen_cylinder_quads(), but with a color
+		for (unsigned j = 0; j < 2; ++j) {
+			unsigned const S(i + j), s(S%ndiv);
+			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+			float const ts(S*tss);
+			quad_pts[2*j+0].assign(vpn.p[(s<<1)+!j], normal, (swap_ts_tt ?      j *tst : ts), (swap_ts_tt ? ts :      j *tst), cw.c);
+			quad_pts[2*j+1].assign(vpn.p[(s<<1)+ j], normal, (swap_ts_tt ? (1.0-j)*tst : ts), (swap_ts_tt ? ts : (1.0-j)*tst), cw.c);
+		}
+		for (unsigned n = 0; n < 6; ++n) {verts.push_back(quad_pts[q2t_ixs[n]]);}
+
+		for (unsigned d = 0; d < 2; ++d) { // draw bottom and top triangle(s)
+			if (!(draw_top_bot & (1<<d))) continue;
+			unsigned const I((i+1)%ndiv);
+			vector3d const normal(d ? plus_z : -plus_z);
+			verts.emplace_back(ce[d], normal, 0.5, 0.5, cw);
+			verts.emplace_back(vpn.p[(i<<1)+d], normal, 0.5*(1.0 + vpn.n[i].x), 0.5*(1.0 + vpn.n[i].y), cw);
+			verts.emplace_back(vpn.p[(I<<1)+d], normal, 0.5*(1.0 + vpn.n[I].x), 0.5*(1.0 + vpn.n[I].y), cw);
+		}
+	} // for i
+}
 void draw_wire(point const pts[2], float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd) {
 	unsigned const ndiv(4);
 	vector3d v12;
@@ -491,14 +490,17 @@ void draw_ortho_wire(point const &p, float radius, float pole_spacing, bool d, c
 	// black, don't need normals/tcs/colors; could use indexed triangles, but the time taken to draw these wires is insignificant (< 1% of total frame time)
 	dstate.draw_cube(untex_qbd, wire, cw, 0); // since wires are black, and we can't see the ends, we can't even tell they're cubes rather than cylinders
 }
+void draw_standoff_geom(point const ce[2], float radius, point const &camera_bs, color_wrapper const &cw, quad_batch_draw &untex_qbd) {
+	bool const draw_top(dot_product((ce[1] - ce[0]), (camera_bs - ce[1])) > 0.0);
+	add_cylin_as_tris(untex_qbd.verts, ce, radius, 0.75*radius, cw, 16, (draw_top ? 2 : 0)); // truncated cone
+}
 void draw_vert_standoff(point const &p1, point const &camera_bs, float height, float radius, float delta_offset, bool dim, bool is_first,
 	unsigned verts_start, unsigned &verts_end, color_wrapper const &cw, quad_batch_draw &untex_qbd)
 {
 	if (is_first) { // first standoff, draw a truncated cone
 		point ce[2] = {p1, p1};
 		ce[1].z += height;
-		bool const draw_top(ce[1].z < camera_bs.z);
-		add_virt_cylin_as_tris(untex_qbd.verts, ce, radius, 0.75*radius, cw, 16, (draw_top ? 2 : 0)); // truncated cone
+		draw_standoff_geom(ce, radius, camera_bs, cw, untex_qbd);
 		verts_end = untex_qbd.verts.size();
 	}
 	else { // next standoff, copy and translate the previous truncated cone
@@ -508,6 +510,7 @@ void draw_vert_standoff(point const &p1, point const &camera_bs, float height, f
 		}
 	}
 }
+
 void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
 	float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
@@ -523,7 +526,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		float const vert_tscale = 10.0;
 		point ce[2] = {base, get_top()};
 		bool const draw_top(ce[1].z < camera_bs.z);
-		add_virt_cylin_as_tris(qbd.verts, ce, pole_radius, pole_radius, cw, pole_ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/pole_ndiv, 1); // swap_ts_tt=1
+		add_cylin_as_tris(qbd.verts, ce, pole_radius, pole_radius, cw, pole_ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/pole_ndiv, 1); // swap_ts_tt=1
 
 		if (dims == 3 && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
 			float const tf_radius(2.0*pole_radius), pole_height(bcube.dz()), tf_height(0.1*pole_height);
@@ -532,7 +535,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			ce[0].x = ce[1].x = base.x;
 			ce[0].y = ce[1].y = base.y + (at_line_end[1] ? 1.0 : -1.0)*(tf_radius + pole_radius); // offset in -y, +y at end (so that wires across above it)
 			bool const draw_top(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
-			add_virt_cylin_as_tris(untex_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top ? 2 : 1));
+			add_cylin_as_tris(untex_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top ? 2 : 1));
 			tf_bcube.set_from_points(ce, 2);
 			tf_bcube.expand_by_xy(tf_radius);
 		}
@@ -632,12 +635,11 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			point ce[2] = {pb, pb};
 			ce[1][!d] -= offset_sign*wire_radius; // end attached to the wire
 			ce[0][!d]  = base[!d] + 0.96*offset_sign*pole_radius; // end attached to the pole, slightly offset into the pole
-			bool const draw_end((ce[1][!d] < camera_bs[!d]) ^ is_offset);
 			unsigned verts_start(untex_qbd.verts.size()), verts_end(0);
 
 			for (unsigned n = 0; n < 3; ++n) {
 				if (n == 0) { // first standoff, draw a truncated cone
-					add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, (draw_end ? 2 : 0)); // truncated cone
+					draw_standoff_geom(ce, standoff_radius, camera_bs, white, untex_qbd);
 					verts_end = untex_qbd.verts.size();
 				}
 				else { // next standoff, copy and translate the previous truncated cone
@@ -659,7 +661,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 				vector3d const so_dir(-1.0, 1.0, 0.0);
 				ce[0] += 0.4*pole_radius*so_dir;
 				ce[1] += 0.5*wire_radius*so_dir;
-				add_virt_cylin_as_tris(untex_qbd.verts, ce, standoff_radius, 0.75*standoff_radius, white, 16, 2); // truncated cone with end
+				draw_standoff_geom(ce, standoff_radius, camera_bs, white, untex_qbd);
 			}
 		}
 	} // for d
