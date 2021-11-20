@@ -345,7 +345,7 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, int shadow_only, bool reflec
 	vao_mgr.create_and_upload(vector<vertex_t>(), vector<unsigned>(), shadow_only, 0, 1); // pass empty vectors because data is already uploaded; dynamic_level=0, setup_pointers=1
 	vao_mgr.pre_render(shadow_only);
 	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
-	if (!shadow_only) {tex.unset_gl(state);}
+	if (shadow_only != 1) {tex.unset_gl(state);}
 }
 
 void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) {
