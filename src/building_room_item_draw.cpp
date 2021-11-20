@@ -336,22 +336,22 @@ void rgeom_mat_t::create_vbo_inner() {
 }
 
 // shadow_only: 0=non-shadow pass, 1=shadow pass, 2=shadow pass with alpha mask texture
-void rgeom_mat_t::draw(shader_t &s, int shadow_only, bool reflection_pass) {
+void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, int shadow_only, bool reflection_pass) {
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows (also applies to bathroom windows, which don't produce shadows)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	assert(num_verts > 0);
-	if (shadow_only != 1) {tex.set_gl(s);} // ignores texture scale for now; enable alpha texture for shadow pass
+	if (shadow_only != 1) {tex.set_gl(state);} // ignores texture scale for now; enable alpha texture for shadow pass
 	vao_mgr.create_and_upload(vector<vertex_t>(), vector<unsigned>(), shadow_only, 0, 1); // pass empty vectors because data is already uploaded; dynamic_level=0, setup_pointers=1
 	vao_mgr.pre_render(shadow_only);
 	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
-	if (!shadow_only) {tex.unset_gl(s);}
+	if (!shadow_only) {tex.unset_gl(state);}
 }
 
-void rgeom_mat_t::upload_draw_and_clear(shader_t &s) {
+void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) {
 	if (empty()) return; // nothing to do
 	create_vbo_inner();
-	draw(s, 0, 0);
+	draw(state, 0, 0);
 	clear();
 }
 
@@ -383,17 +383,19 @@ void building_materials_t::draw(shader_t &s, int shadow_only, bool reflection_pa
 	//highres_timer_t timer("Draw Materials"); // 0.0168
 	static vector<iterator> text_mats;
 	text_mats.clear();
+	tid_nm_pair_dstate_t state(s);
 
 	// first pass, draw regular materials (excluding text)
 	for (iterator m = begin(); m != end(); ++m) {
 		if (m->tex.tid == FONT_TEXTURE_ID) {text_mats.push_back(m);} // skip in this pass
-		else {m->draw(s, shadow_only, reflection_pass);}
+		else {m->draw(state, shadow_only, reflection_pass);}
 	}
 	// second pass, draw text (if it exists) so that alpha blending works
-	for (auto m = text_mats.begin(); m != text_mats.end(); ++m) {(*m)->draw(s, shadow_only, reflection_pass);}
+	for (auto m = text_mats.begin(); m != text_mats.end(); ++m) {(*m)->draw(state, shadow_only, reflection_pass);}
 }
 void building_materials_t::upload_draw_and_clear(shader_t &s) {
-	for (iterator m = begin(); m != end(); ++m) {m->upload_draw_and_clear(s);}
+	tid_nm_pair_dstate_t state(s);
+	for (iterator m = begin(); m != end(); ++m) {m->upload_draw_and_clear(state);}
 }
 
 void building_room_geom_t::add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex,
@@ -698,7 +700,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 			screen_mat.tex = get_phone_tex(c);
 			screen_mat.add_cube_to_verts(c, WHITE, all_zeros, ~EF_Z2, 0, 1); // mirror_x=1
 			rotate_verts(screen_mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
-			screen_mat.upload_draw_and_clear(s);
+			screen_mat.upload_draw_and_clear(tid_nm_pair_dstate_t(s));
 		}
 		else {mat.add_cube_to_verts(c, BLACK, all_zeros, ~EF_Z2);} // screen drawn as black
 		mat.add_cube_to_verts(c, c.color, all_zeros, EF_Z2);
@@ -706,7 +708,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
-	mat.upload_draw_and_clear(s);
+	mat.upload_draw_and_clear(tid_nm_pair_dstate_t(s));
 	if (needs_blend) {disable_blend();}
 }
 
@@ -733,7 +735,7 @@ public:
 		if (mat.empty()) return;
 		glDepthMask(GL_FALSE); // disable depth writing - fixes sky visible through exterior wall, but then not drawn in front of exterior wall
 		enable_blend();
-		mat.upload_draw_and_clear(s);
+		mat.upload_draw_and_clear(tid_nm_pair_dstate_t(s));
 		disable_blend();
 		glDepthMask(GL_TRUE); // re-enable depth writing
 		if (animate2) {tex_off += 0.02*fticks;} // animate the texture

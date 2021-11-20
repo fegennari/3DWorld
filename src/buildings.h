@@ -125,6 +125,15 @@ struct city_zone_t : public cube_t {
 
 typedef vector<city_zone_t> vect_city_zone_t;
 
+struct tid_nm_pair_dstate_t {
+	shader_t &s;
+	int bmm_loc;
+	float bump_map_mag;
+	tid_nm_pair_dstate_t(shader_t &s_) : s(s_), bmm_loc(-1), bump_map_mag(1.0) {}
+	void set_for_shader(float new_bump_map_mag);
+	~tid_nm_pair_dstate_t();
+};
+
 struct tid_nm_pair_t { // size=28
 
 	int tid, nm_tid; // Note: assumes each tid has only one nm_tid
@@ -149,8 +158,8 @@ struct tid_nm_pair_t { // size=28
 	colorRGBA get_avg_color() const {return texture_color(tid);}
 	tid_nm_pair_t get_scaled_version(float scale) const;
 	bool bind_reflection_shader() const;
-	void set_gl(shader_t &s) const;
-	void unset_gl(shader_t &s) const;
+	void set_gl(tid_nm_pair_dstate_t &state) const;
+	void unset_gl(tid_nm_pair_dstate_t &state) const;
 	void toggle_transparent_windows_mode();
 };
 
@@ -487,8 +496,8 @@ public:
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, vector3d const &skip_hemi_dir=zero_vector, xform_matrix const *const matrix=nullptr);
 	void create_vbo(building_t const &building);
 	void create_vbo_inner();
-	void draw(shader_t &s, int shadow_only, bool reflection_pass);
-	void upload_draw_and_clear(shader_t &s);
+	void draw(tid_nm_pair_dstate_t &state, int shadow_only, bool reflection_pass);
+	void upload_draw_and_clear(tid_nm_pair_dstate_t &state);
 };
 
 struct building_materials_t : public vector<rgeom_mat_t> {

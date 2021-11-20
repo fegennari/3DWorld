@@ -41,27 +41,37 @@ void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
+void tid_nm_pair_dstate_t::set_for_shader(float new_bump_map_mag) {
+	if (new_bump_map_mag == bump_map_mag) return; // no change
+	bump_map_mag = new_bump_map_mag;
+	if (bmm_loc == -1) {bmm_loc = s.get_uniform_loc("bump_map_mag");} // set on the first call
+	s.set_uniform_float(bmm_loc, bump_map_mag);
+}
+tid_nm_pair_dstate_t::~tid_nm_pair_dstate_t() { // restore to default if needed
+	if (bmm_loc && bump_map_mag != 1.0) {s.set_uniform_float(bmm_loc, 1.0);} // bmm_loc should have been set
+}
+
 tid_nm_pair_t tid_nm_pair_t::get_scaled_version(float scale) const {
 	tid_nm_pair_t tex(*this);
 	tex.tscale_x *= scale;
 	tex.tscale_y *= scale;
 	return tex;
 }
-void tid_nm_pair_t::set_gl(shader_t &s) const {
+void tid_nm_pair_t::set_gl(tid_nm_pair_dstate_t &state) const {
 	if (tid == FONT_TEXTURE_ID) {text_drawer::bind_font_texture();}
 	else if (tid == REFLECTION_TEXTURE_ID) {
 		if (bind_reflection_shader()) return;
 	} else {select_texture(tid);}
 	bool const has_normal_map(get_nm_tid() != FLAT_NMAP_TEX);
 	if (has_normal_map) {select_multitex(get_nm_tid(), 5);} // else we set bump_map_mag=0.0
-	s.add_uniform_float("bump_map_mag", (has_normal_map ? 1.0 : 0.0)); // enable or disable normal map (only ~25% of calls have a normal map); TODO: cache location
-	if (emissive > 0.0) {s.add_uniform_float("emissive_scale", emissive);} // enable emissive
-	if (spec_mag > 0  ) {s.set_specular(spec_mag/255.0, shininess);}
+	state.set_for_shader(has_normal_map ? 1.0 : 0.0); // enable or disable normal map (only ~25% of calls have a normal map)
+	if (emissive > 0.0) {state.s.add_uniform_float("emissive_scale", emissive);} // enable emissive
+	if (spec_mag > 0  ) {state.s.set_specular(spec_mag/255.0, shininess);}
 }
-void tid_nm_pair_t::unset_gl(shader_t &s) const {
-	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {s.make_current(); return;}
-	if (emissive > 0.0) {s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
-	if (spec_mag > 0  ) {s.clear_specular();}
+void tid_nm_pair_t::unset_gl(tid_nm_pair_dstate_t &state) const {
+	if (tid == REFLECTION_TEXTURE_ID && room_mirror_ref_tid != 0) {state.s.make_current(); return;}
+	if (emissive > 0.0) {state.s.add_uniform_float("emissive_scale", 0.0);} // disable emissive
+	if (spec_mag > 0  ) {state.s.clear_specular();}
 }
 void tid_nm_pair_t::toggle_transparent_windows_mode() { // hack
 	if      (tid == BLDG_WINDOW_TEX    ) {tid = BLDG_WIND_TRANS_TEX;}
@@ -442,10 +452,10 @@ class building_draw_t {
 		draw_block_t() : tri_vbo_off(0), no_shadows(0) {}
 		void record_num_verts() {start_num_verts[0] = num_quad_verts(); start_num_verts[1] = num_tri_verts();}
 
-		void draw_geom_range(shader_t &s, bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
+		void draw_geom_range(tid_nm_pair_dstate_t &state, bool shadow_only, vert_ix_pair const &vstart, vert_ix_pair const &vend) { // use VBO rendering
 			if (vstart == vend) return; // empty range - no verts for this tile
 			if (shadow_only && no_shadows) return; // no shadows on this material
-			if (!shadow_only) {tex.set_gl(s);}
+			if (!shadow_only) {tex.set_gl(state);}
 			assert(vbo.vbo_valid());
 			(shadow_only ? svao : vao).create_from_vbo<vert_norm_comp_tc_color>(vbo, 1, 1); // setup_pointers=1, always_bind=1
 
@@ -457,38 +467,38 @@ class building_draw_t {
 				assert(vstart.tix < vend.tix);
 				glDrawArrays(GL_TRIANGLES, (vstart.tix + tri_vbo_off), (vend.tix - vstart.tix));
 			}
-			if (!shadow_only) {tex.unset_gl(s);}
+			if (!shadow_only) {tex.unset_gl(state);}
 			vao_manager_t::post_render();
 		}
-		void draw_all_geom(shader_t &s, bool shadow_only, bool direct_draw_no_vbo, vertex_range_t const *const exclude=nullptr) {
+		void draw_all_geom(tid_nm_pair_dstate_t &state, bool shadow_only, bool direct_draw_no_vbo, vertex_range_t const *const exclude=nullptr) {
 			if (shadow_only && no_shadows) return; // no shadows on this material
 
 			if (direct_draw_no_vbo) {
 				enable_use_temp_vbo = 1; // hack to fix missing wall artifacts when not using a core context
 				assert(!exclude); // not supported in this mode
 				bool const use_texture(!shadow_only && (!quad_verts.empty() || !tri_verts.empty()));
-				if (use_texture) {tex.set_gl(s);} // Note: colors are not disabled here
+				if (use_texture) {tex.set_gl(state);} // Note: colors are not disabled here
 				if (!quad_verts.empty()) {draw_quad_verts_as_tris(quad_verts, 0, 1, 1);}
 				if (!tri_verts .empty()) {draw_verts(tri_verts, GL_TRIANGLES, 0, 1);}
-				if (use_texture) {tex.unset_gl(s);}
+				if (use_texture) {tex.unset_gl(state);}
 				enable_use_temp_vbo = 0;
 			}
 			else {
 				if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
 				vert_ix_pair const &start(pos_by_tile.front()), end(pos_by_tile.back());
-				if (!exclude) {draw_geom_range(s, shadow_only, start, end); return;} // non-exclude case
+				if (!exclude) {draw_geom_range(state, shadow_only, start, end); return;} // non-exclude case
 				assert(exclude->start >= start.qix && exclude->start < exclude->end && exclude->end <= end.qix); // exclude (start, end) must be a subset of (start.qix, end.qix)
-				draw_geom_range(s, shadow_only, start, vert_ix_pair(exclude->start, end.tix)); // first block of quads and all tris
-				draw_geom_range(s, shadow_only, vert_ix_pair(exclude->end, end.tix), end); // second block of quads and no tris
+				draw_geom_range(state, shadow_only, start, vert_ix_pair(exclude->start, end.tix)); // first block of quads and all tris
+				draw_geom_range(state, shadow_only, vert_ix_pair(exclude->end, end.tix), end); // second block of quads and no tris
 			}
 		}
-		void draw_quad_geom_range(shader_t &s, vertex_range_t const &range, bool shadow_only=0) { // no tris; empty range is legal
-			draw_geom_range(s, shadow_only, vert_ix_pair(range.start, 0), vert_ix_pair(range.end, 0));
+		void draw_quad_geom_range(tid_nm_pair_dstate_t &state, vertex_range_t const &range, bool shadow_only=0) { // no tris; empty range is legal
+			draw_geom_range(state, shadow_only, vert_ix_pair(range.start, 0), vert_ix_pair(range.end, 0));
 		}
-		void draw_geom_tile(shader_t &s, unsigned tile_id, bool shadow_only) {
+		void draw_geom_tile(tid_nm_pair_dstate_t &state, unsigned tile_id, bool shadow_only) {
 			if (pos_by_tile.empty()) return; // nothing to draw for this block/texture
 			assert(tile_id+1 < pos_by_tile.size()); // tile and next tile must be valid indices
-			draw_geom_range(s, shadow_only, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
+			draw_geom_range(state, shadow_only, pos_by_tile[tile_id], pos_by_tile[tile_id+1]); // shadow_only=0
 		}
 		void upload_to_vbos() {
 			assert((quad_verts.size()%4) == 0);
@@ -1005,25 +1015,29 @@ public:
 	
 	// tex_filt_mode: 0=draw everything, 1=draw exterior walls only, 2=draw everything but exterior walls, 3=draw everything but exterior walls and doors
 	void draw(shader_t &s, bool shadow_only, bool direct_draw_no_vbo=0, int tex_filt_mode=0, vertex_range_t const *const exclude=nullptr) {
+		tid_nm_pair_dstate_t state(s);
+
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
 			if (tex_filt_mode && (tid_mapper.is_ext_wall_tid(i->tex.tid) != (tex_filt_mode == 1))) continue; // not an ext wall texture, skip
 			if (tex_filt_mode == 3 && building_texture_mgr.is_door_tid(i->tex.tid)) continue; // door texture, skip
 			bool const use_exclude(exclude && exclude->draw_ix == int(i - to_draw.begin()));
-			i->draw_all_geom(s, shadow_only, direct_draw_no_vbo, (use_exclude ? exclude : nullptr));
+			i->draw_all_geom(state, shadow_only, direct_draw_no_vbo, (use_exclude ? exclude : nullptr));
 		}
 	}
 	void draw_tile(shader_t &s, unsigned tile_id, bool shadow_only=0) {
-		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(s, tile_id, shadow_only);}
+		tid_nm_pair_dstate_t state(s);
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(state, tile_id, shadow_only);}
 	}
 	void draw_block(shader_t &s, unsigned ix, bool shadow_only, vertex_range_t const *const exclude=nullptr) {
-		if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(s, shadow_only, 0, exclude);}
+		if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(tid_nm_pair_dstate_t(s), shadow_only, 0, exclude);}
 	}
-	void draw_quad_geom_range(shader_t &s, vertex_range_t const &range, bool shadow_only=0) {
+	void draw_quad_geom_range(tid_nm_pair_dstate_t &state, vertex_range_t const &range, bool shadow_only=0) {
 		if (range.draw_ix < 0 || (unsigned)range.draw_ix >= to_draw.size()) return; // invalid range, skip
-		to_draw[range.draw_ix].draw_quad_geom_range(s, range, shadow_only);
+		to_draw[range.draw_ix].draw_quad_geom_range(state, range, shadow_only);
 	}
 	void draw_quads_for_draw_range(shader_t &s, draw_range_t const &draw_range, bool shadow_only=0) {
-		for (unsigned i = 0; i < MAX_DRAW_BLOCKS; ++i) {draw_quad_geom_range(s, draw_range.vr[i], shadow_only);}
+		tid_nm_pair_dstate_t state(s);
+		for (unsigned i = 0; i < MAX_DRAW_BLOCKS; ++i) {draw_quad_geom_range(state, draw_range.vr[i], shadow_only);}
 	}
 }; // end building_draw_t
 
