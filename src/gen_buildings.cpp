@@ -2455,19 +2455,7 @@ public:
 						this_frame_camera_in_building  = 1;
 						this_frame_player_in_basement |= b.is_pos_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()));
 						player_building = &b;
-
-						if (display_mode & 0x10) { // compute indirect lighting
-#if 0
-							point cpos;
-							colorRGBA ccolor;
-							if (b.ray_cast_camera_dir(camera_xlated, cpos, ccolor)) { // for debugging
-								tid_nm_pair_t tex; tex.emissive = 1; tex.set_gl(s); // untextured emissive
-								s.set_cur_color(ccolor);
-								draw_subdiv_sphere(cpos, 0.1*CAMERA_RADIUS, N_SPHERE_DIV, 0, 1);
-							}
-#endif
-							indir_bcs_ix = bcs_ix; indir_bix = bi->ix;
-						}
+						if (display_mode & 0x10) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
 						// run any player interaction logic here
 						if (toggle_room_light  ) {b.toggle_room_light(camera_xlated);}
 						if (building_action_key) {b.apply_player_action_key(camera_xlated, cview_dir, (building_action_key-1), 0);} // check_only=0
