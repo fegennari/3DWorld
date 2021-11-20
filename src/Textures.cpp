@@ -261,7 +261,7 @@ void set_landscape_texture_from_file() {
 void load_textures() {
 
 	timer_t timer("Texture Load");
-	cout << "loading textures"; cout.flush();
+	cout << "Loading " << textures.size() << " textures" << endl;
 	if (using_custom_landscape_texture()) {set_landscape_texture_from_file();} // must be done first
 	load_texture_names();
 
@@ -273,7 +273,6 @@ void load_textures() {
 	for (int i = 0; i < (int)textures.size(); ++i) {
 		if (!is_tex_disabled(i)) {textures[i].fix_word_alignment();}
 	}
-	cout << " done" << endl;
 	textures[BULLET_D_TEX].merge_in_alpha_channel(textures[BULLET_A_TEX]);
 	gen_smoke_texture();
 	gen_plasma_texture();
