@@ -338,7 +338,7 @@ void rgeom_mat_t::create_vbo_inner() {
 
 void brg_batch_draw_t::add_material(rgeom_mat_t const &m) {
 	for (auto &i : to_draw) { // check all existing materials for a matching texture, etc.
-		if (i.tex.is_compatible(m.tex)) {i.mats.push_back(&m); return;} // found existing material
+		if (i.tex.is_compat_ignore_shadowed(m.tex)) {i.mats.push_back(&m); return;} // found existing material
 	}
 	to_draw.emplace_back(m); // add a new material entry
 }
