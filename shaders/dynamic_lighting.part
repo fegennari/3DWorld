@@ -180,17 +180,20 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec4 epos, in vec
 		vec3 eye_dir   = normalize(camera_pos - dlpos); // world space
 
 #ifdef USE_BUMP_MAP_DL // convert from world to eye to tangent space
+		vec3 orig_eye_dir   = eye_dir;
+		vec3 orig_light_dir = light_dir;
 		vec3 lpos_eye  = ((use_fg_ViewMatrix ? fg_ViewMatrix : fg_ModelViewMatrix) * vec4(lpos_r.xyz, 1.0)).xyz; // eye space
 		float nscale   = bump_map_normal_sign*clamp(10.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing (in world space)
 		light_dir      = normalize(lpos_eye - epos.xyz); // eye space
-		eye_dir        = fg_NormalMatrix * eye_dir; // convert world space into eye space
-		vec3 lnorm     = nscale*apply_bump_map_for_tbn(light_dir, eye_dir, TBN); // convert eye space to tangent space
-		//if (dot(eye_dir, lnorm) < 0.0) {eye_dir = -eye_dir;} // is this required?
-		float n_dot_l  = mix(dot(normal, orig_ldir), dot(lnorm, light_dir), bump_map_mag*bump_map_normal_scale);
+		eye_dir        = fg_NormalMatrix*eye_dir; // convert world space into eye space
+		float nm_mag   = bump_map_mag*bump_map_normal_scale; // should be either 0.0 or 1.0; used to interpolate the variables below
+		vec3 lnorm     = mix(normal, nscale*apply_bump_map_for_tbn(light_dir, eye_dir, TBN), nm_mag); // convert eye space to tangent space
+		eye_dir        = mix(orig_eye_dir,   eye_dir,   nm_mag);
+		light_dir      = mix(orig_light_dir, light_dir, nm_mag);
 #else // !USE_BUMP_MAP_DL
 		vec3 lnorm     = normal;
-		float n_dot_l  = dot(lnorm, light_dir);
 #endif // USE_BUMP_MAP_DL
+		float n_dot_l  = dot(lnorm, light_dir);
 		intensity *= dlight_intensity_scale;
 		if (intensity < 0.001) continue; // usually faster
 
