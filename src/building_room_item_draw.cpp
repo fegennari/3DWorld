@@ -338,7 +338,7 @@ void rgeom_mat_t::create_vbo_inner() {
 
 void brg_batch_draw_t::add_material(rgeom_mat_t const &m) {
 	for (auto &i : to_draw) { // check all existing materials for a matching texture, etc.
-		if (i.tex == m.tex) {i.mats.push_back(&m); return;} // found existing material
+		if (i.tex.is_compatible(m.tex)) {i.mats.push_back(&m); return;} // found existing material
 	}
 	to_draw.emplace_back(m); // add a new material entry
 }
@@ -398,8 +398,10 @@ unsigned building_materials_t::count_all_verts() const {
 rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool inc_shadows) {
 	// for now we do a simple linear search because there shouldn't be too many unique materials
 	for (iterator m = begin(); m != end(); ++m) {
-		if (m->tex != tex) continue;
+		if (!m->tex.is_compatible(tex)) continue;
 		if (inc_shadows) {m->enable_shadows();}
+		// tscale diffs don't make new materials; copy tscales from incoming tex; this field may be used locally by the caller, but isn't used for drawing
+		m->tex.tscale_x = tex.tscale_x; m->tex.tscale_y = tex.tscale_y;
 		return *m;
 	}
 	emplace_back(tex); // not found, add a new material
