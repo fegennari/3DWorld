@@ -734,7 +734,8 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 			screen_mat.tex = get_phone_tex(c);
 			screen_mat.add_cube_to_verts(c, WHITE, all_zeros, ~EF_Z2, 0, 1); // mirror_x=1
 			rotate_verts(screen_mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
-			screen_mat.upload_draw_and_clear(tid_nm_pair_dstate_t(s));
+			tid_nm_pair_dstate_t state(s);
+			screen_mat.upload_draw_and_clear(state);
 		}
 		else {mat.add_cube_to_verts(c, BLACK, all_zeros, ~EF_Z2);} // screen drawn as black
 		mat.add_cube_to_verts(c, c.color, all_zeros, EF_Z2);
@@ -742,7 +743,8 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
-	mat.upload_draw_and_clear(tid_nm_pair_dstate_t(s));
+	tid_nm_pair_dstate_t state(s);
+	mat.upload_draw_and_clear(state);
 	if (needs_blend) {disable_blend();}
 }
 
@@ -769,7 +771,8 @@ public:
 		if (mat.empty()) return;
 		glDepthMask(GL_FALSE); // disable depth writing - fixes sky visible through exterior wall, but then not drawn in front of exterior wall
 		enable_blend();
-		mat.upload_draw_and_clear(tid_nm_pair_dstate_t(s));
+		tid_nm_pair_dstate_t state(s);
+		mat.upload_draw_and_clear(state);
 		disable_blend();
 		glDepthMask(GL_TRUE); // re-enable depth writing
 		if (animate2) {tex_off += 0.02*fticks;} // animate the texture

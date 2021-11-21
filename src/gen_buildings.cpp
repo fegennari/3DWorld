@@ -1029,7 +1029,9 @@ public:
 		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {i->draw_geom_tile(state, tile_id, shadow_only);}
 	}
 	void draw_block(shader_t &s, unsigned ix, bool shadow_only, vertex_range_t const *const exclude=nullptr) {
-		if (ix < to_draw.size()) {to_draw[ix].draw_all_geom(tid_nm_pair_dstate_t(s), shadow_only, 0, exclude);}
+		if (ix >= to_draw.size()) return;
+		tid_nm_pair_dstate_t state(s);
+		to_draw[ix].draw_all_geom(state, shadow_only, 0, exclude);
 	}
 	void draw_quad_geom_range(tid_nm_pair_dstate_t &state, vertex_range_t const &range, bool shadow_only=0) {
 		if (range.draw_ix < 0 || (unsigned)range.draw_ix >= to_draw.size()) return; // invalid range, skip

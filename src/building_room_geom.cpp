@@ -2447,7 +2447,8 @@ void building_room_geom_t::add_lg_ball(room_object_t const &c) { // is_small=1
 	static rgeom_mat_t mat = rgeom_mat_t(tid_nm_pair_t()); // allocated memory is reused across frames; VBO/IBO are recreated every time
 	mat.tex = tid_nm_pair_t(get_lg_ball_tid(c), get_lg_ball_nm_tid(c), 0.0, 0.0);
 	mat.add_sphere_to_verts(c, apply_light_color(c), 0, zero_vector, &rot_matrix); // low_detail=0
-	mat.upload_draw_and_clear(tid_nm_pair_dstate_t(s));
+	tid_nm_pair_dstate_t state(s);
+	mat.upload_draw_and_clear(state);
 }
 
 colorRGBA room_object_t::get_color() const {
