@@ -55,6 +55,7 @@ struct building_t;
 class building_creator_t;
 class light_ix_assign_t;
 struct elevator_t;
+class brg_batch_draw_t;
 typedef vector<vert_norm_comp_tc_color> vect_vnctcc_t;
 
 struct bottle_params_t {
@@ -496,7 +497,8 @@ public:
 	void add_sphere_to_verts(cube_t const &c, colorRGBA const &color, bool low_detail=0, vector3d const &skip_hemi_dir=zero_vector, xform_matrix const *const matrix=nullptr);
 	void create_vbo(building_t const &building);
 	void create_vbo_inner();
-	void draw(tid_nm_pair_dstate_t &state, int shadow_only, bool reflection_pass);
+	void draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, bool reflection_pass);
+	void draw_inner(tid_nm_pair_dstate_t &state, int shadow_only) const;
 	void upload_draw_and_clear(tid_nm_pair_dstate_t &state);
 };
 
@@ -505,8 +507,21 @@ struct building_materials_t : public vector<rgeom_mat_t> {
 	unsigned count_all_verts() const;
 	rgeom_mat_t &get_material(tid_nm_pair_t const &tex, bool inc_shadows);
 	void create_vbos(building_t const &building);
-	void draw(shader_t &s, int shadow_only, bool reflection_pass);
+	void draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, bool reflection_pass);
 	void upload_draw_and_clear(shader_t &s);
+};
+
+class brg_batch_draw_t {
+	struct mat_entry_t {
+		tid_nm_pair_t tex;
+		vector<rgeom_mat_t const *> mats;
+		mat_entry_t() {}
+		mat_entry_t(rgeom_mat_t const &m) : tex(m.tex) {mats.push_back(&m);}
+	};
+	vector<mat_entry_t> to_draw;
+public:
+	void add_material(rgeom_mat_t const &m);
+	void draw_and_clear(shader_t &s);
 };
 
 struct obj_model_inst_t {
@@ -666,7 +681,7 @@ struct building_room_geom_t {
 	void create_lights_vbos(building_t const &building);
 	void create_dynamic_vbos(building_t const &building);
 	void create_door_vbos(building_t const &building);
-	void draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+	void draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 		unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
@@ -1000,8 +1015,8 @@ struct building_t : public building_geom_t {
 	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2) const;
 	bool maybe_use_last_pickup_room_object(point const &player_pos);
 	bool maybe_update_tape(point const &player_pos, bool end_of_tape);
-	void draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
-	void gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
+	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
+	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom(bool force);

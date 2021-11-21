@@ -336,23 +336,53 @@ void rgeom_mat_t::create_vbo_inner() {
 	num_ixs = indices.size();
 }
 
+void brg_batch_draw_t::add_material(rgeom_mat_t const &m) {
+	for (auto &i : to_draw) { // check all existing materials for a matching texture, etc.
+		if (i.tex == m.tex) {i.mats.push_back(&m); return;} // found existing material
+	}
+	to_draw.emplace_back(m); // add a new material entry
+}
+void brg_batch_draw_t::draw_and_clear(shader_t &s) {
+	tid_nm_pair_dstate_t state(s);
+	enable_blend(); // needed for rugs and book text
+
+	for (auto &i : to_draw) {
+		i.tex.set_gl(state);
+		for (auto const &m : i.mats) {m->draw_inner(state, 0);} // shadow_only=0
+		i.tex.unset_gl(state);
+		i.mats.clear(); // clear mats but not to_draw
+	}
+	disable_blend();
+	indexed_vao_manager_with_shadow_t::post_render();
+}
+
 // shadow_only: 0=non-shadow pass, 1=shadow pass, 2=shadow pass with alpha mask texture
-void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, int shadow_only, bool reflection_pass) {
+void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int shadow_only, bool reflection_pass) {
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows (also applies to bathroom windows, which don't produce shadows)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
 	assert(num_verts > 0);
-	if (shadow_only != 1) {tex.set_gl(state);} // ignores texture scale for now; enable alpha texture for shadow pass
 	vao_mgr.create_and_upload(vector<vertex_t>(), vector<unsigned>(), shadow_only, 0, 1); // pass empty vectors because data is already uploaded; dynamic_level=0, setup_pointers=1
-	vao_mgr.pre_render(shadow_only);
+
+	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
+	if (bbd != nullptr && !shadow_only) { // add to batch draw (optimization)
+		bbd->add_material(*this);
+	}
+	else { // draw this material now
+		if (shadow_only != 1) {tex.set_gl(state);} // ignores texture scale for now; enable alpha texture for shadow pass
+		draw_inner(state, shadow_only);
+		if (shadow_only != 1) {tex.unset_gl(state);}
+	}
+}
+void rgeom_mat_t::draw_inner(tid_nm_pair_dstate_t &state, int shadow_only) const {
+	vao_mgr.pre_render(shadow_only != 0);
 	glDrawRangeElements(GL_TRIANGLES, 0, num_verts, num_ixs, GL_UNSIGNED_INT, nullptr);
-	if (shadow_only != 1) {tex.unset_gl(state);}
 }
 
-void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) {
+void rgeom_mat_t::upload_draw_and_clear(tid_nm_pair_dstate_t &state) { // Note: called by draw_interactive_player_obj() and water_draw_t
 	if (empty()) return; // nothing to do
 	create_vbo_inner();
-	draw(state, 0, 0);
+	draw(state, nullptr, 0, 0); // no brg_batch_draw_t
 	clear();
 }
 
@@ -380,7 +410,7 @@ rgeom_mat_t &building_materials_t::get_material(tid_nm_pair_t const &tex, bool i
 void building_materials_t::create_vbos(building_t const &building) {
 	for (iterator m = begin(); m != end(); ++m) {m->create_vbo(building);}
 }
-void building_materials_t::draw(shader_t &s, int shadow_only, bool reflection_pass) {
+void building_materials_t::draw(brg_batch_draw_t *bbd, shader_t &s, int shadow_only, bool reflection_pass) {
 	//highres_timer_t timer("Draw Materials"); // 0.0168
 	static vector<iterator> text_mats;
 	text_mats.clear();
@@ -389,10 +419,10 @@ void building_materials_t::draw(shader_t &s, int shadow_only, bool reflection_pa
 	// first pass, draw regular materials (excluding text)
 	for (iterator m = begin(); m != end(); ++m) {
 		if (m->tex.tid == FONT_TEXTURE_ID) {text_mats.push_back(m);} // skip in this pass
-		else {m->draw(state, shadow_only, reflection_pass);}
+		else {m->draw(state, bbd, shadow_only, reflection_pass);}
 	}
-	// second pass, draw text (if it exists) so that alpha blending works
-	for (auto m = text_mats.begin(); m != text_mats.end(); ++m) {(*m)->draw(state, shadow_only, reflection_pass);}
+	// second pass, draw text (if it exists) so that alpha blending works; really only needed for the building the player is in
+	for (auto m = text_mats.begin(); m != text_mats.end(); ++m) {(*m)->draw(state, bbd, shadow_only, reflection_pass);}
 }
 void building_materials_t::upload_draw_and_clear(shader_t &s) {
 	tid_nm_pair_dstate_t state(s);
@@ -754,14 +784,14 @@ int room_object_t::get_model_id() const {
 	return id;
 }
 
-void building_t::draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix,
+void building_t::draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix,
 	bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (!interior || !interior->room_geom) return;
 	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
-	interior->room_geom->draw(s, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+	interior->room_geom->draw(bbd, s, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
-void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
+void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 	unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (!interior) return;
@@ -784,7 +814,7 @@ void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t
 		gen_room_details(rgen, ped_bcubes, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}
-	draw_room_geom(s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+	draw_room_geom(bbd, s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
 }
 void building_t::clear_room_geom(bool force) {
 	if (!has_room_geom()) return;
@@ -794,7 +824,7 @@ void building_t::clear_room_geom(bool force) {
 }
 
 // Note: non-const because it creates the VBO
-void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
+void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
 {
 	if (empty()) return; // no geom
@@ -805,6 +835,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	bool const can_update_geom(shadow_only || num_geom_this_frame < MAX_ROOM_GEOM_GEN_PER_FRAME); // must be consistent for static and small geom
 	point const camera_bs(camera_pdu.pos - xlate);
 	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
+	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
 
 	if (materials_invalid) { // set in set_obj_lit_state_to()
 		clear_materials();
@@ -832,28 +863,28 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	if (mats_doors.empty()) {create_door_vbos(building);} // create door materials if needed (no limit)
 	enable_blend(); // needed for rugs and book text
 	assert(s.is_setup());
-	mats_static .draw(s, shadow_only, reflection_pass); // this is the slowest call
-	if (draw_lights) {mats_lights .draw(s, shadow_only, reflection_pass);}
-	if (inc_small  ) {mats_dynamic.draw(s, shadow_only, reflection_pass);}
-	mats_doors  .draw(s, shadow_only, reflection_pass);
+	mats_static .draw(bbd, s, shadow_only, reflection_pass); // this is the slowest call
+	if (draw_lights) {mats_lights .draw(bbd, s, shadow_only, reflection_pass);}
+	if (inc_small  ) {mats_dynamic.draw(bbd, s, shadow_only, reflection_pass);}
+	mats_doors  .draw(bbd, s, shadow_only, reflection_pass);
 	
 	if (inc_small) {
-		mats_small.draw(s, shadow_only, reflection_pass);
+		mats_small.draw(bbd, s, shadow_only, reflection_pass);
 
 		if (player_in_building) { // if we're not in the building, don't draw alpha mask materials at all; without the special shader they won't look correct when drawn through windows
 			if (shadow_only) {
 				shader_t amask_shader;
 				amask_shader.begin_simple_textured_shader(0.9); // need to use texture with alpha test
-				mats_amask.draw(amask_shader, 2, 0); // shadow pass with alpha mask
+				mats_amask.draw(nullptr, amask_shader, 2, 0); // shadow pass with alpha mask; no brg_batch_draw
 				s.make_current(); // switch back to the normal shader
 			}
 			else if (reflection_pass) {
-				mats_amask.draw(s, 0, 1);
+				mats_amask.draw(nullptr, s, 0, 1); // no brg_batch_draw
 			}
 			else { // this is expensive: only enable for the current building and the main draw pass
 				shader_t amask_shader;
 				setup_building_draw_shader(amask_shader, 0.9, 1, 1, 0); // min_alpha=0.9, enable_indir=1, force_tsl=1, use_texgen=0
-				mats_amask.draw(amask_shader, 0, 0);
+				mats_amask.draw(nullptr, amask_shader, 0, 0); // no brg_batch_draw
 				s.make_current(); // switch back to the normal shader
 			}
 		}
@@ -933,7 +964,7 @@ void building_room_geom_t::draw(shader_t &s, building_t const &building, occlusi
 	if (!shadow_only && !mats_alpha.empty()) { // draw last; not shadow casters; for shower glass, etc.
 		enable_blend();
 		glDepthMask(GL_FALSE); // disable depth writing
-		mats_alpha.draw(s, shadow_only, reflection_pass);
+		mats_alpha.draw(bbd, s, shadow_only, reflection_pass);
 		glDepthMask(GL_TRUE);
 		disable_blend();
 		indexed_vao_manager_with_shadow_t::post_render();
