@@ -347,6 +347,7 @@ void brg_batch_draw_t::draw_and_clear(shader_t &s) {
 	enable_blend(); // needed for rugs and book text
 
 	for (auto &i : to_draw) {
+		if (i.mats.empty()) continue; // empty slot
 		i.tex.set_gl(state);
 		for (auto const &m : i.mats) {m->draw_inner(state, 0);} // shadow_only=0
 		i.tex.unset_gl(state);

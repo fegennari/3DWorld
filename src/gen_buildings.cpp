@@ -2385,7 +2385,7 @@ public:
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
 			vector<point> points; // reused temporary
 			vect_cube_t ped_bcubes; // reused temporary
-			brg_batch_draw_t bbd;
+			static brg_batch_draw_t bbd; // allocated memory is reused across calls
 			int indir_bcs_ix(-1), indir_bix(-1);
 
 			if (draw_interior) {
