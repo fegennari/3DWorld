@@ -20,6 +20,7 @@ extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
 extern building_t const *player_building;
 extern carried_item_t player_held_object;
+extern building_params_t global_building_params;
 
 unsigned get_num_screenshot_tids();
 tid_nm_pair_t get_phone_tex(room_object_t const &c);
@@ -751,6 +752,45 @@ int room_object_t::get_model_id() const {
 	int id((int)type + OBJ_MODEL_TOILET - TYPE_TOILET);
 	if (type == TYPE_HANGER || type == TYPE_CLOTHES) {id += ((int)item_flags << 8);} // choose a sub_model_id for these types using bits 8-15
 	return id;
+}
+
+void building_t::draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix,
+	bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
+{
+	if (!interior || !interior->room_geom) return;
+	if (ENABLE_MIRROR_REFLECTIONS && !shadow_only && !reflection_pass && player_in_building) {find_mirror_needing_reflection(xlate);}
+	interior->room_geom->draw(s, *this, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+}
+void building_t::gen_and_draw_room_geom(shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
+	unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
+{
+	if (!interior) return;
+	if (!global_building_params.enable_rotated_room_geom && is_rotated()) return; // rotated buildings: need to fix texture coords, room object collisions, mirrors, etc.
+
+	if (!shadow_only && !camera_pdu.point_visible_test(bcube.get_cube_center() + xlate)) {
+		// skip if none of the building parts are visible to the camera; this is rare, so it may not help
+		bool any_part_visible(0);
+
+		for (auto p = parts.begin(); p != parts.end(); ++p) {
+			if (camera_pdu.cube_visible(*p + xlate)) {any_part_visible = 1; break;}
+		}
+		if (!any_part_visible) return;
+	}
+	if (!has_room_geom()) {
+		rand_gen_t rgen;
+		rgen.set_state(building_ix, parts.size()); // set to something canonical per building
+		ped_bcubes.clear();
+		if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, building_ix, ped_bcubes);}
+		gen_room_details(rgen, ped_bcubes, building_ix); // generate so that we can draw it
+		assert(has_room_geom());
+	}
+	draw_room_geom(s, oc, xlate, building_ix, shadow_only, reflection_pass, inc_small, player_in_building);
+}
+void building_t::clear_room_geom(bool force) {
+	if (!has_room_geom()) return;
+	if (interior->room_geom->modified_by_player) return; // keep the player's modifications and don't delete the room geom
+	interior->room_geom->clear(); // free VBO data before deleting the room_geom object
+	interior->room_geom.reset();
 }
 
 // Note: non-const because it creates the VBO
