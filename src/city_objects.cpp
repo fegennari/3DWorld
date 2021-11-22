@@ -1317,13 +1317,15 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 		if (!qbd.empty() || !untex_qbd.empty() || !dstate.hedge_draw.empty()) { // we have something to draw
 			if (!has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // will_emit_now=1, ensure_active=1
 			qbd.draw_and_clear(); // draw this group with current smap
+			bool must_restore_state(!dstate.hedge_draw.empty());
 			dstate.hedge_draw.draw_and_clear(dstate.s);
 
 			if (!untex_qbd.empty()) {
 				if (!shadow_only) {select_texture(WHITE_TEX);}
 				untex_qbd.draw_and_clear();
-				if (!shadow_only) {T::pre_draw(dstate, shadow_only);} // re-setup for next tile
+				must_restore_state = 1;
 			}
+			if (!shadow_only && must_restore_state) {T::pre_draw(dstate, shadow_only);} // re-setup for next tile
 		}
 	} // for g
 	T::post_draw(dstate, shadow_only);
