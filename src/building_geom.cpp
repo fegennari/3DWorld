@@ -1133,6 +1133,8 @@ tquad_with_ix_t const &building_t::find_main_roof_tquad(rand_gen_t &rgen, bool s
 	return roof_tquads[best_tquad];
 }
 
+// Note: occasionally the chosen point will generate a wire that intersects some other part of the house;
+// I haven't found a way to avoid this because it involves knowing both end points and possibly iterating until a valid wire is found
 bool building_t::get_power_point(vector<point> &ppts) const {
 	if (!is_house || roof_tquads.empty()) return 0; // houses only for now
 	static rand_gen_t rgen; // used for tie breaker when both sides of the roof are symmetric
@@ -1149,16 +1151,16 @@ bool building_t::get_power_point(vector<point> &ppts) const {
 	if (ridge_ix == 0 && roof.pts[ridge_ix2].z != zmax) {ridge_ix2 = 3;} // wraps around from 3 => 0
 	point const &p1(roof.pts[ridge_ix]), &p2(roof.pts[ridge_ix2]);
 	assert(p2.z == zmax); // there must be a ridge of two adjacent points at max height
+	float ridge_pos(0.0);
 
 	if (street_dir) {
 		bool const street_dim((street_dir-1) >> 1), pref_dir((street_dir-1)&1);
 		
 		if (p1[street_dim] != p2[street_dim]) { // choose the point closest to the street as it will likely also be closest to the power lines
-			ppts.push_back(((p1[street_dim] < p2[street_dim]) ^ pref_dir) ? p1 : p2);
-			return 1;
+			ridge_pos = (((p1[street_dim] < p2[street_dim]) ^ pref_dir) ? 0.01 : 0.99); // near the end of the roof, but leave some space for the connecting pole
 		}
 	}
-	float const ridge_pos(rgen.rand_uniform(0.1, 0.9)); // select a random point along the ridge, not too close to the edge to avoid the chimney
+	if (ridge_pos == 0.0) {ridge_pos = rgen.rand_uniform(0.1, 0.9);} // select a rand point along ridge if not set, not too close to the edge to avoid the chimney
 	ppts.push_back((1.0 - ridge_pos)*p1 + ridge_pos*p2); // interpolate along the ridgeline
 	return 1;
 }

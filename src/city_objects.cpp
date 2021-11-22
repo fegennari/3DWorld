@@ -433,10 +433,15 @@ point power_pole_t::get_nearest_connection_point(point const &to_pos, bool near_
 	} // for d
 	return ret;
 }
-void power_pole_t::add_wire(point const &p1, point const &p2) { // Note: p1 connects to building or streetlight; p2 connects to wires on pole
-	wires.emplace_back(p1, p2);
-	bcube_with_wires.union_with_sphere(p1, get_wire_radius());
-	bcube_with_wires.union_with_sphere(p2, get_wire_radius());
+void power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { // Note: p1 connects to building or streetlight; p2 connects to wires on pole
+	wire_t wire(p1, p2);
+	
+	if (add_pole) {
+		wire.pts[0]   .z += 0.040*bcube.dz(); // set the wire pole height
+		wire.pole_base.z -= 0.006*bcube.dz(); // extend below the roof
+	}
+	wires.push_back(wire);
+	for (unsigned d = 0; d < 2; ++d) {bcube_with_wires.union_with_sphere(wire.pts[d], get_wire_radius());} // okay to omit pole_base
 	bsphere_radius = bcube_with_wires.furthest_dist_to_pt(pos); // recompute
 }
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
@@ -686,10 +691,10 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			}
 		}
 	} // for d
-	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.35*dmax)) { // both dims set, connect X and Y wires
+	if (drew_wires && wire_mask == 3 && bcube.closest_dist_less_than(camera_bs, 0.25*dmax)) { // both dims set, connect X and Y wires
 		for (unsigned n = 0; n < 3; ++n) {draw_wire(wire_pts[n], wire_radius, black, untex_qbd);}
 	}
-	if (!shadow_only && !wires.empty() && bcube_with_wires.closest_dist_less_than(camera_bs, 0.35*dmax)) {
+	if (!shadow_only && !wires.empty() && bcube_with_wires.closest_dist_less_than(camera_bs, 0.3*dmax)) {
 		for (auto &w : wires) { // represents all three wires tied together
 			draw_wire(w.pts, wire_radius, black, untex_qbd);
 			// draw vertical wire segment connecting the three, which also represents all three power wires tied together
@@ -697,6 +702,12 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			wire.expand_in_dim(2, vwire_spacing); // connect to wires above and below
 			wire.expand_by_xy(wire_radius);
 			dstate.draw_cube(untex_qbd, wire, black, 1, 0.0, 4); // skip top and bottom
+			if (w.pole_base.z == w.pts[0].z || !dist_less_than(w.pts[0], camera_bs, 0.15*dmax)) continue; // no pole, or too far away
+			point const ce[2] = {w.pole_base, (w.pts[0] + vector3d(0.0, 0.0, wire_radius))};
+			float const radius(1.5f*wire_radius);
+			unsigned const ndiv(max(4U, min(16U, unsigned(0.1f*dmax/p2p_dist(camera_bs, ce[1])))));
+			bool const draw_top(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
+			add_cylin_as_tris(untex_qbd.verts, ce, radius, radius, gray, ndiv, (draw_top ? 2 : 1));
 		} // for w
 	}
 }
@@ -1424,7 +1435,7 @@ bool city_obj_placer_t::connect_power_to_point(point const &at_pos, bool near_po
 		if (dmin_sq == 0.0 || dsq < dmin_sq) {best_pos = cur_pos; dmin_sq = dsq; best_pole = (p - ppoles.begin());}
 	}
 	if (dmin_sq == 0.0) return 0; // failed (no power poles?)
-	ppoles[best_pole].add_wire(at_pos, best_pos);
+	ppoles[best_pole].add_wire(at_pos, best_pos, near_power_pole); // add a wire pole for houses
 	return 1;
 }
 void city_obj_placer_t::connect_power_to_buildings(vector<road_plot_t> const &plots) {
