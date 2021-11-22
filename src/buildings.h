@@ -520,7 +520,9 @@ class brg_batch_draw_t {
 		mat_entry_t(rgeom_mat_t const &m) : tex(m.tex) {mats.push_back(&m);}
 	};
 	vector<mat_entry_t> to_draw;
+	vector<int> tid_to_first_mat_map; // -1 is unset
 public:
+	void clear() {to_draw.clear(); tid_to_first_mat_map.clear();}
 	void add_material(rgeom_mat_t const &m);
 	void draw_and_clear(shader_t &s);
 };

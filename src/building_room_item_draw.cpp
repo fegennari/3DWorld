@@ -337,9 +337,22 @@ void rgeom_mat_t::create_vbo_inner() {
 }
 
 void brg_batch_draw_t::add_material(rgeom_mat_t const &m) {
+#if 0 // doesn't seem like this helps for ~100 materials, but it may help when more materials are added
+	unsigned const tid((m.tex.tid < 0) ? WHITE_TEX : m.tex.tid);
+	if (tid >= tid_to_first_mat_map.size()) {tid_to_first_mat_map.resize(tid+1, -1);}
+	int &tex_ix(tid_to_first_mat_map[tid]);
+	unsigned const start_ix((tex_ix >= 0) ? tex_ix : 0); // start searching at the first material using this texture
+	assert(start_ix <= to_draw.size());
+		
+	for (auto i = to_draw.begin() + start_ix; i != to_draw.end(); ++i) {
+		if (i->tex.is_compat_ignore_shadowed(m.tex)) {i->mats.push_back(&m); return;} // found existing material
+	}
+	if (tex_ix < 0) {tex_ix = to_draw.size();} // cache this material index for later calls
+#else
 	for (auto &i : to_draw) { // check all existing materials for a matching texture, etc.
 		if (i.tex.is_compat_ignore_shadowed(m.tex)) {i.mats.push_back(&m); return;} // found existing material
 	}
+#endif
 	to_draw.emplace_back(m); // add a new material entry
 }
 void brg_batch_draw_t::draw_and_clear(shader_t &s) {
