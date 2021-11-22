@@ -1133,8 +1133,7 @@ tquad_with_ix_t const &building_t::find_main_roof_tquad(rand_gen_t &rgen, bool s
 	return roof_tquads[best_tquad];
 }
 
-// Note: occasionally the chosen point will generate a wire that intersects some other part of the house;
-// I haven't found a way to avoid this because it involves knowing both end points and possibly iterating until a valid wire is found
+// Note: occasionally the chosen point will generate a wire that intersects some other part of the house for every nearby power pole and may be skipped
 bool building_t::get_power_point(vector<point> &ppts) const {
 	if (!is_house || roof_tquads.empty()) return 0; // houses only for now
 	static rand_gen_t rgen; // used for tie breaker when both sides of the roof are symmetric

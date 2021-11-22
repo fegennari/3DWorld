@@ -3431,6 +3431,11 @@ bool check_city_building_line_coll_bs(point const &p1, point const &p2, point &p
 	p_int = p1 + t*(p2 - p1);
 	return 1;
 }
+bool check_city_building_line_coll_bs_any(point const &p1, point const &p2) {
+	float t(1.0); // unused
+	unsigned hit_bix(0); // unused
+	return building_creator_city.check_line_coll(p1, p2, t, hit_bix, 1, 1); // ret_any_pt=1, no_coll_pt=1
+}
 void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) {
 	building_creator_city.update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);
 	building_creator     .update_zmax_for_line(p1, p2, radius, house_extra_zval, cur_zmax);

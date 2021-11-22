@@ -14,6 +14,8 @@ extern object_model_loader_t building_obj_model_loader;
 
 unsigned const q2t_ixs[6] = {0,2,1,0,3,2}; // quad => 2 tris
 
+bool check_city_building_line_coll_bs_any(point const &p1, point const &p2);
+
 float get_power_pole_offset() {return 0.045*city_params.road_width;}
 
 
@@ -433,16 +435,18 @@ point power_pole_t::get_nearest_connection_point(point const &to_pos, bool near_
 	} // for d
 	return ret;
 }
-void power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { // Note: p1 connects to building or streetlight; p2 connects to wires on pole
+bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { // Note: p1 connects to building or streetlight; p2 connects to wires on pole
 	wire_t wire(p1, p2);
 	
-	if (add_pole) {
+	if (add_pole) { // used for houses
 		wire.pts[0]   .z += 0.040*bcube.dz(); // set the wire pole height
 		wire.pole_base.z -= 0.006*bcube.dz(); // extend below the roof
+		if (check_city_building_line_coll_bs_any(wire.pts[0], wire.pts[1])) return 0; // placement failed
 	}
 	wires.push_back(wire);
 	for (unsigned d = 0; d < 2; ++d) {bcube_with_wires.union_with_sphere(wire.pts[d], get_wire_radius());} // okay to omit pole_base
 	bsphere_radius = bcube_with_wires.furthest_dist_to_pt(pos); // recompute
+	return 1;
 }
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(WOOD2_TEX);}
@@ -1424,19 +1428,25 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 }
 
 bool city_obj_placer_t::connect_power_to_point(point const &at_pos, bool near_power_pole) {
-	float dmin_sq(0.0);
-	unsigned best_pole(0);
-	point best_pos;
+	float dmax_sq(0.0);
 
-	for (auto p = ppoles.begin(); p != ppoles.end(); ++p) {
-		point const cur_pos(p->get_nearest_connection_point(at_pos, near_power_pole));
-		if (cur_pos == at_pos) continue; // bad point
-		float const dsq(p2p_dist_sq(at_pos, cur_pos));
-		if (dmin_sq == 0.0 || dsq < dmin_sq) {best_pos = cur_pos; dmin_sq = dsq; best_pole = (p - ppoles.begin());}
-	}
-	if (dmin_sq == 0.0) return 0; // failed (no power poles?)
-	ppoles[best_pole].add_wire(at_pos, best_pos, near_power_pole); // add a wire pole for houses
-	return 1;
+	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts to connect a to a power pole without intersecting a building
+		float dmin_sq(0.0);
+		unsigned best_pole(0);
+		point best_pos;
+
+		for (auto p = ppoles.begin(); p != ppoles.end(); ++p) {
+			point const cur_pos(p->get_nearest_connection_point(at_pos, near_power_pole));
+			if (cur_pos == at_pos) continue; // bad point
+			float const dsq(p2p_dist_sq(at_pos, cur_pos));
+			if (dsq <= dmax_sq) continue; // this pole was previously flagged as bad
+			if (dmin_sq == 0.0 || dsq < dmin_sq) {best_pos = cur_pos; dmin_sq = dsq; best_pole = (p - ppoles.begin());}
+		} // for p
+		if (dmin_sq == 0.0) return 0; // failed (no power poles?)
+		if (ppoles[best_pole].add_wire(at_pos, best_pos, near_power_pole)) return 1; // add a wire pole for houses
+		dmax_sq = dmin_sq; // prevent this pole from being used in the next iteration
+	} // for n
+	return 0; // failed
 }
 void city_obj_placer_t::connect_power_to_buildings(vector<road_plot_t> const &plots) {
 	if (plots.empty() || ppoles.empty() || !have_buildings()) return;

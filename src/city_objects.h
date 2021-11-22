@@ -92,7 +92,7 @@ public:
 	cube_t const &get_outer_bcube() const {return bcube_with_wires;}
 	cube_t get_ped_occluder() const;
 	point get_nearest_connection_point(point const &to_pos, bool near_power_pole) const;
-	void add_wire(point const &p1, point const &p2, bool add_pole);
+	bool add_wire(point const &p1, point const &p2, bool add_pole);
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
