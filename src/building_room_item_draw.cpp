@@ -324,7 +324,7 @@ void rgeom_mat_t::create_vbo(building_t const &building) {
 void rgeom_mat_t::create_vbo_inner() {
 	assert(itri_verts.empty() == indices.empty());
 	unsigned qsz(quad_verts.size()*sizeof(vertex_t)), itsz(itri_verts.size()*sizeof(vertex_t));
-	num_verts = quad_verts.size() + itri_verts.size();
+	num_verts   = quad_verts.size() + itri_verts.size();
 	vao_mgr.vbo = ::create_vbo();
 	check_bind_vbo(vao_mgr.vbo);
 	upload_vbo_data(nullptr, num_verts*sizeof(vertex_t));
@@ -334,8 +334,27 @@ void rgeom_mat_t::create_vbo_inner() {
 	gen_quad_ixs(indices, 6*(quad_verts.size()/4), itri_verts.size()); // append indices for quad_verts
 	create_vbo_and_upload(vao_mgr.ivbo, indices, 1, 1);
 	num_ixs = indices.size();
+
+	if (num_verts >= 32) {dir_mask = 63;} // too many verts, assume all orients
+	else {
+		dir_mask = 0;
+		for (unsigned n = 0; n < 2; ++n) {
+			for (auto const &v : (n ? itri_verts : quad_verts)) {
+				for (unsigned d = 0; d < 3; ++d) {
+					if (v.n[d] < 0) {dir_mask |= 1<<(2*d);} else if (v.n[d] > 0) {dir_mask |= 1<<(2*d+1);}
+				}
+			}
+		} // for n
+	}
 }
 
+void brg_batch_draw_t::set_camera_dir_mask(point const &camera_bs, cube_t const &bcube) {
+	camera_dir_mask = 0;
+	for (unsigned d = 0; d < 3; ++d) {
+		if (camera_bs[d] < bcube.d[d][1]) {camera_dir_mask |=  1<<(2*d);}
+		if (camera_bs[d] > bcube.d[d][0]) {camera_dir_mask |= 1<<(2*d+1);}
+	}
+}
 void brg_batch_draw_t::add_material(rgeom_mat_t const &m) {
 #if 0 // doesn't seem like this helps for ~100 materials, but it may help when more materials are added
 	unsigned const tid((m.tex.tid < 0) ? WHITE_TEX : m.tex.tid);
@@ -380,10 +399,11 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
 	if (bbd != nullptr && !shadow_only) { // add to batch draw (optimization)
+		if (dir_mask > 0 && bbd->camera_dir_mask > 0 && (dir_mask & bbd->camera_dir_mask) == 0) return; // check for visible surfaces
 		bbd->add_material(*this);
 	}
 	else { // draw this material now
-		if (shadow_only != 1) {tex.set_gl(state);} // ignores texture scale for now; enable alpha texture for shadow pass
+		if (shadow_only != 1) {tex.set_gl  (state);} // ignores texture scale for now; enable alpha texture for shadow pass
 		draw_inner(state, shadow_only);
 		if (shadow_only != 1) {tex.unset_gl(state);}
 	}
@@ -855,6 +875,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	point const camera_bs(camera_pdu.pos - xlate);
 	bool const draw_lights(camera_bs.z < building.bcube.z2()); // don't draw ceiling lights when player is above the building
 	if (player_in_building) {bbd = nullptr;} // use immediate drawing when player is in the building because draw order matters for alpha blending
+	if (bbd != nullptr) {bbd->set_camera_dir_mask(camera_bs, building.bcube);}
 
 	if (materials_invalid) { // set in set_obj_lit_state_to()
 		clear_materials();

@@ -479,9 +479,10 @@ class rgeom_mat_t : public rgeom_storage_t { // simplified version of building_d
 	indexed_vao_manager_with_shadow_t vao_mgr;
 public:
 	unsigned num_verts, num_ixs; // for drawing
+	uint8_t dir_mask; // {-x, +x, -y, +y, -z, +z}
 	bool en_shadows;
 
-	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_), num_verts(0), num_ixs(0), en_shadows(0) {}
+	rgeom_mat_t(tid_nm_pair_t const &tex_=tid_nm_pair_t()) : rgeom_storage_t(tex_), num_verts(0), num_ixs(0), dir_mask(0), en_shadows(0) {}
 	//~rgeom_mat_t() {assert(vbo_mgr.vbo == 0); assert(vbo_mgr.ivbo == 0);} // VBOs should be freed before destruction
 	void enable_shadows() {en_shadows = 1;}
 	void clear();
@@ -522,7 +523,11 @@ class brg_batch_draw_t {
 	vector<mat_entry_t> to_draw;
 	vector<int> tid_to_first_mat_map; // -1 is unset
 public:
+	uint8_t camera_dir_mask;
+
+	brg_batch_draw_t() : camera_dir_mask(0) {}
 	void clear() {to_draw.clear(); tid_to_first_mat_map.clear();}
+	void set_camera_dir_mask(point const &camera_bs, cube_t const &bcube);
 	void add_material(rgeom_mat_t const &m);
 	void draw_and_clear(shader_t &s);
 };
