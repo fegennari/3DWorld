@@ -1229,7 +1229,13 @@ class city_road_gen_t : public road_gen_base_t {
 						dstate.draw_city_region(segs,       b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
 						dstate.draw_city_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
 						dstate.draw_city_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
-						dstate.draw_city_region(city_obj_placer.driveways,    b->ranges[TYPE_DRIVEWAY], b->quads[TYPE_DRIVEWAY], TYPE_DRIVEWAY); // driveways
+
+						if (!city_obj_placer.driveways.empty()) {
+							glPolygonOffset(-1.0, -1.0); // useful for avoiding z-fighting with grassy ground under driveways
+							glEnable(GL_POLYGON_OFFSET_FILL);
+							dstate.draw_city_region(city_obj_placer.driveways, b->ranges[TYPE_DRIVEWAY], b->quads[TYPE_DRIVEWAY], TYPE_DRIVEWAY); // driveways
+							glDisable(GL_POLYGON_OFFSET_FILL);
+						}
 					}
 					for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
 						dstate.draw_city_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
