@@ -523,13 +523,13 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 	cube_t const cube(get_xv(x), get_xv(x2), get_yv(y), get_yv(y2), get_zv(z), get_zv(z2));
 	unsigned const edge_to_dim_map[12] = {0, 2, 0, 2, 0, 2, 0, 2, 1, 1, 1, 1};
 	point vlist[12];
-	int *vixs[12] = {0};
+	int *vixs[12] = {};
 
 	for (unsigned i = 0; i < 12; ++i) {
 		if (!(edge_val & (1 << i))) continue;
 		unsigned const *eix = voxel_detail::edge_to_vals[i];
 		unsigned xhv(1), yhv(1), zhv(1);
-		float vals[2];
+		float vals[2] = {};
 		point pts[2];
 
 		for (unsigned d = 0; d < 2; ++d) {
@@ -1286,7 +1286,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	bool const material_removed(val_at_center < 0.0);
 	if (params.invert) val_at_center *= -1.0; // is this correct?
 	unsigned const num[3] = {nx, ny, nz};
-	unsigned bounds[3][2]; // {x,y,z} x {lo,hi}
+	unsigned bounds[3][2] = {}; // {x,y,z} x {lo,hi}
 	std::set<unsigned> blocks_to_update;
 	float const dist_adjust(0.5*vsz.mag()); // single voxel diagonal half-width
 	bool saw_inside(0), saw_outside(0);
