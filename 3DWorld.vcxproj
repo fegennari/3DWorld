@@ -521,6 +521,7 @@
     <ClCompile Include="src\cars.cpp" />
     <ClCompile Include="src\city_building_params.cpp" />
     <ClCompile Include="src\city_gen.cpp" />
+    <ClCompile Include="src\city_interact.cpp" />
     <ClCompile Include="src\city_model.cpp" />
     <ClCompile Include="src\city_objects.cpp" />
     <ClCompile Include="src\city_terrain.cpp" />

@@ -79,6 +79,7 @@ void toggle_fullscreen();
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
 void building_gameplay_next_frame(); // from building_interact.cc
+void follow_city_actor();
 
 
 void glClearColor_rgba(const colorRGBA &color) {
@@ -1213,6 +1214,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	}
 	camera_view = 0;
 	if (camera_surf_collide) {check_player_tiled_terrain_collision();}
+	follow_city_actor(); // after collision detection so that it doesn't apply to the actor we're following
 	update_temperature(0);
 	point const camera(get_camera_pos());
 	apply_camera_offsets(camera);

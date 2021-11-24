@@ -178,6 +178,7 @@ void teleport_to_map_location();
 void building_gameplay_action_key(int mode, bool mouse_wheel);
 void building_gameplay_switch_item(bool dir);
 float get_player_building_speed_mult();
+void toggle_city_spectate_mode();
 
 
 // all OpenGL error handling goes through these functions
@@ -1355,6 +1356,7 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 		break;
 
 	case GLUT_KEY_F8: // toggle spectator gameplay mode
+		if (world_mode == WMODE_INF_TERRAIN && have_buildings()) {toggle_city_spectate_mode(); break;}
 		if (!spectate && (num_smileys == 0 || !obj_groups[coll_id[SMILEY]].enabled)) break;
 		if (spectate) {camera_reset = camera_change = 1;}
 		spectate = !spectate;

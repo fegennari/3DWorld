@@ -640,6 +640,7 @@ public:
 class city_road_gen_t;
 struct pedestrian_t;
 class ped_manager_t;
+class city_spectate_manager_t;
 
 struct ped_city_vect_t {
 	vector<vector<vector<sphere_t>>> peds; // per city per road
@@ -692,6 +693,7 @@ class car_manager_t { // and trucks and helicopters
 	vector3d get_helicopter_size(unsigned model_id);
 	void draw_helicopters(bool shadow_only);
 public:
+	friend class city_spectate_manager_t;
 	car_manager_t(city_road_gen_t const &road_gen_) :
 		road_gen(road_gen_), dstate(car_model_loader, helicopter_model_loader), first_parked_car(0), first_garage_car(0), car_destroyed(0) {}
 	bool empty() const {return cars.empty();}
@@ -841,6 +843,7 @@ class ped_manager_t { // pedestrians
 	bool draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations);
 public:
+	friend class city_spectate_manager_t;
 	// for use in pedestrian_t, mostly for collisions and path finding
 	path_finder_t path_finder;
 	vect_cube_t const &get_colliders_for_plot(unsigned city_ix, unsigned plot_ix) const;

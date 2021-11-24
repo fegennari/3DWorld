@@ -31,6 +31,7 @@ void add_dynamic_lights_city(cube_t const &scene_bcube, float &dlight_add_thresh
 void disable_shadow_maps(shader_t &s);
 vector3d get_tt_xlate_val();
 float get_max_house_size();
+void init_city_spectate_manager(car_manager_t &car_manager, ped_manager_t &ped_manager);
 
 
 template<typename S, typename T> void get_all_bcubes(vector<T> const &v, S &bcubes) {
@@ -2643,6 +2644,7 @@ public:
 		road_gen.add_streetlights();
 		road_gen.gen_tile_blocks();
 		car_manager.init_cars(city_params.num_cars);
+		init_city_spectate_manager(car_manager, ped_manager);
 	}
 	void gen_details() {
 		if (road_gen.empty()) return; // nothing to do - no roads or cars

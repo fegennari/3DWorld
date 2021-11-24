@@ -117,3 +117,4 @@ city_model.o
 city_building_params.o
 city_objects.o
 city_terrain.o
+city_interact.o
