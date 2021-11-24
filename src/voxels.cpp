@@ -307,7 +307,9 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 		free_texture(tid);
 		return;
 	}
-	#pragma omp parallel for schedule(static,1)
+	cout << "Voxel resolution: " << nx << "x" << ny << "x" << nz << endl;
+
+#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)ny; ++y) { // generate voxel values
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
