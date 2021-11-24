@@ -1324,6 +1324,7 @@ void ped_manager_t::draw(vector3d const &xlate, bool use_dlights, bool shadow_on
 				assert(i < peds.size());
 				pedestrian_t const &ped(peds[i]);
 				assert(ped.city == city && ped.plot == plot);
+				if (skip_ped_draw(ped)) continue;
 				if (!draw_ped(ped, dstate.s, pdu, xlate, def_draw_dist, draw_dist_sq, in_sphere_draw, shadow_only, is_dlight_shadows, enable_animations)) continue;
 
 				if (dist_less_than(pdu.pos, ped.pos, 0.5*draw_dist)) { // fake AO shadow at below half draw distance
@@ -1379,6 +1380,7 @@ void ped_manager_t::draw_peds_in_building(int first_ped_ix, ped_draw_vars_t cons
 	// Note: no far clip adjustment or draw dist scale
 	for (auto p = peds_b.begin()+first_ped_ix; p != peds_b.end(); ++p) {
 		if (p->dest_bldg != pdv.bix) break; // done with this building
+		if (skip_bai_draw(*p)) continue;
 		
 		if ((display_mode & 0x08) && !city_params.ped_model_files.empty()) { // occlusion culling, if using models
 			if (pdv.building.check_obj_occluded(p->get_bcube(), pdu.pos, pdv.oc, pdv.reflection_pass)) continue;

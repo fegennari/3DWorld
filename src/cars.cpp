@@ -1287,8 +1287,10 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 			assert(end <= cars.size());
 
 			for (unsigned c = cb->start; c != end; ++c) {
-				if (only_parked && !(cars[c].is_parked() && !cars[c].is_sleeping())) continue; // skip non-parked cars
-				dstate.draw_car(cars[c], is_dlight_shadows, garages_pass);
+				car_t const &car(cars[c]);
+				if (only_parked && !(car.is_parked() && !car.is_sleeping())) continue; // skip non-parked cars
+				if (skip_car_draw(car)) continue;
+				dstate.draw_car(car, is_dlight_shadows, garages_pass);
 			}
 		} // for cb
 		if (!garages_pass && !is_dlight_shadows) {draw_helicopters(shadow_only);} // draw helicopters in the normal draw pass

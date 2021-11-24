@@ -913,3 +913,9 @@ void get_all_garages(vect_cube_t &garages);
 void get_all_city_helipads(vect_cube_t &helipads);
 bool check_city_building_line_coll_bs(point const &p1, point const &p2, point &p_int);
 void update_buildings_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax);
+
+// from city_interact.cpp
+void init_city_spectate_manager(car_manager_t &car_manager, ped_manager_t &ped_manager);
+bool skip_bai_draw(pedestrian_t const &bai);
+bool skip_ped_draw(pedestrian_t const &ped);
+bool skip_car_draw(car_t        const &car);
