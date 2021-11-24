@@ -745,6 +745,7 @@ struct pedestrian_t : public waiting_obj_t {
 	float get_z1     () const {return (pos.z - radius);}
 	float get_z2     () const {return (get_z1() + get_height());}
 	cube_t get_bcube () const;
+	point get_eye_pos() const {return (pos + vector3d(0.0, 0.0, (0.9*get_height() - radius)));}
 	bool target_valid() const {return (target_pos != all_zeros);}
 	//bool on_stairs   () const {return (fabs(pos.z - target_pos.z) > 0.01*radius);} // walking on a slope; allow for some floating-point error
 	bool on_stairs   () const {return is_on_stairs;}

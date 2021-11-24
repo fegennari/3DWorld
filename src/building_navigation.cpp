@@ -935,7 +935,7 @@ bool building_t::is_player_visible(building_ai_state_t const &state, pedestrian_
 	bool const same_room_and_floor(same_room_and_floor_as_player(state, person));
 
 	if (!same_room_and_floor) { // check visibility; assume LOS if in the same room
-		point const eye_pos(person.pos + vector3d(0.0, 0.0, (0.9*person.get_height() - person.radius))); // for person
+		point const eye_pos(person.get_eye_pos());
 		if (!is_sphere_visible(target.pos, player_radius, eye_pos) && !is_sphere_visible(pp2, player_radius, eye_pos)) return 0; // check both the bottom and top of player
 	}
 	if (vis_test >= 2) { // check person FOV
