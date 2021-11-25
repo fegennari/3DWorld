@@ -176,7 +176,6 @@ void apply_grass_scale();
 void take_screenshot_texture();
 void teleport_to_map_location();
 void building_gameplay_action_key(int mode, bool mouse_wheel);
-void building_gameplay_switch_item(bool dir);
 float get_player_building_speed_mult();
 void toggle_city_spectate_mode();
 
@@ -837,7 +836,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'x': // toggle animation
 		animate = !animate;
-		if (animate) reset_timing = 1;
+		if (animate) {reset_timing = 1;}
 		break;
 	case 't': // animation - movement (freeze frame on objects), show star streams in universe mode
 		animate2 = !animate2;
