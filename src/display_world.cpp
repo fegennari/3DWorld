@@ -34,7 +34,7 @@ float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.75;
 
 
-bool mesh_invalidated(1), fog_enabled(0), tt_fire_button_down(0), in_loading_screen(0);
+bool mesh_invalidated(1), fog_enabled(0), tt_fire_button_down(0), in_loading_screen(0), no_tt_footsteps(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned enabled_lights(0), cur_display_iter(0); // 8 bit flags for enabled_lights
 float fticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0), far_clip_ratio(1.0);
@@ -1284,7 +1284,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	run_tt_gameplay(); // enable limited gameplay elements in tiled terrain mode
 	draw_game_elements(timer1);
 	draw_teleporters();
-	if (camera_surf_collide) {play_camera_footstep_sound();}
+	if (camera_surf_collide && !no_tt_footsteps) {play_camera_footstep_sound();}
 	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)
 	check_xy_offsets();
 	init_x = 0;

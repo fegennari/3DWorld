@@ -3,7 +3,7 @@
 // 11/23/21
 #include "city.h"
 
-extern bool camera_in_building, enable_mouse_look;
+extern bool camera_in_building, enable_mouse_look, no_tt_footsteps;
 extern int spectate;
 extern float CAMERA_RADIUS;
 extern point surface_pos;
@@ -82,10 +82,11 @@ public:
 		car_manager = &car_manager_;
 	}
 	void clear() {
-		follow_ix = person_ssn = 0;
-		car_speed = 0.0;
-		spectate_mode = FOLLOW_NONE;
-		spectate = 0;
+		follow_ix       = person_ssn = 0;
+		car_speed       = 0.0;
+		spectate_mode   = FOLLOW_NONE;
+		spectate        = 0;
+		no_tt_footsteps = 0;
 	}
 	void toggle_enabled() {
 		if (world_mode != WMODE_INF_TERRAIN) return;
@@ -163,6 +164,7 @@ public:
 				car_draw_state_t::gen_car_pts(car, 0, pb, pt); // draw_top=0
 				cview_dir = cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm() * ((car.dim ^ car.dir) ? -1.0 : 1.0);
 			}
+			no_tt_footsteps = 1; // not walking
 			break;
 		}
 		default: // undefined mode
