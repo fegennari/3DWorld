@@ -141,7 +141,7 @@ void do_look_at() {
 }
 
 
-void apply_camera_offsets(point const &camera) {
+void apply_camera_offsets(point const &camera) { // for TT mode
 
 	int const dx(int(camera.x*DX_VAL_INV) - xoff);
 	int const dy(int(camera.y*DY_VAL_INV) - yoff);

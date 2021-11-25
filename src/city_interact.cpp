@@ -170,6 +170,7 @@ public:
 		default: // undefined mode
 			assert(0);
 		}
+		surface_pos += get_tiled_terrain_model_xlate(); // convert back to camera space
 	}
 	// functions used to disable drawing of the actor the player is following
 	//bool skip_bai_draw(unsigned ix) const {return (spectate_mode == FOLLOW_BAI && ix == follow_ix);}
