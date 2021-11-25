@@ -548,6 +548,7 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 		triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
 		vector3d const normal(tri.get_normal());
 		if (normal == zero_vector) continue; // invalid triangle
+		//float const area(triangle_area(tri.pts[0], tri.pts[1], tri.pts[2]));
 			
 		for (unsigned v = 0; v < 3; ++v) {
 			int *vix(vixs[tris[i+v]]);
@@ -557,7 +558,8 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 				tri_verts.emplace_back(tri.pts[v], zero_vector);
 			}
 			assert(*vix < (int)tri_verts.size());
-			tri_verts[*vix].n += normal; // average the triangle normals to get the vertex normal
+			tri_verts[*vix].n += normal; // compute the average of the triangle normals to get the vertex normal
+			//tri_verts[*vix].n += normal * area; // compute the weighted average of the triangle normals to get the vertex normal
 			tri_verts.add_index(*vix);
 			tri_verts.mark_need_normalize();
 		} // for v
@@ -1214,7 +1216,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 			for (int zi = nz-2; zi >= 0; zi -= zstep) { // skip top zval
 				unsigned const x(min(x_end-1, xi+xstep-1)), y(min(y_end-1, yi+ystep-1)), z(min(nz-1, zi+zstep-1));
 				unsigned char const outside_val(outside.get(x, y, z));
-				saw_inside |= (outside_val == 0 || bool(outside_val & end_ray_flags));
+				saw_inside |= ((outside_val == 0) || bool(outside_val & end_ray_flags));
 				if (!saw_inside) continue;
 				if (increase_only && ao_lighting.get(x, y, z) == 255) continue;
 				point const pos(ao_lighting.get_pt_at(x, y, z));
