@@ -575,20 +575,22 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0f);
 	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light), headlights_on(car.headlights_on());
+	float const hv1(is_truck ? 0.6 : 0.2), hv2(1.0 - hv1); // headlights and tail lights; blend from bottom to top
+	float const sv1(is_truck ? 0.6 : 0.3), sv2(1.0 - hv1); // turn signals; blend from bottom to top
 
 	if (headlights_on && dist_val < 0.3) { // night time headlights
 		colorRGBA const hl_color(get_headlight_color(car));
 
 		for (unsigned d = 0; d < 2; ++d) { // L, R
 			unsigned const lr(d ^ lr_xor ^ 1);
-			point const pos((lr ? 0.2 : 0.8)*(0.2*pb[0] + 0.8*pb[4]) + (lr ? 0.8 : 0.2)*(0.2*pb[1] + 0.8*pb[5]));
+			point const pos((lr ? 0.2 : 0.8)*(hv1*pb[0] + hv2*pb[4]) + (lr ? 0.8 : 0.2)*(hv1*pb[1] + hv2*pb[5]));
 			add_light_flare(pos, front_n, hl_color, 2.0, 0.65*car.height); // pb 0,1,4,5
 		}
 	}
 	if ((brake_lights_on || headlights_on || car.in_reverse) && dist_val < 0.2) { // brake/tail/backup lights
 		for (unsigned d = 0; d < 2; ++d) { // L, R
 			unsigned const lr(d ^ lr_xor);
-			point const pos((lr ? 0.2 : 0.8)*(0.2*pb[2] + 0.8*pb[6]) + (lr ? 0.8 : 0.2)*(0.2*pb[3] + 0.8*pb[7]));
+			point const pos((lr ? 0.2 : 0.8)*(hv1*pb[2] + hv2*pb[6]) + (lr ? 0.8 : 0.2)*(hv1*pb[3] + hv2*pb[7]));
 			colorRGBA const bl_color(car.in_reverse ? colorRGBA(1.0, 0.9, 0.7, 1.0) : colorRGBA(1.0, 0.1, 0.05, 1.0)); // yellow-white/near red; pb 2,3,6,7
 			add_light_flare(pos, -front_n, bl_color, (brake_lights_on ? 1.0 : 0.5), 0.5*car.height);
 		}
@@ -602,7 +604,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 			vector3d const side_n(cross_product((pb[6] - pb[2]), (pb[1] - pb[2])).get_norm()*sign*(tdir ? 1.0 : -1.0));
 
 			for (unsigned d = 0; d < 2; ++d) { // B, F
-				point const pos(0.3*pb[tdir ? (d ? 1 : 2) : (d ? 0 : 3)] + 0.7*pb[tdir ? (d ? 5 : 6) : (d ? 4 : 7)]);
+				point const pos(sv1*pb[tdir ? (d ? 1 : 2) : (d ? 0 : 3)] + sv2*pb[tdir ? (d ? 5 : 6) : (d ? 4 : 7)]);
 				add_light_flare(pos, (side_n + (d ? 1.0 : -1.0)*front_n).get_norm(), colorRGBA(1.0, 0.75, 0.0, 1.0), 1.5, 0.3*car.height); // normal points out 45 degrees
 			}
 		}
