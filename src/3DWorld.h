@@ -214,6 +214,7 @@ typedef point2d<float> vector2d;
 
 template<typename T> struct pointT { // size = 12 (float), 24(double)
 
+	typedef T value_type;
 	T x, y, z;
 
 	pointT() : x(0.0), y(0.0), z(0.0) {}
@@ -927,8 +928,7 @@ template<typename T> struct triangle_t {
 };
 
 typedef triangle_t<point>        triangle;
-typedef triangle_t<point_d>      triangle_d;
-typedef triangle_t<vert_tc_t>    triangle_vtc; // unused
+typedef triangle_t<point_d>      triangle_d; // unused
 typedef triangle_t<vert_norm_tc> triangle_vntc;
 
 
