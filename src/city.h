@@ -629,7 +629,7 @@ public:
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_);
 	virtual void draw_unshadowed();
 	void add_car_headlights(vector<car_t> const &cars, vector3d const &xlate_, cube_t &lights_bcube);
-	void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const;
+	static void gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]);
 	void draw_car(car_t const &car, bool is_dlight_shadows, bool in_garage);
 	void draw_helicopter(helicopter_t const &h, bool shadow_only);
 	void add_car_headlights(car_t const &car, cube_t &lights_bcube);

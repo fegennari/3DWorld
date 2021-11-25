@@ -481,7 +481,7 @@ void car_draw_state_t::add_car_headlights(vector<car_t> const &cars, vector3d co
 	for (auto i = cars.begin(); i != cars.end(); ++i) {add_car_headlights(*i, lights_bcube);}
 }
 
-void car_draw_state_t::gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) const {
+/*static*/ void car_draw_state_t::gen_car_pts(car_t const &car, bool include_top, point pb[8], point pt[8]) {
 	point const center(car.get_center());
 	cube_t const &c(car.bcube);
 	float const z1(center.z - 0.5*car.height), z2(center.z + 0.5*car.height), zmid(center.z + (include_top ? 0.1 : 0.5)*car.height), length(car.get_length());

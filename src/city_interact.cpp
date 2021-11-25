@@ -3,7 +3,7 @@
 // 11/23/21
 #include "city.h"
 
-extern bool camera_in_building;
+extern bool camera_in_building, enable_mouse_look;
 extern int spectate;
 extern float CAMERA_RADIUS;
 extern point surface_pos;
@@ -38,42 +38,41 @@ class city_spectate_manager_t {
 		int closest_ix(-1);
 
 		for (auto i = cars.begin(); i != cars.end(); ++i) {
-			if (i->is_parked()) continue; // skip parked cars
+			if (i->is_parked()) continue; // skip parked cars; should never get here?
 			float const dsq(p2p_dist_sq(pos, i->bcube.closest_pt(pos)));
 			if (dsq < dmin_sq) {closest_ix = (i - cars.begin()); dmin_sq = dsq;}
 		}
 		return closest_ix;
 	}
-	void update_ix_for_correct_person(vector<pedestrian_t> const &people) {
+	bool update_ix_for_correct_person(vector<pedestrian_t> const &people) {
 		assert(unsigned(follow_ix) < people.size());
-		if (people[follow_ix].ssn == person_ssn) return; // done/correct
+		if (people[follow_ix].ssn == person_ssn) return 1; // done/correct
 
 		for (auto i = people.begin(); i != people.end(); ++i) { // slow, could maybe start searching around follow_ix
 			if (i->ssn != person_ssn) continue; // wrong person
-			cout << "update ped " << follow_ix << " => " << (i - people.begin()) << endl; // TESTING
 			follow_ix = (i - people.begin());
-			return; // success
+			return 1; // success
 		}
-		assert(0); // error, person with matching SSN not found, error
+		return 0; // person with matching SSN not found, error? or maybe reached dest?
 	}
 	void set_camera_to_follow_person(vector<pedestrian_t> const &people) const {
 		assert(unsigned(follow_ix) < people.size());
 		pedestrian_t const &person(people[follow_ix]);
 		surface_pos = person.get_eye_pos();
-		cview_dir   = person.dir; // or let the player override this?
+		spectate    = !enable_mouse_look; // 'V' key contols whether or not the player can move the camera
+		if (spectate) {cview_dir = person.dir;}
 	}
-	void update_ix_for_correct_car() {
+	bool update_ix_for_correct_car() {
 		assert(car_manager);
 		assert(unsigned(follow_ix) < car_manager->cars.size());
-		if (car_manager->cars[follow_ix].max_speed == car_speed) return; // done/correct
+		if (car_manager->cars[follow_ix].max_speed == car_speed) return 1; // done/correct
 
 		for (auto i = car_manager->cars.begin(); i != car_manager->cars.end(); ++i) { // slow, could maybe start searching around follow_ix
 			if (i->max_speed != car_speed) continue; // wrong car
-			cout << "update car " << follow_ix << " => " << (i - car_manager->cars.begin()) << endl; // TESTING
 			follow_ix = (i - car_manager->cars.begin());
-			return; // success
+			return 1; // success
 		}
-		assert(0); // error, car with matching speed not found
+		return 0; // car with matching speed not found, maybe it parked
 	}
 public:
 	city_spectate_manager_t() : spectate_mode(FOLLOW_NONE), follow_ix(0), person_ssn(0), car_speed(0.0), car_manager(nullptr), ped_manager(nullptr) {}
@@ -102,7 +101,6 @@ public:
 					follow_ix  = ix;
 					person_ssn = ped_manager->peds_b[ix].ssn;
 					spectate_mode = FOLLOW_BAI;
-					spectate = 1;
 				}
 			}
 			return;
@@ -118,10 +116,9 @@ public:
 				follow_ix  = ix;
 				person_ssn = ped_manager->peds[ix].ssn;
 				spectate_mode = FOLLOW_PED;
-				spectate = 1;
 			}
 		}
-		else if (car_manager && city_params.num_cars > 0) {
+		if (car_manager && city_params.num_cars > 0) {
 			int const ix(find_closest_car(car_manager->cars, camera_bs));
 			if (ix >= 0) {
 				assert(unsigned(ix) < car_manager->cars.size());
@@ -131,7 +128,6 @@ public:
 					follow_ix = ix;
 					car_speed = car.max_speed; // should be constant and pseudo-unique across cars
 					spectate_mode = FOLLOW_CAR;
-					spectate = 1;
 				}
 			}
 		}
@@ -149,18 +145,24 @@ public:
 		}
 		case FOLLOW_PED: {
 			assert(ped_manager);
-			update_ix_for_correct_person(ped_manager->peds);
+			if (!update_ix_for_correct_person(ped_manager->peds)) {clear(); return;}
 			set_camera_to_follow_person(ped_manager->peds);
 			break;
 		}
 		case FOLLOW_CAR: {
 			assert(car_manager);
-			update_ix_for_correct_car();
+			if (!update_ix_for_correct_car()) {clear(); return;}
 			assert(unsigned(follow_ix) < car_manager->cars.size());
 			car_t const &car(car_manager->cars[follow_ix]);
 			point const center(car.get_center());
 			surface_pos.assign(center.x, center.y, (center.z + 0.25*car.height)); // 75% of car height
-			// don't set cview_dir; allow the player to turn their head
+			spectate = !enable_mouse_look; // 'V' key contols whether or not the player can move the camera
+			
+			if (spectate) { // calculate direction using code copied from car_draw_state_t::draw_car()
+				point pb[8], pt[8]; // bottom and top sections
+				car_draw_state_t::gen_car_pts(car, 0, pb, pt); // draw_top=0
+				cview_dir = cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm() * ((car.dim ^ car.dir) ? -1.0 : 1.0);
+			}
 			break;
 		}
 		default: // undefined mode
