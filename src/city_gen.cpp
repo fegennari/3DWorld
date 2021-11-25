@@ -1506,13 +1506,12 @@ class city_road_gen_t : public road_gen_base_t {
 			} // for i
 			assert(0); // should never get here
 		}
-		unsigned find_road_for_car(car_t const &car, bool dim) const {
+		int find_road_for_car(car_t const &car, bool dim) const {
 			for (auto r = roads.begin(); r != roads.end(); ++r) { // similar to get_nearby_road_ix(), except checks cube overlap rather than point containment
 				if (r->dim != dim) continue; // wrong direction
 				if (r->intersects_xy(car.bcube)) {return (r - roads.begin());}
 			}
-			assert(0); // road not found - error
-			return 0;
+			return -1; // road not found - error?
 		}
 
 		bool dest_driveway_in_this_city(car_t const &car) const {
@@ -1537,7 +1536,12 @@ class city_road_gen_t : public road_gen_base_t {
 				car.back_or_pull_out_of_driveway(driveway);
 				return 1;
 			}
-			unsigned const road_ix(find_road_for_car(car, !driveway.dim));
+			int const road_ix(find_road_for_car(car, !driveway.dim));
+
+			if (road_ix < 0) {
+				cerr << car.str() << TXT(driveway.str()) << endl;
+				assert(0);
+			}
 			float const road_center(roads[road_ix].get_center_dim(car.dim));
 			float const centerline(road_center + (driveway.dir ? -1.0 : 1.0)*get_car_lane_offset());
 			if (!car.exit_driveway_to_road(cars, driveway, centerline, road_ix, rgen)) return 1; // still exiting driveway
@@ -1739,6 +1743,7 @@ class city_road_gen_t : public road_gen_base_t {
 				driveway_t const &driveway(get_driveway(dix));
 				if (driveway.in_use) continue;
 				if (driveway.get_length() < 1.5*car.get_length()) continue; // driveway is too short
+				if (driveway.get_width () < 1.1*car.get_width ()) continue; // driveway is too narrow (mostly applies to trucks)
 				driveway.in_use   = 1; // temporarily in use
 				car.dest_driveway = (unsigned short)dix;
 				// find intersection before the driveway such that driving on the road exiting this intersection will encounter the driveway on the right
