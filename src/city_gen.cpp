@@ -1556,7 +1556,7 @@ class city_road_gen_t : public road_gen_base_t {
 			if (car.cur_road_type == TYPE_DRIVEWAY) { // moving in a driveway
 				if (run_car_in_driveway_logic(car, cars, rgen)) return;
 			}
-			if (dest_driveway_in_this_city(car)) {
+			if (dest_driveway_in_this_city(car) && !car.in_isect() && !car.stopped_at_light) { // turning into an intersection is not the same as a driveway
 				if (car.run_enter_driveway_logic(cars, get_driveway(car.dest_driveway))) return;
 			}
 			if (car.in_isect()) {
