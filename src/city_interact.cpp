@@ -139,6 +139,8 @@ public:
 		case FOLLOW_PED: {
 			assert(ped_manager);
 			if (!update_ix_for_correct_agent(ped_manager->peds)) {assert(0);} // should never fail
+			assert(unsigned(follow_ix) < ped_manager->peds.size());
+			if (ped_manager->peds[follow_ix].at_dest) {clear(); return;} // stop following when ped reaches the destination, before respawn
 			set_camera_to_follow_person(ped_manager->peds);
 			break;
 		}
