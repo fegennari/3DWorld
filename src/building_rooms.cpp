@@ -3098,7 +3098,7 @@ void building_t::add_doorbell(tquad_with_ix_t const &door) {
 	float const zval(door_bcube.z1() + 0.55*door_bcube.dz());
 	float const pos(door_bcube.d[!dim][side] + (side ? 1.0 : -1.0)*5.0*half_width);
 	cube_t c;
-	c.d[dim][0  ]  = c.d[dim][1] = door_bcube.d[dim][dir];
+	c.d[dim][0  ]  = c.d[dim][1] = door_bcube.d[dim][dir] - 0.02*(dir ? 1.0 : -1.0)*get_window_vspace(); // slightly in front of exterior wall
 	c.d[dim][dir] += (dir ? 1.0 : -1.0)*0.1*half_width;
 	set_cube_zvals(c, (zval - half_height), (zval + half_height));
 	set_wall_width(c, pos, half_width, !dim);
