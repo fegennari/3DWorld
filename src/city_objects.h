@@ -72,7 +72,7 @@ class power_pole_t : public city_obj_t {
 		point pts[2], pole_base;
 		wire_t(point const &p1, point const &p2) : pole_base(p1) {pts[0] = p1; pts[1] = p2;}
 	};
-	bool at_line_end[2];
+	bool at_grid_edge, at_line_end[2];
 	uint8_t dims; // bit mask for direction the wires run
 	float pole_radius, bsphere_radius, wires_offset, pole_spacing[2];
 	point base, center; // base of the pole and center of wires/bcube
@@ -82,12 +82,13 @@ class power_pole_t : public city_obj_t {
 	float get_wire_radius  () const {return 0.08*pole_radius;}
 	float get_bar_extend   () const {return 8.00*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
 	float get_vwire_spacing() const {return 0.25*get_bar_extend();}
-	point get_top() const {return point(base.x, base.y, bcube.z2());}
 	bool has_dim_set(unsigned d) const {return (dims & (1<<d));}
 	cube_t calc_cbar(bool d) const;
 public:
 	power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
-		float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[2]);
+		float const pole_spacing_[2], uint8_t dims_, bool at_grid_edge_, bool const at_line_end_[2]);
+	bool is_at_grid_edge() const {return at_grid_edge;}
+	point get_top() const {return point(base.x, base.y, bcube.z2());}
 	float get_bsphere_radius(bool shadow_only) const {return (shadow_only ? radius : bsphere_radius);} // non-shadow pass includes wires bsphere radius
 	cube_t const &get_outer_bcube() const {return bcube_with_wires;}
 	cube_t get_ped_occluder() const;
@@ -139,6 +140,7 @@ private:
 public:
 	city_obj_placer_t() : num_spaces(0), filled_spaces(0), num_x_plots(0), num_y_plots(0), plot_subdiv_sz(0.0) {}
 	bool has_plot_dividers() const {return !dividers.empty();}
+	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
 	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential);

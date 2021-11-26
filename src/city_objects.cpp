@@ -379,8 +379,8 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 // power poles
 
 power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
-	float const pole_spacing_[2], uint8_t dims_, bool const at_line_end_[2]) :
-	dims(dims_), pole_radius(pole_radius_), wires_offset(wires_offset_), base(base_), center(center_)
+	float const pole_spacing_[2], uint8_t dims_, bool at_grid_edge_, bool const at_line_end_[2]) :
+	at_grid_edge(at_grid_edge_), dims(dims_), pole_radius(pole_radius_), wires_offset(wires_offset_), base(base_), center(center_)
 {
 	UNROLL_2X(pole_spacing[i_] = pole_spacing_[i_]; at_line_end[i_] = at_line_end_[i_];)
 	bcube.set_from_point(center);
@@ -1054,7 +1054,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			point base(pos);
 			if (i == 1) {base.y += extra_offset;} // shift the pole off the sidewalk and off toward the road to keep it out of the way of pedestrians
 			bool const at_line_end[2] = {0, 0};
-			ppole_groups.add_obj(power_pole_t(base, pos, pole_radius, height, wires_offset, xyspace, dims[i], at_line_end), ppoles);
+			bool const at_grid_edge(plot.xpos+1 == num_x_plots || plot.ypos+1 == num_y_plots);
+			ppole_groups.add_obj(power_pole_t(base, pos, pole_radius, height, wires_offset, xyspace, dims[i], at_grid_edge, at_line_end), ppoles);
 		}
 		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power poles there
 			unsigned const pole_ixs[2] = {0, 2};
@@ -1063,7 +1064,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				point pt(pts[pole_ixs[i]]);
 				pt.x -= xspace;
 				bool const at_line_end[2] = {1, 0};
-				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], at_line_end), ppoles);
+				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], 1, at_line_end), ppoles);
 			}
 		}
 		if (plot.ypos == 0) { // no -y neighbor plot, but need to add the power poles there
@@ -1075,16 +1076,16 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				point base(pt);
 				if (i == 1) {base.y += extra_offset;}
 				bool const at_line_end[2] = {0, 1};
-				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], at_line_end), ppoles);
+				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], 1, at_line_end), ppoles);
 			}
 		}
-		if (plot.xpos == 0 && plot.ypos == 0) { // pole at the corner
+		if (plot.xpos == 0 && plot.ypos == 0) { // pole at the corner of the grid
 			point pt(pts[0]);
 			pt.x -= xspace;
 			pt.y -= yspace;
 			point base(pt);
 			bool const at_line_end[2] = {1, 1};
-			ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[0], at_line_end), ppoles);
+			ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[0], 1, at_line_end), ppoles);
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}
@@ -1352,7 +1353,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	bool const add_parking_lots(have_cars && !is_residential && city_params.min_park_spaces > 0 && city_params.min_park_rows > 0);
 	float const sidewalk_width(get_sidewalk_width());
 
-	for (auto i = plots.begin(); i != plots.end(); ++i) { // calculate num_x_plots and num_y_plots; these were used for power poles, but are no longer used
+	for (auto i = plots.begin(); i != plots.end(); ++i) { // calculate num_x_plots and num_y_plots; these are used for determining edge power poles
 		max_eq(num_x_plots, i->xpos+1U);
 		max_eq(num_y_plots, i->ypos+1U);
 	}

@@ -463,6 +463,7 @@ class city_road_gen_t : public road_gen_base_t {
 		bool get_is_residential() const {return is_residential;}
 		cube_t const &get_bcube() const {return bcube;}
 		cube_t const &get_plot_bcube(unsigned plot_ix) const {assert(plot_ix < plots.size()); return plots[plot_ix];}
+		vector<power_pole_t> const &get_power_poles() const {return city_obj_placer.get_power_poles();} // used for city connectivity
 		void set_bcube(cube_t const &bcube_) {bcube = bcube_;}
 		unsigned num_roads() const {return roads.size();}
 		vector<road_t> const &get_roads() const {return roads;} // used for connecting roads between cities with 4-way intersections
@@ -2211,7 +2212,7 @@ public:
 		float tot_cost(0.0);
 		unsigned num_conn(0);
 
-		// full cross-product connectivity
+		// full cross product road connectivity
 		for (unsigned i = 0; i < num_cities; ++i) {
 			for (unsigned j = i+1; j < num_cities; ++j) {
 				float const cost(connect_two_cities(i, j, blockers, crc, road_width));
