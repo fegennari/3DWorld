@@ -772,10 +772,12 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		target_pos = all_zeros; // reset and force path finding to re-route from this new direction/pos
 	}
 	if (vel != zero_vector) { // if stopped, don't update dir
-		if (!collided && target_valid()) {delta_dir = min(1.0f, 4.0f*delta_dir);} // use a tighter turning radius when there's an unobstructed target_pos
-		dir = (delta_dir/speed)*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
+		if (target_valid()) {delta_dir *= 4.0;} // use a tighter turning radius when there's a valid target_pos
+		delta_dir = min(1.0f, delta_dir*get_speed_mult()); // tighter turn radius when moving quickly in the road
+		dir   = (delta_dir/speed)*vel + (1.0 - delta_dir)*dir; // merge velocity into dir gradually for smooth turning
 		dir.z = 0.0; // should be zero, but set just in case
-		dir.normalize();
+		float const xy_mag_inv(1.0/dir.xy_mag()); // normalize using XY only
+		dir.x *= xy_mag_inv; dir.y *= xy_mag_inv;
 	}
 	collided = ped_coll = 0; // reset for next frame
 }
