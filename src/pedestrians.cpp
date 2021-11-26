@@ -7,6 +7,7 @@
 
 float const CROSS_SPEED_MULT = 1.8; // extra speed multiplier when crossing the road
 float const CROSS_WAIT_TIME  = 60.0; // in seconds
+float const LOOKAHEAD_TICKS  = 2.0*TICKS_PER_SECOND; // 2s
 bool const FORCE_USE_CROSSWALKS = 0; // more realistic and safe, but causes problems with pedestian collisions
 
 extern bool tt_fire_button_down;
@@ -188,11 +189,21 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		float const r_sum(0.6f*(radius + i->radius)); // using a smaller radius to allow peds to get close to each other
 		if (dist_sq < r_sum*r_sum) {register_ped_coll(*this, *i, pid, (i - peds.begin())); return 1;} // collision
 		if (speed < TOLERANCE) continue;
-		vector3d const delta_v(vel - i->vel), delta_p((pos.x - i->pos.x), (pos.y - i->pos.y), 0.0);
+		point const p1_xy(pos.x, pos.y, 0.0), p2_xy(i->pos.x, i->pos.y, 0.0); // z=0.0
+		vector3d const delta_v(vel - i->vel), delta_p(p1_xy - p2_xy);
 		float const dp(-dot_product_xy(delta_v, delta_p));
 		if (dp <= 0.0) continue; // diverging, no avoidance needed
-		float const dv_mag(delta_v.mag()), dist(sqrt(dist_sq)), fmag(dist/(dist - 0.9*r_sum));
+		// determine if these two peds will collide within LOOKAHEAD_TICKS time, using a conservative approach;
+		// solving this correctly requires solving for cylinder-cylinder intersection or line segment-line segment min distance, which is complex and slow;
+		// so instead we only look at the X and Y separation values, which at least works if peds are walking in X or Y along sidewalks
+		point const p1_xy_end(p1_xy + LOOKAHEAD_TICKS*vel), p2_xy_end(p2_xy + LOOKAHEAD_TICKS*i->vel);
+		cube_t bc1(p1_xy, p1_xy_end), bc2(p2_xy, p2_xy_end);
+		bc1.expand_by_xy(0.6*   radius); // XY bounding cube of ped collision volume from now to 2s in the future
+		bc2.expand_by_xy(0.6*i->radius);
+		if (!bc1.intersects_xy(bc2)) continue;
+		float const dv_mag(delta_v.mag());
 		if (dv_mag < TOLERANCE) continue;
+		float const dist(sqrt(dist_sq)), fmag(dist/(dist - 0.9*r_sum));
 		vector3d const rejection(delta_p - (dp/(dv_mag*dv_mag))*delta_v); // component of velocity perpendicular to delta_p (avoid dir)
 		float const rmag(rejection.mag()), rel_vel(max(dv_mag/speed, 0.5f)); // higher when peds are converging
 		if (rmag < TOLERANCE) continue;
@@ -206,7 +217,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 bool pedestrian_t::check_ped_ped_coll(ped_manager_t const &ped_mgr, vector<pedestrian_t> &peds, unsigned pid, float delta_dir) {
 	if (in_building) return 0; // no ped-ped collisions in buildings (yet)
 	assert(pid < peds.size());
-	float const timestep(2.0*TICKS_PER_SECOND), lookahead_dist(timestep*speed); // how far we can travel in 2s
+	float const lookahead_dist(LOOKAHEAD_TICKS*speed); // how far we can travel in 2s
 	float const prox_radius(1.2*radius + lookahead_dist); // assume other ped has a similar radius
 	vector3d force(zero_vector);
 	if (check_ped_ped_coll_range(peds, pid, pid+1, plot, prox_radius, force)) return 1;
@@ -1267,11 +1278,18 @@ void pedestrian_t::debug_draw(ped_manager_t &ped_mgr) const {
 	if (collided        ) {draw_colored_cube(get_bcube(), RED, s);} // show marker if collided this frame
 	else if (in_the_road) {draw_colored_cube(get_bcube(), GREEN, s);}
 
-	if (1) {
+	if (1) { // show debug state cube
 		colorRGBA const debug_colors[8] = {BLACK, WHITE, RED, GREEN, BLUE, YELLOW, ORANGE, PURPLE};
 		cube_t c(get_bcube());
 		c.z1() = c.z2(); c.z2() += 0.5*get_height();
 		draw_colored_cube(c, debug_colors[debug_state], s);
+	}
+	if (0) { // show lookahead cube
+		point const lookahead_pos(pos + LOOKAHEAD_TICKS*vel);
+		cube_t lookahead(pos, (pos + LOOKAHEAD_TICKS*vel));
+		lookahead.expand_by_xy(0.6*radius);
+		set_cube_zvals(lookahead, get_z1(), get_z2());
+		draw_colored_cube(lookahead, BROWN, s);
 	}
 	set_fill_mode(); // reset
 	draw_verts(line_pts, GL_LINES);
