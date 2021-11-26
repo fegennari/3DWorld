@@ -16,10 +16,11 @@ class city_spectate_manager_t {
 	enum {FOLLOW_NONE, FOLLOW_BAI, FOLLOW_PED, FOLLOW_CAR};
 	unsigned spectate_mode;
 	unsigned follow_ix; // building AI, pedestrian, or car index
-	unsigned person_ssn; // for building AI and pedestrians
-	float car_speed; // pseudo-unique value per-car
+	unsigned follow_id; // unique ID
 	car_manager_t *car_manager;
 	ped_manager_t *ped_manager;
+
+	template<typename T> bool match_id(T const &actor) const {return (actor.get_unique_id() == follow_id);}
 
 	int find_closest_person(vector<pedestrian_t> const &peds, point const &pos) const {
 		float const dmax(4.0*CAMERA_RADIUS); // max distance for spectate
@@ -44,17 +45,6 @@ class city_spectate_manager_t {
 		}
 		return closest_ix;
 	}
-	bool update_ix_for_correct_person(vector<pedestrian_t> const &people) {
-		assert(unsigned(follow_ix) < people.size());
-		if (people[follow_ix].ssn == person_ssn) return 1; // done/correct
-
-		for (auto i = people.begin(); i != people.end(); ++i) { // slow, could maybe start searching around follow_ix
-			if (i->ssn != person_ssn) continue; // wrong person
-			follow_ix = (i - people.begin());
-			return 1; // success
-		}
-		return 0; // person with matching SSN not found, error? or maybe reached dest?
-	}
 	void set_camera_to_follow_person(vector<pedestrian_t> const &people) const {
 		assert(unsigned(follow_ix) < people.size());
 		pedestrian_t const &person(people[follow_ix]);
@@ -62,28 +52,30 @@ class city_spectate_manager_t {
 		spectate    = !enable_mouse_look; // 'V' key contols whether or not the player can move the camera
 		if (spectate) {cview_dir = person.dir;}
 	}
-	bool update_ix_for_correct_car() {
-		assert(car_manager);
-		assert(unsigned(follow_ix) < car_manager->cars.size());
-		if (car_manager->cars[follow_ix].max_speed == car_speed) return 1; // done/correct
+	template<typename T> bool update_ix_for_correct_agent(vector<T> const &agents) {
+		assert(unsigned(follow_ix) < agents.size());
+		unsigned ntest(1);
+		if (match_id(agents[follow_ix])) {return 1;} // done/correct
+		unsigned const search_dist = 100; // distance to search in backwards as first pass (optimization)
+		auto search_start(agents.begin() + ((follow_ix < search_dist) ? 0 : (follow_ix - search_dist)));
 
-		for (auto i = car_manager->cars.begin(); i != car_manager->cars.end(); ++i) { // slow, could maybe start searching around follow_ix
-			if (i->max_speed != car_speed) continue; // wrong car
-			follow_ix = (i - car_manager->cars.begin());
-			return 1; // success
+		for (auto i = search_start; i != agents.end(); ++i, ++ntest) { // start searching around the old index
+			if (match_id(*i)) {follow_ix = (i - agents.begin()); return 1;} // success
 		}
-		return 0; // car with matching speed not found, maybe it parked
+		for (auto i = agents.begin(); i != search_start; ++i, ++ntest) { // search the remaining range starting at the first element
+			if (match_id(*i)) {follow_ix = (i - agents.begin()); return 1;} // success
+		}
+		return 0; // agent with matching ID not found
 	}
 public:
-	city_spectate_manager_t() : spectate_mode(FOLLOW_NONE), follow_ix(0), person_ssn(0), car_speed(0.0), car_manager(nullptr), ped_manager(nullptr) {}
+	city_spectate_manager_t() : spectate_mode(FOLLOW_NONE), follow_ix(0), follow_id(0), car_manager(nullptr), ped_manager(nullptr) {}
 
 	void init(car_manager_t &car_manager_, ped_manager_t &ped_manager_) {
 		ped_manager = &ped_manager_;
 		car_manager = &car_manager_;
 	}
 	void clear() {
-		follow_ix       = person_ssn = 0;
-		car_speed       = 0.0;
+		follow_ix       = follow_id = 0;
 		spectate_mode   = FOLLOW_NONE;
 		spectate        = 0;
 		no_tt_footsteps = 0;
@@ -99,8 +91,8 @@ public:
 				if (ix >= 0) {
 					assert(unsigned(ix) < ped_manager->peds_b.size());
 					//if (ped_manager->peds_b[ix].dest_bldg != player_building) break; // wrong building; doesn't work, but the dmax test should be good enough
-					follow_ix  = ix;
-					person_ssn = ped_manager->peds_b[ix].ssn;
+					follow_ix = ix;
+					follow_id = ped_manager->peds_b[ix].get_unique_id();
 					spectate_mode = FOLLOW_BAI;
 				}
 			}
@@ -113,9 +105,9 @@ public:
 			int const ix(find_closest_person(ped_manager->peds, camera_bs));
 			if (ix >= 0) {
 				assert(unsigned(ix) < ped_manager->peds.size());
-				dmin_sq    = p2p_dist_sq(camera_bs, ped_manager->peds[ix].pos);
-				follow_ix  = ix;
-				person_ssn = ped_manager->peds[ix].ssn;
+				dmin_sq   = p2p_dist_sq(camera_bs, ped_manager->peds[ix].pos);
+				follow_ix = ix;
+				follow_id = ped_manager->peds[ix].get_unique_id();
 				spectate_mode = FOLLOW_PED;
 			}
 		}
@@ -127,7 +119,7 @@ public:
 
 				if (dmin_sq == 0.0 || p2p_dist_sq(camera_bs, car.get_center()) < dmin_sq) { // no ped, or car is closer
 					follow_ix = ix;
-					car_speed = car.max_speed; // should be constant and pseudo-unique across cars
+					follow_id = car.get_unique_id(); // should be constant and pseudo-unique across cars
 					spectate_mode = FOLLOW_CAR;
 				}
 			}
@@ -141,18 +133,18 @@ public:
 			return;
 		case FOLLOW_BAI: {
 			assert(ped_manager);
-			set_camera_to_follow_person(ped_manager->peds_b);
+			set_camera_to_follow_person(ped_manager->peds_b); // index never changes (no peds_b sort), don't need to update
 			break;
 		}
 		case FOLLOW_PED: {
 			assert(ped_manager);
-			if (!update_ix_for_correct_person(ped_manager->peds)) {clear(); return;}
+			if (!update_ix_for_correct_agent(ped_manager->peds)) {assert(0);} // should never fail
 			set_camera_to_follow_person(ped_manager->peds);
 			break;
 		}
 		case FOLLOW_CAR: {
 			assert(car_manager);
-			if (!update_ix_for_correct_car()) {clear(); return;}
+			if (!update_ix_for_correct_agent(car_manager->cars)) {clear(); return;} // if this fails, maybe it's a car that parked in a driveway
 			assert(unsigned(follow_ix) < car_manager->cars.size());
 			car_t const &car(car_manager->cars[follow_ix]);
 			point const center(car.get_center());
@@ -173,12 +165,9 @@ public:
 		surface_pos += get_tiled_terrain_model_xlate(); // convert back to camera space
 	}
 	// functions used to disable drawing of the actor the player is following
-	//bool skip_bai_draw(unsigned ix) const {return (spectate_mode == FOLLOW_BAI && ix == follow_ix);}
-	//bool skip_ped_draw(unsigned ix) const {return (spectate_mode == FOLLOW_PED && ix == follow_ix);}
-	//bool skip_car_draw(unsigned ix) const {return (spectate_mode == FOLLOW_CAR && ix == follow_ix);}
-	bool skip_bai_draw(pedestrian_t const &ped) const {return (spectate_mode == FOLLOW_BAI && ped.ssn == person_ssn);}
-	bool skip_ped_draw(pedestrian_t const &ped) const {return (spectate_mode == FOLLOW_PED && ped.ssn == person_ssn);}
-	bool skip_car_draw(car_t        const &car) const {return (spectate_mode == FOLLOW_CAR && car.max_speed == car_speed);} // not exact enough?
+	bool skip_bai_draw(pedestrian_t const &ped) const {return (spectate_mode == FOLLOW_BAI && match_id(ped));}
+	bool skip_ped_draw(pedestrian_t const &ped) const {return (spectate_mode == FOLLOW_PED && match_id(ped));}
+	bool skip_car_draw(car_t        const &car) const {return (spectate_mode == FOLLOW_CAR && match_id(car));} // almost exact ; id collision is rare
 };
 
 city_spectate_manager_t city_spectate_manager;

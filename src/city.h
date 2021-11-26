@@ -163,6 +163,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	float get_turn_rot_z(float dist_to_turn) const;
 	bool is_close_to_player() const;
 	colorRGBA const &get_color() const {assert(color_id < NUM_CAR_COLORS); return car_colors[color_id];}
+	unsigned get_unique_id() const {return (unsigned(1000000.0*max_speed) + color_id + (model_id<<8));} // not guaranteed to be unique, but pretty close
 	void apply_scale(float scale);
 	void destroy();
 	float get_min_sep_dist_to_car(car_t const &c, bool add_one_car_len=0) const;
@@ -739,6 +740,7 @@ struct pedestrian_t : public waiting_obj_t {
 	bool operator<(pedestrian_t const &ped) const {return ((city == ped.city) ? (plot < ped.plot) : (city < ped.city));} // currently only compares city + plot
 	string get_name() const;
 	string str() const;
+	unsigned get_unique_id() const {return ssn;} // technically only unique if there are <= 65536 people
 	float get_speed_mult() const;
 	float get_height () const {return PED_HEIGHT_SCALE*radius;}
 	float get_width  () const {return PED_WIDTH_SCALE *radius;}
