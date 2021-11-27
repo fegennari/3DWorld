@@ -2553,12 +2553,13 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		assert(tile);
 		if (tile->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue; // too far to draw
 		//if (display_mode & 0x20) {tile->clear_shadow_map(&smap_manager);} // useful for perf testing
+		bool const is_visible(tile->is_visible());
 
 		if (shadow_map_enabled()) {
-			if (tile->is_smap_bounds_visible()) {to_update_shadows.push_back(tile);} // Note: using current camera view frustum
+			if (is_visible || tile->is_smap_bounds_visible()) {to_update_shadows.push_back(tile);} // Note: using current camera view frustum
 			else {tile->setup_shadow_maps(smap_manager, 1);} // cleanup_only=1 (only clear shadow maps to increase LOD levels)
 		}
-		if (tile->is_visible()) {
+		if (is_visible) {
 			if (tile->can_have_trees()) { // no trees in water or distant tiles
 				if (tile->can_have_pine_palm_trees() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
 				if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
