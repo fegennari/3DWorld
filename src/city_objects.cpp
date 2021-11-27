@@ -1079,7 +1079,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			point base(pos);
 			if (i == 1) {base.y += extra_offset;} // shift the pole off the sidewalk and off toward the road to keep it out of the way of pedestrians
 			bool const at_line_end[2] = {0, 0};
-			bool const at_grid_edge(plot.xpos+1 == num_x_plots || plot.ypos+1 == num_y_plots);
+			bool const at_grid_edge(plot.xpos+1U == num_x_plots || plot.ypos+1U == num_y_plots);
 			ppole_groups.add_obj(power_pole_t(base, pos, pole_radius, height, wires_offset, xyspace, dims[i], at_grid_edge, at_line_end, is_residential), ppoles);
 		}
 		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power poles there
