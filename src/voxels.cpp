@@ -780,7 +780,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 			for (unsigned x = x1; x < x2; ++x) {
 				unsigned ix(outside.get_ix(x, y, 0));
 
-				for (unsigned z = 0; z < nz; ++z, ++ix) {
+				for (unsigned ix_end = ix + nz; ix < ix_end; ++ix) {
 					if (outside[ix] != UNDER_MESH_BIT) continue; // outside or above mesh
 					work.push_back(ix); // inside, anchored to the mesh
 					outside[ix] |= ANCHORED_BIT; // mark as anchored
