@@ -168,6 +168,8 @@ template<typename T> struct point2d { // size = 8
 	T mag_sq() const {return (x*x + y*y);}
 	T mag()    const {return sqrt(mag_sq());}
 	T cp_mag(point2d const &p) const {return (x*p.y - y*p.x);}
+	T get_max_val() const {return std::max(x, y);}
+	T get_min_val() const {return std::min(x, y);}
 	void operator+=(point2d const &p) {x += p.x; y += p.y;}
 	void operator-=(point2d const &p) {x -= p.x; y -= p.y;}
 	void operator*=(point2d const &p) {x *= p.x; y *= p.y;} // component multiply
