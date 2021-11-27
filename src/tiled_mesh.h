@@ -339,6 +339,7 @@ public:
 	bool mesh_sphere_intersect(point const &pos, float rradius) const;
 	bool update_range(tile_shadow_map_manager &smap_manager);
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), get_bsphere_radius_inc_water(), get_bcube());}
+	bool is_smap_bounds_visible() const {return camera_pdu.cube_visible(get_shadow_bcube());}
 	float get_dist_to_camera_in_tiles(bool xy_dist=1) const {return get_rel_dist_to_camera(xy_dist)*TILE_RADIUS;}
 	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
 	float get_scenery_dist_scale(bool reflection_pass) const {return tree_scale*get_dist_to_camera_in_tiles(0)/get_scenery_thresh(reflection_pass);}
