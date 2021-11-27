@@ -1842,6 +1842,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 
 	//timer_t timer("Draw Tile Mesh");
 	// check if the tile was visible in the building mirror reflection but not in normal view (so wasn't setup)
+	//if (get_checkerboard_bit()) return; // checkerboard drawing, for debugging
 	if (reflection_pass == 2 && !(weight_tid > 0 && height_tid > 0 && normal_tid > 0 && shadow_tid > 0)) return;
 	fgPushMatrix();
 	vector3d const xlate(get_mesh_xlate());

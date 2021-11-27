@@ -223,6 +223,7 @@ public:
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
 	bool has_valid_shadow_map() const {return !smap_data.empty();}
 	bool has_grass() const {return !grass_blocks.empty();}
+	bool get_checkerboard_bit() const {return (((x1/128) + (y1/128)) & 1);}
 	void invalidate_mesh_height() {mesh_height_invalid = 1;}
 	float get_avg_veg() const {return 0.25f*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
 	void set_last_occluded(bool val) {last_occluded = val; last_occluded_frame = frame_counter;}
