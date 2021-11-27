@@ -477,6 +477,11 @@ class city_road_gen_t : public road_gen_base_t {
 		float get_traffic_density() const {return ((tot_road_len == 0.0) ? 0.0 : num_cars/tot_road_len);} // cars per unit road
 		void register_car() const {++num_cars;} // Note: must be const; num_cars is mutable
 
+		cube_t get_bcube_inc_stoplights_and_streetlights() const {
+			cube_t c(bcube); // deep copy
+			c.z2() += max(stoplight_ns::stoplight_max_height(), streetlight_ns::get_streetlight_height());
+			return c;
+		}
 		void clear() {
 			roads.clear();
 			segs.clear();
@@ -1083,11 +1088,9 @@ class city_road_gen_t : public road_gen_base_t {
 			return 0;
 		}
 		bool line_intersect(point const &p1, point const &p2, float &t) const { // Note: xlate has already been applied
-			cube_t c(bcube); // deep copy
-			c.z2() += stoplight_ns::stoplight_max_height();
 			bool ret(0);
 			
-			if (c.line_intersects(p1, p2)) { // z2 too small for streetlights?
+			if (get_bcube_inc_stoplights_and_streetlights().line_intersects(p1, p2)) { // z2 too small for streetlights?
 				for (unsigned n = 1; n < 3; ++n) { // intersections with stoplights (3-way, 4-way)
 					for (auto i = isecs[n].begin(); i != isecs[n].end(); ++i) {ret |= i->line_intersect(p1, p2, t);}
 				}
@@ -1201,8 +1204,9 @@ class city_road_gen_t : public road_gen_base_t {
 			if (bcube.contains_pt_xy(camera_pdu.pos)) {city_obj_placer.get_occluders(camera_pdu, occluders);} // only add if this city contains the camera
 		}
 		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
+			city_obj_placer.draw_detail_objects(dstate, shadow_only); // always drawn; does its own VFC and distance test
 			if (empty()) return;
-			if (!dstate.check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
+			if (!dstate.check_cube_visible(get_bcube_inc_stoplights_and_streetlights(), 1.0, shadow_only)) return; // VFC/too far
 
 			if (shadow_only) {
 				if (!is_connector_road) { // connector road has no stoplights to cast shadows
@@ -1255,7 +1259,6 @@ class city_road_gen_t : public road_gen_base_t {
 				dstate.draw_tunnel(*t, shadow_only);
 				t->draw_streetlights(dstate, shadow_only, 1); // always_on=1
 			}
-			city_obj_placer.draw_detail_objects(dstate, shadow_only);
 		}
 		void add_city_lights(vector3d const &xlate, cube_t &lights_bcube) const { // for now, the only light sources added by the road network are city block streetlights
 			add_streetlight_dlights(xlate, lights_bcube, 0);
@@ -1925,7 +1928,6 @@ public:
 	bool empty() const {return road_networks.empty();}
 	bool has_tunnels() const {return global_rn.has_tunnels();}
 	bool point_in_tunnel(point const &pos) const {return global_rn.point_in_tunnel(pos);}
-
 	road_network_t const &get_city(unsigned city_ix) const {return road_network_t::get_city(city_ix, road_networks, global_rn);} // call the static function
 	cube_t const &get_city_bcube(unsigned city_ix) const {return get_city(city_ix).get_bcube();}
 	cube_t const &get_city_plot_bcube(unsigned city_ix, unsigned plot_ix) const {return get_city(city_ix).get_plot_bcube(plot_ix);}
