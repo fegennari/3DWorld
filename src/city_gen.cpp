@@ -1111,9 +1111,9 @@ class city_road_gen_t : public road_gen_base_t {
 			}
 			return 0;
 		}
-		bool tile_contains_tunnel(cube_t const &bcube) const {
+		bool tile_contains_tunnel(cube_t const &tile_bcube) const {
 			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
-				if (i->intersects_xy(bcube)) return 1;
+				if (i->intersects_xy(tile_bcube)) return 1;
 			}
 			return 0;
 		}
@@ -1425,10 +1425,10 @@ class city_road_gen_t : public road_gen_base_t {
 			car.cur_seg  = (unsigned)conn_ix;
 			car.cur_road_type = TYPE_RSEG; // always connects to a road segment
 			car.entering_city = 0;
-			cube_t const bcube(get_road_bcube_for_car(car, global_rn));
+			cube_t const road_bcube(get_road_bcube_for_car(car, global_rn));
 
-			if (!bcube.intersects_xy(car.bcube)) { // sanity check
-				cout << "bad intersection:" << endl << car.str() << endl << "bcube: " << bcube.str() << endl;
+			if (!road_bcube.intersects_xy(car.bcube)) { // sanity check
+				cout << "bad intersection:" << endl << car.str() << endl << "bcube: " << road_bcube.str() << endl;
 				assert(0);
 			}
 		}
@@ -1786,9 +1786,9 @@ class city_road_gen_t : public road_gen_base_t {
 			if (car.cur_road_type == TYPE_DRIVEWAY) return 0; // driveway desination check is handled in update_car()
 			if (!dest_driveway_in_this_city(car)) {return get_isec_by_ix(car.dest_isec).contains_pt_xy(car.get_center());} // dest isec
 			cube_t const &driveway(get_driveway(car.dest_driveway));
-			cube_t bcube(car.bcube);
-			bcube.d[car.dim][!car.dir] -= (car.dir ? 1.0 : -1.0)*0.2*car.get_length(); // add some space behind the car
-			return driveway.contains_cube_xy(bcube);
+			cube_t car_bcube(car.bcube);
+			car_bcube.d[car.dim][!car.dir] -= (car.dir ? 1.0 : -1.0)*0.2*car.get_length(); // add some space behind the car
+			return driveway.contains_cube_xy(car_bcube);
 		}
 		road_isec_t const &get_isec_by_ix(unsigned ix) const {
 			for (unsigned n = 0; n < 3; ++n) {
@@ -1881,9 +1881,9 @@ class city_road_gen_t : public road_gen_base_t {
 		int get_nearby_road_ix(point const &pos, bool road_dim) const {
 			for (auto r = roads.begin(); r != roads.end(); ++r) {
 				if (r->dim != road_dim) continue;
-				cube_t bcube(*r);
-				bcube.expand_by_xy(0.01*city_params.road_width); // expand slightly to pick up roads that are adjacent to this point
-				if (bcube.contains_pt_xy(pos)) {return (r - roads.begin());}
+				cube_t road_bcube(*r);
+				road_bcube.expand_by_xy(0.01*city_params.road_width); // expand slightly to pick up roads that are adjacent to this point
+				if (road_bcube.contains_pt_xy(pos)) {return (r - roads.begin());}
 			}
 			return -1; // should never get here, but occasionally can due to bad collisions between peds, floating-point error, etc.
 		}
