@@ -411,6 +411,15 @@ cube_t power_pole_t::calc_cbar(bool d) const {
 	set_wall_width(cbar,  center[!d], get_bar_extend(), !d);
 	return cbar;
 }
+point power_pole_t::get_wires_conn_pt() const {
+	cube_t cbars_bcube;
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (has_dim_set(d)) {cbars_bcube.assign_or_union_with_cube(calc_cbar(d));}
+	}
+	if (cbars_bcube.is_all_zeros()) {return get_top();} // error/shouldn't happen?
+	return point(cbars_bcube.xc(), cbars_bcube.yc(), (cbars_bcube.z2() + get_standoff_height()));
+}
 point power_pole_t::get_nearest_connection_point(point const &to_pos, bool near_power_pole) const {
 	float dmin_sq(0.0);
 	point ret(to_pos); // start at to_pos; will return this if no wires can be connected to
@@ -581,7 +590,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		}
 	}
 	float const wire_spacing(0.75*get_bar_extend()), vwire_spacing(get_vwire_spacing());
-	float const standoff_height(0.3*pole_radius), standoff_radius(0.25*pole_radius);
+	float const standoff_height(get_standoff_height()), standoff_radius(0.25*pole_radius);
 	point wire_pts[3][2];
 	unsigned wire_mask(0);
 	bool drew_wires(0);

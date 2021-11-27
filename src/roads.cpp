@@ -776,6 +776,7 @@ void road_draw_state_t::draw_unshadowed() {
 		road_mat_mgr.set_texture(i);
 		qbd_batched[i].draw_and_clear();
 	}
+	qbd_tlines.draw_and_clear();
 }
 
 void road_draw_state_t::post_draw() {
@@ -1031,5 +1032,13 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 
 void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, range_pair_t const &rp, bool shadow_only) {
 	for (unsigned i = rp.s; i < rp.e; ++i) {isecs[i].draw_stoplights(qbd_sl, *this, shadow_only);}
+}
+
+// not really related to roads, but I guess this goes here
+void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline) {
+	// TODO: use qbd_tlines
+	s.set_cur_color(BLACK);
+	float const radius(0.05*city_params.road_width);
+	draw_fast_cylinder(tline.p1, tline.p2, radius, radius, 16, 0); // ndiv=16; no ends
 }
 

@@ -79,9 +79,10 @@ class power_pole_t : public city_obj_t {
 	cube_t bcube_with_wires;
 	vector<wire_t> wires; // in addition to the normal connector wires
 
-	float get_wire_radius  () const {return 0.08*pole_radius;}
-	float get_bar_extend   () const {return 8.00*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
-	float get_vwire_spacing() const {return 0.25*get_bar_extend();}
+	float get_wire_radius    () const {return 0.08*pole_radius;}
+	float get_bar_extend     () const {return 8.00*pole_radius;} // distance from the center that the wooden bar holding the wires extends in each side in !dim
+	float get_vwire_spacing  () const {return 0.25*get_bar_extend();}
+	float get_standoff_height() const {return 0.3*pole_radius;}
 	bool has_dim_set(unsigned d) const {return (dims & (1<<d));}
 	cube_t calc_cbar(bool d) const;
 public:
@@ -89,6 +90,7 @@ public:
 		float const pole_spacing_[2], uint8_t dims_, bool at_grid_edge_, bool const at_line_end_[2], bool residential_);
 	bool is_at_grid_edge() const {return at_grid_edge;}
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
+	point get_wires_conn_pt() const;
 	float get_bsphere_radius(bool shadow_only) const {return (shadow_only ? radius : bsphere_radius);} // non-shadow pass includes wires bsphere radius
 	cube_t const &get_outer_bcube() const {return bcube_with_wires;}
 	cube_t get_ped_occluder() const;

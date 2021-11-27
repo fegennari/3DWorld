@@ -564,6 +564,11 @@ struct tunnel_t : public road_connector_t {
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 };
 
+struct transmission_line_t {
+	point p1, p2;
+	transmission_line_t(point const &p1_, point const &p2_) : p1(p1_), p2(p2_) {}
+};
+
 struct range_pair_t {
 	unsigned s, e; // Note: e is one past the end
 	range_pair_t(unsigned s_=0, unsigned e_=0) : s(s_), e(e_) {}
@@ -571,7 +576,7 @@ struct range_pair_t {
 };
 
 class road_draw_state_t : public draw_state_t {
-	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_sl, qbd_bridge;
+	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_sl, qbd_bridge, qbd_tlines;
 	float ar;
 
 	void draw_city_region_int(quad_batch_draw &cache, unsigned type_ix);
@@ -602,6 +607,7 @@ public:
 	void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale);
 	void draw_tunnel(tunnel_t const &tunnel, bool shadow_only);
 	void draw_stoplights(vector<road_isec_t> const &isecs, range_pair_t const &rp, bool shadow_only);
+	void draw_transmission_line(transmission_line_t const &tline);
 }; // road_draw_state_t
 
 class ao_draw_state_t : public draw_state_t {
