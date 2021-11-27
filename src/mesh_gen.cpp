@@ -203,7 +203,7 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 
 	assert(matrix);
 	mesh_xy_grid_cache_t height_gen;
-	height_gen.build_arrays((x_offset - xsize/2)*DX_VAL, (y_offset - ysize/2)*DY_VAL, DX_VAL, DY_VAL, xsize, ysize);
+	height_gen.build_arrays(float(x_offset - xsize/2)*DX_VAL, float(y_offset - ysize/2)*DY_VAL, DX_VAL, DY_VAL, xsize, ysize);
 
 	for (int i = 0; i < ysize; ++i) {
 		for (int j = 0; j < xsize; ++j) {matrix[i][j] = height_gen.eval_index(j, i);}
@@ -222,7 +222,7 @@ void gen_rand_sine_table_entries(float scaled_height) {
 	float xf_scale((float)MESH_Y_SIZE/(float)MESH_X_SIZE), yf_scale(1.0/xf_scale);
 	if (X_SCENE_SIZE > Y_SCENE_SIZE) yf_scale *= (float)Y_SCENE_SIZE/(float)X_SCENE_SIZE;
 	if (Y_SCENE_SIZE > X_SCENE_SIZE) xf_scale *= (float)X_SCENE_SIZE/(float)Y_SCENE_SIZE;
-	float mags[NUM_FREQ_COMP], freqs[NUM_FREQ_COMP];
+	float mags[NUM_FREQ_COMP] = {}, freqs[NUM_FREQ_COMP] = {};
 	// Note: none of these config values are error checked, maybe should at least check >= 0.0
 	freqs[0] = MESH_START_FREQ;
 	mags [0] = MESH_START_MAG;
@@ -397,7 +397,7 @@ void glaciate() {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			float &zval(mesh_height[i][j]);
 			apply_glaciate(zval);
-			apply_mesh_sine(zval, (j + xoff2 - MESH_X_SIZE/2), (i + yoff2 - MESH_Y_SIZE/2));
+			apply_mesh_sine(zval, float(j + xoff2 - MESH_X_SIZE/2), float(i + yoff2 - MESH_Y_SIZE/2));
 			zbottom = min(zbottom, zval);
 			ztop    = max(ztop, zval);
 		}
