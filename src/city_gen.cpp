@@ -1076,7 +1076,7 @@ class city_road_gen_t : public road_gen_base_t {
 			for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
 				if (i->proc_sphere_coll(pos, p_last, radius, prev_frame_zval, xlate, cnorm)) return 1;
 			}
-			if ((pos.z - xlate.z - radius < bcube.z2()) + (streetlight_ns::get_streetlight_height())) { // below the level of the streetlights
+			if ((pos.z - xlate.z - radius) < (bcube.z2() + streetlight_ns::get_streetlight_height())) { // below the level of the streetlights
 				if (proc_streetlight_sphere_coll(pos, radius, xlate, cnorm)) return 1;
 			}
 			if (city_obj_placer.proc_sphere_coll(pos, p_last, xlate, radius, cnorm)) return 1;
