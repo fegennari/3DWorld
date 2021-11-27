@@ -343,7 +343,7 @@ bool is_night(float adj=0.0);
 bool parse_city_option(FILE *fp);
 bool have_cities();
 bool have_city_models();
-float get_road_max_len();
+vector2d get_road_max_len();
 float get_road_max_width();
 float get_min_obj_spacing();
 void gen_cities(float *heightmap, unsigned xsize, unsigned ysize);

@@ -932,9 +932,9 @@ unsigned tile_shadow_map_manager::get_free_list_mem_usage() const {
 
 cube_t tile_t::get_shadow_bcube() const {
 	vector3d const b_ext(get_buildings_max_extent()); // what about bridges overlapping this tile?
-	float const road_ext(0.5*get_road_max_len());
+	vector2d const road_len(get_road_max_len());
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
-	float const x_ext(max(max(road_ext, b_ext.x), trmax)), y_ext(max(max(road_ext, b_ext.y), trmax));
+	float const x_ext(max(max(0.5f*road_len.x, b_ext.x), trmax)), y_ext(max(max(0.5f*road_len.y, b_ext.y), trmax));
 	return cube_t(xv1-x_ext, xv1+(x2-x1)*deltax+x_ext, yv1-y_ext, yv1+(y2-y1)*deltay+y_ext, mzmin-BCUBE_ZTOLER, max(get_tile_zmax()+BCUBE_ZTOLER, mzmax+b_ext.z));
 }
 
@@ -2767,7 +2767,7 @@ void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, tile_t const *const 
 	assert(tile != nullptr);
 	float const recv_dist_sq(p2p_dist_xy_sq(lpos, tile->get_center()));
 	cube_t const shadow_bcube(tile->get_shadow_bcube());
-	bool const inc_adj_smap(get_buildings_max_extent() != zero_vector || get_road_max_len() > 0.0);
+	bool const inc_adj_smap(get_buildings_max_extent() != zero_vector || get_road_max_len().x > 0.0);
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		tile_t *const t(to_draw[i].second);
@@ -3321,7 +3321,7 @@ bool tile_draw_t::try_bind_tile_smap_at_point(point const &pos, shader_t &s, boo
 
 void tile_draw_t::invalidate_tile_smap_at_pt(point const &pos, float radius) {
 	vector3d const b_ext(get_buildings_max_extent());
-	radius += max(0.5f*get_road_max_len(), max(b_ext.x, b_ext.y)); // expand by city tile overlap (should also include trees?)
+	radius += max(0.5f*get_road_max_len().get_max_val(), max(b_ext.x, b_ext.y)); // expand by city tile overlap (should also include trees?)
 
 	for (int y = 0; y < 2; ++y) { // try 4 corners, needed to handle objects that overlap more than one tile
 		for (int x = 0; x < 2; ++x) {

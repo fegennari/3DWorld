@@ -17,6 +17,7 @@ float const CITY_LIGHT_FALLOFF      = 0.2;
 
 
 float city_dlight_pcf_offset_scale(1.0);
+vector2d actual_max_road_seg_len;
 city_params_t city_params;
 point pre_smap_player_pos(all_zeros);
 
@@ -510,6 +511,8 @@ class city_road_gen_t : public road_gen_base_t {
 			int const num_x_roads((rx2 - rx1)/road_pitch_x), num_y_roads((ry2 - ry1)/road_pitch_y);
 			road_pitch_x = 0.9999f*(rx2 - rx1)/num_x_roads; // auto-calculate, round down slightly to avoid FP error
 			road_pitch_y = 0.9999f*(ry2 - ry1)/num_y_roads;
+			max_eq(actual_max_road_seg_len.x, (road_pitch_x - road_width));
+			max_eq(actual_max_road_seg_len.y, (road_pitch_y - road_width));
 
 			// create a grid, for now; crossing roads will overlap
 			for (float x = rx1; x < rx2; x += road_pitch_x) {
@@ -2768,7 +2771,7 @@ bool have_cities() {return city_params.enabled();}
 bool have_city_models() {
 	return ((have_cities() && (city_params.num_cars > 0 || city_params.num_peds > 0)) || (enable_building_people_ai() && city_params.num_building_peds > 0));
 }
-float get_road_max_len   () {return city_params.road_spacing;}
+vector2d get_road_max_len() {return vector2d(max(city_params.road_spacing, actual_max_road_seg_len.x), max(city_params.road_spacing, actual_max_road_seg_len.y));}
 float get_road_max_width () {return city_params.road_width;}
 float get_min_obj_spacing() {return 4.0*ped_manager_t::get_ped_radius();} // allow a ped to walk between objects (two side-by-side)
 
