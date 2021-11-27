@@ -165,7 +165,7 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 	assert(bix+1 < vbo_offsets[lod].size());
 	unsigned const search_dist(1*grass_density/pow(1.5f, float(lod-1))); // enough for one cell (assumes grass blades scale down with LOD by at least 1.5x)
 	unsigned const start_ix(vbo_offsets[lod-1][bix]), end_ix(vbo_offsets[lod-1][bix+1]); // from previous LOD
-	float const dmax(2.5*grass_width*(1ULL << lod)), dkeep(0.2*grass_width*(1ULL << lod));
+	float const dmax(2.5*grass_width*(1ULL << lod)), dkeep(0.2*grass_width*(1ULL << lod)), dkeep_sq(dkeep*dkeep);
 	vector<unsigned char> used((end_ix - start_ix), 0); // initially all unused
 	
 	for (unsigned i = start_ix; i < end_ix; ++i) {
@@ -182,7 +182,7 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 			if (dist_sq < dmin_sq) {
 				dmin_sq  = dist_sq;
 				merge_ix = cur;
-				if (tt_grass_scale_factor < 1.0 && dmin_sq < dkeep*dkeep) break; // good enough
+				if (tt_grass_scale_factor < 1.0 && dmin_sq < dkeep_sq) break; // good enough
 			}
 		}
 		if (merge_ix > i) {
