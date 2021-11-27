@@ -973,7 +973,7 @@ class city_road_gen_t : public road_gen_base_t {
 			city_obj_placer.set_plot_subdiv_sz(get_plot_subdiv_sz());
 			city_obj_placer.gen_parking_and_place_objects(plots, plot_colliders, cars, city_id, have_cars, is_residential, !streetlights.empty());
 			add_tile_blocks(city_obj_placer.parking_lots, tile_to_block_map, TYPE_PARK_LOT); // need to do this later, after gen_tile_blocks()
-			add_tile_blocks(city_obj_placer.driveways, tile_to_block_map, TYPE_DRIVEWAY);
+			add_tile_blocks(city_obj_placer.driveways,    tile_to_block_map, TYPE_DRIVEWAY);
 			tile_to_block_map.clear(); // no longer needed
 			city_obj_placer.move_and_connect_streetlights(*this);
 			have_plot_dividers |= !city_obj_placer.has_plot_dividers();
@@ -2197,7 +2197,7 @@ public:
 		float const cost(cost1 + cost2);
 		if (best_cost < 0.0 || cost < best_cost) {best_xval = xval; best_yval = yval; best_int_cube = int_cube; best_cost = cost;}
 	}
-	public:
+public:
 	void connect_all_cities(float *heightmap, unsigned xsize, unsigned ysize, float road_width, float road_spacing) {
 		if (road_width == 0.0 || road_spacing == 0.0) return; // no roads
 		unsigned const num_cities(road_networks.size());
