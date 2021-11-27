@@ -72,7 +72,7 @@ class power_pole_t : public city_obj_t {
 		point pts[2], pole_base;
 		wire_t(point const &p1, point const &p2) : pole_base(p1) {pts[0] = p1; pts[1] = p2;}
 	};
-	bool at_grid_edge, at_line_end[2];
+	bool at_grid_edge, at_line_end[2], residential;
 	uint8_t dims; // bit mask for direction the wires run
 	float pole_radius, bsphere_radius, wires_offset, pole_spacing[2];
 	point base, center; // base of the pole and center of wires/bcube
@@ -86,7 +86,7 @@ class power_pole_t : public city_obj_t {
 	cube_t calc_cbar(bool d) const;
 public:
 	power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
-		float const pole_spacing_[2], uint8_t dims_, bool at_grid_edge_, bool const at_line_end_[2]);
+		float const pole_spacing_[2], uint8_t dims_, bool at_grid_edge_, bool const at_line_end_[2], bool residential_);
 	bool is_at_grid_edge() const {return at_grid_edge;}
 	point get_top() const {return point(base.x, base.y, bcube.z2());}
 	float get_bsphere_radius(bool shadow_only) const {return (shadow_only ? radius : bsphere_radius);} // non-shadow pass includes wires bsphere radius
@@ -130,7 +130,8 @@ private:
 	bool gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen);
 	void add_cars_to_driveways(vector<car_t> &cars, vector<road_plot_t> const &plots, vector<vect_cube_t> &plot_colliders, unsigned city_id, rand_gen_t &rgen);
 	void place_trees_in_plot(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> &tree_pos, rand_gen_t &rgen, unsigned buildings_end);
-	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential);
+	void place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, vector<point> const &tree_pos,
+		rand_gen_t &rgen, bool is_residential, bool have_streetlights);
 	void place_residential_plot_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders, rand_gen_t &rgen);
 	void add_house_driveways(road_plot_t const &plot, vect_cube_t &temp_cubes, rand_gen_t &rgen, unsigned plot_ix);
 	template<typename T> void draw_objects(vector<T> const &objs, city_obj_groups_t const &groups,
@@ -143,7 +144,8 @@ public:
 	vector<power_pole_t> const &get_power_poles() const {return ppoles;} // used for city connectivity
 	void clear();
 	void set_plot_subdiv_sz(float sz) {plot_subdiv_sz = sz;}
-	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars, unsigned city_id, bool have_cars, bool is_residential);
+	void gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
+		unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights);
 	void move_and_connect_streetlights(streetlights_t &sl);
 	static bool subdivide_plot_for_residential(cube_t const &plot, float plot_subdiv_sz, unsigned parent_plot_ix, vect_city_zone_t &sub_plots);
 	void draw_detail_objects(draw_state_t &dstate, bool shadow_only);

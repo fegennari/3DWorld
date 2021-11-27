@@ -379,8 +379,8 @@ bool swimming_pool_t::proc_sphere_coll(point &pos_, point const &p_last, float r
 // power poles
 
 power_pole_t::power_pole_t(point const &base_, point const &center_, float pole_radius_, float height, float wires_offset_,
-	float const pole_spacing_[2], uint8_t dims_, bool at_grid_edge_, bool const at_line_end_[2]) :
-	at_grid_edge(at_grid_edge_), dims(dims_), pole_radius(pole_radius_), wires_offset(wires_offset_), base(base_), center(center_)
+	float const pole_spacing_[2], uint8_t dims_, bool at_grid_edge_, bool const at_line_end_[2], bool residential_) :
+	at_grid_edge(at_grid_edge_), residential(residential_), dims(dims_), pole_radius(pole_radius_), wires_offset(wires_offset_), base(base_), center(center_)
 {
 	UNROLL_2X(pole_spacing[i_] = pole_spacing_[i_]; at_line_end[i_] = at_line_end_[i_];)
 	bcube.set_from_point(center);
@@ -548,7 +548,9 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 	if (!camera_pdu.cube_visible((shadow_only ? bcube : bcube_with_wires) + dstate.xlate)) return;
 	color_wrapper const black(BLACK), white(colorRGBA(0.7, 0.7, 0.7)), gray(colorRGBA(0.4, 0.4, 0.4)), cw(LT_BROWN); // darken the wood color
 	bool const pole_visible(camera_pdu.cube_visible(bcube + dstate.xlate));
+	float const wire_radius(get_wire_radius());
 	cube_t tf_bcube;
+	point conduit_top(all_zeros);
 
 	if (pole_visible) {
 		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(1.5f*dmax/p2p_dist(camera_bs, pos)))));
@@ -559,18 +561,26 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 		add_cylin_as_tris(qbd.verts, ce, pole_radius, pole_radius, cw, pole_ndiv, (draw_top ? 2 : 0), vert_tscale, 1.0/pole_ndiv, 1); // swap_ts_tt=1
 
 		if (dims == 3 && (shadow_only || bcube.closest_dist_less_than(camera_bs, 0.7*dmax))) { // draw transformer, untextured
-			float const tf_radius(2.0*pole_radius), pole_height(bcube.dz()), tf_height(0.1*pole_height);
+			float const tf_radius(2.0*pole_radius), pole_height(bcube.dz()), tf_height(0.1*pole_height), y_sign(at_line_end[1] ? 1.0 : -1.0);
 			ce[0].z = base.z  + 0.77*pole_height;
 			ce[1].z = ce[0].z + tf_height;
 			ce[0].x = ce[1].x = base.x;
-			ce[0].y = ce[1].y = base.y + (at_line_end[1] ? 1.0 : -1.0)*(tf_radius + pole_radius); // offset in -y, +y at end (so that wires across above it)
-			bool const draw_top(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
-			add_cylin_as_tris(untex_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top ? 2 : 1));
+			ce[0].y = ce[1].y = base.y + y_sign*(tf_radius + pole_radius); // offset in -y, +y at end (so that wires across above it)
+			bool const draw_top_bot(camera_bs.z > 0.5f*(ce[0].z + ce[1].z));
+			add_cylin_as_tris(untex_qbd.verts, ce, tf_radius, tf_radius, gray, ndiv, (draw_top_bot ? 2 : 1));
 			tf_bcube.set_from_points(ce, 2);
 			tf_bcube.expand_by_xy(tf_radius);
+
+			if (!residential && ndiv > 4) { // draw conduit for wires that go into the ground
+				float const cradius(3.5*wire_radius);
+				conduit_top.assign(base.x, (base.y + y_sign*(0.5f*cradius + pole_radius)), (base.z + 0.6*pole_height)); // below the transformer
+				point const cce[2] = {point(conduit_top.x, conduit_top.y, base.z), conduit_top};
+				bool const draw_top(ndiv > 8 && camera_bs.z > conduit_top.z);
+				add_cylin_as_tris(untex_qbd.verts, cce, cradius, cradius, gray, min(ndiv, 16U), (draw_top ? 2 : 0));
+			}
 		}
 	}
-	float const wire_radius(get_wire_radius()), wire_spacing(0.75*get_bar_extend()), vwire_spacing(get_vwire_spacing());
+	float const wire_spacing(0.75*get_bar_extend()), vwire_spacing(get_vwire_spacing());
 	float const standoff_height(0.3*pole_radius), standoff_radius(0.25*pole_radius);
 	point wire_pts[3][2];
 	unsigned wire_mask(0);
@@ -692,6 +702,12 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 				ce[0] += 0.4*pole_radius*so_dir;
 				ce[1] += 0.5*wire_radius*so_dir;
 				draw_standoff_geom(ce, standoff_radius, dmax, camera_bs, white, untex_qbd);
+
+				if (conduit_top != all_zeros) { // draw wires to the top of the ground conduit
+					point const conn_pt(tf_conn_pt.x, tf_conn_pt.y, (pb.z - 2.0*vwire_spacing)); // connect to bottom wire
+					point const pts[2] = {(conduit_top - vector3d(0.0, 0.0, wire_radius)), conn_pt};
+					draw_wire(pts, wire_radius, black, untex_qbd);
+				}
 			}
 		}
 	} // for d
@@ -970,7 +986,7 @@ template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs, cube
 
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
-	vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential)
+	vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential, bool have_streetlights)
 {
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 
@@ -1024,8 +1040,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			planter_groups.add_obj(tree_planter_t(*i, planter_radius, planter_height), planters); // no colliders for planters; pedestrians avoid the trees instead
 		}
 	}
-	// place power poles if a residential neighborhood
-	if (is_residential) {
+	// place power poles if there are houses or streetlights
+	if ((is_residential && have_city_buildings()) || have_streetlights) {
 		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(0.9*road_width);
 		float const xspace(plot.dx() + road_width), yspace(plot.dy() + road_width); // == city_params.road_spacing?
 		float const xyspace[2] = {0.5f*xspace, 0.5f*yspace};
@@ -1055,7 +1071,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			if (i == 1) {base.y += extra_offset;} // shift the pole off the sidewalk and off toward the road to keep it out of the way of pedestrians
 			bool const at_line_end[2] = {0, 0};
 			bool const at_grid_edge(plot.xpos+1 == num_x_plots || plot.ypos+1 == num_y_plots);
-			ppole_groups.add_obj(power_pole_t(base, pos, pole_radius, height, wires_offset, xyspace, dims[i], at_grid_edge, at_line_end), ppoles);
+			ppole_groups.add_obj(power_pole_t(base, pos, pole_radius, height, wires_offset, xyspace, dims[i], at_grid_edge, at_line_end, is_residential), ppoles);
 		}
 		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power poles there
 			unsigned const pole_ixs[2] = {0, 2};
@@ -1064,7 +1080,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				point pt(pts[pole_ixs[i]]);
 				pt.x -= xspace;
 				bool const at_line_end[2] = {1, 0};
-				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], 1, at_line_end), ppoles);
+				ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], 1, at_line_end, is_residential), ppoles);
 			}
 		}
 		if (plot.ypos == 0) { // no -y neighbor plot, but need to add the power poles there
@@ -1076,7 +1092,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 				point base(pt);
 				if (i == 1) {base.y += extra_offset;}
 				bool const at_line_end[2] = {0, 1};
-				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], 1, at_line_end), ppoles);
+				ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[pole_ixs[i]], 1, at_line_end, is_residential), ppoles);
 			}
 		}
 		if (plot.xpos == 0 && plot.ypos == 0) { // pole at the corner of the grid
@@ -1085,7 +1101,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			pt.y -= yspace;
 			point base(pt);
 			bool const at_line_end[2] = {1, 1};
-			ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[0], 1, at_line_end), ppoles);
+			ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[0], 1, at_line_end, is_residential), ppoles);
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}
@@ -1340,7 +1356,7 @@ void city_obj_placer_t::clear() {
 }
 
 void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots, vector<vect_cube_t> &plot_colliders, vector<car_t> &cars,
-	unsigned city_id, bool have_cars, bool is_residential)
+	unsigned city_id, bool have_cars, bool is_residential, bool have_streetlights)
 {
 	// Note: fills in plots.has_parking
 	//timer_t timer("Gen Parking Lots and Place Objects");
@@ -1380,7 +1396,7 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 		} // for j
 		if (city_params.assign_house_plots && plot_subdiv_sz > 0.0) {place_residential_plot_objects(*i, bcubes, colliders, detail_rgen);} // before placing trees
 		place_trees_in_plot (*i, bcubes, colliders, tree_pos, detail_rgen, buildings_end);
-		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential);
+		place_detail_objects(*i, bcubes, colliders, tree_pos, detail_rgen, is_residential, have_streetlights);
 	} // for i
 	connect_power_to_buildings(plots);
 	if (have_cars) {add_cars_to_driveways(cars, plots, plot_colliders, city_id, rgen);}

@@ -908,6 +908,7 @@ float get_sidewalk_width();
 float get_inner_sidewalk_width();
 
 // from gen_buildings.cpp
+bool have_city_buildings();
 bool enable_building_people_ai();
 bool place_building_people(vect_building_place_t &locs, float radius, float speed_mult, unsigned num);
 void update_building_ai_state(vector<pedestrian_t> &people, float delta_dir);
