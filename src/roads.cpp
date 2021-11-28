@@ -1044,9 +1044,9 @@ void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline)
 
 	for (auto const &p : tline.tower_pts) {
 		// TODO: draw tower geometry or model
-		draw_fast_cylinder(cur_pt, p, radius, radius, ndiv, 0); // no ends
+		if (cur_pt != p) {draw_fast_cylinder(cur_pt, p, radius, radius, ndiv, 0);} // no ends
 		cur_pt = p;
 	}
-	draw_fast_cylinder(cur_pt, tline.p2, radius, radius, ndiv, 0); // final segment; no ends
+	if (cur_pt != tline.p2) {draw_fast_cylinder(cur_pt, tline.p2, radius, radius, ndiv, 0);} // final segment; no ends
 }
 

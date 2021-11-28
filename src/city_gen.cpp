@@ -2183,33 +2183,63 @@ public:
 		return 0.0; // failed to connect cities
 	}
 
-	bool connect_two_cities_with_power(unsigned city1, unsigned city2, vect_cube_t &blockers, float road_width) {
-		assert(city1 < road_networks.size() && city2 < road_networks.size());
+	bool route_transmission_line(transmission_line_t &tline, heightmap_query_t &hq, vect_cube_t &blockers, float road_width, float road_spacing) {
+		vector3d const vxy(tline.p2.x-tline.p1.x, tline.p2.y-tline.p1.y, 0.0);
+		float const dist(vxy.xy_mag()), tower_spacing(1.0*road_spacing), tower_height(2.0*road_width);
+		unsigned const num_towers(2U + unsigned(floor(dist/tower_spacing))); // includes towers at the two end points
+		cout << TXT(dist) << TXT(tower_spacing) << TXT(num_towers) << endl; // TESTING
+		vector3d const step_delta(vxy/(num_towers - 1U)); // divide distance by the number of spans
+		point cur_pos(tline.p1); // first tower XY location
+
+		// TODO: find a path that avoids blockers (for the towers at least) and minimizes elevation change
+		for (unsigned n = 0; n < num_towers; ++n) {
+			cur_pos.z = hq.get_height_at(cur_pos) + tower_height;
+			tline.tower_pts.push_back(cur_pos);
+			cur_pos += step_delta;
+		} // for n
+		return 1;
+	}
+	bool connect_two_cities_with_power(unsigned city1, unsigned city2, heightmap_query_t &hq, vect_cube_t &blockers, float road_width, float road_spacing) {
 		assert(city1 != city2); // check for self reference
 		road_network_t &rn1(get_city_by_ix(city1)), &rn2(get_city_by_ix(city2));
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		point const center1(bcube1.get_cube_center()), center2(bcube2.get_cube_center());
 		vector3d const dir(center2 - center1);
-		vector<power_pole_t> const &ppoles1(rn1.get_power_poles()), &ppoles2(rn2.get_power_poles());
-		// find the closest pair of power poles on the edges of the city that are facing each other; uses get_top() because it's faster
-		unsigned best_p1(0), best_p2(0);
-		float dmin_sq(0.0);
+		cube_t const bcubes[2] = {bcube1, bcube2};
+		float const tower_to_city_spacing(2.0*road_width); // TODO: what if this is less than half the spacing between projecting cities?
+		point p1, p2;
+		bool found_conn_pt(0);
 
-		for (auto p1 = ppoles1.begin(); p1 != ppoles1.end(); ++p1) {
-			if (!p1->is_at_grid_edge() || dot_product_ptv(dir, p1->get_top(), center1) < 0.0) continue; // not on edge, or on wrong edge
-
-			for (auto p2 = ppoles2.begin(); p2 != ppoles2.end(); ++p2) {
-				if (!p2->is_at_grid_edge() || dot_product_ptv(dir, p2->get_top(), center2) > 0.0) continue; // not on edge, or on wrong edge
-				// TODO: should reject lines that cut off the corner of a city
-				float const dsq(p2p_dist_sq(p1->get_top(), p2->get_top()));
-				if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; best_p1 = (p1 - ppoles1.begin()); best_p2 = (p2 - ppoles2.begin());}
-			} // for p2
-		} // for p1
-		//cout << TXT(city1) << TXT(city2) << TXT(best_p1) << TXT(best_p2) << TXT(dmin_sq) << endl; // TESTING
-		if (dmin_sq == 0.0) return 0; // no valid pole pair found
-		point const p1(ppoles1[best_p1].get_wires_conn_pt()), p2(ppoles2[best_p2].get_wires_conn_pt());
-		// TODO: find a path that avoids obstacles and minimizes elevation change
-		transmission_lines.emplace_back(p1, p2);
+		for (unsigned d = 0; d < 2 && !found_conn_pt; ++d) { // x/y
+			for (unsigned c = 0; c < 2 && !found_conn_pt; ++c) { // city1/city2
+				for (unsigned D = 0; D < 2; ++D) { // direction left/right
+					float const cand_val(bcubes[c].d[d][D]);
+					if (cand_val < bcubes[!c].d[d][0] || cand_val > bcubes[!c].d[d][1]) continue; // not projection in this dim
+					bool const other_dir((dir[!d] > 0) ^ c); // for city c
+					float const spacing_from_city(tower_to_city_spacing*(other_dir ? 1.0 : -1.0));
+					p1[ d] = p2[d] = cand_val;
+					// connect to city bcube edges facing each other, shifted away from the city
+					p1[!d] = bcubes[ c].d[!d][ other_dir] + spacing_from_city;
+					p2[!d] = bcubes[!c].d[!d][!other_dir] - spacing_from_city;
+					p1.z   = bcubes[c].z2(); p2.z = bcubes[!c].z2(); // set to city zvals; will be reset later anyway
+					if (c) {swap(p1, p2);} // p1 always applies to city1, p2 always applies to city2
+					found_conn_pt = 1;
+					break;
+				} // for dir
+			} // for c
+		} // for d
+		if (!found_conn_pt) { // no projecting points, find closest pair of corners
+			for (unsigned d = 0; d < 2 && !found_conn_pt; ++d) { // x/y
+				bool const D(dir[d] > 0);
+				float const spacing_from_city(tower_to_city_spacing*(D ? 1.0 : -1.0));
+				p1[d] = bcube1.d[d][ D] + spacing_from_city; // opposite corners
+				p2[d] = bcube2.d[d][!D] - spacing_from_city;
+			}
+			p1.z = bcube1.z2(); p2.z = bcube2.z2(); // set to city zvals; will be reset later anyway
+		}
+		transmission_line_t tline(city1, city2, p1, p2);
+		if (!route_transmission_line(tline, hq, blockers, road_width, road_spacing)) return 0;
+		transmission_lines.push_back(tline);
 		return 1;
 	}
 private:
@@ -2269,22 +2299,17 @@ public:
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();
+		//connect_city_power_grids(hq, blockers, road_width, road_spacing);
 		timer.end();
 		// old: 8, 12, 19057 ; new: 8, 15, 26085
 		cout << "Cities: " << num_cities << ", connector roads: " << num_conn << ", total cost: " << tot_cost << endl;
 	}
 
-	void connect_city_power_grids(float *heightmap, unsigned xsize, unsigned ysize, float road_width) {
-		if (road_width == 0.0) return; // no roads
+	void connect_city_power_grids(heightmap_query_t &hq, vect_cube_t &blockers, float road_width, float road_spacing) {
 		unsigned const num_cities(road_networks.size());
 		if (num_cities < 2) return; // no cities to connect
 		timer_t timer("Connect City Power Grids");
-		assert(heightmap != nullptr); // must be called when heightmap is valid
-		heightmap_query_t hq(heightmap, xsize, ysize);
 		vector<uint8_t> power_connected(num_cities, 0);
-		vect_cube_t blockers; // existing cities and connector roads that we want to avoid intersecting with poles and wires
-		get_city_bcubes(blockers);
-		// TODO: add other obstacles such as connector roads (for poles) and bridges/tunnels (for poles and wires)
 		unsigned c1(0), c2(0);
 		float dmin_sq(0.0);
 
@@ -2295,7 +2320,7 @@ public:
 				if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; c1 = i; c2 = j;}
 			}
 		} // for i
-		connect_two_cities_with_power(c1, c2, blockers, road_width); // what if this fails? try another pair?
+		connect_two_cities_with_power(c1, c2, hq, blockers, road_width, road_spacing); // what if this fails? try another pair?
 		power_connected[c1] = power_connected[c2] = 1;
 		unsigned num_power_conn(2);
 
@@ -2314,9 +2339,28 @@ public:
 					if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; c1 = i; c2 = j;}
 				}
 			} // for i
-			connect_two_cities_with_power(c1, c2, blockers, road_width); // what if this fails? try another pair?
+			connect_two_cities_with_power(c1, c2, hq, blockers, road_width, road_spacing); // what if this fails? try another pair?
 			power_connected[c2] = 1;
 			++num_power_conn;
+		}
+	}
+	point closest_edge_power_pole_conn_pt(point const &pt, unsigned city_ix) const {
+		vector<power_pole_t> const &ppoles(get_city_by_ix(city_ix).get_power_poles());
+		float dmin_sq(0.0);
+		point best_pt(pt); // start at p1; will return this value if ppoles is empty
+
+		for (auto const &p : ppoles) {
+			if (!p.is_at_grid_edge()) continue; // not on edge
+			point const conn_pt(p.get_wires_conn_pt());
+			float const dsq(p2p_dist_xy_sq(pt, conn_pt));
+			if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; best_pt = conn_pt;}
+		} // for p
+		return best_pt;
+	}
+	void connect_power_poles_to_transmission_lines() {
+		for (auto &t : transmission_lines) {
+			t.p1 = closest_edge_power_pole_conn_pt(t.p1, t.city1);
+			t.p2 = closest_edge_power_pole_conn_pt(t.p2, t.city2);
 		}
 	}
 	void add_streetlights() {
@@ -2750,7 +2794,7 @@ public:
 		bool const have_cars(!car_manager.empty());
 		highres_timer_t timer("Gen City Details");
 		road_gen.gen_parking_lots_and_place_objects(parked_cars, have_cars);
-		//road_gen.connect_city_power_grids(heightmap, xsize, ysize, city_params.road_width); // must be after placing power poles
+		road_gen.connect_power_poles_to_transmission_lines(); // must be after placing power poles
 		if (have_cars) {get_all_garages(garages);}
 		if (city_params.has_helicopter_model()) {get_all_city_helipads(hp_locs);}
 		timer.end(); // exclude the steps below, which are dominated by model load time
