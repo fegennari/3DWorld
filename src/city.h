@@ -566,6 +566,7 @@ struct tunnel_t : public road_connector_t {
 
 struct transmission_line_t {
 	point p1, p2;
+	vector<point> tower_pts;
 	transmission_line_t(point const &p1_, point const &p2_) : p1(p1_), p2(p2_) {}
 };
 

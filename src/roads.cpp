@@ -1038,7 +1038,15 @@ void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, range_
 void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline) {
 	// TODO: use qbd_tlines
 	s.set_cur_color(BLACK);
+	unsigned const ndiv = 16;
 	float const radius(0.05*city_params.road_width);
-	draw_fast_cylinder(tline.p1, tline.p2, radius, radius, 16, 0); // ndiv=16; no ends
+	point cur_pt(tline.p1);
+
+	for (auto const &p : tline.tower_pts) {
+		// TODO: draw tower geometry or model
+		draw_fast_cylinder(cur_pt, p, radius, radius, ndiv, 0); // no ends
+		cur_pt = p;
+	}
+	draw_fast_cylinder(cur_pt, tline.p2, radius, radius, ndiv, 0); // final segment; no ends
 }
 
