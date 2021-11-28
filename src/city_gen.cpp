@@ -310,6 +310,7 @@ protected:
 	}
 public:
 	city_plot_gen_t() : last_rgi(0), bcube(all_zeros) {}
+	void invalidate_heightmap() {heightmap = nullptr;}
 
 	void init(float *heightmap_, unsigned xsize_, unsigned ysize_) {
 		heightmap = heightmap_; xsize = xsize_; ysize = ysize_;
@@ -2237,6 +2238,7 @@ public:
 		unsigned const num_cities(road_networks.size());
 		if (num_cities < 2) return; // no cities to connect
 		timer_t timer("Connect Cities");
+		assert(heightmap != nullptr); // must be called when heightmap is valid
 		heightmap_query_t hq(heightmap, xsize, ysize);
 		city_road_connector_t crc(hq);
 		vector<unsigned> is_conn(num_cities, 0); // start with all cities unconnected (0=unconnected, 1=connected, 2=done/connect failed
@@ -2276,6 +2278,7 @@ public:
 		unsigned const num_cities(road_networks.size());
 		if (num_cities < 2) return; // no cities to connect
 		timer_t timer("Connect City Power Grids");
+		assert(heightmap != nullptr); // must be called when heightmap is valid
 		heightmap_query_t hq(heightmap, xsize, ysize);
 		vector<uint8_t> power_connected(num_cities, 0);
 		vect_cube_t blockers; // existing cities and connector roads that we want to avoid intersecting with poles and wires
@@ -2864,6 +2867,7 @@ void gen_cities(float *heightmap, unsigned xsize, unsigned ysize) {
 	if (!have_cities()) return; // nothing to do
 	city_gen.init(heightmap, xsize, ysize); // only need to call once for any given heightmap
 	city_gen.gen_cities();
+	city_gen.invalidate_heightmap();
 }
 void gen_city_details() {city_gen.gen_details();} // called after gen_buildings()
 cube_t get_city_bcube(unsigned city_id) {return city_gen.get_city_bcube(city_id);}

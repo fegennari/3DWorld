@@ -36,7 +36,7 @@ public:
 	flatten_op_t last_flatten_op;
 
 	heightmap_query_t() : heightmap(nullptr), xsize(0), ysize(0) {}
-	heightmap_query_t(float *hmap, unsigned xsize_, unsigned ysize_) : heightmap(hmap), xsize(xsize_), ysize(ysize_) {}
+	heightmap_query_t(float *hmap, unsigned xsize_, unsigned ysize_) : heightmap(hmap), xsize(xsize_), ysize(ysize_) {assert(heightmap != nullptr);}
 	float get_x_value(int x) const {return get_xval(x - int(xsize)/2);} // convert from center to LLC
 	float get_y_value(int y) const {return get_yval(y - int(ysize)/2);}
 	int get_x_pos(float x) const {return (get_xpos(x) + int(xsize)/2);}
@@ -53,7 +53,8 @@ public:
 	cube_t get_cube_for_cell(int x, int y) const;
 	point  get_pos_for_cell (int x, int y) const {return point(get_x_value(x), get_y_value(y), get_height_clamped(x, y));}
 	float get_height_at(float xval, float yval) const {return get_height_clamped(get_x_pos(xval), get_y_pos(yval));}
-	float get_road_zval_at_pt(point const &pos) const {return get_height_at(pos.x, pos.y) + ROAD_HEIGHT;}
+	float get_height_at(point const &pos      ) const {return get_height_at(pos.x, pos.y);}
+	float get_road_zval_at_pt(point const &pos) const {return get_height_at(pos) + ROAD_HEIGHT;}
 	bool any_underwater(unsigned x1, unsigned y1, unsigned x2, unsigned y2, bool check_border=0) const;
 	void get_segment_end_pts(road_t const &r, unsigned six, unsigned eix, point &ps, point &pe) const;
 	void flatten_region_to(cube_t const c, unsigned slope_width, bool decrease_only=0);
