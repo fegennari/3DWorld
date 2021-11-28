@@ -104,6 +104,6 @@ struct city_road_connector_t {
 	bool segment_road(road_t const &road, bool check_only);
 	// transmission lines
 	bool is_tline_seg_valid(point const &p1, point const &p2, float max_ground_clearance) const;
-	bool route_transmission_line(transmission_line_t &tline, vect_cube_t &blockers, float road_spacing) const;
+	bool route_transmission_line(transmission_line_t &tline, vect_cube_t &blockers, float road_width, float road_spacing) const;
 };
 

@@ -2188,7 +2188,7 @@ public:
 	{
 		float const tower_height(2.0*road_width);
 		transmission_line_t tline(city1, city2, tower_height, p1, p2);
-		if (!crc.route_transmission_line(tline, blockers, road_spacing)) return 0;
+		if (!crc.route_transmission_line(tline, blockers, road_width, road_spacing)) return 0;
 		transmission_lines.push_back(tline);
 		return 1;
 	}
@@ -2270,6 +2270,7 @@ public:
 		// gather city blockers
 		get_city_bcubes(blockers);
 		expand_cubes_by_xy(blockers, road_spacing); // separate roads by at least this value
+		unsigned const city_bcubes_end(blockers.size());
 		// place railroad tracks before roads so that roads will reset the mesh height; need to fix this later
 		cube_t const tracks_region(calc_cubes_bcube(blockers));
 		global_rn.gen_railroad_tracks(TRACKS_WIDTH*city_params.road_width, city_params.num_rr_tracks, tracks_region, blockers, hq);
@@ -2291,6 +2292,7 @@ public:
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();
+		for (auto i = blockers.begin(); i != blockers.begin() + city_bcubes_end; ++i) {i->expand_by_xy(-road_spacing);} // undo city expand
 		connect_city_power_grids(crc, blockers, road_width, road_spacing);
 		timer.end();
 		// old: 8, 12, 19057 ; new: 8, 15, 26085
