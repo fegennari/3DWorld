@@ -96,10 +96,14 @@ struct city_road_connector_t {
 
 	city_road_connector_t(heightmap_query_t &hq_) : hq(hq_) {}
 	static bool get_closer_dir(cube_t const &A, cube_t const &B, bool dim);
+	// roads
 	float calc_road_cost(point const &p1, point const &p2);
 	float calc_road_path_cost(vector<point> &pts);
 	float find_route_between_points(point const &p1, point const &p2, vect_cube_t const &blockers, vector<point> &pts,
 		cube_t const &bcube1, cube_t const &bcube2, float road_hwidth, bool dim1, bool dir1, bool dim2, bool dir2);
 	bool segment_road(road_t const &road, bool check_only);
+	// transmission lines
+	bool is_tline_seg_valid(point const &p1, point const &p2, float max_ground_clearance) const;
+	bool route_transmission_line(transmission_line_t &tline, vect_cube_t &blockers, float road_spacing) const;
 };
 

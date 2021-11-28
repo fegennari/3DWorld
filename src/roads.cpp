@@ -1054,7 +1054,7 @@ void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline)
 		// TODO: this is a placeholder model; draw proper tower geometry or model (overheadpylon.obj)
 		cube_t tower(p, p);
 		tower.expand_by_xy(tower_radius);
-		tower.z1() -= tline.tower_height;
+		tower.z1() -= 1.5*tline.tower_height; // extend 50% further into the ground in case it's on a steep slope
 		if (check_cube_visible(tower, 0.5)) {draw_cube(qbd_tlines, tower, GRAY, 1);}
 		draw_transmission_line_wires(cur_pt, p, wires_radius);
 		cur_pt = p;

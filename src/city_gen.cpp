@@ -2183,65 +2183,56 @@ public:
 		return 0.0; // failed to connect cities
 	}
 
-	bool route_transmission_line(transmission_line_t &tline, heightmap_query_t &hq, vect_cube_t &blockers, float road_spacing) {
-		vector3d const vxy(tline.p2.x-tline.p1.x, tline.p2.y-tline.p1.y, 0.0);
-		float const dist(vxy.xy_mag()), tower_spacing(1.0*road_spacing);
-		unsigned const num_towers(2U + unsigned(floor(dist/tower_spacing))); // includes towers at the two end points
-		//cout << TXT(dist) << TXT(tower_spacing) << TXT(num_towers) << endl; // TESTING
-		vector3d const step_delta(vxy/(num_towers - 1U)); // divide distance by the number of spans
-		point cur_pos(tline.p1); // first tower XY location
-
-		// TODO: find a path that avoids blockers (for the towers at least) and minimizes elevation change
-		for (unsigned n = 0; n < num_towers; ++n) {
-			cur_pos.z = hq.get_height_at(cur_pos) + tline.tower_height;
-			tline.tower_pts.push_back(cur_pos);
-			cur_pos += step_delta;
-		} // for n
+	bool try_add_transmission_line(unsigned city1, unsigned city2, point const &p1, point const &p2, city_road_connector_t &crc,
+		vect_cube_t &blockers, float road_width, float road_spacing)
+	{
+		float const tower_height(2.0*road_width);
+		transmission_line_t tline(city1, city2, tower_height, p1, p2);
+		if (!crc.route_transmission_line(tline, blockers, road_spacing)) return 0;
+		transmission_lines.push_back(tline);
 		return 1;
 	}
-	bool connect_two_cities_with_power(unsigned city1, unsigned city2, heightmap_query_t &hq, vect_cube_t &blockers, float road_width, float road_spacing) {
+	bool connect_two_cities_with_power(unsigned city1, unsigned city2, city_road_connector_t &crc, vect_cube_t &blockers, float road_width, float road_spacing) {
 		assert(city1 != city2); // check for self reference
 		road_network_t &rn1(get_city_by_ix(city1)), &rn2(get_city_by_ix(city2));
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		point const center1(bcube1.get_cube_center()), center2(bcube2.get_cube_center());
 		vector3d const dir(center2 - center1);
-		cube_t const bcubes[2] = {bcube1, bcube2};
-		float const tower_to_city_spacing(2.0*road_width); // TODO: what if this is less than half the spacing between projecting cities?
-		point p1, p2;
-		bool found_conn_pt(0);
+		float tower_to_city_spacing(2.0*road_width);
 
-		for (unsigned d = 0; d < 2 && !found_conn_pt; ++d) { // x/y
-			for (unsigned c = 0; c < 2 && !found_conn_pt; ++c) { // city1/city2
-				for (unsigned D = 0; D < 2; ++D) { // direction left/right
-					float const cand_val(bcubes[c].d[d][D]);
-					if (cand_val < bcubes[!c].d[d][0] || cand_val > bcubes[!c].d[d][1]) continue; // not projection in this dim
-					bool const other_dir((dir[!d] > 0) ^ c); // for city c
-					float const spacing_from_city(tower_to_city_spacing*(other_dir ? 1.0 : -1.0));
-					p1[ d] = p2[d] = cand_val;
-					// connect to city bcube edges facing each other, shifted away from the city
-					p1[!d] = bcubes[ c].d[!d][ other_dir] + spacing_from_city;
-					p2[!d] = bcubes[!c].d[!d][!other_dir] - spacing_from_city;
-					p1.z   = bcubes[c].z2(); p2.z = bcubes[!c].z2(); // set to city zvals; will be reset later anyway
-					if (c) {swap(p1, p2);} // p1 always applies to city1, p2 always applies to city2
-					found_conn_pt = 1;
-					break;
-				} // for dir
-			} // for c
+		for (unsigned d = 0; d < 2; ++d) { // x/y
+			float const seg_min(max(bcube1.d[d][0], bcube2.d[d][0])), seg_max(min(bcube1.d[d][1], bcube2.d[d][1]));
+			if (seg_max <= seg_min) continue; // no shared edge
+			bool const other_dir(dir[!d] > 0);
+			float const spacing_from_city(tower_to_city_spacing*(other_dir ? 1.0 : -1.0));
+			unsigned const num_samples(unsigned(ceil((seg_max - seg_min)/road_spacing)));
+
+			for (unsigned n = 0; n < num_samples; ++n) { // take some random points in the shared range
+				point p1, p2;
+				p1[d] = p2[d] = rgen.rand_uniform(seg_min, seg_max);
+				// connect to city bcube edges facing each other, shifted away from the city
+				float const edge1(bcube1.d[!d][other_dir]), edge2(bcube2.d[!d][!other_dir]);
+				if (fabs(edge2 - edge1) < 3.0*tower_to_city_spacing) continue; // too close; shouldn't happen, but if it does the results won't be good
+				p1[!d] = edge1 + spacing_from_city;
+				p2[!d] = edge2 - spacing_from_city;
+				p1.z   = bcube1.z2(); p2.z = bcube2.z2(); // set to city zvals; will be reset later anyway
+				if (try_add_transmission_line(city1, city2, p1, p2, crc, blockers, road_width, road_spacing)) return 1;
+			} // for n
 		} // for d
-		if (!found_conn_pt) { // no projecting points, find closest pair of corners
-			for (unsigned d = 0; d < 2 && !found_conn_pt; ++d) { // x/y
-				bool const D(dir[d] > 0);
-				float const spacing_from_city(tower_to_city_spacing*(D ? 1.0 : -1.0));
-				p1[d] = bcube1.d[d][ D] + spacing_from_city; // opposite corners
-				p2[d] = bcube2.d[d][!D] - spacing_from_city;
-			}
-			p1.z = bcube1.z2(); p2.z = bcube2.z2(); // set to city zvals; will be reset later anyway
+		// no projecting points could be connected, find closest pair of corners
+		tower_to_city_spacing /= SQRT2; // decrease because corner has spacing in both dims
+		point p1, p2;
+
+		for (unsigned d = 0; d < 2; ++d) { // x/y
+			bool const D(dir[d] > 0);
+			float const edge1( bcube1.d[d][D]), edge2(bcube2.d[d][!D]);
+			if (fabs(edge2 - edge1) < 3.0*tower_to_city_spacing) return 0; // too close; shouldn't happen, but if it does the results won't be good
+			float const spacing_from_city(tower_to_city_spacing*(D ? 1.0 : -1.0));
+			p1[d] = edge1 + spacing_from_city; // opposite corners
+			p2[d] = edge2 - spacing_from_city;
 		}
-		float const tower_height(2.0*road_width);
-		transmission_line_t tline(city1, city2, tower_height, p1, p2);
-		if (!route_transmission_line(tline, hq, blockers, road_spacing)) return 0;
-		transmission_lines.push_back(tline);
-		return 1;
+		p1.z = bcube1.z2(); p2.z = bcube2.z2(); // set to city zvals; will be reset later anyway
+		return try_add_transmission_line(city1, city2, p1, p2, crc, blockers, road_width, road_spacing);
 	}
 private:
 	void try_single_jog_conn_road(unsigned city1, unsigned city2, vect_cube_t &blockers, city_road_connector_t &crc, float road_width,
@@ -2300,13 +2291,13 @@ public:
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();
-		//connect_city_power_grids(hq, blockers, road_width, road_spacing);
+		connect_city_power_grids(crc, blockers, road_width, road_spacing);
 		timer.end();
 		// old: 8, 12, 19057 ; new: 8, 15, 26085
 		cout << "Cities: " << num_cities << ", connector roads: " << num_conn << ", total cost: " << tot_cost << endl;
 	}
 
-	void connect_city_power_grids(heightmap_query_t &hq, vect_cube_t &blockers, float road_width, float road_spacing) {
+	void connect_city_power_grids(city_road_connector_t &crc, vect_cube_t &blockers, float road_width, float road_spacing) {
 		unsigned const num_cities(road_networks.size());
 		if (num_cities < 2) return; // no cities to connect
 		timer_t timer("Connect City Power Grids");
@@ -2315,13 +2306,14 @@ public:
 		float dmin_sq(0.0);
 
 		// determine first two cities to connect
+		// TODO: use sorted cands and stop when a connection is made
 		for (unsigned i = 0; i < num_cities; ++i) {
 			for (unsigned j = i+1; j < num_cities; ++j) {
 				float const dsq(city_dist_sq(road_networks[i], road_networks[j]));
 				if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; c1 = i; c2 = j;}
 			}
 		} // for i
-		connect_two_cities_with_power(c1, c2, hq, blockers, road_width, road_spacing); // what if this fails? try another pair?
+		connect_two_cities_with_power(c1, c2, crc, blockers, road_width, road_spacing); // what if this fails? try another pair?
 		power_connected[c1] = power_connected[c2] = 1;
 		unsigned num_power_conn(2);
 
@@ -2331,6 +2323,7 @@ public:
 			dmin_sq = 0.0;
 			c1 = c2 = 0; // not needed, but good for error checking
 
+			// TODO: use sorted cands
 			for (unsigned i = 0; i < num_cities; ++i) {
 				if (!power_connected[i]) continue; // not connected, skip
 
@@ -2340,7 +2333,7 @@ public:
 					if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; c1 = i; c2 = j;}
 				}
 			} // for i
-			connect_two_cities_with_power(c1, c2, hq, blockers, road_width, road_spacing); // what if this fails? try another pair?
+			connect_two_cities_with_power(c1, c2, crc, blockers, road_width, road_spacing); // what if this fails? try another pair?
 			power_connected[c2] = 1;
 			++num_power_conn;
 		}

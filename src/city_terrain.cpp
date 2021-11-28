@@ -363,3 +363,45 @@ bool city_road_connector_t::segment_road(road_t const &road, bool check_only) {
 	return 1;
 }
 
+// not roads, but uses similar routing logic; maybe this class should be renamed
+bool city_road_connector_t::is_tline_seg_valid(point const &p1, point const &p2, float max_ground_clearance) const {
+	vector3d const delta(p2 - p1);
+	float const step_len(delta.xy_mag()), hmap_check_step(HALF_DXY);
+	unsigned const num_hmap_steps(round_fp(step_len/hmap_check_step));
+	vector3d const hmap_step_delta(delta/(num_hmap_steps + 1U)); // calculate here so that zvals are correct
+	point test_pos(p1 + hmap_step_delta); // take one hmap step
+
+	for (unsigned s = 0; s < num_hmap_steps; ++s) {
+		float const hm_zval(hq.get_height_at(test_pos));
+		if (test_pos.z < hm_zval + max_ground_clearance) return 0; // wire comes too close to terrain, fail
+		test_pos += hmap_step_delta;
+	}
+	return 1;
+}
+bool city_road_connector_t::route_transmission_line(transmission_line_t &tline, vect_cube_t &blockers, float road_spacing) const {
+	vector3d const vxy(tline.p2.x-tline.p1.x, tline.p2.y-tline.p1.y, 0.0);
+	float const dist(vxy.xy_mag()), tower_spacing(1.0*road_spacing), max_ground_clearance(0.25*tline.tower_height);
+	unsigned const num_towers(2U + unsigned(floor(dist/tower_spacing))); // includes towers at the two end points
+	vector3d const step_delta(vxy/(num_towers - 1U)); // divide distance by the number of spans
+	point cur_pos(tline.p1); // first tower XY location
+	cur_pos.z = hq.get_height_at(cur_pos) + tline.tower_height;
+	tline.tower_pts.push_back(cur_pos); // first tower point
+
+	// TODO: find a path that avoids blockers (for the towers at least) and minimizes elevation change
+	for (unsigned n = 0; n < num_towers-1; ++n) { // one tower was already added
+		point next_pos(cur_pos + step_delta);
+		next_pos.z = hq.get_height_at(next_pos) + tline.tower_height;
+
+		if (!is_tline_seg_valid(cur_pos, next_pos, max_ground_clearance)) {
+			// not valid, try adding an extra tower in the middle; if it's still invalid then fail
+			point midpoint(0.5*(cur_pos + next_pos));
+			midpoint.z = hq.get_height_at(midpoint) + tline.tower_height;
+			tline.tower_pts.push_back(midpoint);
+			if (!is_tline_seg_valid(cur_pos, midpoint, max_ground_clearance) || !is_tline_seg_valid(midpoint, next_pos, max_ground_clearance)) return 0;
+		}
+		cur_pos = next_pos;
+		tline.tower_pts.push_back(cur_pos);
+	} // for n
+	return 1;
+}
+
