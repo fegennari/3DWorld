@@ -550,6 +550,9 @@ void draw_vert_standoff(point const &p1, point const &camera_bs, float height, f
 	}
 }
 
+// Note: power line connectivity is all handled here in draw();
+// the current grid is fully connected, forming loops on both the upper three high voltage lines and lower three low voltage lines;
+// maybe this isn't realistic, but it does have a nice symmetry and higher apparent wiring complexity; the user will likely not notice
 void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
 	float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
