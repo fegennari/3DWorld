@@ -73,7 +73,7 @@ void bench_t::calc_bcube() {
 	if (!shadow_only) {select_texture(FENCE_TEX);} // normal map?
 }
 void bench_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
 	cube_t cubes[] = { // Note: taken from mapx/bench.txt
 		cube_t(-0.4, 0.0,  -5.0,   5.0,   1.6, 5.0), // back (straight)
@@ -135,7 +135,7 @@ tree_planter_t::tree_planter_t(point const &pos_, float radius_, float height) :
 	if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? (int)DIRT_TEX : get_texture_by_name("roads/sidewalk.jpg"));}
 }
 void tree_planter_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
-	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	color_wrapper const cw(LT_GRAY);
 	cube_t dirt(bcube);
 	dirt.expand_by_xy(-0.1*dirt.get_size()); // shrink 10% on all XY sides
@@ -176,7 +176,7 @@ fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, v
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 void fire_hydrant_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const { // Note: qbds are unused
-	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
 	if (!shadow_only && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
 		building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_FHYDRANT, shadow_only);
@@ -217,7 +217,7 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 }
 void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (dstate.pass_ix == DIV_NUM_TYPES && type == DIV_CHAINLINK) { // add chainlink fence posts
-		if (!dstate.check_cube_visible(bcube, 1.5*dist_scale, shadow_only)) return;
+		if (!dstate.check_cube_visible(bcube, 1.5*dist_scale)) return;
 		float const length(bcube.get_sz_dim(!dim)), height(bcube.dz()), thickness(bcube.get_sz_dim(dim));
 		float const post_hwidth(1.5*thickness), post_width(2.0*post_hwidth), top_width(1.5*thickness);
 		unsigned const num_sections(ceil(0.3*length/height)), num_posts(num_sections + 1);
@@ -239,7 +239,7 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw
 	}
 	if (type != dstate.pass_ix) return; // this type not enabled in this pass
 	if (type == DIV_CHAINLINK) {dist_scale *= 0.5;} // less visible
-	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	assert(dstate.pass_ix < DIV_NUM_TYPES);
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
 	dstate.draw_cube(qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
@@ -325,7 +325,7 @@ void hedge_draw_t::draw_and_clear(shader_t &s) {
 }
 void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if ((dstate.pass_ix > 1) ^ above_ground) return; // not drawn in this pass
-	if (!dstate.check_cube_visible(bcube, dist_scale, shadow_only)) return;
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
 	if (above_ground) { // cylindrical; bcube should be square in XY
 		point const camera_bs(camera_pdu.pos - dstate.xlate);
@@ -1332,7 +1332,7 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 	assert(qbd.empty() && untex_qbd.empty());
 
 	for (auto g = groups.begin(); g != groups.end(); start_ix = g->ix, ++g) {
-		if (!dstate.check_cube_visible(*g, dist_scale, shadow_only)) continue; // VFC/distance culling for group
+		if (!dstate.check_cube_visible(*g, dist_scale)) continue; // VFC/distance culling for group
 		if (has_immediate_draw) {dstate.begin_tile(g->get_cube_center(), 1, 1);} // must setup shader and tile shadow map before drawing
 		assert(start_ix <= g->ix && g->ix <= objs.size());
 
@@ -1512,7 +1512,7 @@ void city_obj_placer_t::move_and_connect_streetlights(streetlights_t &sl) {
 }
 
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
-	if (!dstate.check_cube_visible(all_objs_bcube, 1.0, shadow_only)) return; // check bcube, dist_scale=1.0
+	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20

@@ -444,7 +444,7 @@ public:
 	void ensure_shader_active();
 	void draw_and_clear_light_flares();
 	bool check_sphere_visible(point const &pos, float radius) const {return camera_pdu.sphere_visible_test((pos + xlate), radius);}
-	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0, bool shadow_only=0) const;
+	bool check_cube_visible(cube_t const &bc, float dist_scale=1.0) const;
 	static void set_cube_pts(cube_t const &c, float z1f, float z1b, float z2f, float z2b, bool d, bool D, point p[8]);
 	static void set_cube_pts(cube_t const &c, float z1, float z2, bool d, bool D, point p[8]) {set_cube_pts(c, z1, z1, z2, z2, d, D, p);}
 	static void set_cube_pts(cube_t const &c, bool d, bool D, point p[8]) {set_cube_pts(c, c.z1(), c.z2(), d, D, p);}

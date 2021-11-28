@@ -508,7 +508,7 @@ void road_isec_t::draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, poin
 
 void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const {
 	if (num_conn == 2) return; // no stoplights
-	if (!dstate.check_cube_visible(*this, 0.16, shadow_only)) return; // dist_scale=0.16
+	if (!dstate.check_cube_visible(*this, 0.16)) return; // dist_scale=0.16
 	point const center(get_cube_center() + dstate.xlate);
 	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
 	vector3d const cview_dir(camera_pdu.pos - center);
@@ -807,7 +807,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	bcube.d[!d][0] -= w_expand; bcube.d[!d][1] += w_expand;
 	max_eq(bcube.d[d][0], bridge.src_road.d[d][0]); // clamp to orig road segment length
 	min_eq(bcube.d[d][1], bridge.src_road.d[d][1]);
-	if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
+	if (!check_cube_visible(bcube, 1.0)) return; // VFC/too far
 	point const cpos(camera_pdu.pos - xlate);
 	float const center(bcube.get_center_dim(!d)), len(bcube.get_sz_dim(d));
 	point p1, p2; // centerline end points
@@ -966,7 +966,7 @@ void road_draw_state_t::add_bridge_quad(point const pts[4], color_wrapper const 
 
 void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient
 	cube_t const bcube(tunnel.get_tunnel_bcube());
-	if (!check_cube_visible(bcube, 1.0, shadow_only)) return; // VFC/too far
+	if (!check_cube_visible(bcube, 1.0)) return; // VFC/too far
 	ensure_shader_active(); // needed for use_smap=0 case
 	quad_batch_draw &qbd(qbd_bridge); // use same qbd as bridges
 	color_wrapper cw_concrete(LT_GRAY);

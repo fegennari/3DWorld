@@ -118,7 +118,7 @@ void draw_state_t::draw_and_clear_light_flares() {
 	set_std_blend_mode();
 	disable_blend();
 }
-bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale, bool shadow_only) const {
+bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale) const {
 	if (!camera_pdu.valid) return 1;
 	cube_t const bcx(bc + xlate);
 
@@ -1210,13 +1210,13 @@ class city_road_gen_t : public road_gen_base_t {
 		void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 			city_obj_placer.draw_detail_objects(dstate, shadow_only); // always drawn; does its own VFC and distance test
 			if (empty()) return;
-			if (!dstate.check_cube_visible(get_bcube_inc_stoplights_and_streetlights(), 1.0, shadow_only)) return; // VFC/too far
+			if (!dstate.check_cube_visible(get_bcube_inc_stoplights_and_streetlights(), 1.0)) return; // VFC/too far
 
 			if (shadow_only) {
 				if (!is_connector_road) { // connector road has no stoplights to cast shadows
 					// Note: we can store the contents of qbd_sl in a VBO to avoid recreating it every frame for the shadow pass
 					for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
-						if (!dstate.check_cube_visible(b->bcube, 0.16, 1)) continue; // VFC/too far; dist_scale=0.16
+						if (!dstate.check_cube_visible(b->bcube, 0.16)) continue; // VFC/too far; dist_scale=0.16
 						for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], b->ranges[TYPE_ISEC2 + i], 1);} // intersections with stoplights (3-way, 4-way)
 					}
 				}
