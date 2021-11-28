@@ -2299,46 +2299,63 @@ public:
 		cout << "Cities: " << num_cities << ", connector roads: " << num_conn << ", total cost: " << tot_cost << endl;
 	}
 
+	struct conn_cand_t {
+		unsigned c1, c2; // city index
+		float dsq; // squared distance between cities
+		conn_cand_t(unsigned c1_, unsigned c2_, float dsq_) : c1(c1_), c2(c2_), dsq(dsq_) {}
+		bool operator<(conn_cand_t const &c) const {return (dsq < c.dsq);} // compare squared distance only as it will likely always be unique
+	};
 	void connect_city_power_grids(city_road_connector_t &crc, vect_cube_t &blockers, float road_width, float road_spacing) {
 		unsigned const num_cities(road_networks.size());
 		if (num_cities < 2) return; // no cities to connect
 		timer_t timer("Connect City Power Grids");
 		vector<uint8_t> power_connected(num_cities, 0);
-		unsigned c1(0), c2(0);
-		float dmin_sq(0.0);
+		vector<conn_cand_t> cands;
 
 		// determine first two cities to connect
-		// TODO: use sorted cands and stop when a connection is made
 		for (unsigned i = 0; i < num_cities; ++i) {
 			for (unsigned j = i+1; j < num_cities; ++j) {
-				float const dsq(city_dist_sq(road_networks[i], road_networks[j]));
-				if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; c1 = i; c2 = j;}
+				cands.emplace_back(i, j, city_dist_sq(road_networks[i], road_networks[j]));
 			}
-		} // for i
-		connect_two_cities_with_power(c1, c2, crc, blockers, road_width, road_spacing); // what if this fails? try another pair?
-		power_connected[c1] = power_connected[c2] = 1;
+		}
+		sort(cands.begin(), cands.end()); // sort min to max distance
+		bool success(0);
+
+		for (auto const &cand : cands) {
+			if (connect_two_cities_with_power(cand.c1, cand.c2, crc, blockers, road_width, road_spacing)) {
+				power_connected[cand.c1] = power_connected[cand.c2] = 1;
+				success = 1;
+				break;
+			}
+		}
+		if (!success) return; // can't even connect two cities together, failed
 		unsigned num_power_conn(2);
 
 		// connect remaining cities
 		while (num_power_conn < num_cities) {
-			// find the closest {connected, unconnected} city pair
-			dmin_sq = 0.0;
-			c1 = c2 = 0; // not needed, but good for error checking
+			cands.clear();
+			success = 0;
 
-			// TODO: use sorted cands
 			for (unsigned i = 0; i < num_cities; ++i) {
 				if (!power_connected[i]) continue; // not connected, skip
 
 				for (unsigned j = 0; j < num_cities; ++j) {
 					if (power_connected[j]) continue; // connected, skip (includes self)
-					float const dsq(city_dist_sq(road_networks[i], road_networks[j]));
-					if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; c1 = i; c2 = j;}
+					cands.emplace_back(i, j, city_dist_sq(road_networks[i], road_networks[j]));
 				}
 			} // for i
-			connect_two_cities_with_power(c1, c2, crc, blockers, road_width, road_spacing); // what if this fails? try another pair?
-			power_connected[c2] = 1;
+			sort(cands.begin(), cands.end()); // sort min to max distance
+
+			for (auto const &cand : cands) {
+				if (connect_two_cities_with_power(cand.c1, cand.c2, crc, blockers, road_width, road_spacing)) {
+					power_connected[cand.c2] = 1;
+					success = 1;
+					break;
+				}
+			}
+			if (!success) break; // failed to connect any more pairs, done (partially connected)
 			++num_power_conn;
-		}
+		} // end while()
 	}
 	point closest_edge_power_pole_conn_pt(point const &pt, unsigned city_ix) const {
 		vector<power_pole_t> const &ppoles(get_city_by_ix(city_ix).get_power_poles());
