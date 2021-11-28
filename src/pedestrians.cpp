@@ -178,6 +178,19 @@ void register_ped_coll(pedestrian_t &p1, pedestrian_t &p2, unsigned pid1, unsign
 	p2.collided = p2.ped_coll = 1; p2.colliding_ped = pid1;
 }
 
+bool check_for_ped_future_coll(point const &p1, point const &p2, vector3d const &v1, vector3d const &v2, float r1, float r2) {
+	// determine if these two peds will collide within LOOKAHEAD_TICKS time
+	point const p1b(p1 + LOOKAHEAD_TICKS*v1), p2b(p2 + LOOKAHEAD_TICKS*v2);
+#if 1 // precise, but complex and slow
+	return (line_seg_line_seg_dist_2d(p1, p1b, p2, p2b) < 0.6*(r1 + r2));
+#else // conservative: only look at the X and Y separation values, which at least works if peds are walking in X or Y along sidewalks
+	cube_t bc1(p1, p1b), bc2(p2, p2b);
+	bc1.expand_by_xy(0.6*r1); // XY bounding cube of ped collision volume from now to 2s in the future
+	bc2.expand_by_xy(0.6*r2);
+	return bc1.intersects_xy(bc2); // conservative
+#endif
+}
+
 bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned pid, unsigned ped_start, unsigned target_plot, float prox_radius, vector3d &force) {
 	float const prox_radius_sq(prox_radius*prox_radius);
 
@@ -193,14 +206,7 @@ bool pedestrian_t::check_ped_ped_coll_range(vector<pedestrian_t> &peds, unsigned
 		vector3d const delta_v(vel - i->vel), delta_p(p1_xy - p2_xy);
 		float const dp(-dot_product_xy(delta_v, delta_p));
 		if (dp <= 0.0) continue; // diverging, no avoidance needed
-		// determine if these two peds will collide within LOOKAHEAD_TICKS time, using a conservative approach;
-		// solving this correctly requires solving for cylinder-cylinder intersection or line segment-line segment min distance, which is complex and slow;
-		// so instead we only look at the X and Y separation values, which at least works if peds are walking in X or Y along sidewalks
-		point const p1_xy_end(p1_xy + LOOKAHEAD_TICKS*vel), p2_xy_end(p2_xy + LOOKAHEAD_TICKS*i->vel);
-		cube_t bc1(p1_xy, p1_xy_end), bc2(p2_xy, p2_xy_end);
-		bc1.expand_by_xy(0.6*   radius); // XY bounding cube of ped collision volume from now to 2s in the future
-		bc2.expand_by_xy(0.6*i->radius);
-		if (!bc1.intersects_xy(bc2)) continue;
+		if (!check_for_ped_future_coll(p1_xy, p2_xy, vel, i->vel, radius, i->radius)) continue;
 		float const dv_mag(delta_v.mag());
 		if (dv_mag < TOLERANCE) continue;
 		float const dist(sqrt(dist_sq)), fmag(dist/(dist - 0.9*r_sum));
