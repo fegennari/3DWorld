@@ -558,6 +558,9 @@ void rotate_vector3d_by_vr_multi(vector3d v1, vector3d v2, vector3d *vout, unsig
 void rotate_norm_vector3d_into_plus_z_multi(vector3d const &v1, vector3d *vout, unsigned num_vout, float rot_dir_sign=1.0);
 cube_t rotate_cube(cube_t const &cube, vector3d const &axis, float angle_in_radians);
 void mirror_about_plane(vector3d const &norm, point const &pt);
+bool line_segs_intersect_2d(vector2d const &L1a, vector2d const &L1b, vector2d const &L2a, vector2d const &L2b);
+float point_line_seg_dist_2d(vector2d const &pt, vector2d const &La, vector2d const &Lb);
+float line_seg_line_seg_dist_2d(vector2d const &L1a, vector2d const &L1b, vector2d const &L2a, vector2d const &L2b);
 vector3d rtp_to_xyz(float radius, double theta, double phi);
 vector3d gen_rand_vector_uniform(float mag);
 vector3d gen_rand_vector(float mag, float zscale=1.0, float phi_term=PI);

@@ -157,13 +157,13 @@ template<typename T> inline void cross_product(pointT<T> const &v1, pointT<T> co
 	v3.y = v1.z*v2.x - v1.x*v2.z;
 	v3.z = v1.x*v2.y - v1.y*v2.x;
 }
-
 template<typename T> inline pointT<T> cross_product(pointT<T> const &v1, pointT<T> const &v2) {
 	pointT<T> cp;
 	cross_product(v1, v2, cp);
 	return cp;
 }
 
+inline float cross_product   (vector2d const &a, vector2d const &b) {return (a.x*b.y - a.y*b.x);}
 inline float cross_product_xy(vector3d const &a, vector3d const &b) {return (a.x*b.y - a.y*b.x);} // result is z-value
 inline float dot_product_xy  (vector3d const &a, vector3d const &b) {return (a.x*b.x + a.y*b.y);}
 
@@ -208,6 +208,10 @@ inline bool pt_line_dist_less_than(point const &P, point const &L1, point const 
 }
 inline bool pt_line_dir_dist_less_than(point const &P, point const &L1, vector3d const &Ldir, float dist) { // Ldir is normalized
 	return (cross_product(Ldir, (L1 - P)).mag_sq() < dist*dist);
+}
+
+inline float line_seg_line_seg_dist_2d(point const &L1a, point const &L1b, point const &L2a, point const &L2b) {
+	return line_seg_line_seg_dist_2d(vector2d(L1a.x, L1a.y), vector2d(L1b.x, L1b.y), vector2d(L2a.x, L2a.y), vector2d(L2b.x, L2b.y));
 }
 
 template<typename T> inline T dot_product(pointT<T> const &A, pointT<T> const &B, pointT<T> const &C) {

@@ -310,7 +310,6 @@ bool sphere_intersect_poly_sides(vector<tquad_t> const &pts, point const &center
 
 
 bool pt_line_seg_dist_less_than(point const &P, point const &L1, point const &L2, float dist) {
-
 	if (dot_product(P-L1, P-L2) > 0.0) return 0; // pt not between s1 and s2
 	return pt_line_dist_less_than(P, L1, L2, dist);
 }
@@ -1214,6 +1213,7 @@ void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout) { // pr
 	matrix_mult(vin, vout, m);
 }
 
+// ************ Rotations ************
 
 // OK if vrot is zero_vector, sin = sqrt(1 - cos^2) ???
 // Note: angle is in radians
@@ -1345,6 +1345,40 @@ vector3d rtp_to_xyz(float radius, double theta, double phi) {
 }
 
 
+// ************ 2D Line Math ************
+
+
+bool line_segs_intersect_2d(vector2d const &L1a, vector2d const &L1b, vector2d const &L2a, vector2d const &L2b) {
+	vector2d const delta1(L1b - L1a), delta2(L2b - L2a);
+	float const cp(cross_product(delta2, delta1));
+	if (fabs(cp) < TOLERANCE) return 0; // parallel segments
+	float const dx(L2a.x - L1a.x), dy(L2a.y - L1a.y);
+	float const s( (delta1.x *  dy + delta1.y * -dx) / cp);
+	if (s < 0.0 || s > 1.0) return 0;
+	float const t(-(delta2.x * -dy + delta2.y *  dx) / cp);
+	return (t >= 0.0 && t <= 1.0);
+}
+
+float point_line_seg_dist_2d(vector2d const &pt, vector2d const &La, vector2d const &Lb) {
+	vector2d const delta(Lb - La), pt_to_La(pt - La);
+	if (fabs(delta.x) < TOLERANCE && fabs(delta.y) < TOLERANCE) {return pt_to_La.mag();} // the segment's just a point
+	// calculate the t that minimizes the distance
+	float const t((pt_to_La.x * delta.x + pt_to_La.y * delta.y) / delta.mag_sq());
+	// see if this represents one of the segment's end points or a point in the middle
+	if (t < 0.0) {return pt_to_La .mag();}
+	if (t > 1.0) {return (pt - Lb).mag();}
+	float const near_x(La.x + t*delta.x), near_y(La.y + t*delta.y);
+	return vector2d((pt.x - near_x), (pt.y - near_y)).mag();
+}
+
+float line_seg_line_seg_dist_2d(vector2d const &L1a, vector2d const &L1b, vector2d const &L2a, vector2d const &L2b) {
+	if (line_segs_intersect_2d(L1a, L1b, L2a, L2b)) return 0.0;
+	// try each of the 4 vertices w/the other segment
+	return min(min(point_line_seg_dist_2d(L1a, L2a, L2b), point_line_seg_dist_2d(L1b, L2a, L2b)),
+		min(point_line_seg_dist_2d(L2a, L1a, L1b), point_line_seg_dist_2d(L2b, L1a, L1b)));
+}
+
+
 // ************ MISC ************
 
 
@@ -1364,21 +1398,15 @@ template <rand_func rfunc> vector3d gen_rand_vector_template(float mag, float zs
 	return v;
 }
 
-
 vector3d gen_rand_vector_uniform(float mag) {
-
 	return rtp_to_xyz(mag*rand_float(), rand_uniform(0.0, TWO_PI), gen_rand_phi<rand_uniform>());
 }
 
-
 vector3d gen_rand_vector(float mag, float zscale, float phi_term) {
-
 	return gen_rand_vector_template<rand_uniform>(mag, zscale, phi_term);
 }
 
-
 vector3d gen_rand_vector2(float mag, float zscale, float phi_term) {
-
 	return gen_rand_vector_template<rand_uniform2>(mag, zscale, phi_term);
 }
 
