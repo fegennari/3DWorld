@@ -2295,8 +2295,8 @@ public:
 		for (auto i = blockers.begin(); i != blockers.begin() + city_bcubes_end; ++i) {i->expand_by_xy(-road_spacing);} // undo city expand
 		connect_city_power_grids(crc, blockers, road_width, road_spacing);
 		timer.end();
-		// old: 8, 12, 19057 ; new: 8, 15, 26085
-		cout << "Cities: " << num_cities << ", connector roads: " << num_conn << ", total cost: " << tot_cost << endl;
+		// old: 8, 12, 7, 19057 ; new: 8, 15, 7, 26085
+		cout << "Cities: " << num_cities << ", connector roads: " << num_conn << ", transmission lines: " << transmission_lines.size() << ", total cost: " << tot_cost << endl;
 	}
 
 	struct conn_cand_t {
@@ -2308,7 +2308,6 @@ public:
 	void connect_city_power_grids(city_road_connector_t &crc, vect_cube_t &blockers, float road_width, float road_spacing) {
 		unsigned const num_cities(road_networks.size());
 		if (num_cities < 2) return; // no cities to connect
-		timer_t timer("Connect City Power Grids");
 		vector<uint8_t> power_connected(num_cities, 0);
 		vector<conn_cand_t> cands;
 

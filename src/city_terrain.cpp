@@ -390,14 +390,13 @@ bool check_and_add_tower_pt(point const &pos, float height, float clearance_radi
 }
 bool city_road_connector_t::route_transmission_line(transmission_line_t &tline, vect_cube_t &blockers, float road_width, float road_spacing) const {
 	vector3d const vxy(tline.p2.x-tline.p1.x, tline.p2.y-tline.p1.y, 0.0);
-	float const dist(vxy.xy_mag()), tower_spacing(1.0*road_spacing), max_ground_clearance(0.25*tline.tower_height), clearance_radius(0.5*road_width);
+	float const dist(vxy.xy_mag()), tower_spacing(1.0*road_spacing), max_ground_clearance(0.5*tline.tower_height), clearance_radius(0.5*road_width);
 	unsigned const num_towers(2U + unsigned(floor(dist/tower_spacing))); // includes towers at the two end points
 	vector3d const step_delta(vxy/(num_towers - 1U)); // divide distance by the number of spans
 	point cur_pos(tline.p1); // first tower XY location
 	cur_pos.z = hq.get_height_at(cur_pos) + tline.tower_height;
 	if (!check_and_add_tower_pt(cur_pos, tline.tower_height, clearance_radius, tline, blockers)) return 0; // first tower point
 
-	// TODO: find a path that avoids blockers (for the towers at least) and minimizes elevation change
 	for (unsigned n = 0; n < num_towers-1; ++n) { // one tower was already added
 		point next_pos(cur_pos + step_delta);
 		next_pos.z = hq.get_height_at(next_pos) + tline.tower_height;
