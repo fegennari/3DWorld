@@ -776,7 +776,10 @@ void road_draw_state_t::draw_unshadowed() {
 		road_mat_mgr.set_texture(i);
 		qbd_batched[i].draw_and_clear();
 	}
-	qbd_tlines.draw_and_clear();
+	if (!qbd_tlines.empty()) {
+		select_texture(WHITE_TEX);
+		qbd_tlines.draw_and_clear();
+	}
 }
 
 void road_draw_state_t::post_draw() {
@@ -1035,18 +1038,27 @@ void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, range_
 }
 
 // not really related to roads, but I guess this goes here
+void road_draw_state_t::draw_transmission_line_wires(point const &p1, point const &p2, float radius) {
+	if (!check_cube_visible(cube_t(p1, p2), 1.0)) return; // VFC/too far
+	// TODO: this should really be three wires, spaced out horizontally in direction cross_product((p2 - p1), plus_z).get_norm()
+	unsigned const ndiv = 16; // hard-coded for now
+	if (p1 != p2) {draw_fast_cylinder(p1, p2, radius, radius, ndiv, 0);} // no ends
+}
 void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline) {
-	// TODO: use qbd_tlines
 	s.set_cur_color(BLACK);
 	unsigned const ndiv = 16;
-	float const radius(0.05*city_params.road_width);
+	float const wires_radius(0.05*city_params.road_width), tower_radius(0.05*city_params.road_width);
 	point cur_pt(tline.p1);
 
 	for (auto const &p : tline.tower_pts) {
-		// TODO: draw tower geometry or model
-		if (cur_pt != p) {draw_fast_cylinder(cur_pt, p, radius, radius, ndiv, 0);} // no ends
+		// TODO: this is a placeholder model; draw proper tower geometry or model (overheadpylon.obj)
+		cube_t tower(p, p);
+		tower.expand_by_xy(tower_radius);
+		tower.z1() -= tline.tower_height;
+		if (check_cube_visible(tower, 0.5)) {draw_cube(qbd_tlines, tower, GRAY, 1);}
+		draw_transmission_line_wires(cur_pt, p, wires_radius);
 		cur_pt = p;
 	}
-	if (cur_pt != tline.p2) {draw_fast_cylinder(cur_pt, tline.p2, radius, radius, ndiv, 0);} // final segment; no ends
+	draw_transmission_line_wires(cur_pt, tline.p2, wires_radius); // final segment
 }
 

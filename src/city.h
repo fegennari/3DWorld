@@ -566,9 +566,11 @@ struct tunnel_t : public road_connector_t {
 
 struct transmission_line_t {
 	unsigned city1, city2;
+	float tower_height;
 	point p1, p2;
 	vector<point> tower_pts;
-	transmission_line_t(unsigned c1, unsigned c2, point const &p1_, point const &p2_) : city1(c1), city2(c2), p1(p1_), p2(p2_) {}
+	transmission_line_t(unsigned c1, unsigned c2, float tower_height_, point const &p1_, point const &p2_) :
+		city1(c1), city2(c2), tower_height(tower_height_), p1(p1_), p2(p2_) {}
 };
 
 struct range_pair_t {
@@ -582,6 +584,7 @@ class road_draw_state_t : public draw_state_t {
 	float ar;
 
 	void draw_city_region_int(quad_batch_draw &cache, unsigned type_ix);
+	void draw_transmission_line_wires(point const &p1, point const &p2, float radius);
 public:
 	road_draw_state_t() : ar(1.0) {}
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader=0);

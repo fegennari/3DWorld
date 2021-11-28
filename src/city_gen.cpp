@@ -2183,17 +2183,17 @@ public:
 		return 0.0; // failed to connect cities
 	}
 
-	bool route_transmission_line(transmission_line_t &tline, heightmap_query_t &hq, vect_cube_t &blockers, float road_width, float road_spacing) {
+	bool route_transmission_line(transmission_line_t &tline, heightmap_query_t &hq, vect_cube_t &blockers, float road_spacing) {
 		vector3d const vxy(tline.p2.x-tline.p1.x, tline.p2.y-tline.p1.y, 0.0);
-		float const dist(vxy.xy_mag()), tower_spacing(1.0*road_spacing), tower_height(2.0*road_width);
+		float const dist(vxy.xy_mag()), tower_spacing(1.0*road_spacing);
 		unsigned const num_towers(2U + unsigned(floor(dist/tower_spacing))); // includes towers at the two end points
-		cout << TXT(dist) << TXT(tower_spacing) << TXT(num_towers) << endl; // TESTING
+		//cout << TXT(dist) << TXT(tower_spacing) << TXT(num_towers) << endl; // TESTING
 		vector3d const step_delta(vxy/(num_towers - 1U)); // divide distance by the number of spans
 		point cur_pos(tline.p1); // first tower XY location
 
 		// TODO: find a path that avoids blockers (for the towers at least) and minimizes elevation change
 		for (unsigned n = 0; n < num_towers; ++n) {
-			cur_pos.z = hq.get_height_at(cur_pos) + tower_height;
+			cur_pos.z = hq.get_height_at(cur_pos) + tline.tower_height;
 			tline.tower_pts.push_back(cur_pos);
 			cur_pos += step_delta;
 		} // for n
@@ -2237,8 +2237,9 @@ public:
 			}
 			p1.z = bcube1.z2(); p2.z = bcube2.z2(); // set to city zvals; will be reset later anyway
 		}
-		transmission_line_t tline(city1, city2, p1, p2);
-		if (!route_transmission_line(tline, hq, blockers, road_width, road_spacing)) return 0;
+		float const tower_height(2.0*road_width);
+		transmission_line_t tline(city1, city2, tower_height, p1, p2);
+		if (!route_transmission_line(tline, hq, blockers, road_spacing)) return 0;
 		transmission_lines.push_back(tline);
 		return 1;
 	}
