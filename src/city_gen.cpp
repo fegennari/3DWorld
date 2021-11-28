@@ -1927,6 +1927,8 @@ class city_road_gen_t : public road_gen_base_t {
 		} // for i
 		cout << "City clusters: " << cluster_id << endl;
 	}
+	road_network_t       &get_city_by_ix(unsigned ix)       {assert(ix < road_networks.size()); return road_networks[ix];}
+	road_network_t const &get_city_by_ix(unsigned ix) const {assert(ix < road_networks.size()); return road_networks[ix];}
 
 public:
 	city_road_gen_t() : have_plot_dividers(0) {}
@@ -1968,7 +1970,7 @@ public:
 
 	float connect_two_cities_new(unsigned city1, unsigned city2, vect_cube_t &blockers, city_road_connector_t &crc, float road_width) {
 		// Note: ignores the value of city_params.make_4_way_ints because this will always start and end at a 4-way intersection
-		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
+		road_network_t &rn1(get_city_by_ix(city1)), &rn2(get_city_by_ix(city2));
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		heightmap_query_t &hq(crc.hq);
 		float const road_hwidth(0.5*road_width);
@@ -2040,14 +2042,13 @@ public:
 	}
 
 	float connect_two_cities(unsigned city1, unsigned city2, vect_cube_t &blockers, city_road_connector_t &crc, float road_width) {
-		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
 
 		if (city_params.new_city_conn_road_alg) { // run the new algorithm first; if that fails, run the old algorithm
 			float const cost(connect_two_cities_new(city1, city2, blockers, crc, road_width));
 			if (cost > 0.0) return cost;
 		}
-		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
+		road_network_t &rn1(get_city_by_ix(city1)), &rn2(get_city_by_ix(city2));
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		assert(!bcube1.intersects_xy(bcube2));
 		float const min_edge_dist(4.0*road_width), min_jog(2.0*road_width);
@@ -2185,7 +2186,7 @@ public:
 	bool connect_two_cities_with_power(unsigned city1, unsigned city2, vect_cube_t &blockers, float road_width) {
 		assert(city1 < road_networks.size() && city2 < road_networks.size());
 		assert(city1 != city2); // check for self reference
-		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
+		road_network_t &rn1(get_city_by_ix(city1)), &rn2(get_city_by_ix(city2));
 		cube_t const &bcube1(rn1.get_bcube()), &bcube2(rn2.get_bcube());
 		point const center1(bcube1.get_cube_center()), center2(bcube2.get_cube_center());
 		vector3d const dir(center2 - center1);
@@ -2218,7 +2219,7 @@ private:
 		float const height(crc.hq.get_road_zval_at_pt(point(xval, yval, 0.0))), half_width(0.5*road_width);
 		cube_t const int_cube(xval-half_width, xval+half_width, yval-half_width, yval+half_width, height, height); // the candidate intersection point
 		if (has_bcube_int_xy(int_cube, blockers)) return; // bad intersection, fail
-		road_network_t &rn1(road_networks[city1]), &rn2(road_networks[city2]);
+		road_network_t &rn1(get_city_by_ix(city1)), &rn2(get_city_by_ix(city2));
 		float const cost1(global_rn.create_connector_road(rn1.get_bcube(), int_cube, blockers, &rn1, nullptr, city1,
 			CONN_CITY_IX, city1, city2, crc, road_width, (fdim ? xval : yval), fdim, 1, is_4way, 0)); // check_only=1
 		if (cost1 < 0.0) return; // bad segment
@@ -2453,7 +2454,7 @@ public:
 		if (road_networks.empty()) {assert(!car.dest_valid); return;} // no roads, no updates
 		if (!car.dest_valid) {car.dest_city = car.cur_city;} // start in current city
 		else {
-			auto const &conn(road_networks[car.cur_city].get_connected());
+			auto const &conn(get_city_by_ix(car.cur_city).get_connected());
 			float const new_city_prob(city_params.new_city_prob*min(0.4f, 0.1f*conn.size())); // 10% to 40% chance, depending on the number of connecting cities (to reduce traffic congestion)
 
 			if (rgen.rand_float() < new_city_prob) { // select a different city when there are multiple cities
@@ -2461,8 +2462,7 @@ public:
 					float min_td(0.0);
 
 					for (auto c = conn.begin(); c != conn.end(); ++c) {
-						assert(*c < road_networks.size()); // excludes global_rn
-						float const td(road_networks[*c].get_traffic_density());
+						float const td(get_city_by_ix(*c).get_traffic_density()); // excludes global_rn
 						if (min_td == 0.0 || td < min_td) {min_td = td; car.dest_city = *c;}
 					}
 				}
