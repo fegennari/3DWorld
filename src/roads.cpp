@@ -1050,10 +1050,13 @@ void road_draw_state_t::draw_transmission_line_wires(point const &p1, point cons
 }
 void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline) {
 	unsigned const ndiv = 16;
-	float const wires_radius(0.0024*city_params.road_width), tower_radius(0.035*city_params.road_width);
-	float const tower_bar_len(0.25*city_params.road_width), tower_bar_radius(0.4*tower_radius), end_rscale(0.5);
+	float const wire_radius(0.0024*city_params.road_width), tower_radius(0.035*city_params.road_width);
+	float const tower_bar_len(0.25*city_params.road_width), tower_bar_radius(0.4*tower_radius), end_rscale(0.5), bar_extend(1.04);
+	float const standoff_radius(0.08*tower_radius), standoff_height(1.2*tower_radius), standoff_dmax(0.15*get_draw_tile_dist());
+	float const camera_zval(camera_pdu.pos.z - xlate.z);
+	vector3d const standoff_delta(0.0, 0.0, standoff_height);
 	vector3d const wire_sep_dir(cross_product((tline.p2 - tline.p1), plus_z).get_norm()); // should be a straight line through all towers
-	point wire_pts[3]; // relative to the top of the tower
+	point wire_pts[3]; // relative to the top of the tower; this is the bottom of the standoffs
 
 	for (unsigned n = 0; n < 3; ++n) {
 		wire_pts[n].z = -((n + 1)*0.07*tline.tower_height); // shifted down
@@ -1066,34 +1069,43 @@ void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline)
 	for (auto const &p : tline.tower_pts) {
 		point bot_pt(p - vector3d(0.0, 0.0, 1.25*tline.tower_height)); // extend 25% further into the ground in case it's on a steep slope
 		cube_t tower_bcube(p, bot_pt);
-		tower_bcube.expand_by_xy(tower_bar_len);
+		tower_bcube.expand_by_xy(bar_extend*tower_bar_len);
 
 		if (check_cube_visible(tower_bcube, 0.5)) {
-			if (!shadow_only) {
-				if (use_smap) {
-					uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(p));
+			if (!shadow_only && use_smap) {
+				uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(p));
 
-					if (last_tile_id == 0 || tile_id != last_tile_id) { // moved to a new tile
-						try_bind_tile_smap_at_point((p + xlate), s);
-						last_tile_id = tile_id;
-					}
+				if (last_tile_id == 0 || tile_id != last_tile_id) { // moved to a new tile
+					try_bind_tile_smap_at_point((p + xlate), s);
+					last_tile_id = tile_id;
 				}
-				s.set_cur_color(GRAY);
 			}
-			bool const draw_top(camera_pdu.pos.z > tower_bcube.z2() + xlate.z);
+			if (!shadow_only) {s.set_cur_color(GRAY);}
+			bool const draw_top(camera_zval > tower_bcube.z2());
 			draw_fast_cylinder(bot_pt, p, tower_radius, end_rscale*tower_radius, 20, 0, (draw_top ? 4 : 0)); // draw sides and maybe top
 			tower_bcube.z1() = p.z + wire_pts[2].z - tower_bar_radius; // bottom of lowest bar
 
 			if (check_cube_visible(tower_bcube, 0.3)) {
 				for (unsigned n = 0; n < 3; ++n) { // draw 3 horizontal bars to support each wire, top to bottom
-					point const bar_start(p + vector3d(0.0, 0.0, wire_pts[n].z));
-					draw_fast_cylinder(bar_start, (p + wire_pts[n]), tower_bar_radius, end_rscale*tower_bar_radius, 12, 0, 4); // draw sides and end
+					point const bar_start(p + vector3d(0.0, 0.0, wire_pts[n].z) + standoff_delta); // top of standoffs
+					point const bar_end  (bar_start + bar_extend*vector3d(wire_pts[n].x, wire_pts[n].y, 0.0)); // extend a bit further out
+					draw_fast_cylinder(bar_start, bar_end, tower_bar_radius, end_rscale*tower_bar_radius, 12, 0, 4); // draw sides and end
+				}
+				if (!shadow_only && (tower_bcube + xlate).closest_dist_less_than(camera_pdu.pos, standoff_dmax)) {
+					s.set_cur_color(WHITE);
+
+					for (unsigned n = 0; n < 3; ++n) { // draw 3 standoffs
+						point const bot(p + wire_pts[n] + vector3d(0.0, 0.0, wire_radius));
+						point const top(bot + standoff_delta - vector3d(0.0, 0.0, (wire_radius + bar_extend*end_rscale*tower_bar_radius)));
+						bool const draw_top(camera_zval > 0.5f*(bot.z + top.z));
+						draw_fast_cylinder(bot, top, standoff_radius, standoff_radius, 12, 0, (draw_top ? 4 : 3)); // draw sides and one end
+					}
 				}
 			}
 		}
-		draw_transmission_line_wires(cur_pt, p, ((cur_pt == all_zeros) ? tline.p1_wire_pts : wire_pts), wire_pts, wires_radius);
+		draw_transmission_line_wires(cur_pt, p, ((cur_pt == all_zeros) ? tline.p1_wire_pts : wire_pts), wire_pts, wire_radius);
 		cur_pt = p;
 	} // for p
-	draw_transmission_line_wires(cur_pt, all_zeros, wire_pts, tline.p2_wire_pts, wires_radius); // final segment
+	draw_transmission_line_wires(cur_pt, all_zeros, wire_pts, tline.p2_wire_pts, wire_radius); // final segment
 }
 
