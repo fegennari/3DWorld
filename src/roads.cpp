@@ -1038,27 +1038,59 @@ void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, range_
 }
 
 // not really related to roads, but I guess this goes here
-void road_draw_state_t::draw_transmission_line_wires(point const &p1, point const &p2, float radius) {
-	if (!check_cube_visible(cube_t(p1, p2), 1.0)) return; // VFC/too far
-	// TODO: this should really be three wires, spaced out horizontally in direction cross_product((p2 - p1), plus_z).get_norm()
-	unsigned const ndiv = 16; // hard-coded for now
-	if (p1 != p2) {draw_fast_cylinder(p1, p2, radius, radius, ndiv, 0);} // no ends
+void road_draw_state_t::draw_transmission_line_wires(point const &p1, point const &p2, point const wire_pts1[3], point const wire_pts2[3], float radius) {
+	if (shadow_only) return; // not shadow casters
+	if (p1 == p2)    return; // zero length wire segment?
+	point const all_pts[6] = {p1+wire_pts1[0], p1+wire_pts1[1], p1+wire_pts1[2], p2+wire_pts2[0], p2+wire_pts2[1], p2+wire_pts2[2]};
+	cube_t wires_bcube(all_pts, 6);
+	if (!check_cube_visible(wires_bcube, 1.0)) return; // VFC/too far
+	s.set_cur_color(BLACK);
+	unsigned const ndiv = 4;
+	for (unsigned n = 0; n < 3; ++n) {draw_fast_cylinder(all_pts[n], all_pts[n+3], radius, radius, ndiv, 0);} // no ends
 }
 void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline) {
-	s.set_cur_color(BLACK);
 	unsigned const ndiv = 16;
-	float const wires_radius(0.05*city_params.road_width), tower_radius(0.05*city_params.road_width);
+	float const wires_radius(0.0024*city_params.road_width), tower_radius(0.035*city_params.road_width);
+	float const tower_bar_len(0.25*city_params.road_width), tower_bar_radius(0.4*tower_radius), end_rscale(0.5);
+	vector3d const wire_sep_dir(cross_product((tline.p2 - tline.p1), plus_z).get_norm()); // should be a straight line through all towers
+	point wire_pts[3]; // relative to the top of the tower
+
+	for (unsigned n = 0; n < 3; ++n) {
+		wire_pts[n].z = -((n + 1)*0.1*tline.tower_height); // shifted down
+		wire_pts[n]  += (((n&1) ? -1.0 : 1.0)*tower_bar_len)*wire_sep_dir; // shift away from the tower
+		// TODO: set p1_wire_pts and p2_wire_pts somehow; maybe calculated in connect_power_poles_to_transmission_lines()
+	}
+	ensure_shader_active(); // ???
 	point cur_pt(tline.p1);
+	uint64_t last_tile_id(0);
 
 	for (auto const &p : tline.tower_pts) {
-		// TODO: this is a placeholder model; draw proper tower geometry or model (overheadpylon.obj)
-		cube_t tower(p, p);
-		tower.expand_by_xy(tower_radius);
-		tower.z1() -= 1.5*tline.tower_height; // extend 50% further into the ground in case it's on a steep slope
-		if (check_cube_visible(tower, 0.5)) {draw_cube(qbd_tlines, tower, GRAY, 1);}
-		draw_transmission_line_wires(cur_pt, p, wires_radius);
+		point bot_pt(p - vector3d(0.0, 0.0, 1.25*tline.tower_height)); // extend 25% further into the ground in case it's on a steep slope
+		cube_t tower_bcube(p, bot_pt);
+		tower_bcube.expand_by_xy(tower_bar_len);
+
+		if (check_cube_visible(tower_bcube, 0.5)) {
+			if (!shadow_only) {
+				if (use_smap) {
+					uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(p));
+
+					if (last_tile_id == 0 || tile_id != last_tile_id) { // moved to a new tile
+						try_bind_tile_smap_at_point((p + xlate), s);
+						last_tile_id = tile_id;
+					}
+				}
+				s.set_cur_color(GRAY);
+			}
+			draw_fast_cylinder(bot_pt, p, tower_radius, end_rscale*tower_radius, 20, 0, 4); // draw sides and top
+
+			for (unsigned n = 0; n < 3; ++n) { // draw 3 horizontal bars to support each wire
+				point const bar_start(p + vector3d(0.0, 0.0, wire_pts[n].z));
+				draw_fast_cylinder(bar_start, (p + wire_pts[n]), tower_bar_radius, end_rscale*tower_bar_radius, 12, 0, 4); // draw sides and end
+			}
+		}
+		draw_transmission_line_wires(cur_pt, p, ((cur_pt == tline.p1) ? tline.p1_wire_pts : wire_pts), wire_pts, wires_radius);
 		cur_pt = p;
-	}
-	draw_transmission_line_wires(cur_pt, tline.p2, wires_radius); // final segment
+	} // for p
+	draw_transmission_line_wires(cur_pt, tline.p2, wire_pts, tline.p2_wire_pts, wires_radius); // final segment
 }
 

@@ -2356,7 +2356,7 @@ public:
 			++num_power_conn;
 		} // end while()
 	}
-	point closest_edge_power_pole_conn_pt(point const &pt, unsigned city_ix) const {
+	point closest_edge_power_pole_conn_pt(point const &pt, unsigned city_ix, point conn_pts[3]) const {
 		vector<power_pole_t> const &ppoles(get_city_by_ix(city_ix).get_power_poles());
 		float dmin_sq(0.0);
 		point best_pt(pt); // start at p1; will return this value if ppoles is empty
@@ -2367,12 +2367,13 @@ public:
 			float const dsq(p2p_dist_xy_sq(pt, conn_pt));
 			if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; best_pt = conn_pt;}
 		} // for p
+		// TODO: set conn_pts relative to best_pt
 		return best_pt;
 	}
 	void connect_power_poles_to_transmission_lines() {
 		for (auto &t : transmission_lines) {
-			t.p1 = closest_edge_power_pole_conn_pt(t.p1, t.city1);
-			t.p2 = closest_edge_power_pole_conn_pt(t.p2, t.city2);
+			t.p1 = closest_edge_power_pole_conn_pt(t.p1, t.city1, t.p1_wire_pts);
+			t.p2 = closest_edge_power_pole_conn_pt(t.p2, t.city2, t.p2_wire_pts);
 		}
 	}
 	void add_streetlights() {
@@ -2462,7 +2463,7 @@ public:
 			assert(dstate.s.is_setup());
 			for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->draw(dstate, shadow_only, 0);}
 			global_rn.draw(dstate, shadow_only, 1); // connector road may have bridges, and therefore needs shadows
-			if (!shadow_only) {draw_transmission_lines();} // shadows not yet drawn
+			draw_transmission_lines();
 			dstate.post_draw();
 			set_std_depth_func();
 			fgPopMatrix();

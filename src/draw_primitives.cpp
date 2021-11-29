@@ -444,7 +444,7 @@ void add_cylin_ends(float radius1, float radius2, int ndiv, bool texture, int dr
 	}
 }
 
-// draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = pt1 end, 4 = pt2 end
+// draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = sides + pt1 end, 4 = sides + pt2 end
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends,
 	bool two_sided_lighting, float const *const perturb_map, float tex_scale_len, float tex_t_start, point const *inst_pos, unsigned num_insts)
 {
