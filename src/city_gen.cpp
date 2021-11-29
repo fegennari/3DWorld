@@ -2356,24 +2356,25 @@ public:
 			++num_power_conn;
 		} // end while()
 	}
-	point closest_edge_power_pole_conn_pt(point const &pt, unsigned city_ix, point conn_pts[3]) const {
+	void closest_edge_power_pole_conn_pts(point const &pt, unsigned city_ix, point conn_pts[3]) const {
 		vector<power_pole_t> const &ppoles(get_city_by_ix(city_ix).get_power_poles());
+		if (ppoles.empty()) {UNROLL_3X(conn_pts[i_] = pt;) return;} // set all conn pts to pt if there are no power poles
 		float dmin_sq(0.0);
-		point best_pt(pt); // start at p1; will return this value if ppoles is empty
 
 		for (auto const &p : ppoles) {
 			if (!p.is_at_grid_edge()) continue; // not on edge
-			point const conn_pt(p.get_wires_conn_pt());
-			float const dsq(p2p_dist_xy_sq(pt, conn_pt));
-			if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; best_pt = conn_pt;}
+			point cand_pts[3];
+			// Note: it's possible that the wires connecting from the power pole to the tline tower cross over each other or intersect the power pole,
+			// depending on the orientations of the two sets of wires relative to each other; I have no idea how to avoid this
+			p.get_top_wires_conn_pts(cand_pts);
+			float const dsq(p2p_dist_xy_sq(pt, cand_pts[1])); // use center wire
+			if (dmin_sq == 0.0 || dsq < dmin_sq) {dmin_sq = dsq; UNROLL_3X(conn_pts[i_] = cand_pts[i_];)}
 		} // for p
-		// TODO: set conn_pts relative to best_pt
-		return best_pt;
 	}
 	void connect_power_poles_to_transmission_lines() {
 		for (auto &t : transmission_lines) {
-			t.p1 = closest_edge_power_pole_conn_pt(t.p1, t.city1, t.p1_wire_pts);
-			t.p2 = closest_edge_power_pole_conn_pt(t.p2, t.city2, t.p2_wire_pts);
+			closest_edge_power_pole_conn_pts(t.p1, t.city1, t.p1_wire_pts);
+			closest_edge_power_pole_conn_pts(t.p2, t.city2, t.p2_wire_pts);
 		}
 	}
 	void add_streetlights() {

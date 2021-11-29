@@ -411,14 +411,16 @@ cube_t power_pole_t::calc_cbar(bool d) const {
 	set_wall_width(cbar,  center[!d], get_bar_extend(), !d);
 	return cbar;
 }
-point power_pole_t::get_wires_conn_pt() const {
-	cube_t cbars_bcube;
+void power_pole_t::get_wires_conn_pts(point pts[3], bool d) const {
+	float const wire_spacing(get_hwire_spacing()), wire_radius(get_wire_radius()), standoff_height(get_standoff_height());
+	float const offsets[3] = {-wire_spacing, -0.3f*wire_spacing, wire_spacing}; // offset from the center to avoid intersecting the pole
+	cube_t const cbar(calc_cbar(d));
 
-	for (unsigned d = 0; d < 2; ++d) {
-		if (has_dim_set(d)) {cbars_bcube.assign_or_union_with_cube(calc_cbar(d));}
+	for (unsigned n = 0; n < 3; ++n) {
+		pts[n][d]  = cbar.get_center_dim(d);
+		pts[n][!d] = center[!d] + offsets[n]; // set wire offset
+		pts[n].z   = cbar.z2()  + standoff_height + wire_radius; // resting on top of the standoff
 	}
-	if (cbars_bcube.is_all_zeros()) {return get_top();} // error/shouldn't happen?
-	return point(cbars_bcube.xc(), cbars_bcube.yc(), (cbars_bcube.z2() + get_standoff_height()));
 }
 point power_pole_t::get_nearest_connection_point(point const &to_pos, bool near_power_pole) const {
 	float dmin_sq(0.0);
@@ -592,7 +594,7 @@ void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_d
 			}
 		}
 	}
-	float const wire_spacing(0.75*get_bar_extend()), vwire_spacing(get_vwire_spacing());
+	float const wire_spacing(get_hwire_spacing()), vwire_spacing(get_vwire_spacing());
 	float const standoff_height(get_standoff_height()), standoff_radius(0.25*pole_radius);
 	point wire_pts[3][2];
 	unsigned wire_mask(0);
