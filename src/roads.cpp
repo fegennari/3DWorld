@@ -13,8 +13,6 @@ extern float FAR_CLIP;
 extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
-void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd);
-
 
 void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
@@ -774,17 +772,9 @@ void road_draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool
 }
 
 void road_draw_state_t::draw_unshadowed() {
-	draw_tline_geom(); // draw any remaining geom
-
 	for (unsigned i = 0; i < NUM_RD_TIDS; ++i) { // only unshadowed blocks
 		road_mat_mgr.set_texture(i);
 		qbd_batched[i].draw_and_clear();
-	}
-}
-void road_draw_state_t::draw_tline_geom() {
-	if (!qbd_tlines.empty()) {
-		select_texture(WHITE_TEX);
-		qbd_tlines.draw_and_clear();
 	}
 }
 
@@ -1049,29 +1039,10 @@ void road_draw_state_t::draw_transmission_line_wires(point const &p1, point cons
 	if (p1 == p2)    return; // zero length wire segment?
 	point const pts[6] = {p1+wire_pts1[0], p2+wire_pts2[0], p1+wire_pts1[1], p2+wire_pts2[1], p1+wire_pts1[2], p2+wire_pts2[2]};
 	cube_t wires_bcube(pts, 6);
-	if (!check_cube_visible(wires_bcube, 1.0)) return; // VFC/too far
-#if 0
-	color_wrapper const cw(BLACK);
-	unsigned const start_ix(qbd_tlines.verts.size());
-	unsigned end_ix(0);
-
-	for (unsigned n = 0; n < 3; ++n) {
-		if (n == 0 || wire_pts1 != wire_pts2) {
-			draw_wire((pts + 2*n), radius,cw, qbd_tlines);
-			end_ix = qbd_tlines.verts.size();
-		}
-		else { // copy + translate previous wire points if parallel
-			for (unsigned i = start_ix; i < end_ix; ++i) {
-				qbd_tlines.verts.push_back(qbd_tlines.verts[i]);
-				qbd_tlines.verts.back().v += (wire_pts1[n] - wire_pts1[0]);
-			}
-		}
-	}
-#else
+	if (!check_cube_visible(wires_bcube, 0.2)) return; // VFC/too far
 	s.set_cur_color(BLACK);
 	unsigned const ndiv = 4;
 	for (unsigned n = 0; n < 3; ++n) {draw_fast_cylinder(pts[2*n], pts[2*n+1], radius, radius, ndiv, 0);} // no ends
-#endif
 }
 void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline) {
 	unsigned const ndiv = 16;
@@ -1101,7 +1072,6 @@ void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline)
 				uint64_t const tile_id(get_tile_id_containing_point_no_xyoff(p));
 
 				if (last_tile_id == 0 || tile_id != last_tile_id) { // moved to a new tile
-					draw_tline_geom(); // draw/flush before chaging shadow maps
 					try_bind_tile_smap_at_point((p + xlate), s);
 					last_tile_id = tile_id;
 				}

@@ -583,7 +583,7 @@ struct range_pair_t {
 };
 
 class road_draw_state_t : public draw_state_t {
-	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_sl, qbd_bridge, qbd_tlines;
+	quad_batch_draw qbd_batched[NUM_RD_TIDS], qbd_sl, qbd_bridge;
 	float ar;
 
 	void draw_city_region_int(quad_batch_draw &cache, unsigned type_ix);
@@ -591,7 +591,6 @@ class road_draw_state_t : public draw_state_t {
 public:
 	road_draw_state_t() : ar(1.0) {}
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader=0);
-	void draw_tline_geom();
 	virtual void draw_unshadowed();
 	virtual void post_draw();
 	template<typename T> void add_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {add_flat_city_quad(r, qbd, color, ar);} // generic flat road case
