@@ -1052,9 +1052,9 @@ void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline)
 	unsigned const ndiv = 16;
 	float const wire_radius(0.0024*city_params.road_width), tower_radius(0.035*city_params.road_width);
 	float const tower_bar_len(0.25*city_params.road_width), tower_bar_radius(0.4*tower_radius), end_rscale(0.5), bar_extend(1.04);
-	float const standoff_radius(0.08*tower_radius), standoff_height(1.2*tower_radius), standoff_dmax(0.15*get_draw_tile_dist());
-	float const camera_zval(camera_pdu.pos.z - xlate.z);
-	vector3d const standoff_delta(0.0, 0.0, standoff_height);
+	float const standoff_radius(0.12*tower_radius), standoff_height(1.2*tower_radius), standoff_dmax(0.05*get_draw_tile_dist());
+	float const standoff_len(standoff_height - bar_extend*end_rscale*tower_bar_radius); // actual height
+	point const camera_bs(camera_pdu.pos - xlate);
 	vector3d const wire_sep_dir(cross_product((tline.p2 - tline.p1), plus_z).get_norm()); // should be a straight line through all towers
 	point wire_pts[3]; // relative to the top of the tower; this is the bottom of the standoffs
 
@@ -1081,24 +1081,41 @@ void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline)
 				}
 			}
 			if (!shadow_only) {s.set_cur_color(GRAY);}
-			bool const draw_top(camera_zval > tower_bcube.z2());
+			bool const draw_top(camera_bs.z > tower_bcube.z2());
 			draw_fast_cylinder(bot_pt, p, tower_radius, end_rscale*tower_radius, 20, 0, (draw_top ? 4 : 0)); // draw sides and maybe top
 			tower_bcube.z1() = p.z + wire_pts[2].z - tower_bar_radius; // bottom of lowest bar
 
 			if (check_cube_visible(tower_bcube, 0.3)) {
 				for (unsigned n = 0; n < 3; ++n) { // draw 3 horizontal bars to support each wire, top to bottom
-					point const bar_start(p + vector3d(0.0, 0.0, wire_pts[n].z) + standoff_delta); // top of standoffs
+					point const bar_start(p + vector3d(0.0, 0.0, wire_pts[n].z+standoff_height)); // top of standoffs
 					point const bar_end  (bar_start + bar_extend*vector3d(wire_pts[n].x, wire_pts[n].y, 0.0)); // extend a bit further out
 					draw_fast_cylinder(bar_start, bar_end, tower_bar_radius, end_rscale*tower_bar_radius, 12, 0, 4); // draw sides and end
 				}
-				if (!shadow_only && (tower_bcube + xlate).closest_dist_less_than(camera_pdu.pos, standoff_dmax)) {
-					s.set_cur_color(WHITE);
+				if (!shadow_only && tower_bcube.closest_dist_less_than(camera_bs, standoff_dmax)) {
+					s.set_cur_color(LT_GRAY);
 
 					for (unsigned n = 0; n < 3; ++n) { // draw 3 standoffs
-						point const bot(p + wire_pts[n] + vector3d(0.0, 0.0, wire_radius));
-						point const top(bot + standoff_delta - vector3d(0.0, 0.0, (wire_radius + bar_extend*end_rscale*tower_bar_radius)));
-						bool const draw_top(camera_zval > 0.5f*(bot.z + top.z));
-						draw_fast_cylinder(bot, top, standoff_radius, standoff_radius, 12, 0, (draw_top ? 4 : 3)); // draw sides and one end
+						point const bot(p + wire_pts[n]);
+
+						if (tower_bcube.closest_dist_less_than(camera_bs, 0.4*standoff_dmax)) { // draw as a stack of cones
+							unsigned const num_segs = 8;
+							float const len_per_seg(standoff_len/num_segs), hlen_per_seg(0.5*len_per_seg);
+							float const r1(1.25*standoff_radius), r2(0.2*standoff_radius);
+
+							for (unsigned n = 0; n < num_segs; ++n) {
+								point pb(bot), pm(bot), pt(bot); // bottom, middle, top
+								pb.z += n*len_per_seg;
+								pm.z  = pb.z + hlen_per_seg;
+								pt.z  = pm.z + hlen_per_seg;
+								draw_fast_cylinder(pm, pb, r1, r2, 16, 0, 0); // truncated cone with no end
+								draw_fast_cylinder(pm, pt, r1, r2, 16, 0, 0);
+							} // for n
+						}
+						else { // draw as a single cylinder
+							point const top(bot + vector3d(0.0, 0.0, standoff_len));
+							bool const draw_top(camera_bs.z > 0.5f*(bot.z + top.z));
+							draw_fast_cylinder(bot, top, standoff_radius, standoff_radius, 16, 0, (draw_top ? 4 : 3)); // draw sides and one end
+						}
 					}
 				}
 			}
