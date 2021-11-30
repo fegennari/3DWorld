@@ -40,7 +40,8 @@ colorRGBA get_textured_wood_color() {return WOOD_COLOR.modulate_with(texture_col
 colorRGBA get_counter_color      () {return (get_textured_wood_color()*0.75 + texture_color(get_counter_tid())*0.25);}
 
 rgeom_mat_t &building_room_geom_t::get_wood_material(float tscale, bool inc_shadows, bool dynamic, bool small) {
-	return get_material(get_tex_auto_nm(WOOD2_TEX, tscale, inc_shadows), inc_shadows, dynamic, small); // hard-coded for common material
+	return get_material(tid_nm_pair_t(WOOD2_TEX, get_texture_by_name("normal_maps/wood_NRM.jpg", 1),
+		3.0*tscale, 3.0*tscale, 0.0, 0.0, inc_shadows), inc_shadows, dynamic, small); // hard-coded for common material
 }
 
 void get_tc_leg_cubes_abs_width(cube_t const &c, float leg_width, cube_t cubes[4]) {
@@ -196,7 +197,7 @@ void building_room_geom_t::add_dresser_drawers(room_object_t const &c, float tsc
 	assert(drawers.size() <= 16); // we only have 16 bits to store drawer flags
 	float const height(c.dz()), drawer_thick(0.05*height), handle_thick(0.75*drawer_thick), dir_sign(c.dir ? 1.0 : -1.0), handle_width(0.07*height);
 	get_metal_material(0, 0, 1); // ensure material exists so that door_mat reference is not invalidated
-	rgeom_mat_t &drawer_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale), 1, 0, 1)); // shadowed, small=1
+	rgeom_mat_t &drawer_mat(get_wood_material(1.5*tscale, 1, 0, 1)); // shadowed, small=1
 	rgeom_mat_t &handle_mat(get_metal_material(0, 0, 1)); // untextured, unshadowed, small=1
 	colorRGBA const drawer_color(apply_light_color(c, WHITE)); // lighter color than dresser
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
@@ -2277,7 +2278,7 @@ void building_room_geom_t::add_cabinet(room_object_t const &c, float tscale) { /
 	// add cabinet doors; maybe these should be small objects, but there are at most a few cabinets per house and none in office buildings
 	if (doors.empty()) return; // no doors
 	get_metal_material(0); // ensure material exists so that door_mat reference is not invalidated
-	rgeom_mat_t &door_mat(get_material(get_tex_auto_nm(WOOD2_TEX, 2.0*tscale, any_doors_open), any_doors_open)); // only shadowed if a door is open
+	rgeom_mat_t &door_mat(get_wood_material(1.5*tscale, any_doors_open)); // only shadowed if a door is open
 	rgeom_mat_t &handle_mat(get_metal_material(0)); // untextured, unshadowed
 	colorRGBA const door_color(apply_light_color(c, WHITE)); // lighter color than cabinet
 	colorRGBA const handle_color(apply_light_color(c, GRAY_BLACK));
