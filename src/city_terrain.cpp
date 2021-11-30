@@ -382,6 +382,7 @@ bool check_and_add_tower_pt(point const &pos, float height, float clearance_radi
 	// Note: this doesn't check for two transmission line wires intersecting each other, but this should be unlikely, and I've never seen it happen
 	cube_t tower_area(pos, pos);
 	tower_area.z1() -= height; // set base of tower
+	if (tower_area.z1() < water_plane_z) return 0; // underwater, invalid tower location
 	tower_area.expand_by_xy(clearance_radius);
 	if (has_bcube_int_xy_no_adj(tower_area, blockers)) return 0;
 	blockers.push_back(tower_area);
