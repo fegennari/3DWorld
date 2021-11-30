@@ -1352,8 +1352,9 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 			dstate.hedge_draw.draw_and_clear(dstate.s);
 
 			if (!untex_qbd.empty()) {
-				if (!shadow_only) {select_texture(WHITE_TEX);}
+				dstate.set_untextured_material();
 				untex_qbd.draw_and_clear();
+				dstate.unset_untextured_material();
 				must_restore_state = 1;
 			}
 			if (!shadow_only && must_restore_state) {T::pre_draw(dstate, shadow_only);} // re-setup for next tile

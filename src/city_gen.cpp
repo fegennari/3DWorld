@@ -103,6 +103,14 @@ void draw_state_t::end_draw() {
 	draw_unshadowed();
 	s.end_shader();
 }
+void draw_state_t::set_untextured_material() {
+	if (shadow_only) return;
+	select_texture(WHITE_TEX);
+	if (normal_maps_enabled()) {s.add_uniform_float("bump_map_mag", 0.0);} // disable bump map
+}
+void draw_state_t::unset_untextured_material() {
+	if (!shadow_only && normal_maps_enabled()) {s.add_uniform_float("bump_map_mag", 1.0);} // re-enable bump map
+}
 void draw_state_t::ensure_shader_active() {
 	if (s.is_setup()) return; // already active
 	if (shadow_only) {s.begin_color_only_shader();}
@@ -2472,8 +2480,10 @@ public:
 		if (trans_op_mask & 2) {dstate.draw_and_clear_light_flares();} // transparent pass; must be done last for alpha blending, and no translate
 	}
 	void draw_transmission_lines() { // non-const because dstate is modified
-		//if (transmission_lines.empty()) return;
+		if (transmission_lines.empty()) return;
+		dstate.set_untextured_material();
 		for (auto const &i : transmission_lines) {dstate.draw_transmission_line(i);}
+		dstate.unset_untextured_material();
 	}
 	void draw_label() {dstate.show_label_text();}
 

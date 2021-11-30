@@ -436,11 +436,14 @@ public:
 	draw_state_t() : use_building_lights(0), pass_ix(0), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
  	virtual ~draw_state_t() {}
 	void set_enable_normal_map(bool val) {use_bmap = val;}
+	bool normal_maps_enabled() const {return use_bmap;}
 	virtual void draw_unshadowed() {}
 	void begin_tile(point const &pos, bool will_emit_now=0, bool ensure_active=0);
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only_, bool always_setup_shader);
 	void end_draw();
 	virtual void post_draw();
+	void set_untextured_material();
+	void unset_untextured_material();
 	void ensure_shader_active();
 	void draw_and_clear_light_flares();
 	bool check_sphere_visible(point const &pos, float radius) const {return camera_pdu.sphere_visible_test((pos + xlate), radius);}
