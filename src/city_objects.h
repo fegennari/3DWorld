@@ -35,7 +35,7 @@ struct fire_hydrant_t : public city_obj_t {
 	float cylin_radius;
 	vector3d orient;
 	fire_hydrant_t(point const &pos_, float radius_, float height, vector3d const &orient_);
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
@@ -48,7 +48,7 @@ struct divider_t : public city_obj_t {
 	divider_t() : type(0), dim(0), dir(0), skip_dims(0) {}
 	divider_t(cube_t const &c, unsigned type_, bool dim_, bool dir_, unsigned sd=0) :
 		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), type(type_), dim(dim_), dir(dir_), skip_dims(sd) {bcube = c;}
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
@@ -61,7 +61,7 @@ struct swimming_pool_t : public city_obj_t {
 	swimming_pool_t(cube_t const &c, colorRGBA const &color_, colorRGBA const &wcolor_, bool above_ground_) :
 		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), color(color_), wcolor(wcolor_), above_ground(above_ground_) {bcube = c;}
 	float get_radius() const {assert(above_ground); return 0.25f*(bcube.dx() + bcube.dy());}
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
@@ -98,7 +98,8 @@ public:
 	cube_t get_ped_occluder() const;
 	point get_nearest_connection_point(point const &to_pos, bool near_power_pole) const;
 	bool add_wire(point const &p1, point const &p2, bool add_pole);
-	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };

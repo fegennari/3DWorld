@@ -460,7 +460,13 @@ bool power_pole_t::add_wire(point const &p1, point const &p2, bool add_pole) { /
 	return 1;
 }
 /*static*/ void power_pole_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(WOOD2_TEX);}
+	if (shadow_only) return;
+	select_texture(WOOD2_TEX);
+	select_multitex(get_texture_by_name("normal_maps/wood_NRM.jpg", 1), 5);
+}
+/*static*/ void power_pole_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {select_multitex(FLAT_NMAP_TEX, 5);} // restore to default
+	city_obj_t::post_draw(dstate, shadow_only);
 }
 
 void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], float r1, float r2, color_wrapper const &cw,

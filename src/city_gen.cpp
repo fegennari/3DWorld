@@ -2464,7 +2464,7 @@ public:
 			translate_to(xlate);
 			set_std_depth_func_with_eq(); // helps prevent Z-fighting
 
-			if (have_plot_dividers) { // enable normal maps for fences and walls; also applies to tunnels
+			if (1 || have_plot_dividers) { // enable normal maps for fences and walls; also applies to tunnels and power poles
 				dstate.set_enable_normal_map(1);
 				select_multitex(FLAT_NMAP_TEX, 5); // set flat normal map texture as the default
 			}
