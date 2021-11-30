@@ -497,7 +497,7 @@ void add_cylin_as_tris(vector<vert_norm_tc_color> &verts, point const ce[2], flo
 		}
 	} // for i
 }
-void draw_wire(point const pts[2], float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd) {
+void draw_wire(point const *const pts, float radius, color_wrapper const &cw, quad_batch_draw &untex_qbd) { // pts is size 2
 	unsigned const ndiv(4);
 	vector3d v12;
 	vector_point_norm const &vpn(gen_cylinder_data(pts, radius, radius, ndiv, v12));
