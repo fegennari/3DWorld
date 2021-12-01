@@ -2481,6 +2481,7 @@ public:
 	}
 	void draw_transmission_lines() { // non-const because dstate is modified
 		if (transmission_lines.empty()) return;
+		//highres_timer_t timer("Draw Transmission Lines"); // 0.12ms
 		dstate.set_untextured_material();
 		for (auto const &i : transmission_lines) {dstate.draw_transmission_line(i);}
 		dstate.unset_untextured_material();
