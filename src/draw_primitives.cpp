@@ -55,45 +55,67 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 										   float const *const perturb_map, float s_beg, float s_end, int force_dim)
 {
 	assert(ndiv > 0 && ndiv < 100000);
-	v12 = (ce[1] - ce[0]).get_norm();
-	float const r[2] = {radius1, radius2};
-	vector3d vab[2];
-	get_ortho_vectors(v12, vab, force_dim);
 	vector_point_norm &vpn(cylinder_vpn);
-	unsigned s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end));
-	if (s1 == ndiv) s0 = 0; // make wraparound correct
-	s1 = min(ndiv, s1+1);   // allow for sn
 	vpn.p.resize(2*ndiv);
-	vpn.n.resize(ndiv);
+	vpn.n.resize(  ndiv);
+	float const r[2] = {radius1, radius2};
 	float const css(TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
-	float sin_s((s0 == 0) ? 0.0 : sin(s0*css)), cos_s((s0 == 0) ? 1.0 : cos(s0*css));
-	// sin(x + y) = sin(x)*cos(y) + cos(x)*sin(y)
-	// cos(x + y) = cos(x)*cos(y) - sin(x)*sin(y)
+	unsigned s0(0), s1(ndiv);
 
-	for (unsigned S = s0; S < s1; ++S) { // build points table
-		float const s(sin_s), c(cos_s);
-		vpn.p[(S<<1)+0] = ce[0] + (vab[0]*(r[0]*s)) + (vab[1]*(r[0]*c)); // loop unrolled
-		vpn.p[(S<<1)+1] = ce[1] + (vab[0]*(r[1]*s)) + (vab[1]*(r[1]*c));
-		sin_s = s*cos_ds + c*sin_ds;
-		cos_s = c*cos_ds - s*sin_ds;
+	if (ce[0].x == ce[1].x && ce[0].y == ce[1].y && s_beg == 0.0 && s_end == 1.0) { // special case optimization for full vertical cylinder
+		float const z_sign((ce[1].z > ce[0].z) ? 1.0 : -1.0);
+		v12 = z_sign*plus_z;
+		float sin_s(0.0), cos_s(1.0);
+
+		for (unsigned S = 0; S < ndiv; ++S) { // build points table
+			float const s(sin_s), c(cos_s);
+			vpn.p[(S<<1)+0] = ce[0] + vector3d(z_sign*r[0]*s, r[0]*c, 0.0);
+			vpn.p[(S<<1)+1] = ce[1] + vector3d(z_sign*r[1]*s, r[1]*c, 0.0);
+			sin_s = s*cos_ds + c*sin_ds;
+			cos_s = c*cos_ds - s*sin_ds;
+		}
 	}
-	float nmag_inv(0.0);
-	bool const npt_r2(radius1 < radius2); // determine normal from longest edge for highest accuracy (required for when r1 == 0.0)
+	else {
+		v12 = (ce[1] - ce[0]).get_norm();
+		vector3d vab[2];
+		get_ortho_vectors(v12, vab, force_dim);
+		s0 = NDIV_SCALE(s_beg); s1 = NDIV_SCALE(s_end);
+		if (s1 == ndiv) {s0 = 0;} // make wraparound correct
+		s1 = min(ndiv, s1+1); // allow for sn
+		float sin_s((s0 == 0) ? 0.0 : sin(s0*css)), cos_s((s0 == 0) ? 1.0 : cos(s0*css));
+		// sin(x + y) = sin(x)*cos(y) + cos(x)*sin(y)
+		// cos(x + y) = cos(x)*cos(y) - sin(x)*sin(y)
 
-	for (unsigned S = s0; S < s1; ++S) { // build normals table
-		vector3d const v1(vpn.p[(((S+1)%ndiv)<<1)+npt_r2], vpn.p[(S<<1)+npt_r2]), v2(vpn.p[(S<<1)+1], vpn.p[S<<1]);
-		cross_product(v2, v1, vpn.n[S]);
-		if (S == s0) nmag_inv = 1.0/vpn.n[S].mag(); // first one (should not have a divide by zero)
-		vpn.n[S] *= nmag_inv; //norms[S].normalize();
+		for (unsigned S = s0; S < s1; ++S) { // build points table
+			float const s(sin_s), c(cos_s);
+			vpn.p[(S<<1)+0] = ce[0] + (vab[0]*(r[0]*s)) + (vab[1]*(r[0]*c)); // loop unrolled
+			vpn.p[(S<<1)+1] = ce[1] + (vab[0]*(r[1]*s)) + (vab[1]*(r[1]*c));
+			sin_s = s*cos_ds + c*sin_ds;
+			cos_s = c*cos_ds - s*sin_ds;
+		}
+	}
+	if (radius1 == radius2) { // special case optimization for cylinder rather than truncated cone
+		float const nscale(1.0/(0.5f*(vpn.p[0] + vpn.p[2]) - ce[0]).mag()); // slightly larger than 1.0/radius
+		for (unsigned S = s0; S < s1; ++S) {vpn.n[S] = (0.5f*(vpn.p[S<<1] + vpn.p[((S+1)%ndiv)<<1]) - ce[0])*nscale;} // build normals table
+	}
+	else {
+		bool const npt_r2(radius1 < radius2); // determine normal from longest edge for highest accuracy (required for when r1 == 0.0)
+		float nmag_inv(0.0);
+
+		for (unsigned S = s0; S < s1; ++S) { // build normals table
+			vector3d const v1(vpn.p[(((S+1)%ndiv)<<1)+npt_r2], vpn.p[(S<<1)+npt_r2]), v2(vpn.p[(S<<1)+1], vpn.p[S<<1]);
+			vector3d &normal(vpn.n[S]);
+			cross_product(v2, v1, normal);
+			if (S == s0) {nmag_inv = 1.0/normal.mag();} // first one (should not have a divide by zero)
+			normal *= nmag_inv; //norms[S].normalize();
+		}
 	}
 	if (perturb_map != NULL) { // add in perturbations
 		float const ravg(0.5f*(r[0] + r[1]));
 		float const pscale[2] = {r[0]/ravg, r[1]/ravg};
 
 		for (unsigned S = s0; S < s1; ++S) {
-			for (unsigned i = 0; i < 2; ++i) {
-				vpn.p[(S<<1)+i] += vpn.n[S]*(pscale[i]*perturb_map[S]);
-			}
+			for (unsigned i = 0; i < 2; ++i) {vpn.p[(S<<1)+i] += vpn.n[S]*(pscale[i]*perturb_map[S]);}
 		}
 		// update normals?
 	}
