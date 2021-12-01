@@ -911,7 +911,7 @@ float tree::calc_size_scale(point const &draw_pos) const {
 		float const dmax(get_draw_tile_dist());
 		if (dist_sq > dmax*dmax) return 0.0; // too far away to draw
 	}
-	return (do_zoom ? ZOOM_FACTOR : 1.0f)*tdata().base_radius/(sqrt(dist_sq)*DIST_C_SCALE);
+	return (do_zoom ? ZOOM_FACTOR : 1.0f)*tdata().base_radius*InvSqrt(dist_sq)/DIST_C_SCALE;
 }
 
 float tree_data_t::get_size_scale_mult() const {return (has_4th_branches ? LEAF_4TH_SCALE : 1.0);}
@@ -968,7 +968,6 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 {
 	if (!created) return;
 	tree_data_t &td(tdata());
-	td.gen_leaf_color();
 	bool const ground_mode(world_mode == WMODE_GROUND), wind_enabled(ground_mode && (display_mode & 0x0100) != 0);
 	point const tree_xlate(tree_center + xlate);
 
@@ -997,6 +996,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	float const size_scale(calc_size_scale(draw_pos));
 	last_size_scale = size_scale;
 	if (size_scale == 0.0) return;
+	td.gen_leaf_color();
 
 	if (lod_renderer.is_enabled()) {
 		float const lod_start(tree_lod_scales[2]), lod_end(tree_lod_scales[3]), lod_denom(lod_start - lod_end);
