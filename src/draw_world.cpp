@@ -653,7 +653,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 			unsigned const tsize(reflective_cobjs.get_tsize_for_cid(*i));
 			// physically correct, but no anisotropic texture filtering, artifact at cube map seams, etc. - so we use 0.0 (auto mipmap level/perfect mirror) instead
 			float const shininess(c.cp.shine*c.cp.shine); // hack to adjust to the 3DWorld model/shininess ranges
-			float const level(log2(tsize*SQRT3) - 0.5*log2(shininess + 1.0) + def_cube_map_reflect_mipmap_level);
+			float const level(min(10.0, (log2(tsize*SQRT3) - 0.5*log2(shininess + 1.0) + def_cube_map_reflect_mipmap_level))); // limit to a reasonable value of 10.0
 			//cout << TXT(tsize) << TXT(c.cp.shine) << TXT(level) << endl;
 			s.add_uniform_float("cube_map_reflect_mipmap_level", level);
 			setup_shader_cube_map_params(s, c, tid, tsize);
