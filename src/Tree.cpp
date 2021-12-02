@@ -289,9 +289,9 @@ bool tree::check_sphere_coll(point &center, float radius) const { // 10.7% of CP
 	return sphere_vert_cylin_intersect(center, radius, cylin);
 }
 
-
 bool tree_cont_t::check_sphere_coll(point &center, float radius) const {
 
+	if (!all_bcube.is_zero_area() && !sphere_cube_intersect(center, radius, all_bcube)) return 0;
 	bool coll(0);
 	for (const_iterator i = begin(); i != end(); ++i) {coll |= i->check_sphere_coll(center, radius);}
 	return coll;
