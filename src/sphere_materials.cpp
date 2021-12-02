@@ -1,4 +1,4 @@
-// 3D World - OpenGL CS184 Computer Graphics Project - Throwable Sphere Materials
+// 3D World - OpenGL CS184 Computer Graphics Project - Throwable Sphere Materials (enable with 'b' + '0')
 // by Frank Gennari
 // 9/5/16
 
@@ -493,7 +493,7 @@ gen_sphere_params_t gen_sphere_params;
 
 bool parse_sphere_gen_option(FILE *fp) {return gen_sphere_params.read_option(fp);}
 
-
+// Note: update reflections with 'i'
 void gen_rand_spheres(unsigned num, point const &center, float place_radius, float min_radius, float max_radius) {
 
 	timer_t timer("Gen Rand Spheres");
