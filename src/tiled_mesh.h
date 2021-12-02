@@ -13,6 +13,8 @@
 #include "tree_3dw.h"
 #include "shadow_map.h"
 #include "animals.h"
+#include <unordered_map>
+#include <unordered_set>
 
 
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
@@ -101,11 +103,15 @@ struct tile_xy_pair {
 
 	int x, y;
 	tile_xy_pair(int x_=0, int y_=0) : x(x_), y(y_) {}
-	bool operator<(tile_xy_pair const &t) const {return ((y == t.y) ? (x < t.x) : (y < t.y));}
+	bool operator==(tile_xy_pair const &tp) const {return (x == tp.x && y == tp.y);}
+	bool operator< (tile_xy_pair const &tp) const {return ((y == tp.y) ? (x < tp.x) : (y < tp.y));}
 	void operator+=(tile_xy_pair const &tp) {x += tp.x; y += tp.y;}
 	void operator-=(tile_xy_pair const &tp) {x -= tp.x; y -= tp.y;}
 	tile_xy_pair operator+(tile_xy_pair const &tp) const {return tile_xy_pair(x+tp.x, y+tp.y);}
 	tile_xy_pair operator-(tile_xy_pair const &tp) const {return tile_xy_pair(x-tp.x, y-tp.y);}
+};
+struct hash_tile_xy_pair {
+	uint32_t operator()(tile_xy_pair const &tp) const {return ((tp.x * 0x1F1F1F1F) ^ tp.y);}
 };
 
 tile_t *get_tile_from_xy(tile_xy_pair const &tp);
@@ -416,8 +422,8 @@ public:
 
 class tile_draw_t : public indexed_vbo_manager_t {
 
-	typedef map<tile_xy_pair, std::unique_ptr<tile_t> > tile_map;
-	typedef set<tile_xy_pair> tile_set_t;
+	typedef unordered_map<tile_xy_pair, unique_ptr<tile_t>, hash_tile_xy_pair> tile_map;
+	typedef unordered_set<tile_xy_pair, hash_tile_xy_pair> tile_set_t;
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
 	tile_map tiles;
