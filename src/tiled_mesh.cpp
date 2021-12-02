@@ -1693,6 +1693,8 @@ void tile_t::update_animals() {
 		propagate_animals_to_neighbor_tiles(fish);
 	}
 	if (atmosphere > 0.4 && vegetation > 0.2) { // need atmosphere and vegetation for birds and butterflies
+		adj_tiles_t adj_tiles;
+
 		if (!birds.was_generated()) {
 			cube_t range(get_mesh_bcube_global());
 			float const z_range(zmax - zmin);
@@ -1701,7 +1703,7 @@ void tile_t::update_animals() {
 			birds.gen(num_birds_per_tile, range, this);
 		}
 		else {
-			birds.flock(this);
+			birds.flock(this, adj_tiles);
 			birds.update(this);
 			propagate_animals_to_neighbor_tiles(birds);
 		}
@@ -1710,7 +1712,7 @@ void tile_t::update_animals() {
 			bflies.gen(num_bflies_per_tile, get_mesh_bcube_global(), this);
 		}
 		else {
-			bflies.run_mating(this);
+			bflies.run_mating(this, adj_tiles);
 			bflies.update(this);
 			propagate_animals_to_neighbor_tiles(bflies);
 		}

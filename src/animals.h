@@ -9,6 +9,12 @@
 
 class tile_t;
 
+struct adj_tiles_t {
+	tile_t *adj[9] = {0};
+	bool valid = 0;
+	void ensure_valid(tile_t const *const tile);
+};
+
 struct tile_offset_t {
 	int dxoff, dyoff;
 
@@ -116,11 +122,11 @@ public:
 struct vect_fish_t : public animal_group_t<fish_t> {};
 
 struct vect_bird_t : public animal_group_t<bird_t> {
-	void flock(tile_t const *const tile);
+	void flock(tile_t const *const tile, adj_tiles_t &adj_tiles);
 };
 
 struct vect_butterfly_t : public animal_group_t<butterfly_t> {
-	void run_mating(tile_t const *const tile);
+	void run_mating(tile_t const *const tile, adj_tiles_t &adj_tiles);
 };
 
 bool birds_active();

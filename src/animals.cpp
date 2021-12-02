@@ -273,16 +273,19 @@ void bird_t::apply_force_xy_const_vel(vector3d const &force) {
 	flocking = 1;
 }
 
-void get_adj_tiles(tile_t const *const tile, tile_t *adj_tiles[9]) {
+void adj_tiles_t::ensure_valid(tile_t const *const tile) {
+	if (valid) return;
+	assert(tile != nullptr);
 	tile_xy_pair const tp(tile->get_tile_xy_pair());
 	unsigned ix(0);
 
 	for (int dy = -1; dy <= 1; ++dy) {
-		for (int dx = -1; dx <= 1; ++dx) {adj_tiles[ix++] = get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy));}
+		for (int dx = -1; dx <= 1; ++dx) {adj[ix++] = get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy));}
 	}
+	valid = 1;
 }
 
-void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
+void vect_bird_t::flock(tile_t const *const tile, adj_tiles_t &adj_tiles) { // boids, called per-tile
 
 	// see https://www.blog.drewcutchins.com/blog/2018-8-16-flocking
 	if (!animate2 || this->empty()) return;
@@ -290,8 +293,7 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 	float const sep_dist_sq(0.2*nd_sq), cohesion_dist_sq(0.3*nd_sq), align_dist_sq(0.25*nd_sq);
 	float const dmax(sqrt(max(sep_dist_sq, max(cohesion_dist_sq, align_dist_sq))));
 	float const mass(100.0), sep_strength(0.05), cohesion_strength(0.05), align_strength(0.5);
-	tile_t *adj_tiles[9] = {0};
-	get_adj_tiles(tile, adj_tiles);
+	adj_tiles.ensure_valid(tile);
 
 	for (auto i = this->begin(); i != this->end(); ++i) {
 		if (!i->is_enabled()) continue;
@@ -300,7 +302,7 @@ void vect_bird_t::flock(tile_t const *const tile) { // boids, called per-tile
 		unsigned pcount(0), vcount(0);
 
 		for (unsigned adj_ix = 0; adj_ix < 9; ++adj_ix) {
-			tile_t *const adj_tile(adj_tiles[adj_ix]);
+			tile_t *const adj_tile(adj_tiles.adj[adj_ix]);
 			if (!adj_tile) continue;
 			vect_bird_t &birds(adj_tile->get_birds());
 			if (!birds.empty() && adj_tile != tile && !adj_tile->get_mesh_bcube().closest_dist_xy_less_than(cs_pos, dmax)) continue; // tile is too far away
@@ -454,10 +456,9 @@ void butterfly_t::update_dest(rand_gen_t &rgen, tile_t const *const tile) {
 
 bool butterfly_t::can_mate_with(butterfly_t const &b) const {return (gender != b.gender && color == b.color);} // different gender and same color
 
-void vect_butterfly_t::run_mating(tile_t const *const tile) {
+void vect_butterfly_t::run_mating(tile_t const *const tile, adj_tiles_t &adj_tiles) {
 	if (!animate2 || this->empty()) return;
-	tile_t *adj_tiles[9] = {0};
-	get_adj_tiles(tile, adj_tiles);
+	adj_tiles.ensure_valid(tile);
 	float const mate_dmax(0.75f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // 0.75 tile
 
 	for (auto i = this->begin(); i != this->end(); ++i) {
@@ -468,7 +469,7 @@ void vect_butterfly_t::run_mating(tile_t const *const tile) {
 		float dmin_sq(mate_dmax*mate_dmax);
 
 		for (unsigned adj_ix = 0; adj_ix < 9; ++adj_ix) {
-			tile_t *const adj_tile(adj_tiles[adj_ix]);
+			tile_t *const adj_tile(adj_tiles.adj[adj_ix]);
 			if (!adj_tile) continue;
 			vect_butterfly_t &bflies(adj_tile->get_bflies());
 			if (!bflies.empty() && adj_tile != tile && !adj_tile->get_mesh_bcube().closest_dist_xy_less_than(cs_pos, mate_dmax)) continue; // tile is too far away
