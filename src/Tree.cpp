@@ -316,29 +316,40 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 		tree_data_t::post_branch_draw(shadow_only);
 	}
 	else { // draw_leaves
-		int const tex0_loc(s.get_uniform_loc("tex0"));
-		tree_data_t::pre_leaf_draw(s);
-		sorted.clear();
-		
-		for (unsigned i = 0; i < size(); ++i) {
-			tree const &t(operator[](i));
-			point const center(t.sphere_center() + xlate);
-			// still need VFC in tiled terrain mode since the shadow volume doesn't include the entire scene (especially for local city light shadows)
-			if (tt_shadow_mode && !dist_less_than(center, camera_pdu.pos, camera_pdu.far_))    continue; // Note: intentionally excludes tree radius
-			if (tt_shadow_mode && !camera_pdu.sphere_visible_test(center, 1.1*t.get_radius())) continue;
-			sorted.emplace_back(distance_to_camera_sq(center), i);
-		}
-		if (!tt_shadow_mode) {sort(sorted.begin(), sorted.end());} // sort front to back for better early z culling
 		to_update_leaves.clear();
+		tree_data_t::pre_leaf_draw(s);
 
-		for (auto i = sorted.begin(); i != sorted.end(); ++i) {
-			operator[](i->second).draw_leaves_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc, tex0_loc, to_update_leaves);
+		if (tt_shadow_mode) {
+			for (tree &t : *this) {
+				point const center(t.sphere_center() + xlate);
+				// still need VFC in tiled terrain mode since the shadow volume doesn't include the entire scene (especially for local city light shadows)
+				if (!dist_less_than(center, camera_pdu.pos, camera_pdu.far_))    continue; // Note: intentionally excludes tree radius
+				if (!camera_pdu.sphere_visible_test(center, 1.1*t.get_radius())) continue;
+				t.draw_leaves_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc, -1, to_update_leaves);
+			}
+			tree_data_t::post_leaf_draw();
 		}
-		tree_data_t::post_leaf_draw();
+		else {
+			int const tex0_loc(shadow_only ? -1 : s.get_uniform_loc("tex0")); // not needed in shadow mode
+			point const local_camera(get_camera_pos() - xlate);
+			
+			if (shadow_only || (world_mode == WMODE_INF_TERRAIN && !all_bcube.is_all_zeros() &&
+				!all_bcube.closest_dist_less_than(local_camera, 1.0*(X_SCENE_SIZE + Y_SCENE_SIZE))))
+			{ // direct draw
+				for (tree &t : *this) {t.draw_leaves_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc, tex0_loc, to_update_leaves);}
+			}
+			else { // sorted draw - when close to the player
+				sorted.clear();
+				for (unsigned i = 0; i < size(); ++i) {sorted.emplace_back(p2p_dist_sq(operator[](i).sphere_center(), local_camera), i);}
+				sort(sorted.begin(), sorted.end()); // sort front to back for better early z culling
 
-		if (!tt_shadow_mode) {
+				for (auto i = sorted.begin(); i != sorted.end(); ++i) {
+					operator[](i->second).draw_leaves_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc, tex0_loc, to_update_leaves);
+				}
+			}
+			tree_data_t::post_leaf_draw();
 			int const num_to_update(to_update_leaves.size());
-	#pragma omp parallel for num_threads(max(1, min(4, num_to_update))) schedule(static) if (num_to_update > 1)
+#pragma omp parallel for num_threads(max(1, min(4, num_to_update))) schedule(static) if (num_to_update > 1)
 			for (int i = 0; i < num_to_update; ++i) {to_update_leaves[i]->update_leaf_orients_wind();}
 		}
 	}
