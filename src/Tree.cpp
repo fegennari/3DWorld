@@ -302,7 +302,8 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 	bool draw_branches, bool draw_leaves, bool shadow_only, bool reflection_pass, vector3d const &xlate)
 {
 	assert(draw_branches != draw_leaves); // must enable exactly one
-	int const wsoff_loc(s.get_uniform_loc("world_space_offset"));
+	if (!all_bcube.is_zero_area() && !camera_pdu.cube_visible(all_bcube + xlate)) return; // VFC
+	int const wsoff_loc(shadow_only ? -1 : s.get_uniform_loc("world_space_offset")); // not needed in shadow mode
 	bool const tt_shadow_mode(world_mode == WMODE_INF_TERRAIN && shadow_only);
 
 	if (draw_branches) {
@@ -2069,7 +2070,7 @@ int tree_builder_t::generate_next_cylin(int cylin_num, int ncib, bool branch_jus
 	float const t_start(TWO_PI/rgen.rand_int(3,8)); //start in the first pi
 	float const t_end(((rgen.rand_int(1,3) == 1) ? 1.0f : 5.0f)*PI_TWO + rgen.rand_int(2,8)*PI_16); //either PI/2 to PI or 5*PI/2 to 3*PI - controls branch droopiness
 	int add_deg_rotate(int(0.01*cylin_num*sinf(t_start+(t_end-t_start)*cylin_num/ncib)*branch_curveness)); //how much wavy the branch will be --in degrees
-	int rg[2];
+	int rg[2] = {};
 
 	if (cylin_num < int(ncib/3)) { //how much to start the starting deg_scale
 		rg[0] = 5; rg[1] = 10;
@@ -2254,6 +2255,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 			back().gen_tree(pos, 0, ttype, 0, 1, 0, rgen, 1.0, 1.0, 1.0, tree_4th_branches, 1); // allow bushes
 		} // for j
 	} // for i
+	calc_bcube();
 }
 
 
