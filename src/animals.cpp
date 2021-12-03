@@ -397,6 +397,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	// skip tile scenery intersection check if close to the destination or within the dest plant bsphere
 	bool const skip_tile_int_check(dest_valid && !is_mating && (dist_less_than(pos, cur_dest, 2.0*radius) ||
 		(dest_bsphere.radius > 0.0 && dist_less_than(pos, dest_bsphere.pos, (coll_radius + dest_bsphere.radius)))));
+	bool check_tree_coll(dist_less_than(cs_pos, get_camera_pos(), (X_SCENE_SIZE + Y_SCENE_SIZE)));
 	
 	// skip building interiors (shouldn't be there) and cars (too slow)
 	if (!skip_coll_check && proc_city_sphere_coll(cs_pos, prev_cs_pos, coll_radius, prev_cs_pos.z, 0, 0, &cnorm, 0)) {
@@ -408,7 +409,8 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		explore_time = TICKS_PER_SECOND*rgen.rand_uniform(2.0, 5.0); // explore a bit more to get out from between the buildings
 	}
 	else if ((mesh_height < water_plane_z - 0.5*get_butterfly_max_alt()) || // over deep water
-		(!skip_tile_int_check && !skip_coll_check && tile && tile->check_sphere_collision(cs_pos, coll_radius))) // check collision with trees and scenery
+		// check collision with trees (maybe) and scenery
+		(!skip_tile_int_check && !skip_coll_check && tile && tile->check_sphere_collision(cs_pos, coll_radius, check_tree_coll, check_tree_coll, 1)))
 	{
 		dir.negate(); // just negate the direction because we don't have the collision normal
 		velocity.negate();

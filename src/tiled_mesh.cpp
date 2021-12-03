@@ -1949,23 +1949,23 @@ void tile_t::draw_water(shader_t &s, float z) const {
 }
 
 
-bool tile_t::check_sphere_collision(point &pos, float sradius) const { // pos is in camera space
+bool tile_t::check_sphere_collision(point &pos, float sradius, bool inc_dtrees, bool inc_ptrees, bool inc_scenery) const { // pos is in camera space
 
 	if (is_distant || !contains_point(pos)) return 0;
 	if (pos.z > get_tile_zmax() + sradius)  return 0; // sphere is completely above the tile
 	bool coll(0);
 
-	if (!pine_trees.empty()) {
+	if (inc_ptrees && !pine_trees.empty()) {
 		pos  -= ptree_off.get_xlate(); // Note: pos adj is required because pos is modified
 		coll |= pine_trees.check_sphere_coll(pos, sradius);
 		pos  += ptree_off.get_xlate();
 	}
-	if (!decid_trees.empty()) {
+	if (inc_dtrees && !decid_trees.empty()) {
 		pos  -= dtree_off.get_xlate();
 		coll |= decid_trees.check_sphere_coll(pos, sradius);
 		pos  += dtree_off.get_xlate();
 	}
-	if (scenery.generated) {
+	if (inc_scenery && scenery.generated) {
 		pos  -= scenery_off.get_xlate();
 		coll |= scenery.check_sphere_coll(pos, sradius);
 		pos  += scenery_off.get_xlate();
