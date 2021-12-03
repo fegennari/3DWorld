@@ -109,6 +109,7 @@ bool is_distance_mode     () {return ((display_mode & 0x10) != 0);}
 bool nonunif_fog_enabled  () {return (show_fog && is_distance_mode());}
 bool enable_ocean_waves   () {return ((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);}
 bool draw_distant_water   () {return (is_water_enabled() && is_distance_mode() && far_clip_ratio > 1.1);}
+bool enable_tree_dlights  () {return ((is_night() && have_cities()) || flashlight_on);} // enable for city night lights
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5f*(get_tt_fog_bot() + get_tt_fog_top());}
@@ -2888,7 +2889,7 @@ void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves
 }
 
 
-void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
+void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) { // and palm trees
 
 	// far leaves
 	if (!shadow_pass) {
@@ -2943,7 +2944,8 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	s.end_shader();
 
 	// near trunks
-	tree_branch_shader_setup(s, enable_smap, 0, shadow_pass); // enable_opacity=0
+	bool const enable_dlights(!shadow_pass && !reflection_pass && enable_tree_dlights());
+	tree_branch_shader_setup(s, enable_smap, 0, shadow_pass, enable_dlights); // enable_opacity=0
 	s.add_uniform_float("tex_scale_t", 5.0);
 	draw_pine_tree_bl(s, 1, 0, 0, shadow_pass, reflection_pass, enable_smap, -1); // branches
 	s.add_uniform_float("tex_scale_t", 1.0);
@@ -3058,7 +3060,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	}
 	{ // draw branches
 		shader_t bs;
-		bool const enable_dlights(!shadow_pass && !reflection_pass && ((is_night() && have_cities()) || flashlight_on)); // enable for city night lights
+		bool const enable_dlights(!shadow_pass && !reflection_pass && enable_tree_dlights());
 		tree_branch_shader_setup(bs, enable_shadow_maps, 1, shadow_pass, enable_dlights); // enable_opacity=1
 		if (!shadow_pass) {set_tree_dither_noise_tex(bs, 1);} // TU=1 (for opacity)
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
