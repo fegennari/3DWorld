@@ -211,8 +211,9 @@ struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // s
 	vert_norm_comp_color() {}
 	vert_norm_comp_color(vert_norm const &vn, color_wrapper const &cw) : vert_norm_comp(vn), color_wrapper(cw) {}
 	vert_norm_comp_color(vert_norm_comp const &vn, color_wrapper const &cw) : vert_norm_comp(vn), color_wrapper(cw) {}
-	vert_norm_comp_color(point const &v_, vector3d const &n_, colorRGBA const &c_) : vert_norm_comp(v_, n_) {set_c4(c_);}
-	vert_norm_comp_color(point const &v_, vector3d const &n_, color_wrapper const &cw) : vert_norm_comp(v_, n_), color_wrapper(cw) {}
+	vert_norm_comp_color(point const &v_, vector3d  const &n_, colorRGB  const &c_) : vert_norm_comp(v_, n_) {set_c3(c_);}
+	vert_norm_comp_color(point const &v_, vector3d  const &n_, colorRGBA const &c_) : vert_norm_comp(v_, n_) {set_c4(c_);}
+	vert_norm_comp_color(point const &v_, vector3d  const &n_, color_wrapper const &cw) : vert_norm_comp(v_, n_), color_wrapper(cw) {}
 	vert_norm_comp_color(point const &v_, norm_comp const &n_, color_wrapper const &cw) : vert_norm_comp(v_, n_), color_wrapper(cw) {}
 	void assign(point const &v_, vector3d const &n_, unsigned char const *const c_, bool has_alpha=0) {
 		v = v_; set_norm(n_); copy_color(c_, has_alpha);

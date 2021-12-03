@@ -253,7 +253,7 @@ void small_tree_group::get_back_to_front_ordering(vector<pair<float, unsigned> >
 	point const ref_pos(get_camera_pos() - xlate);
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		if (i->are_leaves_visible(xlate)) {to_draw.push_back(make_pair(p2p_dist_sq(i->get_pos(), ref_pos), i-begin()));}
+		if (i->are_leaves_visible(xlate)) {to_draw.emplace_back(p2p_dist_sq(i->get_pos(), ref_pos), i-begin());}
 	}
 	sort(to_draw.begin(), to_draw.end()); // sort front to back for early Z culling
 }
@@ -267,12 +267,12 @@ void small_tree_group::draw_tree_insts(shader_t &s, bool draw_all, vector3d cons
 
 	if (!draw_all || insts.size() != num_of_this_type) { // recompute insts
 		insts.clear();
-		if (!camera_pdu.cube_visible(all_bcube + xlate)) return; // VFC
+		if (!draw_all && !camera_pdu.cube_visible(all_bcube + xlate)) return; // VFC
 		insts.reserve(num_of_this_type);
 
 		for (const_iterator i = begin(); i != end(); ++i) {
 			if ((is_pine && !i->is_pine_tree()) || (!is_pine && i->get_type() != T_PALM)) continue; // only pine/plam trees are instanced
-			if (draw_all || i->are_leaves_visible(xlate)) {insts.push_back(tree_inst_t(i->get_inst_id(), i->get_pos()));}
+			if (draw_all || i->are_leaves_visible(xlate)) {insts.emplace_back(i->get_inst_id(), i->get_pos());}
 		}
 		sort(insts.begin(), insts.end());
 	}
@@ -982,15 +982,15 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 			vbo_manager.fill_pts_from(points, PINE_TREE_NPTS, leaf_color, vbo_mgr_ix);
 		}*/
 		else { // we only get into this case when running in parallel
-			#pragma omp critical(pine_tree_vbo_update)
+#pragma omp critical(pine_tree_vbo_update)
 			vbo_mgr_ix = vbo_manager.add_points_with_offset(points, PINE_TREE_NPTS, leaf_color);
 		}
 	}
 	else { // low detail billboard
 		assert(!update_mode);
 		float const zv1(0.75*dz); // shift slightly down to account for sparse tree texture image
-		vert_norm_comp const vn((pos + point(0.0, 0.0, zv1)), vector3d(2.0f*sz_scale/calc_tree_size(), 0.9f*(height - zv1), 0.0f)); // 0.9x to prevent clipping above 1.0
-		vbo_manager.add_points(&vn, 1, leaf_color);
+		// 0.9x to prevent clipping above 1.0
+		vbo_manager.add_point(vert_norm_comp_color((pos + point(0.0, 0.0, zv1)), vector3d(2.0f*sz_scale/calc_tree_size(), 0.9f*(height - zv1), 0.0f), leaf_color));
 	}
 }
 

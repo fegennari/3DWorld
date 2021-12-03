@@ -68,7 +68,7 @@ public:
 	float get_pine_tree_radius() const;
 	float get_radius() const {return (is_pine_tree() ? get_pine_tree_radius() : width);} // approximate
 	float get_zmax() const;
-	float get_trunk_bsphere_radius() const {return (trunk_cylin.r1 + 0.5*trunk_cylin.get_length());}
+	float get_trunk_bsphere_radius() const {return (trunk_cylin.r1 + 0.5*((r_angle == 0.0) ? fabs(trunk_cylin.p1.z - trunk_cylin.p2.z) : trunk_cylin.get_length()));}
 	void write_to_cobj_file(std::ostream &out) const;
 
 	struct comp_by_type_dist {
