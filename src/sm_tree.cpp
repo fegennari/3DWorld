@@ -189,6 +189,7 @@ void small_tree_group::calc_bcube() {
 
 bool small_tree_group::check_sphere_coll(point &center, float radius) const {
 
+	if (!all_bcube.is_zero_area() && !sphere_cube_intersect(center, radius, all_bcube)) return 0;
 	bool coll(0);
 
 	for (const_iterator i = begin(); i != end(); ++i) {
@@ -221,6 +222,7 @@ void small_tree_group::translate_by(vector3d const &vd) {
 
 bool small_tree_group::draw_trunks(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate) const {
 
+	if (!all_visible && !shadow_only && !camera_pdu.cube_visible(all_bcube + xlate)) return 0; // VFC
 	static vector<vert_norm_tc> cylin_verts; // class member?
 	bool all_drawn(1);
 
@@ -264,7 +266,9 @@ void small_tree_group::draw_tree_insts(shader_t &s, bool draw_all, vector3d cons
 	if (num_of_this_type == 0) return;
 
 	if (!draw_all || insts.size() != num_of_this_type) { // recompute insts
-		insts.clear(); insts.reserve(num_of_this_type);
+		insts.clear();
+		if (!camera_pdu.cube_visible(all_bcube + xlate)) return; // VFC
+		insts.reserve(num_of_this_type);
 
 		for (const_iterator i = begin(); i != end(); ++i) {
 			if ((is_pine && !i->is_pine_tree()) || (!is_pine && i->get_type() != T_PALM)) continue; // only pine/plam trees are instanced
@@ -303,6 +307,7 @@ void small_tree_group::draw_pine_leaves(shader_t &s, bool shadow_only, bool low_
 		return;
 	}
 	if (num_pine_trees == 0) return;
+	if (!draw_all && !camera_pdu.cube_visible(all_bcube + xlate)) return; // VFC
 	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
 	vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);// non-instanced (pine trees only)
 	vbomgr.begin_render();
@@ -327,6 +332,7 @@ void small_tree_group::draw_pine_leaves(shader_t &s, bool shadow_only, bool low_
 void small_tree_group::draw_non_pine_leaves(bool shadow_only, bool draw_palm, bool draw_non_palm, int xlate_loc, int scale_loc, vector3d const &xlate) const {
 
 	if (!draw_non_palm && num_palm_trees == 0) return; // no palm trees to draw
+	if (!shadow_only && !camera_pdu.cube_visible(all_bcube + xlate)) return; // VFC
 	
 	for (const_iterator i = begin(); i != end(); ++i) {
 		if (i->is_pine_tree()) continue;
@@ -452,8 +458,8 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 			} // for b
 		}
 	}
-	if (sm_tree_density == 0.0 || vegetation == 0.0 || !(tree_mode & 2)) return;
-	if (density[0] == 0.0 && density[1] == 0.0 && density[2] == 0.0 && density[3] == 0.0) return;
+	if (sm_tree_density == 0.0 || vegetation == 0.0 || !(tree_mode & 2)) {calc_bcube(); return;}
+	if (density[0] == 0.0 && density[1] == 0.0 && density[2] == 0.0 && density[3] == 0.0) {calc_bcube(); return;}
 	assert(x1 < x2 && y1 < y2);
 	float const tscale(calc_tree_scale()), tsize(calc_tree_size()), ntrees_mult(vegetation*sm_tree_density*tscale*tscale/8.0f);
 	int const skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
@@ -486,6 +492,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 		xv = 0.0; // reset for next y iter
 	} // for i
 	if (world_mode == WMODE_GROUND) {sort_by_type();}
+	calc_bcube();
 }
 
 // Note: for user placed trees in tiled terrain mode with heightmap texture; ignores vegetation, tree density functions, slope, etc.
@@ -513,6 +520,7 @@ void small_tree_group::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2
 			}
 		} // for j
 	} // for i
+	calc_bcube();
 }
 
 
@@ -635,7 +643,6 @@ void gen_small_trees() {
 	small_trees.finalize(0);
 	//PRINT_TIME("Gen");
 	small_trees.add_cobjs();
-	small_trees.calc_bcube();
 	//PRINT_TIME("Cobj");
 	cout << "small trees: " << small_trees.size() << endl;
 }
