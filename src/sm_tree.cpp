@@ -875,6 +875,7 @@ void small_tree::add_bounds_to_bcube(cube_t &bcube) const {
 // very simple check against trunk only, for collisions with a player walking on the ground
 bool small_tree::check_sphere_coll(point &center, float radius) const {
 	if (type == T_BUSH) return 0; // no trunk, not yet handled
+	if (!dist_xy_less_than(center, pos, (radius + trunk_cylin.r1))) return 0; // optimization
 	return sphere_vert_cylin_intersect(center, radius, trunk_cylin);
 }
 
