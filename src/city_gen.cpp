@@ -1904,6 +1904,7 @@ class city_road_gen_t : public road_gen_base_t {
 	vector<road_network_t> road_networks; // one per city
 	road_network_t global_rn; // connects cities together; no plots
 	vector<transmission_line_t> transmission_lines;
+	cube_t cities_bcube;
 	road_draw_state_t dstate;
 	rand_gen_t rgen;
 	bool have_plot_dividers;
@@ -1961,7 +1962,7 @@ public:
 		//timer_t timer("Gen Roads"); // ~0.5ms
 		road_networks.push_back(road_network_t(region, road_networks.size(), is_residential));
 		if (!road_networks.back().gen_road_grid(road_width, road_spacing)) {road_networks.pop_back(); return;}
-		//cout << "Roads: " << road_networks.back().num_roads() << endl;
+		if (cities_bcube.is_all_zeros()) {cities_bcube = region;} else {cities_bcube.union_with_cube(region);} // Note: region is zero height
 	}
 
 	void get_all_conn_road_endpoints(road_network_t const &rn, cube_t const &dest_bcube, vector<road_endpoint_t> &rpts) {
@@ -2413,12 +2414,15 @@ public:
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
 		if (global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges_and_tunnels)) return 1;
 
-		if (!exclude_bridges_and_tunnels && xy_only && !transmission_lines.empty()) {
+		// since transmission lines run between cities, we can check the cities_bcube for early rejection
+		if (!exclude_bridges_and_tunnels && xy_only && !transmission_lines.empty() && sphere_cube_intersect_xy(pos, radius, cities_bcube)) {
 			// assume this is a valid scenery placement query and check transmission lines
-			float const radius_exp(radius + 0.25*city_params.road_width); // include tower bar length
+			float const right_of_way(radius + 0.3*city_params.road_width); // include tower bar length (.25) plus some extra spacing
 
 			for (auto const &t : transmission_lines) {
-				if (point_line_seg_dist_2d(pos, t.p1, t.p2) < radius_exp) return 1;
+				if (point_line_seg_dist_2d(pos, t.p1, t.p2            ) < right_of_way) return 1; // check the line of towers
+				if (point_line_seg_dist_2d(pos, t.p1, t.p1_wire_pts[1]) < right_of_way) return 1; // check end points
+				if (point_line_seg_dist_2d(pos, t.p2, t.p2_wire_pts[1]) < right_of_way) return 1; // check end points
 			}
 		}
 		return 0;
