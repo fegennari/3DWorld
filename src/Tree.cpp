@@ -2202,7 +2202,7 @@ void tree_cont_t::gen_trees_tt_within_radius(int x1, int y1, int x2, int y2, poi
 			} // for b
 		}
 	}
-	if (mod_num_trees == 0 || !(tree_mode & 1)) return; // no trees
+	if (mod_num_trees == 0 || !(tree_mode & 1)) {calc_bcube(); return;} // no generated trees
 	float const height_thresh(get_median_height(tree_density_thresh));
 	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1U, XY_MULT_SIZE/mod_num_trees));
 	unsigned const skip_val(max(1, int(1.0/tree_scale))); // similar to deterministic gen in scenery.cpp
