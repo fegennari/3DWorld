@@ -345,7 +345,7 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, bool draw_palm, bo
 
 
 float calc_tree_scale() {return (Z_SCENE_SIZE*tree_scale)/16.0f;}
-float calc_tree_size () {return SM_TREE_SIZE*Z_SCENE_SIZE/calc_tree_scale();}
+float calc_tree_size () {return 16.0f*SM_TREE_SIZE/tree_scale;}
 
 float rand_tree_height(rand_gen_t &rgen) {return rgen.rand_uniform(0.4, 1.0);}
 float rand_tree_width (rand_gen_t &rgen) {return rgen.rand_uniform(0.25, 0.35);}
@@ -900,7 +900,7 @@ bool small_tree::line_intersect(point const &p1, point const &p2, float *t) cons
 				coll = 1;
 			}
 		}
-	}
+	} // for i
 	return coll;
 }
 
@@ -1023,6 +1023,9 @@ bool small_tree::are_leaves_visible(vector3d const &xlate) const {
 
 	if (type == T_PALM) { // slower, use occlusion culling
 		return sphere_in_camera_view((trunk_cylin.p2 - 0.2*width*get_rot_dir() + xlate), (0.3*height + 0.2*width), 2);
+	}
+	else if (r_angle == 0.0) { // vertical trunk - common case
+		return camera_pdu.sphere_visible_test((pos + vector3d(0.0, 0.0, 0.5*height) + xlate), max(1.5*width, 0.5*height));
 	}
 	else {
 		return camera_pdu.sphere_visible_test((pos + 0.5*height*get_rot_dir() + xlate), max(1.5*width, 0.5*height));
