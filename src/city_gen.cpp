@@ -2411,7 +2411,17 @@ public:
 		for (auto r = road_networks.begin(); r != road_networks.end(); ++r) {r->get_plot_zones(zones);}
 	}
 	bool check_road_sphere_coll(point const &pos, float radius, bool xy_only, bool exclude_bridges_and_tunnels) const {
-		return global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges_and_tunnels);
+		if (global_rn.check_road_sphere_coll(pos, radius, 1, xy_only, exclude_bridges_and_tunnels)) return 1;
+
+		if (!exclude_bridges_and_tunnels && xy_only && !transmission_lines.empty()) {
+			// assume this is a valid scenery placement query and check transmission lines
+			float const radius_exp(radius + 0.25*city_params.road_width); // include tower bar length
+
+			for (auto const &t : transmission_lines) {
+				if (point_line_seg_dist_2d(pos, t.p1, t.p2) < radius_exp) return 1;
+			}
+		}
+		return 0;
 	}
 	void get_roads_sphere_coll(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) const {
 		global_rn.get_roads_sphere_coll(pos, radius, 1, xy_only, out, out_bt);

@@ -213,6 +213,9 @@ inline bool pt_line_dir_dist_less_than(point const &P, point const &L1, vector3d
 inline float line_seg_line_seg_dist_2d(point const &L1a, point const &L1b, point const &L2a, point const &L2b) {
 	return line_seg_line_seg_dist_2d(vector2d(L1a.x, L1a.y), vector2d(L1b.x, L1b.y), vector2d(L2a.x, L2a.y), vector2d(L2b.x, L2b.y));
 }
+inline float point_line_seg_dist_2d(vector3d const &pt, vector3d const &La, vector3d const &Lb) {
+	return point_line_seg_dist_2d(vector2d(pt.x, pt.y), vector2d(La.x, La.y), vector2d(Lb.x, Lb.y));
+}
 
 template<typename T> inline T dot_product(pointT<T> const &A, pointT<T> const &B, pointT<T> const &C) {
 	return ((B.x - A.x)*(C.x - A.x) + (B.y - A.y)*(C.y - A.y) + (B.z - A.z)*(C.z - A.z));
