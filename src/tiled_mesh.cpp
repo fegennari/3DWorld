@@ -75,7 +75,6 @@ extern char *mh_filename_tt;
 extern float h_dirt[];
 extern tree_data_manager_t tree_data_manager;
 extern pt_line_drawer tree_scenery_pld;
-extern tree_cont_t *cur_tile_trees;
 extern tree_placer_t tree_placer;
 
 bool enable_terrain_env(ENABLE_TERRAIN_ENV);
@@ -1403,10 +1402,9 @@ void tile_t::update_scenery() {
 	if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
 	if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
 	//timer_t timer("Gen Scenery");
-	cur_tile_trees = &decid_trees; // set our tile's decid trees as current so that logs and stumps get the correct colors; assumes trees are generated before scenery
 	scenery_off.set_from_xyoff2();
-	scenery.gen(x1+scenery_off.dxoff, y1+scenery_off.dyoff, x2+scenery_off.dxoff, y2+scenery_off.dyoff, vegetation*get_avg_veg(), 1);
-	cur_tile_trees = nullptr;
+	// set our tile's decid trees as current so that logs and stumps get the correct colors; assumes trees are generated before scenery
+	scenery.gen(x1+scenery_off.dxoff, y1+scenery_off.dyoff, x2+scenery_off.dxoff, y2+scenery_off.dyoff, vegetation*get_avg_veg(), 1, decid_trees);
 }
 
 void tile_t::draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_shadow_maps) {

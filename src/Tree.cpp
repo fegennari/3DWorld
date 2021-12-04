@@ -58,7 +58,6 @@ float tree_lod_scales[4] = {0, 0, 0, 0}; // branch_start, branch_end, leaf_start
 colorRGBA leaf_base_color(BLACK);
 tree_data_manager_t tree_data_manager;
 tree_cont_t t_trees(tree_data_manager);
-tree_cont_t *cur_tile_trees(nullptr);
 tree_placer_t tree_placer;
 
 
@@ -2298,9 +2297,6 @@ void regen_trees(bool keep_old) {
 	}
 	if (!scrolling) {PRINT_TIME(" Gen Trees");}
 }
-
-
-unsigned get_closest_tree_type(point const &pos) {return (cur_tile_trees ? *cur_tile_trees : t_trees).get_closest_tree_type(pos);}
 
 
 void tree::write_to_cobj_file(std::ostream &out) const {

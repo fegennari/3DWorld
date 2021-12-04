@@ -120,7 +120,7 @@ protected:
 	int get_tid() const;
 	colorRGBA get_bark_color(vector3d const &xlate=zero_vector) const;
 public:
-	void cache_closest_tree_type();
+	void cache_closest_tree_type(tree_cont_t const &trees);
 };
 
 
@@ -268,13 +268,12 @@ public:
 	bool check_sphere_coll(point &center, float radius) const;
 	void shift(vector3d const &vd);
 	void calc_bcube();
-	void cache_closest_tree_types();
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 	void add_leafy_plant(point const &pos, float radius, int type, int calc_z);
-	void gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache);
-	void post_gen_setup();
+	void gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache, tree_cont_t const &trees);
+	void post_gen_setup(tree_cont_t const &trees);
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass=0);
 	void draw_opaque_objects(shader_t &s, shader_t &vrs, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
 	bool setup_voxel_rocks_shader(shader_t &vrs, bool shadow_only) const;

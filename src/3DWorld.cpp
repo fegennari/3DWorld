@@ -979,7 +979,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			rand_gen_index = rand(); // Note: doesn't set mesh_rgen_index
 
 			if (world_mode == WMODE_GROUND) {
-				//gen_scenery();
+				//gen_scenery(t_trees);
 				//regen_trees(0);
 				gen_scene(0, 1, 1, 0, 1);
 			}

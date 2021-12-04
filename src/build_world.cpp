@@ -662,7 +662,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		}
 	}
 	if (!inf_terrain) {
-		gen_scenery(); // must be generated after trees
+		gen_scenery(t_trees); // must be generated after trees
 		PRINT_TIME("Scenery generation");
 	}
 	add_all_coll_objects(coll_obj_file, (num_trees == 0));
@@ -2090,7 +2090,7 @@ int read_coll_objects(const char *filename) {
 	if (use_voxel_cobjs) {cobj.cp.cobj_type = COBJ_TYPE_VOX_TERRAIN;}
 	if (!read_coll_obj_file(filename, xf, cobj, 0, WHITE)) return 0;
 	if (num_keycards > 0) {obj_groups[coll_id[KEYCARD]].enable();}
-	if (has_scenery2) {gen_scenery();} // need to call post_gen_setup() for leafy plants
+	if (has_scenery2) {gen_scenery(t_trees);} // need to call post_gen_setup() for leafy plants
 	cube_t const model_bcube(calc_and_return_all_models_bcube()); // calculate even if not using; will force internal transform bcubes to be calculated
 
 	if (using_model_bcube) {

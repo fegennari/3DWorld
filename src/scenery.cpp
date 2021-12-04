@@ -7,6 +7,7 @@
 #include "shaders.h"
 #include "gl_ext_arb.h"
 #include "tree_leaf.h" // for tree_type
+#include "tree_3dw.h" // for get_closest_tree_type
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
@@ -50,7 +51,6 @@ extern tree_type tree_types[];
 
 int get_bark_tex_for_tree_type(int type); // for small trees
 bool is_pine_tree_type(int type);
-unsigned get_closest_tree_type(point const &pos); // for large trees
 
 
 inline float get_pt_line_thresh   () {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
@@ -575,8 +575,8 @@ bool wood_scenery_obj::is_from_large_trees() const {
 	if (tree_mode == 3) return !is_pine_tree_type(type); // both large and small trees: choose based on pine vs. decid tree type
 	return 1;
 }
-void wood_scenery_obj::cache_closest_tree_type() {
-	if (closest_tree_type < 0) {closest_tree_type = get_closest_tree_type(pos);} // compute once and cache
+void wood_scenery_obj::cache_closest_tree_type(tree_cont_t const &trees) {
+	if (closest_tree_type < 0) {closest_tree_type = trees.get_closest_tree_type(pos);} // compute once and cache
 }
 int wood_scenery_obj::get_tid() const {
 	if (!is_from_large_trees()) {return get_bark_tex_for_tree_type(type);} // small tree
@@ -1211,11 +1211,6 @@ void scenery_group::calc_bcube() {
 	update_bcube(leafy_plants,  all_bcube);
 }
 
-void scenery_group::cache_closest_tree_types() {
-	for (auto &log   : logs  ) {log  .cache_closest_tree_type();}
-	for (auto &stump : stumps) {stump.cache_closest_tree_type();}
-}
-
 // update region is inclusive: [x1,x2]x[y1,y2]
 bool scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficient, should use spatial subdivision
 
@@ -1253,7 +1248,7 @@ void scenery_group::add_leafy_plant(point const &pos, float radius, int type, in
 
 bool check_valid_scenery_pos(scenery_obj const &obj) {return check_valid_scenery_pos(obj.get_pos(), obj.get_radius());}
 
-void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache) {
+void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache, tree_cont_t const &trees) { // called in tiled terrain mode
 
 	//RESET_TIME;
 	unsigned const smod(max(200U, unsigned(3.321f*XY_MULT_SIZE/(tree_scale+1))));
@@ -1328,10 +1323,10 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 		} // for j
 	} // for i
 	if (!fixed_sz_rock_cache) {surface_rock_cache.clear_unref();}
-	post_gen_setup();
+	post_gen_setup(trees);
 }
 
-void scenery_group::post_gen_setup() {
+void scenery_group::post_gen_setup(tree_cont_t const &trees) {
 
 	if (!leafy_plants.empty()) {
 		bool const use_tri_strip = 1;
@@ -1351,7 +1346,8 @@ void scenery_group::post_gen_setup() {
 		i->build_model();
 		i->add_bounds_to_bcube(all_bcube);
 	}
-	cache_closest_tree_types();
+	for (auto &log   : logs  ) {log  .cache_closest_tree_type(trees);}
+	for (auto &stump : stumps) {stump.cache_closest_tree_type(trees);}
 	//PRINT_TIME("Gen Scenery");
 }
 
@@ -1504,15 +1500,15 @@ bool scenery_group::choose_butterfly_dest(point &dest, sphere_t &plant_bsphere, 
 scenery_group all_scenery;
 
 
-void gen_scenery() {
+void gen_scenery(tree_cont_t const &trees) { // called in ground mode
 
-	if (has_scenery2) {all_scenery.post_gen_setup(); return;} // don't generate scenery if some has already been added
+	if (has_scenery2) {all_scenery.post_gen_setup(trees); return;} // don't generate scenery if some has already been added
 	all_scenery.clear();
 	all_scenery = scenery_group(); // really force a clear
 	has_scenery = 0;
 	if (DISABLE_SCENERY) return;
 	has_scenery = 1;
-	all_scenery.gen(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation, 0);
+	all_scenery.gen(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation, 0, trees);
 	all_scenery.add_cobjs();
 }
 

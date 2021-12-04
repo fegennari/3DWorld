@@ -6,6 +6,7 @@
 #include "3DWorld.h"
 
 struct xform_matrix;
+class tree_cont_t;
 
 int omp_get_thread_num_3dw();
 
@@ -731,7 +732,7 @@ void draw_blasts(shader_t &s);
 void draw_universe_blasts();
 
 // function prototypes - scenery
-void gen_scenery();
+void gen_scenery(tree_cont_t const &trees);
 void draw_scenery(bool shadow_only=0);
 void draw_scenery_fires(shader_t &s);
 bool update_scenery_zvals(int x1, int y1, int x2, int y2);
