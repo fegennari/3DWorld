@@ -337,12 +337,22 @@ void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 	verts.resize(3*ndiv + ixoff);
 	float const ndiv_inv(1.0/ndiv);
 
-	for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
-		unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv), vix(3*s + ixoff);
-		//create_vert(verts[vix+0], vpn.p[(s <<1)+1],        vpn.n[s],              (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
-		create_vert(verts[vix+0], vpn.p[(s <<1)+1]+xlate,  vpn.n[s],               0.5,                     tc_t1, two_sided_lighting); // one big discontinuity at one position
-		create_vert(verts[vix+1], vpn.p[(sn<<1)+0]+xlate, (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
-		create_vert(verts[vix+2], vpn.p[(s <<1)+0]+xlate, (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
+	if (!two_sided_lighting && xlate == zero_vector) { // common case optimization, for example for tree trunks
+		for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
+			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv), vix(3*s + ixoff);
+			verts[vix+0].assign(vpn.p[(s <<1)+1],  vpn.n[s],               0.5,                     tc_t1); // one big discontinuity at one position
+			verts[vix+1].assign(vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), tc_t0); // normalize?
+			verts[vix+2].assign(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), tc_t0); // normalize?
+		}
+	}
+	else {
+		for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
+			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv), vix(3*s + ixoff);
+			//create_vert(verts[vix+0], vpn.p[(s <<1)+1],        vpn.n[s],              (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
+			create_vert(verts[vix+0], vpn.p[(s <<1)+1]+xlate,  vpn.n[s],               0.5,                     tc_t1, two_sided_lighting); // one big discontinuity at one position
+			create_vert(verts[vix+1], vpn.p[(sn<<1)+0]+xlate, (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
+			create_vert(verts[vix+2], vpn.p[(s <<1)+0]+xlate, (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
+		}
 	}
 }
 
