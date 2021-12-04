@@ -356,9 +356,10 @@ public:
 		flatten_region_to(x1, y1, x2, y2, slope_width, elevation);
 		return elevation;
 	}
-	bool check_plot_sphere_coll(point const &pos, float radius, bool xy_only=1) const {
+	bool check_plot_sphere_coll(point const &pos, float radius, bool xy_only=1) const { // Note: cities, not blocks
 		if (plots.empty()) return 0;
 		point const query_pos(pos - get_camera_coord_space_xlate());
+		radius += 0.5*city_params.road_width; // add extra padding around city plots
 		if (!check_bcube_sphere_coll(bcube, query_pos, radius, xy_only)) return 0;
 		return check_bcubes_sphere_coll(plots, query_pos, radius, xy_only);
 	}
