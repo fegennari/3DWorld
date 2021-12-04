@@ -6,6 +6,7 @@
 #include "mesh.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
+#include "tree_leaf.h" // for tree_type
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
@@ -44,10 +45,12 @@ extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, displ
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern voxel_params_t global_voxel_params;
+extern tree_type tree_types[];
 
 
-int get_bark_tex_for_tree_type(int type);
+int get_bark_tex_for_tree_type(int type); // for small trees
 bool is_pine_tree_type(int type);
+unsigned get_closest_tree_type(point const &pos); // for large trees
 
 
 inline float get_pt_line_thresh   () {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
@@ -566,23 +569,28 @@ void burnable_scenery_obj::draw_fire(fire_drawer_t &fire_drawer, float rscale, u
 
 void wood_scenery_obj::calc_type() {type = (char)get_tree_type_from_height(pos.z, global_rand_gen, 1);}
 
-int get_closest_tree_bark_tid(point const &pos);
-colorRGBA get_closest_tree_bark_color(point const &pos);
-
 bool wood_scenery_obj::is_from_large_trees() const {
 	if (tree_mode == 0) return 0; // no trees enabled: any solution is acceptable, so use the simplest one
 	if (tree_mode == 2) return 0; // small trees only: correct/simple
 	if (tree_mode == 3) return !is_pine_tree_type(type); // both large and small trees: choose based on pine vs. decid tree type
 	return 1;
 }
+void wood_scenery_obj::cache_closest_tree_type() const {
+	if (closest_tree_type < 0) {closest_tree_type = get_closest_tree_type(pos);} // compute and cache
+}
 int wood_scenery_obj::get_tid() const {
-	if (!is_from_large_trees()) {return get_bark_tex_for_tree_type(type);}
+	if (!is_from_large_trees()) {return get_bark_tex_for_tree_type(type);} // small tree
 	// else large trees only, or large (non-pine) trees at this height
-	if (closest_bark_tid < 0) {closest_bark_tid = get_closest_tree_bark_tid(pos);}
-	return closest_bark_tid;
+	cache_closest_tree_type();
+	return tree_types[closest_tree_type].bark_tex;
 }
 colorRGBA wood_scenery_obj::get_bark_color(vector3d const &xlate) const {
-	colorRGBA const base_color((is_from_large_trees() ? get_closest_tree_bark_color(pos) : get_tree_trunk_color(type, 0)));
+	colorRGBA base_color;
+	if (!is_from_large_trees()) {base_color = get_tree_trunk_color(type, 0);} // small tree
+	else { // large tree
+		cache_closest_tree_type();
+		base_color = tree_types[closest_tree_type].barkc;
+	}
 	return get_atten_color(blend_color(BLACK, base_color, burn_amt, 0), xlate);
 }
 

@@ -2300,9 +2300,7 @@ void regen_trees(bool keep_old) {
 }
 
 
-tree_type const &get_closest_tree_type(point const &pos) {return (cur_tile_trees ? *cur_tile_trees : t_trees).get_closest_tree_type(pos);}
-int       get_closest_tree_bark_tid   (point const &pos) {return get_closest_tree_type(pos).bark_tex;}
-colorRGBA get_closest_tree_bark_color (point const &pos) {return get_closest_tree_type(pos).barkc;}
+unsigned get_closest_tree_type(point const &pos) {return (cur_tile_trees ? *cur_tile_trees : t_trees).get_closest_tree_type(pos);}
 
 
 void tree::write_to_cobj_file(std::ostream &out) const {
@@ -2394,7 +2392,7 @@ float tree_cont_t::get_rmax() const {
 	return rmax;
 }
 
-tree_type const &tree_cont_t::get_closest_tree_type(point const &pos) const {
+unsigned tree_cont_t::get_closest_tree_type(point const &pos) const {
 	int closest_type(TREE_MAPLE); // default value for the no-trees-found case
 	float min_dist_sq(0.0);
 	
@@ -2410,7 +2408,7 @@ tree_type const &tree_cont_t::get_closest_tree_type(point const &pos) const {
 		}
 	} // for i
 	assert(closest_type >= 0 && closest_type < NUM_TREE_TYPES);
-	return tree_types[closest_type];
+	return closest_type;
 }
 
 void tree_cont_t::update_zmax(float &tzmax) const {

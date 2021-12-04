@@ -113,10 +113,11 @@ public:
 
 class wood_scenery_obj : public burnable_scenery_obj {
 protected:
-	mutable int closest_bark_tid;
-	wood_scenery_obj() : closest_bark_tid(-1) {}
+	mutable int closest_tree_type; // cached from drawing functions
+	wood_scenery_obj() : closest_tree_type(-1) {}
 	void calc_type();
 	bool is_from_large_trees() const;
+	void cache_closest_tree_type() const;
 	int get_tid() const;
 	colorRGBA get_bark_color(vector3d const &xlate=zero_vector) const;
 };
