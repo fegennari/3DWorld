@@ -575,22 +575,16 @@ bool wood_scenery_obj::is_from_large_trees() const {
 	if (tree_mode == 3) return !is_pine_tree_type(type); // both large and small trees: choose based on pine vs. decid tree type
 	return 1;
 }
-void wood_scenery_obj::cache_closest_tree_type() const {
-	if (closest_tree_type < 0) {closest_tree_type = get_closest_tree_type(pos);} // compute and cache
+void wood_scenery_obj::cache_closest_tree_type() {
+	if (closest_tree_type < 0) {closest_tree_type = get_closest_tree_type(pos);} // compute once and cache
 }
 int wood_scenery_obj::get_tid() const {
 	if (!is_from_large_trees()) {return get_bark_tex_for_tree_type(type);} // small tree
 	// else large trees only, or large (non-pine) trees at this height
-	cache_closest_tree_type();
 	return tree_types[closest_tree_type].bark_tex;
 }
 colorRGBA wood_scenery_obj::get_bark_color(vector3d const &xlate) const {
-	colorRGBA base_color;
-	if (!is_from_large_trees()) {base_color = get_tree_trunk_color(type, 0);} // small tree
-	else { // large tree
-		cache_closest_tree_type();
-		base_color = tree_types[closest_tree_type].barkc;
-	}
+	colorRGBA const base_color(is_from_large_trees() ? tree_types[closest_tree_type].barkc : get_tree_trunk_color(type, 0));
 	return get_atten_color(blend_color(BLACK, base_color, burn_amt, 0), xlate);
 }
 
@@ -1217,6 +1211,11 @@ void scenery_group::calc_bcube() {
 	update_bcube(leafy_plants,  all_bcube);
 }
 
+void scenery_group::cache_closest_tree_types() {
+	for (auto &log   : logs  ) {log  .cache_closest_tree_type();}
+	for (auto &stump : stumps) {stump.cache_closest_tree_type();}
+}
+
 // update region is inclusive: [x1,x2]x[y1,y2]
 bool scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficient, should use spatial subdivision
 
@@ -1352,6 +1351,7 @@ void scenery_group::post_gen_setup() {
 		i->build_model();
 		i->add_bounds_to_bcube(all_bcube);
 	}
+	cache_closest_tree_types();
 	//PRINT_TIME("Gen Scenery");
 }
 

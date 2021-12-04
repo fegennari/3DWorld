@@ -662,7 +662,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		}
 	}
 	if (!inf_terrain) {
-		gen_scenery();
+		gen_scenery(); // must be generated after trees
 		PRINT_TIME("Scenery generation");
 	}
 	add_all_coll_objects(coll_obj_file, (num_trees == 0));

@@ -113,13 +113,14 @@ public:
 
 class wood_scenery_obj : public burnable_scenery_obj {
 protected:
-	mutable int closest_tree_type; // cached from drawing functions
+	int closest_tree_type; // cached from drawing functions
 	wood_scenery_obj() : closest_tree_type(-1) {}
 	void calc_type();
 	bool is_from_large_trees() const;
-	void cache_closest_tree_type() const;
 	int get_tid() const;
 	colorRGBA get_bark_color(vector3d const &xlate=zero_vector) const;
+public:
+	void cache_closest_tree_type();
 };
 
 
@@ -267,6 +268,7 @@ public:
 	bool check_sphere_coll(point &center, float radius) const;
 	void shift(vector3d const &vd);
 	void calc_bcube();
+	void cache_closest_tree_types();
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);

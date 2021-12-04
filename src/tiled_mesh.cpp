@@ -1403,15 +1403,16 @@ void tile_t::update_scenery() {
 	if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
 	if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
 	//timer_t timer("Gen Scenery");
+	cur_tile_trees = &decid_trees; // set our tile's decid trees as current so that logs and stumps get the correct colors; assumes trees are generated before scenery
 	scenery_off.set_from_xyoff2();
 	scenery.gen(x1+scenery_off.dxoff, y1+scenery_off.dyoff, x2+scenery_off.dxoff, y2+scenery_off.dyoff, vegetation*get_avg_veg(), 1);
+	cur_tile_trees = nullptr;
 }
 
 void tile_t::draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_shadow_maps) {
 
 	if (!scenery.generated || get_scenery_dist_scale(reflection_pass) > 1.0) return;
 	//timer_t timer("Draw Scenery");
-	cur_tile_trees = &decid_trees; // set our tile's decid trees as current so that logs and stumps get the correct colors
 	fgPushMatrix();
 	vector3d const xlate(scenery_off.get_xlate());
 	translate_to(xlate);
@@ -1420,7 +1421,6 @@ void tile_t::draw_scenery(shader_t &s, shader_t &vrs, bool draw_opaque, bool dra
 	if (draw_opaque) {scenery.draw_opaque_objects(s, vrs, shadow_pass, xlate, 0, scale_val, reflection_pass);} // shader not passed in here
 	if (draw_leaves) {scenery.draw_plant_leaves  (s, shadow_pass, xlate, reflection_pass);}
 	fgPopMatrix();
-	cur_tile_trees = nullptr;
 }
 
 void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
