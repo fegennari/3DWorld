@@ -222,7 +222,7 @@ void small_tree_group::translate_by(vector3d const &vd) {
 
 bool small_tree_group::draw_trunks(bool shadow_only, bool all_visible, bool skip_lines, vector3d const &xlate) const {
 
-	if (!all_visible && !shadow_only && !camera_pdu.cube_visible(all_bcube + xlate)) return 0; // VFC
+	if (!all_visible && !(shadow_only && world_mode == WMODE_GROUND) && !camera_pdu.cube_visible(all_bcube + xlate)) return 0; // VFC
 	static vector<vert_norm_tc> cylin_verts; // class member?
 	bool all_drawn(1);
 

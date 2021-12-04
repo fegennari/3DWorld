@@ -193,7 +193,7 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 	tree_data_t const *last_td(nullptr);
 	s.add_uniform_vector3d("camera_pos", get_camera_pos());
 	s.add_uniform_vector3d("up_vector",  up_vector);
-	vector<vert_tc_color> pts;
+	static vector<vert_tc_color> pts; // reused across frames
 
 	for (vector<entry_t>::const_iterator i = data.begin(); i != data.end(); ++i) {
 		if (i->td != last_td) {
@@ -206,6 +206,7 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 	} // for i
 	assert(!pts.empty());
 	draw_and_clear_verts(pts, GL_POINTS);
+	pts.clear();
 	bind_vbo(0);
 }
 

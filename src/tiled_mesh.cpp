@@ -1475,7 +1475,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 			insts[lod_level].resize(num_rnd_grass_blocks); // may already be the correct size
 			unsigned const bix(gb.ix - 1);
 			assert(bix < num_rnd_grass_blocks);
-			insts[lod_level][bix].push_back(vector2d(x*dx_step, y*dy_step));
+			insts[lod_level][bix].emplace_back(x*dx_step, y*dy_step);
 		} // for x
 	} // for y
 	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
