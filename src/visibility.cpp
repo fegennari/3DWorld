@@ -183,6 +183,18 @@ bool pos_dir_up::cube_visible_for_light_cone(cube_t const &c) const { // test on
 	return dist_less_than(pos, c.closest_pt(pos), far_); // extra check for far clipping plane - useful for short range lights and faraway objects
 }
 
+bool pos_dir_up::cube_completely_visible(cube_t const &c) const {
+	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
+	point const cube_pts[8] = {
+		point(c.x1(), c.y1(), c.z1()), point(c.x1(), c.y1(), c.z2()), point(c.x1(), c.y2(), c.z1()), point(c.x1(), c.y2(), c.z2()),
+		point(c.x2(), c.y1(), c.z1()), point(c.x2(), c.y1(), c.z2()), point(c.x2(), c.y2(), c.z1()), point(c.x2(), c.y2(), c.z2())};
+
+	for (unsigned n = 0; n < 8; ++n) {
+		if (!point_visible_test(cube_pts[n])) return 0;
+	}
+	return 1;
+}
+
 // approximate
 bool pos_dir_up::projected_cube_visible(cube_t const &cube, point const &proj_pt) const {
 

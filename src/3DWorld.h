@@ -666,7 +666,8 @@ struct pos_dir_up { // defines a view frustum
 	bool sphere_visible_test_no_inside_test(point const &pos_, float radius) const;
 	bool sphere_completely_visible_test(point const &pos_, float radius) const {return sphere_visible_test(pos_, -radius);}
 	template<unsigned N> bool pt_set_visible(point const *const pts) const;
-	bool cube_visible(cube_t const &cube) const;
+	bool cube_visible(cube_t const &c) const;
+	bool cube_completely_visible(cube_t const &c) const;
 	bool cube_visible_likely(cube_t const &c) const {return (!valid || point_visible_test(c.get_cube_center()) || cube_visible(c));}
 	bool cube_visible_for_light_cone(cube_t const &c) const;
 	bool projected_cube_visible(cube_t const &cube, point const &proj_pt) const;
