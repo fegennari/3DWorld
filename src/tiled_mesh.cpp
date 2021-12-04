@@ -1439,7 +1439,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 	float const grass_thresh(get_grass_thresh_pad());
 	point const camera(get_camera_pos());
 	if (get_min_dist_to_pt(camera) > grass_thresh) return 0; // too far away to draw
-	//timer_t timer("Draw Grass");
+	//highres_timer_t timer("Draw Grass"); // 0.075
 	pre_draw_grass_flowers(s, use_cloud_shadows);
 	bind_texture_tu(weight_tid, 3);
 	unsigned const grass_block_dim(get_grass_block_dim());
@@ -1447,19 +1447,21 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 	float const llcx(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
 	float const dx_step(GRASS_BLOCK_SZ*deltax), dy_step(GRASS_BLOCK_SZ*deltay);
 	float const lod_scale(GRASS_LOD_SCALE/(tt_grass_scale_factor*get_scaled_tile_radius()));
-	float const block_grass_thresh(grass_thresh + (SQRT2*radius)/grass_block_dim);
+	float const block_grass_thresh(grass_thresh + (SQRT2*radius)/grass_block_dim), bg_thresh_sq(block_grass_thresh*block_grass_thresh);
 	point const adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
+	bool const all_visible(camera_pdu.cube_completely_visible(get_mesh_bcube()));
 	unsigned num_drawn(0);
 
 	for (unsigned y = 0; y < grass_block_dim; ++y) {
 		for (unsigned x = 0; x < grass_block_dim; ++x) {
 			grass_block_t const &gb(grass_blocks[y*grass_block_dim+x]);
 			if (gb.ix == 0) continue; // empty block
-			cube_t const bcube(llcx+x*dx_step, llcx+(x+1)*dx_step, llcy+y*dy_step, llcy+(y+1)*dy_step, gb.zmin, (gb.zmax + grass_length));
-			point const close_pt(bcube.closest_pt(camera));
-			if (!dist_less_than(camera, close_pt, block_grass_thresh) || !camera_pdu.cube_visible(bcube)) continue;
+			float const bcx1(llcx + x*dx_step), bcy1(llcy + y*dy_step);
+			cube_t const bcube(bcx1, bcx1+dx_step, bcy1, bcy1+dy_step, gb.zmin, (gb.zmax + grass_length));
+			float const dist_sq(p2p_dist_sq(camera, bcube.closest_pt(camera)));
+			if (dist_sq > bg_thresh_sq || (!all_visible && !camera_pdu.cube_visible(bcube))) continue;
 
-			if (dist_less_than(camera, close_pt, 0.75*block_grass_thresh)) { // only do back face culling on nearby blocks
+			if (dist_sq < 0.56*bg_thresh_sq) { // only do back face culling on nearby blocks (75% of max dist)
 				bool back_facing(1);
 
 				for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) { // Note: could precompute avg normal per block, but it probably isn't necessary
@@ -1470,7 +1472,7 @@ unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool 
 				}
 				if (back_facing) continue;
 			}
-			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(lod_scale*distance_to_camera(close_pt))));
+			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(lod_scale*sqrt(dist_sq))));
 			assert(insts != NULL);
 			insts[lod_level].resize(num_rnd_grass_blocks); // may already be the correct size
 			unsigned const bix(gb.ix - 1);
