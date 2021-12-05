@@ -730,7 +730,8 @@ void maybe_update_loading_screen(const char *str) {
 	draw_text(PURPLE, -0.01, 0.0, -0.02, (string("Loading: ") + str), 1.0);
 	fgPopMatrix();
 	glutSwapBuffers();
-	check_gl_error(567);
+	bool const had_error(check_gl_error(567));
+	if (had_error) {in_loading_screen = 0;}
 }
 
 void begin_loading_screen() {
