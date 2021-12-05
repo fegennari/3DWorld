@@ -522,16 +522,15 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 		if (car.bcube.contains_pt_exp(camera_pdu.pos, 0.1*car.height)) return; // don't self-shadow
 	}
 	point const center_xlated(center + xlate);
-	float const tile_draw_dist(get_draw_tile_dist());
-	if (!shadow_only && !dist_less_than(camera_pdu.pos, center_xlated, 0.5*tile_draw_dist)) return; // check draw distance, dist_scale=0.5
+	if (!shadow_only && !dist_less_than(camera_pdu.pos, center_xlated, 0.5*draw_tile_dist)) return; // check draw distance, dist_scale=0.5
 	if (!camera_pdu.sphere_visible_test(center_xlated, 0.5f*car.height*CAR_RADIUS_SCALE) || !camera_pdu.cube_visible(car.bcube + xlate)) return;
 	begin_tile(center); // enable shadows
 	colorRGBA const &color(car.get_color());
-	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/tile_draw_dist);
+	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/draw_tile_dist);
 	bool const is_truck(car.height > 1.2*city_params.get_nom_car_size().z); // hack - truck has a larger than average size
 	bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
 	bool const draw_model(car_model_loader.num_models() > 0 &&
-		(is_dlight_shadows ? dist_less_than(pre_smap_player_pos, center, 0.05*tile_draw_dist) : (shadow_only || dist_val < 0.05)));
+		(is_dlight_shadows ? dist_less_than(pre_smap_player_pos, center, 0.05*draw_tile_dist) : (shadow_only || dist_val < 0.05)));
 	float const sign((dim^dir) ? -1.0 : 1.0);
 	point pb[8], pt[8]; // bottom and top sections
 	gen_car_pts(car, draw_top, pb, pt);
@@ -1278,12 +1277,12 @@ void car_manager_t::draw(int trans_op_mask, vector3d const &xlate, bool use_dlig
 		translate_to(xlate);
 		dstate.pre_draw(xlate, use_dlights, shadow_only);
 		if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_normal_scale", 0.0);} // disable hemispherical lighting normal because the transforms make it incorrect
-		float const tile_draw_dist(get_draw_tile_dist());
+		float const draw_tile_dist(dstate.draw_tile_dist);
 
 		for (auto cb = car_blocks.begin(); cb+1 < car_blocks.end(); ++cb) {
 			if (cb->is_in_building() != garages_pass) continue; // wrong pass
 			cube_t const block_bcube(get_cb_bcube(*cb) + xlate);
-			if (!shadow_only && !block_bcube.closest_dist_less_than(camera_pdu.pos, 0.5*tile_draw_dist)) continue; // check draw distance, dist_scale=0.5
+			if (!shadow_only && !block_bcube.closest_dist_less_than(camera_pdu.pos, 0.5*draw_tile_dist)) continue; // check draw distance, dist_scale=0.5
 			if (!camera_pdu.cube_visible(block_bcube)) continue; // city not visible - skip
 			unsigned const end((cb+1)->start);
 			assert(end <= cars.size());

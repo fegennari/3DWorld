@@ -249,7 +249,7 @@ namespace streetlight_ns {
 
 		if (shadow_only) {dist_val = (is_local_shadow ? 0.12 : 0.06);}
 		else {
-			dist_val = p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist();
+			dist_val = p2p_dist(camera_pdu.pos, center)/dstate.draw_tile_dist;
 			if (dist_val > 0.2) return; // too far
 		}
 		float const pradius(get_streetlight_pole_radius()), lradius(light_radius*city_params.road_width);
@@ -510,7 +510,7 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 	if (num_conn == 2) return; // no stoplights
 	if (!dstate.check_cube_visible(*this, 0.16)) return; // dist_scale=0.16
 	point const center(get_cube_center() + dstate.xlate);
-	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
+	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/dstate.draw_tile_dist);
 	vector3d const cview_dir(camera_pdu.pos - center);
 	float const sz(0.03*city_params.road_width), h(1.0*sz);
 	color_wrapper cw(BLACK);
@@ -820,7 +820,7 @@ void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { 
 	color_wrapper const cw_main(main_color), cw_cables(cables_color), cw_concrete(concrete_color);
 	float const thickness(0.2*scale), conn_thick(0.25*thickness), cable_thick(0.1*thickness), wall_width(0.25*thickness), wall_height(0.5*thickness);
 	point const closest_pt((bridge + xlate).closest_pt(camera_pdu.pos));
-	float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/get_draw_tile_dist());
+	float const dist_val(shadow_only ? 1.0 : p2p_dist(camera_pdu.pos, closest_pt)/draw_tile_dist);
 	int const cable_ndiv(min(24, max(4, int(0.4/dist_val))));
 	unsigned const num_segs(max(16U, min(48U, unsigned(ceil(2.5*len/scale))))); // scale to fit the gap, with reasonable ranges
 	float const step_sz(1.0/num_segs), delta_d(step_sz*delta[d]), delta_z(step_sz*delta.z);
@@ -1047,7 +1047,7 @@ void road_draw_state_t::draw_transmission_line_wires(point const &p1, point cons
 void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline) {
 	float const wire_radius(0.0024*city_params.road_width), tower_radius(0.035*city_params.road_width);
 	float const tower_bar_len(0.25*city_params.road_width), tower_bar_radius(0.4*tower_radius), end_rscale(0.5), bar_extend(1.04);
-	float const standoff_radius(0.12*tower_radius), standoff_height(1.2*tower_radius), standoff_dmax(0.05*get_draw_tile_dist());
+	float const standoff_radius(0.12*tower_radius), standoff_height(1.2*tower_radius), standoff_dmax(0.05*draw_tile_dist);
 	float const standoff_len(standoff_height - bar_extend*end_rscale*tower_bar_radius); // actual height
 	point const camera_bs(camera_pdu.pos - xlate);
 	vector3d const wire_sep_dir(cross_product((tline.p2 - tline.p1), plus_z).get_norm()); // should be a straight line through all towers

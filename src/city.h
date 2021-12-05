@@ -426,6 +426,7 @@ struct draw_state_t {
 	vector3d xlate;
 	bool use_building_lights;
 	unsigned pass_ix;
+	float draw_tile_dist;
 	hedge_draw_t hedge_draw;
 protected:
 	bool use_smap, use_bmap, shadow_only, use_dlights, emit_now;
@@ -433,7 +434,7 @@ protected:
 	string label_str;
 	point label_pos;
 public:
-	draw_state_t() : use_building_lights(0), pass_ix(0), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
+	draw_state_t() : use_building_lights(0), pass_ix(0), draw_tile_dist(0.0), use_smap(0), use_bmap(0), shadow_only(0), use_dlights(0), emit_now(0) {}
  	virtual ~draw_state_t() {}
 	void set_enable_normal_map(bool val) {use_bmap = val;}
 	bool normal_maps_enabled() const {return use_bmap;}

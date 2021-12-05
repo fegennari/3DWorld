@@ -90,7 +90,7 @@ void bench_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &
 		cube_t( 2.8, 3.2,   4.9,   5.1,   2.0, 3.0),
 	};
 	point const center(pos + dstate.xlate);
-	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/get_draw_tile_dist());
+	float const dist_val(shadow_only ? 0.0 : p2p_dist(camera_pdu.pos, center)/dstate.draw_tile_dist);
 	cube_t bc; // bench bbox
 
 	for (unsigned i = 0; i < 12; ++i) { // back still contributes to bbox
@@ -329,8 +329,8 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batc
 
 	if (above_ground) { // cylindrical; bcube should be square in XY
 		point const camera_bs(camera_pdu.pos - dstate.xlate);
-		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc());
-		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dist_scale*get_draw_tile_dist()/p2p_dist(camera_bs, pos)))));
+		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc()), dscale(dist_scale*dstate.draw_tile_dist);
+		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dscale/p2p_dist(camera_bs, pos)))));
 
 		if (dstate.pass_ix == 2) { // draw sides
 			dstate.s.set_cur_color(color);
@@ -563,7 +563,7 @@ void draw_vert_standoff(point const &p1, point const &camera_bs, float height, f
 // maybe this isn't realistic, but it does have a nice symmetry and higher apparent wiring complexity; the user will likely not notice
 void power_pole_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	point const camera_bs(camera_pdu.pos - dstate.xlate);
-	float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
+	float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*dstate.draw_tile_dist);
 	if (!bcube.closest_dist_less_than(camera_bs, dmax)) return;
 	if (!camera_pdu.cube_visible((shadow_only ? bcube : bcube_with_wires) + dstate.xlate)) return;
 	color_wrapper const black(BLACK), white(colorRGBA(0.7, 0.7, 0.7)), gray(colorRGBA(0.4, 0.4, 0.4)), cw(LT_BROWN); // darken the wood color

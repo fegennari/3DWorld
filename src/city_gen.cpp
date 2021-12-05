@@ -86,6 +86,7 @@ void draw_state_t::pre_draw(vector3d const &xlate_, bool use_dlights_, bool shad
 	shadow_only = shadow_only_;
 	use_dlights = (use_dlights_ && !shadow_only);
 	use_smap    = (shadow_map_enabled() && !shadow_only && !disable_city_shadow_maps);
+	draw_tile_dist = get_draw_tile_dist();
 	if (!use_smap && !always_setup_shader) return;
 	if (shadow_only) {s.begin_simple_textured_shader();}
 	else {
@@ -131,7 +132,7 @@ bool draw_state_t::check_cube_visible(cube_t const &bc, float dist_scale) const 
 	cube_t const bcx(bc + xlate);
 
 	if (dist_scale > 0.0) {
-		float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*get_draw_tile_dist());
+		float const dmax(shadow_only ? camera_pdu.far_ : dist_scale*draw_tile_dist);
 		if (!bcx.closest_dist_less_than(camera_pdu.pos, dmax)) return 0;
 	}
 	return camera_pdu.cube_visible(bcx);
