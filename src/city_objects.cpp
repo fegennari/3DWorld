@@ -347,15 +347,16 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batc
 				ladder.d[dim][ dir] = side_pos + swidth;
 				set_wall_width(ladder, (dim ? xc : yc), 0.16*radius, !dim);
 				bool const is_close(bcube.closest_dist_less_than(camera_bs, 0.2*dscale));
+				bool const is_very_close(is_close && bcube.closest_dist_less_than(camera_bs, 0.1*dscale));
 
 				for (unsigned n = 0; n < num_steps; ++n) { // draw steps
 					ladder.z1() = bcube .z1() + n*step_delta + step_offset;
 					ladder.z2() = ladder.z1() + step_height;
-					dstate.draw_cube(qbd, ladder, step_color, !is_close); // skip bottom if not close
+					dstate.draw_cube(qbd, ladder, step_color, !is_very_close); // skip bottom if not close
 				}
 				if (is_close) { // draw bars
 					float const bars_top(bcube.z1() + height), bar_radius(0.012*radius);
-					bool const draw_top(camera_bs.z > bars_top);
+					bool const draw_top(is_very_close && camera_bs.z > bars_top);
 					unsigned const bars_ndiv(max(3U, min(12U, ndiv/4)));
 					point pt;
 					pt.z    = bcube.z1();
