@@ -11,7 +11,7 @@
 float const TT_PRECIP_DIST  = 20.0;
 float const WATER_PART_DIST = 1.0;
 
-extern bool begin_motion;
+extern bool begin_motion, camera_in_building;
 extern int animate2, display_mode, camera_coll_id, precip_mode, DISABLE_WATER;
 extern float temperature, fticks, zmin, water_plane_z, brightness, XY_SCENE_SIZE;
 extern vector3d wind;
@@ -96,13 +96,13 @@ public:
 					point cpos;
 					vector3d cnorm;
 					int cindex;
-					if (camera_pdu.point_visible_test(bot_pos) && check_coll_line_exact(pos, bot_pos, cpos, cnorm, cindex, 0.0, camera_coll_id)) {splashes->push_back(sphere_t(cpos, 1.0));}
+					if (camera_pdu.point_visible_test(bot_pos) && check_coll_line_exact(pos, bot_pos, cpos, cnorm, cindex, 0.0, camera_coll_id)) {splashes->emplace_back(cpos, 1.0);}
 				}
 				return 0;
 			}
 		}
 		else if (world_mode == WMODE_INF_TERRAIN) {
-			if (is_pos_in_player_building(bot_pos)) return 0;
+			if (camera_in_building && is_pos_in_player_building(bot_pos)) return 0;
 		}
 		return 1;
 	}
@@ -129,7 +129,15 @@ class rain_manager_t : public precip_manager_t<2> {
 	line_tquad_draw_t drawer;
 	colorRGBA color;
 
-	void gen_draw_data() {
+public:
+	void update() {
+		//timer_t timer("Rain Update"); // 0.43ms for default rain intensity / 3.26ms for 5x rain; TT 0.4/3.0/9.6 for 1x/5x/8x
+		pre_update();
+		if (verts.empty()) return;
+		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
+		vector3d vcur(v);
+		while (!splashes.empty() && splashes.front().radius > 4.0) {splashes.pop_front();} // remove old splashes from the front
+		deque<sphere_t> *sv(begin_motion ? &splashes : nullptr);
 		drawer.clear();
 		splash_qbd.clear();
 		get_avg_sky_color(color);
@@ -138,34 +146,19 @@ class rain_manager_t : public precip_manager_t<2> {
 		float const width = 0.002;
 		float const splash_size = 0.004; // 2x-8x rain line diameter
 
-		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs (0.07ms for default rain intensity)
-			if (dist_less_than(verts[i].v, camera, 0.5) && camera_pdu.line_visible_test(verts[i].v, verts[i+1].v)) {
-				drawer.add_line_as_tris(verts[i].v, verts[i+1].v, width, width, color, color);
-			}
+		for (auto i = verts.begin(); i < verts.end(); i += 2) { // iterate in pairs
+			point &v1(i->v), &v2((i+1)->v);
+			check_pos(v1, v2, sv);
+			if (animate2) {v1 += vcur; vcur += vinc;}
+			v2 = v1 + dir;
+			if (dist_less_than(v1, camera, 0.5) && camera_pdu.line_visible_test(v1, v2)) {drawer.add_line_as_tris(v1, v2, width, width, color, color);}
 		}
 		// 0.08ms for default rain intensity
-		for (auto i = splashes.begin(); i != splashes.end(); ++i) { // normal always faces up;
+		for (auto i = splashes.begin(); i != splashes.end(); ++i) { // normal always faces up
+			if (animate2) {i->radius += 0.2*fticks;} // increase in size over time
 			float const sz(i->radius*splash_size), alpha(0.75*(4.0 - i->radius)/3.0); // size increases with radius/time; alpha decreases with radius/time
 			splash_qbd.add_billboard(i->pos, camera, up_vector, colorRGBA(0.8, 0.9, 1.0, alpha), sz, sz, tex_range_t(), 0, &plus_z);
 		}
-	}
-public:
-	void update() {
-		//timer_t timer("Rain Update"); // 0.64ms for default rain intensity / 2.66ms for 5x rain
-		pre_update();
-		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
-		vector3d vcur(v);
-		while (!splashes.empty() && splashes.front().radius > 4.0) {splashes.pop_front();} // remove old splashes from the front
-		if (animate2) {for (auto i = splashes.begin(); i != splashes.end(); ++i) {i->radius += 0.2*fticks;}}
-		deque<sphere_t> *sv(begin_motion ? &splashes : nullptr);
-
-//#pragma omp parallel for schedule(static,64) num_threads(2) // not valid for splashes, and actually slower for light rain
-		for (int i = 0; i < (int)verts.size(); i += 2) { // iterate in pairs
-			check_pos(verts[i].v, verts[i+1].v, sv);
-			if (animate2) {verts[i].v += vcur; vcur += vinc;}
-			verts[i+1].v = verts[i].v + dir;
-		}
-		gen_draw_data();
 	}
 	void render() const { // partially transparent
 		if (empty()) return;
@@ -202,13 +195,6 @@ public:
 class snow_manager_t : public precip_manager_t<1> {
 	point_sprite_drawer psd;
 
-	void gen_draw_data() {
-		psd.clear();
-		psd.reserve_pts(size());
-		colorRGBA const color(WHITE*((world_mode == WMODE_GROUND) ? 1.5 : 1.0)*brightness); // constant
-		color_wrapper const cw(color);
-		for (vector<vert_type_t>::const_iterator i = verts.begin(); i != verts.end(); ++i) {psd.add_pt(vert_color(i->v, cw));}
-	}
 public:
 	void update() {
 		//timer_t timer("Snow Update");
@@ -216,12 +202,16 @@ public:
 		float const vmult(0.1/verts.size());
 		vector3d const v(get_velocity(-0.02)), v_step(vmult*v);
 		vector3d v_add(v);
+		psd.clear();
+		psd.reserve_pts(size());
+		colorRGBA const color(WHITE*((world_mode == WMODE_GROUND) ? 1.5 : 1.0)*brightness); // constant
+		color_wrapper const cw(color);
 
-		for (unsigned i = 0; i < verts.size(); ++i) {
-			check_pos(verts[i].v, verts[i].v);
-			if (animate2) {verts[i].v += v_add; v_add += v_step;}
+		for (auto i = verts.begin(); i != verts.end(); ++i) {
+			check_pos(i->v, i->v);
+			if (animate2) {i->v += v_add; v_add += v_step;}
+			psd.add_pt(vert_color(i->v, cw));
 		}
-		gen_draw_data();
 	}
 	void render() const {psd.draw(WHITE_TEX, 1.0);} // unblended pixels
 	void clear() {precip_manager_t<1>::clear(); psd.clear();}
@@ -233,21 +223,6 @@ class uw_particle_manager_t : public precip_manager_t<1> { // underwater particl
 	point_sprite_drawer psd;
 	vector<vector3d> velocity;
 
-	void gen_draw_data() {
-		psd.clear();
-		psd.reserve_pts(size());
-		float const cscale(1.0/WATER_PART_DIST);
-		point const camera(get_camera_pos());
-		colorRGBA base_color(WHITE);
-		water_color_atten_at_pos(base_color, camera);
-
-		for (vector<vert_type_t>::iterator i = verts.begin(); i != verts.end(); ++i) {
-			colorRGBA color(base_color);
-			color.A -= cscale*p2p_dist(camera, i->v);
-			if (color.A <= 0.0) {i->v = gen_pt(i->v.z); continue;} // note: should be in check_pos()
-			psd.add_pt(vert_color(i->v, color));
-		}
-	}
 	virtual float get_zmin() const  {return max(terrain_zmin,  (get_camera_pos().z - WATER_PART_DIST));}
 	virtual float get_zmax() const  {return min(water_plane_z, (get_camera_pos().z + WATER_PART_DIST));}
 	virtual size_t get_num_precip() {return 150*get_precip_rate();}
@@ -261,12 +236,21 @@ public:
 		unsigned const vsz(velocity.size());
 		velocity.resize(verts.size());
 		for (unsigned i = vsz; i < velocity.size(); ++i) {velocity[i] = rgen.signed_rand_vector(0.0002);} // generate velocities if needed
+		psd.clear();
+		psd.reserve_pts(size());
+		float const cscale(1.0/WATER_PART_DIST);
+		point const camera(get_camera_pos());
+		colorRGBA base_color(WHITE);
+		water_color_atten_at_pos(base_color, camera);
 
-		for (unsigned i = 0; i < verts.size(); ++i) {
-			check_pos(verts[i].v, verts[i].v);
-			if (animate2) {verts[i].v += fticks*velocity[i];}
+		for (vector<vert_type_t>::iterator i = verts.begin(); i != verts.end(); ++i) {
+			check_pos(i->v, i->v);
+			if (animate2) {i->v += fticks*velocity[i - verts.begin()];}
+			colorRGBA color(base_color);
+			color.A -= cscale*p2p_dist(camera, i->v);
+			if (color.A <= 0.0) {i->v = gen_pt(i->v.z); continue;} // note: should be in check_pos()
+			psd.add_pt(vert_color(i->v, color));
 		}
-		gen_draw_data();
 	}
 	void render() const { // partially transparent
 		if (empty()) return;
