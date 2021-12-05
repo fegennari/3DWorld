@@ -20,6 +20,7 @@ ground_effects_level 2 # 1 = mesh shadows, 2 = mesh + cloud shadows
 init_tree_mode 2 # pine trees
 use_instanced_pine_trees 1 # for faster tree editing
 tt_triplanar_tex 1
+disable_tt_water_reflect 1 # too slow for museums
 
 grass_density 120
 grass_size 0.03 0.002
