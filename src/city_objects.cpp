@@ -332,9 +332,42 @@ void swimming_pool_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batc
 		float const radius(get_radius()), xc(bcube.xc()), yc(bcube.yc()), dscale(dist_scale*dstate.draw_tile_dist);
 		unsigned const ndiv(shadow_only ? 24 : max(4U, min(64U, unsigned(6.0f*dscale/p2p_dist(camera_bs, pos)))));
 
-		if (dstate.pass_ix == 2) { // draw sides
+		if (dstate.pass_ix == 2) { // draw sides, and maybe ladder
 			dstate.s.set_cur_color(color);
 			draw_fast_cylinder(point(xc, yc, bcube.z1()), point(xc, yc, bcube.z2()), radius, radius, ndiv, 0, 0); // untextured, no ends
+			point const camera_bs(camera_pdu.pos - dstate.xlate);
+
+			if (bcube.closest_dist_less_than(camera_bs, 0.5*dscale)) { // draw ladder
+				unsigned const num_steps = 5;
+				color_wrapper const step_color(LT_GRAY);
+				cube_t ladder;
+				float const side_pos(bcube.d[dim][dir]), swidth((dir ? 1.0 : -1.0)*0.065*radius); // ladder is on this side of the pool
+				float const height(1.2*bcube.dz()), step_delta(height/(num_steps + 0.25)), step_offset(0.25*step_delta), step_height(0.14*step_delta);
+				ladder.d[dim][!dir] = side_pos;
+				ladder.d[dim][ dir] = side_pos + swidth;
+				set_wall_width(ladder, (dim ? xc : yc), 0.16*radius, !dim);
+				bool const is_close(bcube.closest_dist_less_than(camera_bs, 0.2*dscale));
+
+				for (unsigned n = 0; n < num_steps; ++n) { // draw steps
+					ladder.z1() = bcube .z1() + n*step_delta + step_offset;
+					ladder.z2() = ladder.z1() + step_height;
+					dstate.draw_cube(qbd, ladder, step_color, !is_close); // skip bottom if not close
+				}
+				if (is_close) { // draw bars
+					float const bars_top(bcube.z1() + height), bar_radius(0.012*radius);
+					bool const draw_top(camera_bs.z > bars_top);
+					unsigned const bars_ndiv(max(3U, min(12U, ndiv/4)));
+					point pt;
+					pt.z    = bcube.z1();
+					pt[dim] = side_pos + 0.4*swidth; // slightly off center
+					dstate.s.set_cur_color(colorRGBA(0.33, 0.33, 0.33));
+
+					for (unsigned n = 0; n < 2; ++n) {
+						pt[!dim] = ladder.d[!dim][n] + (n ? -1.0 : 1.0)*2.0*bar_radius;
+						draw_fast_cylinder(pt, point(pt.x, pt.y, bars_top), bar_radius, bar_radius, bars_ndiv, 0, (draw_top ? 4 : 0)); // untextured with top
+					}
+				}
+			}
 		}
 		else if (dstate.pass_ix == 3) { // draw water surface
 			dstate.s.set_cur_color(wcolor);
@@ -1304,7 +1337,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 				fences[side] = divider_t(fence, DIV_CHAINLINK, fence_dim, dir, 0); // Note: dir is unused in divider_t so doesn't have to be set correctly
 			} // for side
 			if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
-			pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground), pools);
+			pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground, dim, dir), pools);
 			pool.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
 			colliders.push_back(pool);
 			blockers .push_back(pool);

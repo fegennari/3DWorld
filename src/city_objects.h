@@ -56,10 +56,10 @@ struct divider_t : public city_obj_t {
 
 struct swimming_pool_t : public city_obj_t {
 	colorRGBA color, wcolor; // wall color and water color
-	bool above_ground;
+	bool above_ground, dim, dir; // dim and dir are used for the ladder and face toward the house
 
-	swimming_pool_t(cube_t const &c, colorRGBA const &color_, colorRGBA const &wcolor_, bool above_ground_) :
-		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), color(color_), wcolor(wcolor_), above_ground(above_ground_) {bcube = c;}
+	swimming_pool_t(cube_t const &c, colorRGBA const &color_, colorRGBA const &wcolor_, bool above_ground_, bool dim_, bool dir_) :
+		city_obj_t(c.get_cube_center(), c.get_bsphere_radius()), color(color_), wcolor(wcolor_), above_ground(above_ground_), dim(dim_), dir(dir_) {bcube = c;}
 	float get_radius() const {assert(above_ground); return 0.25f*(bcube.dx() + bcube.dy());}
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
 	static void post_draw(draw_state_t &dstate, bool shadow_only);
