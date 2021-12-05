@@ -299,13 +299,13 @@ void reset_interior_lighting_and_end_shader(shader_t &s) {
 	reset_interior_lighting(s);
 	s.end_shader();
 }
-void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen) {
+void setup_building_draw_shader(shader_t &s, float min_alpha, bool enable_indir, bool force_tsl, bool use_texgen) { // for building interiors
 	float const pcf_scale = 0.2;
 	bool const have_indir(enable_indir && indir_tex_mgr.enabled() && !(player_in_closet && !(player_in_closet & RO_FLAG_OPEN))); // disable indir if the player is in a closed closet
 	int const use_bmap(global_building_params.has_normal_map), interior_use_smaps((ADD_ROOM_SHADOWS && ADD_ROOM_LIGHTS) ? 2 : 1); // dynamic light smaps only
 	cube_t const lights_bcube(building_lights_manager.get_lights_bcube());
 	s.set_prefix("#define LINEAR_DLIGHT_ATTEN", 1); // FS; improves room lighting (better light distribution vs. framerate trade-off)
-	city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir);
+	city_shader_setup(s, lights_bcube, ADD_ROOM_LIGHTS, interior_use_smaps, use_bmap, min_alpha, force_tsl, pcf_scale, use_texgen, have_indir, 0); // is_outside=0
 	set_interior_lighting(s, have_indir);
 	if (have_indir) {indir_tex_mgr.setup_for_building(s);}
 }
