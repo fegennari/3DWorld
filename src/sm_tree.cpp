@@ -619,6 +619,7 @@ int add_small_tree(point const &pos, float height, float width, int tree_type, b
 	assert(height > 0.0 && width > 0.0);
 	small_trees.add_tree(small_tree(pos, height, width, (abs(tree_type)%NUM_ST_TYPES), calc_z, small_trees.rgen)); // could have a type error
 	small_trees.back().calc_points(small_trees.vbo_manager[0], 0);
+	small_trees.back().add_bounds_to_bcube(small_trees.all_bcube);
 	return 1; // might return zero in some case
 }
 
