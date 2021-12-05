@@ -3527,3 +3527,10 @@ void get_all_garages(vect_cube_t &garages) {
 }
 void get_all_city_helipads(vect_cube_t &helipads) {building_creator_city.get_all_helipads(helipads);} // city only for now
 
+bool is_pos_in_player_building(point const &pos) { // pos is in global space
+	if (!camera_in_building || player_building == nullptr) return 0;
+	//static vector<point> points; // reused across calls
+	//return player_building->check_point_or_cylin_contained(pos, 0.0, points);
+	return player_building->check_point_xy_in_part(pos); // don't need to draw if above the building either, since there are no skylights
+}
+

@@ -866,3 +866,14 @@ bool building_t::check_point_or_cylin_contained(point const &pos, float xy_radiu
 	return 0;
 }
 
+bool building_t::check_point_xy_in_part(point const &pos) const { // simpler/faster version of check_point_or_cylin_contained() with no z check
+	if (!bcube.contains_pt_xy(pos)) return 0; // no intersection (bcube does not need to be rotated)
+	point pr(pos);
+	maybe_inv_rotate_point(pr);
+
+	for (auto i = parts.begin(); i != get_real_parts_end_inc_sec(); ++i) {
+		if (i->contains_pt_xy(pr)) return 1;
+	}
+	return 0;
+}
+

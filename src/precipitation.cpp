@@ -19,6 +19,8 @@ extern int coll_id[];
 extern obj_group obj_groups[];
 
 
+bool is_pos_in_player_building(point const &pos);
+
 template <unsigned VERTS_PER_PRIM> class precip_manager_t {
 protected:
 	typedef vert_wrap_t vert_type_t;
@@ -76,29 +78,33 @@ public:
 		if (in_water && (rgen.rand() & 1)) {add_splash(cpos, x, y, 0.5, 0.01, 0, zero_vector, 0);} // 50% of the time; no droplets
 	}
 	bool is_bot_pos_valid(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
-		if (world_mode != WMODE_GROUND) return 1;
-		// check bottom of raindrop/snow below the mesh or top surface cobjs (even if just created)
-		if (pos.z > max(ztop, czmax))   return 1; // above mesh and cobjs, no collision possible
-		if (!is_over_mesh(pos))         return 1; // outside the simulation region, no collision possible
-		int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
-		if (point_outside_mesh(x, y))   return 1;
+		if (world_mode == WMODE_GROUND) {
+			// check bottom of raindrop/snow below the mesh or top surface cobjs (even if just created)
+			if (pos.z > max(ztop, czmax))   return 1; // above mesh and cobjs, no collision possible
+			if (!is_over_mesh(pos))         return 1; // outside the simulation region, no collision possible
+			int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
+			if (point_outside_mesh(x, y))   return 1;
 			
-		if (check_water_coll && !DISABLE_WATER && (display_mode & 0x04) && pos.z < water_matrix[y][x]) { // water collision
-			if (splashes != nullptr && (rgen.rand() & 1)) {maybe_add_rain_splash(pos, bot_pos, water_matrix[y][x], *splashes, x, y, 1);} // 50% of the time
-			return 0;
-		}
-		else if (check_mesh_coll && pos.z < mesh_height[y][x]) { // mesh collision
-			if (splashes != nullptr) {maybe_add_rain_splash(pos, bot_pos, mesh_height[y][x], *splashes, x, y, 0);} // line_intersect_mesh(pos, bot_pos, cpos);
-			return 0;
-		}
-		else if (check_cobj_coll && bot_pos.z < v_collision_matrix[y][x].zmax) { // possible cobj collision
-			if (splashes != nullptr && check_splash_dist(bot_pos)) {
-				point cpos;
-				vector3d cnorm;
-				int cindex;
-				if (camera_pdu.point_visible_test(bot_pos) && check_coll_line_exact(pos, bot_pos, cpos, cnorm, cindex, 0.0, camera_coll_id)) {splashes->push_back(sphere_t(cpos, 1.0));}
+			if (check_water_coll && !DISABLE_WATER && (display_mode & 0x04) && pos.z < water_matrix[y][x]) { // water collision
+				if (splashes != nullptr && (rgen.rand() & 1)) {maybe_add_rain_splash(pos, bot_pos, water_matrix[y][x], *splashes, x, y, 1);} // 50% of the time
+				return 0;
 			}
-			return 0;
+			else if (check_mesh_coll && pos.z < mesh_height[y][x]) { // mesh collision
+				if (splashes != nullptr) {maybe_add_rain_splash(pos, bot_pos, mesh_height[y][x], *splashes, x, y, 0);} // line_intersect_mesh(pos, bot_pos, cpos);
+				return 0;
+			}
+			else if (check_cobj_coll && bot_pos.z < v_collision_matrix[y][x].zmax) { // possible cobj collision
+				if (splashes != nullptr && check_splash_dist(bot_pos)) {
+					point cpos;
+					vector3d cnorm;
+					int cindex;
+					if (camera_pdu.point_visible_test(bot_pos) && check_coll_line_exact(pos, bot_pos, cpos, cnorm, cindex, 0.0, camera_coll_id)) {splashes->push_back(sphere_t(cpos, 1.0));}
+				}
+				return 0;
+			}
+		}
+		else if (world_mode == WMODE_INF_TERRAIN) {
+			if (is_pos_in_player_building(bot_pos)) return 0;
 		}
 		return 1;
 	}
