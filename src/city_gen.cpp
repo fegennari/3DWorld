@@ -2991,10 +2991,42 @@ bool line_intersect_city(point const &p1, point const &p2, point &p_int) {
 	p_int = p1 + t*(p2 - p1);
 	return 1;
 }
+
+class model_bcube_checker_t {
+	vect_cube_t model_bcubes;
+	cube_t all_bcube;
+	bool is_valid = 0;
+
+	void gather_bcubes() {
+		if (is_valid) return; // nothing to do
+		get_all_model_bcubes(model_bcubes);
+		for (cube_t const &c : model_bcubes) {all_bcube.assign_or_union_with_cube(c);}
+		is_valid = 1;
+	}
+public:
+	bool check_sphere_coll(point const &pos, float radius, bool xy_only) {
+		if (!is_valid) {
+#pragma omp critical(create_model_bcubes)
+			gather_bcubes(); // will be run by the first thread to get here
+		}
+		if (model_bcubes.empty()) return 0;
+		if (!check_bcube_sphere_coll(all_bcube, pos, radius, xy_only)) return 0;
+		return check_bcubes_sphere_coll(model_bcubes, pos, radius, xy_only); // Note: can be somewhat slow for our Puget Sound 10K museums scene
+	}
+};
+
+model_bcube_checker_t model_bcube_checker;
+
 bool check_valid_scenery_pos(point const &pos, float radius, bool is_tall) {
-	if (check_buildings_sphere_coll(pos, radius, 1, 1, 0, 1)) return 0; // apply_tt_xlate=1, xy_only=1, check_interior=0, exclude_city=1 (since we're checking plots below)
-	if (check_city_sphere_coll(pos, radius, !is_tall))        return 0; // exclude bridges if not tall
-	if (check_mesh_disable(pos, (radius + 2.0*HALF_DXY)))     return 0; // check tunnels
+	point const pos_bs(pos + get_tt_xlate_val()); // convert from camera to city/building space
+	if (check_buildings_sphere_coll(pos_bs, radius, 0, 0, 0, 1)) return 0; // apply_tt_xlate=0, xy_only=0, check_interior=0, exclude_city=1 (since we're checking plots below)
+	if (world_mode != WMODE_INF_TERRAIN) return 1; // the checks below are for tiled terrain mode only
+
+	if (have_cities()) {
+		if (city_gen.check_city_sphere_coll(pos_bs, radius, 1, !is_tall, 1, 3)) return 0; // check_mask=3 to include both plots and roads
+		if (city_gen.check_mesh_disable(pos_bs, radius)) return 0;
+	}
+	if (model_bcube_checker.check_sphere_coll((pos_bs - get_tiled_terrain_model_xlate()), radius, 1)) return 0; // xy_only=1
 	return 1;
 }
 bool check_mesh_disable(point const &pos, float radius) {

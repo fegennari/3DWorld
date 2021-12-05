@@ -430,6 +430,7 @@ void small_tree_group::maybe_add_tree(int i, int j, float zpos_in, float tsize, 
 // density = x1,y1 x2,y1 x1,y2 x2,y2
 void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const density[4]) {
 
+	//timer_t timer("Gen Trees");
 	generated = 1; // mark as generated if we got here, even if there are no actual trees generated
 
 	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.sm_blocks.empty()) { // now add pre-placed trees within the city (TT mode)
