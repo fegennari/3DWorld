@@ -531,7 +531,7 @@ void draw_water(bool no_update, bool draw_fast) {
 		if (DEBUG_WATER_TIME) {PRINT_TIME("5 Water Ripple Update");}
 	}
 	unsigned nin(0);
-	int xin[4], yin[4], last_wsi(-1);
+	int xin[4] = {}, yin[4] = {}, last_wsi(-1);
 	bool const disp_snow((display_mode & 0x40) && temperature <= SNOW_MAX_TEMP);
 	if (!water_is_lava) {color *= INT_WATER_ATTEN;} // attenuate for interior water
 	colorRGBA wcolor(color);
