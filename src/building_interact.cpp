@@ -205,14 +205,20 @@ bool building_t::get_building_door_pos_closest_to(point const &target_pos, point
 
 void building_t::register_open_ext_door_state(int door_ix) {
 	bool const is_open(door_ix >= 0), was_open(open_door_ix >= 0);
-	if (is_open == was_open) return; // no state change
+	bool const ring_doorbell(is_open && is_house && door_ix == 0 && city_action_key); // action key when front door of a house is open
+	if (is_open == was_open && !ring_doorbell) return; // no state change
 	unsigned const dix(is_open ? (unsigned)door_ix : (unsigned)open_door_ix);
 	assert(dix < doors.size());
 	auto const &door(doors[dix]);
+	point const door_center(door.get_bcube().get_cube_center()), sound_pos(local_to_camera_space(door_center)); // convert to camera space
+
+	if (ring_doorbell) {
+		gen_sound_thread_safe(SOUND_DOORBELL, sound_pos);
+		return;
+	}
+	gen_sound_thread_safe((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	vector3d const normal(door.get_norm());
 	bool const dim(fabs(normal.x) < fabs(normal.y)), dir(normal[dim] < 0.0);
-	point const door_center(door.get_bcube().get_cube_center()), sound_pos(local_to_camera_space(door_center)); // convert to camera space
-	gen_sound_thread_safe((is_open ? (unsigned)SOUND_DOOR_OPEN : (unsigned)SOUND_DOOR_CLOSE), sound_pos);
 	point pos_interior(door_center);
 	pos_interior[dim] += (dir ? 1.0 : -1.0)*CAMERA_RADIUS; // move point to the building interior so that it's a valid AI position
 	register_building_sound(pos_interior, 0.4); // slightly quieter than interior doors because the user has no control over this
