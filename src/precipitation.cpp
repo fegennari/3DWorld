@@ -15,8 +15,6 @@ extern bool begin_motion;
 extern int animate2, display_mode, camera_coll_id, precip_mode, DISABLE_WATER;
 extern float temperature, fticks, zmin, water_plane_z, brightness, XY_SCENE_SIZE;
 extern vector3d wind;
-extern int coll_id[];
-extern obj_group obj_groups[];
 
 
 bool is_pos_in_player_building(point const &pos);

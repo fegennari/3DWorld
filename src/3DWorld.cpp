@@ -780,6 +780,11 @@ void toggle_camera_mode() {
 	if (camera_mode == 1) {camera_invincible = 1;} // in air (else on ground)
 }
 
+void update_precip_rate_verbose(float val) {
+	update_precip_rate(val);
+	cout << ((val > 1.0) ? "increase" : "decrease") << " precip to " << obj_groups[coll_id[PRECIP]].max_objs << endl;
+}
+
 
 // This function is called whenever there is a keyboard input;
 // key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127);
@@ -1081,12 +1086,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'N': // decrease precipitation rate by 1.5X
-		update_precip_rate(1.0/1.5);
-		cout << "decrease precip to " << obj_groups[coll_id[PRECIP]].max_objects() << endl;
+		update_precip_rate_verbose(1.0/1.5);
 		break;
 	case 'M': // increase precipitation rate by 1.5X
-		update_precip_rate(1.5);
-		cout << "increase precip to " << obj_groups[coll_id[PRECIP]].max_objects() << endl;
+		update_precip_rate_verbose(1.5);
 		break;
 
 	case 'H': // save mesh state/modmap/voxel brushes/cobj file/materials/heightmap
