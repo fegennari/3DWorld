@@ -1045,7 +1045,6 @@ void road_draw_state_t::draw_transmission_line_wires(point const &p1, point cons
 	for (unsigned n = 0; n < 3; ++n) {draw_fast_cylinder(pts[2*n], pts[2*n+1], radius, radius, ndiv, 0);} // no ends
 }
 void road_draw_state_t::draw_transmission_line(transmission_line_t const &tline) {
-	unsigned const ndiv = 16;
 	float const wire_radius(0.0024*city_params.road_width), tower_radius(0.035*city_params.road_width);
 	float const tower_bar_len(0.25*city_params.road_width), tower_bar_radius(0.4*tower_radius), end_rscale(0.5), bar_extend(1.04);
 	float const standoff_radius(0.12*tower_radius), standoff_height(1.2*tower_radius), standoff_dmax(0.05*get_draw_tile_dist());
