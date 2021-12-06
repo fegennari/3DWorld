@@ -73,3 +73,13 @@ num_light_rays 0 0 120000 # npts nrays local_rays
 lighting_file_local "" 1 1.0 0.0 # <filename> <write_mode> <light_scale> [<first_ray_weight>]
 indir_light_exp 0.5
 indir_vert_offset 1.0
+
+
+# options for use with museum model;
+# unfortunately, these conflict with the car/ped/building/Ferris wheel models, and the lighting config conflicts with building indir lighting
+#model_calc_tan_vect 0
+#invert_model_nmap_bscale 1
+#model_auto_tc_scale 10.0
+#model_mat_lod_thresh 4.0
+#load_coll_objs 1
+#enable_tt_model_indir 1

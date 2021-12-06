@@ -1,3 +1,9 @@
 # O <filename> <group_cobjs_level> <recalc_normals> <write_file>
-t 4.5 -3.8 -4.8  s 1 2  m 0.00005  O "../models/Ferris_Wheel/Ferris wheel N240616.model3d" 4 1 0
+T 4.5 -3.8 -4.8  s 1 2  m 0.00005  O "../models/Ferris_Wheel/Ferris wheel N240616.model3d" 4 1 0
 # Note: the 3DS version of this model seems to have incorrect transforms
+R # restore mirrors and swap
+
+#t -4.0 3.0 0.0  s 1 2  M 0  m 0.01  O ../models/museum/museumhallRD.obj 4 1 0
+#s 1 2  m 1.0 # reset
+#lighting_file_sky_model ../models/museum/lighting.tt.data.gz 256 128 64 2.0
+#R # restore mirrors and swap
