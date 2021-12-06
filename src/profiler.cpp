@@ -8,6 +8,7 @@
 using std::string;
 
 void maybe_update_loading_screen(const char *str);
+int omp_get_thread_num_3dw();
 
 
 template <typename T> class timing_profiler {
@@ -27,9 +28,12 @@ public:
 	void clear() {entries.clear();}
 
 	void register_time(const char *str, T delta_time) {
-		if (enabled) {entries[str].add(delta_time);}
-		else {cout << str << " time = " << delta_time << endl;}
-		maybe_update_loading_screen(str);
+#pragma omp critical(timer_update)
+		{
+			if (enabled) {entries[str].add(delta_time);}
+			else {cout << str << " time = " << delta_time << endl;}
+		}
+		if (omp_get_thread_num_3dw() == 0) {maybe_update_loading_screen(str);} // only call on main thread
 	}
 	void stats() const {
 		if (entries.empty()) return;
