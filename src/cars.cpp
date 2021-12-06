@@ -24,7 +24,14 @@ float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
 
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
 float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
+bool  car_t::is_truck() const {return (height > 1.2*city_params.get_nom_car_size().z);} // hack - truck has a larger than average size
 
+void car_t::set_bcube(point const &center, vector3d const &sz) {
+	height = sz.z;
+	bcube.set_from_point(center);
+	bcube.expand_by_xy(0.5*(dim ? vector3d(sz.y, sz.x, sz.z) : sz)); // swap size X and Y when dim==1
+	bcube.z2() += height; // set height
+}
 bool car_t::headlights_on() const { // no headlights when parked
 	return (engine_running && (in_tunnel || ((light_factor < (0.5 + HEADLIGHT_ON_RAND)) && is_night(HEADLIGHT_ON_RAND*signed_rand_hash(height + max_speed)))));
 }
@@ -527,7 +534,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 	begin_tile(center); // enable shadows
 	colorRGBA const &color(car.get_color());
 	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/draw_tile_dist);
-	bool const is_truck(car.height > 1.2*city_params.get_nom_car_size().z); // hack - truck has a larger than average size
+	bool const is_truck(car.is_truck());
 	bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
 	bool const draw_model(car_model_loader.num_models() > 0 &&
 		(is_dlight_shadows ? dist_less_than(pre_smap_player_pos, center, 0.05*draw_tile_dist) : (shadow_only || dist_val < 0.05)));
@@ -688,15 +695,11 @@ void car_manager_t::add_parked_cars(vector<car_t> const &new_cars, vect_cube_t c
 	
 	for (auto i = garages.begin(); i != garages.end(); ++i) {
 		if ((rgen.rand()&3) == 0) continue; // 25% of garages have no car
-		vector3d car_sz(nom_car_size);
-		car.dim    = (i->dx() < i->dy()); // long dim
-		car.dir    = rgen.rand_bool(); // Note: ignores garage dir because some cars and backed in and some are pulled in
-		car.height = car_sz.z;
-		if (car.dim) {swap(car_sz.x, car_sz.y);}
-		car.bcube.set_from_point(i->get_cube_center());
-		car.bcube.expand_by(0.5*car_sz);
-		assert(i->contains_cube(car.bcube));
-		car.bcube.z1() = i->z1(); car.bcube.z2() = i->z1() + car.height;
+		car.dim = (i->dx() < i->dy()); // long dim
+		car.dir = rgen.rand_bool(); // Note: ignores garage dir because some cars and backed in and some are pulled in
+		point const center(i->get_cube_center());
+		car.set_bcube(point(center.x, center.y, i->z1()), nom_car_size);
+		assert(i->contains_cube_xy(car.bcube));
 		cars.push_back(car);
 		garages_bcube.assign_or_union_with_cube(car.bcube);
 	} // for i

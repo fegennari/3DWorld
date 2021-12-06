@@ -156,8 +156,10 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 	car_t() : prev_bcube(all_zeros), entering_city(0), in_tunnel(0), dest_valid(0), destroyed(0), in_reverse(0), engine_running(0), color_id(0),
 		front_car_turn_dir(TURN_UNSPEC), model_id(0), dest_city(0), dest_isec(0), height(0.0), dz(0.0), rot_z(0.0),
 		turn_val(0.0), waiting_pos(0.0), wake_time(0.0), car_in_front(nullptr) {}
+	void set_bcube(point const &center, vector3d const &sz);
 	bool is_valid   () const {return !bcube.is_all_zeros();}
 	bool is_sleeping() const {return (wake_time > 0.0);}
+	bool is_truck   () const;
 	float get_max_lookahead_dist() const;
 	bool headlights_on() const;
 	float get_turn_rot_z(float dist_to_turn) const;

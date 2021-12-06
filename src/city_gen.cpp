@@ -1311,24 +1311,20 @@ public:
 		for (unsigned n = 0; n < 10; ++n) { // make 10 tries
 			unsigned const seg_ix(rgen.rand()%segs.size());
 			road_seg_t const &seg(segs[seg_ix]); // chose a random segment
-			car.dim   = seg.dim;
-			car.dir   = rgen.rand_bool();
+			car.dim = seg.dim;
+			car.dir = rgen.rand_bool();
 			car.choose_max_speed(rgen);
-			car.cur_road  = seg.road_ix;
-			car.cur_seg   = seg_ix;
+			car.cur_road = seg.road_ix;
+			car.cur_seg  = seg_ix;
 			car.cur_road_type = TYPE_RSEG;
-			vector3d car_sz(nom_car_size); // {length, width, height} // Note: car models should all be the same size
-			car.height = car_sz.z;
 			point pos;
-			float val1(seg.d[seg.dim][0] + 0.6f*car_sz.x), val2(seg.d[seg.dim][1] - 0.6f*car_sz.x);
+			float val1(seg.d[seg.dim][0] + 0.6f*nom_car_size.x), val2(seg.d[seg.dim][1] - 0.6f*nom_car_size.x);
 			if (val1 >= val2) continue; // failed, try again (connector road junction?)
 			pos[!seg.dim]  = seg.get_center_dim(!seg.dim); // center of road
 			pos[!seg.dim] += ((car.dir ^ car.dim) ? -1.0 : 1.0)*get_car_lane_offset(); // place in right lane
 			pos[ seg.dim]  = rgen.rand_uniform(val1, val2); // place at random pos in segment
-			pos.z = seg.z2() + 0.5*car_sz.z; // place above road surface
-			if (seg.dim) {swap(car_sz.x, car_sz.y);}
-			car.bcube.set_from_point(pos);
-			car.bcube.expand_by(0.5*car_sz);
+			pos.z = seg.z2(); // place above road surface
+			car.set_bcube(pos, nom_car_size);
 			assert(get_road_bcube_for_car(car).contains_cube_xy(car.bcube)); // sanity check
 			return 1; // success
 		} // for n

@@ -847,13 +847,9 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 		// fill the parking lot with cars
 		vector<unsigned char> &used_spaces(parking_lots.back().used_spaces);
 		used_spaces.resize(nspaces, 0); // start empty
-		vector3d car_sz(nom_car_size);
-		car.dim    = car_dim;
-		car.dir    = car_dir;
-		car.height = car_sz.z;
-		if (car.dim) {swap(car_sz.x, car_sz.y);}
-		point pos(corner_pos.x, corner_pos.y, (plot.z2() + 0.5*car_sz.z));
-		pos[ car_dim] += 0.5*dr + (car_dim ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
+		car.dim = car_dim; car.dir = car_dir;
+		point pos(corner_pos.x, corner_pos.y, plot.z2());
+		pos[car_dim] += 0.5*dr + (car_dim ? 0.15 : -0.15)*fabs(dr); // offset for centerline, biased toward the front of the parking space
 		float const car_density(rgen.rand_uniform(city_params.min_park_density, city_params.max_park_density));
 
 		for (unsigned row = 0; row < park.num_rows; ++row) {
@@ -871,8 +867,7 @@ bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &ca
 						cpos[!car_dim] += dw*rgen.rand_uniform(0.3, 0.35);
 						prev_was_bad = 1;
 					}
-					car.bcube.set_from_point(cpos);
-					car.bcube.expand_by(0.5*car_sz);
+					car.set_bcube(pos, nom_car_size);
 					cars.push_back(car);
 					if ((rgen.rand()&7) == 0) {cars.back().dir ^= 1;} // pack backwards 1/8 of the time
 					used_spaces[row*park.num_rows + col] = 1;
@@ -914,24 +909,21 @@ void city_obj_placer_t::add_cars_to_driveways(vector<car_t> &cars, vector<road_p
 	car.park();
 	car.cur_city = city_id;
 	car.cur_road_type = TYPE_DRIVEWAY;
+	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}
 
 	for (auto i = driveways.begin(); i != driveways.end(); ++i) {
 		if (rgen.rand_float() < 0.5) continue; // no car in this driveway 50% of the time
 		car.cur_road = (unsigned short)i->plot_ix; // store plot_ix in road field
 		car.cur_seg  = (unsigned short)(i - driveways.begin()); // store driveway index in cur_seg
-		vector3d car_sz(city_params.get_nom_car_size()); // {length, width, height}
 		cube_t const &plot(plots[i->plot_ix]);
-		car.dim    = (i->y1() == plot.y1() || i->y2() == plot.y2()); // check which edge of the plot the driveway is connected to, which is more accurate than the aspect ratio
-		if (i->get_sz_dim(car.dim) < 1.6*car_sz.x || i->get_sz_dim(!car.dim) < 1.25*car_sz.y) continue; // driveway is too small to fit this car
-		car.dir    = rgen.rand_bool(); // randomly pulled in vs. backed in, since we don't know the direction to the house anyway
-		car.height = car_sz.z;
-		float const pad_l(0.75*car_sz.x), pad_w(0.6*car_sz.y); // needs to be a bit larger to fit trucks
-		if (car.dim) {swap(car_sz.x, car_sz.y);}
-		point cpos(0.0, 0.0, (i->z2() + 0.5*car_sz.z));
+		car.dim = (i->y1() == plot.y1() || i->y2() == plot.y2()); // check which edge of the plot the driveway is connected to, which is more accurate than the aspect ratio
+		if (i->get_sz_dim(car.dim) < 1.6*nom_car_size.x || i->get_sz_dim(!car.dim) < 1.25*nom_car_size.y) continue; // driveway is too small to fit this car
+		car.dir = rgen.rand_bool(); // randomly pulled in vs. backed in, since we don't know the direction to the house anyway
+		float const pad_l(0.75*nom_car_size.x), pad_w(0.6*nom_car_size.y); // needs to be a bit larger to fit trucks
+		point cpos(0.0, 0.0, i->z2());
 		cpos[ car.dim] = rgen.rand_uniform(i->d[ car.dim][0]+pad_l, i->d[ car.dim][1]-pad_l);
 		cpos[!car.dim] = rgen.rand_uniform(i->d[!car.dim][0]+pad_w, i->d[!car.dim][1]-pad_w); // not quite centered
-		car.bcube.set_from_point(cpos);
-		car.bcube.expand_by(0.5*car_sz);
+		car.set_bcube(cpos, nom_car_size);
 		// check if this car intersects another parked car; this can only happen if two driveways intersect, which should be rare
 		bool intersects(0);
 
