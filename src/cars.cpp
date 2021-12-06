@@ -24,7 +24,6 @@ float get_clamped_fticks() {return min(fticks, 4.0f);} // clamp to 100ms
 
 float car_t::get_max_lookahead_dist() const {return (get_length() + city_params.road_width);} // extend one car length + one road width in front
 float car_t::get_turn_rot_z(float dist_to_turn) const {return (1.0 - CLIP_TO_01(4.0f*fabs(dist_to_turn)/city_params.road_width));}
-bool  car_t::is_truck() const {return (height > 1.2*city_params.get_nom_car_size().z);} // hack - truck has a larger than average size
 
 void car_t::set_bcube(point const &center, vector3d const &sz) {
 	height = sz.z;
@@ -41,13 +40,19 @@ bool car_t::is_close_to_player() const { // for debugging
 
 void car_t::apply_scale(float scale) {
 	if (scale == 1.0) return; // no scale
-	float const prev_height(height);
 	height *= scale;
 	point const pos(get_center());
-	bcube.z2() += height - prev_height; // z1 is unchanged
-	float const dx(bcube.x2() - pos.x), dy(bcube.y2() - pos.y);
-	bcube.x1() = pos.x - scale*dx; bcube.x2() = pos.x + scale*dx;
-	bcube.y1() = pos.y - scale*dy; bcube.y2() = pos.y + scale*dy;
+	vector2d sz((bcube.x2() - pos.x), (bcube.y2() - pos.y));
+	is_truck = (scale > 1.2); // trucks are larger in size
+
+	if (is_truck) { // truck bcube is taller and less wide
+		height   *= 1.55;
+		sz[ dim] *= 0.85; // length
+		sz[!dim] *= 0.75; // width
+	}
+	bcube.z2() = bcube.z1() + height; // z1 is unchanged
+	bcube.x1() = pos.x - scale*sz.x; bcube.x2() = pos.x + scale*sz.x;
+	bcube.y1() = pos.y - scale*sz.y; bcube.y2() = pos.y + scale*sz.y;
 }
 
 void car_t::destroy() { // Note: not calling create_explosion(), so no chain reactions
@@ -534,8 +539,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 	begin_tile(center); // enable shadows
 	colorRGBA const &color(car.get_color());
 	float const dist_val(p2p_dist(camera_pdu.pos, center_xlated)/draw_tile_dist);
-	bool const is_truck(car.is_truck());
-	bool const draw_top(dist_val < 0.25 && !is_truck), dim(car.dim), dir(car.dir);
+	bool const draw_top(dist_val < 0.25 && !car.is_truck), dim(car.dim), dir(car.dir);
 	bool const draw_model(car_model_loader.num_models() > 0 &&
 		(is_dlight_shadows ? dist_less_than(pre_smap_player_pos, center, 0.05*draw_tile_dist) : (shadow_only || dist_val < 0.05)));
 	float const sign((dim^dir) ? -1.0 : 1.0);
@@ -581,8 +585,8 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 	vector3d const front_n(cross_product((pb[5] - pb[1]), (pb[0] - pb[1])).get_norm()*sign);
 	unsigned const lr_xor(((camera_pdu.pos[!dim] - xlate[!dim]) - center[!dim]) < 0.0f);
 	bool const brake_lights_on(car.is_almost_stopped() || car.stopped_at_light), headlights_on(car.headlights_on());
-	float const hv1(is_truck ? 0.6 : 0.2), hv2(1.0 - hv1); // headlights and tail lights; blend from bottom to top
-	float const sv1(is_truck ? 0.6 : 0.3), sv2(1.0 - hv1); // turn signals; blend from bottom to top
+	float const hv1(car.is_truck ? 0.8 : 0.2), hv2(1.0 - hv1); // headlights and tail lights; blend from bottom to top
+	float const sv1(car.is_truck ? 0.8 : 0.3), sv2(1.0 - hv1); // turn signals; blend from bottom to top
 
 	if (headlights_on && dist_val < 0.3) { // night time headlights
 		colorRGBA const hl_color(get_headlight_color(car));
