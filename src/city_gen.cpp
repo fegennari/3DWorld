@@ -3001,12 +3001,22 @@ bool line_intersect_city(point const &p1, point const &p2, point &p_int) {
 class model_bcube_checker_t {
 	vect_cube_t model_bcubes;
 	cube_t all_bcube;
+	vector3d max_sz;
 	bool is_valid = 0;
+
+	struct bcube_by_y2 {
+		bool operator()(cube_t const &a, cube_t const &b) const {return (a.y2() < b.y2());}
+	};
 
 	void gather_bcubes() {
 		if (is_valid) return; // nothing to do
 		get_all_model_bcubes(model_bcubes);
-		for (cube_t const &c : model_bcubes) {all_bcube.assign_or_union_with_cube(c);}
+		
+		for (cube_t const &c : model_bcubes) {
+			all_bcube.assign_or_union_with_cube(c);
+			max_sz = max_sz.max(c.get_size());
+		}
+		sort(model_bcubes.begin(), model_bcubes.end(), bcube_by_y2());
 		is_valid = 1;
 	}
 public:
@@ -3017,6 +3027,18 @@ public:
 		}
 		if (model_bcubes.empty()) return 0;
 		if (!check_bcube_sphere_coll(all_bcube, pos, radius, xy_only)) return 0;
+		if (model_bcubes.size() == 1) return 1; // one bcube, must be equal to all_bcube
+
+		if (model_bcubes.size() >= 100) { // large dataset, use a binary search over x2
+			auto it(lower_bound(model_bcubes.begin(), model_bcubes.end(), cube_t(0,0,0,(pos.x - radius),0,0))); // only y2 is important
+			float const y2_end(pos.y + radius + max_sz.y); // we can stop when the model bcube x1 value passes this point
+			
+			for (auto i = it; i != model_bcubes.end(); ++i) {
+				if (i->y2() > y2_end) break; // done
+				if (check_bcube_sphere_coll(*i, pos, radius, xy_only)) return 1;
+			}
+			return 0;
+		}
 		return check_bcubes_sphere_coll(model_bcubes, pos, radius, xy_only); // Note: can be somewhat slow for our Puget Sound 10K museums scene
 	}
 };
