@@ -1487,20 +1487,26 @@ void alloc_if_req(char *&fn, const char *def_fn=nullptr) {
 
 bool load_config_file(const char *fn) {
 
-	string config_file;
+	string line, config_file;
 	ifstream in(fn);
 	if (!in.good()) return 0;
 
-	while (in >> config_file) {
-		if (!config_file.empty() && config_file[0] != '#') { // not commented out
-			cout << "Using config file " << config_file << "." << endl;
+	while (std::getline(in, line)) {
+		if (line.empty() || line[0] == '#') continue; // comment
+		config_file.clear();
 
-			if (!load_config(config_file)) {
-				cerr << "Error: Failed to open config file " << config_file << " for read" << endl;
-				return 0;
-			}
+		for (auto const &c : line) {
+			if (isspace(c) || c == '#') break; // ignore anything after the first string - assume it's a comment
+			config_file.push_back(c);
 		}
-	}
+		if (config_file.empty()) continue;
+		cout << "Using config file " << config_file << "." << endl;
+
+		if (!load_config(config_file)) {
+			cerr << "Error: Failed to open config file " << config_file << " for read" << endl;
+			return 0;
+		}
+	} // end while
 	min_eq(NEAR_CLIP, 0.5f*CAMERA_RADIUS); // make sure the player's view can't clip through scene objects
 	return 1;
 }
