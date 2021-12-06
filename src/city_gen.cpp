@@ -24,7 +24,7 @@ point pre_smap_player_pos(all_zeros);
 extern bool enable_dlight_shadows, dl_smap_enabled, flashlight_on, camera_in_building, have_indir_smoke_tex, disable_city_shadow_maps, player_in_basement;
 extern int rand_gen_index, display_mode, animate2, draw_model;
 extern unsigned shadow_map_sz, cur_display_iter;
-extern float shadow_map_pcf_offset, cobj_z_bias;
+extern float shadow_map_pcf_offset, cobj_z_bias, rain_wetness;
 extern vector<light_source> dl_sources;
 
 
@@ -1215,6 +1215,9 @@ public:
 	void get_occluders(vect_cube_t &occluders) const {
 		if (bcube.contains_pt_xy(camera_pdu.pos)) {city_obj_placer.get_occluders(camera_pdu, occluders);} // only add if this city contains the camera
 	}
+	static void set_road_normal_map  () {select_multitex(get_texture_by_name("normal_maps/dirt_normal.jpg", 1), 5);}
+	static void reset_road_normal_map() {select_multitex(FLAT_NMAP_TEX, 5);}
+
 	void draw(road_draw_state_t &dstate, bool shadow_only, bool is_connector_road) {
 		city_obj_placer.draw_detail_objects(dstate, shadow_only); // always drawn; does its own VFC and distance test
 		if (empty()) return;
@@ -1230,6 +1233,8 @@ public:
 			}
 		}
 		else {
+			bool const use_road_normal_maps(rain_wetness > 0.0); // use dirt normal map texture for rain effects
+
 			for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 				if (!dstate.check_cube_visible(b->bcube)) continue; // VFC/too far
 				dstate.begin_tile(b->bcube.get_cube_center());
@@ -1243,8 +1248,8 @@ public:
 						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PLOT], TYPE_PLOT); // concrete
 						dstate.draw_city_region(plots, b->ranges[TYPE_PLOT], b->quads[TYPE_PARK], TYPE_PARK); // grass parks (stored as plots)
 					}
-					dstate.draw_city_region(segs,       b->ranges[TYPE_RSEG  ], b->quads[TYPE_RSEG  ], TYPE_RSEG  ); // road segments
-					dstate.draw_city_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
+					if (use_road_normal_maps) {set_road_normal_map();} // set normal maps for roads, parking lots, and driveways
+					dstate.draw_city_region(segs, b->ranges[TYPE_RSEG], b->quads[TYPE_RSEG], TYPE_RSEG); // road segments
 					dstate.draw_city_region(city_obj_placer.parking_lots, b->ranges[TYPE_PARK_LOT], b->quads[TYPE_PARK_LOT], TYPE_PARK_LOT); // parking lots
 
 					if (!city_obj_placer.driveways.empty()) {
@@ -1253,11 +1258,16 @@ public:
 						dstate.draw_city_region(city_obj_placer.driveways, b->ranges[TYPE_DRIVEWAY], b->quads[TYPE_DRIVEWAY], TYPE_DRIVEWAY); // driveways
 						glDisable(GL_POLYGON_OFFSET_FILL);
 					}
+					if (use_road_normal_maps) {reset_road_normal_map();}
+					dstate.draw_city_region(track_segs, b->ranges[TYPE_TRACKS], b->quads[TYPE_TRACKS], TYPE_TRACKS); // railroad tracks
 				}
+				if (use_road_normal_maps) {set_road_normal_map();}
+
 				for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
 					dstate.draw_city_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
 					if (i > 0) {dstate.draw_stoplights(isecs[i], b->ranges[TYPE_ISEC2 + i], 0);}
 				}
+				if (use_road_normal_maps) {reset_road_normal_map();}
 			} // for b
 		}
 		draw_streetlights(dstate, shadow_only, 0);
