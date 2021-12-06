@@ -1996,10 +1996,15 @@ void model3d::set_sky_lighting_file(string const &fn, float weight, unsigned sz[
 
 void model3d::create_indir_texture() {
 
-	timer_t timer("Create Indir Texture");
 	unsigned const xsize(sky_lighting_sz[0]), ysize(sky_lighting_sz[1]), zsize(sky_lighting_sz[2]), tot_sz(xsize*ysize*zsize);
-	assert(tot_sz > 0);
-	if (tot_sz == 0) return; // nothing to do
+	
+	if (tot_sz == 0) {
+		static bool showed_warning(0);
+		if (!showed_warning) {cout << "Failed to allocate indir lighting texture: " << TXT(xsize) << TXT(ysize) << TXT(zsize) << endl;}
+		showed_warning = 1;
+		return; // nothing to do
+	}
+	timer_t timer("Create Indir Texture");
 	lmap_manager_t local_lmap_manager; // store in the model3d and cache for reuse on context change (at the cost of more CPU memory usage)? only matters when ray tracing (below)?
 	lmcell init_lmcell;
 	unsigned char **need_lmcell = nullptr; // not used - dense mode
