@@ -168,7 +168,7 @@ fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, v
 	max_eq(radius, 0.5f*height); // use a more accurate bounding sphere; Note: no cube root of (r*r + r*r + h*h)
 }
 /*static*/ void fire_hydrant_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(WHITE_TEX);}
+	if (!shadow_only) {select_texture(WHITE_TEX);} // set in case model isn't loaded
 	if (!shadow_only) {dstate.s.set_cur_color(colorRGBA(1.0, 0.75, 0.0));}
 }
 /*static*/ void fire_hydrant_t::post_draw(draw_state_t &dstate, bool shadow_only) {
@@ -194,6 +194,28 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 	pos_ += coll_norm*(r_sum - p2p_dist(pos_, pos2)); // move away from pos2
 	if (cnorm) {*cnorm = coll_norm;}
 	return 1;
+}
+
+// substations
+
+substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : dim(dim_), dir(dir_) {
+	bcube = bcube_;
+	*((sphere_t *)this) = bcube.get_bsphere();
+}
+/*static*/ void substation_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
+	// nothing to do?
+}
+void substation_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
+	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+
+	if (!shadow_only && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
+		vector3d orient(zero_vector);
+		orient[dim] = (dir ? 1.0 : -1.0);
+		building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_SUBSTATION, shadow_only);
+	}
+	else { // draw as a simple cube, untextured, no bottom
+		dstate.draw_cube(qbd, bcube, WHITE, 1);
+	}
 }
 
 // plot dividers
@@ -1151,6 +1173,9 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}
+	if (!is_residential) { // place substations
+		// TODO
+	}
 }
 
 bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, cube_t const &exclude, unsigned prev_blockers_end, float expand, bool exp_dim) {
@@ -1396,8 +1421,8 @@ template<typename T> void city_obj_placer_t::draw_objects(vector<T> const &objs,
 }
 
 void city_obj_placer_t::clear() {
-	parking_lots.clear(); benches.clear(); planters.clear(); fhydrants.clear(); driveways.clear(); dividers.clear(); pools.clear(); ppoles.clear();
-	bench_groups.clear(); planter_groups.clear(); fhydrant_groups.clear(); divider_groups.clear(); pool_groups.clear(); ppole_groups.clear();
+	parking_lots.clear(); benches.clear(); planters.clear(); fhydrants.clear(); sstations.clear(); driveways.clear(); dividers.clear(); pools.clear(); ppoles.clear();
+	bench_groups.clear(); planter_groups.clear(); fhydrant_groups.clear(); sstation_groups.clear(); divider_groups.clear(); pool_groups.clear(); ppole_groups.clear();
 	all_objs_bcube.set_to_zeros();
 	num_spaces = filled_spaces = 0;
 }
@@ -1451,14 +1476,15 @@ void city_obj_placer_t::gen_parking_and_place_objects(vector<road_plot_t> &plots
 	bench_groups   .create_groups(benches,   all_objs_bcube);
 	planter_groups .create_groups(planters,  all_objs_bcube);
 	fhydrant_groups.create_groups(fhydrants, all_objs_bcube);
+	sstation_groups.create_groups(sstations, all_objs_bcube);
 	divider_groups .create_groups(dividers,  all_objs_bcube);
 	pool_groups    .create_groups(pools,     all_objs_bcube);
 	ppole_groups   .create_groups(ppoles,    all_objs_bcube);
 
 	if (0) { // debug info printing
 		cout << TXT(benches.size()) << TXT(bench_groups.size()) << TXT(planters.size()) << TXT(planter_groups.size()) << TXT(fhydrants.size())
-			 << TXT(fhydrant_groups.size()) << TXT(dividers.size()) << TXT(divider_groups.size()) << TXT(pools.size()) << TXT(pool_groups.size())
-			 << TXT(ppoles.size()) << TXT(ppole_groups.size()) << endl;
+			 << TXT(fhydrant_groups.size()) << TXT(sstations.size()) << TXT(sstation_groups.size()) << TXT(dividers.size()) << TXT(divider_groups.size())
+			 << TXT(pools.size()) << TXT(pool_groups.size()) << TXT(ppoles.size()) << TXT(ppole_groups.size()) << endl;
 	}
 	if (add_parking_lots) {
 		cout << "parking lots: " << parking_lots.size() << ", spaces: " << num_spaces << ", filled: " << filled_spaces << ", benches: " << benches.size() << endl;
@@ -1553,6 +1579,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
+	draw_objects(sstations, sstation_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 			
 	if (!shadow_only) { // low profile, not drawn in shadow pass
@@ -1593,6 +1620,7 @@ bool city_obj_placer_t::proc_sphere_coll(point &pos, point const &p_last, vector
 	if (!sphere_cube_intersect(pos, (radius + p2p_dist(pos,p_last)), (all_objs_bcube + xlate))) return 0;
 	if (proc_vector_sphere_coll(benches,   bench_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(fhydrants, fhydrant_groups, pos, p_last, radius, xlate, cnorm)) return 1;
+	if (proc_vector_sphere_coll(sstations, sstation_groups, pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(dividers,  divider_groups,  pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(pools,     pool_groups,     pos, p_last, radius, xlate, cnorm)) return 1;
 	if (proc_vector_sphere_coll(ppoles,    ppole_groups,    pos, p_last, radius, xlate, cnorm)) return 1;
@@ -1614,6 +1642,7 @@ bool city_obj_placer_t::line_intersect(point const &p1, point const &p2, float &
 	bool ret(0);
 	check_vector_line_intersect(benches,   bench_groups,    p1, p2, t, ret);
 	check_vector_line_intersect(fhydrants, fhydrant_groups, p1, p2, t, ret); // check bounding cube; cylinder intersection may be more accurate, but likely doesn't matter much
+	check_vector_line_intersect(sstations, sstation_groups, p1, p2, t, ret);
 	check_vector_line_intersect(dividers,  divider_groups,  p1, p2, t, ret);
 	check_vector_line_intersect(pools,     pool_groups,     p1, p2, t, ret);
 	check_vector_line_intersect(ppoles,    ppole_groups,    p1, p2, t, ret); // inaccurate, could be customized if needed
@@ -1687,7 +1716,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 			return 1;
 		}
 	} // for i
-	// Note: ppoles are skipped for now
+	// Note: ppoles and substations are skipped for now
 	return 0;
 }
 

@@ -41,6 +41,13 @@ struct fire_hydrant_t : public city_obj_t {
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
+struct substation_t : public city_obj_t {
+	bool dim, dir;
+	substation_t(cube_t const &bcube_, bool dim_, bool dir_);
+	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+};
+
 struct divider_t : public city_obj_t {
 	unsigned type;
 	bool dim, dir;
@@ -119,10 +126,11 @@ private:
 	vector<bench_t> benches;
 	vector<tree_planter_t> planters;
 	vector<fire_hydrant_t> fhydrants;
+	vector<substation_t> sstations;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
 	vector<power_pole_t> ppoles;
-	city_obj_groups_t bench_groups, planter_groups, fhydrant_groups, divider_groups, pool_groups, ppole_groups; // index is last object in group
+	city_obj_groups_t bench_groups, planter_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups; // index is last object in group
 	quad_batch_draw qbd, untex_qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
