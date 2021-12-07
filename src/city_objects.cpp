@@ -168,8 +168,7 @@ fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, v
 	max_eq(radius, 0.5f*height); // use a more accurate bounding sphere; Note: no cube root of (r*r + r*r + h*h)
 }
 /*static*/ void fire_hydrant_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(WHITE_TEX);} // set in case model isn't loaded
-	if (!shadow_only) {dstate.s.set_cur_color(colorRGBA(1.0, 0.75, 0.0));}
+	if (!shadow_only) {dstate.s.set_cur_color(colorRGBA(1.0, 0.75, 0.0));} // override with custom color since the model color is black
 }
 /*static*/ void fire_hydrant_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
