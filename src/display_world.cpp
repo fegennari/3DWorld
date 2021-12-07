@@ -46,7 +46,7 @@ string lighting_update_text;
 
 extern bool combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern bool user_action_key, flashlight_on, enable_clip_plane_z, begin_motion, config_unlimited_weapons, start_maximized, show_bldg_pickup_crosshair;
-extern bool can_do_building_action;
+extern bool can_do_building_action, enable_tt_model_indir;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, UNLIMITED_WEAPONS;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, DISABLE_WATER, can_pickup_bldg_obj;
@@ -75,6 +75,7 @@ void play_camera_footstep_sound();
 void draw_voxel_edit_volume();
 void play_switch_weapon_sound();
 void toggle_fullscreen();
+void calc_cur_ambient_diffuse();
 
 vector3d calc_camera_direction();
 void draw_player_model(point const &pos, vector3d const &dir, int time);
@@ -1237,6 +1238,10 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (draw_water && !underwater) {tt_reflection_tid = create_tt_reflection(terrain_zmin);}
 	far_clip_ratio = 1.0; // reset to default, may be overwritten below
 
+	if (enable_tt_model_indir) {
+		calc_cur_ambient_diffuse(); // required to handle lighting updates
+		upload_smoke_indir_texture();
+	}
 	if (combined_gu) {
 		draw_universe_bkg(0); // infinite universe as background
 		check_gl_error(4);

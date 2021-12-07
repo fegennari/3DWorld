@@ -11,7 +11,7 @@ nleaves_scale 2.0
 tree_branch_radius 0.5
 sm_tree_density 1.5
 
-#start_in_inf_terrain 1 # doesn't work, need to load model in ground mode for lighting to be correct
+start_in_inf_terrain 1
 disable_inf_terrain 0
 disable_water 0
 disable_scenery 1
