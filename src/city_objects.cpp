@@ -169,9 +169,11 @@ fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, v
 }
 /*static*/ void fire_hydrant_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.set_cur_color(colorRGBA(1.0, 0.75, 0.0));} // override with custom color since the model color is black
+	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
 }
 /*static*/ void fire_hydrant_t::post_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.set_cur_color(WHITE);} // restore to default color
+	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
 	city_obj_t::post_draw(dstate, shadow_only);
 }
 void fire_hydrant_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const { // Note: qbds are unused
@@ -202,7 +204,10 @@ substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : dim(dim
 	*((sphere_t *)this) = bcube.get_bsphere();
 }
 /*static*/ void substation_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	// nothing to do?
+	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
+}
+/*static*/ void substation_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.5);} // set hemispherical lighting back to the default
 }
 void substation_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;

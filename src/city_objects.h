@@ -45,6 +45,7 @@ struct substation_t : public city_obj_t {
 	bool dim, dir;
 	substation_t(cube_t const &bcube_, bool dim_, bool dir_);
 	static void pre_draw (draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 };
 
