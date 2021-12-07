@@ -178,11 +178,11 @@ fire_hydrant_t::fire_hydrant_t(point const &pos_, float radius_, float height, v
 void fire_hydrant_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const { // Note: qbds are unused
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 
-	if (!shadow_only && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
+	if (!shadow_only) {
 		building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_FHYDRANT, shadow_only);
 	}
-	else { // draw as a simple cylinder, untextured, top end only
-		draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), 0.8*cylin_radius, 0.8*cylin_radius, (shadow_only ? 12 : N_CYL_SIDES), 0, 4);
+	else { // shadow pass: draw as a simple cylinder, untextured, top end only
+		draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), 0.8*cylin_radius, 0.8*cylin_radius, 12, 0, 4); // ndiv=12
 	}
 }
 bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
@@ -207,15 +207,9 @@ substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : dim(dim
 }
 void substation_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-
-	if (!shadow_only && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
-		vector3d orient(zero_vector);
-		orient[dim] = (dir ? 1.0 : -1.0);
-		building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_SUBSTATION, shadow_only);
-	}
-	else { // draw as a simple cube, untextured, no bottom
-		dstate.draw_cube(qbd, bcube, WHITE, 1);
-	}
+	vector3d orient(zero_vector);
+	orient[dim] = (dir ? 1.0 : -1.0);
+	building_obj_model_loader.draw_model(dstate.s, pos, bcube, orient, WHITE, dstate.xlate, OBJ_MODEL_SUBSTATION, shadow_only);
 }
 
 // plot dividers
@@ -1058,8 +1052,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 {
 	float const car_length(city_params.get_nom_car_size().x); // used as a size reference for other objects
 
-	// place fire_hydrants; don't add fire hydrants in parks
-	if (!plot.is_park) {
+	// place fire_hydrants if the model has been loaded; don't add fire hydrants in parks
+	if (!plot.is_park && building_obj_model_loader.is_model_valid(OBJ_MODEL_FHYDRANT)) {
 		// we want the fire hydrant on the edge of the sidewalk next to the road, not next to the plot; this makes it outside the plot itself
 		float const radius(0.04*car_length), height(0.18*car_length), dist_from_road(-0.5*radius - get_sidewalk_width());
 		point pos(0.0, 0.0, plot.z2()); // XY will be assigned below
@@ -1173,7 +1167,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}
-	if (!is_residential) { // place substations
+	if (!is_residential && building_obj_model_loader.is_model_valid(OBJ_MODEL_SUBSTATION)) { // place substations if the model has been loaded
 		// TODO
 	}
 }
