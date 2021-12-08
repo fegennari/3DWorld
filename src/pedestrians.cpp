@@ -772,9 +772,11 @@ void pedestrian_t::next_frame(ped_manager_t &ped_mgr, vector<pedestrian_t> &peds
 		}
 		if (ped_coll) {
 			assert(colliding_ped < peds.size());
-			vector3d const coll_dir(peds[colliding_ped].pos - pos);
+			pedestrian_t const &other(peds[colliding_ped]);
+			vector3d const coll_dir(other.pos - pos);
 			new_dir = cross_product(vel, plus_z); // right angle turn - using the tangent causes peds to get stuck together
-			if (dot_product_xy(new_dir, coll_dir) > 0.0) {new_dir.negate();} // orient away from the other ped
+			if (dot_product_xy(new_dir, coll_dir) > 0.0) {new_dir.negate();} // orient away from the other ped's position
+			if (dot_product_xy(new_dir, other.vel)/(new_dir.mag()*other.vel.mag()) > 0.9) {new_dir.negate();} // velocities too close together (stuck together?)
 		}
 		else if (outside_plot && !in_the_road && !plot_bcube.contains_pt_xy(pos)) { // attempt to re-enter the plot at the nearest point
 			point plot_pt(pos);
