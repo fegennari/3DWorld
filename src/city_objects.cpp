@@ -1107,6 +1107,8 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		}
 	}
 	// place power poles if there are houses or streetlights
+	point corner_pole_pos(all_zeros);
+
 	if ((is_residential && have_city_buildings()) || have_streetlights) {
 		float const road_width(city_params.road_width), pole_radius(0.015*road_width), height(0.9*road_width);
 		float const xspace(plot.dx() + road_width), yspace(plot.dy() + road_width); // == city_params.road_spacing?
@@ -1138,6 +1140,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			bool const at_line_end[2] = {0, 0};
 			bool const at_grid_edge(plot.xpos+1U == num_x_plots || plot.ypos+1U == num_y_plots);
 			ppole_groups.add_obj(power_pole_t(base, pos, pole_radius, height, wires_offset, xyspace, dims[i], at_grid_edge, at_line_end, is_residential), ppoles);
+			if (i == 0) {corner_pole_pos = base;}
 		}
 		if (plot.xpos == 0) { // no -x neighbor plot, but need to add the power poles there
 			unsigned const pole_ixs[2] = {0, 2};
@@ -1165,14 +1168,26 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			point pt(pts[0]);
 			pt.x -= xspace;
 			pt.y -= yspace;
-			point base(pt);
 			bool const at_line_end[2] = {1, 1};
-			ppole_groups.add_obj(power_pole_t(base, pt, pole_radius, height, 0.0, xyspace, dims[0], 1, at_line_end, is_residential), ppoles);
+			ppole_groups.add_obj(power_pole_t(pt, pt, pole_radius, height, 0.0, xyspace, dims[0], 1, at_line_end, is_residential), ppoles);
 		}
 		for (auto i = (ppoles.begin() + pp_start); i != ppoles.end(); ++i) {colliders.push_back(i->get_ped_occluder());}
 	}
-	if (!is_residential && building_obj_model_loader.is_model_valid(OBJ_MODEL_SUBSTATION)) { // place substations if the model has been loaded
-		// TODO
+	// place substations in commercial cities, near the corner pole that routes power into the ground, if the model has been loaded
+	if (!is_residential && corner_pole_pos != all_zeros && building_obj_model_loader.is_model_valid(OBJ_MODEL_SUBSTATION)) {
+		bool const dim(0), dir(0); // hard-coded for now
+		float const ss_height(0.08*city_params.road_width), dist_from_corner(0.25); // relative to plot size
+		vector3d const ss_center((1.0 - dist_from_corner)*corner_pole_pos + dist_from_corner*plot.get_cube_center());
+		vector3d const model_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SUBSTATION));
+		vector3d bcube_exp;
+		bcube_exp[ dim] = 0.5*ss_height*model_sz.x/model_sz.z;
+		bcube_exp[!dim] = 0.5*ss_height*model_sz.y/model_sz.z;
+		cube_t ss_bcube(ss_center, ss_center);
+		ss_bcube.expand_by_xy(bcube_exp);
+		ss_bcube.z2() += ss_height;
+		// TODO: check for collision with building or other placed object
+		sstation_groups.add_obj(substation_t(ss_bcube, dim, dir), sstations);
+		colliders.push_back(ss_bcube);
 	}
 }
 
@@ -1577,7 +1592,7 @@ void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_on
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
-	draw_objects(sstations, sstation_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
+	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 			
 	if (!shadow_only) { // low profile, not drawn in shadow pass
@@ -1655,7 +1670,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 		assert(start_ix <= i->ix && i->ix <= benches.size());
 					
 		for (auto b = benches.begin()+start_ix; b != benches.begin()+i->ix; ++b) {
-			if (pos.x < b->bcube.x1()) break; // benches are sorted by x1, no bench after this can match
+			if (pos.x < b->bcube.x1()) break; // benches are sorted by x1, none after this can match
 			if (b->bcube.contains_pt_xy(pos)) {color = texture_color(FENCE_TEX); return 1;}
 		}
 	} // for i
@@ -1667,7 +1682,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 		assert(start_ix <= i->ix && i->ix <= planters.size());
 
 		for (auto p = planters.begin()+start_ix; p != planters.begin()+i->ix; ++p) {
-			if (x_test < p->bcube.x1()) break; // planters are sorted by x1, no planter after this can match
+			if (x_test < p->bcube.x1()) break; // planters are sorted by x1, none after this can match
 			if (!p->bcube.contains_pt_xy_exp(pos, expand)) continue;
 			// treat this as a tree rather than a planter by testing against a circle, since trees aren't otherwise included
 			if (dist_xy_less_than(pos, p->pos, (p->radius + expand))) {color = DK_GREEN; return 1;}
@@ -1681,7 +1696,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 			assert(start_ix <= i->ix && i->ix <= fhydrants.size());
 
 			for (auto b = fhydrants.begin()+start_ix; b != fhydrants.begin()+i->ix; ++b) {
-				if (pos.x < b->bcube.x1()) break; // fire_hydrants are sorted by x1, no fire_hydrant after this can match
+				if (pos.x < b->bcube.x1()) break; // fire_hydrants are sorted by x1, none after this can match
 				if (dist_xy_less_than(pos, b->pos, b->radius)) {color = colorRGBA(1.0, 0.75, 0.0); return 1;} // orange/yellow color
 			}
 		} // for i
@@ -1692,7 +1707,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 		assert(start_ix <= i->ix && i->ix <= dividers.size());
 
 		for (auto b = dividers.begin()+start_ix; b != dividers.begin()+i->ix; ++b) {
-			if (pos.x < b->bcube.x1()) break; // dividers are sorted by x1, no divider after this can match
+			if (pos.x < b->bcube.x1()) break; // dividers are sorted by x1, none after this can match
 			
 			if (b->bcube.contains_pt_xy(pos)) {
 				assert(b->type < DIV_NUM_TYPES);
@@ -1707,14 +1722,27 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 		assert(start_ix <= i->ix && i->ix <= pools.size());
 
 		for (auto b = pools.begin()+start_ix; b != pools.begin()+i->ix; ++b) {
-			if (pos.x < b->bcube.x1()) break; // pools are sorted by x1, no divider after this can match
+			if (pos.x < b->bcube.x1()) break; // pools are sorted by x1, none after this can match
 			if (!b->bcube.contains_pt_xy(pos)) continue;
 			if (b->above_ground && !dist_xy_less_than(pos, point(b->bcube.xc(), b->bcube.yc(), b->bcube.z1()), b->get_radius())) continue; // circular in-ground pool
 			color = b->wcolor; // return water color
 			return 1;
 		}
 	} // for i
-	// Note: ppoles and substations are skipped for now
+	start_ix = 0;
+
+	for (auto i = sstation_groups.begin(); i != sstation_groups.end(); start_ix = i->ix, ++i) {
+		if (!i->contains_pt_xy(pos)) continue;
+		assert(start_ix <= i->ix && i->ix <= sstations.size());
+
+		for (auto b = sstations.begin()+start_ix; b != sstations.begin()+i->ix; ++b) {
+			if (pos.x < b->bcube.x1()) break; // substations are sorted by x1, none after this can match
+			if (!b->bcube.contains_pt_xy(pos)) continue;
+			color = colorRGBA(0.6, 0.8, 0.4, 1.0); // light olive
+			return 1;
+		}
+	} // for i
+	// Note: ppoles are skipped for now
 	return 0;
 }
 
