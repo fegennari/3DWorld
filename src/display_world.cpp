@@ -724,15 +724,17 @@ void flashlight_next_frame() {
 
 void maybe_update_loading_screen(const char *str) {
 	if (!in_loading_screen) return;
+	static string suffix;
 	check_gl_error(566);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	fgPushMatrix();
 	fgLoadIdentity();
-	draw_text(PURPLE, -0.01, 0.0, -0.02, (string("Loading: ") + str), 1.0);
+	draw_text(PURPLE, -0.01, 0.0, -0.02, (string("Loading: ") + str + suffix), 1.0);
 	fgPopMatrix();
 	glutSwapBuffers();
 	bool const had_error(check_gl_error(567));
 	if (had_error) {in_loading_screen = 0;}
+	suffix.push_back('.');
 }
 
 void begin_loading_screen() {

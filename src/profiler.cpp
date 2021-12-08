@@ -33,7 +33,7 @@ public:
 			if (enabled) {entries[str].add(delta_time);}
 			else {cout << str << " time = " << delta_time << endl;}
 		}
-		if (omp_get_thread_num_3dw() == 0) {maybe_update_loading_screen(str);} // only call on main thread
+		if (delta_time > 0 && omp_get_thread_num_3dw() == 0) {maybe_update_loading_screen(str);} // only call on main thread when some time has elapsed
 	}
 	void stats() const {
 		if (entries.empty()) return;
