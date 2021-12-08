@@ -57,7 +57,10 @@ public:
 class video_capture_t {
 
 	class video_buffer {
-		typedef vector<unsigned char> frame_t;
+		struct frame_t : public vector<unsigned char> {
+			unsigned data_sz;
+			frame_t(unsigned data_sz_) : vector<unsigned char>(data_sz_), data_sz(data_sz_) {}
+		};
 		typedef shared_ptr<frame_t> p_frame_t;
 		thread_safe_queue<p_frame_t> frames, free_list; // queue of frames to compress
 
@@ -65,6 +68,7 @@ class video_capture_t {
 		void push_frame(void const *const data, unsigned data_sz) {
 			assert(data_sz > 0);
 			p_frame_t frame(free_list.empty() ? p_frame_t(new frame_t(data_sz)) : free_list.remove()); // take a frame from the free list if nonempty
+			assert(frame->data_sz == data_sz); // free_list returned must be of the correct size
 			memcpy(&frame->front(), data, data_sz);
 			frames.add(frame);
 		}
@@ -77,11 +81,15 @@ class video_capture_t {
 		void write_frames(FILE *fp) {
 			while (!frames.empty()) {pop_and_send_frame(fp);}
 		}
+		void empty_free_list() {
+			// must be called on window resize, which is illegal to do when recording; okay/recommended to call between videos
+			while (!free_list.empty()) {free_list.remove();}
+		}
 		size_t num_pending_frames() const {return frames.size();}
 		bool empty() const {return frames.empty();}
 	};
 
-	unsigned video_id, pbo, start_sz;
+	unsigned video_id, pbo, data_sz;
 	string filename;
 
 	// multithreaded writing support
@@ -98,29 +106,29 @@ class video_capture_t {
 		assert(!is_writing);
 	}
 	void queue_frame(void const *const data) {
-		buffer.push_frame(data, get_num_bytes());
+		assert(data_sz == get_num_bytes());
+		buffer.push_frame(data, data_sz);
 		
 		while (buffer.num_pending_frames() > MAX_FRAMES_BUFFERED) { // sleep for 10ms until buffer is partially emptied
 			cout << "Waiting for video write buffer to empty" << endl;
 			sleep_for_ms(10);
 		}
 	}
-
 	static unsigned get_num_bytes() {return 4*window_width*window_height;}
 
 public:
-	video_capture_t() : video_id(0), pbo(0), start_sz(0), is_recording(0), is_writing(0) {}
+	video_capture_t() : video_id(0), pbo(0), data_sz(0), is_recording(0), is_writing(0) {}
 
 	void start(string const &fn) {
 		assert(!is_recording); // must end() before calling start() again
 		wait_for_write_complete();
 		assert(!is_writing);
 		is_recording = 1;
-		start_sz     = get_num_bytes();
+		data_sz      = get_num_bytes();
 		assert(pbo == 0);
 		glGenBuffers(1, &pbo);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-		glBufferData(GL_PIXEL_PACK_BUFFER, start_sz, NULL, GL_STREAM_READ);
+		glBufferData(GL_PIXEL_PACK_BUFFER, data_sz, NULL, GL_STREAM_READ);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		// start writing in a different thread
 		filename = fn;
@@ -150,14 +158,15 @@ public:
 		  end();
 		  return;
 		}
-		is_writing   = 1;
+		is_writing = 1;
 		while (is_recording || !buffer.empty()) {buffer.write_frames(ffmpeg); sleep_for_ms(1);} // 1ms sleep
+		buffer.empty_free_list(); // clear free list (to save memory, and in case the frame buffer size changes between recording sessions)
 #ifdef _WIN32
 		_pclose(ffmpeg);
 #else
 		pclose(ffmpeg);
 #endif
-		is_writing   = 0;
+		is_writing = 0;
 	}
 	void end() {
 		is_recording = 0; // signal writer to finish
@@ -173,13 +182,13 @@ public:
 	void end_frame() {
 		if (!is_recording) return;
 		assert(pbo != 0);
-		assert(start_sz == get_num_bytes()); // make sure the resolution hasn't changed since recording started
+		assert(data_sz == get_num_bytes()); // make sure the resolution hasn't changed since recording started
 		//timer_t timer("Video Capture Frame"); // 13.7ms for 1920x1024, 10.9ms with free list
 		glReadBuffer(GL_FRONT);
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
 		glReadPixels(0, 0, window_width, window_height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr); // use PBO
-		void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, start_sz, GL_MAP_READ_BIT); // this line takes most of the time
+		void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, data_sz, GL_MAP_READ_BIT); // this line takes most of the time
 		queue_frame(ptr);
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
