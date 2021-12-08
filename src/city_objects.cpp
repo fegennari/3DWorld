@@ -1176,7 +1176,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	// place substations in commercial cities, near the corner pole that routes power into the ground, if the model has been loaded
 	if (!is_residential && corner_pole_pos != all_zeros && building_obj_model_loader.is_model_valid(OBJ_MODEL_SUBSTATION)) {
 		bool const dim(0), dir(0); // hard-coded for now
-		float const ss_height(0.08*city_params.road_width), dist_from_corner(0.25); // relative to plot size
+		float const ss_height(0.08*city_params.road_width), dist_from_corner(0.12); // distance from corner relative to plot size
 		vector3d const ss_center((1.0 - dist_from_corner)*corner_pole_pos + dist_from_corner*plot.get_cube_center());
 		vector3d const model_sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_SUBSTATION));
 		vector3d bcube_exp;
@@ -1185,9 +1185,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		cube_t ss_bcube(ss_center, ss_center);
 		ss_bcube.expand_by_xy(bcube_exp);
 		ss_bcube.z2() += ss_height;
-		// TODO: check for collision with building or other placed object
-		sstation_groups.add_obj(substation_t(ss_bcube, dim, dir), sstations);
-		colliders.push_back(ss_bcube);
+		
+		if (!has_bcube_int_xy(ss_bcube, blockers, 0.2*ss_height)) { // skip if intersects a building or parking lot
+			sstation_groups.add_obj(substation_t(ss_bcube, dim, dir), sstations);
+			colliders.push_back(ss_bcube);
+			blockers.push_back(ss_bcube);
+		}
 	}
 }
 
