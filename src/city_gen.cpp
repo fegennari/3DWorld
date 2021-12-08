@@ -2947,7 +2947,8 @@ bool parse_city_option(FILE *fp) {return city_params.read_option(fp);}
 bool have_cities() {return city_params.enabled();}
 // Note: this is used for parallel car/pedestrian updates and does not include city_params.num_building_peds
 bool have_city_models() {
-	return ((have_cities() && (city_params.num_cars > 0 || city_params.num_peds > 0)) || (enable_building_people_ai() && city_params.num_building_peds > 0));
+	return ((have_cities() && (city_params.num_cars > 0 || city_params.num_peds > 0)) ||
+		    (have_buildings() && enable_building_people_ai() && city_params.num_building_peds > 0));
 }
 vector2d get_road_max_len() {return vector2d(max(city_params.road_spacing, actual_max_road_seg_len.x), max(city_params.road_spacing, actual_max_road_seg_len.y));}
 float get_road_max_width () {return city_params.road_width;}
