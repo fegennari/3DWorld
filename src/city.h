@@ -760,6 +760,7 @@ struct pedestrian_t : public waiting_obj_t {
 	float get_speed_mult() const;
 	float get_height () const {return PED_HEIGHT_SCALE*radius;}
 	float get_width  () const {return PED_WIDTH_SCALE *radius;}
+	float get_coll_radius() const {return 0.6f*radius;} // using a smaller radius to allow peds to get close to each other
 	float get_z1     () const {return (pos.z - radius);}
 	float get_z2     () const {return (get_z1() + get_height());}
 	cube_t get_bcube () const;
