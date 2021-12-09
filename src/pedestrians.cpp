@@ -130,13 +130,15 @@ bool pedestrian_t::check_inside_plot(ped_manager_t &ped_mgr, point const &prev_p
 }
 
 bool pedestrian_t::check_road_coll(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, cube_t const &next_plot_bcube) const {
-	if (!in_the_road) return 0;
+	// Note: streetlights and stoplights now sit on the edges between sidewalks and roads, so they contribute to collisions in both of these areas;
+	// this step can only be skipped if the player is inside a plot, and neither on the sidewalk or in the road
+	if (!in_the_road && plot_bcube.contains_pt_xy(pos)) return 0;
 	float const expand((get_sidewalk_width() - get_sidewalk_walkable_area()) + radius); // max dist from plot edge where a collision can occur
 	cube_t pbce(plot_bcube), npbce(next_plot_bcube);
-	pbce.expand_by_xy(expand);
+	pbce .expand_by_xy(expand);
 	npbce.expand_by_xy(expand);
 	if ((!pbce.contains_pt_xy(pos)) && (!npbce.contains_pt_xy(pos))) return 0; // ped is too far from the edge of the road to collide with streetlights or stoplights
-	if (ped_mgr.check_isec_sphere_coll(*this)) return 1;
+	if (ped_mgr.check_isec_sphere_coll       (*this)) return 1;
 	if (ped_mgr.check_streetlight_sphere_coll(*this)) return 1;
 	return 0;
 }
