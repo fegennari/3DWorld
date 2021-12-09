@@ -536,6 +536,32 @@ bool building_t::is_rot_cube_visible(cube_t const &c, vector3d const &xlate) con
 
 float get_radius_for_room_light(room_object_t const &obj) {return 6.0f*(obj.dx() + obj.dy());}
 
+bool check_for_shadow_caster(vect_cube_t const &cubes, cube_t const &light_bcube, point const &lpos, float dmax, bool has_stairs, vector3d const &xlate) {
+	for (auto c = cubes.begin(); c != cubes.end(); ++c) {
+		if (lpos.z < c->z2()) continue; // light is below the object; assumes lights are spotlights pointed downward
+		if (!c->intersects(light_bcube)) continue; // object not within light area of effect
+		if (!dist_less_than(lpos, c->get_cube_center(), dmax)) continue; // too far from light to cast a visible shadow
+		if (has_stairs) return 1; // the below check is inaccurate, skip and just return 1
+		// check for camera visibility of the union of the cube and the intersection points of the light rays
+		// projected through the top 4 corners of the cube to the floor (cube z1 value)
+		// skip this check if the object has just stopped moving (in case it now comes into view)?
+		float const z(c->z2()); // top edge of the cube
+		float const floor_z(light_bcube.z1()); // assume light z1 is on the floor; maybe could also use c->z1(), which at least works for people
+		point const corners[4] = {point(c->x1(), c->y1(), z), point(c->x2(), c->y1(), z), point(c->x2(), c->y2(), z), point(c->x1(), c->y2(), z)};
+		cube_t cube_ext(*c);
+
+		for (unsigned n = 0; n < 4; ++n) {
+			vector3d const delta(corners[n] - lpos);
+			float const t((floor_z - lpos.z)/delta.z);
+			cube_ext.union_with_pt(lpos + delta*t); // union with floor hit pos
+		}
+		//if ((display_mode & 0x08) && check_obj_occluded((cube_ext + xlate), get_camera_pos(), oc, 0)) continue; // occlusion culling - is this useful?
+		if (!camera_pdu.cube_visible(cube_ext + xlate)) continue; // VFC
+		return 1;
+	} // for c
+	return 0;
+}
+
 // Note: non const because this caches light_bcubes
 void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bool camera_in_building, int ped_ix,
 	occlusion_checker_noncity_t &oc, vect_cube_t &ped_bcubes, cube_t &lights_bcube)
@@ -750,14 +776,10 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 					bool const moving_only(((frame_counter + i->obj_id) % 60) != 0);
 					get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes, moving_only); // get cubes on first light
 				}
-				for (auto c = ped_bcubes.begin(); c != ped_bcubes.end(); ++c) {
-					if (lpos_rot.z > c->z2() && c->intersects(clipped_bc) && dist_less_than(lpos_rot, c->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
-				}
+				dynamic_shadows |= check_for_shadow_caster(ped_bcubes, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate);
 			}
 			if (!dynamic_shadows) { // check moving objects
-				for (auto j = moving_objs.begin(); j != moving_objs.end(); ++j) {
-					if (lpos_rot.z > j->z2() && j->intersects(clipped_bc) && dist_less_than(lpos_rot, j->get_cube_center(), dshadow_radius)) {dynamic_shadows = 1; break;}
-				}
+				dynamic_shadows |= check_for_shadow_caster(moving_objs, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate);
 			}
 		}
 		// end dynamic shadows check
