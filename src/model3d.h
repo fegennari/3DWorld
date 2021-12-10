@@ -164,23 +164,6 @@ struct weighted_normal : public vector3d { // size = 16
 	bool is_valid() const {return (weight > 0.0);}
 };
 
-
-template<typename T> uint32_t jenkins_one_at_a_time_hash(const T* key, size_t length) { // T is an unsigned integer type
-
-	size_t i = 0;
-	uint32_t hash = 0;
-	while (i != length) {hash += key[i++]; hash += hash << 10; hash ^= hash >> 6;}
-	hash += hash << 3;
-	hash ^= hash >> 11;
-	hash += hash << 15;
-	return hash;
-}
-
-template<typename T> struct hash_by_bytes { // should work with all packed vertex types
-	uint32_t operator()(T const &v) const {return jenkins_one_at_a_time_hash((const uint8_t*)&v, sizeof(T));} // slower but better quality hash
-	//uint32_t operator()(T const &v) const {return jenkins_one_at_a_time_hash((const uint32_t*)&v, sizeof(T)>>2);} // faster but lower quality hash
-};
-
 //template<typename T> class vertex_map_t : public unordered_map<T, unsigned, hash_by_bytes<T>> {
 template<typename T> class vertex_map_t : public map<T, unsigned> {
 
