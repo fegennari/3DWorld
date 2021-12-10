@@ -1759,8 +1759,11 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 
 
 void disable_shadow_maps(shader_t &s) {
-	s.add_uniform_float("sm_scale0", -1.0);
-	s.add_uniform_float("sm_scale1", -1.0);
+	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+		if (!light_valid_and_enabled(l)) continue;
+		bind_texture_tu(get_empty_smap_tid(), TILE_SMAP_START_TU_ID+l); // bind empty shadow map
+		s.add_uniform_float((l ? "sm_scale1" : "sm_scale0"), -1.0); // set shadow map scale to 0
+	}
 }
 
 void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm) const {

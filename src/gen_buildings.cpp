@@ -11,6 +11,7 @@
 #include "subdiv.h" // for sd_sphere_d
 #include "tree_3dw.h" // for tree_placer_t
 #include "profiler.h"
+#include "shadow_map.h" // for get_empty_smap_tid
 
 using std::string;
 
@@ -2303,6 +2304,12 @@ public:
 			assert(!reflection_pass);
 			multi_draw_shadow(xlate, bcs);
 			return;
+		}
+		// ensure shadow map TU_IDs are valid in case we try to use them without binding to a tile;
+		// maybe this fixes the occasional shader undefined behavior warning we get with the debug callback?
+		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+			if (!light_valid_and_enabled(l)) continue;
+			bind_texture_tu(get_empty_smap_tid(), GLOBAL_SMAP_START_TU_ID+l); // bind empty shadow map
 		}
 		building_t const *const prev_player_building(player_building);
 

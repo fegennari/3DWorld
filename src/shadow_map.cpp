@@ -63,7 +63,7 @@ vector<ground_mode_smap_data_t> smap_data;
 void ensure_smap_data() {
 
 	if (smap_data.empty()) {
-		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {smap_data.push_back(ground_mode_smap_data_t(6+l));} // tu_ids 6 and 7
+		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {smap_data.push_back(ground_mode_smap_data_t(GLOBAL_SMAP_START_TU_ID+l));} // tu_ids 6 and 7
 	}
 	assert(smap_data.size() == NUM_LIGHT_SRC);
 }
@@ -333,6 +333,15 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	return 1;
 }
 
+unsigned get_empty_smap_tid() {
+	if (empty_smap_tid == 0) {
+		set_shadow_tex_params(empty_smap_tid, 0);
+		char const zero_data[16] = {0};
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1, 1, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);
+	}
+	return empty_smap_tid;
+}
+
 bool smap_data_t::bind_smap_texture(bool light_valid) const {
 
 	set_active_texture(tu_id);
@@ -344,12 +353,7 @@ bool smap_data_t::bind_smap_texture(bool light_valid) const {
 		set_active_texture(0);
 		return 1;
 	}
-	if (empty_smap_tid == 0) {
-		set_shadow_tex_params(empty_smap_tid, 0);
-		char const zero_data[16] = {0};
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 1, 1, 0, GL_DEPTH_COMPONENT, SHADOW_MAP_DATATYPE, zero_data);
-	}
-	bind_2d_texture(empty_smap_tid);
+	bind_2d_texture(get_empty_smap_tid());
 	set_active_texture(0);
 	return 0;
 }

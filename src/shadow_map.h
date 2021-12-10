@@ -7,6 +7,7 @@
 
 unsigned const DEF_LOCAL_SMAP_SZ      = 1024;
 unsigned const LOCAL_SMAP_START_TU_ID = 16;
+unsigned const GLOBAL_SMAP_START_TU_ID= 6; // for ground mode and tiled terrain mode
 unsigned const MAX_DLIGHT_SMAPS       = 64; // must agree with the value used in dynamic_lighting.part
 
 
@@ -118,4 +119,6 @@ template<class SD> struct vect_smap_t : public vector<SD> { // one per light sou
 		}
 	}
 };
+
+unsigned get_empty_smap_tid();
 
