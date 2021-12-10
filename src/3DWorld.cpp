@@ -2231,7 +2231,7 @@ int main(int argc, char** argv) {
 	glutInitWindowSize(window_width, window_height);
 
 	if (init_core_context) {
-		glutInitContextVersion(4, 3);
+		glutInitContextVersion(4, 5);
 		glutInitContextFlags(GLUT_CORE_PROFILE
 #if _DEBUG
 			| GLUT_DEBUG
@@ -2254,7 +2254,7 @@ int main(int argc, char** argv) {
 	uevent_advance_frame();
 	--frame_counter;
 
-	if (0) { // reversed Z-buffer; OpenGL 4.5 only
+	if (0) { // reversed Z-buffer; OpenGL 4.5 only; appears to break shadows
 		// see https://www.wedesoft.de/software/2021/09/20/reversed-z-rendering/
 		glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 	}
