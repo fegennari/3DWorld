@@ -573,9 +573,13 @@ struct transmission_line_t {
 	unsigned city1, city2;
 	float tower_height;
 	point p1, p2, p1_wire_pts[3], p2_wire_pts[3];
+	cube_t bcube;
 	vector<point> tower_pts;
 	transmission_line_t(unsigned c1, unsigned c2, float tower_height_, point const &p1_, point const &p2_) :
 		city1(c1), city2(c2), tower_height(tower_height_), p1(p1_), p2(p2_) {}
+	void calc_bcube();
+	bool sphere_intersect_xy(point const &pos, float radius) const;
+	bool cube_intersect_xy(cube_t const &c) const;
 };
 
 struct range_pair_t {

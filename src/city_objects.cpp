@@ -811,6 +811,43 @@ bool power_pole_t::proc_sphere_coll(point &pos_, point const &p_last, float radi
 	return sphere_vert_cylin_intersect(pos_, radius_, cylinder_3dw((base + xlate), (get_top() + xlate), pole_radius, pole_radius), cnorm); // check pole using the base radius
 }
 
+// transmission lines
+
+float get_tline_right_of_way() {return 0.3*city_params.road_width;} // include tower bar length (.25) plus some extra spacing
+
+void transmission_line_t::calc_bcube() { // bcube of the right of way
+	bcube = cube_t(p1, p2); // endpoints
+
+	for (unsigned n = 0; n < 3; ++n) { // probably only need to include center point [1], but okay to include them all
+		bcube.union_with_pt(p1_wire_pts[n]);
+		bcube.union_with_pt(p2_wire_pts[n]);
+	}
+	bcube.z1() -= tower_height; // approximate
+	bcube.expand_by_xy(get_tline_right_of_way());
+}
+bool transmission_line_t::sphere_intersect_xy(point const &pos, float radius) const {
+	if (!sphere_cube_intersect_xy(pos, radius, bcube)) return 0;
+	float const right_of_way(radius + get_tline_right_of_way());
+	if (point_line_seg_dist_2d(pos, p1, p2            ) < right_of_way) return 1; // check the line of towers
+	if (point_line_seg_dist_2d(pos, p1, p1_wire_pts[1]) < right_of_way) return 1; // check end points using center wire
+	if (point_line_seg_dist_2d(pos, p2, p2_wire_pts[1]) < right_of_way) return 1; // check end points using center wire
+	return 0;
+}
+bool transmission_line_t::cube_intersect_xy(cube_t const &c) const {
+	if (bcube.is_all_zeros()) { // endpoints not yet connected; check p1-p2 only (for building generation)
+		cube_t c_exp(c);
+		c_exp.expand_by_xy(get_tline_right_of_way());
+		return check_line_clip_xy(p1, p2, c_exp.d);
+	}
+	if (!bcube.intersects_xy(c)) return 0;
+	cube_t c_exp(c);
+	c_exp.expand_by_xy(get_tline_right_of_way());
+	if (check_line_clip_xy(p1, p2, c_exp.d)) return 1; // check the line of towers
+	if (check_line_clip_xy(p1, p1_wire_pts[1], c_exp.d)) return 1; // check end points using center wire
+	if (check_line_clip_xy(p2, p2_wire_pts[1], c_exp.d)) return 1; // check end points using center wire
+	return 0;
+}
+
 
 bool city_obj_placer_t::gen_parking_lots_for_plot(cube_t plot, vector<car_t> &cars, unsigned city_id, unsigned plot_ix, vect_cube_t &bcubes, vect_cube_t &colliders, rand_gen_t &rgen) {
 	vector3d const nom_car_size(city_params.get_nom_car_size()); // {length, width, height}

@@ -1340,4 +1340,5 @@ void draw_cars_in_garages(vector3d const &xlate, bool shadow_only);
 void create_mirror_reflection_if_needed();
 void draw_city_roads(int trans_op_mask, vector3d const &xlate);
 void get_closest_dim_dir_xy(cube_t const &inner, cube_t const &outer, bool &dim, bool &dir);
+bool check_city_tline_cube_intersect_xy(cube_t const &c);
 

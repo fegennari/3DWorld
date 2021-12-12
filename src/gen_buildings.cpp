@@ -1745,6 +1745,7 @@ class building_creator_t {
 		{
 			return 0;
 		}
+		else if (non_city_only && check_city_tline_cube_intersect_xy(test_bc)) {return 0;} // check transmission lines
 		else {
 			float const extra_spacing(non_city_only ? params.sec_extra_spacing : 0.0); // absolute value of expand
 			test_bc.expand_by_xy(extra_spacing);

@@ -2309,7 +2309,9 @@ public:
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();
 		
-		if (!have_secondary_buildings()) { // only connect cities with transmission lines if there are no secondary buildings in the way
+		// only connect cities with transmission lines if there are no secondary buildings in the way;
+		// while buildings should now avoid tlines, it still looks a bit odd having them so close to houses, and the endpoints aren't checked
+		if (!have_secondary_buildings()) {
 			for (auto i = blockers.begin(); i != blockers.begin() + city_bcubes_end; ++i) {i->expand_by_xy(-road_spacing);} // undo city expand
 			connect_city_power_grids(crc, blockers, road_width, road_spacing);
 		}
@@ -2394,6 +2396,7 @@ public:
 		for (auto &t : transmission_lines) {
 			closest_edge_power_pole_conn_pts(t.p1, t.city1, t.p1_wire_pts);
 			closest_edge_power_pole_conn_pts(t.p2, t.city2, t.p2_wire_pts);
+			t.calc_bcube();
 		}
 	}
 	void add_streetlights() {
@@ -2427,13 +2430,18 @@ public:
 		// since transmission lines run between cities, we can check the cities_bcube for early rejection
 		if (!exclude_bridges_and_tunnels && xy_only && !transmission_lines.empty() && sphere_cube_intersect_xy(pos, radius, cities_bcube)) {
 			// assume this is a valid scenery placement query and check transmission lines
-			float const right_of_way(radius + 0.3*city_params.road_width); // include tower bar length (.25) plus some extra spacing
-
 			for (auto const &t : transmission_lines) {
-				if (point_line_seg_dist_2d(pos, t.p1, t.p2            ) < right_of_way) return 1; // check the line of towers
-				if (point_line_seg_dist_2d(pos, t.p1, t.p1_wire_pts[1]) < right_of_way) return 1; // check end points
-				if (point_line_seg_dist_2d(pos, t.p2, t.p2_wire_pts[1]) < right_of_way) return 1; // check end points
+				if (t.sphere_intersect_xy(pos, radius)) return 1;
 			}
+		}
+		return 0;
+	}
+	bool check_tline_cube_intersect_xy(cube_t const &c) const {
+		if (transmission_lines.empty())     return 0;
+		if (!cities_bcube.intersects_xy(c)) return 0;
+
+		for (auto const &t : transmission_lines) {
+			if (t.cube_intersect_xy(c)) return 1;
 		}
 		return 0;
 	}
@@ -2865,6 +2873,8 @@ public:
 		if ((check_mask & 2) && road_gen.check_road_sphere_coll(pos, radius, xy_only, exclude_bridges_and_tunnels)) {ret |= 2;}
 		return ret;
 	}
+	bool check_tline_cube_intersect_xy(cube_t const &c) const {return road_gen.check_tline_cube_intersect_xy(c);}
+
 	void get_sphere_coll_cubes(point const &pos, float radius, bool include_intersections, bool xy_only, vect_cube_t &out, vect_cube_t *out_bt) const {
 		get_plots_sphere_coll(pos, radius, xy_only, out);
 		road_gen.get_roads_sphere_coll(pos, radius, include_intersections, xy_only, out, out_bt);
@@ -3001,6 +3011,7 @@ bool line_intersect_city(point const &p1, point const &p2, point &p_int) {
 	p_int = p1 + t*(p2 - p1);
 	return 1;
 }
+bool check_city_tline_cube_intersect_xy(cube_t const &c) {return city_gen.check_tline_cube_intersect_xy(c);}
 
 class model_bcube_checker_t {
 	vect_cube_t model_bcubes;
