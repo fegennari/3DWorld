@@ -507,6 +507,13 @@ void building_t::refine_light_bcube(point const &lpos, float light_radius, cube_
 	light_bcube = rays_bcube;
 }
 
+void assign_light_for_building_interior(light_source &ls, room_object_t const &obj, cube_t const &light_bcube, bool cache_shadows, bool is_lamp) {
+	unsigned const smap_id(uintptr_t(&obj)/sizeof(void *) + is_lamp); // use memory address as a unique ID; add 1 for lmaps to keep them separate
+	ls.assign_smap_mgr_id(1); // use a different smap manager than the city (cars + streetlights) so that they don't interfere with each other
+	if (!light_bcube.is_all_zeros()) {ls.set_custom_bcube(light_bcube);}
+	ls.assign_smap_id(cache_shadows ? smap_id : 0); // if cache_shadows, mark so that shadow map can be reused in later frames
+	if (!cache_shadows) {ls.invalidate_cached_smap_id(smap_id);}
+}
 void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cube_t const &light_bcube, bool force_smap_update, unsigned shadow_caster_hash) {
 	// If there are no dynamic shadows, we can reuse the previous frame's shadow map;
 	// need to handle the case where a shadow caster moves out of the light's influence and leaves a shadow behind;
@@ -515,11 +522,9 @@ void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cub
 	uint16_t const sc_hash16(shadow_caster_hash ^ (shadow_caster_hash >> 16));
 	// cache if no objects moved (based on position hashing) this frame or last frame, and we're not forced to do an update
 	bool const shadow_update(obj.item_flags != sc_hash16), cache_shadows(!shadow_update && !force_smap_update && (obj.flags & RO_FLAG_NODYNAM));
-	if (!light_bcube.is_all_zeros()) {ls.set_custom_bcube(light_bcube);}
-	if (cache_shadows) {ls.assign_smap_id(uintptr_t(&obj)/sizeof(void *));} // use memory address as a unique ID
+	assign_light_for_building_interior(ls, obj, light_bcube, cache_shadows, 0); // is_lamp=0
 	if (shadow_update) {obj.flags &= ~RO_FLAG_NODYNAM;} else {obj.flags |= RO_FLAG_NODYNAM;} // store prev update state in object flag
 	obj.item_flags = sc_hash16;
-	ls.assign_smap_mgr_id(1); // use a different smap manager than the city (cars + streetlights) so that they don't interfere with each other
 }
 
 cube_t building_t::get_rotated_bcube(cube_t const &c) const {
@@ -779,7 +784,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		if (camera_surf_collide && camera_in_building && (is_lamp || (lpos_rot.z > camera_bs.z && (camera_on_stairs || lpos_rot.z < (camera_bs.z + window_vspacing)))) &&
 			clipped_bc.contains_pt(camera_rot) && dist_less_than(lpos_rot, camera_bs, dshadow_radius))
 		{ // player shadow; includes lamps (with no zval test)
-			force_smap_update = 1; // always update, even if stationary, to avoid problems
+			force_smap_update = 1; // always update, even if stationary; required to get correct shadows when player stands still and takes/moves objects
 		}
 		else if (camera_near_building && !is_lamp) {
 			if (building_action_key) {
@@ -813,10 +818,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (is_lamp) { // add a second shadowed light source pointing up
 				dl_sources.emplace_back(light_radius, lpos_rot, lpos_rot, color, 0, plus_z, 0.5*bwidth); // points up
 				// lamps are static and have no dynamic shadows, so always cache their shadow maps
-				light_source &ls(dl_sources.back());
-				ls.set_custom_bcube(light_bc2);
-				ls.assign_smap_id(uintptr_t(&(*i))/sizeof(void *) + 1); // use memory address as a unique ID, but add 1 to keep it separate from the main light
-				ls.assign_smap_mgr_id(1); // use a different smap manager than the city (cars + streetlights) so that they don't interfere with each other
+				assign_light_for_building_interior(dl_sources.back(), *i, light_bc2, 1, 1); // cache_shadows=1, is_lamp=1
 				dl_sources.emplace_back(0.15*light_radius, lpos_rot, lpos_rot, color); // add an additional small unshadowed light for ambient effect
 				dl_sources.back().set_custom_bcube(light_bc2); // not sure if this is helpful, but should be okay
 			}

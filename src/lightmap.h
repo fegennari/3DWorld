@@ -221,6 +221,7 @@ public:
 	void draw_light_cone(shader_t &shader, float alpha) const;
 	bool setup_shadow_map(float falloff, bool dynamic_cobj=0, bool outdoor_shadows=0, bool force_update=0, unsigned sm_size=0);
 	void release_smap();
+	void invalidate_cached_smap_id(unsigned smap_id) const;
 	void assign_smap_id    (unsigned id) {user_smap_id = id;}
 	void assign_smap_mgr_id(unsigned id) {smap_mgr_id  = id;}
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
