@@ -2308,8 +2308,11 @@ public:
 		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 		global_rn.finalize_bridges_and_tunnels();
-		for (auto i = blockers.begin(); i != blockers.begin() + city_bcubes_end; ++i) {i->expand_by_xy(-road_spacing);} // undo city expand
-		connect_city_power_grids(crc, blockers, road_width, road_spacing);
+		
+		if (!have_secondary_buildings()) { // only connect cities with transmission lines if there are no secondary buildings in the way
+			for (auto i = blockers.begin(); i != blockers.begin() + city_bcubes_end; ++i) {i->expand_by_xy(-road_spacing);} // undo city expand
+			connect_city_power_grids(crc, blockers, road_width, road_spacing);
+		}
 		timer.end();
 		// old: 8, 12, 7, 19057 ; new: 8, 15, 7, 26085
 		cout << "Cities: " << num_cities << ", connector roads: " << num_conn << ", transmission lines: " << transmission_lines.size() << ", total cost: " << tot_cost << endl;
