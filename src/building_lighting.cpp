@@ -786,11 +786,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 		{ // player shadow; includes lamps (with no zval test)
 			force_smap_update = 1; // always update, even if stationary; required to get correct shadows when player stands still and takes/moves objects
 		}
-		else if (camera_near_building && !is_lamp) {
+		else if (camera_near_building) {
 			if (building_action_key) {
 				force_smap_update = 1; // toggling a door state or interacting with objects will generally invalidate shadows in the building for that frame
 			}
-			if (check_building_people) { // update shadow_caster_hash for moving people
+			if (check_building_people && !is_lamp) { // update shadow_caster_hash for moving people, but not for lamps, because their light points toward the floor
 				if (ped_ix >= 0 && ped_bcubes.empty()) {get_ped_bcubes_for_building(ped_ix, building_id, ped_bcubes);} // get all cubes on first light
 				check_for_shadow_caster(ped_bcubes, clipped_bc, lpos_rot, dshadow_radius, stairs_light, xlate, shadow_caster_hash);
 			}
