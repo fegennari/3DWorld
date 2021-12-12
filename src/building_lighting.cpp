@@ -516,15 +516,15 @@ void assign_light_for_building_interior(light_source &ls, room_object_t const &o
 }
 void setup_light_for_building_interior(light_source &ls, room_object_t &obj, cube_t const &light_bcube, bool force_smap_update, unsigned shadow_caster_hash) {
 	// If there are no dynamic shadows, we can reuse the previous frame's shadow map;
-	// need to handle the case where a shadow caster moves out of the light's influence and leaves a shadow behind;
+	// hashing object positions should handle the case where a shadow caster moves out of the light's influence and leaves a shadow behind;
 	// also need to handle the case where the light is added on the frame the room geom is generated when the shadow map is not yet created;
-	// requiring two consecutive frames of no dynamic objects should fix both problems
-	uint16_t const sc_hash16(shadow_caster_hash ^ (shadow_caster_hash >> 16));
+	// requiring two consecutive frames of no dynamic objects should fix this
+	uint16_t const sc_hash16(shadow_caster_hash ^ (shadow_caster_hash >> 16)); // combine upper and lower 16 bits into a single 16-bit value
 	// cache if no objects moved (based on position hashing) this frame or last frame, and we're not forced to do an update
 	bool const shadow_update(obj.item_flags != sc_hash16), cache_shadows(!shadow_update && !force_smap_update && (obj.flags & RO_FLAG_NODYNAM));
 	assign_light_for_building_interior(ls, obj, light_bcube, cache_shadows, 0); // is_lamp=0
 	if (shadow_update) {obj.flags &= ~RO_FLAG_NODYNAM;} else {obj.flags |= RO_FLAG_NODYNAM;} // store prev update state in object flag
-	obj.item_flags = sc_hash16;
+	obj.item_flags = sc_hash16; // store current object hash in item flags
 }
 
 cube_t building_t::get_rotated_bcube(cube_t const &c) const {
