@@ -79,17 +79,18 @@ void texture_manager::clear() {
 }
 
 void texture_manager::free_tids() {
-	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {t->gl_delete();}
+	for (auto &t : textures) {t.gl_delete();}
 }
 void texture_manager::free_textures() {
-	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {t->free_data();}
+	for (auto &t : textures) {t.free_data();}
 }
 void texture_manager::free_client_mem() { // Note: should not be called if model textures can overlap with predefined textures
-	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {t->free_client_mem();}
+	for (auto &t : textures) {t.free_client_mem();}
 }
 
-bool texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump) {
+bool texture_manager::ensure_texture_loaded(int tid, bool is_bump) {
 
+	texture_t &t(get_texture(tid));
 	if (t.is_loaded()) return 0; // already loaded from disk
 	if (t.is_bound() ) return 0; // already bound to a texture/sent to the GPU, no need to reload
 	//if (is_bump) {t.do_compress = 0;} // don't compress normal maps

@@ -367,9 +367,9 @@ public:
 	void free_tids();
 	void free_textures();
 	void free_client_mem();
-	bool ensure_texture_loaded(texture_t &t, int tid, bool is_bump);
+	bool ensure_texture_loaded(int tid, bool is_bump);
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
-	bool ensure_tid_loaded(int tid, bool is_bump) {return ((tid >= 0) ? ensure_texture_loaded(get_texture(tid), tid, is_bump) : 0);}
+	bool ensure_tid_loaded(int tid, bool is_bump) {return ((tid >= 0) ? ensure_texture_loaded(tid, is_bump) : 0);}
 	void ensure_tid_bound(int tid) {if (tid >= 0) {get_texture(tid).check_init();}} // if allocated
 	void bind_texture(int tid) const {get_texture(tid).bind_gl();}
 	colorRGBA get_tex_avg_color(int tid) const {return get_texture(tid).get_avg_color();}
