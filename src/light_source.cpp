@@ -452,16 +452,12 @@ public:
 		assert(smap_data[index-1].used);
 		return smap_data[index-1];
 	}
-	bool invalidate_cached_smap_id(unsigned smap_id) {
-		if (smap_id == 0) return 0; // invalid/unset smap_id
-
-		for (auto &i : free_list) {
-			if (get_smap(i).user_smap_id == smap_id) {
-				get_smap(i).user_smap_id = 0; // invalidate
-				return 1;
-			}
+	void invalidate_cached_smap_id(unsigned smap_id) {
+		if (smap_id == 0) return; // invalid/unset smap_id
+		
+		for (auto &i : smap_data) { // there should be at most one match, but it shouldn't hurt to iterate until the end just in case
+			if (i.user_smap_id == smap_id) {i.user_smap_id = 0;} // invalidate if the ID matches
 		}
-		return 0; // not found
 	}
 	void free_gl_state() {
 		for (auto i = smap_data.begin(); i != smap_data.end(); ++i) {i->free_gl_state();}
