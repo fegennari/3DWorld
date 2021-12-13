@@ -124,6 +124,19 @@ void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 	if (t.use_mipmaps) {t.use_mipmaps = 3;} // generate custom alpha mipmaps
 }
 
+void texture_manager::add_work_item(int tid, bool is_nm) {
+	if (tid < 0) return;
+	if (get_texture(tid).is_loaded() || get_texture(tid).is_bound()) return; // already loaded or bound, nothing to do
+	to_load.emplace_back(tid, is_nm);
+}
+void texture_manager::load_work_items_mt() {
+	if (to_load.empty()) return; // nothing to do
+	sort_and_unique(to_load);
+#pragma omp parallel for schedule(dynamic)
+	for (int i = 0; i < (int)to_load.size(); ++i) {ensure_texture_loaded(to_load[i].tid, to_load[i].is_nm);}
+	to_load.clear();
+}
+
 texture_t &get_builtin_texture(int tid) {
 	assert((unsigned)tid < textures.size());
 	return textures[tid];
@@ -1094,6 +1107,17 @@ void material_t::init_textures(texture_manager &tmgr) {
 	}
 }
 
+void material_t::queue_textures_to_load(texture_manager &tmgr) {
+
+	if (!mat_is_used()) return;
+	int const tid(get_render_texture());
+	tmgr.bind_alpha_channel_to_texture(tid, alpha_tid);
+	tmgr.add_work_item(tid, 0);
+	if (use_bump_map()) {tmgr.add_work_item(bump_tid, 1);} else {bump_tid = -1;}
+	if (use_spec_map()) {tmgr.add_work_item( s_tid,   0);} else {s_tid    = -1;}
+	if (use_spec_map()) {tmgr.add_work_item(ns_tid,   0);} else {ns_tid   = -1;}
+}
+
 void material_t::check_for_tc_invert_y(texture_manager &tmgr) {
 
 	if (tcs_checked) return; // already done
@@ -1610,8 +1634,16 @@ void model3d::load_all_used_tids() {
 
 	if (textures_loaded) return; // is this safe to skip?
 	timer_t timer("Model3d Texture Load");
-//#pragma omp parallel for schedule(dynamic) // not thread safe due to texture_t::resize() GL calls and reuse of textures across materials
-	for (int i = 0; i < (int)materials.size(); ++i) {materials[i].init_textures(tmgr);}
+#if 0
+	// MT loading flow; will fail with an error if any textures require calling texture_t::resize() due to nested OpenGL calls;
+	// while this mostly works, it's not much faster because the majority of the time is spent in OpenGL calls for things like texture compression
+	// build a worklist of files to load from disk
+	for (auto &m : materials) {m.queue_textures_to_load(tmgr);}
+	// load the textures from disk in parallel; requires sorting and uniquing textures, which may be shared across multiple materials
+	tmgr.load_work_items_mt();
+	// run serial post load steps and make any required OpenGL calls
+#endif
+	for (auto &m : materials) {m.init_textures(tmgr);}
 	textures_loaded = 1;
 	if (no_store_model_textures_in_memory) {tmgr.free_client_mem();}
 }

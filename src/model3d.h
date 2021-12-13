@@ -356,11 +356,18 @@ template<typename T> struct geometry_t {
 
 
 class texture_manager {
-
+	struct tex_work_item_t {
+		unsigned tid;
+		bool is_nm;
+		tex_work_item_t(unsigned tid_, bool is_nm_) : tid(tid_), is_nm(is_nm_) {}
+		// we really shouldn't have the same tid with different is_nm; should we just ingore is_nm when comparing
+		bool operator< (tex_work_item_t const &w) const {return ((tid == w.tid) ? (is_nm < w.is_nm) : (tid < w.tid));}
+		bool operator==(tex_work_item_t const &w) const {return (tid == w.tid && is_nm == w.is_nm);}
+	};
 protected:
 	deque<texture_t> textures;
 	string_map_t tex_map; // maps texture filenames to texture indexes
-
+	vector<tex_work_item_t> to_load;
 public:
 	unsigned create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0, bool wrap=1, bool mirror=0, bool force_grayscale=0);
 	void clear();
@@ -371,6 +378,8 @@ public:
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
 	bool ensure_tid_loaded(int tid, bool is_bump) {return ((tid >= 0) ? ensure_texture_loaded(tid, is_bump) : 0);}
 	void ensure_tid_bound(int tid) {if (tid >= 0) {get_texture(tid).check_init();}} // if allocated
+	void add_work_item(int tid, bool is_nm);
+	void load_work_items_mt();
 	void bind_texture(int tid) const {get_texture(tid).bind_gl();}
 	colorRGBA get_tex_avg_color(int tid) const {return get_texture(tid).get_avg_color();}
 	bool has_binary_alpha(int tid) const {return get_texture(tid).has_binary_alpha;}
@@ -422,6 +431,7 @@ struct material_t : public material_params_t {
 	void simplify_indices(float reduce_target);
 	void ensure_textures_loaded(texture_manager &tmgr);
 	void init_textures(texture_manager &tmgr);
+	void queue_textures_to_load(texture_manager &tmgr);
 	void check_for_tc_invert_y(texture_manager &tmgr);
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass,
 		int enable_alpha_mask, bool is_bmap_pass, point const *const xlate);
