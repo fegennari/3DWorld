@@ -1633,7 +1633,7 @@ void model3d::clear_smaps() { // frees GL state
 void model3d::load_all_used_tids() {
 
 	if (textures_loaded) return; // is this safe to skip?
-	timer_t timer("Model3d Texture Load");
+	timer_t timer("Model3d Texture Load", !tmgr.empty());
 #if 0
 	// MT loading flow; will fail with an error if any textures require calling texture_t::resize() due to nested OpenGL calls;
 	// while this mostly works, it's not much faster because the majority of the time is spent in OpenGL calls for things like texture compression
