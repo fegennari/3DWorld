@@ -1276,7 +1276,8 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 	return door;
 }
 tquad_with_ix_t building_t::set_interior_door_from_cube(door_t const &door) const {
-	return set_door_from_cube(door, door.dim, door.open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, door.open, 0, 0, door.hinge_side);
+	unsigned const type(is_house ? tquad_with_ix_t::TYPE_IDOOR : tquad_with_ix_t::TYPE_ODOOR); // house or office door
+	return set_door_from_cube(door, door.dim, door.open_dir, type, 0.0, 0, door.open, 0, 0, door.hinge_side);
 }
 
 bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access) { // exterior doors

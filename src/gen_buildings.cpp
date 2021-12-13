@@ -381,7 +381,7 @@ void add_tquad_to_verts(building_geom_t const &bg, tquad_with_ix_t const &tquad,
 	vector3d normal(tquad.get_norm());
 	if (do_rotate) {bg.do_xy_rotate_normal(normal);}
 	vert.set_norm(normal);
-	invert_tc_x ^= (tquad.type == tquad_with_ix_t::TYPE_IDOOR2); // interior door, back face
+	invert_tc_x ^= (tquad.type == tquad_with_ix_t::TYPE_IDOOR2 || tquad.type == tquad_with_ix_t::TYPE_ODOOR2); // interior/office door, back face
 
 	for (unsigned i = 0; i < tquad.npts; ++i) {
 		vert.v = tquad.pts[i];
@@ -1052,9 +1052,11 @@ public:
 
 // *** Drawing ***
 
-int get_building_ext_door_tid(unsigned type) {
+int get_building_door_tid(unsigned type) { // exterior doors, and interior doors of limited types
 	switch(type) {
 	case tquad_with_ix_t::TYPE_HDOOR : return building_texture_mgr.get_hdoor_tid ();
+	//case tquad_with_ix_t::TYPE_ODOOR : return building_texture_mgr.get_odoor_tid (); // enable when this texture is ready
+	case tquad_with_ix_t::TYPE_ODOOR : return building_texture_mgr.get_hdoor_tid ();
 	case tquad_with_ix_t::TYPE_RDOOR : return building_texture_mgr.get_hdoor_tid ();
 	case tquad_with_ix_t::TYPE_BDOOR : return building_texture_mgr.get_bdoor_tid ();
 	case tquad_with_ix_t::TYPE_BDOOR2: return building_texture_mgr.get_bdoor2_tid();
@@ -1167,7 +1169,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 		}
 		for (auto i = doors.begin(); i != doors.end(); ++i) { // these are the exterior doors
 			colorRGBA const &dcolor((i->type == tquad_with_ix_t::TYPE_GDOOR) ? WHITE : door_color); // garage doors are always white
-			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_ext_door_tid(i->type), -1, 1.0, 1.0), dcolor);
+			bdraw.add_tquad(*this, *i, bcube, tid_nm_pair_t(get_building_door_tid(i->type), -1, 1.0, 1.0), dcolor);
 		}
 		for (auto i = fences.begin(); i != fences.end(); ++i) {
 			bdraw.add_fence(*this, *i, tid_nm_pair_t(WOOD_TEX, 0.4f/min(i->dx(), i->dy())), WHITE, (fences.size() > 1));
@@ -1282,7 +1284,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 	bool const opens_up(door_type == tquad_with_ix_t::TYPE_GDOOR);
 	bool const exclude_frame(door_type == tquad_with_ix_t::TYPE_HDOOR && !exterior && opened); // exclude the frame on open interior doors
 	unsigned const num_edges(opens_up ? 4 : 2);
-	int const tid(get_building_ext_door_tid(door_type));
+	int const tid(get_building_door_tid(door_type));
 	float const half_thickness(opens_up ? 0.01*D.dz() : 0.5*DOOR_THICK_TO_WIDTH*D.get_sz_dim(!dim));
 	unsigned const num_sides((door_type == tquad_with_ix_t::TYPE_BDOOR || door_type == tquad_with_ix_t::TYPE_BDOOR2) ? 2 : 1); // double doors for office building exterior
 	tid_nm_pair_t const tp(tid, -1, 1.0f/num_sides, ty);
@@ -1312,7 +1314,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 			if (d == 1) { // back face
 				swap(door_side.pts[0], door_side.pts[1]);
 				swap(door_side.pts[2], door_side.pts[3]);
-				door_side.type = tquad_with_ix_t::TYPE_IDOOR2;
+				door_side.type = (is_house ? (unsigned)tquad_with_ix_t::TYPE_IDOOR2 : (unsigned)tquad_with_ix_t::TYPE_ODOOR2); // back side of house/office door
 			}
 			drawer.add_tquad(*this, door_side, bcube, tp, color, (int_other_side && !opened), exclude_frame, 0); // invert_tc_x=xxx, no_tc=0
 		} // for d
