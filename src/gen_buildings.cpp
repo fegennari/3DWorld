@@ -111,7 +111,7 @@ void building_geom_t::do_xy_rotate_normal_inv(point &n) const {::do_xy_rotate_no
 
 
 class building_texture_mgr_t {
-	int window_tid, hdoor_tid, bdoor_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2, bath_wind_tid, helipad_tex, solarp_tex;
+	int window_tid, hdoor_tid, odoor_tid, bdoor_tid, bdoor2_tid, gdoor_tid, ac_unit_tid1, ac_unit_tid2, bath_wind_tid, helipad_tex, solarp_tex;
 
 	int ensure_tid(int &tid, const char *name) {
 		if (tid < 0) {tid = get_texture_by_name(name);}
@@ -119,10 +119,13 @@ class building_texture_mgr_t {
 		return tid;
 	}
 public:
-	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), bdoor_tid(-1), gdoor_tid(-1), ac_unit_tid1(-1), ac_unit_tid2(-1), bath_wind_tid(-1), helipad_tex(-1), solarp_tex(-1) {}
+	building_texture_mgr_t() : window_tid(-1), hdoor_tid(-1), odoor_tid(-1), bdoor_tid(-1), bdoor2_tid(-1), gdoor_tid(-1),
+		ac_unit_tid1(-1), ac_unit_tid2(-1), bath_wind_tid(-1), helipad_tex(-1), solarp_tex(-1) {}
 	int get_window_tid   () const {return window_tid;}
 	int get_hdoor_tid    () {return ensure_tid(hdoor_tid,     "white_door.jpg");} // house door
-	int get_bdoor_tid    () {return ensure_tid(bdoor_tid,     "buildings/building_door.jpg");} // building door
+	int get_odoor_tid    () {return ensure_tid(odoor_tid,     "buildings/office_door.jpg");} // office door (low resolution); unused
+	int get_bdoor_tid    () {return ensure_tid(bdoor_tid,     "buildings/building_door.jpg");} // metal + glass building door
+	int get_bdoor2_tid   () {return ensure_tid(bdoor2_tid,    "buildings/metal_door.jpg");} // metal building door; unused
 	int get_gdoor_tid    () {return ensure_tid(gdoor_tid,     "buildings/garage_door.jpg");} // garage door
 	int get_ac_unit_tid1 () {return ensure_tid(ac_unit_tid1,  "buildings/AC_unit1.jpg");} // AC unit (should this be a <d> loop?)
 	int get_ac_unit_tid2 () {return ensure_tid(ac_unit_tid2,  "buildings/AC_unit2.jpg");} // AC unit
@@ -137,7 +140,7 @@ public:
 		window_tid = BLDG_WINDOW_TEX;
 		return 1;
 	}
-	bool is_door_tid(int tid) const {return (tid >= 0 && (tid == hdoor_tid || tid == bdoor_tid || tid == gdoor_tid));}
+	bool is_door_tid(int tid) const {return (tid >= 0 && (tid == hdoor_tid || tid == odoor_tid || tid == bdoor_tid || tid == bdoor2_tid || tid == gdoor_tid));}
 };
 building_texture_mgr_t building_texture_mgr;
 
@@ -176,7 +179,9 @@ public:
 		tid_to_slot_ix.push_back(0); // untextured case
 		register_tid(building_texture_mgr.get_window_tid());
 		register_tid(building_texture_mgr.get_hdoor_tid());
+		//register_tid(building_texture_mgr.get_odoor_tid()); // enable when this door type is used
 		register_tid(building_texture_mgr.get_bdoor_tid());
+		register_tid(building_texture_mgr.get_bdoor2_tid());
 		register_tid(building_texture_mgr.get_gdoor_tid());
 		register_tid(building_texture_mgr.get_ac_unit_tid1());
 		register_tid(building_texture_mgr.get_ac_unit_tid2());
@@ -1049,10 +1054,11 @@ public:
 
 int get_building_ext_door_tid(unsigned type) {
 	switch(type) {
-	case tquad_with_ix_t::TYPE_HDOOR: return building_texture_mgr.get_hdoor_tid();
-	case tquad_with_ix_t::TYPE_RDOOR: return building_texture_mgr.get_hdoor_tid();
-	case tquad_with_ix_t::TYPE_BDOOR: return building_texture_mgr.get_bdoor_tid();
-	case tquad_with_ix_t::TYPE_GDOOR: return building_texture_mgr.get_gdoor_tid();
+	case tquad_with_ix_t::TYPE_HDOOR : return building_texture_mgr.get_hdoor_tid ();
+	case tquad_with_ix_t::TYPE_RDOOR : return building_texture_mgr.get_hdoor_tid ();
+	case tquad_with_ix_t::TYPE_BDOOR : return building_texture_mgr.get_bdoor_tid ();
+	case tquad_with_ix_t::TYPE_BDOOR2: return building_texture_mgr.get_bdoor2_tid();
+	case tquad_with_ix_t::TYPE_GDOOR : return building_texture_mgr.get_gdoor_tid ();
 	default: assert(0);
 	}
 	return -1; // never gets here
@@ -1278,7 +1284,7 @@ template<typename T> void building_t::add_door_verts(cube_t const &D, T &drawer,
 	unsigned const num_edges(opens_up ? 4 : 2);
 	int const tid(get_building_ext_door_tid(door_type));
 	float const half_thickness(opens_up ? 0.01*D.dz() : 0.5*DOOR_THICK_TO_WIDTH*D.get_sz_dim(!dim));
-	unsigned const num_sides((door_type == tquad_with_ix_t::TYPE_BDOOR) ? 2 : 1); // double doors for office building exterior door
+	unsigned const num_sides((door_type == tquad_with_ix_t::TYPE_BDOOR || door_type == tquad_with_ix_t::TYPE_BDOOR2) ? 2 : 1); // double doors for office building exterior
 	tid_nm_pair_t const tp(tid, -1, 1.0f/num_sides, ty);
 	colorRGBA const &color((exterior && !opens_up) ? door_color : WHITE); // garage doors are always white
 

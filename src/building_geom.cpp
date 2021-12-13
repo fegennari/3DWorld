@@ -82,7 +82,7 @@ void building_t::clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor
 	float const dz(clip_cube.dz());
 	float xy_border(0.0), z_border(0.0);
 	if      (door.type == tquad_with_ix_t::TYPE_GDOOR) {xy_border = 0.016; z_border = 0.02;} // garage door
-	else if (door.type == tquad_with_ix_t::TYPE_BDOOR) {xy_border = 0.04;  z_border = 0.03;} // building door
+	else if (door.is_building_door())                  {xy_border = 0.04;  z_border = 0.03;} // building door
 	else {xy_border = 0.06; z_border = 0.03;} // house door
 	// clip off bottom for floor if clip_to_floor==1 and not a roof door; somewhat arbitrary, should we use interior->floors.back().z2() instead?
 	if (door.type != tquad_with_ix_t::TYPE_RDOOR) {clip_cube.z1() += (clip_to_floor ? 0.7*get_floor_thickness() : 0.04*dz);}
@@ -1279,12 +1279,15 @@ tquad_with_ix_t building_t::set_interior_door_from_cube(door_t const &door) cons
 	return set_door_from_cube(door, door.dim, door.open_dir, tquad_with_ix_t::TYPE_IDOOR, 0.0, 0, door.open, 0, 0, door.hinge_side);
 }
 
-bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building, bool roof_access) { // exterior doors
+bool building_t::add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access) { // exterior doors
 
 	if (c.is_all_zeros()) return 0;
 	vector3d const sz(c.get_size());
 	assert(sz[dim] == 0.0 && sz[!dim] > 0.0 && sz.z > 0.0);
-	unsigned const type(for_building ? (unsigned)tquad_with_ix_t::TYPE_BDOOR : (unsigned)tquad_with_ix_t::TYPE_HDOOR);
+	// if it's an office building with two doors already added, make this third door a back metal door
+	unsigned const type(for_office_building ? ((doors.size() == 2) ?
+		(unsigned)tquad_with_ix_t::TYPE_BDOOR2 : (unsigned)tquad_with_ix_t::TYPE_BDOOR) :
+		(unsigned)tquad_with_ix_t::TYPE_HDOOR);
 	float const pos_adj(0.015*get_window_vspace()); // distance to move away from the building wall
 	doors.push_back(set_door_from_cube(c, dim, dir, type, pos_adj, 1, 0, 0, 0, 0)); // exterior=1, opened=0, opens_out=0, opens_up=0, swap_sides=0
 	if (!roof_access && part_ix < 4) {door_sides[part_ix] |= 1 << (2*dim + dir);}

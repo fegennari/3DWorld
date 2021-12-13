@@ -281,17 +281,19 @@ struct building_geom_t { // describes the physical shape of a building
 	bool is_cube()    const {return (num_sides == 4);}
 	bool is_simple_cube()    const {return (is_cube() && !half_offset && flat_side_amt == 0.0 && alt_step_factor == 0.0);}
 	bool use_cylinder_coll() const {return (num_sides > 8 && flat_side_amt == 0.0);} // use cylinder collision if not a cube, triangle, octagon, etc. (approximate)
-	void do_xy_rotate(point const &center, point &pos) const;
+	void do_xy_rotate    (point const &center, point &pos) const;
 	void do_xy_rotate_inv(point const &center, point &pos) const;
 	void do_xy_rotate_normal(point &n) const;
 	void do_xy_rotate_normal_inv(point &n) const;
 };
 
 struct tquad_with_ix_t : public tquad_t {
-	// roof, roof access cover, wall, chimney cap, house door, building door, garage door, interior door, roof door
-	enum {TYPE_ROOF=0, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_GDOOR, TYPE_IDOOR, TYPE_IDOOR2, TYPE_RDOOR, TYPE_HELIPAD, TYPE_SOLAR, TYPE_TRIM};
-	bool is_exterior_door() const {return (type == TYPE_HDOOR || type == TYPE_BDOOR || type == TYPE_GDOOR || type == TYPE_RDOOR);}
-	bool is_interior_door() const {return (type == TYPE_IDOOR || type == TYPE_IDOOR2);}
+	// roof, roof access cover, wall, chimney cap, house door, building front door, building back door, garage door, interior door back face, office door, roof door
+	enum {TYPE_ROOF=0, TYPE_ROOF_ACC, TYPE_WALL, TYPE_HDOOR, TYPE_BDOOR, TYPE_BDOOR2, TYPE_GDOOR,
+		TYPE_IDOOR, TYPE_IDOOR2, TYPE_ODOOR, TYPE_RDOOR, TYPE_HELIPAD, TYPE_SOLAR, TYPE_TRIM};
+	bool is_building_door() const {return (type == TYPE_BDOOR  || type == TYPE_BDOOR2);} // for office buildings
+	bool is_exterior_door() const {return (type == TYPE_HDOOR || type == TYPE_GDOOR  || type == TYPE_RDOOR || is_building_door());}
+	bool is_interior_door() const {return (type == TYPE_IDOOR || type == TYPE_IDOOR2 || type == TYPE_ODOOR);}
 
 	unsigned type;
 	tquad_with_ix_t(unsigned npts_=0, unsigned type_=TYPE_ROOF) : tquad_t(npts_), type(type_) {}
@@ -969,7 +971,7 @@ struct building_t : public building_geom_t {
 	bool maybe_add_house_driveway(cube_t const &plot, vect_cube_t &driveways, unsigned building_ix) const;
 	bool get_power_point(vector<point> &ppts) const;
 	void add_solar_panels(rand_gen_t &rgen);
-	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_building, bool roof_access=0);
+	bool add_door(cube_t const &c, unsigned part_ix, bool dim, bool dir, bool for_office_building, bool roof_access=0);
 	float gen_peaked_roof(cube_t const &top_, float peak_height, bool dim, float extend_to, float max_dz, unsigned skip_side_tri);
 	float gen_hipped_roof(cube_t const &top_, float peak_height, float extend_to);
 	void place_roof_ac_units(unsigned num, float sz_scale, cube_t const &bounds, vect_cube_t const &avoid, bool avoid_center, rand_gen_t &rgen);

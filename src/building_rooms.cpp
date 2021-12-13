@@ -2562,10 +2562,10 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		set_cube_zvals(trim, door.z1()+fc_thick, door.z1()+fc_thick+2.0*trim_thickness); // floor height
 		objs.emplace_back(trim, TYPE_WALL_TRIM, 0, dim, dir, (ext_flags | RO_FLAG_ADJ_BOT), 1.0, SHAPE_SHORT, ext_trim_color);
 
-		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->type == tquad_with_ix_t::TYPE_BDOOR || garage_door) { // add trim at top of exterior door, houses and office buildings
+		if (d->type == tquad_with_ix_t::TYPE_HDOOR || d->is_building_door() || garage_door) { // add trim at top of exterior door, houses and office buildings
 			set_cube_zvals(trim, door.z2()-0.03*door.dz(), door.z2()); // ends at top of door texture; see logic in clip_door_to_interior()
 		}
-		if (d->type == tquad_with_ix_t::TYPE_BDOOR) { // different logic for building doors
+		if (d->is_building_door()) { // different logic for building doors
 			ext_flags = flags; // unlike hdoors, need to draw the back face to hide the gap betweeen ceiling and floor above
 			trim.d[dim][dir] += (dir ? -1.0 : 1.0)*0.005*window_vspacing; // minor shift back toward building to prevent z-fighting
 		}
@@ -3118,7 +3118,7 @@ void building_t::add_exterior_door_signs(rand_gen_t &rgen) {
 		
 		for (auto d = doors.begin(); d != doors.end(); ++d) {
 			if (has_courtyard && (d+1) == doors.end()) break; // courtyard door is not an exit
-			if (d->type == tquad_with_ix_t::TYPE_BDOOR) {add_sign_by_door(*d, 0, "Exit", exit_color, 1);} // inside, emissive
+			if (d->is_building_door()) {add_sign_by_door(*d, 0, "Exit", exit_color, 1);} // inside, emissive
 		}
 	}
 }
