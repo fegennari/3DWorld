@@ -2049,12 +2049,11 @@ void model3d::create_indir_texture() {
 		light_int_scale[LIGHTING_SKY] = sky_lighting_weight;
 	}
 	else {
-		// FIXME: run raytracing to fill in local_lmap_manager, use bcube for bounds (scale to get_scene_bounds_bcube())
+		// TODO: run raytracing to fill in local_lmap_manager, use bcube for bounds (scale to get_scene_bounds_bcube())
 	}
 	vector<unsigned char> tex_data;
 	indir_light_tex_from_lmap(model_indir_tid, local_lmap_manager, tex_data, xsize, ysize, zsize);
 	light_int_scale[LIGHTING_SKY] = init_weight; // restore orig value
-	//cout << TXT(zsize) << TXT(tot_sz) << TXT(model_indir_tid) << endl;
 }
 
 void model3d::set_local_model_scene_bounds(shader_t &s) { // tight bounds
