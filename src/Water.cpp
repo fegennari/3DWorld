@@ -359,8 +359,8 @@ public:
 	}
 	void calc_vertex_colors_normals(colorRGBA const &color_in) {
 		if (verts.empty()) return;
-		// Note: frame_counter check is a hack to avoid Nvidia driver perf problem in drvValidateVersion where we get 8 FPS for a few seconds
-		bool const use_threads(!fast_water_reflect && !draw_fast && !(display_mode & 0x20) && frame_counter > 100);
+		// Note: frame_counter check is a hack to avoid Nvidia driver perf problem where we get only a few FPS for the first 8s
+		bool const use_threads(!fast_water_reflect && !draw_fast && !(display_mode & 0x20) /*&& frame_counter > 100*/);
 
 		// run on multiple threads when we have the slow ray-traced per-vertex water reflections enabled (assumes a quad core machine)
 #pragma omp parallel for num_threads(4) schedule(dynamic,8) if (use_threads)

@@ -751,7 +751,15 @@ void begin_loading_screen() {
 void display() {
 
 	check_gl_error(0);
+	static unsigned counter(0);
 
+	// hack to avoid slow frames when starting OpenMP threads; for some reason, threads started during the first 100 frames slow those frames down
+	if (counter++ < 100) {
+		glutSwapBuffers();
+		post_window_redisplay();
+		check_gl_error(11);
+		return;
+	}
 	if (start_maximized) {
 		toggle_fullscreen();
 		begin_loading_screen();
@@ -837,7 +845,7 @@ void display() {
 #ifdef USE_GPU_TIMER
 	gpu_timer_t gpu_timer;
 #endif
-
+	
 	if (world_mode == WMODE_UNIVERSE) {
 		in_loading_screen = 0; // if we got here, loading is done
 		display_universe(); // infinite universe
@@ -1278,7 +1286,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	// threads: 0=draw tiled terrain (2.5ms) + transparent (0.3), 1=update roads and cars (2.3ms), 2=pedestrians (3.8ms) + building AI (0.85ms)
 	// Note: it's questionable to update (move) cars between the opaque and transparent pass because the parts will be out of sync;
 	// however, only the headlight flares are drawn in the transparent pass, and it doesn't seem to be a problem, so we allow it
-	if (have_city_models() && frame_counter > 100 && animate2) { // same frame_counter hack to avoid perf problem as in water color calculation
+	if (have_city_models()) {
 		//timer_t timer("City Update MT"); // 4.65ms
 #pragma omp parallel num_threads(3)
 		if (omp_get_thread_num_3dw() == 0) {draw_tiled_terrain_and_transparent_geom(terrain_zmin, tt_reflection_tid, draw_water, camera_above_clouds);} // drawing must be on thread 0
