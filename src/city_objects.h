@@ -31,6 +31,12 @@ struct tree_planter_t : public city_obj_t {
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
 };
 
+struct trashcan_t : public city_obj_t {
+	trashcan_t(point const &pos_, float radius_, float height);
+	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+};
+
 struct fire_hydrant_t : public city_obj_t {
 	float cylin_radius;
 	vector3d orient;
@@ -126,12 +132,13 @@ public: // road network needs access to parking lots and driveways for drawing
 private:
 	vector<bench_t> benches;
 	vector<tree_planter_t> planters;
+	vector<trashcan_t> trashcans;
 	vector<fire_hydrant_t> fhydrants;
 	vector<substation_t> sstations;
 	vector<divider_t> dividers; // dividers for residential plots
 	vector<swimming_pool_t> pools;
 	vector<power_pole_t> ppoles;
-	city_obj_groups_t bench_groups, planter_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups; // index is last object in group
+	city_obj_groups_t bench_groups, planter_groups, trashcan_groups, fhydrant_groups, sstation_groups, divider_groups, pool_groups, ppole_groups; // index is last obj in group
 	quad_batch_draw qbd, untex_qbd;
 	vector<city_zone_t> sub_plots; // reused across calls
 	cube_t all_objs_bcube;
