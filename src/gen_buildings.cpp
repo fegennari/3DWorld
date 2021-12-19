@@ -1478,7 +1478,7 @@ void building_t::cut_holes_for_ext_doors(building_draw_t &bdraw, point const &co
 	} // for d
 }
 
-bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist, unsigned &door_type) { // for exterior doors
+bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist) { // for exterior doors
 	tquad_with_ix_t door;
 	int const door_ix(find_ext_door_close_to_point(door, pos, dist));
 	register_open_ext_door_state(door_ix);
@@ -1486,7 +1486,6 @@ bool building_t::get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, 
 	move_door_to_other_side_of_wall(door, -1.01, 0); // move a bit further away from the outside of the building to make it in front of the orig door
 	clip_door_to_interior(door, 1); // clip to floor
 	bdraw.add_tquad(*this, door, bcube, tid_nm_pair_t(WHITE_TEX), WHITE);
-	door_type = door.type;
 	// draw the opened door
 	building_draw_t open_door_draw;
 	vector3d const normal(door.get_norm());
@@ -2340,7 +2339,7 @@ public:
 		// check for sun or moon; also need the smap pass for drawing with dynamic lights at night, so basically it's always enabled
 		bool const use_tt_smap(check_tile_smap(0)); // && (night || light_valid_and_enabled(0) || light_valid_and_enabled(1)));
 		bool have_windows(0), have_wind_lights(0), have_interior(0), this_frame_camera_in_building(0), this_frame_player_in_basement(0);
-		unsigned max_draw_ix(0), door_type(0);
+		unsigned max_draw_ix(0);
 		shader_t s;
 
 		for (auto i = bcs.begin(); i != bcs.end(); ++i) {
@@ -2457,7 +2456,7 @@ public:
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
 						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
 						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
-						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist, door_type); // and draw opened door
+						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
