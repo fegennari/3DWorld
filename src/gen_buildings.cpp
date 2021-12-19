@@ -2407,7 +2407,7 @@ public:
 			setup_building_draw_shader(s, min_alpha, 1, 0, 0); // enable_indir=1, force_tsl=0, use_texgen=0
 			if (enable_animations) {s.add_uniform_int("animation_id", 0);}
 			if (reflection_pass) {draw_player_model(s, xlate, 0);} // shadow_only=0
-			vector<point> points, people_locs; // reused temporary
+			vector<point> points; // reused temporary
 			vect_cube_t ped_bcubes; // reused temporary
 			static brg_batch_draw_t bbd; // allocated memory is reused across calls
 			int indir_bcs_ix(-1), indir_bix(-1);
@@ -2459,20 +2459,10 @@ public:
 						g->has_room_geom = 1;
 						if (!draw_interior) continue;
 						if (ped_ix >= 0) {draw_peds_in_building(ped_ix, ped_draw_vars_t(b, oc, s, xlate, bi->ix, 0, reflection_pass));} // draw people in this building
-						// get building people locations to allow them to open exterior doors; there's no easy way to make this work with pedestrians outside of buildings;
-						// this doesn't really work due to all the noise spam, changes to drawing/lighting of closed exterior doors,
-						// and missing draw of closed doors when the player is in the building
-						if (ped_ix >= 0 && reflection_pass != 2) {get_locations_of_peds_in_building(ped_ix, people_locs);}
-						
 						// check the bcube rather than check_point_or_cylin_contained() so that it works with roof doors that are outside any part?
-						if (!camera_near_building) { // camera not near building
-							b.get_all_nearby_ext_door_verts(ext_door_draw, s, people_locs, door_open_dist); // allow people to open doors
-							b.player_not_near_building();
-							continue;
-						}
+						if (!camera_near_building) {b.player_not_near_building(); continue;} // camera not near building
 						if (reflection_pass == 2) continue; // interior room, don't need to draw windows and exterior doors
-						bool const had_open_door(b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist)); // and draw opened door
-						if (!had_open_door) {b.get_all_nearby_ext_door_verts(ext_door_draw, s, people_locs,   door_open_dist);} // allow people to open doors
+						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
