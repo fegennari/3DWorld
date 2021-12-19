@@ -75,6 +75,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "make_4_way_ints") {
 		if (!read_uint(fp, make_4_way_ints) || make_4_way_ints > 3) {return read_error(str);}
 	}
+	else if (str == "add_transmission_lines") {
+		if (!read_uint(fp, add_tlines) || add_tlines > 2) {return read_error(str);}
+	}
 	else if (str == "residential_probability") {
 		if (!read_float(fp, residential_probability)) {return read_error(str);}
 	}

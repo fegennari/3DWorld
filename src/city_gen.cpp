@@ -2310,8 +2310,9 @@ public:
 		global_rn.finalize_bridges_and_tunnels();
 		
 		// only connect cities with transmission lines if there are no secondary buildings in the way;
-		// while buildings should now avoid tlines, it still looks a bit odd having them so close to houses, and the endpoints aren't checked
-		if (!have_secondary_buildings()) {
+		// while buildings should now avoid tlines, it still looks a bit odd having them so close to houses, and the endpoints aren't checked;
+		// but let the user override this by setting add_transmission_lines to 1
+		if (city_params.add_tlines && (city_params.add_tlines == 1 || !have_secondary_buildings())) {
 			for (auto i = blockers.begin(); i != blockers.begin() + city_bcubes_end; ++i) {i->expand_by_xy(-road_spacing);} // undo city expand
 			connect_city_power_grids(crc, blockers, road_width, road_spacing);
 		}

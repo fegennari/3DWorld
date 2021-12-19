@@ -62,6 +62,7 @@ struct city_params_t {
 	unsigned num_cities, num_samples, num_conn_tries, city_size_min, city_size_max, city_border, road_border, slope_width, num_rr_tracks, park_rate;
 	float road_width, road_spacing, road_spacing_rand, road_spacing_xy_add, conn_road_seg_len, max_road_slope, residential_probability;
 	unsigned make_4_way_ints; // 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 3=only 4-way (no straight roads)
+	unsigned add_tlines; // 0=never, 1=always, 2=only when there are no secondary buildings
 	bool assign_house_plots, new_city_conn_road_alg;
 	// cars
 	unsigned num_cars;
@@ -88,8 +89,8 @@ struct city_params_t {
 
 	city_params_t() : num_cities(0), num_samples(100), num_conn_tries(50), city_size_min(0), city_size_max(0), city_border(0), road_border(0), slope_width(0),
 		num_rr_tracks(0), park_rate(0), road_width(0.0), road_spacing(0.0), road_spacing_rand(0.0), road_spacing_xy_add(0.0), conn_road_seg_len(1000.0),
-		max_road_slope(1.0), residential_probability(0.0), make_4_way_ints(0), assign_house_plots(0), new_city_conn_road_alg(0), num_cars(0), car_speed(0.0),
-		traffic_balance_val(0.5), new_city_prob(1.0), max_car_scale(1.0), enable_car_path_finding(0), convert_model_files(0), cars_use_driveways(0),
+		max_road_slope(1.0), residential_probability(0.0), make_4_way_ints(0), add_tlines(2), assign_house_plots(0), new_city_conn_road_alg(0), num_cars(0),
+		car_speed(0.0), traffic_balance_val(0.5), new_city_prob(1.0), max_car_scale(1.0), enable_car_path_finding(0), convert_model_files(0), cars_use_driveways(0),
 		min_park_spaces(12), min_park_rows(1), min_park_density(0.0), max_park_density(1.0), car_shadows(0), max_lights(1024), max_shadow_maps(0), smap_size(0),
 		max_trees_per_plot(0), tree_spacing(1.0), max_benches_per_plot(0), num_peds(0), num_building_peds(0), ped_speed(0.0), ped_respawn_at_dest(0) {}
 	bool enabled() const {return (num_cities > 0 && city_size_min > 0);}

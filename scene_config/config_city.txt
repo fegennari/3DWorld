@@ -47,6 +47,7 @@ city conn_road_seg_len 6.0 # also determines max length of bridges and tunnels
 city max_road_slope 0.3
 city new_city_conn_road_alg 0
 city make_4_way_ints 2 # 0=all 3-way intersections; 1=allow 4-way; 2=all connector roads must have at least a 4-way on one end; 3=only 4-way (no straight roads)
+city add_transmission_lines 2 # 0=never, 1=always, 2=only when there are no secondary buildings
 city residential_probability 0.5 # 0.0=all office buildings, 1.0=all houses
 city assign_house_plots 1 # only applies to residential cities
 city min_park_spaces 12
