@@ -1003,6 +1003,7 @@ struct building_t : public building_geom_t {
 	void get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_pass=0, float offset_scale=1.0, point const *const only_cont_pt_in=nullptr) const;
 	void get_all_drawn_window_verts_as_quads(vect_vnctcc_t &verts) const;
 	bool get_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, point const &pos, float dist);
+	void get_all_nearby_ext_door_verts(building_draw_t &bdraw, shader_t &s, vector<point> const &pts, float dist);
 	void player_not_near_building() {register_open_ext_door_state(-1);}
 	int find_ext_door_close_to_point(tquad_with_ix_t &door, point const &pos, float dist) const;
 	bool get_building_door_pos_closest_to(point const &target_pos, point &door_pos) const;
@@ -1333,6 +1334,7 @@ void city_shader_setup(shader_t &s, cube_t const &lights_bcube, bool use_dlights
 void enable_animations_for_shader(shader_t &s);
 void setup_city_lights(vector3d const &xlate);
 void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv); // from city_gen.cpp
+void get_locations_of_peds_in_building(int first_ped_ix, vector<point> &locs); // from city_gen.cpp
 void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes, bool moving_only=0); // from city_gen.cpp
 void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
