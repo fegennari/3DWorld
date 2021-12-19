@@ -134,6 +134,18 @@ tree_planter_t::tree_planter_t(point const &pos_, float radius_, float height) :
 /*static*/ void tree_planter_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture((dstate.pass_ix == 0) ? (int)DIRT_TEX : get_texture_by_name("roads/sidewalk.jpg"));}
 }
+void draw_xy_walls(cube_t const &bcube, cube_t const &hole, color_wrapper const &cw, float tscale, draw_state_t &dstate, quad_batch_draw &qbd) {
+	cube_t walls[4] = {bcube, bcube, bcube, bcube}; // -X, +X, -Y, +Y
+	walls[0].x2() = walls[2].x1() = walls[3].x1() = hole.x1();
+	walls[1].x1() = walls[2].x2() = walls[3].x2() = hole.x2();
+	walls[2].y2() = hole.y1();
+	walls[3].y1() = hole.y2();
+
+	for (unsigned d = 0; d < 2; ++d) {
+		dstate.draw_cube(qbd, walls[d  ], cw, 1, tscale, 0); // X
+		dstate.draw_cube(qbd, walls[d+2], cw, 1, tscale, 1); // Y, skip X dims
+	}
+}
 void tree_planter_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
 	color_wrapper const cw(LT_GRAY);
@@ -145,17 +157,7 @@ void tree_planter_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch
 		dstate.draw_cube(qbd, dirt, cw, 1, 0.0, 3); // top only (skip X, Y, and bottom)
 	}
 	else { // draw stone
-		cube_t walls[4] = {bcube, bcube, bcube, bcube}; // -X, +X, -Y, +Y
-		walls[0].x2() = walls[2].x1() = walls[3].x1() = dirt.x1();
-		walls[1].x1() = walls[2].x2() = walls[3].x2() = dirt.x2();
-		walls[2].y2() = dirt.y1();
-		walls[3].y1() = dirt.y2();
-		float const tscale(40.0);
-			
-		for (unsigned d = 0; d < 2; ++d) {
-			dstate.draw_cube(qbd, walls[d  ], cw, 1, tscale, 0); // X
-			dstate.draw_cube(qbd, walls[d+2], cw, 1, tscale, 1); // Y, skip X dims
-		}
+		draw_xy_walls(bcube, dirt, cw, 40.0, dstate, qbd);
 	}
 }
 
@@ -165,25 +167,30 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height) : city_ob
 	bcube.set_from_point(pos);
 	bcube.expand_by_xy(radius);
 	bcube.z2() += height;
+	set_bsphere_from_bcube(); // recompute bcube from bsphere
 }
 /*static*/ void trashcan_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {select_texture(get_texture_by_name("roads/asphalt.jpg"));}
 }
 void trashcan_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	color_wrapper const cw(LT_BROWN);
+	if (shadow_only) {dstate.draw_cube(qbd, bcube, WHITE, 1); return;} // draw a cube for the shadow
+	color_wrapper const tan(colorRGBA(0.8, 0.6, 0.3, 1.0));
 	cube_t hole(bcube);
-	hole.expand_by_xy(-0.2*bcube.get_size()); // shrink 20% on all XY sides
-	cube_t sides[4] = {bcube, bcube, bcube, bcube}; // -X, +X, -Y, +Y
-	sides[0].x2() = sides[2].x1() = sides[3].x1() = hole.x1();
-	sides[1].x1() = sides[2].x2() = sides[3].x2() = hole.x2();
-	sides[2].y2() = hole.y1();
-	sides[3].y1() = hole.y2();
-	float const tscale(10.0);
+	hole.expand_by_xy(-0.08*bcube.get_size()); // shrink on all XY sides
+	draw_xy_walls(bcube, hole, tan, 25.0, dstate, qbd); // sides
 
-	for (unsigned d = 0; d < 2; ++d) {
-		dstate.draw_cube(qbd, sides[d  ], cw, 1, tscale, 0); // X
-		dstate.draw_cube(qbd, sides[d+2], cw, 1, tscale, 1); // Y, skip X dims
+	if (bcube.closest_dist_less_than((camera_pdu.pos - dstate.xlate), 0.4*dist_scale*dstate.draw_tile_dist)) {
+		float const height(bcube.dz());
+		cube_t bottom(hole);
+		bottom.z2() -= 0.95*height;
+		dstate.draw_cube(qbd, bottom, tan, 1, 30.0, 3); // inside bottom, top surface only
+		cube_t top(hole);
+		top.z1() += 0.92*height;
+		top.z2() -= 0.02*height;
+		cube_t top_hole(top);
+		top_hole.expand_by_xy(-0.22*bcube.get_size()); // shrink on all XY sides
+		draw_xy_walls(top, top_hole, color_wrapper(BROWN), 200.0, dstate, qbd); // brown top; technically don't need to draw some of the interior surfaces
 	}
 }
 
@@ -229,7 +236,7 @@ bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float ra
 
 substation_t::substation_t(cube_t const &bcube_, bool dim_, bool dir_) : dim(dim_), dir(dir_) {
 	bcube = bcube_;
-	*((sphere_t *)this) = bcube.get_bsphere();
+	set_bsphere_from_bcube(); // recompute bcube from bsphere
 }
 /*static*/ void substation_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
 	if (!shadow_only) {dstate.s.add_uniform_float("hemi_lighting_scale", 0.0);} // disable hemispherical lighting
@@ -292,7 +299,7 @@ void divider_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw
 	plot_divider_type_t const &pdt(plot_divider_types[dstate.pass_ix]);
 	dstate.draw_cube(qbd, bcube, color_wrapper(pdt.color), 1, pdt.tscale/bcube.dz(), skip_dims); // skip bottom, scale texture to match the height
 
-	if (!shadow_only && type == DIV_HEDGE && (bcube + dstate.xlate).closest_dist_less_than(camera_pdu.pos, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	if (!shadow_only && type == DIV_HEDGE && bcube.closest_dist_less_than((camera_pdu.pos - dstate.xlate), 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
 		dstate.hedge_draw.add(bcube); // draw detailed leaves for nearby hedges
 	}
 }
@@ -1171,10 +1178,6 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			planter_groups.add_obj(tree_planter_t(*i, planter_radius, planter_height), planters); // no colliders for planters; pedestrians avoid the trees instead
 		}
 	}
-	// place trashcans next to sidewalks in commercial cities
-	if (!is_residential) {
-	
-	}
 	// place power poles if there are houses or streetlights
 	point corner_pole_pos(all_zeros);
 
@@ -1260,6 +1263,21 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 			colliders.push_back(ss_bcube);
 			blockers.push_back(ss_bcube);
 		}
+	}
+	// place trashcans next to sidewalks in commercial cities and parks; after substations so that we don't block them
+	if (!is_residential || plot.is_park) {
+		float const tc_height(0.18*car_length), tc_radius(0.4*tc_height), dist_from_corner(0.06); // distance from corner relative to plot size
+
+		for (unsigned d = 0; d < 4; ++d) { // try all 4 corners
+			vector3d const tc_center((1.0 - dist_from_corner)*point(plot.d[0][d&1], plot.d[1][d>>1], plot.z2()) + dist_from_corner*plot.get_cube_center());
+			trashcan_t const trashcan(tc_center, tc_radius, tc_height);
+
+			if (!has_bcube_int_xy(trashcan.bcube, blockers, 1.5*tc_radius)) { // skip if intersects a building or parking lot, with some padding
+				trashcan_groups.add_obj(trashcan, trashcans);
+				colliders.push_back(trashcan.bcube);
+				blockers.push_back(trashcan.bcube);
+			}
+		} // for d
 	}
 }
 
@@ -1666,7 +1684,7 @@ void city_obj_placer_t::move_and_connect_streetlights(streetlights_t &sl) {
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
-	draw_objects(trashcans, trashcan_groups, dstate, 0.12, shadow_only, 0); // dist_scale=0.16
+	draw_objects(trashcans, trashcan_groups, dstate, 0.10, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
@@ -1803,7 +1821,7 @@ bool city_obj_placer_t::get_color_at_xy(point const &pos, colorRGBA &color, bool
 	} // for i
 	start_ix = 0;
 	if (check_city_obj_bcube_pt_xy_contain(sstation_groups, sstations, pos, obj_ix)) {color = colorRGBA(0.6, 0.8, 0.4, 1.0); return 1;} // light olive
-	if (check_city_obj_bcube_pt_xy_contain(trashcan_groups, trashcans, pos, obj_ix)) {color = LT_BROWN; return 1;}
+	if (check_city_obj_bcube_pt_xy_contain(trashcan_groups, trashcans, pos, obj_ix)) {color = colorRGBA(0.8, 0.6, 0.3, 1.0); return 1;} // tan
 	// Note: ppoles are skipped for now
 	return 0;
 }

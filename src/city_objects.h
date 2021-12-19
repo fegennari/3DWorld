@@ -13,6 +13,7 @@ struct city_obj_t : public sphere_t {
 	bool operator<(city_obj_t const &b) const {return (bcube.x1() < b.bcube.x1());} // sort by bcube x1
 	cube_t const &get_outer_bcube() const {return bcube;}
 	float get_bsphere_radius(bool shadow_only) const {return radius;}
+	void set_bsphere_from_bcube() {*((sphere_t *)this) = bcube.get_bsphere();}
 	static void post_draw(draw_state_t &dstate, bool shadow_only) {}
 	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const; // default, can be overridden in derived class
 };
