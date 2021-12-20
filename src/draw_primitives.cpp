@@ -331,7 +331,7 @@ void create_vert(vert_norm_texp &v, point const &p, vector3d const &n, texgen_pa
 	v = vert_norm_texp(p, calc_oriented_normal(p, n, two_sided_lighting), tp);
 }
 
-void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting, float tc_t0, float tc_t1, vector3d const &xlate) {
+void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting, float tc_t0, float tc_t1, float ts_scale, vector3d const &xlate) {
 	
 	unsigned const ixoff(verts.size()), ndiv(vpn.n.size());
 	verts.resize(3*ndiv + ixoff);
@@ -340,18 +340,20 @@ void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 	if (!two_sided_lighting && xlate == zero_vector) { // common case optimization, for example for tree trunks
 		for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
 			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv), vix(3*s + ixoff);
-			verts[vix+0].assign(vpn.p[(s <<1)+1],  vpn.n[s],               0.5,                     tc_t1); // one big discontinuity at one position
-			verts[vix+1].assign(vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), tc_t0); // normalize?
-			verts[vix+2].assign(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), tc_t0); // normalize?
+			float const ts(ts_scale*(1.0 - s*ndiv_inv));
+			verts[vix+0].assign(vpn.p[(s <<1)+1],  vpn.n[s],              ts_scale*0.5,    tc_t1); // one big discontinuity at one position
+			verts[vix+1].assign(vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), (ts - ndiv_inv), tc_t0); // normalize?
+			verts[vix+2].assign(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), ts,              tc_t0); // normalize?
 		}
 	}
 	else {
 		for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
 			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv), vix(3*s + ixoff);
-			//create_vert(verts[vix+0], vpn.p[(s <<1)+1],        vpn.n[s],              (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
-			create_vert(verts[vix+0], vpn.p[(s <<1)+1]+xlate,  vpn.n[s],               0.5,                     tc_t1, two_sided_lighting); // one big discontinuity at one position
-			create_vert(verts[vix+1], vpn.p[(sn<<1)+0]+xlate, (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
-			create_vert(verts[vix+2], vpn.p[(s <<1)+0]+xlate, (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
+			float const ts(ts_scale*(1.0 - s*ndiv_inv));
+			//create_vert(verts[vix+0], vpn.p[(s <<1)+1],        vpn.n[s], (ts - 0.5f*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
+			create_vert(verts[vix+0], vpn.p[(s <<1)+1]+xlate,  vpn.n[s],              ts_scale*0.5,    tc_t1, two_sided_lighting); // one big discontinuity at one position
+			create_vert(verts[vix+1], vpn.p[(sn<<1)+0]+xlate, (vpn.n[s] + vpn.n[sn]), (ts - ndiv_inv), tc_t0, two_sided_lighting); // normalize?
+			create_vert(verts[vix+2], vpn.p[(s <<1)+0]+xlate, (vpn.n[s] + vpn.n[sp]), ts,              tc_t0, two_sided_lighting); // normalize?
 		}
 	}
 }
@@ -369,8 +371,9 @@ void gen_cone_triangles_tp(vector<vert_norm_texp> &verts, vector_point_norm cons
 	}
 }
 
-void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting, float tc_t0, float tc_t1, vector3d const &xlate) {
-
+void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm const &vpn,
+	bool two_sided_lighting, float tc_t0, float tc_t1, float ts_scale, vector3d const &xlate)
+{
 	bool const prev_strip(!verts.empty());
 	unsigned const ixoff(prev_strip ? (verts.size() + 2) : 0), ndiv(vpn.n.size()); // 2 extra for connecting with degenerate triangles
 	verts.resize(2*(ndiv+1) + ixoff);
@@ -378,7 +381,7 @@ void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm 
 
 	for (unsigned S = 0; S <= ndiv; ++S) { // Note: always has tex coords
 		unsigned const s(S%ndiv), vix(2*S + ixoff);
-		float const ts(1.0f - S*ndiv_inv);
+		float const ts(ts_scale*(1.0f - S*ndiv_inv));
 		vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
 		create_vert(verts[vix+0], vpn.p[(s<<1)+0]+xlate, normal, ts, tc_t0, two_sided_lighting);
 		create_vert(verts[vix+1], vpn.p[(s<<1)+1]+xlate, normal, ts, tc_t1, two_sided_lighting);
@@ -478,7 +481,7 @@ void add_cylin_ends(float radius1, float radius2, int ndiv, bool texture, int dr
 
 // draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = sides + pt1 end, 4 = sides + pt2 end
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture, int draw_sides_ends,
-	bool two_sided_lighting, float const *const perturb_map, float tex_scale_len, float tex_t_start, point const *inst_pos, unsigned num_insts)
+	bool two_sided_lighting, float const *const perturb_map, float tex_scale_len, float tex_t_start, point const *inst_pos, unsigned num_insts, float tex_width_scale)
 {
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
@@ -493,10 +496,10 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			// draw ends only - nothing to do here
 		}
 		else if (radius2 == 0.0) { // cone (Note: still not perfect for pine tree trunks and enforcer ships)
-			gen_cone_triangles(cvb.tverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, inst_pos[inst]);
+			gen_cone_triangles(cvb.tverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]);
 		}
 		else {
-			gen_cylinder_triangle_strip(cvb.sverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, inst_pos[inst]);
+			gen_cylinder_triangle_strip(cvb.sverts, vpn, two_sided_lighting, tex_t_start, tex_scale_len+tex_t_start, tex_width_scale, inst_pos[inst]);
 		}
 		if (draw_sides_ends != 0) {add_cylin_ends(radius1, radius2, ndiv, texture, draw_sides_ends, v12, ce, inst_pos[inst], vpn);} // Note: TSL doesn't apply here
 	} // for inst
