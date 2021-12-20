@@ -1324,12 +1324,11 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place trashcans next to sidewalks in commercial cities and parks; after substations so that we don't block them
 	if (!is_residential || plot.is_park) {
-		bool const is_city_park(!is_residential || plot.is_park), is_cylin(!is_city_park);
-		float const tc_height(0.18*car_length), tc_radius((is_cylin ? 0.3 : 0.4)*tc_height), dist_from_corner(0.06); // dist from corner relative to plot size
+		float const tc_height(0.18*car_length), tc_radius(0.4*tc_height), dist_from_corner(0.06); // dist from corner relative to plot size
 
 		for (unsigned d = 0; d < 4; ++d) { // try all 4 corners
 			vector3d const tc_center((1.0 - dist_from_corner)*point(plot.d[0][d&1], plot.d[1][d>>1], plot.z2()) + dist_from_corner*plot.get_cube_center());
-			trashcan_t const trashcan(tc_center, tc_radius, tc_height, is_cylin);
+			trashcan_t const trashcan(tc_center, tc_radius, tc_height, 0); // is_cylin=0
 
 			if (!has_bcube_int_xy(trashcan.bcube, blockers, 1.5*tc_radius)) { // skip if intersects a building or parking lot, with some padding
 				trashcan_groups.add_obj(trashcan, trashcans);
@@ -1428,29 +1427,53 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 					if (overlaps) continue; // overlaps a previous divider, skip this one
 				}
 				divider_groups.add_obj(divider_t(c, type, dim, dir, skip_dims), dividers);
-				colliders.push_back(c);
-				blockers .push_back(c);
+				add_cube_to_colliders_and_blockers(c, colliders, blockers);
 			} // for dir
 		} // for dim
 
-		// place swimming pools
+		// place yard objects
 		if (!i->is_residential || i->is_park || i->street_dir == 0) continue; // not a residential plot along a road
-		if (rgen.rand_float() < 0.1) continue; // add pools 90% of the time
 		bcubes.clear();
 		if (have_buildings()) {get_building_bcubes(*i, bcubes);}
 		if (bcubes.empty()) continue; // no house, skip adding swimming pool
 		assert(bcubes.size() == 1); // there should be exactly one building/house in this sub-plot
-		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
-		bool const above_ground(rgen.rand_bool());
 		cube_t const &house(bcubes.front());
-		cube_t pool_area(*i);
-		pool_area.d[dim][dir] = house.d[dim][!dir]; // limit the pool to the back yard
+		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
+
+		// maybe place a trashcan next to the house
+		float const tc_height(0.18*city_params.get_nom_car_size().x), tc_radius(0.3*tc_height);
+
+		for (unsigned n = 0; n < 20; ++n) { // make some attempts to generate a valid trashcan location
+			bool tc_dim(0), tc_dir(0);
+			unsigned const house_side(rgen.rand() % 3); // any side but the front
+			if (house_side == 0) {tc_dim = dim; tc_dir = !dir;} // put it in the back yard
+			else {tc_dim = !dim; tc_dir = rgen.rand_bool();} // put it on a random side of the house
+			if (tc_radius > 4.0*house.get_sz_dim(!tc_dim)) continue; // house wall is too short - shouldn't happen in the normal case
+			point pos;
+			pos.z = i->z2();
+			pos[ tc_dim] = house.d[tc_dim][tc_dir] + (tc_dir ? 1.0 : -1.0)*1.5*tc_radius; // place near this wall of the house
+			pos[!tc_dim] = rgen.rand_uniform((house.d[!tc_dim][0] + tc_radius), (house.d[!tc_dim][1] - tc_radius));
+			trashcan_t const trashcan(pos, tc_radius, tc_height, 1); // is_cylin=1
+
+			if (!is_placement_blocked(trashcan.bcube, blockers, house, prev_blockers_end, 0.0, 0)) { // no expand
+				trashcan_groups.add_obj(trashcan, trashcans);
+				add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
+				break; // success
+			}
+		} // for n
+
+		// place swimming pools; must be placed last due to the continues
+		if (rgen.rand_float() < 0.1) continue; // add pools 90% of the time
+		cube_t back_yard(*i);
+		back_yard.d[dim][dir] = house.d[dim][!dir];
+		cube_t pool_area(back_yard); // limit the pool to the back yard
 
 		for (unsigned d = 0; d < 2; ++d) {
 			if (i->d[!dim][d] == plot.d[!dim][d]) {pool_area.d[!dim][d] = house.d[!dim][d];} // adjacent to road - constrain to house projection so that side fence can be placed
 		}
 		float const dmin(min(pool_area.dx(), pool_area.dy())); // or should this be based on city_params.road_width?
 		if (dmin < 0.75f*city_params.road_width) continue; // back yard is too small to add a pool
+		bool const above_ground(rgen.rand_bool());
 
 		for (unsigned d = 0; d < 2; ++d) { // keep pools away from the edges of plots; applies to sub-plots on the corners
 			max_eq(pool_area.d[d][0], plot.d[d][0]+min_pool_spacing_to_plot_edge);
