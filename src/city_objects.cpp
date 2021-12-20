@@ -1176,6 +1176,11 @@ template<typename T> void city_obj_groups_t::create_groups(vector<T> &objs, cube
 	by_tile.clear(); // no longer needed
 }
 
+void add_cube_to_colliders_and_blockers(cube_t const &cube, vect_cube_t &blockers, vect_cube_t &colliders) {
+	colliders.push_back(cube);
+	blockers .push_back(cube);
+}
+
 // Note: blockers are used for placement of objects within this plot; colliders are used for pedestrian AI
 void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_t &blockers, vect_cube_t &colliders,
 	vector<point> const &tree_pos, rand_gen_t &rgen, bool is_residential, bool have_streetlights)
@@ -1314,8 +1319,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 		
 		if (!has_bcube_int_xy(ss_bcube, blockers, 0.2*ss_height)) { // skip if intersects a building or parking lot
 			sstation_groups.add_obj(substation_t(ss_bcube, dim, dir), sstations);
-			colliders.push_back(ss_bcube);
-			blockers.push_back(ss_bcube);
+			add_cube_to_colliders_and_blockers(ss_bcube, colliders, blockers);
 		}
 	}
 	// place trashcans next to sidewalks in commercial cities and parks; after substations so that we don't block them
@@ -1329,8 +1333,7 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 
 			if (!has_bcube_int_xy(trashcan.bcube, blockers, 1.5*tc_radius)) { // skip if intersects a building or parking lot, with some padding
 				trashcan_groups.add_obj(trashcan, trashcans);
-				colliders.push_back(trashcan.bcube);
-				blockers.push_back(trashcan.bcube);
+				add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
 			}
 		} // for d
 	}
@@ -1515,15 +1518,13 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			if (bad_fence_place) continue; // failed to fence off the pool, don't place it here
 			pool_groups.add_obj(swimming_pool_t(pool, color, wcolor, above_ground, dim, dir), pools);
 			pool.z2() += 0.1*city_params.road_width; // extend upward to make a better collider
-			colliders.push_back(pool);
-			blockers .push_back(pool);
+			add_cube_to_colliders_and_blockers(pool, colliders, blockers);
 
 			for (unsigned side = 0; side < 2; ++side) {
 				divider_t const &fence(fences[side]);
 				assert(fence.bcube.is_strictly_normalized());
 				divider_groups.add_obj(fence, dividers);
-				colliders.push_back(fence.bcube);
-				blockers .push_back(fence.bcube);
+				add_cube_to_colliders_and_blockers(fence.bcube, colliders, blockers);
 			}
 			break; // success
 		} // for n
