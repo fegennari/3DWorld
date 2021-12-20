@@ -33,9 +33,13 @@ struct tree_planter_t : public city_obj_t {
 };
 
 struct trashcan_t : public city_obj_t {
-	trashcan_t(point const &pos_, float radius_, float height);
+	bool is_cylin;
+	trashcan_t(point const &pos_, float radius_, float height, bool is_cylin_);
+	float get_cylin_radius() const {assert(is_cylin); return 0.5*bcube.dx();}
 	static void pre_draw(draw_state_t &dstate, bool shadow_only);
+	static void post_draw(draw_state_t &dstate, bool shadow_only);
 	void draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const;
+	bool proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const;
 };
 
 struct fire_hydrant_t : public city_obj_t {

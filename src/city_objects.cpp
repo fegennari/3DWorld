@@ -163,35 +163,71 @@ void tree_planter_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch
 
 // trashcans
 
-trashcan_t::trashcan_t(point const &pos_, float radius_, float height) : city_obj_t(pos_, radius_) {
+trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_cylin_) : city_obj_t(pos_, radius_), is_cylin(is_cylin_) {
 	bcube.set_from_point(pos);
 	bcube.expand_by_xy(radius);
 	bcube.z2() += height;
 	set_bsphere_from_bcube(); // recompute bcube from bsphere
 }
 /*static*/ void trashcan_t::pre_draw(draw_state_t &dstate, bool shadow_only) {
-	if (!shadow_only) {select_texture(get_texture_by_name("roads/asphalt.jpg"));}
+	if (shadow_only) {} // nothing to do
+	else if (dstate.pass_ix == 0) {select_texture(get_texture_by_name("roads/asphalt.jpg"));} // cube city/park
+	else { // cylinder residential
+		select_texture (get_texture_by_name("buildings/corrugated_metal.tif"));
+		select_multitex(get_texture_by_name("buildings/corrugated_metal_normal.tif", 1), 5);
+		dstate.s.set_cur_color(GRAY);
+	}
+}
+/*static*/ void trashcan_t::post_draw(draw_state_t &dstate, bool shadow_only) {
+	if (!shadow_only && dstate.pass_ix > 0) {select_multitex(FLAT_NMAP_TEX, 5);} // restore to default for cylindrical trashcan
+	city_obj_t::post_draw(dstate, shadow_only);
 }
 void trashcan_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
+	if (is_cylin != (dstate.pass_ix == 1)) return; // wrong pass
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
-	if (shadow_only) {dstate.draw_cube(qbd, bcube, WHITE, 1); return;} // draw a cube for the shadow
-	color_wrapper const tan(colorRGBA(0.8, 0.6, 0.3, 1.0));
-	cube_t hole(bcube);
-	hole.expand_by_xy(-0.08*bcube.get_size()); // shrink on all XY sides
-	draw_xy_walls(bcube, hole, tan, 25.0, dstate, qbd); // sides
 
-	if (bcube.closest_dist_less_than((camera_pdu.pos - dstate.xlate), 0.4*dist_scale*dstate.draw_tile_dist)) {
-		float const height(bcube.dz());
-		cube_t bottom(hole);
-		bottom.z2() -= 0.95*height;
-		dstate.draw_cube(qbd, bottom, tan, 1, 30.0, 3); // inside bottom, top surface only
-		cube_t top(hole);
-		top.z1() += 0.92*height;
-		top.z2() -= 0.02*height;
-		cube_t top_hole(top);
-		top_hole.expand_by_xy(-0.22*bcube.get_size()); // shrink on all XY sides
-		draw_xy_walls(top, top_hole, color_wrapper(BROWN), 200.0, dstate, qbd); // brown top; technically don't need to draw some of the interior surfaces
+	if (is_cylin) { // cylindrical residential trashcan
+		point const camera_bs(camera_pdu.pos - dstate.xlate);
+		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(camera_bs, pos)))));
+		float const cylin_radius(get_cylin_radius());
+		draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), cylin_radius, cylin_radius,
+			ndiv, 1, 4, 0, nullptr, 1.0, 0.0, nullptr, 0, 2.5); // draw sides + top, with texture repeated 2.5x
 	}
+	else { // cube city/park trashcan
+		if (shadow_only) {dstate.draw_cube(qbd, bcube, WHITE, 1); return;} // draw a cube for the shadow
+		color_wrapper const tan(colorRGBA(0.8, 0.6, 0.3, 1.0));
+		cube_t hole(bcube);
+		hole.expand_by_xy(-0.08*bcube.get_size()); // shrink on all XY sides
+		draw_xy_walls(bcube, hole, tan, 25.0, dstate, qbd); // sides
+
+		if (bcube.closest_dist_less_than((camera_pdu.pos - dstate.xlate), 0.4*dist_scale*dstate.draw_tile_dist)) {
+			float const height(bcube.dz());
+			cube_t bottom(hole);
+			bottom.z2() -= 0.95*height;
+			dstate.draw_cube(qbd, bottom, tan, 1, 30.0, 3); // inside bottom, top surface only
+			cube_t top(hole);
+			top.z1() += 0.92*height;
+			top.z2() -= 0.02*height;
+			cube_t top_hole(top);
+			top_hole.expand_by_xy(-0.22*bcube.get_size()); // shrink on all XY sides
+			draw_xy_walls(top, top_hole, color_wrapper(BROWN), 200.0, dstate, qbd); // brown top; technically don't need to draw some of the interior surfaces
+		}
+	}
+}
+// used for trashcans and fire hydrants
+bool sphere_city_obj_cylin_coll(point const &cpos, float cradius, point &spos, point const &p_last, float sradius, point const &xlate, vector3d *cnorm) {
+	point const pos2(cpos + xlate);
+	float const r_sum(cradius + sradius);
+	if (!dist_less_than(spos, pos2, r_sum)) return 0; // use sphere/vert cylinder instead?
+	// since this is a cylinder, and we're not supposed to stand on top of it, assume collision normal is in the XY plane
+	vector3d const coll_norm(vector3d((spos.x - pos2.x), (spos.y - pos2.y), 0.0).get_norm());
+	spos += coll_norm*(r_sum - p2p_dist(spos, pos2)); // move away from pos2
+	if (cnorm) {*cnorm = coll_norm;}
+	return 1;
+}
+bool trashcan_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
+	if (!is_cylin) {return city_obj_t::proc_sphere_coll(pos_, p_last, radius_, xlate, cnorm);} // use base class cube coll for cube trashcans
+	return sphere_city_obj_cylin_coll(pos, get_cylin_radius(), pos_, p_last, radius_, xlate, cnorm);
 }
 
 // fire hydrants
@@ -222,14 +258,7 @@ void fire_hydrant_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch
 	}
 }
 bool fire_hydrant_t::proc_sphere_coll(point &pos_, point const &p_last, float radius_, point const &xlate, vector3d *cnorm) const {
-	point const pos2(pos + xlate);
-	float const r_sum(cylin_radius + radius_);
-	if (!dist_less_than(pos_, pos2, r_sum)) return 0; // use sphere/vert cylinder instead?
-	// since this is a cylinder, and we're not supposed to stand on top of it, assume collision normal is in the XY plane
-	vector3d const coll_norm(vector3d((pos_.x - pos2.x), (pos_.y - pos2.y), 0.0).get_norm());
-	pos_ += coll_norm*(r_sum - p2p_dist(pos_, pos2)); // move away from pos2
-	if (cnorm) {*cnorm = coll_norm;}
-	return 1;
+	return sphere_city_obj_cylin_coll(pos, cylin_radius, pos_, p_last, radius_, xlate, cnorm);
 }
 
 // substations
@@ -1266,11 +1295,12 @@ void city_obj_placer_t::place_detail_objects(road_plot_t const &plot, vect_cube_
 	}
 	// place trashcans next to sidewalks in commercial cities and parks; after substations so that we don't block them
 	if (!is_residential || plot.is_park) {
-		float const tc_height(0.18*car_length), tc_radius(0.4*tc_height), dist_from_corner(0.06); // distance from corner relative to plot size
+		bool const is_city_park(!is_residential || plot.is_park), is_cylin(!is_city_park);
+		float const tc_height(0.18*car_length), tc_radius((is_cylin ? 0.3 : 0.4)*tc_height), dist_from_corner(0.06); // dist from corner relative to plot size
 
 		for (unsigned d = 0; d < 4; ++d) { // try all 4 corners
 			vector3d const tc_center((1.0 - dist_from_corner)*point(plot.d[0][d&1], plot.d[1][d>>1], plot.z2()) + dist_from_corner*plot.get_cube_center());
-			trashcan_t const trashcan(tc_center, tc_radius, tc_height);
+			trashcan_t const trashcan(tc_center, tc_radius, tc_height, is_cylin);
 
 			if (!has_bcube_int_xy(trashcan.bcube, blockers, 1.5*tc_radius)) { // skip if intersects a building or parking lot, with some padding
 				trashcan_groups.add_obj(trashcan, trashcans);
@@ -1684,11 +1714,14 @@ void city_obj_placer_t::move_and_connect_streetlights(streetlights_t &sl) {
 void city_obj_placer_t::draw_detail_objects(draw_state_t &dstate, bool shadow_only) {
 	if (!dstate.check_cube_visible(all_objs_bcube, 1.0)) return; // check bcube, dist_scale=1.0
 	draw_objects(benches,   bench_groups,    dstate, 0.16, shadow_only, 0); // dist_scale=0.16
-	draw_objects(trashcans, trashcan_groups, dstate, 0.10, shadow_only, 0); // dist_scale=0.16
 	draw_objects(fhydrants, fhydrant_groups, dstate, 0.07, shadow_only, 1); // dist_scale=0.07, has_immediate_draw=1
 	draw_objects(sstations, sstation_groups, dstate, 0.15, shadow_only, 1); // dist_scale=0.15, has_immediate_draw=1
 	draw_objects(ppoles,    ppole_groups,    dstate, 0.20, shadow_only, 0); // dist_scale=0.20
 			
+	for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {cube/city, cylindre/residential}
+		bool const is_cylin(dstate.pass_ix > 0);
+		draw_objects(trashcans, trashcan_groups, dstate, (is_cylin ? 0.08 : 0.10), shadow_only, is_cylin); // has_immediate_draw=cylinder
+	}
 	if (!shadow_only) { // low profile, not drawn in shadow pass
 		for (dstate.pass_ix = 0; dstate.pass_ix < 2; ++dstate.pass_ix) { // {dirt, stone}
 			draw_objects(planters, planter_groups, dstate, 0.1, shadow_only, 0); // dist_scale=0.1
