@@ -1343,7 +1343,7 @@ bool is_placement_blocked(cube_t const &cube, vect_cube_t const &blockers, cube_
 	cube_t query_cube(cube);
 	query_cube.expand_in_dim(exp_dim, expand);
 
-	for (auto b = blockers.begin(); b != blockers.end()+prev_blockers_end; ++b) {
+	for (auto b = blockers.begin(); b != blockers.begin()+prev_blockers_end; ++b) {
 		if (*b != exclude && b->intersects_xy_no_adj(query_cube)) return 1;
 	}
 	return 0;
