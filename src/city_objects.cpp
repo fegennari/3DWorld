@@ -185,13 +185,38 @@ trashcan_t::trashcan_t(point const &pos_, float radius_, float height, bool is_c
 void trashcan_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_draw &untex_qbd, float dist_scale, bool shadow_only) const {
 	if (is_cylin != (dstate.pass_ix == 1)) return; // wrong pass
 	if (!dstate.check_cube_visible(bcube, dist_scale)) return;
+	point const camera_bs(camera_pdu.pos - dstate.xlate);
 
 	if (is_cylin) { // cylindrical residential trashcan
 		point const camera_bs(camera_pdu.pos - dstate.xlate);
 		unsigned const ndiv(shadow_only ? 16 : max(4U, min(32U, unsigned(2.0f*dist_scale*dstate.draw_tile_dist/p2p_dist(camera_bs, pos)))));
-		float const cylin_radius(get_cylin_radius());
-		draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), point(pos.x, pos.y, bcube.z2()), cylin_radius, cylin_radius,
-			ndiv, 1, 4, 0, nullptr, 1.0, 0.0, nullptr, 0, 2.5); // draw sides + top, with texture repeated 2.5x
+		float const cylin_radius(get_cylin_radius()), lid_radius(1.08*cylin_radius), height(bcube.dz());
+		point const rim_center(pos.x, pos.y, (bcube.z1() + 0.88*height)), lid_center(pos.x, pos.y, (bcube.z1() + 0.96*bcube.dz()));
+		draw_fast_cylinder(point(pos.x, pos.y, bcube.z1()), rim_center, cylin_radius, cylin_radius, ndiv, 1, 0); // draw sides only
+
+		if (!shadow_only && bcube.closest_dist_less_than(camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) { // draw the lid
+			draw_fast_cylinder(rim_center, lid_center, lid_radius, lid_radius, ndiv, 1, 0, 0, nullptr, 0.1); // draw sides only with partial texture
+			draw_fast_cylinder(lid_center, point(pos.x, pos.y, bcube.z2()), lid_radius, 0.001*lid_radius, ndiv, 1, 0); // draw sides only; not quite a cone
+
+			if (bcube.closest_dist_less_than(camera_bs, 0.1*dist_scale*dstate.draw_tile_dist)) { // draw the handle
+				color_wrapper const gray(GRAY);
+				float const hlen(0.1*height), hwidth(0.02*height), thickness(0.005*height);
+				cube_t top;
+				set_wall_width(top, bcube.xc(), hwidth, 0);
+				set_wall_width(top, bcube.yc(), hlen,   1);
+				cube_t side(top); // copy xvals
+				side.z1() = bcube.z2() - 0.03*height;
+				side.z2() = top.z1() = bcube.z2() + 0.02*height;
+				top .z2() = top.z1() + thickness;
+				dstate.draw_cube(qbd, top, gray, 0, 0.001); // set tscale to map to a single texel
+
+				for (unsigned s = 0; s < 2; ++s) {
+					side.y1() = side.y2() = top.d[1][s];
+					side.d[1][!s] += (s ? -1.0 : 1.0)*thickness;
+					dstate.draw_cube(qbd, side, gray, 1, 0.001, 4); // set tscale to map to a single texel, skip top and bottom
+				}
+			}
+		}
 	}
 	else { // cube city/park trashcan
 		if (shadow_only) {dstate.draw_cube(qbd, bcube, WHITE, 1); return;} // draw a cube for the shadow
@@ -200,7 +225,7 @@ void trashcan_t::draw(draw_state_t &dstate, quad_batch_draw &qbd, quad_batch_dra
 		hole.expand_by_xy(-0.08*bcube.get_size()); // shrink on all XY sides
 		draw_xy_walls(bcube, hole, tan, 25.0, dstate, qbd); // sides
 
-		if (bcube.closest_dist_less_than((camera_pdu.pos - dstate.xlate), 0.4*dist_scale*dstate.draw_tile_dist)) {
+		if (bcube.closest_dist_less_than(camera_bs, 0.4*dist_scale*dstate.draw_tile_dist)) {
 			float const height(bcube.dz());
 			cube_t bottom(hole);
 			bottom.z2() -= 0.95*height;
