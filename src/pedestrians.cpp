@@ -20,7 +20,6 @@ extern object_model_loader_t building_obj_model_loader; // for umbrella model
 
 
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
-bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos);
 
 class person_name_gen_t {
 	bool loaded = 0;

@@ -3515,7 +3515,7 @@ cube_t get_building_lights_bcube() {return building_lights_manager.get_lights_bc
 // used for pedestrians in cities
 cube_t get_building_bcube(unsigned building_id) {return building_creator_city.get_building_bcube(building_id);}
 
-bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos) {
+bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos) { // for city buildings only
 	return building_creator_city.get_building_door_pos_closest_to(building_id, target_pos, door_pos);
 }
 bool check_line_coll_building(point const &p1, point const &p2, unsigned building_id) {return building_creator_city.check_line_coll_building(p1, p2, building_id);}

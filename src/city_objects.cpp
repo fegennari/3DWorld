@@ -1379,7 +1379,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 	unsigned const dividers_start(dividers.size()), prev_blockers_end(blockers.size());
 	float const min_pool_spacing_to_plot_edge(0.5*city_params.road_width);
 	colorRGBA const pool_side_colors[5] = {WHITE, WHITE, GRAY, LT_BROWN, LT_BLUE};
-	vect_cube_t bcubes;
+	vect_cube_with_ix_t bcubes; // we need the building index for the get_building_door_pos_closest_to() call
 
 	for (auto i = sub_plots.begin(); i != sub_plots.end(); ++i) {
 		// place plot dividers
@@ -1437,7 +1437,7 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 		if (have_buildings()) {get_building_bcubes(*i, bcubes);}
 		if (bcubes.empty()) continue; // no house, skip adding swimming pool
 		assert(bcubes.size() == 1); // there should be exactly one building/house in this sub-plot
-		cube_t const &house(bcubes.front());
+		cube_with_ix_t const &house(bcubes.front());
 		bool const dim((i->street_dir-1)>>1), dir((i->street_dir-1)&1); // direction to the road
 
 		// maybe place a trashcan next to the house
@@ -1449,16 +1449,18 @@ void city_obj_placer_t::place_residential_plot_objects(road_plot_t const &plot, 
 			if (house_side == 0) {tc_dim = dim; tc_dir = !dir;} // put it in the back yard
 			else {tc_dim = !dim; tc_dir = rgen.rand_bool();} // put it on a random side of the house
 			if (tc_radius > 4.0*house.get_sz_dim(!tc_dim)) continue; // house wall is too short - shouldn't happen in the normal case
-			point pos;
+			point pos, door_pos;
 			pos.z = i->z2();
 			pos[ tc_dim] = house.d[tc_dim][tc_dir] + (tc_dir ? 1.0 : -1.0)*1.5*tc_radius; // place near this wall of the house
 			pos[!tc_dim] = rgen.rand_uniform((house.d[!tc_dim][0] + tc_radius), (house.d[!tc_dim][1] - tc_radius));
 			trashcan_t const trashcan(pos, tc_radius, tc_height, 1); // is_cylin=1
 
 			if (!is_placement_blocked(trashcan.bcube, blockers, house, prev_blockers_end, 0.0, 0)) { // no expand
-				trashcan_groups.add_obj(trashcan, trashcans);
-				add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
-				break; // success
+				if (!get_building_door_pos_closest_to(house.ix, pos, door_pos) || !dist_xy_less_than(pos, door_pos, 2.0*tc_radius)) { // not too close to doors
+					trashcan_groups.add_obj(trashcan, trashcans);
+					add_cube_to_colliders_and_blockers(trashcan.bcube, colliders, blockers);
+					break; // success
+				}
 			}
 		} // for n
 
