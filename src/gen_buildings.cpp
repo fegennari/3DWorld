@@ -3086,7 +3086,10 @@ public:
 					if (!query_cube.intersects_xy(*b)) continue;
 					if (get_grid_ix(query_cube.get_llc().max(b->get_llc())) != (y*grid_sz + x)) continue; // add only if in home grid (to avoid duplicates)
 					if      (query_mode == 0) {cubes.push_back(*b);} // return building bcube
-					else if (query_mode == 1) {get_building(b->ix).maybe_add_house_driveway(query_cube, cubes, b->ix);} // return house driveways
+					else if (query_mode == 1) { // return house driveways
+						cube_t ret; // this will be the added driveway; if a valid driveway already connects the garage to the road, it will remain all zeros
+						if (get_building(b->ix).maybe_add_house_driveway(query_cube, ret, b->ix) && !ret.is_all_zeros()) {cubes.push_back(ret);} // ix not set
+					}
 					else {assert(0);} // invalid mode/not implemented
 				}
 			} // for x
