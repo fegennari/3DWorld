@@ -629,6 +629,7 @@ struct cube_with_ix_t : public cube_t {
 	cube_with_ix_t(unsigned ix_=0) : ix(ix_) {}
 	cube_with_ix_t(cube_t const &c, unsigned ix_=0) : cube_t(c), ix(ix_) {}
 };
+typedef vector<cube_with_ix_t> vect_cube_with_ix_t;
 
 
 vector3d get_poly_norm(point const *const points, bool normalize=1);

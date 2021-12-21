@@ -3072,7 +3072,8 @@ public:
 		return 1;
 	}
 
-	void query_for_cube(cube_t const &query_cube, vect_cube_t &cubes, int query_mode) const { // Note: called on init, don't need to use get_camera_coord_space_xlate()
+	// Note: called on init, don't need to use get_camera_coord_space_xlate()
+	template<typename RET> void query_for_cube(cube_t const &query_cube, vector<RET> &cubes, int query_mode) const {
 		if (empty()) return; // nothing to do
 		unsigned ixr[2][2];
 		get_grid_range(query_cube, ixr);
@@ -3095,8 +3096,9 @@ public:
 			} // for x
 		} // for y
 	}
-	void get_overlapping_bcubes      (cube_t const &xy_range, vect_cube_t &bcubes   ) const {return query_for_cube(xy_range, bcubes,    0);}
-	void add_house_driveways_for_plot(cube_t const &plot,     vect_cube_t &driveways) const {return query_for_cube(plot,     driveways, 1);}
+	void get_overlapping_bcubes      (cube_t const &xy_range, vect_cube_t         &bcubes) const {return query_for_cube(xy_range, bcubes,    0);}
+	void get_overlapping_bcubes      (cube_t const &xy_range, vect_cube_with_ix_t &bcubes) const {return query_for_cube(xy_range, bcubes,    0);}
+	void add_house_driveways_for_plot(cube_t const &plot,     vect_cube_t      &driveways) const {return query_for_cube(plot,     driveways, 1);}
 
 	void get_power_points(cube_t const &xy_range, vector<point> &ppts) const { // similar to above function, but returns points rather than cubes
 		if (empty()) return; // nothing to do
@@ -3490,9 +3492,11 @@ void clear_building_vbos() {
 
 // city interface
 void set_buildings_pos_range(cube_t const &pos_range) {global_building_params.set_pos_range(pos_range);}
-void get_building_bcubes(cube_t const &xy_range, vect_cube_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);} // Note: no xlate applied
-void get_building_power_points(cube_t const &xy_range, vector<point> &ppts) {building_creator_city.get_power_points(xy_range, ppts  );} // Note: no xlate applied
-void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways) {building_creator_city.add_house_driveways_for_plot(plot, driveways);} // Note: no xlate applied
+// Note: no xlate applied for any of these four queries below
+void get_building_bcubes(cube_t const &xy_range, vect_cube_with_ix_t &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
+void get_building_bcubes(cube_t const &xy_range, vect_cube_t         &bcubes) {building_creator_city.get_overlapping_bcubes(xy_range, bcubes);}
+void get_building_power_points(cube_t const &xy_range, vector<point> &ppts  ) {building_creator_city.get_power_points(xy_range, ppts);}
+void add_house_driveways_for_plot(cube_t const &plot, vect_cube_t &driveways) {building_creator_city.add_house_driveways_for_plot(plot, driveways);}
 void end_register_player_in_building();
 float get_max_house_size() {return global_building_params.get_max_house_size();}
 
