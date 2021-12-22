@@ -367,7 +367,7 @@ void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysiz
 	unsigned fbo_id(0);
 	enable_fbo(fbo_id, atlas.tid, 0, atlas.multisample); // too slow to create and free fbos every time?
 	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(atlas.nx*tsize, atlas.ny*tsize, atlas.multisample) : 0);
-	set_temp_clear_color(bkg_color); // FIXME: can only set a single clear color, should we draw a full quad to set the clear normal?
+	set_temp_clear_color(bkg_color); // TODO: can only set a single clear color; should we draw a full quad to set the clear normal?
 	vector3d xlate(2.0*xsize, 0.0, 0.0);
 	rotate_vector3d_by_vr(-plus_z, view_dir, xlate);
 	translate_to(-0.5*xlate);

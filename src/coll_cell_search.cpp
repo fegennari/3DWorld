@@ -327,7 +327,7 @@ bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsi
 
 colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal, bool fast) const {
 
-	// FIXME: model3d cobjs don't have cp.tid set here, they use textures from the model3d class + per-vertex tex coords
+	// Note: model3d cobjs don't have cp.tid set here, they use textures from the model3d class + per-vertex tex coords
 	if (cp.tid < 0) {return cp.color;}
 	if (fast)       {return get_avg_color();}
 

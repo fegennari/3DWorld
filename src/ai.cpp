@@ -830,7 +830,7 @@ float player_state::get_pos_cost(int smiley_id, point pos, point const &opos, po
 		float const dist(p2p_dist(pos, target_pos));
 		float const range(weapon_range(1));
 		if (check_dists && dist > range) return (3.0 + 0.01*dist); // out of weapon range
-		// FIXME: use target_in_range()?
+		// TODO: use target_in_range()?
 
 		if (is_targeting_smiley(target, smiley_id, pos)) { // enemy (or camera) is targeting me
 			float const enemy_range(sstates[target].weapon_range(1)); // use sstates[target].target_in_range?

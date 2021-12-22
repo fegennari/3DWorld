@@ -387,7 +387,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 	else if (model_coll) {
 		weight  *= model_color.get_luminance();
 		color    = color.modulate_with(model_color); // Note: model texture coords not available here - use average color
-		// FIXME: get this from the model?
+		// TODO: get this from the model?
 		// requires storing material id in each coll_tquad and calculating approx specular component from specular color and textures
 		specular = 0.0;
 		shine    = 1.0;
@@ -571,7 +571,7 @@ void kill_current_raytrace_threads() {
 void update_lmap_from_temp_copy() {
 
 	if (!thread_temp_lmap.was_updated) return; // no updates
-	float const blend_weight = 1.0; // FIXME: slow blend over time to reduce popping
+	float const blend_weight = 1.0; // TODO: slow blend over time to reduce popping
 	lmap_manager.copy_data(thread_temp_lmap, blend_weight);
 	thread_temp_lmap.was_updated = 0;
 	lmap_manager.was_updated     = 1;

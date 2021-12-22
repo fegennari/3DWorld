@@ -292,7 +292,7 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	pre_ref_camera_pos  = camera_pdu.pos;
 	pos_dir_up const old_camera_pdu(camera_pdu);
 	camera_pdu.apply_z_mirror(zval); // setup reflected camera frustum
-	// FIXME: use x/y bcube bounds to clip reflected view frustum
+	// TODO: use x/y bcube bounds to clip reflected view frustum
 	camera_pdu.near_ = max(camera_pdu.near_, min_camera_dist); // move near clip plane to closest edge of ref plane bcube (optimization)
 	//if (combined_gu) {draw_universe_bkg(1, 1);} // FIXME: infinite universe as background with no asteroid dust
 	pos_dir_up const refl_camera_pdu(camera_pdu);

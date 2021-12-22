@@ -363,7 +363,7 @@ void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 	cube_t const &bcube(cobj);
 	int llc[3], urc[3];
 	get_bcube_ix_bounds(bcube, llc, urc);
-	float const sphere_radius(0.5*vsz.mag()/num_test_pts); // FIXME: step the radius to generate grayscale intersection values?
+	float const sphere_radius(0.5*vsz.mag()/num_test_pts); // TODO: step the radius to generate grayscale intersection values?
 	float const dv(1.0/(num_test_pts*num_test_pts*num_test_pts));
 	vector3d const step_sz(vsz / num_test_pts);
 

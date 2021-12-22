@@ -300,8 +300,8 @@ class object_file_reader_model : public object_file_reader, public model_from_fi
 			}
 		}
 		read_to_newline(in, &name);
-		// FIXME: sometimes the -bm option can be after the filename instead
-		// however, this is difficult to differentiate from a filename with whitespace ahd hyphen, so we don't support it and require the user to update their file
+		// Note: sometimes the -bm option can be after the filename instead
+		// however, this is difficult to differentiate from a filename with whitespace and hyphen, so we don't support it and require the user to update their file
 		// unless it's "-bm 1", which seems to be the common case
 		if (endswith(name, " -bm 1")) {name = name.substr(0, name.size()-6);}
 		return 1;
@@ -775,7 +775,7 @@ public:
 					poly[p] = vert_norm_tc(v[V.vix], normal, tcoord.x, tcoord.y);
 					if (!colors.empty()) {assert(V.vix < colors.size()); poly.color += colors[V.vix];}
 				} // for p
-				if (!colors.empty()) {poly.color = poly.color/j->npts; poly.color.A = 1.0;} // FIXME: uses average vertex color for each face/polygon
+				if (!colors.empty()) {poly.color = poly.color/j->npts; poly.color.A = 1.0;} // uses average vertex color for each face/polygon, with alpha=1.0
 				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id);
 				pix += j->npts;
 			} // for j

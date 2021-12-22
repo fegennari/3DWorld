@@ -372,7 +372,7 @@ void process_univ_objects() {
 					double const a_radius(asteroid.radius*(norm*upos_point_type(ascale)).mag()), rsum(a_radius + radius);
 					
 					if (dist < rsum) {
-						// FIXME: detailed collision?
+						// TODO: detailed collision?
 						if (projectile) {} // projectile explosions damage the asteroid (reduce its radius? what if it's instanced?)
 						float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
 						upos_point_type const cpos(asteroid.pos + norm*min(rsum, 1.1*dist)); // move away from the asteroid, but limit the distance to smooth the response

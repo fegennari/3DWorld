@@ -3399,7 +3399,7 @@ void tile_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 bool tile_smap_data_t::needs_update(point const &lpos) {
 
 	//return smap_data_t::needs_update(lpos);
-	// FIXME: it would be better if we could just translate the shadow map when the scene shifts, but this seems fairly complex to track and get right
+	// Note: it would be better if we could just translate the shadow map when the scene shifts, but this seems fairly complex to track and get right
 	int const new_dxoff(xoff - xoff2), new_dyoff(yoff - yoff2);
 	bool const new_off(new_dxoff != dxoff || new_dyoff != dyoff);
 	dxoff = new_dxoff; dyoff = new_dyoff;

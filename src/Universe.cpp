@@ -3131,7 +3131,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 						check_asteroid_belt_coll(planet.asteroid_belt, curr, dir, dist, line_radius, system.cluster_id, sv[sc].index,
 							i, result, coll, ctest.dist, asteroid_dist, ldist);
 					}
-					// FIXME: test against exact planet contour?
+					// TODO: test against exact planet contour?
 					if (line_intersect_sphere(curr, dir, planet.pos, (p_radius+line_radius), rdist, ldist, t)) {
 						if (asteroid_dist > 0.0 && ldist > asteroid_dist) continue; // asteroid is closer
 						ctest.index = i;
@@ -3170,7 +3170,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 							float const m_radius(moon.radius);
 							if (!dist_less_than(curr, moon.pos, (m_radius + dist))) continue;
 
-							// FIXME: test against exact moon contour?
+							// TODO: test against exact moon contour?
 							if (line_intersect_sphere(curr, dir, moon.pos, (m_radius+line_radius), rdist, ldist, t)) {
 								if (t > 0.0 && ldist <= dist && ldist < ctest.dist) {
 									ctest.index = i; // line intersects moon

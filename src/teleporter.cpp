@@ -241,7 +241,7 @@ bool jump_pad::maybe_jump(point &opos, vector3d &obj_velocity, float oradius, in
 		assert(player_id >= CAMERA_ID && player_id < num_smileys);
 		player_state &ss(sstates[player_id]);
 		if (ss.jump_time > 0) return 0; // already jumping, not touching the ground/jump pad
-		ss.jump_time = 0.1*TICKS_PER_SECOND*velocity.z; // FIXME: only z velocity is used
+		ss.jump_time = 0.1*TICKS_PER_SECOND*velocity.z; // Note: only z velocity is used, so player can only jump straight up
 	}
 	gen_sound(SOUND_BOING, pos, 1.0, 1.0);
 	last_used_tfticks = tfticks;
