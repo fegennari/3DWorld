@@ -1362,7 +1362,6 @@ void uasteroid_belt::remove_asteroid(unsigned ix) {
 void uasteroid_cont::detach_asteroid(unsigned ix) {
 
 	assert(ix < size());
-	cout << "Detach asteroid " << ix << " of " << size() << endl; // TESTING
 	// create a new asteroid from the instance and copy all the parameters
 	uasteroid const &inst(operator[](ix));
 	uobj_asteroid *asteroid(uobj_asteroid::create(inst.pos, inst.radius, AST_FIELD_MODEL, inst.get_fragment_tid(inst.pos), inst.get_rseed(), 0)); // lt=0

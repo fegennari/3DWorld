@@ -394,9 +394,9 @@ void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 					float &v(get_ref(x, y, z));
 					v = max(v, val*filled_val);
 				}
-			}
-		}
-	}
+			} // for z
+		} // for x
+	} // for y
 }
 
 
