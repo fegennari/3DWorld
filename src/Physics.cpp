@@ -752,6 +752,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		flags &= ~XY_STOPPED;
 	}
 	float const radius(get_true_radius()), friction(otype.friction_factor);
+	bool const is_large(radius >= LARGE_OBJ_RAD);
 
 	if (status == 1 || type == LANDMINE) { // airborne
 		if (type == ROCKET && direction == 1) { // rapid fire rocket
@@ -857,8 +858,8 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (disabled()) return;
 
 		if (!ground_mode) { // tiled terrain
-			//if (sphere_int_tiled_terrain(pos, radius)) {coll = 1;} // FIXME
-			if ((otype.flags & COLL_DESTROYS) && pos != old_pos) {coll = 1;} // rocket clipped to city zval counts as a plot coll and should destroy the rocket
+			if (is_large && sphere_int_tiled_terrain(pos, radius)) {coll = 1;} // check for collisions with tiled terrain trees and scenery if large
+			if ((otype.flags & COLL_DESTROYS) && pos != old_pos)   {coll = 1;} // rocket clipped to city zval counts as a plot coll and should destroy the rocket
 		}
 		if (ground_mode && !coll) {flags &= ~Z_STOPPED;} // fix for landmine no longer stuck to cobj
 		
@@ -871,7 +872,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if (ground_mode && iter == 0) {surf_collide_obj();} // only supports blood and chunks for now
 			
 			if (object_bounce(0, cnorm, 0.0, radius)) {
-				if (radius >= LARGE_OBJ_RAD) {
+				if (is_large) {
 					modify_grass_at(pos, 2.0*radius, 1); // crush grass a lot
 					crush_snow_at_pt(pos, 2.0*radius);
 				}
@@ -915,9 +916,9 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 
 		if (val == 2) { // moved, recalculate velocity from position change
 			status = 3;
-			if (radius >= LARGE_OBJ_RAD) {check_vert_collision(obj_index, 1, iter);} // adds instability though
+			if (is_large) {check_vert_collision(obj_index, 1, iter);} // adds instability though
 			assert(tstep > 0.0);
-			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) {modify_grass_at(pos, radius, 1);} // crush grass
+			if (is_large && velocity != zero_vector) {modify_grass_at(pos, radius, 1);} // crush grass
 		}
 		else if (val == 1) { // stopped
 			if (ground_mode && (otype.flags & IS_PRECIP)) {
