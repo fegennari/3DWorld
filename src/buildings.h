@@ -1247,7 +1247,7 @@ struct ped_draw_vars_t {
 
 class water_sound_manager_t {
 	point const camera_bs;
-	point closest;
+	point closest; // in camera space
 	float dmin_sq;
 public:
 	water_sound_manager_t(point const &camera_bs_) : camera_bs(camera_bs_), dmin_sq(0.0) {}

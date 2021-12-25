@@ -2514,7 +2514,7 @@ void water_sound_manager_t::register_running_water(room_object_t const &obj, bui
 	if (fabs(obj.z2() - camera_bs.z) > building.get_window_vspace()) return; // on the wrong floor
 	point const pos(obj.get_cube_center());
 	float const dsq(p2p_dist_sq(pos, camera_bs));
-	if (dmin_sq == 0.0 || dsq < dmin_sq) {closest = pos; dmin_sq = dsq;}
+	if (dmin_sq == 0.0 || dsq < dmin_sq) {closest = building.local_to_camera_space(pos); dmin_sq = dsq;}
 }
 void water_sound_manager_t::finalize() {
 	if (dmin_sq == 0.0) return; // no water found
