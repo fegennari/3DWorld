@@ -1225,6 +1225,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 				floor_color = mat.house_floor_color;
 			}
 			else {floor_tex = mat.floor_tex; floor_color = mat.floor_color;} // office
+			// expand_by_xy(-get_trim_thickness()) to prevent z-fighting when AA is disabled? but that will leave small gaps where floors from adjacent parts meet
 			bdraw.add_section(*this, 0, *i, floor_tex, floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
 		}
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T

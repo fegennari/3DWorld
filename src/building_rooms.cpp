@@ -2499,6 +2499,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 	float const trim_height(0.04*window_vspacing), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness);
 	float const door_trim_exp(2.0*trim_thickness + 0.5*wall_thickness), door_trim_width(0.5*wall_thickness), floor_to_ceil_height(window_vspacing - floor_thickness);
 	float const trim_toler(0.1*trim_thickness); // required to handle wall intersections that were calculated with FP math and may misalign due to FP rounding error
+	float const ext_wall_toler(0.01*trim_thickness); // required to prevent z-fighting when AA is disabled
 	unsigned const flags(RO_FLAG_NOCOLL);
 	// ceiling trim disabled for large office buildings with outside corners because there's a lot of trim to add, and outside corners don't join correctly;
 	// ceiling trim also disabled for non-houses (all office buildings), because it doesn't really work with acoustic paneling
@@ -2612,7 +2613,8 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		for (unsigned dim = 0; dim < 2; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {
 				cube_t trim(*i);
-				trim.d[dim][!dir] = i->d[dim][dir] + (dir ? -1.0 : 1.0)*trim_thickness;
+				trim.d[dim][!dir]  = i->d[dim][dir] + (dir ? -1.0 : 1.0)*trim_thickness;
+				trim.d[dim][ dir] += (dir ? -1.0 : 1.0)*ext_wall_toler; // slight bias away from the exterior wall
 				unsigned const ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 				float z(i->z1() + fc_thick);
 
@@ -2692,6 +2694,7 @@ void building_t::add_wall_and_door_trim() { // and window trim
 		cube_t window(c); // copy dim <dim>
 		window.translate_dim(dim, dscale*window_offset);
 		window.d[dim][!dir] += dscale*window_trim_depth; // add thickness on interior of building
+		window.d[dim][ dir] += dscale*ext_wall_toler; // slight bias away from the exterior wall
 		unsigned ext_flags(flags | (dir ? RO_FLAG_ADJ_HI : RO_FLAG_ADJ_LO));
 
 		for (float z = tz1; z < tz2; z += 1.0) { // each floor
