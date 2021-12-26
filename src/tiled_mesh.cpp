@@ -129,7 +129,7 @@ vector3d get_camera_coord_space_xlate () {return vector3d((world_mode == WMODE_I
 bool enable_instanced_pine_trees() {
 	if (use_instanced_pine_trees) return 1;
 	float const ntrees_mult(vegetation*sm_tree_density*tree_density_thresh*tree_scale*tree_scale);
-	return (ENABLE_INST_PINE && (tree_mode & 2) && ntrees_mult >= ((tree_mode == 3) ? 3 : 8) && max_unique_trees > 0); // enable when there are lots of pine/palm trees
+	return (ENABLE_INST_PINE && (tree_mode & 2) && ntrees_mult >= ((tree_mode == 3) ? 3 : 4) && max_unique_trees > 0); // enable when there are lots of pine/palm trees
 }
 
 
