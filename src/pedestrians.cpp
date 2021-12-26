@@ -576,7 +576,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		if (avoid_entire_plot) {
 			avoid.push_back(avoid_area); // this is the highest priority
 
-			for (auto i = colliders.begin(); i != colliders.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
+			for (auto i = colliders.begin(); i != colliders.end(); ++i) { // exclude any cubes contained in the plot, since they're redundant
 				if (!avoid_area.contains_cube_xy(*i)) {add_and_expand_ped_avoid_cube(*i, avoid, expand, height);}
 			}
 			return; // done
@@ -592,7 +592,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
 	if (plot == dest_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
 
-	for (auto i = colliders.begin(); i != colliders.end(); ++i) { // remove any cubes contained in the plot, since they're redundant
+	for (auto i = colliders.begin(); i != colliders.end(); ++i) { // check colliders for this plot
 		if (plot == dest_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
 		add_and_expand_ped_avoid_cube(*i, avoid, expand, height);
 	}
