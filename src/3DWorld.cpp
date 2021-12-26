@@ -1711,6 +1711,7 @@ int load_config(string const &config_file) {
 	kwmb.add("draw_building_interiors", draw_building_interiors);
 	kwmb.add("reverse_3ds_vert_winding_order", reverse_3ds_vert_winding_order);
 	kwmb.add("disable_dlights", disable_dlights);
+	kwmb.add("enable_hcopter_shadows", enable_hcopter_shadows);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
