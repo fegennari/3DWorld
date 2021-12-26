@@ -49,10 +49,9 @@ vector<tree_branch>   tree_builder_t::branch_cache;
 vector<tree_branch *> tree_builder_t::branch_ptr_cache;
 
 
-// tree_mode: 0 = no trees, 1 = large only, 2 = small only, 3 = both large and small
 bool has_any_billboard_coll(0), next_has_any_billboard_coll(0), tree_4th_branches(0);
 unsigned max_unique_trees(0);
-int tree_mode(1), tree_coll_level(2);
+int tree_mode(1), tree_coll_level(2); // tree_mode: 0 = no trees, 1 = large only, 2 = small only, 3 = both large and small
 float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), tree_dead_prob(0.0), nleaves_scale(1.0), branch_radius_scale(1.0), tree_height_scale(1.0);
 float tree_lod_scales[4] = {0, 0, 0, 0}; // branch_start, branch_end, leaf_start, leaf_end
 colorRGBA leaf_base_color(BLACK);
@@ -1845,8 +1844,8 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 			temp_num2 = (j+2)*temp_num_big_branches/((num_2_branches_created+1)*(0.5f*branch.num_cylins+1));
 		}
 		else {
-			temp_num2 = (j+1)*branch.num_branches/((num_2_branches_created+1)*branch.num_cylins) +
-				              branch.num_branches/((num_2_branches_created+1)*branch.num_cylins);
+			int const denom(((num_2_branches_created+1)*branch.num_cylins));
+			temp_num2 = (j+1)*int(branch.num_branches)/denom + int(branch.num_branches)/denom;
 		}
 		if (temp_num2*branch_1_distribution >= 1.0f && num_2_branches_created < branch.num_branches) branch_just_created = true;
 		int const deg_added(generate_next_cylin(j, branch.num_cylins, branch_just_created, branch_deflected));
