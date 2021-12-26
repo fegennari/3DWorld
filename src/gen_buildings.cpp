@@ -2994,8 +2994,9 @@ public:
 	}
 
 	// Note: p1 and p2 are in building space
-	void update_zmax_for_line(point const &p1, point const &p2, float radius, float house_extra_zval, float &cur_zmax) const {
+	void update_zmax_for_line(point const &p1_in, point const &p2_in, float radius, float house_extra_zval, float &cur_zmax) const {
 		if (empty()) return;
+		point p1(p1_in.x, p1_in.y, cur_zmax), p2(p2_in.x, p2_in.y, cur_zmax); // use current/starting zmax for line end points
 		cube_t bcube(p1, p2);
 		bcube.expand_by_xy(radius);
 		unsigned ixr[2][2];
@@ -3006,22 +3007,25 @@ public:
 		for (unsigned y = ixr[0][1]; y <= ixr[1][1]; ++y) {
 			for (unsigned x = ixr[0][0]; x <= ixr[1][0]; ++x) {
 				grid_elem_t const &ge(get_grid_elem(x, y));
-				if (ge.bc_ixs.empty() || ge.bcube.z2() < cur_zmax) continue; // skip empty grid or grids below the line
+				if (ge.bc_ixs.empty() || (ge.bcube.z2() + house_extra_zval) < cur_zmax) continue; // skip empty grid or grids below the line
 				cube_t grid_bc(ge.bcube);
+				grid_bc.z2() += house_extra_zval; // assume it could be a house
 				grid_bc.expand_by_xy(radius);
 				if (!check_line_clip(p1, p2, grid_bc.d)) continue; // no intersection - skip this grid
 
 				for (auto b = ge.bc_ixs.begin(); b != ge.bc_ixs.end(); ++b) { // Note: okay to check the same building more than once
-					if (b->z2() < cur_zmax) continue;
 					cube_t bbc(*b);
-					bbc.expand_by_xy(radius);
-					if (!b->intersects(bbc) || !check_line_clip(p1, p2, bbc.d)) continue;
 					building_t const &building(get_building(b->ix));
+					if (building.is_house) {bbc.z2() += house_extra_zval;}
+					if (bbc.z2() < cur_zmax) continue; // building is not tall enough
+					bbc.expand_by_xy(radius);
+					if (!bcube.intersects(bbc) || !check_line_clip(p1, p2, bbc.d)) continue;
 					float t(1.0); // result is unused
 					// Note: unclear if we need to do a detailed line collision check, maybe testing the building bbox is good enough?
 					// if radius is passed in as nonzero, then simply assume it intersects because check_line_coll() can't easily take a radius value
 					if (radius > 0.0 || building.check_line_coll(p1, p2, t, points, 0, 1, 1)) {
-						max_eq(cur_zmax, (b->z2() + (building.is_house ? house_extra_zval : 0.0f)));
+						max_eq(cur_zmax, bbc.z2());
+						p1.z = p2.z = cur_zmax; // update line end points to match this new elevation so that line clipping works properly
 					}
 				} // for b
 			} // for x
