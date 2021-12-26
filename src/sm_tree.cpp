@@ -54,8 +54,8 @@ sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, wscale, hscale, c, ti
 };
 
 bool is_pine_tree_type(int type) {return (type == T_PINE || type == T_SH_PINE);}
-bool small_trees_enabled() {return ((tree_mode & 2) || !tree_placer.sm_blocks.empty());}
-bool are_trees_enabled  () {return ((tree_mode & 1) || !tree_placer.   blocks.empty());}
+bool small_trees_enabled() {return ((tree_mode & 2) || tree_placer.have_small_trees());}
+bool are_trees_enabled  () {return ((tree_mode & 1) || tree_placer.have_decid_trees());}
 
 int get_bark_tex_for_tree_type(int type) {
 	assert(type < NUM_ST_TYPES);
@@ -68,7 +68,6 @@ colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture) {
 	if (modulate_with_texture && bark_tid >= 0) {return c.modulate_with(texture_color(bark_tid));}
 	return c;
 }
-
 
 unsigned get_tree_inst_gpu_mem() {return tree_instances.get_gpu_mem();}
 
@@ -433,7 +432,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 	//timer_t timer("Gen Trees");
 	generated = 1; // mark as generated if we got here, even if there are no actual trees generated
 
-	if (world_mode == WMODE_INF_TERRAIN && !tree_placer.sm_blocks.empty()) { // now add pre-placed trees within the city (TT mode)
+	if (tree_placer.have_decid_trees()) { // now add pre-placed trees within the city (TT mode)
 		vector3d const xlate(-xoff2*DX_VAL, -yoff2*DY_VAL, 0.0);
 		cube_t const bounds(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), 0.0, 0.0); // Note: zvals are unused
 		float const tsize(calc_tree_size());
@@ -594,11 +593,12 @@ int get_tree_type_from_height(float zpos, rand_gen_t &rgen, bool for_scenery) {
 	return TREE_NONE; // never gets here
 }
 
-bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max) {
+bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max, bool skip_range_check_if_manually_placed) {
 
 	if (!small_trees_enabled()) return 0;
 	if (z_max < water_plane_z)  return 0; // underwater
 	if (force_tree_class >= 0) {return (force_tree_class != TREE_CLASS_NONE);}
+	if (skip_range_check_if_manually_placed && tree_placer.have_small_trees()) return 1;
 	float relh1(get_rel_height(z_min, -zmax_est, zmax_est)), relh2(get_rel_height(z_max, -zmax_est, zmax_est));
 	if (relh1 - tree_type_rand_zone > 0.9f) return 0; // too high
 	if (relh2 + tree_type_rand_zone > 0.6f) return 1; // can have pine trees
@@ -606,10 +606,11 @@ bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max) {
 	return (z_min < 0.85*water_plane_z && relh1 - 0.2*tree_type_rand_zone < 0.435); // can have palm trees
 }
 
-bool can_have_decid_trees_in_zrange(float z_min, float z_max) {
+bool can_have_decid_trees_in_zrange(float z_min, float z_max, bool skip_range_check_if_manually_placed) {
 
 	if (!are_trees_enabled())  return 0;
 	if (z_max < water_plane_z) return 0; // underwater
+	if (skip_range_check_if_manually_placed && tree_placer.have_decid_trees()) return 1;
 	float relh1(get_rel_height(z_min, -zmax_est, zmax_est));
 	if (relh1 - tree_type_rand_zone > 0.6f) return 0; // must have pine trees, or too high
 	return 1; // not worth checking plam tree case, since the rand zone overlaps with the water plane

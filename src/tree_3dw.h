@@ -455,6 +455,8 @@ struct tree_placer_t {
 	vector<tree_block> blocks, sm_blocks;
 	cube_t bcube, sm_bcube;
 
+	bool have_small_trees() const;
+	bool have_decid_trees() const;
 	void begin_block(bool is_sm_tree) {(is_sm_tree ? sm_blocks : blocks).push_back(tree_block());}
 	void add(point const &pos, float size, int type, bool allow_bush, bool is_sm_tree);
 	void clear() {blocks.clear(); sm_blocks.clear(); bcube = sm_bcube = cube_t();}

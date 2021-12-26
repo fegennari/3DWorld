@@ -1253,10 +1253,10 @@ bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns
 // *** trees ***
 
 bool tile_t::can_have_pine_palm_trees() const {
-	return (pine_trees_enabled() && can_have_trees() && can_have_pine_palm_trees_in_zrange(mzmin, mzmax));
+	return (pine_trees_enabled() && can_have_trees() && can_have_pine_palm_trees_in_zrange(mzmin, mzmax, 1)); // skip_range_check_if_manually_placed=1
 }
 bool tile_t::can_have_decid_trees() const {
-	return (decid_trees_enabled() && can_have_trees() && can_have_decid_trees_in_zrange(mzmin, mzmax));
+	return (decid_trees_enabled() && can_have_trees() && can_have_decid_trees_in_zrange   (mzmin, mzmax, 1)); // skip_range_check_if_manually_placed=1
 }
 
 void tile_t::init_pine_tree_draw() {

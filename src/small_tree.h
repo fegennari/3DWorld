@@ -146,6 +146,6 @@ struct small_tree_group : public vector<small_tree> {
 
 
 float calc_tree_size();
-bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max);
-bool can_have_decid_trees_in_zrange(float z_min, float z_max);
+bool can_have_pine_palm_trees_in_zrange(float z_min, float z_max, bool skip_range_check_if_manually_placed=0);
+bool can_have_decid_trees_in_zrange(float z_min, float z_max, bool skip_range_check_if_manually_placed=0);
 
