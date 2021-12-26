@@ -3418,9 +3418,11 @@ void draw_building_lights(vector3d const &xlate) {
 	//building_creator.draw_building_lights(xlate); // only city buildings for now
 }
 bool proc_buildings_sphere_coll(point &pos, point const &p_int, float radius, bool xy_only, vector3d *cnorm, bool check_interior, bool exclude_city) { // pos is in camera space
-	player_in_closet   = 0; // reset for this call
-	player_is_hiding   = 0;
-	player_in_elevator = 0;
+	if (check_interior) { // only called for the player
+		player_in_closet   = 0; // reset for this call
+		player_is_hiding   = 0;
+		player_in_elevator = 0;
+	}
 	// we generally won't intersect more than one of these categories, so we can return true without checking all cases
 	return ((!exclude_city && building_creator_city.check_sphere_coll(pos, p_int, radius, xy_only, cnorm, check_interior)) ||
 		                           building_creator.check_sphere_coll(pos, p_int, radius, xy_only, cnorm, check_interior) ||
