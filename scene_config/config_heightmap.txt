@@ -36,6 +36,8 @@ tree_size 0.2
 sm_tree_scale 0.8 # slightly smaller (palm trees in cities are too tall)
 tree_4th_branches 1
 nleaves_scale 1.0
+sm_tree_density 0.5
+init_tree_mode 3 # both large and small trees
 tree_lod_scale 0.24 0.2 0.24 0.2
 tt_grass_scale_factor 0.25
 num_bflies_per_tile 2
