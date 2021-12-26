@@ -739,7 +739,7 @@ colorRGBA plant_base::get_plant_color(vector3d const &xlate) const {
 }
 
 
-int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager) {
+int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts) {
 
 	vbo_mgr_ix = -1;
 	int const ret(plant_base::create(x, y, use_xy, minz));
@@ -748,13 +748,13 @@ int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_
 	else          {type = rand2() % NUM_LAND_PLANT_TYPES;} // land plant
 	radius = rand_uniform2(0.0025, 0.0045)/tree_scale;
 	height = rand_uniform2(0.2, 0.4)/tree_scale + 0.025;
-	gen_points(vbo_manager);
+	gen_points(vbo_manager, pts);
 	return 1;
 }
 
-void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager) {
+void s_plant::create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts) {
 	create_no_verts(pos_, height_, radius_, type_, calc_z);
-	gen_points(vbo_manager);
+	gen_points(vbo_manager, pts);
 }
 
 void s_plant::create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z, bool land_plants_only) {
@@ -809,10 +809,9 @@ void s_plant::create_leaf_points(vector<vert_norm_comp> &points, float plant_sca
 	}
 }
 
-void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
+void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts) {
 
 	if (vbo_mgr_ix >= 0) return; // already generated
-	vector<vert_norm_comp> &pts(vbo_manager.temp_points);
 	create_leaf_points(pts, tree_scale);
 	assert(!pts.empty());
 	vbo_mgr_ix = vbo_manager.add_points_with_offset(pts, get_leaf_color());
@@ -830,7 +829,7 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 			for (unsigned n = 0; n < num; ++n, t += dt) {
 				berries.push_back(start + t*(end - start) + rgen.signed_rand_vector(err));
 			}
-		}
+		} // for i
 	}
 }
 
@@ -838,8 +837,9 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 void s_plant::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager) {
 
 	assert(vbo_mgr_ix >= 0);
-	create_leaf_points(vbo_manager.temp_points, tree_scale);
-	vbo_manager.update_range(vbo_manager.temp_points, get_leaf_color(), vbo_mgr_ix, vbo_mgr_ix+1);
+	static vector<vert_norm_comp> pts; // reused across calls
+	create_leaf_points(pts, tree_scale);
+	vbo_manager.update_range(pts, get_leaf_color(), vbo_mgr_ix, vbo_mgr_ix+1);
 }
 
 bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager) {
@@ -1237,7 +1237,7 @@ void scenery_group::do_rock_damage(point const &pos, float radius, float damage)
 void scenery_group::add_plant(point const &pos, float height, float radius, int type, int calc_z) {
 	assert(height > 0.0 && radius > 0.0);
 	plants.push_back(s_plant());
-	plants.back().create2(pos, height, radius, type, calc_z, plant_vbo_manager);
+	plants.back().create2(pos, height, radius, type, calc_z, plant_vbo_manager, temp_pts);
 }
 void scenery_group::add_leafy_plant(point const &pos, float radius, int type, int calc_z) {
 	assert(radius > 0.0);
@@ -1275,7 +1275,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			}
 			else if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants but we now have 35% plants
 				s_plant plant; // 35%
-				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {
+				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager, temp_pts)) {
 					if (!check_valid_scenery_pos(plant)) continue;
 					plants.push_back(plant);
 					plant.add_bounds_to_bcube(all_bcube);

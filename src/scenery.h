@@ -197,13 +197,13 @@ public:
 	colorRGBA const &get_leaf_color() const;
 	colorRGBA const &get_stem_color() const;
 	int get_leaf_tid() const;
-	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager);
-	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager);
+	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts);
+	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts);
 	void create_no_verts(point const &pos_, float height_, float radius_, int type_, int calc_z=0, bool land_plants_only=0);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
 	void create_leaf_points(vector<vert_norm_comp> &points, float plant_scale, float nlevels_scale=1.0, unsigned nrings=3) const;
-	void gen_points(vbo_vnc_block_manager_t &vbo_manager);
+	void gen_points(vbo_vnc_block_manager_t &vbo_manager, vector<vert_norm_comp> &pts);
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager);
 	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager);
 	bool is_shadowed() const;
@@ -256,6 +256,7 @@ class scenery_group {
 	vbo_vnt_block_manager_t rock_vbo_manager;
 	vbo_vnt_block_manager_t leafy_vbo_manager;
 	cube_t all_bcube;
+	vector<vert_norm_comp> temp_pts;
 
 public:
 	bool generated;
