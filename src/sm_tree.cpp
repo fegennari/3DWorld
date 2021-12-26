@@ -97,18 +97,23 @@ void small_tree_group::finalize(bool low_detail) {
 }
 
 
-void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) {
+void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) { // called in tiled terrain mode
 
 	if (empty() || is_uploaded(low_detail)) return;
+	//timer_t timer("Tree Finalize");
 
 	if (instanced && !low_detail) {
 		tree_instances.finalize_upload_and_clear_pts(0); // high detail
 		return;
 	}
 	//RESET_TIME;
+	static vector<vert_norm_comp_color> reused_pts;
+	vbo_vnc_block_manager_t &vbo_mgr(vbo_manager[low_detail]);
+	vbo_mgr.swap_points(reused_pts); // use the possibly pre-allocated points rather than allocating a new vector
 	finalize(low_detail);
 	//if (!low_detail) {PRINT_TIME("Finalize");}
-	vbo_manager[low_detail].upload_and_clear_points();
+	vbo_mgr.upload();
+	vbo_mgr.swap_points(reused_pts); // make reused_pts available to other tiles
 	//if (!low_detail) {PRINT_TIME("Finalize + Upload");}
 }
 
@@ -630,7 +635,7 @@ colorRGBA colorgen(float r1, float r2, float g1, float g2, float b1, float b2, r
 }
 
 
-void gen_small_trees() {
+void gen_small_trees() { // called in ground mode
 
 	if (num_trees == 0) return;
 	//RESET_TIME;

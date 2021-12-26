@@ -207,9 +207,9 @@ public:
 	void begin_render() const;
 	void end_render() const {post_render();}
 	void clear_points() {vector<vert_type_t>().swap(pts);}
+	void swap_points(vector<vert_type_t> &other_pts) {pts.swap(other_pts);}
 	vector<vert_type_t> &get_pts_vector_for_adding() {return pts;}
 	void clear(bool free_pts_mem=1);
-	void upload_and_clear_points() {upload(); clear_points();}
 	unsigned get_gpu_mem() const {return ((vbo_valid() && has_data()) ? offsets.back()*sizeof(vert_type_t) : 0);}
 };
 
