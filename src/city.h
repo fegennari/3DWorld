@@ -889,6 +889,7 @@ public:
 	bool has_nearby_car(pedestrian_t const &ped, bool road_dim, float delta_time, vect_cube_t *dbg_cubes=nullptr) const;
 	bool has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vect_cube_t *dbg_cubes) const;
 	bool has_car_at_pt(point const &pos, unsigned city, bool is_parked) const;
+	bool has_parked_car_on_path(point const &p1, point const &p2, unsigned city) const;
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center);
 public:
 	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) :

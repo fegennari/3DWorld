@@ -562,12 +562,17 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 				cube_t approach_area(dest_cube);
 				approach_area.d[dim][dir] = plot_bcube.d[dim][dir]; // expand out to the plot
 				approach_area.expand_by_xy(radius); // add a small fudge factor
+				bool use_proxy_pt(0);
 
 				if (!approach_area.contains_pt(pos)) { // not in approach area - walk around the plot
-					// update dest_pos to use the proxy point along the sidewalk across from our destination as the next path point
-					dest_pos[ dim]    = plot_bcube.d[dim][dir];
-					dest_pos[!dim]    = dest_cube.get_center_dim(!dim);
-					avoid_entire_plot = 1;
+					avoid_entire_plot = use_proxy_pt = 1;
+				}
+				else if (has_dest_bldg && !dist_xy_less_than(pos, dest_pos, radius) && ped_mgr.has_parked_car_on_path(pos, dest_pos, city)) {
+					use_proxy_pt = 1; // we're in front of the building, but there's a car in the way, and we're not quite across from the door, so keep walking
+				}
+				if (use_proxy_pt) { // update dest_pos to use the proxy point along the sidewalk across from our destination as the next path point
+					dest_pos[ dim] = plot_bcube.d[dim][dir];
+					dest_pos[!dim] = dest_cube.get_center_dim(!dim);
 				}
 			} // else we can walk through this plot
 		}
@@ -1166,7 +1171,6 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 }
 
 bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parked) const {
-	
 	assert(city < cars_by_city.size());
 	car_city_vect_t const &cv(cars_by_city[city]);
 
@@ -1185,6 +1189,16 @@ bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parke
 				}
 			}
 		}
+	}
+	return 0;
+}
+
+bool ped_manager_t::has_parked_car_on_path(point const &p1, point const &p2, unsigned city) const {
+	assert(city < cars_by_city.size());
+	car_city_vect_t const &cv(cars_by_city[city]);
+
+	for (auto c = cv.parked_car_bcubes.begin(); c != cv.parked_car_bcubes.end(); ++c) {
+		if (check_line_clip(p1, p2, c->d)) return 1;
 	}
 	return 0;
 }
