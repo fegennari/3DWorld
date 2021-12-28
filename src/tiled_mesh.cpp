@@ -1999,6 +1999,7 @@ int tile_t::get_tid_under_point(point const &pos) const {
 bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos, float inc_trees) const {
 
 	if (is_distant) return 0; // Note: this can be made to work, but won't work as-is
+	assert(!is_nan(v1) && !is_nan(v2));
 	point v1c(v1), v2c(v2); // clipped verts
 	
 	if (do_line_clip(v1c, v2c, get_mesh_bcube().d)) {
@@ -2006,6 +2007,7 @@ bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int
 		int const xp1(get_xpos(v1c.x) - x1 - xoff + xoff2), yp1(get_ypos(v1c.y) - y1 - yoff + yoff2);
 		int const xp2(get_xpos(v2c.x) - x1 - xoff + xoff2), yp2(get_ypos(v2c.y) - y1 - yoff + yoff2);
 		int const dx(xp2 - xp1), dy(yp2 - yp1), steps(max(1, max(abs(dx), abs(dy))));
+		assert(steps < 10000); // sanity check
 		double const dz((double)v2c.z - (double)v1c.z), xinc(dx/(double)steps), yinc(dy/(double)steps), zinc(dz/(double)steps);
 		double x(xp1), y(yp1), z(v1c.z - 0.1*fabs(zinc)); // z offset required to avoid problems with zval at bcube.z1
 

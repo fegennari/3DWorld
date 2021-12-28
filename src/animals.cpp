@@ -361,7 +361,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		
 		if (cur_dp < min_dp) { // face us toward our destination
 			if (prev_dp >= min_dp) {dir = prev_dir;} // revert to previous dir
-			else { // slowly merge to dest_dir
+			else if (dest_dir != zero_vector) { // slowly merge to dest_dir, if valid
 				float const blend(pow(0.1, delta_t)*min_dp);
 				dir = ((1.0 - blend)*dir + blend*dest_dir).get_norm();
 			}
@@ -374,8 +374,9 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	else {
 		dest_alignment = 0.0;
 	}
-	float const delta_z(0.4*alt_change*delta_t*radius);
-	velocity = (vmag/dir.mag())*dir;
+	float const delta_z(0.4*alt_change*delta_t*radius), dir_mag(dir.mag());
+	if (dir_mag < TOLERANCE) {dir = plus_x; velocity = vmag*dir;} // avoid divide-by-zero; unclear if this can happen
+	else {velocity = (vmag/dir_mag)*dir;}
 	pos   += velocity*delta_t;
 	time  += delta_t; // controls wing speed
 	if (dest_alignment > 0.75 && fabs(pos.z - cur_dest.z) < fabs(delta_z)) {pos.z = cur_dest.z;} // use exact alignment if possible
@@ -415,7 +416,7 @@ bool butterfly_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		dir.negate(); // just negate the direction because we don't have the collision normal
 		velocity.negate();
 	}
-	else if (pos != prev_pos) {
+	else if (pos.x != prev_pos.x || pos.y != prev_pos.y) {
 		dir   = (pos - prev_pos); // align direction to velocity vector
 		dir.z = 0.0; // always level
 		dir.normalize();
