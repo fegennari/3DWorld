@@ -571,7 +571,7 @@ void car_draw_state_t::draw_car(car_t const &car, bool is_dlight_shadows, bool i
 			v[ dim] += 0.1*length*SIGN(v[ dim]); // increase length slightly
 			v[!dim] += 0.1*length*SIGN(v[!dim]); // increase width  slightly
 			v   += center;
-			v.z += 0.02*car.height; // shift up slightly to avoid z-fighting
+			v.z += 0.06*car.height; // shift up slightly to avoid z-fighting; needs to be a bit higher for driveways
 		}
 		/*if (!car.headlights_on()) { // daytime, adjust shadow to match sun pos
 			vector3d const sun_dir(0.5*length*(center - get_sun_pos()).get_norm());
