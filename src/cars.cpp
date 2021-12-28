@@ -313,7 +313,11 @@ bool car_t::front_intersects_car(car_t const &c) const {
 
 void car_t::honk_horn_if_close() const {
 	point const pos(get_center());
-	if (dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 1.0)) {gen_sound(SOUND_HORN, pos);}
+	
+	if (dist_less_than((pos + get_tiled_terrain_model_xlate()), get_camera_pos(), 1.0)) {
+#pragma omp critical(gen_sound)
+		gen_sound(SOUND_HORN, pos);
+	}
 }
 void car_t::honk_horn_if_close_and_fast() const {
 	if (cur_speed > 0.25*max_speed) {honk_horn_if_close();}
@@ -1124,6 +1128,8 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 	float const shadow_thresh(1.0f*(X_SCENE_SIZE + Y_SCENE_SIZE)); // ~1 tile
 	point const xlate(get_camera_coord_space_xlate()), camera_bs(camera_pdu.pos - xlate);
 	vector3d const shadow_dir(-get_light_pos().get_norm()); // primary light direction (sun/moon)
+	float dmin_sq(0.0);
+	point closest_pos;
 
 	for (auto i = helicopters.begin(); i != helicopters.end(); ++i) {
 		if (i->state == helicopter_t::STATE_WAIT) { // stopped, assumed on a helipad
@@ -1229,6 +1235,9 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			if (i->velocity != zero_vector) {
 				i->blade_rot += 0.75*clamp_fticks; // rotate the blade; should this scale with velocity?
 				if (i->blade_rot > TWO_PI) {i->blade_rot -= TWO_PI;} // keep rotation value small
+				point const center(i->bcube.get_cube_center());
+				float const dist_sq(p2p_dist_sq(center, camera_bs));
+				if (dmin_sq == 0.0 || dist_sq < dmin_sq) {dmin_sq = dist_sq; closest_pos = center;}
 			}
 			// helicopter dynamic shadows look really neat, but significantly reduce framerate; enable with backslash key
 			i->dynamic_shadow = 0;
@@ -1257,6 +1266,11 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			}
 		} // end moving case
 	} // for i
+	// player a looping helicopter sound if close, but don't attenuate the gain with distance because it will only be updated at the beginning of each loop
+	if (dist_less_than(closest_pos, camera_bs, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+#pragma omp critical(gen_sound)
+		gen_sound(SOUND_HELICOPTER, closest_pos, 1.0, 1.0, 0, zero_vector, 1); // skip_if_already_playing=1
+	}
 	// show flight path debug lines?
 }
 

@@ -154,6 +154,7 @@ public:
 		add_new_sound("flowingwater.wav");// SOUND_SINK
 		add_new_sound("metal_door.wav" ); // SOUND_METAL_DOOR
 		add_new_sound("doorbell.wav"   ); // SOUND_DOORBELL
+		add_new_sound("helicopter.wav" ); // SOUND_HELICOPTER
 		cout << endl;
 
 		// create sources
