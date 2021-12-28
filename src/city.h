@@ -867,6 +867,7 @@ class ped_manager_t { // pedestrians
 	int get_road_ix_for_ped_crossing(pedestrian_t const &ped, bool road_dim) const;
 	bool draw_ped(pedestrian_t const &ped, shader_t &s, pos_dir_up const &pdu, vector3d const &xlate, float def_draw_dist, float draw_dist_sq,
 		bool &in_sphere_draw, bool shadow_only, bool is_dlight_shadows, bool enable_animations);
+	car_city_vect_t const &get_cars_for_city(unsigned city) const {assert(city < cars_by_city.size()); return cars_by_city[city];}
 public:
 	friend class city_spectate_manager_t;
 	// for use in pedestrian_t, mostly for collisions and path finding
@@ -890,6 +891,7 @@ public:
 	bool has_nearby_car_on_road(pedestrian_t const &ped, bool dim, unsigned road_ix, float delta_time, vect_cube_t *dbg_cubes) const;
 	bool has_car_at_pt(point const &pos, unsigned city, bool is_parked) const;
 	bool has_parked_car_on_path(point const &p1, point const &p2, unsigned city) const;
+	void get_parked_car_bcubes_for_plot(cube_t const &plot, unsigned city, vect_cube_t &car_bcubes) const;
 	bool choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center);
 public:
 	ped_manager_t(city_road_gen_t const &road_gen_, car_manager_t const &car_manager_) :

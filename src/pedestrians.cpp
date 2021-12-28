@@ -578,6 +578,17 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		}
 		else {avoid_entire_plot = 1;} // not our destination plot, we can't walk through any residential properties
 
+		if (!in_the_road) { // include collider bcubes for cars parked in house driveways
+			static vect_cube_t car_bcubes; // reused across calls
+			car_bcubes.clear();
+			ped_mgr.get_parked_car_bcubes_for_plot(plot_bcube, city, car_bcubes);
+
+			for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) {
+				i->expand_by_xy(0.75*radius); // use smaller collision radius
+				if (avoid_entire_plot && avoid_area.contains_cube_xy(*i)) continue; // contained within the plot cube we're avoiding
+				avoid.push_back(*i);
+			}
+		}
 		if (avoid_entire_plot) {
 			avoid.push_back(avoid_area); // this is the highest priority
 
@@ -595,10 +606,10 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 	get_building_bcubes(cur_plot, avoid);
 	expand_cubes_by_xy(avoid, expand); // expand building cubes in x and y to approximate a cylinder collision (conservative)
 	//remove_cube_if_contains_pt_xy(avoid, pos); // init coll cases (for example from previous dest_bldg) are handled by path_finder_t
-	if (plot == dest_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
+	if (is_home_plot && has_dest_bldg) {remove_cube_if_contains_pt_xy(avoid, dest_pos);} // exclude our dest building, we do want to collide with it
 
 	for (auto i = colliders.begin(); i != colliders.end(); ++i) { // check colliders for this plot
-		if (plot == dest_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
+		if (is_home_plot && has_dest_car && i->contains_pt_xy(dest_pos)) continue; // exclude our dest car, we do want to collide with it
 		add_and_expand_ped_avoid_cube(*i, avoid, expand, height);
 	}
 }
@@ -1171,8 +1182,7 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 }
 
 bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parked) const {
-	assert(city < cars_by_city.size());
-	car_city_vect_t const &cv(cars_by_city[city]);
+	car_city_vect_t const &cv(get_cars_for_city(city));
 
 	if (is_parked) { // handle parked cars case
 		for (auto c = cv.parked_car_bcubes.begin(); c != cv.parked_car_bcubes.end(); ++c) {
@@ -1194,8 +1204,7 @@ bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parke
 }
 
 bool ped_manager_t::has_parked_car_on_path(point const &p1, point const &p2, unsigned city) const {
-	assert(city < cars_by_city.size());
-	car_city_vect_t const &cv(cars_by_city[city]);
+	car_city_vect_t const &cv(get_cars_for_city(city));
 
 	for (auto c = cv.parked_car_bcubes.begin(); c != cv.parked_car_bcubes.end(); ++c) {
 		if (check_line_clip(p1, p2, c->d)) return 1;
@@ -1203,9 +1212,16 @@ bool ped_manager_t::has_parked_car_on_path(point const &p1, point const &p2, uns
 	return 0;
 }
 
+void ped_manager_t::get_parked_car_bcubes_for_plot(cube_t const &plot, unsigned city, vect_cube_t &car_bcubes) const {
+	car_city_vect_t const &cv(get_cars_for_city(city));
+
+	for (auto c = cv.parked_car_bcubes.begin(); c != cv.parked_car_bcubes.end(); ++c) {
+		if (c->intersects_xy(plot)) {car_bcubes.push_back(*c);}
+	}
+}
+
 bool ped_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center) {
-	assert(city_id < cars_by_city.size());
-	car_city_vect_t const &cv(cars_by_city[city_id]);
+	car_city_vect_t const &cv(get_cars_for_city(city_id));
 	if (cv.parked_car_bcubes.empty()) return 0;
 	car_ix     = rgen.rand() % cv.parked_car_bcubes.size(); // Note: car_ix is stored in ped dest_bldg and doesn't get used after that
 	plot_id    = cv.parked_car_bcubes[car_ix].ix;
