@@ -90,10 +90,12 @@ void small_tree_group::finalize(bool low_detail) {
 	vbo_mgr.clear(0); // clear_pts_mem = 0
 	vbo_mgr.reserve_pts(num_pine_trees*(low_detail ? 1 : PINE_TREE_NPTS));
 	if (!low_detail) {vbo_mgr.reserve_offsets(num_pine_trees);}
-	//if (!low_detail) {for (auto i = begin(); i != end(); ++i) {i->alloc_pine_tree_pts(vbo_mgr);}} // correct, but doesn't seem to help
-#pragma omp parallel for schedule(static,1) num_threads(3) if (!low_detail)
+#pragma omp parallel for schedule(static,1) num_threads(4) if (!low_detail)
 	for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_points(vbo_mgr, low_detail);}
-	for (const_iterator i = begin(); i != end(); ++i) {palm_vbo_mem += i->get_palm_mem();}
+
+	if (num_pine_trees > 0) {
+		for (const_iterator i = begin(); i != end(); ++i) {palm_vbo_mem += i->get_palm_mem();}
+	}
 }
 
 
@@ -942,7 +944,7 @@ void small_tree::calc_palm_tree_points() {
 		verts[vix++].assign(p27, n2, cw.c); // 7
 		verts[vix++].assign(p14, n2, cw.c); // 4
 		verts[vix++].assign(p5,  n2, cw.c); // 5
-	}
+	} // for n
 	// Note: vbo_manager is unused, but we could put the palm verts into it, though perf seems okay with individual VBOs
 }
 
