@@ -581,7 +581,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		if (!in_the_road) { // include collider bcubes for cars parked in house driveways
 			static vect_cube_t car_bcubes; // reused across calls
 			car_bcubes.clear();
-			ped_mgr.get_parked_car_bcubes_for_plot(plot_bcube, city, car_bcubes); // TODO: should include cars in driveways that are not parked
+			ped_mgr.get_parked_car_bcubes_for_plot(plot_bcube, city, car_bcubes);
 
 			for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) {
 				i->expand_by_xy(0.75*radius); // use smaller collision radius
@@ -1179,7 +1179,7 @@ bool ped_manager_t::has_nearby_car_on_road(pedestrian_t const &ped, bool dim, un
 	return 0;
 }
 
-bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parked) const {
+bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parked) const { // intended for use with parking lots
 	car_city_vect_t const &cv(get_cars_for_city(city));
 
 	if (is_parked) { // handle parked cars case
@@ -1188,39 +1188,45 @@ bool ped_manager_t::has_car_at_pt(point const &pos, unsigned city, bool is_parke
 		}
 	}
 	else { // check all dims/dirs of non-parked cars
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				auto const &cars(cv.cars[dim][dir]);
+		for (unsigned d = 0; d < 4; ++d) {
+			auto const &cars(cv.cars[d>>1][d&1]);
 
-				for (auto c = cars.begin(); c != cars.end(); ++c) {
-					if (c->bcube.contains_pt_xy(pos)) return 1;
-				}
+			for (auto c = cars.begin(); c != cars.end(); ++c) {
+				if (c->bcube.contains_pt_xy(pos)) return 1;
 			}
 		}
 	}
 	return 0;
 }
 
+// these two functions are intended for use with cars in driveways
 bool ped_manager_t::has_parked_car_on_path(point const &p1, point const &p2, unsigned city) const {
 	car_city_vect_t const &cv(get_cars_for_city(city));
 
-	for (auto c = cv.parked_car_bcubes.begin(); c != cv.parked_car_bcubes.end(); ++c) {
-		if (check_line_clip(p1, p2, c->d)) return 1;
+	for (unsigned v = 0; v < 2; ++v) { // check both parked and sleeping cars
+		vect_cube_with_ix_t const &cars(v ? cv.sleeping_car_bcubes : cv.parked_car_bcubes);
+
+		for (auto c = cars.begin(); c != cars.end(); ++c) {
+			if (check_line_clip(p1, p2, c->d)) return 1;
+		}
 	}
 	return 0;
 }
-
 void ped_manager_t::get_parked_car_bcubes_for_plot(cube_t const &plot, unsigned city, vect_cube_t &car_bcubes) const {
 	car_city_vect_t const &cv(get_cars_for_city(city));
 
-	for (auto c = cv.parked_car_bcubes.begin(); c != cv.parked_car_bcubes.end(); ++c) {
-		if (c->intersects_xy(plot)) {car_bcubes.push_back(*c);}
+	for (unsigned v = 0; v < 2; ++v) { // check both parked and sleeping cars
+		vect_cube_with_ix_t const &cars(v ? cv.sleeping_car_bcubes : cv.parked_car_bcubes);
+
+		for (auto c = cars.begin(); c != cars.end(); ++c) {
+			if (c->intersects_xy(plot)) {car_bcubes.push_back(*c);}
+		}
 	}
 }
 
 bool ped_manager_t::choose_dest_parked_car(unsigned city_id, unsigned &plot_id, unsigned &car_ix, point &car_center) {
 	car_city_vect_t const &cv(get_cars_for_city(city_id));
-	if (cv.parked_car_bcubes.empty()) return 0;
+	if (cv.parked_car_bcubes.empty()) return 0; // no parked cars; excludes sleeping cars in driveways
 	car_ix     = rgen.rand() % cv.parked_car_bcubes.size(); // Note: car_ix is stored in ped dest_bldg and doesn't get used after that
 	plot_id    = cv.parked_car_bcubes[car_ix].ix;
 	car_center = cv.parked_car_bcubes[car_ix].get_cube_center();

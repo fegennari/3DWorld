@@ -205,7 +205,7 @@ struct car_t : public car_base_t, public waiting_obj_t { // size = 100
 
 struct car_city_vect_t {
 	vector<car_base_t> cars[2][2]; // {dim x dir}
-	vector<cube_with_ix_t> parked_car_bcubes; // stores car bcube + plot_ix
+	vect_cube_with_ix_t parked_car_bcubes, sleeping_car_bcubes; // stores car bcube + plot_ix
 	void clear_cars();
 	void clear() {clear_cars(); parked_car_bcubes.clear();}
 };

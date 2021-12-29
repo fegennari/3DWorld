@@ -773,6 +773,7 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 
 void car_city_vect_t::clear_cars() {
 	for (unsigned d = 0; d < 2; ++d) {cars[d][0].clear(); cars[d][1].clear();}
+	sleeping_car_bcubes.clear();
 }
 
 void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) const {
@@ -787,7 +788,8 @@ void car_manager_t::extract_car_data(vector<car_city_vect_t> &cars_by_city) cons
 		if (i->cur_city >= cars_by_city.size()) {cars_by_city.resize(i->cur_city+1);}
 		auto &dest(cars_by_city[i->cur_city]);
 		if (!i->is_parked()) {dest.cars[i->dim][i->dir].push_back(*i);} // moving on road
-		else if (add_parked_cars) {dest.parked_car_bcubes.emplace_back(i->bcube, i->cur_road);} // parked, not yet updated
+		else if (i->is_sleeping()) {dest.sleeping_car_bcubes.emplace_back(i->bcube, i->cur_road);} // cars stopped in driveways
+		else if (add_parked_cars)  {dest.parked_car_bcubes  .emplace_back(i->bcube, i->cur_road);} // parked, not yet updated
 	}
 }
 
