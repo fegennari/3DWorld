@@ -61,6 +61,9 @@ tex_range_t parking_lot_t::get_tex_range(float ar) const { // ar is unused
 	return tex_range_t(tx, ty, (xscale*(d ? dy() : dx()) + tx), (yscale*(d ? dx() : dy()) + ty), 0, d);
 }
 
+void driveway_t::mark_ped_this_frame() const {last_ped_frame = frame_counter;} // can/must be const; last_ped_frame is mutable
+bool driveway_t::has_recent_ped() const {return (frame_counter <= (int)last_ped_frame+1);} // allow one frame lag so that it doesn't matter which thread updates first
+
 tex_range_t driveway_t::get_tex_range(float ar) const { // ar is unused
 	float txy[2] = {2.0, 2.0};
 	txy[dim] *= get_length()/get_width(); // ensure 1:1 texture scale

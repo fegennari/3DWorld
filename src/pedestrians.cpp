@@ -581,7 +581,7 @@ void pedestrian_t::get_avoid_cubes(ped_manager_t const &ped_mgr, vect_cube_t con
 		if (!in_the_road) { // include collider bcubes for cars parked in house driveways
 			static vect_cube_t car_bcubes; // reused across calls
 			car_bcubes.clear();
-			ped_mgr.get_parked_car_bcubes_for_plot(plot_bcube, city, car_bcubes);
+			ped_mgr.get_parked_car_bcubes_for_plot(plot_bcube, city, car_bcubes); // TODO: should include cars in driveways that are not parked
 
 			for (auto i = car_bcubes.begin(); i != car_bcubes.end(); ++i) {
 				i->expand_by_xy(0.75*radius); // use smaller collision radius
@@ -647,10 +647,8 @@ void pedestrian_t::move(ped_manager_t const &ped_mgr, cube_t const &plot_bcube, 
 
 				// check for crossing the side (not end) of the driveway this frame; use next pos assuming we're not stopped
 				if (dw_extend.contains_pt_xy(pos)) {
-					// Flag the driveway as blocked so that cars don't pull into it?
-					// But how do we unset the flag when we leave the driveway? Iterate over driveways and reset each frame? Must be thread safe.
-					// And would this deadlock if the car and ped are waiting on each other?
-					//++dw.driveway->ped_count; // if multiple peds are in the driveway, we need to increment a counter
+					// would this deadlock if the car and ped are waiting on each other?
+					dw.driveway->mark_ped_this_frame(); // flag the driveway as blocked so that cars don't pull into it
 				}
 				else if (dw_wider.contains_pt_xy(pos) && dw_extend.contains_pt_xy(pos + 1.5f*fticks*dir*speed)) {
 					car_base_t const *const car(ped_mgr.find_car_using_driveway(city, dw));
