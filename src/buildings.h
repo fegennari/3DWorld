@@ -1198,6 +1198,7 @@ public:
 };
 
 struct vect_building_t : public vector<building_t> {
+	vect_cube_with_ix_t building_to_person;
 	void ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, unsigned p_start, unsigned p_end, float delta_dir, rand_gen_t &rgen);
 };
 

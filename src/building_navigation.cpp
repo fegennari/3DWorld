@@ -1225,17 +1225,42 @@ void building_t::move_person_to_not_collide(pedestrian_t &person, pedestrian_t c
 
 // Note: non-const because this updates room lights
 void vect_building_t::ai_room_update(vector<building_ai_state_t> &ai_state, vector<pedestrian_t> &people, unsigned p_start, unsigned p_end, float delta_dir, rand_gen_t &rgen) {
-	//timer_t timer("Building People Update"); // ~3.7ms for 50K people, 0.55ms with distance check
+	//timer_t timer("Building People Update"); // ~6.7ms for 55K people, 0.39ms with distance check (avg for 2 calls city + secondary, 502/1383 people)
 	assert(p_start < p_end);
 	point const camera_bs(get_camera_building_space());
 	float const dmax(1.5f*(X_SCENE_SIZE + Y_SCENE_SIZE));
+	unsigned const num_buildings(size());
 	ai_state.resize(people.size());
 
-	for (auto i = (people.begin() + p_start); i != (people.begin() + p_end); ++i) {
-		if (!dist_less_than(i->pos, camera_bs, dmax)) continue; // too far away, no updates
-		unsigned const bix(i->dest_bldg), pix(i - people.begin());
-		assert(bix < size());
-		operator[](bix).ai_room_update(ai_state[pix], rgen, people, delta_dir, pix, STAY_ON_ONE_FLOOR); // dispatch to the correct building
+	if ((p_end - p_start) > num_buildings) { // more people than buildings: build a mapping from person to building and iterate over buildings
+		if (building_to_person.empty()) { // generate on the first call; people don't switch buildings, so their ordering is constant
+			building_to_person.resize(num_buildings + 1); // add 1 for terminator
+			unsigned person_ix(p_start);
+		
+			for (unsigned bix = 0; bix < num_buildings; ++bix) {
+				building_to_person[bix] = cube_with_ix_t(operator[](bix).bcube, person_ix);
+				while (person_ix < p_end && people[person_ix].dest_bldg <= bix) {++person_ix;} // skip over the rest of the people assigned to this building
+			}
+			assert(person_ix == p_end);
+			building_to_person.back().ix = p_end; // add the terminator
+		}
+		assert(building_to_person.size() == num_buildings+1);
+
+		for (unsigned bix = 0; bix < num_buildings; ++bix) {
+			cube_with_ix_t const &c(building_to_person[bix]);
+			if (!c.closest_dist_less_than(camera_bs, dmax)) continue; // building is too far
+			unsigned const iter_end(building_to_person[bix+1].ix);
+			assert(c.ix <= iter_end);
+			for (unsigned pix = c.ix; pix < iter_end; ++pix) {operator[](bix).ai_room_update(ai_state[pix], rgen, people, delta_dir, pix, STAY_ON_ONE_FLOOR);}
+		}
+	}
+	else { // more buildings than people: iterate directly over people
+		for (auto i = (people.begin() + p_start); i != (people.begin() + p_end); ++i) {
+			if (!dist_less_than(i->pos, camera_bs, dmax)) continue; // too far away, no updates
+			unsigned const bix(i->dest_bldg), pix(i - people.begin());
+			assert(bix < size());
+			operator[](bix).ai_room_update(ai_state[pix], rgen, people, delta_dir, pix, STAY_ON_ONE_FLOOR); // dispatch to the correct building
+		}
 	}
 }
 
