@@ -247,7 +247,7 @@ bool cube_t::closest_dist_less_than(point const &pos, float dist) const {
 	return dist_less_than(pos, closest_pt(pos), dist);
 }
 bool cube_t::closest_dist_xy_less_than(point const &pos, float dist) const {
-	return dist_xy_less_than(pos, closest_pt(pos), dist);
+	return dist_xy_less_than(pos, point(max(x1(), min(x2(), pos.x)), max(y1(), min(y2(), pos.y)), 0.0), dist);
 }
 
 int cube_t::closest_face(point const &pos) const {
