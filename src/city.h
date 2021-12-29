@@ -129,7 +129,7 @@ struct car_base_t { // the part needed for the pedestrian interface (size = 48)
 	short dest_driveway; // -1 is unset
 	float max_speed, cur_speed;
 
-	car_base_t() : bcube(all_zeros), dim(0), dir(0), stopped_at_light(0), cur_road_type(TYPE_RSEG), turn_dir(TURN_NONE),
+	car_base_t() : dim(0), dir(0), stopped_at_light(0), cur_road_type(TYPE_RSEG), turn_dir(TURN_NONE),
 		cur_city(0), cur_road(0), cur_seg(0), dest_driveway(-1), max_speed(0.0), cur_speed(0.0) {}
 	point get_center() const {return bcube.get_cube_center();}
 	unsigned get_orient() const {return (2*dim + dir);}

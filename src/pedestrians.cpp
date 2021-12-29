@@ -1038,8 +1038,10 @@ void ped_manager_t::move_ped_to_next_plot(pedestrian_t &ped) {
 void ped_manager_t::next_frame() {
 	if (!animate2) return; // nothing to do (only applies to moving peds)
 	float const delta_dir(1.2*(1.0 - pow(0.7f, fticks))); // controls pedestrian turning rate
-
 	// Note: peds and peds_b can be processed in parallel, but that doesn't seem to make a significant difference in framerate
+	// update people in buildings first, so that it can overlap with car sort and spend less time in the modify_car_data critical section
+	if (!peds_b.empty()) {update_building_ai_state(peds_b, delta_dir);}
+
 	if (!peds.empty()) {
 		//timer_t timer("Ped Update"); // ~4.2ms for 10K peds; 1ms for sparse per-city update
 		// Note: should make sure this is after sorting cars, so that road_ix values are actually in order; however, that makes things slower, and is unlikely to make a difference
@@ -1066,7 +1068,6 @@ void ped_manager_t::next_frame() {
 		if (need_to_sort_peds) {sort_by_city_and_plot();}
 		first_frame = 0;
 	}
-	if (!peds_b.empty()) {update_building_ai_state(peds_b, delta_dir);} // update people in buildings
 }
 
 pedestrian_t const *ped_manager_t::get_ped_at(point const &p1, point const &p2) const { // Note: p1/p2 in local TT space

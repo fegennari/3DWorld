@@ -772,7 +772,7 @@ void car_manager_t::add_helicopters(vect_cube_t const &hp_locs) {
 }
 
 void car_city_vect_t::clear_cars() {
-	for (unsigned d = 0; d < 2; ++d) {cars[d][0].clear(); cars[d][1].clear();}
+	for (unsigned d = 0; d < 4; ++d) {cars[d>>1][d&1].clear();}
 	sleeping_car_bcubes.clear();
 }
 
