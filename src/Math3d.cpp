@@ -310,7 +310,7 @@ bool sphere_intersect_poly_sides(vector<tquad_t> const &pts, point const &center
 
 
 bool pt_line_seg_dist_less_than(point const &P, point const &L1, point const &L2, float dist) {
-	if (dot_product(P-L1, P-L2) > 0.0) return 0; // pt not between s1 and s2
+	if (dot_product(P-L1, P-L2) > 0.0) return 0; // pt not between s1 and s2; but what if it's within dist of L1 or L2?
 	return pt_line_dist_less_than(P, L1, L2, dist);
 }
 
