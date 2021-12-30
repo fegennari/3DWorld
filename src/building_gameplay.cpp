@@ -1209,7 +1209,8 @@ bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 	auto &decal_mgr(interior->room_geom->decal_manager);
 	room_object_t const &obj(tape_manager.tape);
 	float const thickness(obj.dz()), pad_dist(0.1*thickness);
-	point const pos(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
+	point pos(player_pos + (1.5f*get_scaled_player_radius())*cview_dir);
+	interior->line_coll(*this, player_pos, pos, pos); // clip the camera ray to any geometry to avoid putting the point on the wrong side of a wall
 	point sound_pos;
 	float sound_gain(0.0);
 
