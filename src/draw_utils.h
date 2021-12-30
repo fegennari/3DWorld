@@ -98,10 +98,6 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 	vector<vert_norm_tc_color> verts;
 
 	void add_quad_pts(point const pts[4], color_wrapper const &cw, vector3d const &n=plus_z, tex_range_t const &tr=tex_range_t());
-	void add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n=plus_z, tex_range_t const &tr=tex_range_t()) {
-		color_wrapper cw; cw.set_c4(c);
-		add_quad_pts(pts, cw, n, tr);
-	}
 	void add_quad_pts_vert_norms(vert_norm const pts[4], color_wrapper const &cw, tex_range_t const &tr=tex_range_t());
 	void add_quad_pts_vert_norms(point const pts[4], vector3d const n[4], color_wrapper const &cw, tex_range_t const &tr=tex_range_t());
 	void add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n=plus_z, tex_range_t const &tr=tex_range_t());
