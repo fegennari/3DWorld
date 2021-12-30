@@ -1207,6 +1207,13 @@ void rotate_xy(point &pt, point const &origin, float angle) {
 	pt.y = cos_term*yv + sin_term*xv + origin.y;
 }
 
+void building_t::maybe_inv_rotate_pos_dir(point &pos, vector3d &dir) const {
+	if (is_rotated()) {
+		do_xy_rotate_inv(bcube.get_cube_center(), pos);
+		do_xy_rotate_normal_inv(dir);
+	}
+}
+
 bool building_t::check_cube_contained_in_part(cube_t const &c) const {
 	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 		if (p->contains_cube(c)) return 1;
