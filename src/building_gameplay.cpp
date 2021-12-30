@@ -1188,6 +1188,7 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 	return 1;
 }
 
+// adds two back-to-back quads for two sided lighting
 void add_tape_quad(point const &p1, point const &p2, float height, colorRGBA const &color, quad_batch_draw &qbd) {
 	vector3d const dir(p2 - p1), zoff(0.5*height*plus_z);
 	vector3d normal(cross_product(dir, plus_z).get_norm());
@@ -1195,6 +1196,11 @@ void add_tape_quad(point const &p1, point const &p2, float height, colorRGBA con
 	qbd.add_quad_pts(pts, color,  normal);
 	swap(pts[1], pts[3]); // swap winding order and draw with reversed normal for two sided lighting
 	qbd.add_quad_pts(pts, color, -normal);
+}
+
+void building_t::play_tape_sound(point const &sound_pos, float sound_gain) const {
+	gen_sound_thread_safe(get_sound_id_for_file("tape.wav"), local_to_camera_space(sound_pos), sound_gain);
+	register_building_sound(sound_pos, 0.35*sound_gain);
 }
 
 bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
@@ -1238,12 +1244,49 @@ bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 		int const delta_use_count(round_fp(0.5f*delta/thickness));
 		if (!player_inventory.update_last_item_use_count(delta_use_count)) {tape_manager.clear();} // check if we ran out of tape
 	}
-	if (sound_gain > 0.0) { // play a tape sound
-		gen_sound_thread_safe(get_sound_id_for_file("tape.wav"), local_to_camera_space(sound_pos), sound_gain);
-		register_building_sound(sound_pos, 0.35*sound_gain);
-	}
+	if (sound_gain > 0.0) {play_tape_sound(sound_pos, sound_gain);}
 	tape_manager.last_pos = pos;
 	return 1;
+}
+
+// returns the index of the first quad vertex, or -1 if no intersection found
+int tape_quad_batch_draw::moving_vert_cyilin_int_tape(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, float slow_amt) const {
+	if (verts.empty()) return -1;
+	assert(!(verts.size() % 12)); // must be a multiple of 12 (pairs of quads formed from two triangles)
+	assert(slow_amt >= 0.0 && slow_amt <= 1.0); // 0.0 => no change to cur_pos, 1.0 => move back to prev_pos
+	cylinder_3dw const cylin(point(cur_pos.x, cur_pos.y, z1), point(cur_pos.x, cur_pos.y, z2), radius, radius);
+
+	for (unsigned i = 0; i < verts.size(); i += 12) { // iterate over pairs of back-to-back quads
+		point const &p1(verts[i].v), &p2(verts[i+1].v); // get two opposite corners of the first quad, which approximates the line of the tape
+		if (dist_less_than(p1, p2, 2.0*radius)) continue; // skip short lines
+		if (!line_intersect_cylinder(p1, p2, cylin, 1)) continue; // check_ends=1
+		if (pt_line_dist(prev_pos, p1, p2) < pt_line_dist(cur_pos, p1, p2)) continue; // new point is further from the line - moving away, skip
+		if (slow_amt > 0.0) {cur_pos = slow_amt*prev_pos + (1.0 - slow_amt)*cur_pos;}
+		return i;
+	}
+	return -1; // not found
+}
+void tape_quad_batch_draw::split_tape_at(unsigned first_vert, point const &pos, float min_zval) {
+	assert(first_vert+12 <= verts.size());
+	assert(!(first_vert % 12)); // must be the start of a quad pair
+
+	for (auto i = verts.begin()+first_vert; i != verts.begin()+first_vert+12; ++i) {
+		i->v = all_zeros; // for now, just zero out all verts to remove (not draw) this tape quad
+	}
+}
+
+// Note: cur_pos.z should be between z1 and z2
+void building_t::handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius) const {
+	if (!has_room_geom()) return;
+	tape_quad_batch_draw &tape_qbd(interior->room_geom->decal_manager.tape_qbd); // Note: technically, this violates const-ness of this function
+	// first, test if tape is very close, and if so, break it; otherwise, slow down the player/AI when colliding with tape
+	int const vert_ix(tape_qbd.moving_vert_cyilin_int_tape(cur_pos, prev_pos, z1, z2, 0.2*radius, 0.0)); // 20% radius, slow_amt=0.0
+	
+	if (vert_ix >= 0) {
+		tape_qbd.split_tape_at(vert_ix, cur_pos, z1); // min_zval=z1
+		play_tape_sound(cur_pos, 1.0);
+	}
+	else {tape_qbd.moving_vert_cyilin_int_tape(cur_pos, prev_pos, z1, z2, radius, 0.85);} // slow_amt=0.85
 }
 
 // spraypaint, markers, and decals

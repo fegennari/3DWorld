@@ -540,13 +540,19 @@ struct obj_model_inst_t {
 	obj_model_inst_t(unsigned oid, vector3d const &d) : obj_id(oid), dir(d) {}
 };
 
+struct tape_quad_batch_draw : public quad_batch_draw {
+	int moving_vert_cyilin_int_tape(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, float slow_amt) const;
+	void split_tape_at(unsigned first_vert, point const &pos, float min_zval);
+};
+
 struct paint_draw_t {
 	quad_batch_draw qbd[2]; // {spraypaint, markers}
 	void draw_paint() const;
 };
 struct building_decal_manager_t {
 	paint_draw_t paint_draw[2]; // {interior, exterior}
-	quad_batch_draw blood_qbd, tp_qbd, tape_qbd, pend_tape_qbd;
+	quad_batch_draw blood_qbd, tp_qbd, pend_tape_qbd;
+	tape_quad_batch_draw tape_qbd; // for tape, but not pend_tape because it hasn't been placed yet
 
 	void commit_pend_tape_qbd();
 	void draw_building_interior_decals(bool player_in_building, bool shadow_only) const;
@@ -1027,6 +1033,7 @@ struct building_t : public building_geom_t {
 	bool check_for_wall_ceil_floor_int(point const &p1, point const &p2) const;
 	bool maybe_use_last_pickup_room_object(point const &player_pos);
 	bool maybe_update_tape(point const &player_pos, bool end_of_tape);
+	void handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius) const;
 	void draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occlusion_checker_noncity_t &oc, vector3d const &xlate, vect_cube_t &ped_bcubes,
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
@@ -1188,6 +1195,7 @@ private:
 	bool get_zval_of_floor(point const &pos, float radius, float &zval) const;
 	bool get_zval_for_obj_placement(point const &pos, float radius, float &zval, bool add_z_bias) const;
 	void add_blood_decal(point const &pos);
+	void play_tape_sound(point const &sound_pos, float sound_gain) const;
 public:
 	// ray queries
 	bool check_line_intersect_doors(point const &p1, point const &p2) const;

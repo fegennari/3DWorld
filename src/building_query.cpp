@@ -360,7 +360,8 @@ cube_t get_closet_bcube_including_door(room_object_t const &c) {
 }
 
 // Note: used for the player; pos and p_last are already in rotated coordinate space
-// default player is actually too large to fit through doors and too tall to fit between the floor and celing, so player size/height must be reduced in the config file
+// default player is actually too large to fit through doors and too tall to fit between the floor and celing,
+// so player size/height must be reduced in the config file
 bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vect_cube_t const &ped_bcubes, float radius, bool xy_only, vector3d *cnorm) const {
 	pos.z = bcube.z1(); // start at building z1 rather than the terrain height in case we're at the foot of a steep hill
 	assert(interior);
@@ -466,6 +467,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		pos += normal*(r_sum - dist);
 		had_coll = 1;
 	} // for i
+	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_zh, xy_radius);
 	return had_coll; // will generally always be true due to floors
 }
 
