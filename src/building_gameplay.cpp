@@ -1189,10 +1189,10 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 }
 
 // adds two back-to-back quads for two sided lighting
-void add_tape_quad(point const &p1, point const &p2, float height, colorRGBA const &color, quad_batch_draw &qbd) {
-	vector3d const dir(p2 - p1), zoff(0.5*height*plus_z);
-	vector3d normal(cross_product(dir, plus_z).get_norm());
-	point pts[4] = {(p1 - zoff), (p1 + zoff), (p2 + zoff), (p2 - zoff)};
+void add_tape_quad(point const &p1, point const &p2, float width, color_wrapper const &color, quad_batch_draw &qbd, vector3d const &wdir=plus_z) {
+	vector3d const dir(p2 - p1), wvect(0.5*width*wdir);
+	vector3d normal(cross_product(dir, wdir).get_norm());
+	point pts[4] = {(p1 - wvect), (p1 + wvect), (p2 + wvect), (p2 - wvect)};
 	qbd.add_quad_pts(pts, color,  normal);
 	swap(pts[1], pts[3]); // swap winding order and draw with reversed normal for two sided lighting
 	qbd.add_quad_pts(pts, color, -normal);
@@ -1252,16 +1252,19 @@ bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 // returns the index of the first quad vertex, or -1 if no intersection found
 int tape_quad_batch_draw::moving_vert_cyilin_int_tape(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, float slow_amt) const {
 	if (verts.empty()) return -1;
+	if (cur_pos == prev_pos) return -1; // stopped, no effect
 	assert(!(verts.size() % 12)); // must be a multiple of 12 (pairs of quads formed from two triangles)
 	assert(slow_amt >= 0.0 && slow_amt <= 1.0); // 0.0 => no change to cur_pos, 1.0 => move back to prev_pos
 	cylinder_3dw const cylin(point(cur_pos.x, cur_pos.y, z1), point(cur_pos.x, cur_pos.y, z2), radius, radius);
 
 	for (unsigned i = 0; i < verts.size(); i += 12) { // iterate over pairs of back-to-back quads
 		point const &p1(verts[i].v), &p2(verts[i+1].v); // get two opposite corners of the first quad, which approximates the line of the tape
-		if (dist_less_than(p1, p2, 2.0*radius)) continue; // skip short lines
+		if (dist_xy_less_than(p1, p2, 2.0*radius)) continue; // skip short lines; ignore zval to skip already split vertical tape segments
 		if (!line_intersect_cylinder(p1, p2, cylin, 1)) continue; // check_ends=1
 		if (pt_line_dist(prev_pos, p1, p2) < pt_line_dist(cur_pos, p1, p2)) continue; // new point is further from the line - moving away, skip
 		if (slow_amt > 0.0) {cur_pos = slow_amt*prev_pos + (1.0 - slow_amt)*cur_pos;}
+		// hack to avoid intersection with just-placed tape: skip if prev pos also intersects when not slowing
+		else if (line_intersect_cylinder(p1, p2, cylinder_3dw(point(prev_pos.x, prev_pos.y, z1), point(prev_pos.x, prev_pos.y, z2), radius, radius), 1)) continue;
 		return i;
 	}
 	return -1; // not found
@@ -1269,10 +1272,29 @@ int tape_quad_batch_draw::moving_vert_cyilin_int_tape(point &cur_pos, point cons
 void tape_quad_batch_draw::split_tape_at(unsigned first_vert, point const &pos, float min_zval) {
 	assert(first_vert+12 <= verts.size());
 	assert(!(first_vert % 12)); // must be the start of a quad pair
+	point p1(verts[first_vert].v), p2(verts[first_vert+1].v); // get two opposite corners of the first quad; copy to avoid invalid reference
+	// find the lengths of both hanging segments, clipped to min_zval (the floor)
+	float const d1(p2p_dist(p1, pos)), d2(p2p_dist(p2, pos)), t(d1/(d1 + d2)); // find split point
+	float const width(p2p_dist(p1, verts[first_vert+2].v));
+	float const len(p2p_dist(p1, p2)), len1(min(t*len, (p1.z - min_zval))), len2(min((1.0f - t)*len, (p2.z - min_zval))); // should be positive?
+	// find the bottom points of the two hanging segments
+	vector3d const dir((p2 - p1).get_norm());
+	//p1 += 0.1*width*dir; p2 -= 0.1*width*dir; // shift all points slightly inward to avoid z-fighting
+	point const p1b(p1.x, p1.y, p1.z-len1), p2b(p2.x, p2.y, p2.z-len2);
+	vector3d wdir(cross_product(dir, plus_z).get_norm()); // segments hang with normal oriented toward the split point/along the original dir
+	color_wrapper const cw(verts[first_vert]);
 
-	for (auto i = verts.begin()+first_vert; i != verts.begin()+first_vert+12; ++i) {
-		i->v = all_zeros; // for now, just zero out all verts to remove (not draw) this tape quad
+	if (len1 > 0.0) {
+		unsigned const verts_start(verts.size());
+		add_tape_quad(p1, p1b, width, cw, *this, wdir);
+		assert(verts.size() == verts_start+12);
+		for (unsigned i = 0; i < 12; ++i) {verts[first_vert+i] = verts[verts_start+i];} // overwrite old verts with new verts
+		verts.resize(verts_start); // remove new verts
 	}
+	else { // zero length segment, overwrite with zeros to remove this quad
+		for (unsigned i = 0; i < 12; ++i) {verts[first_vert+i].v = zero_vector;}
+	}
+	if (len2 > 0.0) {add_tape_quad(p2, p2b, width, cw, *this, -wdir);} // add the other segment
 }
 
 // Note: cur_pos.z should be between z1 and z2
