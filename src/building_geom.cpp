@@ -1283,7 +1283,7 @@ tquad_with_ix_t building_t::set_door_from_cube(cube_t const &c, bool dim, bool d
 	return door;
 }
 tquad_with_ix_t building_t::set_interior_door_from_cube(door_t const &door) const {
-	unsigned const type(is_house ? tquad_with_ix_t::TYPE_IDOOR : tquad_with_ix_t::TYPE_ODOOR); // house or office door
+	unsigned const type(is_house ? (unsigned)tquad_with_ix_t::TYPE_IDOOR : (unsigned)tquad_with_ix_t::TYPE_ODOOR); // house or office door
 	return set_door_from_cube(door, door.dim, door.open_dir, type, 0.0, 0, door.open, 0, 0, door.hinge_side);
 }
 
