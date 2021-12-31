@@ -1791,7 +1791,34 @@ void building_room_geom_t::add_bed(room_object_t const &c, bool inc_lg, bool inc
 					top.expand_in_dim(dim, -post_width); // remove overlaps with the post
 					wood_mat.add_cube_to_verts(top, color, tex_origin, get_skip_mask_for_xy(dim));
 				}
-				// TODO: add material to the top?
+				// add material to the top
+				bool const shadowed(0); // partially transparent: sadly, we can't make it partially shadow casting
+				//rgeom_mat_t &canopy_mat(get_material(sheet_tex, shadowed)); // TODO: use a different texture
+				//rgeom_mat_t &canopy_mat(get_untextured_material(shadowed, 0, 0, 1)); // transparent=1
+				rgeom_mat_t &canopy_mat(get_untextured_material(shadowed));
+				colorRGBA const base_color(WHITE*0.3 + c.color.modulate_with(texture_color(sheet_tex.tid))*0.7); // brighter version of sheet color, 30% white
+				colorRGBA const color(apply_light_color(c, base_color)); // partially transparent?
+				float const dz(posts[0].z2() - c.z1()), offset(0.0001*dz); // full bed height
+				cube_t canopy(c);
+				canopy.expand_by(offset); // expand slightly to prevent z-fighting with the bed posts and top frame
+				canopy.z1() = canopy.z2() = posts[0].z2(); // copy zvals from the first post z2, since they're all the same; zero height
+				canopy_mat.add_cube_to_verts(canopy, color, tex_origin, ~EF_Z12); // draw top and bottom face only (double sided)
+				// calculat triangle offsets to avoid z-fighting so that the last triangle drawn is in front so that alpha blending works properly
+				float const tri_offs[4][2] = {{0,0}, {0,-offset}, {offset,0}, {offset,offset}};
+
+				for (unsigned i = 0; i < 4; ++i) { // add triangles on the two exterior sides of each post
+					bool const dx(i&1), dy(i>>1);
+
+					for (unsigned d = 0; d < 2; ++d) {
+						point corner(canopy.d[0][dx], canopy.d[1][dy], canopy.z1());
+						corner[d] += tri_offs[i][d];
+						point const bot(corner.x, corner.y, corner.z-0.5f*dz);
+						point top(corner);
+						top[d] += ((d ? dy : dx) ? -1.0 : 1.0)*0.67*canopy.get_sz_dim(d); // shift 2/3 the way along the top side
+						point const verts[3] = {corner, bot, top};
+						canopy_mat.add_triangle_to_verts(verts, color, 1); // two_sided=1
+					} // for d
+				} // for i
 			}
 		}
 		if (!no_mattress) {
