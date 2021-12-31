@@ -639,7 +639,8 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	}
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_lit() || !i->is_light_type()) continue; // light not on, or not a light or lamp
-		point const lpos(i->get_cube_center()); // centered in the light fixture
+		point lpos(i->get_cube_center()); // centered in the light fixture
+		min_eq(lpos.z, (i->z2() - 0.0125f*window_vspacing)); // make sure the light isn't too close to the ceiling (if shifted up to avoid a door intersection)
 		point lpos_rot(lpos);
 		if (is_rotated()) {do_xy_rotate(building_center, lpos_rot);}
 		if (!lights_bcube.contains_pt_xy(lpos_rot)) continue; // not contained within the light volume
