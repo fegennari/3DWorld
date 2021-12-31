@@ -250,6 +250,24 @@ void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, b
 	assert(indices.back() < itri_verts.size());
 }
 
+void rgeom_mat_t::add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided) {
+	color_wrapper cw(color);
+	norm_comp normal(get_poly_norm(v));
+	float const ts[3] = {0.0, 0.0, 1.0}, tt[3] = {0.0, 1.0, 0.0}; // hard-coded for now, maybe pass in?
+
+	for (unsigned side = 0; side < 2; ++side) {
+		for (unsigned n = 0; n < 3; ++n) {
+			indices.push_back(itri_verts.size()); // since we only support indexed triangles, we have to assign each vertex its own index
+			unsigned const ix(side ? 2-n : n); // reverse order for side=1
+			itri_verts.emplace_back(v[ix], normal, ts[ix], tt[ix], cw);
+		}
+		if (side == 0) {
+			if (!two_sided) break; // single sided
+			normal.invert_normal();
+		}
+	} // for side
+}
+
 class rgeom_alloc_t {
 	deque<rgeom_storage_t> free_list; // one per unique texture ID/material
 public:
