@@ -784,6 +784,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		// Note: iteration will include newly added all segments to recursively split long walls
 		for (unsigned w = first_wall_to_split[d]; w < walls.size(); ++w) { // skip hallway walls
 			bool pref_split(must_split[d] & (1ULL << (w & 63)));
+			float stairs_elev_pad(doorway_width);
 
 			for (unsigned nsplits = 0; nsplits < 4; ++nsplits) { // at most 4 splits
 				cube_t &wall(walls[w]); // take a reference here because a prev iteration push_back() may have invalidated it
@@ -822,10 +823,12 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 						} // for s
 					}
 					if (!valid) continue;
+					// if the wall must be split, and we've failed after 20 tries, reduce the stairs and elevator padding; this happens to a building near the player start
+					if (pref_split && ntries >= 20 && (ntries%10) == 0) {stairs_elev_pad *= 0.5;} // 1.0 for n=0-19, 0.5 for n=20-29, 0.25 for n=30-39
 					cube_t cand(wall); // sub-section of wall that will become a doorway
 					cand.d[!d][0] = lo_pos; cand.d[!d][1] = hi_pos;
 					bool const elevators_only(pref_split && ntries > 20); // allow blocking stairs if there's no other way to insert a door
-					if (interior->is_blocked_by_stairs_or_elevator(cand, doorway_width, elevators_only)) continue; // stairs in the way, skip; should we assert !pref_split?
+					if (interior->is_blocked_by_stairs_or_elevator(cand, stairs_elev_pad, elevators_only)) continue; // stairs in the way, skip; should we assert !pref_split?
 					bool const open_dir(wall.get_center_dim(d) > bldg_door_open_dir_tp[d]); // doors open away from the building center
 					insert_door_in_wall_and_add_seg(wall, lo_pos, hi_pos, !d, open_dir, 0); // Note: modifies wall
 					was_split = 1;
