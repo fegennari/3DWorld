@@ -2147,7 +2147,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (has_chimney == 2 && num_floors == 1) { // can't be a bathroom if there's a fireplace
 					cube_t test_cube(*r);
 					test_cube.expand_by_xy(floor_thickness);
-					if (r->intersects(get_fireplace())) continue;
+					if (test_cube.intersects(get_fireplace())) continue;
 				}
 				float score(r->dx() + r->dy()); // starts as half the perimeter
 				score *= (1.0 + 10.0*(max(count_num_int_doors(*r), 1U) - 1U)); // multiply by a large value if there are mult doors so we only choose this if there are no alternatives
@@ -2485,7 +2485,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
-	if (num_bathrooms == 0) {cout << "no bathroom in building " << bcube.xc() << " " << bcube.yc() << endl;} // can happen, but very rare
+	if (num_bathrooms == 0) { // can happen, but very rare
+		cout << "no bathroom in building " << bcube.xc() << " " << bcube.yc() << endl;
+		if (cand_bathroom < rooms.size()) {cout << "cand bathroom was at " << rooms[cand_bathroom].str() << endl;}
+	}
 	else {
 		if (!(added_bathroom_objs_mask & PLACED_TOILET)) {cout << "no toilet in building " << bcube.xc() << " " << bcube.yc() << endl;}
 		if (!(added_bathroom_objs_mask & PLACED_SINK  )) {cout << "no sink in building "   << bcube.xc() << " " << bcube.yc() << endl;}
