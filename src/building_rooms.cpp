@@ -7,6 +7,8 @@
 #include "city.h" // for object_model_loader_t
 #include "profiler.h"
 
+enum {PLACED_TOILET=1, PLACED_SINK=2, PLACED_TUB=4, PLACED_SHOWER=8}; // for bathroom objects
+
 extern bool camera_in_building;
 extern int display_mode;
 extern building_params_t global_building_params;
@@ -849,7 +851,9 @@ float building_t::add_flooring(room_t const &room, float &zval, unsigned room_id
 	return new_zval;
 }
 
-bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement) {
+bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &zval, unsigned room_id, float tot_light_amt,
+	unsigned objs_start, unsigned floor, bool is_basement, unsigned &added_bathroom_objs_mask)
+{
 	// Note: zval passed by reference
 	float const floor_spacing(get_window_vspace()), wall_thickness(get_wall_thickness());
 	cube_t room_bounds(get_walkable_room_bounds(room)), place_area(room_bounds);
@@ -863,7 +867,10 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 		objs_start = objs.size(); // exclude this from collision checks
 	}
 	if (have_toilet && room.is_office && min(place_area.dx(), place_area.dy()) > 1.5*floor_spacing && max(place_area.dx(), place_area.dy()) > 2.0*floor_spacing) {
-		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor)) return 1; // large enough, try to divide into bathroom stalls
+		if (divide_bathroom_into_stalls(rgen, room, zval, room_id, tot_light_amt, floor)) { // large enough, try to divide into bathroom stalls
+			added_bathroom_objs_mask |= (PLACED_TOILET | PLACED_SINK);
+			return 1;
+		}
 	}
 	bool placed_obj(0), placed_toilet(0);
 	
@@ -893,24 +900,25 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 				objs.emplace_back(c,  TYPE_TOILET,  room_id, dim, !dir, 0, tot_light_amt);
 				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_toilet = 1; // done
+				added_bathroom_objs_mask  |= PLACED_TOILET;
 
-				if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the adjacent wall
-					bool const tp_dir(dim ? xdir : ydir);
-					float const length(0.18*height), wall_pos(c.get_center_dim(dim)), far_edge_pos(wall_pos + (dir ? -1.0 : 1.0)*0.5*length);
-					cube_t const part(get_part_for_room(room));
+				// try to place a roll of toilet paper on the adjacent wall
+				bool const tp_dir(dim ? xdir : ydir);
+				float const length(0.18*height), wall_pos(c.get_center_dim(dim)), far_edge_pos(wall_pos + (dir ? -1.0 : 1.0)*0.5*length);
+				cube_t const part(get_part_for_room(room));
 
-					// if this wall has windows and bathroom has multiple exterior walls (which means it has non-glass block windows), don't place a TP roll
-					if (is_basement || !has_windows() || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
-						!is_val_inside_window(part, dim, far_edge_pos, get_hspacing_for_part(part, dim), get_window_h_border()) || count_ext_walls_for_room(room, zval) <= 1)
-					{
-						add_tp_roll(room_bounds, room_id, tot_light_amt, !dim, tp_dir, length, (c.z1() + 0.7*height), wall_pos);
-					}
+				// if this wall has windows and bathroom has multiple exterior walls (which means it has non-glass block windows), don't place a TP roll
+				if (is_basement || !has_windows() || classify_room_wall(room, zval, !dim, tp_dir, 0) != ROOM_WALL_EXT ||
+					!is_val_inside_window(part, dim, far_edge_pos, get_hspacing_for_part(part, dim), get_window_h_border()) || count_ext_walls_for_room(room, zval) <= 1)
+				{
+					add_tp_roll(room_bounds, room_id, tot_light_amt, !dim, tp_dir, length, (c.z1() + 0.7*height), wall_pos);
 				}
 			} // for d
 		} // for n
 		if (!placed_toilet) { // if the toilet can't be placed in a corner, allow it to be placed anywhere; needed for small offices
 			placed_toilet = place_model_along_wall(OBJ_MODEL_TOILET, TYPE_TOILET, room, 0.35, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.8);
 			placed_obj   |= placed_toilet;
+			added_bathroom_objs_mask |= PLACED_TOILET;
 
 			if (placed_toilet) { // if toilet was placed, try to place a roll of toilet paper on the same wall as the toilet
 				room_object_t const &toilet(objs.back()); // okay if this is the blocker
@@ -962,6 +970,7 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 				objs.emplace_back(c,  TYPE_SHOWER,  room_id, xdir, ydir, 0, tot_light_amt);
 				objs.emplace_back(c2, TYPE_BLOCKER, room_id, 0, 0, RO_FLAG_INVIS); // add blocker cube to ensure no other object overlaps this space
 				placed_obj = placed_shower = 1;
+				added_bathroom_objs_mask  |= PLACED_SHOWER;
 				break; // done
 			} // for n
 			if (placed_shower) break; // done
@@ -973,10 +982,15 @@ bool building_t::add_bathroom_objs(rand_gen_t rgen, room_t const &room, float &z
 		// place a tub, but not in office buildings; placed before the sink because it's the largest and the most limited in valid locations
 		cube_t place_area_tub(room_bounds);
 		place_area_tub.expand_by(-get_trim_thickness()); // just enough to prevent z-fighting and intersecting the wall trim
-		placed_obj |= place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, 0.2, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4);
+		
+		if (place_model_along_wall(OBJ_MODEL_TUB, TYPE_TUB, room, 0.2, rgen, zval, room_id, tot_light_amt, place_area_tub, objs_start, 0.4)) {
+			placed_obj = 1;
+			added_bathroom_objs_mask |= PLACED_TUB;
+		}
 	}
 	if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
 		placed_obj = 1;
+		added_bathroom_objs_mask |= PLACED_SINK;
 		room_object_t const &sink((objs.back().type == TYPE_SINK) ? objs.back() : objs[objs.size()-2]); // find sink, skip blocker
 		
 		if (is_basement || classify_room_wall(room, zval, sink.dim, !sink.dir, 0) != ROOM_WALL_EXT) { // interior wall only
@@ -1559,7 +1573,7 @@ bool building_t::add_basement_utility_objs(rand_gen_t rgen, room_t const &room, 
 	return was_placed;
 }
 
-bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
+bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned &added_bathroom_objs_mask) {
 	float const front_clearance(get_min_front_clearance());
 	cube_t place_area(get_walkable_room_bounds(room));
 	place_area.expand_by(-0.25*get_wall_thickness()); // common spacing to wall for appliances
@@ -1584,7 +1598,9 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 		if (success) {
 			// if we've placed a washer and/or dryer and made this into a laundry room, try to place a sink as well; should this use a different sink model from bathrooms?
-			place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6);
+			if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
+				added_bathroom_objs_mask |= PLACED_SINK;
+			}
 
 			// try to place a laundry basket
 			float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.1, 0.12)*floor_spacing), height(rgen.rand_uniform(1.5, 2.2)*radius);
@@ -2113,6 +2129,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	room_obj_shape const light_shape(is_house ? SHAPE_CYLIN : SHAPE_CUBE);
 	unsigned cand_bathroom(rooms.size()); // start at an invalid value
 	unsigned added_kitchen_mask(0); // per-floor
+	unsigned added_bathroom_objs_mask(0);
 	bool added_bedroom(0), added_living(0), added_library(0), added_dining(0), added_laundry(0), added_basement_utility(0);
 	light_ix_assign_t light_ix_assign;
 
@@ -2333,7 +2350,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				has_fireplace = maybe_add_fireplace_to_room(*r, blockers, room_center.z, room_id, tot_light_amt);
 			}
 			if (is_office_bathroom) { // bathroom is already assigned
-				added_obj = is_bathroom = added_bathroom = no_whiteboard = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement); // add bathroom
+				added_obj = is_bathroom = added_bathroom = no_whiteboard =
+					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
 			}
 			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
@@ -2344,7 +2362,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				}
 				if (!added_obj && !has_fireplace && (must_be_bathroom || (can_be_bathroom(*r) && (num_bathrooms == 0 || rgen.rand_float() < extra_bathroom_prob)))) {
 					// bathrooms can be in both houses and office buildings
-					added_obj = is_bathroom = added_bathroom = add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement); // add bathroom
+					added_obj = is_bathroom = added_bathroom =
+						add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
 					if (is_bathroom) {r->assign_to(RTYPE_BATH, f);}
 				}
 			}
@@ -2419,7 +2438,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				else if (!is_house) {r->assign_to(RTYPE_OFFICE, f);} // any unset room in an office building is an office
 				// else house
 				else if (has_stairs && !is_basement) {} // will be marked as RTYPE_STAIRS below
-				else if ((!added_obj || is_basement) && f == 0 && !added_laundry && !has_fireplace && add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start)) {
+				else if ((!added_obj || is_basement) && f == 0 && !added_laundry && !has_fireplace &&
+					add_laundry_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, added_bathroom_objs_mask))
+				{
 					r->assign_to(RTYPE_LAUNDRY, f);
 					added_laundry = 1;
 				}
@@ -2464,7 +2485,12 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			for (auto i = objs.begin() + room_objs_start; i != objs.end(); ++i) {i->flags |= RO_FLAG_INTERIOR;}
 		}
 	} // for r (room)
-	//if (!num_bathrooms) {cout << "no bathroom in building " << bcube.str() << endl;} // can happen, but very rare
+	if (num_bathrooms == 0) {cout << "no bathroom in building " << bcube.xc() << " " << bcube.yc() << endl;} // can happen, but very rare
+	else {
+		if (!(added_bathroom_objs_mask & PLACED_TOILET)) {cout << "no toilet in building " << bcube.xc() << " " << bcube.yc() << endl;}
+		if (!(added_bathroom_objs_mask & PLACED_SINK  )) {cout << "no sink in building "   << bcube.xc() << " " << bcube.yc() << endl;}
+		//if (is_house && !(added_bathroom_objs_mask & (PLACED_TUB | PLACED_SHOWER))) {cout << "no bathtub or shower in building " << bcube.xc() << " " << bcube.yc() << endl;} // common
+	}
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_wall_and_door_trim();
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
