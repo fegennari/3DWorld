@@ -1155,7 +1155,7 @@ private:
 	void add_light_switch_to_room(rand_gen_t rgen, room_t const &room, float zval, unsigned room_id, unsigned objs_start, bool is_ground_floor);
 	bool place_eating_items_on_table(rand_gen_t &rgen, unsigned table_obj_id);
 	void place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room, unsigned room_id, float tot_light_amt, unsigned objs_start, unsigned floor, bool is_basement);
-	bool can_be_bedroom_or_bathroom(room_t const &room, unsigned floor) const;
+	bool can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, bool skip_conn_check=0) const;
 	bool can_be_bathroom(room_t const &room) const;
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;

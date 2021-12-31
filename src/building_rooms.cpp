@@ -449,11 +449,12 @@ bool building_t::create_office_cubicles(rand_gen_t rgen, room_t const &room, flo
 }
 
 // Note: applies to both houses and office buildings, but only houses will have bedrooms
-bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor) const { // check room type and existence of exterior door
+bool building_t::can_be_bedroom_or_bathroom(room_t const &room, unsigned floor, bool skip_conn_check) const { // check room type and existence of exterior door
 	if (room.has_stairs_on_floor(floor) || room.has_elevator || room.is_hallway || room.is_office || room.is_sec_bldg) return 0; // no bed/bath in these cases
 	
 	if (floor == 0) { // run special logic for bedrooms and bathrooms (private rooms) on the first floor of a house
 		if (is_room_adjacent_to_ext_door(room)) return 0; // door to house does not open into a bedroom/bathroom
+		if (skip_conn_check) return 1;
 
 		if (room.dz() > 1.5*get_window_vspace()) { // more than one floor
 			if (interior->stairwells.empty()) return 1; // failed to place stairs in this house, maybe because it was too small; I guess we just return 0 here
@@ -2142,8 +2143,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 			if (has_basement() && r->part_id == (int)basement_part_ix) continue; // skip the basement
 			unsigned const num_floors(calc_num_floors_room(*r, window_vspacing, floor_thickness));
 
-			// find best bathroom with no hard size constraints
-			if (can_be_bedroom_or_bathroom(*r, (num_floors-1))) { // use the top floor for the test since it's less restrictive than the ground floor; will be checked per-floor later
+			// find best bathroom with no hard size constraints;
+			// use the top floor for the test since it's less restrictive than the ground floor; will be checked per-floor later
+			if (can_be_bedroom_or_bathroom(*r, (num_floors-1), 0)) { // skip_conn_check=0
 				if (has_chimney == 2 && num_floors == 1) { // can't be a bathroom if there's a fireplace
 					cube_t test_cube(*r);
 					test_cube.expand_by_xy(floor_thickness);
@@ -2353,7 +2355,8 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				added_obj = is_bathroom = added_bathroom = no_whiteboard =
 					add_bathroom_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, f, is_basement, added_bathroom_objs_mask); // add bathroom
 			}
-			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) { // bedroom or bathroom case; need to check first floor even if is_cand_bathroom
+			// bedroom or bathroom case; need to check first floor even if must_be_bathroom
+			if (!added_obj && allow_br && can_be_bedroom_or_bathroom(*r, f)) {
 				// place a bedroom 75% of the time unless this must be a bathroom; if we got to the second floor and haven't placed a bedroom, always place it; houses only
 				if (is_house && !must_be_bathroom && !is_basement && ((f > 0 && !added_bedroom) || rgen.rand_float() < 0.75)) {
 					added_obj = added_bedroom = is_bedroom = add_bedroom_objs(rgen, *r, blockers, room_center.z, room_id, f, tot_light_amt, objs_start, is_lit, light_ix_assign);
