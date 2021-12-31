@@ -1781,15 +1781,21 @@ void building_t::update_stats(building_stats_t &s) const { // calculate all of t
 bool door_opens_inward(door_stack_t const &door, cube_t const &room) {
 	return (room.is_all_zeros() || (door.d[door.dim][0] < room.get_center_dim(door.dim)) == door.open_dir); // null room always returns 1 (conservative)
 }
-bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs, bool allow_block_door) {
+// check_dirs/open_dirs: 0=lo only, 1=hi only, 2+=both
+bool is_cube_close_to_door(cube_t const &c, float dmin, bool inc_open, cube_t const &door, unsigned check_dirs, unsigned open_dirs, bool allow_block_door) {
 	if (c.z2() < door.z1() || c.z1() > door.z2()) return 0;
 	bool const dim(door.dy() < door.dx());
 	// we don't know how much the door is open and in which direction, so expand by door width in both dirs to be conservative
 	float const width(door.get_sz_dim(!dim)), keepout(inc_open ? width : 0.0f);
 	float const lo_edge(door.d[!dim][0] - ((check_dirs == 1) ? 0 : keepout)), hi_edge(door.d[!dim][1] + ((check_dirs == 0) ? 0 : keepout));
 	if (c.d[!dim][0] > hi_edge || c.d[!dim][1] < lo_edge) return 0; // no overlap in !dim
-	if (!allow_block_door) {max_eq(dmin, width);} // max with door width so that door has space to open
-	return (c.d[dim][0] < door.d[dim][1]+dmin && c.d[dim][1] > door.d[dim][0]-dmin); // within min_dist
+	float dmin_lo(dmin), dmin_hi(dmin);
+	
+	if (!allow_block_door) { // max with door width so that door has space to open, in dirs where the door can open
+		if (open_dirs != 1) {max_eq(dmin_lo, width);}
+		if (open_dirs != 0) {max_eq(dmin_hi, width);}
+	}
+	return (c.d[dim][0] < door.d[dim][1]+dmin_hi && c.d[dim][1] > door.d[dim][0]-dmin_lo); // within min_dist
 }
 bool building_t::is_cube_close_to_exterior_doorway(cube_t const &c, float dmin, bool inc_open) const {
 	for (auto i = doors.begin(); i != doors.end(); ++i) { // test exterior doors
@@ -1797,14 +1803,15 @@ bool building_t::is_cube_close_to_exterior_doorway(cube_t const &c, float dmin, 
 	}
 	return 0;
 }
-bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // Note: inc_open only applies to interior doors
+// Note: inc_open only applies to interior doors
+bool building_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open, bool check_open_dir) const {
 	// Note: we want to test this for things like stairs, but exterior doors likely haven't been allocated at this point, so we have to check for that during door placement
 	if (is_cube_close_to_exterior_doorway(c, dmin, inc_open)) return 1;
-	return (interior ? interior->is_cube_close_to_doorway(c, room, dmin, inc_open) : 0); // test interior doors
+	return (interior ? interior->is_cube_close_to_doorway(c, room, dmin, inc_open, check_open_dir) : 0); // test interior doors
 }
-bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open) const { // ignores zvals
+bool building_interior_t::is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin, bool inc_open, bool check_open_dir) const { // ignores zvals
 	for (auto i = door_stacks.begin(); i != door_stacks.end(); ++i) { // interior doors
-		if (is_cube_close_to_door(c, dmin, (inc_open && door_opens_inward(*i, room)), *i, i->get_check_dirs())) return 1;
+		if (is_cube_close_to_door(c, dmin, (inc_open && door_opens_inward(*i, room)), *i, i->get_check_dirs(), (check_open_dir ? i->open_dir : 2))) return 1;
 	}
 	return 0;
 }

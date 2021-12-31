@@ -932,7 +932,7 @@ bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) c
 	}
 	for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) { // check for door intersection
 		if (!i->open || !door_opens_inward(*i, room)) continue; // closed, or opens into the adjacent room, ignore
-		if (is_cube_close_to_door(obj, 0.0, 1, *i, i->get_check_dirs())) return 0;
+		if (is_cube_close_to_door(obj, 0.0, 1, *i, i->get_check_dirs(), i->open_dir)) return 0;
 	}
 	if (has_bcube_int(obj, interior->stairwells) || has_bcube_int(obj, interior->elevators)) return 0;
 	return 1;

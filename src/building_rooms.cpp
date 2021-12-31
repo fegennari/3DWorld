@@ -1956,9 +1956,9 @@ void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, f
 					set_wall_width(c, wall_pos, switch_hwidth, !dim);
 					cube_t c_test(c);
 					c_test.d[dim][!dir] += (dir ? -1.0 : 1.0)*wall_thickness; // expand out more so that it's guaranteed to intersect appliances placed near the wall
-					if (overlaps_other_room_obj(c_test, objs_start))     continue;
-					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1))) continue; // inc_open=1 for inside doors, to avoid placing the light switch behind an open door
-					if (interior->is_blocked_by_stairs_or_elevator(c))   continue; // check stairs and elevators
+					if (overlaps_other_room_obj(c_test, objs_start))        continue;
+					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1), 1)) continue; // inc_open=1/check_open_dir=1 for inside, to avoid placing light switch behind an open door
+					if (interior->is_blocked_by_stairs_or_elevator(c))      continue; // check stairs and elevators
 					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall
 					done = 1; // done, only need to add one
 					break;
@@ -2182,7 +2182,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					if (interior->is_blocked_by_stairs_or_elevator_no_expand(sec_light, fc_thick)) continue; // skip if blocked
 					cube_t test_cube(sec_light);
 					test_cube.expand_in_dim(2, 0.4*window_vspacing); // expand to cover nearly an entire floor so that it's guaranteed to overlap a door
-					sec_light_int_door = is_cube_close_to_doorway(test_cube, *r, 0.0, 1);
+					sec_light_int_door = is_cube_close_to_doorway(test_cube, *r, 0.0, 1, 1); // inc_open=1, check_open_dir=1
 					use_sec_light = 1;
 					break;
 				} // for n
