@@ -1734,7 +1734,22 @@ void building_t::get_exclude_cube(point const &pos, cube_t const &skip, cube_t &
 		cand_ge.union_with_cube(*p);
 		if (cand_ge.get_area_xy() < 1.05f*(exclude.get_area_xy() + p->get_area_xy())) {exclude = cand_ge;} // union mostly includes the two parts
 	}
-	if (!exclude.is_all_zeros()) {exclude.expand_by_xy(cube_pad);} // exclude grass blades that partially intersect the building interior
+	if (exclude.is_all_zeros()) return; // not found
+
+	// try to expand the exclude cube to each edge of the building's bcube; this may produce overlaps, but may cover additional area (such as for O-shaped buildings)
+	for (unsigned d = 0; d < 4; ++d) {
+		bool const dim(d>>1), dir(d&1);
+		if (exclude.d[dim][dir] == bcube.d[dim][dir]) continue; // already at the bcube edge
+		cube_t cand(exclude);
+		cand.d[dim][dir] = bcube.d[dim][dir];
+		float cov_area(0);
+
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			if (p->intersects_xy(cand)) {cov_area += (min(cand.x2(), p->x2()) - max(cand.x1(), p->x1()))*(min(cand.y2(), p->y2()) - max(cand.y1(), p->y1()));}
+		}
+		if (cov_area > 0.99*cand.get_area_xy()) {exclude = cand;} // expand if covered (with some tolerance to allow for FP error)
+	} // for d
+	exclude.expand_by_xy(cube_pad); // exclude grass blades that partially intersect the building interior
 }
 
 void building_t::update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const {
