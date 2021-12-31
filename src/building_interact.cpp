@@ -211,12 +211,19 @@ bool check_obj_dir_dist(point const &closest_to, vector3d const &in_dir, cube_t 
 	return (dot_product(in_dir, (vis_pt - closest_to).get_norm()) > 0.5); // door is not in the correct direction, skip
 }
 
-bool can_open_bathroom_stall(room_object_t const &stall, point const &pos, vector3d const &dir) {
+bool can_open_bathroom_stall(room_object_t const &stall, point const &pos, vector3d const &from_dir) {
+	bool dim(0), dir(0); // dim/dir that door is on
+	if      (stall.type == TYPE_STALL ) {dim = stall.dim; dir = !stall.dir;} // bathroom stall
+	else if (stall.type == TYPE_SHOWER) { // show stall
+		dim = (stall.dx() < stall.dy());
+		dir = !(dim ? stall.dir : stall.dim); // xdir=stall.dim, ydir=stall.dir
+	}
+	else {assert(0);}
 	point door_center;
-	door_center[ stall.dim] = stall.d[stall.dim][!stall.dir];
-	door_center[!stall.dim] = stall.get_center_dim(!stall.dim);
+	door_center[ dim] = stall.d[dim][dir];
+	door_center[!dim] = stall.get_center_dim(!dim);
 	door_center.z = pos.z;
-	return (dot_product_ptv(dir, door_center, pos) > 0.0); // facing the stall door
+	return (dot_product_ptv(from_dir, door_center, pos) > 0.0); // facing the stall door
 }
 
 // called for the player; mode: 0=normal, 1=pull
