@@ -250,10 +250,10 @@ void rgeom_mat_t::add_sphere_to_verts(cube_t const &c, colorRGBA const &color, b
 	assert(indices.back() < itri_verts.size());
 }
 
-void rgeom_mat_t::add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided) {
+void rgeom_mat_t::add_triangle_to_verts(point const v[3], colorRGBA const &color, bool two_sided, float tscale) {
 	color_wrapper cw(color);
 	norm_comp normal(get_poly_norm(v));
-	float const ts[3] = {0.0, 0.0, 1.0}, tt[3] = {0.0, 1.0, 0.0}; // hard-coded for now, maybe pass in?
+	float const ts[3] = {0.0, 0.0, tscale}, tt[3] = {0.0, tscale, 0.0}; // hard-coded for now, maybe pass in?
 
 	for (unsigned side = 0; side < 2; ++side) {
 		for (unsigned n = 0; n < 3; ++n) {
