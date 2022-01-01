@@ -14,6 +14,37 @@ extern vector<light_source> dl_sources;
 extern city_params_t city_params;
 
 
+string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
+string gen_random_first_name(rand_gen_t &rgen); // from pedestrians.cpp
+
+class road_name_gen_t {
+	string get_numbered_street_name(unsigned num) const {
+		assert(num > 0 && num < 100);
+		string const names_1_to_20[21] = {"Zeroth", "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth",
+			"Eleventh", "Twelfth", "Thirteenth", "Fourteenth", "Fifteenth", "Sixteenth", "Seventeenth", "Eighteenth", "Nineteenth", "Twentieth"};
+		string const decade_names[10] = {"", "Ten", "Twent", "Thirt", "Fort", "Fift", "Sixt", "Sevent", "Eight", "Ninet"}; // missing the 'y'
+		if (num <= 20) {return names_1_to_20[num];}
+		if ((num%10) == 0) {return decade_names[num/10] + "ieth";}
+		return decade_names[num/10] + "y " + names_1_to_20[num%10];
+	}
+public:
+	string gen_name(road_t const &road) const {
+		// can use road.dim for N/S vs. E/W, road.road_ix for numbered streets, and road.x1()/road.y1() for a random seed
+		if (road.dim == 1 && road.road_ix < 99) { // can use numbered roads
+			string const suffix[2] = {"St", "Ave"};
+			unsigned const suffix_ix(int(100.0*road.z1()/city_params.road_width)&1); // use something consistent across the city such as elevation
+			return get_numbered_street_name(road.road_ix+1) + " " + suffix[suffix_ix];
+		}
+		rand_gen_t rgen;
+		rgen.set_state(road.x1()/city_params.road_width, road.y1()/city_params.road_width); // should be unique per road
+		string basename(rgen.rand_bool() ? gen_random_name(rgen) : gen_random_first_name(rgen)); // use either a randomly generated name or a person's first name
+		string const suffix[13] = {"St", "St", "St", "Ave", "Ave", "Rd", "Rd", "Rd", "Dr", "Blvd", "Ln", "Way", "Ct"}; // more common suffixes are duplicated
+		return basename + " " + suffix[rgen.rand()%13];
+	}
+};
+road_name_gen_t road_name_gen;
+string road_t::get_name() const {return road_name_gen.gen_name(*this);}
+
 void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
 	string const img_names[NUM_RD_TIDS] = {"sidewalk.jpg", "straight_road.jpg", "bend_90.jpg", "int_3_way.jpg", "int_4_way.jpg",

@@ -525,12 +525,12 @@ public:
 
 		// create a grid, for now; crossing roads will overlap
 		for (float x = rx1; x < rx2; x += road_pitch_x) {
-			roads.emplace_back(point(x, bcube.y1(), zval), point(x, bcube.y2(), zval), road_width, true);
+			roads.emplace_back(point(x, bcube.y1(), zval), point(x, bcube.y2(), zval), road_width, true, false, roads.size());
 		}
 		unsigned const num_x(roads.size());
 
 		for (float y = ry1; y < ry2; y += road_pitch_y) {
-			roads.emplace_back(point(bcube.x1(), y, zval), point(bcube.x2(), y, zval), road_width, false);
+			roads.emplace_back(point(bcube.x1(), y, zval), point(bcube.x2(), y, zval), road_width, false, false, roads.size());
 		}
 		unsigned const num_r(roads.size()), num_y(num_r - num_x);
 		if (num_x <= 1 || num_y <= 1) {clear(); return 0;} // not enough space for roads

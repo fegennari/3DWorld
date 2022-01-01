@@ -43,13 +43,13 @@ class person_name_gen_t {
 public:
 	string gen_name(unsigned id, bool is_female, bool inc_first, bool inc_last) {
 		assert(inc_first || inc_last);
-		ensure_names_loaded();
 		rand_gen_t rgen;
 		rgen.set_state(id+456, id+123); // use ssn as name rand gen seed
 		rgen.rand_mix();
 		string name;
 
 		if (inc_first) {
+			ensure_names_loaded();
 			vector<string> const &names(is_female ? female_names : male_names);
 			if (!names.empty()) {name += names[rgen.rand()%names.size()];}
 		}
@@ -59,9 +59,16 @@ public:
 		}
 		return name;
 	}
+	string gen_random_first_name(rand_gen_t &rgen) {
+		ensure_names_loaded();
+		vector<string> const &names(rgen.rand_bool() ? female_names : male_names); // 50% chance of male, 50% chance of female
+		return (names.empty() ? "unnamed" : names[rgen.rand()%names.size()]);
+	}
 };
 
 person_name_gen_t person_name_gen;
+
+string gen_random_first_name(rand_gen_t &rgen) {return person_name_gen.gen_random_first_name(rgen);} // for use in naming other entities
 
 string pedestrian_t::get_name() const {
 	return person_name_gen.gen_name(ssn, is_female, 1, 1); // use ssn as name rand gen seed; include both first and last name

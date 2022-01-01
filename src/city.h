@@ -284,6 +284,7 @@ struct road_t : public cube_t {
 	cube_t const &get_bcube() const {return *this;}
 	cube_t       &get_bcube()       {return *this;}
 	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const;
+	string get_name() const;
 };
 
 struct road_seg_t : public road_t {
