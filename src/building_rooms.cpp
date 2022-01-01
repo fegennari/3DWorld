@@ -2620,7 +2620,9 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				} // for W
 			}
 			unsigned const num_floors(calc_num_floors(*w, window_vspacing, floor_thickness));
-			float z(w->z1());
+			// snap to the nearest floor to handle short walls due to cut out stairs
+			float const ground_wall_z1(bcube.z1() + fc_thick);
+			float z(ground_wall_z1 + window_vspacing*round_fp((w->z1() - ground_wall_z1)/window_vspacing));
 
 			for (unsigned f = 0; f < num_floors; ++f, z += window_vspacing) {
 				set_cube_zvals(trim, z, z+trim_height); // starts at floor height
