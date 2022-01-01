@@ -568,7 +568,7 @@ public:
 
 					if (!LX) { // skip last y segment
 						cube_t const &rxn(roads[x+1]);
-						plots.emplace_back(cube_t(rx.x2(), rxn.x1(), ry.y2(), ryn.y1(), zval, zval), x, (y - num_x), is_residential); // plots between roads
+						plots.emplace_back(cube_t(rx.x2(), rxn.x1(), ry.y2(), ryn.y1(), zval, zval), uint8_t(x), uint8_t(y - num_x), is_residential); // plots between roads
 					}
 				}
 			} // for y
