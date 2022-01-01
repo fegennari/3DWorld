@@ -28,9 +28,18 @@ class road_name_gen_t {
 		if ((num%10) == 0) {return decade_names[num/10] + "ieth";}
 		return decade_names[num/10] + "y " + names_1_to_20[num%10];
 	}
+	string select_road_name(rand_gen_t &rgen) const { // use either a randomly generated name or a person's first name
+		return (rgen.rand_bool() ? gen_random_name(rgen) : gen_random_first_name(rgen));
+	}
 public:
 	string gen_name(road_t const &road) const {
-		// can use road.dim for N/S vs. E/W, road.road_ix for numbered streets, and road.x1()/road.y1() for a random seed
+		// Note: can also use road.dim/road.dir for N/S/E/W
+		if (road.is_all_zeros()) { // city connector road; only road.road_ix is valid
+			rand_gen_t rgen;
+			rgen.set_state(road.road_ix+1, road.road_ix+123);
+			string const suffix[3] = {"St", "Rd", "Expy"};
+			return select_road_name(rgen) + " " + suffix[rgen.rand()%3];
+		}
 		if (road.dim == 1 && road.road_ix < 99) { // can use numbered roads
 			string const suffix[2] = {"St", "Ave"};
 			unsigned const suffix_ix(int(100.0*road.z1()/city_params.road_width)&1); // use something consistent across the city such as elevation
@@ -38,9 +47,8 @@ public:
 		}
 		rand_gen_t rgen;
 		rgen.set_state(road.x1()/city_params.road_width, road.y1()/city_params.road_width); // should be unique per road
-		string basename(rgen.rand_bool() ? gen_random_name(rgen) : gen_random_first_name(rgen)); // use either a randomly generated name or a person's first name
 		string const suffix[13] = {"St", "St", "St", "Ave", "Ave", "Rd", "Rd", "Rd", "Dr", "Blvd", "Ln", "Way", "Ct"}; // more common suffixes are duplicated
-		return basename + " " + suffix[rgen.rand()%13];
+		return select_road_name(rgen) + " " + suffix[rgen.rand()%13];
 	}
 };
 road_name_gen_t road_name_gen;
@@ -638,19 +646,17 @@ void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> cons
 			dstate.draw_cube(dstate.qbd_untextured, sign, colorRGBA(0.0, 0.6, 0.0, 1.0));
 
 			if (!shadow_only && dist_val < 0.05) { // draw sign text when very close
-				unsigned const to_the_right[4] = {2,3,1,0}, to_the_left[4] = {3,2,0,1};
+				unsigned const to_the_right[4] = {2,3,1,0};
 				int road_ix(rix_xy[to_the_right[n]]); // map from the current road to the one on the right
-				if (road_ix < 0) {road_ix = rix_xy[to_the_left[n]];} // no road to the right? maybe it was a connector road; how about to the left?
+				//if (road_ix < 0) {road_ix = rix_xy[to_the_right[n]^1];} // no road to the right? maybe it was a connector road; how about to the left (swap the LSB)?
 				string name;
 
 				if (road_ix >= 0) {
 					assert((unsigned)road_ix < roads.size());
 					name = roads[road_ix].get_name();
 				}
-				else { // connector road?
-					ostringstream oss;
-					oss << "Connector Road " << decode_neg_ix(road_ix); // temporary
-					name = oss.str();
+				else { // city connector road
+					name = road_t(decode_neg_ix(road_ix)).get_name(); // only the road_ix is valid, but this is the segment index, so it doesn't match at the two city ends
 				}
 				bool const text_dir(sign.d[dim][dir] + dstate.xlate[dim] < camera_pdu.pos[dim]); // draw text on the side facing the player
 				add_sign_text_verts(name, sign, dim, text_dir, WHITE, dstate.text_verts);
