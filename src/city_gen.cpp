@@ -1228,7 +1228,7 @@ public:
 				// Note: we can store the contents of qbd_sl in a VBO to avoid recreating it every frame for the shadow pass
 				for (auto b = tile_blocks.begin(); b != tile_blocks.end(); ++b) {
 					if (!dstate.check_cube_visible(b->bcube, 0.16)) continue; // VFC/too far; dist_scale=0.16
-					for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], b->ranges[TYPE_ISEC2 + i], 1);} // intersections with stoplights (3-way, 4-way)
+					for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], roads, b->ranges[TYPE_ISEC2 + i], 1);} // intersections with stoplights (3-way, 4-way)
 				}
 			}
 		}
@@ -1265,7 +1265,7 @@ public:
 
 				for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
 					dstate.draw_city_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
-					if (i > 0) {dstate.draw_stoplights(isecs[i], b->ranges[TYPE_ISEC2 + i], 0);}
+					if (i > 0) {dstate.draw_stoplights(isecs[i], roads, b->ranges[TYPE_ISEC2 + i], 0);}
 				}
 				if (use_road_normal_maps) {reset_road_normal_map();}
 			} // for b

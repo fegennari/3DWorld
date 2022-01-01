@@ -16,6 +16,7 @@ extern city_params_t city_params;
 
 string gen_random_name(rand_gen_t &rgen); // from Universe_name.cpp
 string gen_random_first_name(rand_gen_t &rgen); // from pedestrians.cpp
+void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out); // from building_room_geom.cpp
 
 class road_name_gen_t {
 	string get_numbered_street_name(unsigned num) const {
@@ -540,7 +541,8 @@ void road_isec_t::draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, poin
 	}
 }
 
-void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bool shadow_only) const {
+// should this be a function of road_draw_state_t that takes the road_isec_t instead?
+void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> const &roads, bool shadow_only) const {
 	if (num_conn == 2) return; // no stoplights
 	if (!dstate.check_cube_visible(*this, 0.16)) return; // dist_scale=0.16
 	point const center(get_cube_center() + dstate.xlate);
@@ -557,26 +559,26 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 		// draw base
 		unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
 		float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
+		cube_t sc;
 
 		if (dist_val > 0.06) { // draw front face only
 			point pts[4];
-			pts[0][dim]  = pts[1][dim]  = pts[2][dim] = pts[3][dim] = dim_pos;
+			pts[0][dim]  = pts[1][dim]  = pts[2][dim] = pts[3][dim] = dim_pos; // plane of the face
 			pts[0][!dim] = pts[3][!dim] = sl_lo;
 			pts[1][!dim] = pts[2][!dim] = sl_hi;
 			pts[0].z = pts[1].z = z1();
 			pts[2].z = pts[3].z = sl_top;
-			qbd.add_quad_pts(pts, cw,  (dim ? (dir ? plus_y : -plus_y) : (dir ? plus_x : -plus_x))); // Note: normal doesn't really matter since color is black
+			dstate.qbd_sl.add_quad_pts(pts, cw,  (dim ? (dir ? plus_y : -plus_y) : (dir ? plus_x : -plus_x))); // Note: normal doesn't really matter since color is black
 		}
 		else {
-			cube_t c;
-			c.z1() = z1(); c.z2() = sl_top;
-			c.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; c.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
-			c.d[!dim][0] = sl_lo; c.d[!dim][1] = sl_hi;
-			dstate.draw_cube(qbd, c, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is black so it's all black anyway
+			sc.z1() = z1(); sc.z2() = sl_top;
+			sc.d[ dim][0] = dim_pos - (dir ? -0.04 : 0.5)*sz; sc.d[dim][1] = dim_pos + (dir ? 0.5 : -0.04)*sz;
+			sc.d[!dim][0] = sl_lo; sc.d[!dim][1] = sl_hi;
+			dstate.draw_cube(dstate.qbd_sl, sc, cw, 1); // skip_bottom=1; Note: uses traffic light texture, but color is black so it's all black anyway
 
-			if (!shadow_only && tt_fire_button_down && game_mode != 1) {
+			if (!shadow_only && tt_fire_button_down && game_mode != 1) { // player debug visualization
 				point const p1(camera_pdu.pos - dstate.xlate), p2(p1 + camera_pdu.dir*FAR_CLIP);
-				if (c.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (c.get_cube_center() + dstate.xlate));}
+				if (sc.line_intersects(p1, p2)) {dstate.set_label_text(stoplight.label_str(), (sc.get_cube_center() + dstate.xlate));}
 			}
 		}
 		bool const draw_detail(dist_val < 0.05); // add flares only when very close
@@ -600,7 +602,7 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 			for (unsigned i = 0; i < 2; ++i) { // opposite sides of the road
 				float const ndp(d[!dim][i] - (SLIGHT_DIST_TO_CORNER_SCALE + 0.2)*(i ? sz : -sz));
 				c.d[!dim][0] = ndp - 0.1*sz; c.d[!dim][1] = ndp + 0.1*sz;
-				dstate.draw_cube(qbd, c, cw, shadow_only); // skip_bottom=shadow_only
+				dstate.draw_cube(dstate.qbd_sl, c, cw, shadow_only); // skip_bottom=shadow_only
 
 				if (!shadow_only && cw_color != BLACK) { // draw light
 					point p[4];
@@ -618,13 +620,41 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 
 						if (mag > 0.0) {
 							bool const is_walk(cw_state == stoplight_ns::CW_WALK);
-							qbd.add_quad_pts(p, WHITE*mag, normal, tex_range_t((is_walk ? 0.25 : 0.0), 0.0, (is_walk ? 0.5 : 0.25), 0.5)); // color is stored in the texture
+							dstate.qbd_sl.add_quad_pts(p, WHITE*mag, normal, tex_range_t((is_walk ? 0.25 : 0.0), 0.0, (is_walk ? 0.5 : 0.25), 0.5)); // color stored in texture
 							if (draw_detail) {dstate.add_light_flare(cw_center, normal, cw_color*mag, 1.0, 0.8*h);}
 						}
 					}
 				}
 			} // for i
 		} // end crosswalk signal
+		if (dist_val < 0.08) { // draw street signs if close
+			// draw green sign cube
+			cube_t sign(sc); // start with stoplight cube
+			sign.z1() = sign.z2() - 0.7*sz; // high up
+			sign.z2() = sign.z2() - 0.1*sz;
+			sign.d[ dim][dir  ] -= (dir ? 1.0 : -1.0)*0.8*sc.get_sz_dim(dim); // shrink
+			sign.d[!dim][ side]  = sign.d[!dim][!side]; // flush with the side of the stoplight body
+			sign.d[!dim][!side] += 5.0*side_len; // extend into the road
+			dstate.draw_cube(dstate.qbd_untextured, sign, colorRGBA(0.0, 0.6, 0.0, 1.0));
+
+			if (!shadow_only && dist_val < 0.05) { // draw sign text when very close
+				unsigned const to_the_right[4] = {2,3,1,0}, to_the_left[4] = {3,2,0,1};
+				int road_ix(rix_xy[to_the_right[n]]); // map from the current road to the one on the right
+				if (road_ix < 0) {road_ix = rix_xy[to_the_left[n]];} // no road to the right? maybe it was a connector road; how about to the left?
+				string name;
+
+				if (road_ix >= 0) {
+					assert((unsigned)road_ix < roads.size());
+					name = roads[road_ix].get_name();
+				}
+				else { // connector road?
+					ostringstream oss;
+					oss << "Connector Road " << decode_neg_ix(road_ix); // temporary
+					name = oss.str();
+				}
+				add_sign_text_verts(name, sign, dim, !dir, WHITE, dstate.text_verts);
+			}
+		} // end street sign
 		if (shadow_only)    continue; // no lights in shadow pass
 		if (dist_val > 0.1) continue; // too far away
 		vector3d normal(zero_vector);
@@ -635,10 +665,10 @@ void road_isec_t::draw_stoplights(quad_batch_draw &qbd, draw_state_t &dstate, bo
 		p[0][dim] = p[1][dim] = p[2][dim] = p[3][dim] = dim_pos;
 		p[0][!dim] = p[3][!dim] = v1; p[1][!dim] = p[2][!dim] = v2;
 		p[0].z = p[1].z = zbot; p[2].z = p[3].z = zbot + h;
-		draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_detail, draw_detail, normal, tex_range_t(0.0, 0.5, 0.5, 1.0));
+		draw_sl_block(dstate.qbd_sl, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_NONE), draw_detail, draw_detail, normal, tex_range_t(0.0, 0.5, 0.5, 1.0));
 
 		if (has_left_turn_signal(n)) { // draw left turn light (upper light section)
-			draw_sl_block(qbd, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_detail, 0.5*draw_detail, normal, tex_range_t(1.0, 0.5, 0.5, 1.0));
+			draw_sl_block(dstate.qbd_sl, dstate, p, h, stoplight.get_light_state(dim, dir, TURN_LEFT), draw_detail, 0.5*draw_detail, normal, tex_range_t(1.0, 0.5, 0.5, 1.0));
 		}
 	} // for n
 }
@@ -813,6 +843,19 @@ void road_draw_state_t::draw_unshadowed() {
 }
 
 void road_draw_state_t::post_draw() {
+	if (!shadow_only && !qbd_untextured.empty()) {select_texture(WHITE_TEX);}
+	qbd_untextured.draw_and_clear();
+
+	if (!text_verts.empty()) { // draw street names on signs; must be after qbd_untextured due to alpha blending
+		// FIXME: shadows
+		s.add_uniform_float("min_alpha", 0.1); // FIXME: reset back to default?
+		assert(!shadow_only);
+		text_drawer::bind_font_texture();
+		enable_blend();
+		draw_verts(text_verts, GL_QUADS);
+		text_verts.clear();
+		disable_blend();
+	}
 	draw_state_t::post_draw();
 	if (qbd_sl.empty()) return; // no stoplights to draw
 	set_std_depth_func_with_eq(); // helps prevent Z-fighting
@@ -1063,8 +1106,8 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 	if (!shadow_only) {select_multitex(FLAT_NMAP_TEX, 5);} // restore flat normal map
 }
 
-void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, range_pair_t const &rp, bool shadow_only) {
-	for (unsigned i = rp.s; i < rp.e; ++i) {isecs[i].draw_stoplights(qbd_sl, *this, shadow_only);}
+void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, vector<road_t> const &roads, range_pair_t const &rp, bool shadow_only) {
+	for (unsigned i = rp.s; i < rp.e; ++i) {isecs[i].draw_stoplights(*this, roads, shadow_only);}
 }
 
 // not really related to roads, but I guess this goes here

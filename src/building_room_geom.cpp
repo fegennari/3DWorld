@@ -2052,6 +2052,35 @@ sign_helper_t sign_helper;
 
 unsigned register_sign_text(string const &text) {return sign_helper.register_text(text);}
 
+void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out) {
+	assert(!text.empty());
+	cube_t ct(sign); // text area is slightly smaller than full cube
+	ct.expand_in_dim(!dim, -0.1*ct.get_sz_dim(!dim));
+	ct.expand_in_dim(2, -0.05*ct.dz());
+	vector3d col_dir(zero_vector), normal(zero_vector);
+	bool const ldir(dim ^ dir);
+	col_dir[!dim] = (ldir  ? 1.0 : -1.0);
+	normal [ dim] = (dir ? 1.0 : -1.0);
+	static vector<vert_tc_t> verts;
+	verts.clear();
+	point pos;
+	pos[dim] = ct.d[dim][dir] + (dir ? 1.0 : -1.0)*0.1*ct.get_sz_dim(dim); // normal
+	gen_text_verts(verts, pos, text, 1.0, col_dir, plus_z, 1); // use_quads=1
+	assert(!verts.empty());
+	cube_t text_bcube(verts[0].v);
+	for (auto i = verts.begin()+2; i != verts.end(); i += 2) {text_bcube.union_with_pt(i->v);} // only need to include opposite corners
+	float const width_scale(ct.get_sz_dim(!dim)/text_bcube.get_sz_dim(!dim)), height_scale(ct.dz()/text_bcube.dz());
+	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
+	color_wrapper const cw(color);
+	norm_comp const nc(normal);
+
+	for (auto i = verts.begin(); i != verts.end(); ++i) {
+		i->v[!dim] = i->v[!dim]*width_scale + ct.d[!dim][!ldir]; // line
+		i->v.z     = i->v.z*height_scale + ct.z1(); // column
+		verts_out.emplace_back(i->v, nc, i->t[0], i->t[1], cw);
+	}
+}
+
 void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool inc_text) {
 	if (inc_back) {
 		unsigned const skip_faces((c.flags & RO_FLAG_HANGING) ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless hanging
@@ -2059,36 +2088,10 @@ void building_room_geom_t::add_sign(room_object_t const &c, bool inc_back, bool 
 	}
 	if (!inc_text) return;
 	// add sign text
-	cube_t ct(c); // text area is slightly smaller than full cube
-	ct.expand_in_dim(!c.dim, -0.1*c.get_sz_dim(!c.dim));
-	ct.expand_in_dim(2, -0.05*c.dz());
-	vector3d col_dir(zero_vector), normal(zero_vector);
-	bool const ldir(c.dim ^ c.dir);
-	col_dir[!c.dim] = (ldir  ? 1.0 : -1.0);
-	normal [ c.dim] = (c.dir ? 1.0 : -1.0);
-	static vector<vert_tc_t> verts;
-	verts.clear();
-	string const &text(sign_helper.get_text(c.obj_id));
-	assert(!text.empty());
-	point pos;
-	pos[c.dim] = ct.d[c.dim][c.dir] + (c.dir ? 1.0 : -1.0)*0.1*ct.get_sz_dim(c.dim); // normal
-	gen_text_verts(verts, pos, text, 1.0, col_dir, plus_z, 1); // use_quads=1
-	assert(!verts.empty());
-	cube_t text_bcube(verts[0].v);
-	for (auto i = verts.begin()+2; i != verts.end(); i += 2) {text_bcube.union_with_pt(i->v);} // only need to include opposite corners
-	float const width_scale(ct.get_sz_dim(!c.dim)/text_bcube.get_sz_dim(!c.dim)), height_scale(ct.dz()/text_bcube.dz());
-	if (dot_product(normal, cross_product((verts[1].v - verts[0].v), (verts[2].v - verts[1].v))) < 0.0) {std::reverse(verts.begin(), verts.end());} // swap vertex winding order
 	tid_nm_pair_t tex(FONT_TEXTURE_ID);
 	if (c.flags & RO_FLAG_EMISSIVE) {tex.emissive = 1.0;}
 	rgeom_mat_t &mat(get_material(tex, 0, 0, 1));
-	color_wrapper const cw(apply_light_color(c)); // set alpha=1.0
-	norm_comp const nc(normal);
-
-	for (auto i = verts.begin(); i != verts.end(); ++i) {
-		i->v[!c.dim] = i->v[!c.dim]*width_scale + ct.d[!c.dim][!ldir]; // line
-		i->v.z       = i->v.z*height_scale + ct.z1(); // column
-		mat.quad_verts.emplace_back(i->v, nc, i->t[0], i->t[1], cw);
-	}
+	add_sign_text_verts(sign_helper.get_text(c.obj_id), c, c.dim, c.dir, apply_light_color(c), mat.quad_verts);
 }
 
 bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {
