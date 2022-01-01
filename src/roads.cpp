@@ -848,7 +848,6 @@ void road_draw_state_t::post_draw() {
 
 	if (!text_verts.empty()) { // draw street names on signs; must be after qbd_untextured due to alpha blending
 		// FIXME: shadows
-		s.add_uniform_float("min_alpha", 0.1); // FIXME: reset back to default?
 		assert(!shadow_only);
 		text_drawer::bind_font_texture();
 		enable_blend();
