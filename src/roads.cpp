@@ -652,7 +652,8 @@ void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> cons
 					oss << "Connector Road " << decode_neg_ix(road_ix); // temporary
 					name = oss.str();
 				}
-				add_sign_text_verts(name, sign, dim, !dir, WHITE, dstate.text_verts);
+				bool const text_dir(sign.d[dim][dir] + dstate.xlate[dim] < camera_pdu.pos[dim]); // draw text on the side facing the player
+				add_sign_text_verts(name, sign, dim, text_dir, WHITE, dstate.text_verts);
 			}
 		} // end street sign
 		if (shadow_only)    continue; // no lights in shadow pass
