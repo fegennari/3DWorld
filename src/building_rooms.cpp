@@ -1602,7 +1602,6 @@ bool building_t::add_laundry_objs(rand_gen_t rgen, room_t const &room, float zva
 			if (place_model_along_wall(OBJ_MODEL_SINK, TYPE_SINK, room, 0.45, rgen, zval, room_id, tot_light_amt, place_area, objs_start, 0.6)) {
 				added_bathroom_objs_mask |= PLACED_SINK;
 			}
-
 			// try to place a laundry basket
 			float const floor_spacing(get_window_vspace()), radius(rgen.rand_uniform(0.1, 0.12)*floor_spacing), height(rgen.rand_uniform(1.5, 2.2)*radius);
 			place_area.expand_by_xy(-radius); // leave a slight gap between laundry basket and wall

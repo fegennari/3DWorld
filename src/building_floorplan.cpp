@@ -1376,7 +1376,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				bool dim(0), too_small(0);
 				if (min(place_region.dx(), place_region.dy()) < 1.5*len_with_pad) {dim = (place_region.dx() < place_region.dy());} // use larger dim
 				else {dim = rgen.rand_bool();}
-				bool const stairs_dir(rgen.rand_bool());
+				bool const stairs_dir(rgen.rand_bool()); // the direction we move in when going up the stairs
 
 				for (unsigned d = 0; d < 2; ++d) {
 					float const stairs_sz((bool(d) == dim) ? len_with_pad : stairs_width);
@@ -1427,7 +1427,7 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 					float const pos_shift((stairs_dir ? 1.0 : -1.0)*0.8*wall_thickness);
 					door_t door(cand, dim, !stairs_dir, 0, 1); // open=0, on_stairs=1
 					door.z2() -= fc_thick; // bottom of basement ceiling, not the floor above
-					door.d[dim][stairs_dir] = door.d[dim][!stairs_dir] + pos_shift;
+					door.d[dim][stairs_dir] = door.d[dim][!stairs_dir] + pos_shift; // shift from the edge slightly into the stairwell, inserting the door as an end cap
 					if (!stairs_dir) {door.translate_dim(dim, -pos_shift);} // why the asymmetry?
 					door.translate_dim( dim, -0.2*pos_shift); // shift so that the door doesn't intersect the railing, covers the stairs overhang, and the top edge can't be seen
 					door.expand_in_dim(!dim, -0.15*cand.get_sz_dim(dim)/NUM_STAIRS_PER_FLOOR); // shrink by stairs wall half width
@@ -1442,12 +1442,20 @@ void building_t::connect_stacked_parts_with_stairs(rand_gen_t &rgen, cube_t cons
 				subtract_cube_from_floor_ceil(cut_cube, interior->ceilings);
 
 				for (auto r = interior->rooms.begin(); r != interior->rooms.end(); ++r) {
-					if (r->intersects(stairwell) && r->contains_cube_xy(stairwell)) { // Note: may be approximate
-						if      (part.contains_cube(*r)) {r->has_stairs |= (1U << min(num_floors-1U, 7U));} // bottom of stairs - top floor (clamp to 7 to avoid 8-bit overflow)
-						else if (p->  contains_cube(*r)) {r->has_stairs |= 1;} // top of stairs - bottom floor
-						else {assert(0);}
+					if (!r->intersects(stairwell)) continue; // no stairs in this room
+					// set the test point to the stairs entrance on the correct level using stairs_dir; the room contains stairs if it contains the stairs entrance
+					point test_pt(stairwell.get_cube_center());
+
+					if (part.contains_cube(*r)) { // bottom of stairs
+						test_pt[dim] = stairwell.d[dim][!stairs_dir];
+						if (r->contains_pt_xy(test_pt)) {r->has_stairs |= (1U << min(num_floors-1U, 7U));} // top floor (clamp to 7 to avoid 8-bit overflow)
 					}
-				}
+					else if (p->contains_cube(*r)) { // top of stairs
+						test_pt[dim] = stairwell.d[dim][stairs_dir];
+						if (r->contains_pt_xy(test_pt)) {r->has_stairs |= 1;} // bottom floor
+					}
+					else {assert(0);}
+				} // for r
 				connected = 1;
 				break; // success
 			} // for n
