@@ -609,6 +609,7 @@ public:
 	void pre_draw(vector3d const &xlate_, bool use_dlights_, bool shadow_only, bool always_setup_shader=0);
 	virtual void draw_unshadowed();
 	virtual void post_draw();
+	void end_cur_tile();
 	template<typename T> void add_city_quad(T const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {add_flat_city_quad(r, qbd, color, ar);} // generic flat road case
 	void add_city_quad(road_seg_t  const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {r.add_road_quad(qbd, color, ar);} // road segment
 	void add_city_quad(road_t      const &r, quad_batch_draw &qbd, colorRGBA const &color, unsigned type_ix, bool) {r.add_road_quad(qbd, color, ar/TRACKS_WIDTH);} // tracks

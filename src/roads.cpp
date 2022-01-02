@@ -850,18 +850,6 @@ void road_draw_state_t::draw_unshadowed() {
 }
 
 void road_draw_state_t::post_draw() {
-	if (!shadow_only && !qbd_untextured.empty()) {select_texture(WHITE_TEX);}
-	qbd_untextured.draw_and_clear();
-
-	if (!text_verts.empty()) { // draw street names on signs; must be after qbd_untextured due to alpha blending
-		// FIXME: shadows
-		assert(!shadow_only);
-		text_drawer::bind_font_texture();
-		enable_blend();
-		draw_verts(text_verts, GL_QUADS);
-		text_verts.clear();
-		disable_blend();
-	}
 	draw_state_t::post_draw();
 	if (qbd_sl.empty()) return; // no stoplights to draw
 	set_std_depth_func_with_eq(); // helps prevent Z-fighting
@@ -875,6 +863,20 @@ void road_draw_state_t::post_draw() {
 	qbd_sl.draw_and_clear();
 	s.end_shader();
 	set_std_depth_func();
+}
+
+void road_draw_state_t::end_cur_tile() {
+	if (!shadow_only && !qbd_untextured.empty()) {select_texture(WHITE_TEX);}
+	qbd_untextured.draw_and_clear();
+	
+	if (!text_verts.empty()) { // draw street names on signs; must be after qbd_untextured due to alpha blending
+		assert(!shadow_only);
+		text_drawer::bind_font_texture();
+		enable_blend();
+		draw_verts(text_verts, GL_QUADS);
+		text_verts.clear();
+		disable_blend();
+	}
 }
 
 void road_draw_state_t::draw_bridge(bridge_t const &bridge, bool shadow_only) { // Note: called rarely, so doesn't need to be efficient

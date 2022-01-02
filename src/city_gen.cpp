@@ -1265,9 +1265,13 @@ public:
 
 				for (unsigned i = 0; i < 3; ++i) { // intersections (2-way, 3-way, 4-way)
 					dstate.draw_city_region(isecs[i], b->ranges[TYPE_ISEC2 + i], b->quads[TYPE_ISEC2 + i], (TYPE_ISEC2 + i));
-					if (i > 0) {dstate.draw_stoplights(isecs[i], roads, b->ranges[TYPE_ISEC2 + i], 0);}
 				}
 				if (use_road_normal_maps) {reset_road_normal_map();}
+
+				for (unsigned i = 1; i < 3; ++i) { // intersections (3-way, 4-way)
+					dstate.draw_stoplights(isecs[i], roads, b->ranges[TYPE_ISEC2 + i], 0);
+				}
+				dstate.end_cur_tile();
 			} // for b
 		}
 		draw_streetlights(dstate, shadow_only, 0);
