@@ -1814,11 +1814,10 @@ bool geom_xform_t::operator==(geom_xform_t const &x) const {
 
 void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: RM ignored
 	// Note: since pdu's don't have an xform matrix, and don't track applied xforms, we must do the translate first
-	assert(scale != 0.0);
 	pdu.translate(-tv);
 	//pdu.rotate(axis, -angle); // FIXME: incorrect - we want to rotate about the model's origin, not the frustum/camera origin
 	assert(scale != 0.0);
-	//assert(scale > 0.0); // FIXME: what to do about negative scales?
+	//assert(scale > 0.0); // negative scales represent an XYZ mirror, which isn't something we can support for a PDU, so instead we take the abs()
 	pdu.scale(1.0/fabs(scale));
 	if (angle != 0.0) {pdu.valid = 0;} // since we can't transform the pdu correctly, we give up and disable using it for VFC
 }
