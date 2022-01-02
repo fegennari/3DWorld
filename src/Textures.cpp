@@ -528,7 +528,7 @@ void texture_t::do_gl_init(bool free_after_upload) {
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
 	//RESET_TIME;
 	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, mirror, mirror, 0, anisotropy);
-	if (defer_load()) {deferred_load_and_bind();} // TODO: what about mipmaps?
+	if (defer_load()) {deferred_load_and_bind();} // Note: mipmaps are stored in the DDS file and aren't controlled by the use_mipmaps option
 	else {
 		assert(is_allocated());
 		assert(width > 0 && height > 0);

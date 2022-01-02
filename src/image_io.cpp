@@ -737,6 +737,7 @@ void texture_t::deferred_load_and_bind() {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, GLint(Texture.levels() - 1));
 			glTexStorage2D(GL_TEXTURE_2D, Texture.levels(), Format.Internal, width, height);
 
+			// handle mipmaps; the value of use_mipmaps is ignored here
 			for (gli::texture2d::size_type Level = 0; Level < Texture.levels(); ++Level) {
 				if (compressed) {
 					glCompressedTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, Texture[Level].extent().x, Texture[Level].extent().y,
