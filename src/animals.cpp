@@ -107,7 +107,9 @@ public:
 		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, 1, color); // not shadow pass, cancel local translate
 	}
 	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float rot_time, bool draw_body, colorRGBA const &color_in=WHITE) {
-		float rot_angle(45.0f*(sin(5.0*TWO_PI*rot_time) + 0.5)); // 5 flaps per second; more positive angle
+		float const flap_angle(5.0*TWO_PI*rot_time), rot_angle(45.0f*(sin(flap_angle) + 0.5)); // 5 flaps per second; more positive angle
+		point pos_mod(pos);
+		pos_mod.z += 0.25*radius*sin(flap_angle - 0.25f*PI); // add some vertical bounce as the wings move; 22.5 degree lag
 		colorRGBA const color(color_in, 1.0); // make alpha 1.0
 		bool const use_custom_tid(color_in != WHITE);
 
@@ -119,11 +121,11 @@ public:
 			rotation_t const wing_rotate(plus_x, (90.0f + wing_sign*rot_angle));
 			// this isn't perfect because in reality there are two wings on each side, and each of the four wings rotates about a slightly different point;
 			// the result has a bit of clipping of wings through the body and each other, but maybe it's close enough
-			draw_model(bfly_info[n].id, s, pos, radius, dir, wing_rotate, 0, color, use_custom_tid);
+			draw_model(bfly_info[n].id, s, pos_mod, radius, dir, wing_rotate, 0, color, use_custom_tid);
 		}
 		if (draw_body) {
 			rotation_t const body_rotate(plus_x, 90.0); // model has up=y, and we want up=z
-			draw_model(bfly_info[BF_BODY].id, s, pos, radius, dir, body_rotate, 0, WHITE, 0, 0, 1.5); // not shadow pass, custom lod_mult for legs
+			draw_model(bfly_info[BF_BODY].id, s, pos_mod, radius, dir, body_rotate, 0, WHITE, 0, 0, 1.5); // not shadow pass, custom lod_mult for legs
 		}
 	}
 };
