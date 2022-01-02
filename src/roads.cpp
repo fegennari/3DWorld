@@ -550,7 +550,7 @@ void road_isec_t::draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, poin
 }
 
 // should this be a function of road_draw_state_t that takes the road_isec_t instead?
-void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> const &roads, bool shadow_only) const {
+void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> const &roads, unsigned cur_city, bool shadow_only) const {
 	if (num_conn == 2) return; // no stoplights
 	if (!dstate.check_cube_visible(*this, 0.16)) return; // dist_scale=0.16
 	point const center(get_cube_center() + dstate.xlate);
@@ -648,8 +648,7 @@ void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> cons
 
 			if (!shadow_only && dist_val < 0.05) { // draw sign text when very close
 				unsigned const to_the_right[4] = {2,3,1,0};
-				int road_ix(rix_xy[to_the_right[n]]); // map from the current road to the one on the right
-				//if (road_ix < 0) {road_ix = rix_xy[to_the_right[n]^1];} // no road to the right? maybe it was a connector road; how about to the left (swap the LSB)?
+				int const road_ix(rix_xy[to_the_right[n]]); // map from the current road to the one on the right
 				string name;
 
 				if (road_ix >= 0) {
@@ -657,7 +656,9 @@ void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> cons
 					name = roads[road_ix].get_name();
 				}
 				else { // city connector road
-					name = road_t(decode_neg_ix(road_ix)).get_name(); // only the road_ix is valid, but this is the segment index, so it doesn't match at the two city ends
+					assert(conn_to_city >= 0);
+					unsigned const city1(min(cur_city, (unsigned)conn_to_city)), city2(max(cur_city, (unsigned)conn_to_city));
+					name = road_t(city1 + (city2 << 16)).get_name(); // use the canonical pair of city indices so that the road name matches at each city end
 				}
 				bool const text_dir(sign.d[dim][dir] + dstate.xlate[dim] < camera_pdu.pos[dim]); // draw text on the side facing the player
 				add_sign_text_verts(name, sign, dim, text_dir, WHITE, dstate.text_verts);
@@ -1115,8 +1116,8 @@ void road_draw_state_t::draw_tunnel(tunnel_t const &tunnel, bool shadow_only) { 
 	if (!shadow_only) {select_multitex(FLAT_NMAP_TEX, 5);} // restore flat normal map
 }
 
-void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, vector<road_t> const &roads, range_pair_t const &rp, bool shadow_only) {
-	for (unsigned i = rp.s; i < rp.e; ++i) {isecs[i].draw_stoplights(*this, roads, shadow_only);}
+void road_draw_state_t::draw_stoplights(vector<road_isec_t> const &isecs, vector<road_t> const &roads, range_pair_t const &rp, unsigned cur_city, bool shadow_only) {
+	for (unsigned i = rp.s; i < rp.e; ++i) {isecs[i].draw_stoplights(*this, roads, cur_city, shadow_only);}
 }
 
 // not really related to roads, but I guess this goes here

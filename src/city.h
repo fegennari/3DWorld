@@ -538,7 +538,7 @@ struct road_isec_t : public cube_t {
 	bool proc_sphere_coll(point &pos, point const &p_last, float radius, vector3d const &xlate, float dist, vector3d *cnorm) const;
 	bool line_intersect(point const &p1, point const &p2, float &t) const;
 	void draw_sl_block(quad_batch_draw &qbd, draw_state_t &dstate, point p[4], float h, unsigned state, bool draw_unlit, float flare_alpha, vector3d const &n, tex_range_t const &tr) const;
-	void draw_stoplights(road_draw_state_t &dstate, vector<road_t> const &roads, bool shadow_only) const;
+	void draw_stoplights(road_draw_state_t &dstate, vector<road_t> const &roads, unsigned cur_city, bool shadow_only) const;
 };
 
 
@@ -631,7 +631,7 @@ public:
 	void draw_bridge(bridge_t const &bridge, bool shadow_only);
 	void add_bridge_quad(point const pts[4], color_wrapper const &cw, float normal_scale);
 	void draw_tunnel(tunnel_t const &tunnel, bool shadow_only);
-	void draw_stoplights(vector<road_isec_t> const &isecs, vector<road_t> const &roads, range_pair_t const &rp, bool shadow_only);
+	void draw_stoplights(vector<road_isec_t> const &isecs, vector<road_t> const &roads, range_pair_t const &rp, unsigned cur_city, bool shadow_only);
 	void draw_transmission_line(transmission_line_t const &tline);
 }; // road_draw_state_t
 
