@@ -566,7 +566,8 @@ void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> cons
 		float const side_len(side ? -sz : sz), v1(d[!dim][side] + (SLIGHT_DIST_TO_CORNER_SCALE - 1.0)*side_len), v2(v1 + side_len); // pos in other dim
 		// draw base
 		unsigned const num_segs(has_left_turn_signal(n) ? 6 : 3);
-		float const sl_top(zbot + 1.2*h*num_segs), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
+		float const sl_height(1.2*h*max(float(num_segs), 4.2f)); // use 4.2 segs rather than 3 so that the street sign isn't blocked by the crosswalk sign
+		float const sl_top(zbot + sl_height), sl_lo(min(v1, v2) - 0.25*sz), sl_hi(max(v1, v2) + 0.25*sz);
 		cube_t sc;
 
 		if (dist_val > 0.06) { // draw front face only

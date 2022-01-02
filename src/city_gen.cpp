@@ -1230,6 +1230,7 @@ public:
 					if (!dstate.check_cube_visible(b->bcube, 0.16)) continue; // VFC/too far; dist_scale=0.16
 					for (unsigned i = 1; i < 3; ++i) {dstate.draw_stoplights(isecs[i], roads, b->ranges[TYPE_ISEC2 + i], 1);} // intersections with stoplights (3-way, 4-way)
 				}
+				dstate.end_cur_tile(); // once for all tiles, since shadows aren't used
 			}
 		}
 		else {
