@@ -1605,7 +1605,6 @@ void model3d::clear() {
 	undef_materials.clear();
 	mat_map.clear();
 	coll_tree.clear();
-	smap_data.clear(); // unnecessary
 	textures_loaded = 0;
 }
 
