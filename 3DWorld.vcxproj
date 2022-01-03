@@ -1109,6 +1109,7 @@
     <None Include="shaders\drunken_wave.frag" />
     <None Include="shaders\dynamic_lighting.part" />
     <None Include="shaders\exponential_fog.part.frag" />
+    <None Include="shaders\fish_animate.vert" />
     <None Include="shaders\flowers.frag" />
     <None Include="shaders\flowers_pp_dl.vert" />
     <None Include="shaders\flowers_tiled.frag" />

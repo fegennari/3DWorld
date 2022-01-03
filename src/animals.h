@@ -50,9 +50,11 @@ public:
 };
 
 class fish_t : public animal_t {
+	float anim_time;
 
 	float get_half_height() const {return 0.4*radius;} // approximate
 public:
+	fish_t() : anim_time(0.0) {}
 	static bool type_enabled();
 	static bool can_place_in_tile(tile_t const *const tile);
 	bool gen(rand_gen_t &rgen, cube_t const &range, tile_t const *const tile);

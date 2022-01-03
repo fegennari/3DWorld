@@ -1431,6 +1431,9 @@
     <None Include="shaders\pos_only.vert">
       <Filter>Shaders\vert</Filter>
     </None>
+    <None Include="shaders\fish_animate.vert">
+      <Filter>Shaders\vert</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc">

@@ -101,9 +101,10 @@ public:
 		for (unsigned n = 0; n < BF_NUM_PARTS; ++n) {get_model(bfly_info[n].id).union_bcube_with(all_bcube);} // the entire model has one unified bcube
 		return 1; // success
 	}
-	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
+	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float anim_time, colorRGBA const &color=WHITE) {
 		rotation_t const local_rotate(plus_y, -45.0); // fish model is angled 45 degree upward, so need to rotate it back down
 		// invert dir - fish model faces in -x, and we want it to be in +x
+		s.add_uniform_float("animation_time", anim_time);
 		draw_model(fish_info.id, s, pos, radius, -dir, local_rotate, 1, color); // not shadow pass, cancel local translate
 	}
 	void draw_butterfly_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, float rot_time, bool draw_body, colorRGBA const &color_in=WHITE) {
@@ -216,8 +217,9 @@ bool fish_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	if (!enabled || !animate2) return 0;
 	point const camera(get_camera_pos()), pos_(get_camera_space_pos());
 	if (!dist_less_than(pos_, camera, 200.0*radius)) return 1; // to far away to simulate (optimization)
-	if (pos.z - 1.1*get_half_height() < get_mesh_zval_at_pos(tile)) {enabled = 0; return 0;}
+	if (pos.z - 1.1*get_half_height() < get_mesh_zval_at_pos(tile)) {enabled = 0; anim_time = 0.0; return 0;}
 	bool const chased(dist_less_than(pos_, camera, 15.0*radius));
+	float const speed(velocity.mag());
 
 	if (chased) { // scared by the player, swim away
 		dir   = (pos_ - camera);
@@ -226,8 +228,6 @@ bool fish_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 		velocity = (10.0*FISH_SPEED) * dir; // swim away at a constant velocity
 	}
 	else if (!dist_less_than(pos_, camera, 20.0*radius)) { // far enough away from the player
-		float const speed(velocity.mag());
-		
 		if (speed > FISH_SPEED) { // moving fast
 			velocity *= pow(0.96f, fticks); // slow down
 		}
@@ -242,10 +242,12 @@ bool fish_t::update(rand_gen_t &rgen, tile_t const *const tile) {
 	
 	if (pos.z - 1.5*get_half_height() < get_mesh_zval_at_pos(tile)) { // water is too shallow
 		pos = orig_pos;
-		if (chased) {velocity = zero_vector;} // stop
+		if (chased) {velocity = zero_vector; anim_time = 0.0;} // stop
 		else {gen_dir_vel(rgen, FISH_SPEED);} // pick a new direction randomly
 		// or swim up?
 	}
+	anim_time += speed*fticks;
+	if (anim_time > 10000) {anim_time -= 10000;} // reset after many ticks to avoid FP error with large numbers
 	return 1;
 }
 
@@ -527,8 +529,15 @@ void fish_t::draw(shader_t &s, tile_t const *const tile, bool &first_draw) const
 	if (draw_color.alpha < 0.01) return;
 	if (draw_color.alpha < 0.1) {glDepthMask(GL_FALSE);} // disable depth writing to avoid alpha blend order problems
 	//draw_color = lerp(cur_fog_color, draw_color, alpha);
-	if (!s.is_setup()) {s.begin_simple_textured_shader();} // no lighting
-	animal_model_loader.draw_fish_model(s, pos_, radius, dir, draw_color);
+	
+	if (!s.is_setup()) {
+		s.set_vert_shader("fish_animate");
+		s.set_frag_shader("simple_texture");
+		s.begin_shader();
+		s.add_uniform_float("min_alpha", 0.0);
+		s.add_uniform_int("tex0", 0);
+	}
+	animal_model_loader.draw_fish_model(s, pos_, radius, dir, anim_time, draw_color);
 	if (draw_color.alpha < 0.1) {glDepthMask(GL_TRUE);}
 }
 
