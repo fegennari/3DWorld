@@ -664,7 +664,20 @@ void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> cons
 					name = road_t().get_name(city1 + (city2 << 16)); // use the canonical pair of city indices so that the road name matches at each city end
 				}
 				bool const text_dir(sign.d[dim][dir] + dstate.xlate[dim] < camera_pdu.pos[dim]); // draw text on the side facing the player
-				add_sign_text_verts(name, sign, dim, text_dir, WHITE, dstate.text_verts);
+				// split the road name from the extension and draw them in different sizes, like in real street signs
+				auto space_start(name.find_last_of(" "));
+				assert(space_start != string::npos);
+				string const road_name(name.substr(0, space_start)), ext(name.substr(space_start+1));
+				cube_t sign_main(sign), sign_ext(sign);
+				bool const ext_dir(text_dir ^ dim);
+				float const signed_sz(ext_dir ? sz : -sz);
+				sign_main.d[!dim][ ext_dir] -= 0.8*signed_sz;
+				sign_ext .d[!dim][!ext_dir] += 4.2*signed_sz;
+				sign_ext .d[!dim][ ext_dir] -= 0.2*signed_sz;
+				sign_ext.z1() += 0.15*sz; // upper part / smaller text
+				add_sign_text_verts(road_name, sign_main, dim, text_dir, WHITE, dstate.text_verts);
+				add_sign_text_verts(ext,       sign_ext,  dim, text_dir, WHITE, dstate.text_verts); // smaller text
+				//add_sign_text_verts(name, sign, dim, text_dir, WHITE, dstate.text_verts); // single font size text
 			}
 		} // end street sign
 		if (shadow_only)    continue; // no lights in shadow pass
