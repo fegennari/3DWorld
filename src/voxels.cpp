@@ -45,7 +45,7 @@ void gen_rx_ry(float &rx, float &ry);
 
 
 // if size==old_size, we do nothing; if size==0, we only free the texture
-void noise_texture_manager_t::procedural_gen(unsigned size, int rseed, float mag, float freq, vector3d const &offset) {
+void noise_texture_manager_t::procedural_gen(unsigned size, int rseed, float mag, float freq, vector3d const &offset) { // for asteroids and rocks
 
 	if (size == tsize) return; // nothing to do (check mag, freq, etc.?)
 	clear();
@@ -53,7 +53,7 @@ void noise_texture_manager_t::procedural_gen(unsigned size, int rseed, float mag
 	if (size == 0) return; // nothing else to do
 	voxels.clear();
 	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros, 0.0, 1);
-	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index, 0); // always use sines
+	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index, 0, 0); // always use sines; verbose=0
 }
 
 void noise_texture_manager_t::ensure_tid() {
@@ -275,7 +275,7 @@ void voxel_manager::clear() {
 }
 
 
-void voxel_manager::create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2, int gen_mode) {
+void voxel_manager::create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2, int gen_mode, bool verbose) {
 
 	unsigned const xyz_num[3] = {nx, ny, nz};
 	vector<float> xyz_vals[3];
@@ -307,7 +307,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 		free_texture(tid);
 		return;
 	}
-	cout << "Voxel resolution: " << nx << "x" << ny << "x" << nz << endl;
+	if (verbose) {cout << "Voxel resolution: " << nx << "x" << ny << "x" << nz << endl;}
 
 #pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)ny; ++y) { // generate voxel values
@@ -1882,7 +1882,7 @@ void gen_voxel_landscape() {
 	setup_voxel_landscape(global_voxel_params, 0.0);
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
-		global_voxel_params.normalize_to_1, global_voxel_params.geom_rseed, 456+rand_gen_index, mesh_gen_mode);
+		global_voxel_params.normalize_to_1, global_voxel_params.geom_rseed, 456+rand_gen_index, mesh_gen_mode, 1); // verbose=1
 	PRINT_TIME(" Voxel Gen");
 	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0, 1);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
@@ -1931,7 +1931,7 @@ void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const
 	assert(model.empty());
 	model.set_params(params);
 	model.init(size, size, size, vector3d(vsz, vsz, vsz), center, -1.0, params.num_blocks);
-	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed, gen_mode);
+	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed, gen_mode, 0); // verbose=0
 }
 
 
