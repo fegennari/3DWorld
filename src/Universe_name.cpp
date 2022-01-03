@@ -8,12 +8,12 @@ string const v_com = "a e i o ";
 string const v_str = "u ai io ";
 string const v_beg = "au ea ei eo eu ou ya ye yo ";
 string const v_mid = "ao au ea ee ei eo eu ia ie oa oi oo ou ue ";
-string const v_end = "ay ee ey ia ie oo oy ue ";
+string const v_end = "ay ee ey ia ie oo oy ue ion ";
 string const c_com = "l n r s t ";
 string const c_str = "b b c c d d f f g g h h j k m m p p v w w x ch ch sp st st th th ";
-string const c_beg = "bl br cl cr dr fl fr gl gr ph pl pr sk sh sh tr tr wh qu str thr ";
+string const c_beg = "bl br cl cr dr fl fr gl gr ph pl pr sk sh sh tr tr wh q str thr ";
 string const c_mid = "bb dd ff gg pp rr rr tt tt rc ";
-string const c_end = "ck ck ct gh ld ld ll ln ln lm lp lt mp nc nd nd ng nk rk rs rs rt rt ss ss ion gth nch ";
+string const c_end = "ck ck ct gh ld ld ll ln ln lm lp lt mp nc nd nd ng nk rk rs rs rt rt ss ss gth nch ";
 
 string const v_start  = v_com + v_com + v_com + v_com + v_com + v_str + v_beg;
 string const v_middle = v_com + v_com + v_com + v_com + v_com + v_str + v_mid;
