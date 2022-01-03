@@ -19,7 +19,7 @@ string gen_random_first_name(rand_gen_t &rgen); // from pedestrians.cpp
 void add_sign_text_verts(string const &text, cube_t const &sign, bool dim, bool dir, colorRGBA const &color, vector<vert_norm_comp_tc_color> &verts_out); // from building_room_geom.cpp
 
 class road_name_gen_t {
-	string get_numbered_street_name(unsigned num) const {
+	static string get_numbered_street_name(unsigned num) {
 		assert(num > 0 && num < 100);
 		string const names_1_to_20[21] = {"Zeroth", "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth",
 			"Eleventh", "Twelfth", "Thirteenth", "Fourteenth", "Fifteenth", "Sixteenth", "Seventeenth", "Eighteenth", "Nineteenth", "Twentieth"};
@@ -28,31 +28,34 @@ class road_name_gen_t {
 		if ((num%10) == 0) {return decade_names[num/10] + "ieth";}
 		return decade_names[num/10] + "y " + names_1_to_20[num%10];
 	}
-	string select_road_name(rand_gen_t &rgen) const { // use either a randomly generated name or a person's first name
+	static string get_dir_name(bool dim, bool dir) { // for future use, but likely requires knowing the position on the road (so that it can have S/E vs. S/W ends)
+		return (dim ? (dir ? "North" : "South") : (dir ? "East" : "West"));
+	}
+	static string select_road_name(rand_gen_t &rgen) { // use either a randomly generated name or a person's first name
 		return (rgen.rand_bool() ? gen_random_name(rgen) : gen_random_first_name(rgen));
 	}
 public:
-	string gen_name(road_t const &road) const {
-		// Note: can also use road.dim/road.dir for N/S/E/W
-		if (road.is_all_zeros()) { // city connector road; only road.road_ix is valid
+	string gen_name(road_t const &road, unsigned city_ix) const {
+		if (road.is_all_zeros()) { // city connector road; only city_ix is used
 			rand_gen_t rgen;
-			rgen.set_state(road.road_ix+1, road.road_ix+123);
+			rgen.set_state(city_ix+123, city_ix+321); // should be unique per road
+			rgen.rand_mix();
 			string const suffix[3] = {"St", "Rd", "Expy"};
 			return select_road_name(rgen) + " " + suffix[rgen.rand()%3];
 		}
-		if (road.dim == 1 && road.road_ix < 99) { // can use numbered roads
+		if (road.dim == 1 && road.road_ix < 99 && (city_ix & 1)) { // can use numbered roads, for odd cities
 			string const suffix[2] = {"St", "Ave"};
-			unsigned const suffix_ix(int(100.0*road.z1()/city_params.road_width)&1); // use something consistent across the city such as elevation
-			return get_numbered_street_name(road.road_ix+1) + " " + suffix[suffix_ix];
+			return get_numbered_street_name(road.road_ix+1) + " " + suffix[(city_ix & 2) >> 1]; // alternate suffixes between cities (may be unused)
 		}
 		rand_gen_t rgen;
-		rgen.set_state(road.x1()/city_params.road_width, road.y1()/city_params.road_width); // should be unique per road
+		rgen.set_state(road.road_ix+1, city_ix+1); // should be unique per road
+		rgen.rand_mix();
 		string const suffix[13] = {"St", "St", "St", "Ave", "Ave", "Rd", "Rd", "Rd", "Dr", "Blvd", "Ln", "Way", "Ct"}; // more common suffixes are duplicated
 		return select_road_name(rgen) + " " + suffix[rgen.rand()%13];
 	}
 };
 road_name_gen_t road_name_gen;
-string road_t::get_name() const {return road_name_gen.gen_name(*this);}
+string road_t::get_name(unsigned city_ix) const {return road_name_gen.gen_name(*this, city_ix);}
 
 void road_mat_mgr_t::ensure_road_textures() {
 	if (inited) return;
@@ -653,12 +656,12 @@ void road_isec_t::draw_stoplights(road_draw_state_t &dstate, vector<road_t> cons
 
 				if (road_ix >= 0) {
 					assert((unsigned)road_ix < roads.size());
-					name = roads[road_ix].get_name();
+					name = roads[road_ix].get_name(cur_city);
 				}
 				else { // city connector road
 					assert(conn_to_city >= 0);
 					unsigned const city1(min(cur_city, (unsigned)conn_to_city)), city2(max(cur_city, (unsigned)conn_to_city));
-					name = road_t(city1 + (city2 << 16)).get_name(); // use the canonical pair of city indices so that the road name matches at each city end
+					name = road_t().get_name(city1 + (city2 << 16)); // use the canonical pair of city indices so that the road name matches at each city end
 				}
 				bool const text_dir(sign.d[dim][dir] + dstate.xlate[dim] < camera_pdu.pos[dim]); // draw text on the side facing the player
 				add_sign_text_verts(name, sign, dim, text_dir, WHITE, dstate.text_verts);

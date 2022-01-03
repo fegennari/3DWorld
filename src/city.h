@@ -275,7 +275,7 @@ struct road_t : public cube_t {
 
 	road_t(cube_t const &c, bool dim_, bool slope_=0, unsigned road_ix_=0) : cube_t(c), road_ix(road_ix_), dim(dim_), slope(slope_) {}
 	road_t(point const &s, point const &e, float width, bool dim_, bool slope_=0, unsigned road_ix_=0);
-	road_t(unsigned road_ix_) : road_ix(road_ix_), dim(0), slope(0) {} // only used for name generation for city connector roads
+	road_t() : road_ix(0), dim(0), slope(0) {} // only used for name generation for city connector roads
 	float get_length   () const {return (d[ dim][1] - d[ dim][0]);}
 	float get_width    () const {return (d[!dim][1] - d[!dim][0]);}
 	float get_slope_val() const {return dz()/get_length();}
@@ -286,7 +286,7 @@ struct road_t : public cube_t {
 	cube_t const &get_bcube() const {return *this;}
 	cube_t       &get_bcube()       {return *this;}
 	void add_road_quad(quad_batch_draw &qbd, colorRGBA const &color, float ar) const;
-	string get_name() const;
+	string get_name(unsigned city_ix) const;
 };
 
 struct road_seg_t : public road_t {
