@@ -467,7 +467,7 @@ bool building_t::check_sphere_coll_interior(point &pos, point const &p_last, vec
 		pos += normal*(r_sum - dist);
 		had_coll = 1;
 	} // for i
-	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_zh, xy_radius);
+	handle_vert_cylin_tape_collision(pos, p_last, pos.z-radius, pos.z+camera_zh, xy_radius, 1); // is_player=1
 	return had_coll; // will generally always be true due to floors
 }
 

@@ -1251,7 +1251,7 @@ bool building_t::maybe_update_tape(point const &player_pos, bool end_of_tape) {
 }
 
 // returns the index of the first quad vertex, or -1 if no intersection found
-int tape_quad_batch_draw::moving_vert_cyilin_int_tape(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, float slow_amt) const {
+int tape_quad_batch_draw::moving_vert_cyilin_int_tape(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, float slow_amt, bool is_player) const {
 	if (verts.empty()) return -1;
 	if (cur_pos == prev_pos) return -1; // stopped, no effect
 	assert(!(verts.size() % 12)); // must be a multiple of 12 (pairs of quads formed from two triangles)
@@ -1260,12 +1260,12 @@ int tape_quad_batch_draw::moving_vert_cyilin_int_tape(point &cur_pos, point cons
 
 	for (unsigned i = 0; i < verts.size(); i += 12) { // iterate over pairs of back-to-back quads
 		point const &p1(verts[i].v), &p2(verts[i+1].v); // get two opposite corners of the first quad, which approximates the line of the tape
-		if (dist_xy_less_than(p1, p2, 2.0*radius)) continue; // skip short lines; ignore zval to skip already split vertical tape segments
+		if (dist_xy_less_than(p1, p2, 1.5*radius)) continue; // skip short lines; ignore zval to skip already split vertical tape segments
 		if (!line_intersect_cylinder(p1, p2, cylin, 1)) continue; // check_ends=1
 		if (pt_line_dist(prev_pos, p1, p2) < pt_line_dist(cur_pos, p1, p2)) continue; // new point is further from the line - moving away, skip
 		if (slow_amt > 0.0) {cur_pos = slow_amt*prev_pos + (1.0 - slow_amt)*cur_pos;}
-		// hack to avoid intersection with just-placed tape: skip if prev pos also intersects when not slowing
-		else if (line_intersect_cylinder(p1, p2, cylinder_3dw(point(prev_pos.x, prev_pos.y, z1), point(prev_pos.x, prev_pos.y, z2), radius, radius), 1)) continue;
+		// hack to avoid player intersection with just-placed tape: skip if prev pos also intersects when not slowing
+		else if (is_player && line_intersect_cylinder(p1, p2, cylinder_3dw(point(prev_pos.x, prev_pos.y, z1), point(prev_pos.x, prev_pos.y, z2), radius, radius), 1)) continue;
 		return i;
 	}
 	return -1; // not found
@@ -1299,17 +1299,17 @@ void tape_quad_batch_draw::split_tape_at(unsigned first_vert, point const &pos, 
 }
 
 // Note: cur_pos.z should be between z1 and z2
-void building_t::handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius) const {
+void building_t::handle_vert_cylin_tape_collision(point &cur_pos, point const &prev_pos, float z1, float z2, float radius, bool is_player) const {
 	if (!has_room_geom()) return;
 	tape_quad_batch_draw &tape_qbd(interior->room_geom->decal_manager.tape_qbd); // Note: technically, this violates const-ness of this function
 	// first, test if tape is very close, and if so, break it; otherwise, slow down the player/AI when colliding with tape
-	int const vert_ix(tape_qbd.moving_vert_cyilin_int_tape(cur_pos, prev_pos, z1, z2, 0.2*radius, 0.0)); // 20% radius, slow_amt=0.0
+	int const vert_ix(tape_qbd.moving_vert_cyilin_int_tape(cur_pos, prev_pos, z1, z2, 0.2*radius, 0.0, is_player)); // 20% radius, slow_amt=0.0
 	
 	if (vert_ix >= 0) {
 		tape_qbd.split_tape_at(vert_ix, cur_pos, z1); // min_zval=z1
 		play_tape_sound(cur_pos, 1.0);
 	}
-	else {tape_qbd.moving_vert_cyilin_int_tape(cur_pos, prev_pos, z1, z2, radius, 0.85);} // slow_amt=0.85
+	else {tape_qbd.moving_vert_cyilin_int_tape(cur_pos, prev_pos, z1, z2, radius, 0.85, is_player);} // slow_amt=0.85
 }
 
 // spraypaint, markers, and decals
