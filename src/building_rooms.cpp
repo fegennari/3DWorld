@@ -583,9 +583,11 @@ bool building_t::add_bedroom_objs(rand_gen_t rgen, room_t const &room, vect_cube
 			unsigned flags(0);
 			if (c.d[!dim][0] == room_bounds.d[!dim][0]) {flags |= RO_FLAG_ADJ_LO;}
 			if (c.d[!dim][1] == room_bounds.d[!dim][1]) {flags |= RO_FLAG_ADJ_HI;}
+			//if ((rgen.rand() % 10) == 0) {flags |= RO_FLAG_OPEN;} // 10% chance of open closet; unclear if this adds any value, but it works
 			closet_obj_id = objs.size();
 			objs.emplace_back(c, TYPE_CLOSET, room_id, dim, !dir, flags, tot_light_amt, SHAPE_CUBE, wall_color); // closet door is always white; sides should match interior walls
 			set_obj_id(objs);
+			if (flags & RO_FLAG_OPEN) {interior->room_geom->expand_object(objs.back());} // expand opened closets
 			placed_closet = 1; // done
 			// add a light inside the closet
 			room_object_t const &closet(objs.back());
