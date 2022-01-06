@@ -622,7 +622,7 @@ public:
 		assert(ix < to_draw.size()); // must call get_verts() on this tex first
 		to_draw[ix].no_shadows = 1;
 	}
-	void add_cylinder(building_t const &bg, point const &pos, point const &rot_center, float height, float rx, float ry,
+	void add_cylinder(building_t const &bg, point const &pos, float height, float rx, float ry,
 		tid_nm_pair_t const &tex, colorRGBA const &color, unsigned dim_mask, bool no_ao, bool clip_windows)
 	{
 		unsigned const ndiv(bg.num_sides); // Note: no LOD
@@ -662,9 +662,9 @@ public:
 						vert.set_norm(normal.get_norm());
 					}
 					vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), 0.0);
-					if (bg.is_rotated()) {bg.do_xy_rotate(rot_center, vert.v);}
+					if (bg.is_rotated()) {bg.do_xy_rotate(pos, vert.v);}
 
-					for (unsigned e = 0; e < 2; ++e) {
+					for (unsigned e = 0; e < 2; ++e) { // top/bottom
 						vert.v.z = ((d^e) ? z_top : pos.z);
 						vert.t[1] = tscale_y*tex_pos[d^e] + tex.tyoff;
 						if (apply_ao) {vert.copy_color(cw[d^e]);}
@@ -685,7 +685,7 @@ public:
 				center.t[0] = center.t[1] = 0.0; // center of texture space for this disk
 				center.v = pos;
 				if (d) {center.v.z += height;}
-				if (bg.is_rotated()) {bg.do_xy_rotate(rot_center, center.v);}
+				if (bg.is_rotated()) {bg.do_xy_rotate(pos, center.v);}
 				unsigned const start(tri_verts.size());
 
 				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data triangles
@@ -696,7 +696,7 @@ public:
 						vector3d const &n(normals[(S+e)%ndiv]);
 						vert.v.assign((pos.x + rx*n.x), (pos.y + ry*n.y), center.v.z);
 						vert.t[0] = tscale_x*n[0]; vert.t[1] = tscale_y*n[1];
-						if (bg.is_rotated()) {bg.do_xy_rotate(rot_center, vert.v);}
+						if (bg.is_rotated()) {bg.do_xy_rotate(pos, vert.v);}
 						tri_verts.push_back(vert);
 					}
 				} // for S
@@ -729,12 +729,25 @@ public:
 		point const center(!is_rotated ? all_zeros : bg.bcube.get_cube_center()); // rotate about bounding cube / building center
 		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 
+		if (!is_exterior && bg.num_sides != 4) { // interior wall, clip to exterior wall bounds
+			point const ccenter(cube.get_cube_center());
+			cube_t const parent_part(bg.get_part_containing_pt(ccenter));
+			assert(!parent_part.is_all_zeros()); // must be found (but also checked in the call above)
+			vector<point> contour; // TODO: reuse across calls
+			get_cylin_xy_contour(bg, point(parent_part.xc(), parent_part.yc(), cube.zc()), 0.5*sz.x, 0.5*sz.y, contour);
+			assert(!contour.empty());
+			vector<point> to_draw(contour), temp; // TODO: reuse across calls
+			clip_polygon_to_cube_inner(cube, parent_part, to_draw, temp);
+			add_contour(bg, contour, cube.dz(), tex, color, dim_mask);
+			// TODO: if (!(dim_mask & 4)), clip cube and continue with the code below
+			return;
+		}
 		if (is_exterior && bg.num_sides != 4) { // not a cube, use cylinder
 			//assert(door_ztop == 0.0); // not supported / ignored for testing purposes
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.z1());
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
 			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
-			add_cylinder(bg, pos, center, sz.z, rscale*sz.x, rscale*sz.y, tex, color, dim_mask, no_ao, clip_windows);
+			add_cylinder(bg, pos, sz.z, rscale*sz.x, rscale*sz.y, tex, color, dim_mask, no_ao, clip_windows);
 			return;
 		}
 		// else draw as a cube (optimized flow)
@@ -1227,7 +1240,7 @@ void building_t::get_all_drawn_verts(building_draw_t &bdraw, bool get_exterior, 
 			else {floor_tex = mat.floor_tex; floor_color = mat.floor_color;} // office
 			// expand_by_xy(-get_trim_thickness()) to prevent z-fighting when AA is disabled? but that will leave small gaps where floors from adjacent parts meet
 			bdraw.add_section(*this, 0, *i, floor_tex, floor_color, 4, 1, 0, 1, 0); // no AO; skip_bottom; Z dim only
-		}
+		} // for i
 		for (auto i = interior->ceilings.begin(); i != interior->ceilings.end(); ++i) { // 600K T
 			// skip top surface of all but top floor ceilings if the roof is sloped;
 			// if this is an office building, the ceiling could be at a lower floor with a flat roof even if the highest floor has a sloped roof, so we must skip it

@@ -1083,6 +1083,7 @@ struct building_t : public building_geom_t {
 	point local_to_camera_space(point const &pos) const;
 	void play_door_open_close_sound(point const &pos, bool open, float gain=1.0, float pitch=1.0) const;
 	void maybe_gen_chimney_smoke() const;
+	cube_t get_part_containing_pt(point const &pt) const;
 private:
 	void finish_gen_geometry(rand_gen_t &rgen, bool has_overlapping_cubes);
 	bool add_outdoor_ac_unit(rand_gen_t &rgen);
@@ -1097,7 +1098,6 @@ private:
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;
 	void cut_holes_for_ext_doors(building_draw_t &bdraw, point const &contain_pt, unsigned draw_parts_mask) const;
 	bool is_valid_door_pos(cube_t const &door, float door_width, bool dim) const;
-	cube_t get_part_containing_pt(point const &pt) const;
 	bool is_cube_close_to_exterior_doorway(cube_t const &c, float dmin=0.0, bool inc_open=0) const;
 	bool is_cube_close_to_doorway(cube_t const &c, cube_t const &room, float dmin=0.0, bool inc_open=0, bool check_open_dir=0) const;
 	bool is_valid_placement_for_room(cube_t const &c, cube_t const &room, vect_cube_t const &blockers, bool inc_open_doors, float room_pad=0.0) const;
