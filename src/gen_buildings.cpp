@@ -39,6 +39,7 @@ extern shader_t reflection_shader;
 
 
 void get_all_model_bcubes(vector<cube_t> &bcubes); // from model3d.h
+void clip_polygon_to_cube_inner(cube_t const &cube, cube_t const &pts_bcube, vector<point> &pts, vector<point> &next); // from Math3d.cpp
 
 float get_door_open_dist() {return 3.5*CAMERA_RADIUS;}
 
@@ -703,6 +704,82 @@ public:
 				if (d == 1) {std::reverse(tri_verts.begin()+start, tri_verts.end());} // winding order is wrong, but it's easier to reverse it than change all of the indexing logic
 			} // for d
 		} // end draw end(s)
+	}
+
+	void add_contour(building_t const &bg, vector<point> const &contour, float height,
+		tid_nm_pair_t const &tex, colorRGBA const &color, unsigned dim_mask)
+	{
+		unsigned const ndiv(contour.size());
+		assert(ndiv >= 3);
+		float const z_mid(contour.front().z), z_bot(z_mid - 0.5f*height), z_top(z_mid + 0.5f*height);
+		float const bcz1(bg.bcube.z1()), tscale_x(2.0*tex.tscale_x), tscale_y(2.0*tex.tscale_y);
+		vert_norm_comp_tc_color vert;
+		vert.set_c4(color);
+		float tex_pos[2] = {0.0, 1.0};
+		UNROLL_2X(tex_pos[i_] = ((i_ ? z_top : z_bot) - bcz1);)
+
+		if (dim_mask & 3) { // draw sides
+			auto &verts(get_verts(tex)); // Note: cubes are drawn with quads, so we want to emit quads here
+
+			for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
+				vector3d const &v1(contour[S]), &v2(contour[(S+1)%ndiv]);
+				vert.set_norm(cross_product((v2 - v1), plus_z).get_norm());
+
+				for (unsigned d = 0; d < 2; ++d) {
+					vert.t[0] = tscale_x + tex.txoff;
+					vert.v = (d ? v2 : v1);
+
+					for (unsigned e = 0; e < 2; ++e) { // top/bottom
+						vert.v.z = ((d^e) ? z_top : z_bot);
+						vert.t[1] = tscale_y*tex_pos[d^e] + tex.tyoff;
+						verts.push_back(vert);
+					}
+				} // for d
+			} // for S
+		} // end draw sides
+		if (dim_mask & 4) { // draw end(s) / roof
+			auto &tri_verts(get_verts(tex, 1));
+			cube_t bcube; bcube.set_from_points(contour.data(), contour.size());
+			point const contour_center(bcube.get_cube_center());
+
+			for (unsigned d = 0; d < 2; ++d) { // bottom, top
+				vert.set_ortho_norm(2, d); // +/- z
+				vert_norm_comp_tc_color center(vert);
+				center.t[0] = center.t[1] = 0.0; // center of texture space for this disk
+				center.v = contour_center;
+				if (d) {center.v.z += height;}
+				unsigned const start(tri_verts.size());
+
+				for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data triangles
+					tri_verts.push_back(center);
+
+					for (unsigned e = 0; e < 2; ++e) {
+						if (S > 0 && e == 0) {tri_verts.push_back(tri_verts[tri_verts.size()-2]); continue;} // reuse prev vertex
+						vector3d const &v(contour[(S+e)%ndiv]);
+						vert.v = v;
+						vert.t[0] = tscale_x*v[0]; vert.t[1] = tscale_y*v[1];
+						tri_verts.push_back(vert);
+					}
+				} // for S
+				if (d == 1) {std::reverse(tri_verts.begin()+start, tri_verts.end());} // winding order is wrong, but it's easier to reverse it than change all of the indexing logic
+			} // for d
+		} // end draw end(s)
+	}
+	void get_cylin_xy_contour(building_t const &bg, point const &pos, float rx, float ry, vector<point> &contour) {
+		unsigned const ndiv(bg.num_sides); // Note: no LOD
+		assert(ndiv >= 3);
+		building_draw_utils::calc_normals(bg, normals, ndiv); // TODO: don't recalculate for every floor/ceiling/wall
+
+		for (unsigned S = 0; S < ndiv; ++S) { // generate vertex data quads
+			vector3d const &n1(normals[S]), &n2(normals[(S+1)%ndiv]);
+
+			for (unsigned d = 0; d < 2; ++d) {
+				vector3d const &n(d ? n2 : n1);
+				point vert((pos.x + rx*n.x), (pos.y + ry*n.y), pos.z);
+				if (bg.is_rotated()) {bg.do_xy_rotate(pos, vert);}
+				contour.push_back(vert);
+			}
+		} // for S
 	}
 
 	void add_tquad(building_geom_t const &bg, tquad_with_ix_t const &tquad, cube_t const &bcube, tid_nm_pair_t const &tex, colorRGBA const &color,
