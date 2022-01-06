@@ -2527,6 +2527,7 @@ void building_t::add_extra_obj_slots() {
 
 void building_t::add_wall_and_door_trim() { // and window trim
 
+	if (!is_cube()) return; // not yet supported for non-cube buildings
 	//highres_timer_t timer("Add Wall And Door Trim");
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fc_thick(0.5*floor_thickness), wall_thickness(get_wall_thickness());
 	float const trim_height(0.04*window_vspacing), trim_thickness(get_trim_thickness()), expand_val(2.0*trim_thickness);

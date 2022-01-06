@@ -238,7 +238,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 			num_windows_per_side[d] = get_num_windows_on_side(p->d[d][0], p->d[d][1]);
 			window_hspacing[d] = psz[d]/num_windows_per_side[d];
 		}
-		if (use_hallway) {
+		if (!is_cube()) { // cylinder, etc.
+			// rooms/floorplans aren't yet supported for these building types, but we can still add the floors and ceilings
+		}
+		else if (use_hallway) {
 			// building with rectangular slice (no adjacent exterior walls at this level), generate rows of offices
 			// Note: we could probably make these unsigned, but I want to avoid unepected negative numbers in the math
 			int const num_windows   (num_windows_per_side[!min_dim]);
@@ -839,8 +842,10 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		} // for w
 	} // for d
 
-	// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
-	for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
+	if (!is_cube()) { // not supported for cylinders, etc.
+		// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
+		for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
+	}
 }
 
 template<typename T> void ensure_door_opens_outward(cube_t const &room, float expand, vector<T> &doors) {
@@ -928,7 +933,8 @@ void building_t::add_ceilings_floors_stairs(rand_gen_t &rgen, cube_t const &part
 	bool const must_add_stairs(first_part_this_stack || (has_complex_floorplan && part == parts.back())); // first part in stack, or tallest/last part of complex building
 
 	// add stairwells and elevator shafts
-	if (num_floors == 1) {} // no need for stairs or elevator
+	if (!is_cube()) {} // rooms are not yet supported, and neither are stairs or elevators
+	else if (num_floors == 1) {} // no need for stairs or elevator
 	else if (use_hallway) { // part is the hallway cube
 		add_elevator = 1;
 		if (interior->landings.empty()) {interior->landings.reserve(add_elevator ? 1 : (num_floors-1));} // lower bound
