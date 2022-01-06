@@ -619,27 +619,23 @@ bool csg_cube::subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &
 	return 0;
 }
 
-// same as above code, but ignores the outside part of the polygon
-void clip_polygon_to_cube(cube_t const &cube, point const *const pts_in, unsigned npts_in, cube_t const &pts_bcube, vector<point> &pts_out) {
+// pts is both the input and output, while next is a temporary
+void clip_polygon_to_cube_inner(cube_t const &cube, cube_t const &pts_bcube, vector<point> &pts, vector<point> &next) {
 
-	if (!cube.intersects(pts_bcube)) {pts_out.clear(); return;}
-	static vector<point> next;
-	pts_out.resize(npts_in);
-	for (unsigned i = 0; i < npts_in; ++i) {pts_out[i] = pts_in[i];}
 	if (cube.contains_cube(pts_bcube)) return;
 
-	for (unsigned i = 0; i < 3 && !pts_out.empty(); ++i) {
-		for (unsigned j = 0; j < 2 && !pts_out.empty(); ++j) {
+	for (unsigned i = 0; i < 3 && !pts.empty(); ++i) {
+		for (unsigned j = 0; j < 2 && !pts.empty(); ++j) {
 			float const clip_val(cube.d[i][j]); // clip cur polygon by this plane
 			if (((pts_bcube.d[i][j] < clip_val) ^ j) == 0) continue; // don't need to clip in this dim
 			bool prev_outside(0); // put the inside part (if any) in pts_out
 
-			for (unsigned p = 0; p <= pts_out.size(); ++p) {
-				point const &pos(pts_out[(p == pts_out.size()) ? 0 : p]);
+			for (unsigned p = 0; p <= pts.size(); ++p) {
+				point const &pos(pts[(p == pts.size()) ? 0 : p]);
 				bool const cur_outside(((pos[i] < clip_val) ^ j) != 0);
 				bool write_int(0), write_cur(0);
-				
-				if (p == pts_out.size()) { // last point
+
+				if (p == pts.size()) { // last point
 					if (cur_outside != prev_outside) {write_int = 1;} // edge crossing
 				}
 				else if (p == 0 || prev_outside == cur_outside) { // first point or no edge crossing
@@ -649,17 +645,26 @@ void clip_polygon_to_cube(cube_t const &cube, point const *const pts_in, unsigne
 					write_int = write_cur = 1;
 				}
 				if (write_int) {
-					vector3d const edge(pos - pts_out[p-1]);
-					float const t((clip_val - pts_out[p-1][i])/edge[i]);
-					next.push_back(pts_out[p-1] + edge*t);
+					vector3d const edge(pos - pts[p-1]);
+					float const t((clip_val - pts[p-1][i])/edge[i]);
+					next.push_back(pts[p-1] + edge*t);
 				}
 				if (write_cur && !cur_outside) {next.push_back(pos);}
 				prev_outside = cur_outside;
 			} // for p
-			pts_out.swap(next);
+			pts.swap(next);
 			next.clear();
 		} // for j
 	} // for i
+}
+// same as above code, but ignores the outside part of the polygon
+void clip_polygon_to_cube(cube_t const &cube, point const *const pts_in, unsigned npts_in, cube_t const &pts_bcube, vector<point> &pts_out) {
+
+	if (!cube.intersects(pts_bcube)) {pts_out.clear(); return;}
+	static vector<point> next; // reused across calls, not thread safe
+	pts_out.resize(npts_in);
+	for (unsigned i = 0; i < npts_in; ++i) {pts_out[i] = pts_in[i];}
+	clip_polygon_to_cube_inner(cube, pts_bcube, pts_out, next);
 }
 
 
