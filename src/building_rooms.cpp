@@ -2513,8 +2513,9 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 }
 
 void building_t::add_extra_obj_slots() {
-	assert(interior);
+	assert(has_room_geom());
 	vector<room_object_t> &objs(interior->room_geom->objs);
+	if (objs.empty()) return; // if there are no objects (empty building), don't allocate any extra slots
 	unsigned num_slots(0);
 	for (auto i = objs.begin(); i != objs.end(); ++i) {num_slots += (i->type == TYPE_BLOCKER);}
 	if (num_slots >= 10) return;

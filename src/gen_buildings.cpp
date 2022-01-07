@@ -622,8 +622,8 @@ public:
 		assert(ix < to_draw.size()); // must call get_verts() on this tex first
 		to_draw[ix].no_shadows = 1;
 	}
-	void add_cylinder(building_t const &bg, point const &pos, float height, float rx, float ry,
-		tid_nm_pair_t const &tex, colorRGBA const &color, unsigned dim_mask, bool no_ao, bool clip_windows)
+	void add_cylinder(building_t const &bg, point const &pos, float height, float rx, float ry, tid_nm_pair_t const &tex,
+		colorRGBA const &color, unsigned dim_mask, bool skip_bottom, bool skip_top, bool no_ao, bool clip_windows)
 	{
 		unsigned const ndiv(bg.num_sides); // Note: no LOD
 		assert(ndiv >= 3);
@@ -678,6 +678,7 @@ public:
 			auto &tri_verts(get_verts(tex, 1));
 			
 			for (unsigned d = 0; d < 2; ++d) { // bottom, top
+				if (d ? skip_top : skip_bottom) continue;
 				if (is_city && pos.z == bcz1 && d == 0) continue; // skip bottom
 				vert.set_ortho_norm(2, d); // +/- z
 				if (apply_ao) {vert.copy_color(cw[d]);}
@@ -734,7 +735,7 @@ public:
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.z1());
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
 			float const rscale(0.5); // use shape contained in bcube so that bcube tests are correct, since we're not creating L/T/U shapes for this case
-			add_cylinder(bg, pos, sz.z, rscale*sz.x, rscale*sz.y, tex, color, dim_mask, no_ao, clip_windows);
+			add_cylinder(bg, pos, sz.z, rscale*sz.x, rscale*sz.y, tex, color, dim_mask, skip_bottom, skip_top, no_ao, clip_windows);
 			return;
 		}
 		// else draw as a cube (optimized flow)

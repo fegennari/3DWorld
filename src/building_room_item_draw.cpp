@@ -412,7 +412,8 @@ void rgeom_mat_t::draw(tid_nm_pair_dstate_t &state, brg_batch_draw_t *bbd, int s
 	if (shadow_only && !en_shadows)  return; // shadows not enabled for this material (picture, whiteboard, rug, etc.)
 	if (shadow_only && tex.emissive) return; // assume this is a light source and shouldn't produce shadows (also applies to bathroom windows, which don't produce shadows)
 	if (reflection_pass && tex.tid == REFLECTION_TEXTURE_ID) return; // don't draw reflections of mirrors as this doesn't work correctly
-	assert(num_verts > 0);
+	assert(num_verts > 0); // too strong? should be okay to remove this check
+	if (num_verts == 0) return;
 	vao_mgr.create_and_upload(vector<vertex_t>(), vector<unsigned>(), shadow_only, 0, 1); // pass empty vectors because data is already uploaded; dynamic_level=0, setup_pointers=1
 
 	// Note: the shadow pass doesn't normally bind textures and set uniforms, so we don't need to combine those calls into batches
@@ -599,6 +600,7 @@ void building_room_geom_t::create_small_static_vbos(building_t const &building) 
 }
 
 void building_room_geom_t::add_small_static_objs_to_verts(vector<room_object_t> const &objs_to_add) {
+	if (objs_to_add.empty()) return; // don't add untextured material, otherwise we may fail the (num_verts > 0) assert
 	float const tscale(2.0/obj_scale);
 	get_untextured_material(0, 0, 1); // must ensure book covers are drawn before the text so that alpha blending works properly, so add the untextured cover material first
 

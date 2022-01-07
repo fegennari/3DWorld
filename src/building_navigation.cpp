@@ -869,7 +869,7 @@ void building_ai_state_t::next_path_pt(pedestrian_t &person, bool same_floor, bo
 }
 
 unsigned building_t::get_person_capacity_mult() const {
-	if (!interior || is_rotated()) return 0; // skip rotated buildings because AI logic doesn't work in them
+	if (!interior || interior->rooms.empty() || is_rotated()) return 0; // skip rotated buildings because AI logic doesn't work in them
 	return (is_house ? 1 : 2);
 }
 
