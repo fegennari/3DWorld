@@ -2742,19 +2742,21 @@ void building_t::add_wall_and_door_trim() { // and window trim
 				float const low_edge(c.d[!dim][0] + (xy - tx1)*window_width);
 				window.d[!dim][0] = low_edge + border_xy;
 				window.d[!dim][1] = low_edge + window_width - border_xy;
+				float const window_ar(window.get_sz_dim(!dim)/window.dz());
+				float const side_trim_width(window_trim_width*((window_ar > 1.5) ? (window_ar - 0.5) : 1.0)); // widen for very wide windows to cover any holes at stretched edges
 				cube_t top(window), bot(window), side(window);
 				top.z1()  = window.z2();
 				top.z2() += window_trim_width;
 				bot.z2()  = window.z1();
 				bot.z1() -= window_trim_width;
 				bot.d[dim][!dir] += dscale*(windowsill_depth - window_trim_depth); // shift out further for windowsill
-				top.expand_in_dim(!dim, window_trim_width);
-				bot.expand_in_dim(!dim, window_trim_width);
+				top.expand_in_dim(!dim, side_trim_width);
+				bot.expand_in_dim(!dim, side_trim_width);
 				objs.emplace_back(top, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				objs.emplace_back(bot, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 
 				for (unsigned s = 0; s < 2; ++s) { // left/right sides
-					side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*window_trim_width;
+					side.d[!dim][ s] = window.d[!dim][s] - (s ? -1.0 : 1.0)*side_trim_width;
 					side.d[!dim][!s] = window.d[!dim][s];
 					objs.emplace_back(side, TYPE_WALL_TRIM, 0, dim, dir, ext_flags, 1.0, SHAPE_TALL, trim_color);
 				}
