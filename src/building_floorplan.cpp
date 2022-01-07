@@ -842,7 +842,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 		} // for w
 	} // for d
 
-	if (!is_cube()) { // not supported for cylinders, etc.
+	if (is_cube()) { // not supported for cylinders, etc.
 		// add stairs to connect together stacked parts for office buildings; must be done last after all walls/ceilings/floors have been assigned
 		for (auto p = parts.begin(); p != parts_end; ++p) {connect_stacked_parts_with_stairs(rgen, *p);}
 	}
