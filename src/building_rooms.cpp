@@ -1110,8 +1110,9 @@ bool building_t::divide_bathroom_into_stalls(rand_gen_t &rgen, room_t const &roo
 			stall.d[br_dim][!dir] = wall_pos + dir_sign*stall_depth;
 			
 			if (!interior->is_cube_close_to_doorway(stall, room, 0.0, 1)) { // skip if close to a door (for rooms with doors at both ends); inc_open=1
+				bool const is_open(rgen.rand_bool()); // 50% chance of stall door being open
 				objs.emplace_back(toilet, TYPE_TOILET, room_id, br_dim, !dir, 0, tot_light_amt);
-				objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, 0, tot_light_amt, SHAPE_CUBE, stall_color);
+				objs.emplace_back(stall,  TYPE_STALL,  room_id, br_dim,  dir, (is_open ? RO_FLAG_OPEN : 0), tot_light_amt, SHAPE_CUBE, stall_color);
 				float const tp_length(0.18*theight), wall_pos(toilet.get_center_dim(br_dim));
 				cube_t stall_inner(stall);
 				stall_inner.expand_in_dim(!br_dim, -0.0125*stall.dz()); // subtract off stall wall thickness
