@@ -300,7 +300,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 					else if (i->is_sink_type() || i->type == TYPE_TUB) {keep = 1;} // sink/tub
 					else if (i->is_light_type()) {keep = 1;} // room light or lamp
 					else if (i->type == TYPE_PICTURE || i->type == TYPE_TPROLL || i->type == TYPE_BUTTON || i->type == TYPE_MWAVE || i->type == TYPE_TV || i->type == TYPE_MONITOR) {keep = 1;}
-					else if (i->type == TYPE_BLINDS || i->type == TYPE_SHOWER || i->type == TYPE_SWITCH /*|| i->type == TYPE_BOOK*/) {keep = 1;}
+					else if (i->type == TYPE_BLINDS  || i->type == TYPE_SHOWER || i->type == TYPE_SWITCH || i->type == TYPE_BOOK) {keep = 1;}
 				}
 				else if (i->type == TYPE_LIGHT) {keep = 1;} // closet light
 				if (!keep) continue;

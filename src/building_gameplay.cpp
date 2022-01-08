@@ -413,7 +413,7 @@ public:
 						co.y2() = co.y1() + dx;
 					}
 					co.dim = co.dir = 0;
-					co.flags &= ~RO_FLAG_RAND_ROT; // remove the rotate bit
+					co.flags &= ~(RO_FLAG_RAND_ROT | RO_FLAG_OPEN); // remove the rotate and open bits
 				}
 				else if (obj.type == TYPE_PHONE) {
 					if (co.dim) { // swap aspect ratio to make dim=0

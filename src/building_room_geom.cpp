@@ -7,7 +7,7 @@
 #include "scenery.h" // for s_plant
 #include "shaders.h"
 
-bool const ADD_BOOK_COVERS = 1;
+bool const ADD_BOOK_COVERS = 1; // cover pictures
 bool const ADD_BOOK_TITLES = 1;
 colorRGBA const STAIRS_COLOR_TOP(0.7, 0.7, 0.7);
 colorRGBA const STAIRS_COLOR_BOT(0.9, 0.9, 0.9);
@@ -1325,7 +1325,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool const is_held(z_rot_angle != 0.0); // held by the player, and need to draw the bottom
 	bool const draw_cover_as_small((c.flags & RO_FLAG_WAS_EXP) || is_held); // books in drawers, held, or dropped are always drawn as small objects
 	if (draw_cover_as_small && !inc_sm) return; // nothing to draw
-	bool const upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
+	bool const is_open(c.is_open()), upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
 	bool const ldir(!tdir), cdir(c.dim ^ c.dir ^ upright ^ ldir); // colum and line directions (left/right/top/bot) + mirror flags for front cover
 	bool const was_dropped(c.flags & RO_FLAG_TAKEN1); // or held
@@ -1347,17 +1347,14 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	bool has_cover(0);
 	colorRGBA const color(apply_light_color(c));
 	// skip top face, bottom face if not tilted, thickness dim if upright
-	unsigned const sides_mask(upright ? get_skip_mask_for_xy(tdim) : (is_held ? EF_Z12 : EF_Z2)), spine_mask(~get_face_mask(c.dim, !c.dir)); // masks of faces to draw
+	unsigned const sides_mask(upright ? get_skip_mask_for_xy(tdim) : (is_held ? EF_Z12 : EF_Z2));
+	unsigned const spine_mask(is_open ? 0 : ~get_face_mask(c.dim, !c.dir)); // spine is drawn as part of the small faces when open
 	unsigned const skip_faces(extra_skip_faces | ((tilt_angle == 0.0) ? EF_Z1 : 0) | sides_mask);
 
 	if (z_rot_angle == 0.0 && (c.flags & RO_FLAG_RAND_ROT) && (c.obj_id%3) == 0) { // books placed on tables/desks are sometimes randomly rotated a bit
 		z_rot_angle = (PI/12.0)*(fract(123.456*c.obj_id) - 0.5);
 	}
-	if (c.is_open()) {
-		assert(!upright && !is_held);
-		// draw book as open?
-	}
-	if (draw_cover_as_small || inc_lg) { // draw large faces: outside faces of covers and spine
+	if ((draw_cover_as_small || inc_lg) && !is_open) { // draw large faces: outside faces of covers and spine; not for open books
 		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, draw_cover_as_small));
 		unsigned const qv_start(mat.quad_verts.size());
 		mat.add_cube_to_verts_untextured(c, color, (extra_skip_faces | ~(sides_mask | spine_mask))); // untextured
@@ -1367,14 +1364,32 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	if (draw_cover_as_small || inc_sm) { // draw small faces: insides of covers, edges, and pages
 		rgeom_mat_t &mat(get_untextured_material(shadowed, 0, 1));
 		unsigned const qv_start(mat.quad_verts.size());
-		mat.add_cube_to_verts_untextured(bot,   color, (extra_skip_faces | (was_dropped ? 0 : (EF_Z1 | ~get_face_mask(tdim, 0))))); // untextured, skip bottom face if not dropped
-		mat.add_cube_to_verts_untextured(top,   color, (extra_skip_faces | (upright ? EF_Z1 : 0) | ~get_face_mask(tdim, 1))); // untextured, skip top face, skip bottom face if upright
+		unsigned const bot_skip_faces(extra_skip_faces | (was_dropped ? 0 : (EF_Z1 | ~get_face_mask(tdim, 0)))); // skip bottom face if not dropped
+		unsigned top_skip_faces(extra_skip_faces | (upright ? EF_Z1 : 0) | ~get_face_mask(tdim, 1)); // skip top face, skip bottom face if upright
+		colorRGBA const pages_color(apply_light_color(c, WHITE));
+
+		if (is_open) { // draw book top cover as open
+			assert(!upright);
+			assert(!is_held);
+			top_skip_faces = (extra_skip_faces | EF_Z2); // skip top face only
+			top.translate_dim(c.dim, (c.dir ? -1.0 : 1.0)*(width - indent));
+			mat.add_cube_to_verts_untextured(top, pages_color, ~EF_Z2); // untextured white, top face only
+		}
+		mat.add_cube_to_verts_untextured(bot,   color, bot_skip_faces); // untextured
+		mat.add_cube_to_verts_untextured(top,   color, top_skip_faces); // untextured
 		mat.add_cube_to_verts_untextured(spine, color, (skip_faces | spine_mask)); // untextured, skip back of spine (drawn as lg geom)
-		mat.add_cube_to_verts_untextured(pages, apply_light_color(c, WHITE), (skip_faces | spine_mask)); // untextured
+		mat.add_cube_to_verts_untextured(pages, pages_color, (skip_faces | spine_mask)); // untextured
 		rotate_verts(mat.quad_verts, axis,   tilt_angle,  tilt_about, qv_start);
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start);
+
+		if (is_open) {
+			rgeom_mat_t &mat(get_material(tid_nm_pair_t(c.get_paper_tid(), 0.0), 0, 0, 1)); // map texture to quad
+			unsigned const qv_start(mat.quad_verts.size());
+			mat.add_cube_to_verts(pages, pages_color, zero_vector, ~EF_Z2, !c.dim, !c.dir, !cdir); // unshadowed, top face only, with proper orient
+			rotate_verts(mat.quad_verts, plus_z, z_rot_angle, zrot_about, qv_start); // rotated, but not tilted
+		}
 	}
-	if (ADD_BOOK_COVERS && inc_sm && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
+	if (ADD_BOOK_COVERS && inc_sm && !is_open && c.enable_pictures() && (upright || (c.obj_id&2))) { // add picture to book cover
 		vector3d expand;
 		float const height(c.get_sz_dim(hdim)), img_width(0.9*width), img_height(min(0.9f*height, 0.67f*img_width)); // use correct aspect ratio
 		expand[ hdim] = -0.5f*(height - img_height);
@@ -1392,7 +1407,7 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	} // end cover image
 	bool const add_spine_title(c.obj_id & 7); // 7/8 of the time
 
-	if (ADD_BOOK_TITLES && inc_sm && !no_title && (!upright || add_spine_title)) {
+	if (ADD_BOOK_TITLES && inc_sm && !is_open && !no_title && (!upright || add_spine_title)) { // add title(s) if not open
 		unsigned const SPLIT_LINE_SZ = 24;
 		string const &title(gen_book_title(c.obj_id, nullptr, SPLIT_LINE_SZ)); // select our title text
 		if (title.empty()) return; // no title
