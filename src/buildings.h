@@ -1179,10 +1179,10 @@ private:
 	void add_bathroom_window(cube_t const &window, bool dim, bool dir, unsigned room_id, unsigned floor);
 	int get_room_id_for_window(cube_t const &window, bool dim, bool dir, bool &is_split) const;
 	void register_open_ext_door_state(int door_ix);
-	void add_interior_door(door_t &door);
-	void add_interior_door_for_floor(door_t &door);
-	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir);
-	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side);
+	void add_interior_door(door_t &door, bool is_bathroom=0);
+	void add_interior_door_for_floor(door_t &door, bool is_bathroom);
+	void remove_section_from_cube_and_add_door(cube_t &c, cube_t &c2, float v1, float v2, bool xy, bool open_dir, bool is_bathroom=0);
+	void insert_door_in_wall_and_add_seg(cube_t &wall, float v1, float v2, bool dim, bool open_dir, bool keep_high_side, bool is_bathroom=0);
 	unsigned get_floor_for_zval(float zval) const {return unsigned((zval - bcube.z1())/get_window_vspace());}
 	building_loc_t get_building_loc_for_pt(point const &pt) const;
 	void register_player_in_building(point const &camera_bs, unsigned building_id) const;
