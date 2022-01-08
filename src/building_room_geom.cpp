@@ -1950,12 +1950,12 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 		mat.add_cube_to_verts_untextured(c, color, ~get_face_mask(c.dim, c.dir));
 		return;
 	}
-	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(2.0*wall_thick), door_gap(0.3*wall_thick);
+	float const dz(c.dz()), wall_thick(0.0125*dz), frame_thick(6.0*wall_thick), door_gap(0.3*wall_thick);
 	cube_t sides(c), front(c);
 	sides.z2() -= 0.35*dz;
 	sides.z1() += 0.15*dz;
 	sides.d[c.dim][!c.dir] += (c.dir ? 1.0 : -1.0)*wall_thick; // shorten for door
-	front.d[c.dim][ c.dir] = sides.d[c.dim][!c.dir];
+	front.d[c.dim][ c.dir] = sides.d[c.dim][!c.dir]; // dir points toward the inside of the stall
 	cube_t side1(sides), side2(sides), front1(front), front2(front), door(front);
 	door.z2() -= 0.38*dz;
 	door.z1() += 0.18*dz;
@@ -1969,14 +1969,15 @@ void building_room_geom_t::add_br_stall(room_object_t const &c) {
 	mat.add_cube_to_verts_untextured(side2,  color, side_skip_mask);
 	mat.add_cube_to_verts_untextured(front1, color, EF_Z12);
 	mat.add_cube_to_verts_untextured(front2, color, EF_Z12);
+	door.expand_in_dim(!c.dim, -door_gap);
 
-	if (c.is_open()) {
-		// draw open door?
+	if (c.is_open()) { // make the door open
+		bool const hinge_side(0); // does it matter?
+		float const door_width(door.get_sz_dim(!c.dim));
+		door.d[!c.dim][!hinge_side] -= (hinge_side ? -1.0 : 1.0)*(door_width - wall_thick); // width => thickness
+		door.d[ c.dim][ c.dir     ] -= (c.dir      ? -1.0 : 1.0)*(door_width - wall_thick); // thickness => width
 	}
-	else {
-		door.expand_in_dim(!c.dim, -door_gap);
-		mat.add_cube_to_verts_untextured(door, color);
-	}
+	mat.add_cube_to_verts_untextured(door, color);
 }
 
 int get_cubicle_tid(room_object_t const &c) {return get_texture_by_name((c.obj_id & 1) ? "carpet/carpet1.jpg" : "carpet/carpet2.jpg");} // select from one of 2 textures
