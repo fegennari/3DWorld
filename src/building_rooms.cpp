@@ -2501,6 +2501,7 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 		if (!(added_bathroom_objs_mask & PLACED_SINK  )) {cout << "no sink in building "   << bcube.xc() << " " << bcube.yc() << endl;}
 		//if (is_house && !(added_bathroom_objs_mask & (PLACED_TUB | PLACED_SHOWER))) {cout << "no bathtub or shower in building " << bcube.xc() << " " << bcube.yc() << endl;} // common
 	}
+	maybe_add_fire_escape(rgen);
 	add_extra_obj_slots(); // needed to handle balls taken from one building and brought to another
 	add_wall_and_door_trim();
 	add_stairs_and_elevators(rgen); // the room objects - stairs and elevators have already been placed within a room
@@ -2513,6 +2514,38 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 	for (unsigned i = 0; i < 3; ++i) {wood_color[i] = luminance*WOOD_COLOR[i]*rgen.rand_uniform(0.9, 1.1);}
 	wood_color.set_valid_color();
 	max_eq(wood_color.R, max(wood_color.G, wood_color.B)); // make sure wood isn't blue or green tinted
+}
+
+void building_t::maybe_add_fire_escape(rand_gen_t &rgen) {
+	if (!is_house) return; // houses only for now
+	// our hard-coded fire escape model is designed for a 5 story building; but the max number of floors for a 'house' is 5 anyway, which makes them relatively rare
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_FESCAPE)) return;
+	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), fe_height(4.25*window_vspacing);
+
+	for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+		unsigned const num_floors(calc_num_floors(*p, window_vspacing, floor_thickness));
+		if (num_floors != 5) continue; // not 5 story
+		unsigned const pref_dim_dir(rgen.rand() & 3);
+		// it's uncommon to get here, so we only check if the model size here
+		vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_FESCAPE)); // D, W, H
+		float const fe_hwidth(0.5*fe_height*sz.y/sz.z), fe_depth(fe_height*sz.x/sz.z);
+
+		for (unsigned d = 0; d < 4; ++d) {
+			unsigned const dd((d + pref_dim_dir) & 3);
+			bool const dim(dd >> 1), dir(dd & 1);
+			if (p->d[dim][dir] != bcube.d[dim][dir]) continue; // not on the building bcube - could intersect another part, porch, etc.
+			if (p->get_sz_dim(!dim) < 3.0*fe_hwidth) continue; // wall is too narrow
+			cube_t fe_bc;
+			set_cube_zvals(fe_bc, p->z1(), (p->z1() + fe_height));
+			set_wall_width(fe_bc, rgen.rand_uniform((p->d[!dim][0] + 1.2*fe_hwidth), (p->d[!dim][1] - 1.2*fe_hwidth)), fe_hwidth, !dim);
+			fe_bc.d[dim][0] = fe_bc.d[dim][1] = p->d[dim][dir];
+			fe_bc.d[dim][dir] += (dir ? 1.0 : -1.0)*fe_depth;
+			if (has_bcube_int_no_adj(fe_bc, parts)) continue; // check for intersection with other parts, in particular the chimney and fireplace
+			if (has_driveway() && fe_bc.intersects_xy(driveway)) continue; // skip if intersects driveway or garage
+			interior->room_geom->objs.emplace_back(fe_bc, TYPE_FESCAPE, 0, dim, dir, 0, 1.0, SHAPE_CUBE, BLACK); // room_id=0
+			break; // success/done
+		} // for d
+	} // for p
 }
 
 void building_t::add_extra_obj_slots() {

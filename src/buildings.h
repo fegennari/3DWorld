@@ -322,7 +322,7 @@ enum {
 	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
-	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, NUM_ROBJ_TYPES};
+	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
 enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED};
 typedef uint8_t room_obj_shape;
@@ -335,8 +335,8 @@ std::string const room_names[NUM_RTYPES] =
 enum {SHAPE_STRAIGHT=0, SHAPE_U, SHAPE_WALLED, SHAPE_WALLED_SIDES};
 typedef uint8_t stairs_shape;
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
-enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR,
-	OBJ_MODEL_COUCH, OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_KEY, OBJ_MODEL_HANGER, OBJ_MODEL_CLOTHES,
+enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR, OBJ_MODEL_COUCH,
+	OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_KEY, OBJ_MODEL_HANGER, OBJ_MODEL_CLOTHES, OBJ_MODEL_FESCAPE,
 	/*city models*/ OBJ_MODEL_FHYDRANT, OBJ_MODEL_SUBSTATION, OBJ_MODEL_UMBRELLA, NUM_OBJ_MODELS};
 
 // object flags
@@ -1160,6 +1160,7 @@ private:
 	bool find_mirror_in_room(unsigned room_id, vector3d const &xlate, bool check_visibility) const;
 	bool find_mirror_needing_reflection(vector3d const &xlate) const;
 	tquad_with_ix_t const &find_main_roof_tquad(rand_gen_t &rgen, bool skip_if_has_other_obj) const;
+	void maybe_add_fire_escape(rand_gen_t &rgen);
 	void add_extra_obj_slots();
 	void add_wall_and_door_trim();
 	unsigned count_num_int_doors(room_t const &room) const;
