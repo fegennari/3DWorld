@@ -726,11 +726,11 @@ public:
 		float door_ztop=0.0, unsigned door_sides=0, float offset_scale=1.0, bool invert_normals=0, cube_t const *const clamp_cube=nullptr)
 	{
 		assert(bg.num_sides >= 3); // must be nonzero volume
-		bool const is_rotated(bg.is_rotated()), is_exterior(clip_to_other_parts);
+		bool const is_rotated(bg.is_rotated());
 		point const center(!is_rotated ? all_zeros : bg.bcube.get_cube_center()); // rotate about bounding cube / building center
 		vector3d const sz(cube.get_size()), llc(cube.get_llc()); // move origin from center to min corner
 
-		if (/*is_exterior &&*/ bg.num_sides != 4) { // not a cube, use cylinder
+		if (/*clip_to_other_parts &&*/ bg.num_sides != 4) { // not a cube, use cylinder
 			//assert(door_ztop == 0.0); // not supported / ignored for testing purposes
 			point const ccenter(cube.get_cube_center()), pos(ccenter.x, ccenter.y, cube.z1());
 			//float const rscale(0.5*((num_sides <= 8) ? SQRT2 : 1.0)); // larger for triangles/cubes/hexagons/octagons (to ensure overlap/connectivity), smaller for cylinders
