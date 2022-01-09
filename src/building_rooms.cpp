@@ -1953,9 +1953,9 @@ void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, f
 	}
 	for (unsigned ei = 0; ei < 2; ++ei) { // exterior, interior
 		vect_door_stack_t const &cands(ei ? doorways : ext_doors);
-		bool done(0);
+		unsigned num_ls(0);
 
-		for (auto i = cands.begin(); i != cands.end() && !done; ++i) {
+		for (auto i = cands.begin(); i != cands.end() && num_ls < 2; ++i) { // place up to 2 light switches in this room
 			// check for windows if (real_num_parts > 1)? is it actually possible for doors to be within far_spacing of a window?
 			bool const dim(i->dim), dir(i->get_center_dim(dim) > room.get_center_dim(dim));
 			float const door_width(i->get_width()), near_spacing(0.25*door_width), far_spacing(1.25*door_width); // off to the side of the door when open
@@ -1965,6 +1965,7 @@ void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, f
 			c.d[dim][!dir] = c.d[dim][dir] + (dir ? -1.0 : 1.0)*0.2*wall_thickness; // expand out a bit
 			c.z1() = zval + 0.38*floor_spacing;
 			c.z2() = c.z1() + switch_height;
+			bool done(0);
 
 			for (unsigned Side = 0; Side < 2 && !done; ++Side) { // try both sides of the doorway
 				bool const side(bool(Side) ^ first_side);
@@ -1979,7 +1980,8 @@ void building_t::add_light_switch_to_room(rand_gen_t rgen, room_t const &room, f
 					if (is_cube_close_to_doorway(c, room, 0.0, (ei==1), 1)) continue; // inc_open=1/check_open_dir=1 for inside, to avoid placing light switch behind an open door
 					if (interior->is_blocked_by_stairs_or_elevator(c))      continue; // check stairs and elevators
 					objs.emplace_back(c, TYPE_SWITCH, room_id, dim, dir, RO_FLAG_NOCOLL, 1.0); // dim/dir matches wall
-					done = 1; // done, only need to add one
+					done = 1; // done, only need to add one for this door
+					++num_ls;
 					break;
 				} // for nf
 			} // for side
