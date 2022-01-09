@@ -2023,6 +2023,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	if (room.is_hallway) return; // no objects placed in hallways, but there shouldn't be any surfaces either (except for reception desk?)
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
+	bool const is_library(room.get_room_type(floor) == RTYPE_LIBRARY);
 	bool const sparse_place(floor > 0 && interior->rooms.size() > 40); // fewer objects on upper floors of large office buildings as an optimization
 	float const place_book_prob(( is_house ? 1.0 : 0.5)*(room.is_office ? 0.80 : 1.00)*(sparse_place ? 0.75 : 1.0));
 	float const place_bottle_prob(is_house ? 1.0 :      (room.is_office ? 0.80 : 0.50)*(sparse_place ? 0.50 : 1.0));
@@ -2061,6 +2062,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 		else {
 			continue;
 		}
+		if (is_library) {book_prob *= 2.5;} // higher probability of books placed in a library
 		room_object_t surface(obj); // deep copy to allow modification and avoid using an invalidated reference
 		
 		if (obj.shape == SHAPE_CYLIN) { // find max contained XY rectangle (simpler than testing distance to center vs. radius)
@@ -2420,6 +2422,10 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 					added_library = 1;
 				}
 			}
+			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, (unsigned)interior->rooms.size()))) == 0) {
+				// office, no cubicles or bathroom - try to make it a library (in rare cases)
+				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {r->assign_to(RTYPE_LIBRARY, f);}
+			}
 			if (can_place_onto) { // an object was placed (table, desk, counter, etc.), maybe add a book or bottle on top of it
 				place_objects_onto_surfaces(rgen, *r, room_id, tot_light_amt, objs_start, f, is_basement);
 			}
@@ -2431,10 +2437,6 @@ void building_t::gen_room_details(rand_gen_t &rgen, vect_cube_t const &ped_bcube
 				if (!has_stairs && (rgen.rand()&3) <= (added_tc ? 0 : 2) && !is_kitchen) { // maybe add a rug, 25% of the time if there's a table and 75% of the time otherwise
 					add_rug_to_room(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start);
 				}
-			}
-			if (!is_house && r->is_office && !no_whiteboard && (rgen.rand() % (pri_hall.is_all_zeros() ? 30U : max(50U, (unsigned)interior->rooms.size()))) == 0) {
-				// office, no cubicles or bathroom - try to make it a library (in rare cases)
-				if (add_library_objs(rgen, *r, room_center.z, room_id, tot_light_amt, objs_start, is_basement)) {r->assign_to(RTYPE_LIBRARY, f);}
 			}
 			bool const room_type_was_not_set(r->get_room_type(f) == RTYPE_NOTSET);
 
