@@ -14,7 +14,7 @@ object_model_loader_t building_obj_model_loader;
 
 extern bool camera_in_building;
 extern int display_mode, frame_counter, animate2;
-extern float office_chair_rot_rate;
+extern float office_chair_rot_rate, cur_dlight_pcf_offset;
 extern point pre_smap_player_pos;
 extern cube_t smap_light_clip_cube;
 extern pos_dir_up camera_pdu;
@@ -976,9 +976,20 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		bool const is_emissive(!shadow_only && obj.type == TYPE_LAMP && obj.is_lit());
 		if (is_emissive) {s.set_color_e(LAMP_COLOR*0.4);}
 		apply_room_obj_rotate(obj, *i); // Note: may modify obj by clearing flags
+		bool const use_low_z_bias(obj.type == TYPE_CUP);
 		bool const untextured(obj.flags & RO_FLAG_UNTEXTURED);
+		
+		if (use_low_z_bias) {
+			s.add_uniform_float("norm_bias_scale",   5.0); // half the default value
+			s.add_uniform_float("dlight_pcf_offset", 0.5*cur_dlight_pcf_offset);
+		}
 		// Note: lamps are the most common and therefore most expensive models to draw
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0, 0, untextured);
+		
+		if (use_low_z_bias) { // restore to the defaults
+			s.add_uniform_float("norm_bias_scale",   10.0);
+			s.add_uniform_float("dlight_pcf_offset", cur_dlight_pcf_offset);
+		}
 		if (is_emissive) {s.set_color_e(BLACK);}
 		if (is_sink) {water_draw.add_water_for_sink(obj);}
 		obj_drawn = 1;
