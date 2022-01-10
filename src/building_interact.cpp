@@ -422,8 +422,9 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, vec
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_BOOK) {
+		gen_sound_thread_safe_at_player(SOUND_OBJ_FALL, 0.25);
 		obj.flags       ^= RO_FLAG_OPEN; // toggle open/closed
-		sound_scale      = 0.0; // no sound
+		sound_scale      = 0.1; // very little sound
 		update_draw_data = 1;
 	}
 	else if (obj.type == TYPE_SHOWER) { // shower
