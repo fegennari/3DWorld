@@ -1753,6 +1753,16 @@ bool building_t::place_plate_on_obj(rand_gen_t &rgen, room_object_t const &place
 	return 1;
 }
 
+bool building_t::place_cup_on_obj(rand_gen_t &rgen, room_object_t const &place_on, unsigned room_id, float tot_light_amt, cube_t const &avoid) {
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_CUP)) return 0;
+	float const window_vspacing(get_window_vspace()), height(0.06*window_vspacing), radius(0.5f*height*get_radius_for_square_model(OBJ_MODEL_CUP)); // almost square
+	cube_t const cup(place_cylin_object(rgen, place_on, radius, height, 1.2*radius));
+	if (!avoid.is_all_zeros() && cup.intersects(avoid)) return 0; // only make one attempt
+	// random dim/dir, plus more randomness on top
+	interior->room_geom->objs.emplace_back(cup, TYPE_CUP, room_id, rgen.rand_bool(), rgen.rand_bool(), (RO_FLAG_NOCOLL | RO_FLAG_RAND_ROT), tot_light_amt, SHAPE_CYLIN);
+	return 1;
+}
+
 bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval, unsigned room_id, float tot_light_amt, unsigned objs_start) {
 	if (!room_object_t::enable_rugs()) return 0; // disabled
 	vector3d const room_sz(room.get_size());
@@ -2026,38 +2036,43 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs.size() > objs_start);
 	bool const is_library(room.get_room_type(floor) == RTYPE_LIBRARY);
+	bool const is_kitchen(room.get_room_type(floor) == RTYPE_KITCHEN);
 	bool const sparse_place(floor > 0 && interior->rooms.size() > 40); // fewer objects on upper floors of large office buildings as an optimization
 	float const place_book_prob(( is_house ? 1.0 : 0.5)*(room.is_office ? 0.80 : 1.00)*(sparse_place ? 0.75 : 1.0));
 	float const place_bottle_prob(is_house ? 1.0 :      (room.is_office ? 0.80 : 0.50)*(sparse_place ? 0.50 : 1.0));
+	float const place_cup_prob   (is_house ? 1.0 :      (room.is_office ? 0.50 : 0.25)*(sparse_place ? 0.50 : 1.0));
 	float const place_plant_prob (is_house ? 1.0 :      (room.is_office ? 0.25 : 0.15)*(sparse_place ? 0.75 : 1.0));
 	float const place_laptop_prob(is_house ? 0.4 :      (room.is_office ? 0.60 : 0.50)*(sparse_place ? 0.80 : 1.0));
 	unsigned const objs_end(objs.size());
 	bool placed_book_on_counter(0);
 
-	// see if we can place books or bottles on any room object top surfaces
+	// see if we can place objects on any room object top surfaces
 	for (unsigned i = objs_start; i < objs_end; ++i) { // can't iterate over objs because we modify it
 		room_object_t const &obj(objs[i]);
 		// add place settings to kitchen and dining room tables 50% of the time
 		bool const is_eating_table(obj.type == TYPE_TABLE && (room.get_room_type(floor) == RTYPE_KITCHEN || room.get_room_type(floor) == RTYPE_DINING) && rgen.rand_bool());
 		if (is_eating_table && place_eating_items_on_table(rgen, i)) continue; // no other items to place
-		float book_prob(0.0), bottle_prob(0.0), plant_prob(0.0), laptop_prob(0.0);
+		float book_prob(0.0), bottle_prob(0.0), cup_prob(0.0), plant_prob(0.0), laptop_prob(0.0);
 		cube_t avoid;
 
 		if (obj.type == TYPE_TABLE && i == objs_start) { // only first table (not TV table)
 			book_prob   = 0.4*place_book_prob;
 			bottle_prob = 0.6*place_bottle_prob;
+			cup_prob    = 0.5*place_cup_prob;
 			plant_prob  = 0.6*place_plant_prob;
 			laptop_prob = 0.3*place_laptop_prob;
 		}
 		else if (obj.type == TYPE_DESK && (i+1 == objs_end || objs[i+1].type != TYPE_MONITOR)) { // desk with no computer monitor
 			book_prob   = 0.8*place_book_prob;
 			bottle_prob = 0.4*place_bottle_prob;
+			cup_prob    = 0.3*place_cup_prob;
 			plant_prob  = 0.3*place_plant_prob;
 			laptop_prob = 0.7*place_laptop_prob;
 		}
 		else if (obj.type == TYPE_COUNTER && !(obj.flags & RO_FLAG_ADJ_TOP)) { // counter without a microwave
 			book_prob   = (placed_book_on_counter ? 0.0 : 0.5); // only place one book per counter
 			bottle_prob = 0.25*place_bottle_prob;
+			cup_prob    = 0.30*place_cup_prob;
 			plant_prob  = 0.10*place_plant_prob;
 			laptop_prob = 0.05*place_laptop_prob;
 		}
@@ -2065,6 +2080,7 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			continue;
 		}
 		if (is_library) {book_prob *= 2.5;} // higher probability of books placed in a library
+		if (is_kitchen) {cup_prob  *= 2.0;} // higher probability of cups  placed in a kitchen
 		room_object_t surface(obj); // deep copy to allow modification and avoid using an invalidated reference
 		
 		if (obj.shape == SHAPE_CYLIN) { // find max contained XY rectangle (simpler than testing distance to center vs. radius)
@@ -2078,15 +2094,11 @@ void building_t::place_objects_onto_surfaces(rand_gen_t rgen, room_t const &room
 			place_book_on_obj(rgen, surface, room_id, tot_light_amt, (obj.type != TYPE_TABLE));
 			avoid = objs.back();
 		}
-		if (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob) {
-			place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, avoid);
-		}
-		else if (laptop_prob > 0.0 && rgen.rand_float() < laptop_prob) {
-			place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE));
-		}
-		else if (!is_basement && plant_prob > 0.0 && rgen.rand_float() < plant_prob) { // don't add both a plant and a bottle; don't add plants in the basement
-			place_plant_on_obj(rgen, surface, room_id, tot_light_amt, avoid);
-		}
+		if      (bottle_prob > 0.0 && rgen.rand_float() < bottle_prob && place_bottle_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {}
+		else if (cup_prob    > 0.0 && rgen.rand_float() < cup_prob    && place_cup_on_obj   (rgen, surface, room_id, tot_light_amt, avoid)) {}
+		else if (laptop_prob > 0.0 && rgen.rand_float() < laptop_prob && place_laptop_on_obj(rgen, surface, room_id, tot_light_amt, avoid, (obj.type != TYPE_TABLE))) {}
+		// don't add both a plant and a bottle; don't add plants in the basement
+		else if (!is_basement && plant_prob > 0.0 && rgen.rand_float() < plant_prob && place_plant_on_obj(rgen, surface, room_id, tot_light_amt, avoid)) {}
 	} // for i
 }
 
