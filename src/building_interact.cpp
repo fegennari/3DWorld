@@ -389,9 +389,14 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, vec
 		gen_sound_thread_safe(SOUND_SQUEAK, local_center, 0.25, 0.5); // lower pitch
 		sound_scale = 0.2;
 	}
-	else if (obj.type == TYPE_MWAVE || obj.type == TYPE_STOVE) { // beeps
+	else if (obj.type == TYPE_MWAVE) { // beeps
 		gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
 		sound_scale = 0.6;
+	}
+	else if (obj.type == TYPE_STOVE) { // beeps
+		obj.flags ^= RO_FLAG_OPEN; // toggle stove on/off
+		if (obj.is_open()) {gen_sound_thread_safe(SOUND_HISS, local_center, 0.25, 0.6);} else {gen_sound_thread_safe(SOUND_CLICK, local_center, 0.75);}
+		sound_scale = 0.3;
 	}
 	else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
 		if (!(obj.flags & RO_FLAG_BROKEN)) { // no visual effect if broken, but still clicks
