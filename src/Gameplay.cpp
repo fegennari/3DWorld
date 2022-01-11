@@ -2520,7 +2520,7 @@ void show_user_stats() {
 		draw_text(RED, -0.014, -0.012, -0.022, text);
 
 		if (sstate.powerup_time > 0 && sstate.powerup != PU_NONE) {
-			sprintf(text, "%is %s", int(sstate.powerup_time/TICKS_PER_SECOND + 0.5), powerup_names[sstate.powerup].c_str());
+			sprintf(text, "%is %s", int(sstate.powerup_time/TICKS_PER_SECOND + 0.5f), powerup_names[sstate.powerup].c_str());
 			draw_text(get_powerup_color(sstate.powerup), -0.015, -0.012, -0.025, text);
 		}
 		draw_health_bar(chealth, sstate.shields, float(sstate.powerup_time)/POWERUP_TIME, get_powerup_color(sstate.powerup));
