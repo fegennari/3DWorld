@@ -285,6 +285,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			}
 			int const ret1(poly_poly_int_test(c, *this)), ret2(poly_poly_int_test(*this, c));
 			if (ret1 || ret2) {return ((ret1 == 1 || ret2 == 1) ? 1 : 2);}
+			return 0; // no intersection?
 		} // end COLL_POLYGON
 		default: assert(0);
 		} // end switch
