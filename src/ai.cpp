@@ -27,7 +27,7 @@ vector<point> app_spots;
 vector<od_data> oddatav; // used as a temporary
 
 
-extern bool has_wpt_goal, use_waypoint_app_spots, enable_init_shields, smileys_chase_player, enable_translocator, keep_keycards_on_death;
+extern bool has_wpt_goal, use_waypoint_app_spots, enable_init_shields, smileys_chase_player, enable_translocator, keep_keycards_on_death, begin_motion;
 extern int iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id, init_num_balls;
@@ -1453,6 +1453,15 @@ void init_sstate(int id, bool w_start) {
 		if (sstates[i].target_visible == 1 && sstates[i].target == id) {sstates[i].target_visible = 0;}
 	}
 	remove_player_translocator(id);
+
+	if (begin_motion) { // create spawn effect
+		bool const is_player(id == CAMERA_ID);
+		colorRGBA const color(get_smiley_team_color(id));
+		point const &pos(is_player ? camera_pos : obj_groups[coll_id[SMILEY]].get_obj(id).pos);
+		gen_sound(SOUND_POWERUP, pos, 0.5, 0.75);
+		add_dynamic_light(12.0*CAMERA_RADIUS, pos, color);
+		add_blastr(pos, plus_z, 6.0*CAMERA_RADIUS, 0.0, int(1.0*TICKS_PER_SECOND), NO_SOURCE, WHITE, color, ETYPE_NUCLEAR, nullptr, 1);
+	}
 }
 
 
