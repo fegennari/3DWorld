@@ -1,36 +1,36 @@
-#universe/config_universe.txt
-#house/config_house.txt
+#universe/config_universe.txt # 'b' enables ship AIs; 'R' changes speed, 'm' maximizes, 'V' toggles mouse look
+#house/config_house.txt # my parents's house; press 'v' to spawn in the house; F2 changes gameplay mode, 'b' enables physics
 #house/config_house_winter.txt
-mapx/config_mapx.txt # office building scene
+mapx/config_mapx.txt # office building scene; F2 changes gameplay mode, 'b' enables physics
 #mapx/config_mapx_voxels.txt
 #cornell_box/config_box.txt
 #config_scrolling.txt
 #config.txt
-#config_t.txt # config.txt, but with more trees
-#config_heightmap.txt # load heightmap with cities and buildings
+#config_t.txt # config.txt, but with more trees; F1 changes between ground and tiled terrain mode
+#config_heightmap.txt # load heightmap with cities and buildings; 'e'=pick up item, 'q'=interact, 'R'=change speed, 'h'=flight mode
 #config_lava_moon.txt
 #config_voxels.txt
 #config_voxels2.txt
 #config_voxels_grass.txt # floating island
-#config_ice_caves.txt
+#config_ice_caves.txt # snow and ice with voxel editing
 #config_trees.txt
 #config_water.txt
 #config_river.txt
 #config_gym.txt
 #config_berkeley.txt # UC Berkeley heightmap
 #config_puget_sound.txt
-#config_puget_sound_tt.txt # for tiled terrain mode
+#config_puget_sound_tt.txt # for tiled terrain mode; use F1 to toggle modes
 #config_grand_canyon.txt
 #config_grand_canyon_tt.txt
 #config_hetch.txt
-#sponza/config_sponza2.txt
-#model_data/config_soda.txt
+#sponza/config_sponza2.txt # Sponza atrium; press 'v' to spawn inside, 'm' maximizes, 'V' toggles mouse look
+#model_data/config_soda.txt # Uc Berkeley Soda Hall model
 #config_samples.txt # for debug loading/viewing of 3D model files
-#config_san_miguel.txt
-#config_minecraft.txt
+#config_san_miguel.txt # San Miguel scene
+#config_minecraft.txt # currently set for Rungholt
 #config_museum.txt
 #config_museum_tt_model.txt # for generating lighting for TT scenes, not for direcly viewing
-#config_puzzle.txt # platformer level
-#config_buildings.txt
+#config_puzzle.txt # platformer level, use WASD and space to jump
+#config_buildings.txt # infinite buildings in every direction
 #config_white_plane.txt # test scene for reflective/refractive/emissive spheres
 
