@@ -1023,7 +1023,7 @@ struct building_t : public building_geom_t {
 	void toggle_light_object(room_object_t const &light, point const &sound_pos);
 	bool apply_player_action_key(point const &closest_to_in, vector3d const &in_dir_in, int mode, bool check_only=0);
 	bool move_nearest_object(point const &at_pos, vector3d const &in_dir, float range, int mode);
-	bool interact_with_object(unsigned obj_ix, point const &int_pos, vector3d const &int_dir);
+	bool interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir);
 	bool adjust_blinds_state(unsigned obj_ix);
 	void add_box_contents(room_object_t const &box);
 	void toggle_door_state(unsigned door_ix, bool player_in_this_building, bool by_player, float zval);

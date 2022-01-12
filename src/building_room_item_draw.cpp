@@ -883,6 +883,37 @@ void building_t::clear_room_geom(bool force) {
 	interior->room_geom.reset();
 }
 
+void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shader_t &s) {
+	if (stove.item_flags == 0) return; // no burners on
+	static quad_batch_draw flame_qbd; // reused across frames
+	vector3d const sz(stove.get_size());
+	bool const dim(stove.dim), dir(stove.dir);
+	float const zval(stove.z2() - 0.23*sz.z);
+	
+	for (unsigned w = 0; w < 2; ++w) { // width dim
+		float const radius((w ? 0.09 : 0.07)*sz.z), wval(stove.d[!dim][0] + ((bool(w) ^ dim ^ dir ^ 1) ? 0.72 : 0.28)*sz[!dim]);
+
+		for (unsigned d = 0; d < 2; ++d) { // depth dim
+			if (!(stove.item_flags & (1U<<(2U*w + d)))) continue; // burner not on
+			float const dval(stove.d[dim][0] + ((bool(d) ^ dir) ? 0.625 : 0.34)*sz[dim]);
+			point pos(dval, wval, zval);
+			if (dim) {swap(pos.x, pos.y);}
+			flame_qbd.add_quad_dirs(pos, -radius*plus_x, radius*plus_y, WHITE); // use a negative X to get the proper CW order
+		} // for d
+	} // for w
+	if (flame_qbd.empty()) return;
+	select_texture(get_texture_by_name("interiors/gas_burner.png"));
+	s.set_color_e(WHITE); // emissive
+	enable_blend();
+	set_additive_blend_mode();
+	glDepthMask(GL_FALSE);
+	flame_qbd.draw_and_clear();
+	glDepthMask(GL_TRUE);
+	set_std_blend_mode();
+	disable_blend();
+	s.set_color_e(BLACK);
+}
+
 // Note: non-const because it creates the VBO
 void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t const &building, occlusion_checker_noncity_t &oc, vector3d const &xlate,
 	unsigned building_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building)
@@ -985,6 +1016,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		}
 		// Note: lamps are the most common and therefore most expensive models to draw
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0, 0, untextured);
+		if (!shadow_only && player_in_building && obj.type == TYPE_STOVE) {draw_stove_flames(obj, camera_bs, s);} // draw blue burner flame
 		
 		if (use_low_z_bias) { // restore to the defaults
 			s.add_uniform_float("norm_bias_scale",   10.0);

@@ -336,7 +336,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	if (check_only) return 1;
 
 	if (is_obj) { // interactive object
-		if (!interact_with_object(obj_ix, closest_to, in_dir)) return 0; // generate sound from the player height
+		if (!interact_with_object(obj_ix, closest_to, query_ray_end, in_dir)) return 0; // generate sound from the player height
 	}
 	else { // interior door
 		door_t &door(interior->doors[door_ix]);
@@ -348,7 +348,7 @@ bool building_t::apply_player_action_key(point const &closest_to_in, vector3d co
 	return 1;
 }
 
-bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, vector3d const &int_dir) {
+bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, point const &query_ray_end, vector3d const &int_dir) {
 	auto &obj(interior->room_geom->get_room_object_by_index(obj_ix));
 	float const pitch((obj.type == TYPE_STALL) ? 2.0 : 1.0); // higher pitch for stalls
 	point const sound_origin(obj.xc(), obj.yc(), int_pos.z), local_center(local_to_camera_space(sound_origin)); // generate sound from the player height
@@ -393,10 +393,40 @@ bool building_t::interact_with_object(unsigned obj_ix, point const &int_pos, vec
 		gen_sound_thread_safe(SOUND_BEEP, local_center, 0.25);
 		sound_scale = 0.6;
 	}
-	else if (obj.type == TYPE_STOVE) { // beeps
-		obj.flags ^= RO_FLAG_OPEN; // toggle stove on/off
-		if (obj.is_open()) {gen_sound_thread_safe(SOUND_HISS, local_center, 0.25, 0.6);} else {gen_sound_thread_safe(SOUND_CLICK, local_center, 0.75);}
-		sound_scale = 0.3;
+	else if (obj.type == TYPE_STOVE) { // toggle burners
+		float const height(obj.dz());
+		bool const dim(obj.dim), dir(obj.dir);
+		unsigned burner_id(0);
+		float tmin(1.0);
+		
+		for (unsigned w = 0; w < 2; ++w) { // width dim
+			for (unsigned d = 0; d < 2; ++d) { // depth dim
+				bool wv(bool(w) ^ dim ^ dir ^ 1), dv(bool(d) ^ dir);
+				cube_t c(obj);
+				set_cube_zvals(c, (c.z1() + 0.7*height), (c.z1() + 0.8*height)); // select the cook top area
+				((dim ? wv : dv) ? c.x1() : c.x2()) = c.xc();
+				((dim ? dv : wv) ? c.y1() : c.y2()) = c.yc();
+				float cur_tmin(0.0), cur_tmax(1.0);
+				if (!get_line_clip(int_pos, query_ray_end, c.d, cur_tmin, cur_tmax) || tmin < cur_tmin) continue;
+				tmin      = cur_tmin;
+				burner_id = (2U*w + d); // this point intersects earlier - select this burner
+			} // for d
+		} // for w
+		if (tmin < 1.0) { // found an intersection
+			unsigned const flag_mask(1U<<burner_id);
+			bool const is_on(obj.item_flags & flag_mask);
+		
+			if (is_on) { // currently on, turn off
+				obj.item_flags &= ~flag_mask;
+				gen_sound_thread_safe(SOUND_CLICK, local_center, 0.75);
+				sound_scale = 0.1;
+			}
+			else { // currently off, turn on
+				obj.item_flags |= flag_mask;
+				gen_sound_thread_safe(SOUND_HISS, local_center, 0.25, 0.6);
+				sound_scale = 0.3;
+			}
+		}
 	}
 	else if (obj.type == TYPE_TV || obj.type == TYPE_MONITOR) {
 		if (!(obj.flags & RO_FLAG_BROKEN)) { // no visual effect if broken, but still clicks
@@ -674,7 +704,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 					if (obj.type == TYPE_PICTURE || obj.type == TYPE_TV || obj.type == TYPE_MONITOR || obj.type == TYPE_BUTTON || obj.type == TYPE_SWITCH ||
 						(obj.type == TYPE_OFF_CHAIR && (obj.flags & RO_FLAG_RAND_ROT)))
 					{
-						if (!handled) {interact_with_object(obj_ix, center, velocity.get_norm());}
+						if (!handled) {interact_with_object(obj_ix, center, center, velocity.get_norm());}
 					}
 				}
 			}
