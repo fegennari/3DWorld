@@ -340,6 +340,9 @@ public:
 	float get_rel_dist_to_camera(bool xy_dist=1) const {
 		return max(0.0f, (xy_dist ? p2p_dist_xy(get_camera_pos(), get_center()) : p2p_dist(get_camera_pos(), get_center())) - radius)/get_scaled_tile_radius();
 	}
+	bool rel_dist_to_camera_xy_lt(float rel_dist) const {
+		return dist_xy_less_than(get_camera_pos(), get_center(), (rel_dist*get_scaled_tile_radius() + radius));
+	}
 	float get_bsphere_radius_inc_water() const;
 	bool use_as_occluder() const;
 	bool mesh_sphere_intersect(point const &pos, float rradius) const;

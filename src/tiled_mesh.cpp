@@ -1876,7 +1876,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 			(dim ? dy : dx) += (dir ? 1 : -1);
 			tile_t *adj(get_adj_tile(dx, dy)); // need to handle (is_distant != adj->is_distant) when distant tiles are implemented
 			if (adj == NULL) continue; // no adjacent tile
-			//if (!adj->is_visible() || adj->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue;
+			//if (!adj->is_visible() || !adj->rel_dist_to_camera_xy_lt(DRAW_DIST_TILES)) continue;
 			ix_sz_pair const &ixsz(crack_ibuf.lookup(crack_ibuf.get_index(dim, dir, lod_level, adj->get_lod_level(reflection_pass))));
 			if (ixsz.sz == 0) continue;
 			glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, ixsz.sz, GL_UNSIGNED_INT, (void *)(ixsz.ix*sizeof(unsigned)));
@@ -1916,7 +1916,7 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 			tile_t const *const adj_tile(get_adj_tile(dxy[0], dxy[1]));
 				
 			if (adj_tile && !adj_tile->is_distant) {
-				if (adj_tile->get_rel_dist_to_camera() < DRAW_DIST_TILES) continue;
+				if (adj_tile->rel_dist_to_camera_xy_lt(DRAW_DIST_TILES)) continue;
 				if (!adj_tile->has_water ()) continue; // adj tile has no water, so we can't have any uncapped water on this edge
 				if (!adj_tile->is_visible()) continue; // adj tile not visible,  so we can't see this edge
 			}
@@ -1939,7 +1939,7 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 
 
 bool tile_t::is_water_visible() const {
-	return (!is_distant && has_water() && get_rel_dist_to_camera() < DRAW_DIST_TILES && is_visible());
+	return (!is_distant && has_water() && rel_dist_to_camera_xy_lt(DRAW_DIST_TILES) && is_visible());
 }
 void tile_t::draw_water(shader_t &s, float z) const {
 
@@ -2193,7 +2193,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			tile_xy_pair const txy(x, y);
 			if (tiles.find(txy) != tiles.end()) continue; // already exists
 			tile_t tile(get_tile_size(), x, y);
-			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
+			if (!tile.rel_dist_to_camera_xy_lt(CREATE_DIST_TILES)) continue; // too far away to create
 			tile_t *new_tile(new tile_t(tile));
 			to_gen_zvals.push_back(make_pair(new_tile->get_draw_priority(), new_tile));
 			// in this mode, we need to place buildings and flatten the heightmap before calculating tile heights
@@ -2559,7 +2559,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second.get());
 		assert(tile);
-		if (tile->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue; // too far to draw
+		if (!tile->rel_dist_to_camera_xy_lt(DRAW_DIST_TILES)) continue; // too far to draw
 		//if (display_mode & 0x20) {tile->clear_shadow_map(&smap_manager);} // useful for perf testing
 		bool const is_visible(tile->is_visible());
 
@@ -3574,7 +3574,7 @@ bool tile_t::mesh_sphere_intersect(point const &pos, float rradius) const {
 }
 
 bool tile_t::use_as_occluder() const {
-	return (!has_tunnel && get_rel_dist_to_camera() < OCCLUDER_DIST && is_visible());
+	return (!has_tunnel && rel_dist_to_camera_xy_lt(OCCLUDER_DIST) && is_visible());
 }
 
 template <typename T> bool tile_t::add_new_trees(T &trees, tile_offset_t const &toff, cube_t &update_bcube, float &tzmax, point const &tpos, float rradius, bool is_square) {
