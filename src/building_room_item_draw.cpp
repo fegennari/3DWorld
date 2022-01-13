@@ -888,17 +888,17 @@ void draw_stove_flames(room_object_t const &stove, point const &camera_bs, shade
 	static quad_batch_draw flame_qbd; // reused across frames
 	vector3d const sz(stove.get_size());
 	bool const dim(stove.dim), dir(stove.dir);
-	float const zval(stove.z2() - 0.23*sz.z);
+	float const zval(stove.z2() - 0.23*sz.z), dsign(dir ? -1.0 : 1.0);
 	
 	for (unsigned w = 0; w < 2; ++w) { // width dim
-		float const radius((w ? 0.09 : 0.07)*sz.z), wval(stove.d[!dim][0] + ((bool(w) ^ dim ^ dir ^ 1) ? 0.72 : 0.28)*sz[!dim]);
+		float const radius((w ? 0.09 : 0.07)*sz.z), wval(stove.d[!dim][0] + ((bool(w) ^ dim ^ dir ^ 1) ? 0.72 : 0.28)*sz[!dim]); // left/right burners
 
 		for (unsigned d = 0; d < 2; ++d) { // depth dim
 			if (!(stove.item_flags & (1U<<(2U*w + d)))) continue; // burner not on
-			float const dval(stove.d[dim][0] + ((bool(d) ^ dir) ? 0.625 : 0.34)*sz[dim]);
+			float const dval(stove.d[dim][dir] + dsign*(d ? 0.66 : 0.375)*sz[dim]); // front/back burners
 			point pos(dval, wval, zval);
 			if (dim) {swap(pos.x, pos.y);}
-			flame_qbd.add_quad_dirs(pos, -radius*plus_x, radius*plus_y, WHITE); // use a negative X to get the proper CW order
+			flame_qbd.add_quad_dirs(pos, dsign*radius*plus_x, -dsign*radius*plus_y, WHITE); // use a negative Y to get the proper CW order; flip with dsign for symmetry
 		} // for d
 	} // for w
 	if (flame_qbd.empty()) return;
@@ -1016,7 +1016,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		}
 		// Note: lamps are the most common and therefore most expensive models to draw
 		building_obj_model_loader.draw_model(s, obj_center, obj, i->dir, obj.color, xlate, obj.get_model_id(), shadow_only, 0, 0, 0, untextured);
-		if (!shadow_only && player_in_building && obj.type == TYPE_STOVE) {draw_stove_flames(obj, camera_bs, s);} // draw blue burner flame
+		if (!shadow_only && obj.type == TYPE_STOVE) {draw_stove_flames(obj, camera_bs, s);} // draw blue burner flame
 		
 		if (use_low_z_bias) { // restore to the defaults
 			s.add_uniform_float("norm_bias_scale",   10.0);
