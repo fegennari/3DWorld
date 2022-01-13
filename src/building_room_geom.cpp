@@ -539,10 +539,9 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1));
 	
-	if ((c.flags & RO_FLAG_WAS_EXP) && !(c.flags & RO_FLAG_IN_CLOSET)) {
-		// if tape was in a drawer, then the hole won't properly blend with the wood under it, making the floor visible;
-		// draw a wood colored circle under the hole before drawing the roll to sort of cover this up (though it's not textured);
-		// this isn't necessary or corect for tape in boxes, whic are usually in closets, so skip that case
+	if (c.flags & RO_FLAG_WAS_EXP) {
+		// if tape was in a drawer, then the hole won't properly blend with the wood under it, making the floor visible; this applies to some boxes as well;
+		// draw a cardboard colored circle under the hole before drawing the roll to sort of cover this up (though it's not textured);
 		cube_t bot_fill(c);
 		bot_fill.expand_by_xy(-0.1*c.dx());
 		bot_fill.z2() -= 0.95*c.dz();
