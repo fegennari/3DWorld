@@ -448,8 +448,13 @@ class tile_draw_t : public indexed_vbo_manager_t {
 		point cube_pts[4];
 		void calc_cube_top_points(cube_t const &bcube);
 	};
-	vector<tile_t *> occluders; // reused across draw calls
-	vect_cube_t test_cubes; // reused across draw calls
+	struct occluder_cubes_t {
+		tile_t const *const tile;
+		cube_t bcube, sub_cubes[16];
+		occluder_cubes_t(tile_t const *const tile_);
+	};
+	vector<occluder_cubes_t> occluders; // reused across draw calls
+	vector<unsigned> occluder_ixs; // reused across draw calls
 	void insert_tile(tile_t *tile);
 
 public:

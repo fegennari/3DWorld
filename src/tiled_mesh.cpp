@@ -2612,6 +2612,15 @@ void tile_draw_t::occluder_pts_t::calc_cube_top_points(cube_t const &bcube) { //
 
 unsigned in_mb(unsigned long long v) {return v/1024/1024;}
 
+tile_draw_t::occluder_cubes_t::occluder_cubes_t(tile_t const *const tile_) : tile(tile_), bcube(tile->get_mesh_bcube()) {
+	for (unsigned s = 0; s < 16; ++s) {
+		cube_t &sub_cube(sub_cubes[s]);
+		sub_cube = tile->get_mesh_sub_bcube((s>>2), (s&3));
+		if (!camera_pdu.cube_visible(sub_cube)) {sub_cube.set_to_zeros(); continue;} // if cube is behind the player, it can't be an occluder; doesn't help much
+		sub_cube.z2() = sub_cube.z1(); // cube below the bcube
+		sub_cube.z1() = zmin;
+	}
+}
 
 void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=water plane Z, 2=building mirror
 
@@ -2633,7 +2642,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 	if ((display_mode & 0x08) && (display_mode & 0x01) && check_tt_mesh_occlusion) { // check occlusion when occlusion culling and mesh are enabled
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 			tile_t *const tile(i->second.get());
-			if (tile->use_as_occluder()) {occluders.push_back(tile);}
+			if (tile->use_as_occluder()) {occluders.emplace_back(tile);}
 		}
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
@@ -2655,37 +2664,41 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			occluder_pts_t tile_os, sub_tile_os;
 			tile_os.calc_cube_top_points(tile->get_bcube());
 			bool tile_occluded(1);
-			test_cubes.clear();
+			occluder_ixs.clear();
 
 			for (auto j = occluders.begin(); j != occluders.end(); ++j) {
-				if (*j == tile) continue; // no self-occlusion
-				cube_t occluder_bcube((*j)->get_mesh_bcube());
-				occluder_bcube.d[2][0] = zmin; // not required?
+				if (j->tile == tile) continue; // no self-occlusion
 				bool intersected(0); // will always be true for the camera's current tile
 
 				for (unsigned d = 0; d < 4 && !intersected; ++d) {
-					intersected |= check_line_clip(tile_os.cube_pts[d], camera, occluder_bcube.d);
+					intersected |= check_line_clip(tile_os.cube_pts[d], camera, j->bcube.d);
 				}
-				if (!intersected) continue; // skip
-
-				for (unsigned s = 0; s < 16; ++s) {
-					test_cubes.push_back((*j)->get_mesh_sub_bcube((s>>2), (s&3)));
-					test_cubes.back().d[2][1] = test_cubes.back().d[2][0]; // cube below the bcube
-					test_cubes.back().d[2][0] = zmin;
-				}
+				if (intersected) {occluder_ixs.push_back(j - occluders.begin());}
 			} // for j
 			for (unsigned t = 0; t < 16; ++t) {
-				sub_tile_os.calc_cube_top_points(tile->get_sub_bcube((t>>2), (t&3)));
+				cube_t const sub_cube(tile->get_sub_bcube((t>>2), (t&3)));
+				sub_tile_os.calc_cube_top_points(sub_cube);
+				point const center(sub_cube.get_cube_center());
 				bool sub_tile_occluded(0);
 
-				for (vect_cube_t::const_iterator s = test_cubes.begin(); s != test_cubes.end() && !sub_tile_occluded; ++s) {
-					sub_tile_occluded = 1;
+				for (auto S = occluder_ixs.begin(); S != occluder_ixs.end() && !sub_tile_occluded; ++S) {
+					occluder_cubes_t const &oc(occluders[*S]);
+					if (!check_line_clip(center, camera, oc.bcube.d)) continue; // if not occluded by the full tile, then won't be occluded by a sub-cube of it
 
-					for (unsigned d = 0; d < 4 && sub_tile_occluded; ++d) {
-						sub_tile_occluded &= check_line_clip(sub_tile_os.cube_pts[d], camera, s->d);
-					}
+					for (unsigned s = 0; s < 16 && !sub_tile_occluded; ++s) {
+						cube_t const &occluder(oc.sub_cubes[s]);
+						if (occluder.is_all_zeros()) continue; // invalid cube, skip
+						sub_tile_occluded = 1;
+
+						for (unsigned d = 0; d < 4 && sub_tile_occluded; ++d) {
+							sub_tile_occluded &= check_line_clip(sub_tile_os.cube_pts[d], camera, occluder.d);
+						}
+					} // for s
+				} // for S
+				if (!sub_tile_occluded) {
+					if (!camera_pdu.cube_visible(sub_cube)) continue; // not visible, doesn't need to be occluded, skip; doesn't help runtime
+					tile_occluded = 0; break;
 				}
-				if (!sub_tile_occluded) {tile_occluded = 0; break;}
 			} // for t
 			tile->set_last_occluded(tile_occluded);
 			if (tile_occluded) {occluded_tiles.push_back(tile); continue;}
@@ -2693,8 +2706,9 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		to_draw.emplace_back(dist, tile);
 		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
 	} // for i
+	//cout << TXT(occluders.size()) << TXT(tiles.size()) << TXT(to_draw.size()) << TXT(occluded_tiles.size()) << endl; // 5, 341, 59, 38
 	occluders.clear();
-	test_cubes.clear();
+	occluder_ixs.clear();
 	sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 
 	if (display_mode & 0x01) { // draw visible tiles
