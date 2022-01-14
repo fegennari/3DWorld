@@ -1,8 +1,3 @@
-Planet water reflection map
-
-Cities:
-- Curved roads
-- Wider connector roads/intersections
-- Railroad tracks
-- Interiors for non-rectangular buildings
-- Larger spacing between office building floors
+Moved to Trello:
+Cities/Buildings: https://trello.com/b/a9ox4ML6/3dworld-cities
+3DWorld General : https://trello.com/b/DYBO5BdW/3dworld-other
