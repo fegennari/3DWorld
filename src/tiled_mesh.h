@@ -465,7 +465,6 @@ public:
 	float update(float &min_camera_dist);
 private:
 	static void setup_terrain_textures(shader_t &s, unsigned start_tu_id);
-	static void add_texture_colors(shader_t &s, unsigned start_tu_id);
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader);
 	static void lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows);
 	void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const;

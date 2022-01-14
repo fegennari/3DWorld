@@ -2326,15 +2326,6 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 	s.add_uniform_color("snow_cscale", colorRGB(1.0, 1.0, 1.2)); // increased blue
 }
 
-/*static*/ void tile_draw_t::add_texture_colors(shader_t &s, unsigned start_tu_id) {
-
-	for (int i = 0; i < NTEX_DIRT; ++i) { // for future use with weights_tex and hemispherical lighting
-		std::ostringstream oss;
-		oss << "texture_color" << (start_tu_id + i);
-		s.add_uniform_color(oss.str().c_str(), get_avg_color_for_landscape_tex(i));
-	}
-}
-
 
 void setup_tt_fog_pre(shader_t &s) {
 
@@ -2433,7 +2424,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	s.add_uniform_float("spec_offset", (rain_mode ? 0.5 : 0.0)); // increase specular during rain
 	set_noise_tex(s, 8);
 	setup_cloud_plane_uniforms(s);
-	setup_terrain_textures(s, 2);
+	setup_terrain_textures(s, 2); // TU_ID=2-7
 	set_tile_xy_vals(s);
 	s.add_uniform_int("height_tex", 12);
 	if (use_normal_map   ) {setup_detail_normal_map(s, 2.0);}
