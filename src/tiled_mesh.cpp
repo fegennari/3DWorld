@@ -2655,9 +2655,9 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			occluder_pts_t tile_os, sub_tile_os;
 			tile_os.calc_cube_top_points(tile->get_bcube());
 			bool tile_occluded(1);
-			test_cubes.resize(0);
+			test_cubes.clear();
 
-			for (vector<tile_t *>::const_iterator j = occluders.begin(); j != occluders.end(); ++j) {
+			for (auto j = occluders.begin(); j != occluders.end(); ++j) {
 				if (*j == tile) continue; // no self-occlusion
 				cube_t occluder_bcube((*j)->get_mesh_bcube());
 				occluder_bcube.d[2][0] = zmin; // not required?
@@ -2678,7 +2678,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 				sub_tile_os.calc_cube_top_points(tile->get_sub_bcube((t>>2), (t&3)));
 				bool sub_tile_occluded(0);
 
-				for (vector<cube_t>::const_iterator s = test_cubes.begin(); s != test_cubes.end() && !sub_tile_occluded; ++s) {
+				for (vect_cube_t::const_iterator s = test_cubes.begin(); s != test_cubes.end() && !sub_tile_occluded; ++s) {
 					sub_tile_occluded = 1;
 
 					for (unsigned d = 0; d < 4 && sub_tile_occluded; ++d) {
@@ -2690,7 +2690,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 			tile->set_last_occluded(tile_occluded);
 			if (tile_occluded) {occluded_tiles.push_back(tile); continue;}
 		} // check_occlusion
-		to_draw.push_back(make_pair(dist, tile));
+		to_draw.emplace_back(dist, tile);
 		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
 	} // for i
 	occluders.clear();

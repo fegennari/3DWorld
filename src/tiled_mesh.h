@@ -434,10 +434,8 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	unsigned ivbo_ixs[NUM_LODS+1] = {0};
 	unsigned tiles_gen_prev_frame;
 	float terrain_zmin;
-	draw_vect_t to_draw;
-	vector<tile_t *> occluded_tiles;
-	vector<tile_t *> to_draw_trunk_pts;
-	vector<pair<float, tile_t *>> to_gen_zvals;
+	draw_vect_t to_draw, to_gen_zvals;
+	vector<tile_t *> occluded_tiles, to_draw_trunk_pts;
 	cloud_draw_list_t to_draw_clouds;
 	vector<mesh_xy_grid_cache_t> height_gens;
 	lightning_strike_t lightning_strike;
@@ -451,7 +449,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 		void calc_cube_top_points(cube_t const &bcube);
 	};
 	vector<tile_t *> occluders; // reused across draw calls
-	vector<cube_t> test_cubes; // reused across draw calls
+	vect_cube_t test_cubes; // reused across draw calls
 	void insert_tile(tile_t *tile);
 
 public:
