@@ -1114,8 +1114,8 @@ void building_room_geom_t::add_stairs_wall(room_object_t const &c, vector3d cons
 }
 
 // Note: there is a lot duplicated with building_room_geom_t::add_elevator(), but we need a separate function for adding interior elevator buttons
-cube_t get_elevator_car_panel(room_object_t const &c) {
-	float const dz(c.dz()), thickness(elevator_fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
+cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale) {
+	float const dz(c.dz()), thickness(fc_thick_scale*dz), signed_thickness((c.dir ? 1.0 : -1.0)*thickness);
 	float const width(c.get_sz_dim(!c.dim)), frame_width(0.2*width), panel_width(min(0.9f*frame_width, 0.25f*dz)), front_face(c.d[c.dim][c.dir] - signed_thickness);
 	cube_t panel(c);
 	panel.d[c.dim][ c.dir] = front_face; // flush front inner wall
@@ -1125,9 +1125,9 @@ cube_t get_elevator_car_panel(room_object_t const &c) {
 	panel.z1() += 0.28*dz; panel.z2() -= 0.28*dz;
 	return panel;
 }
-void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { // elevator car; dynamic=1
+void building_room_geom_t::add_elevator(room_object_t const &c, float tscale, float fc_thick_scale) { // elevator car; dynamic=1
 	// elevator car, all materials are dynamic; no lighting scale
-	float const dz(c.dz()), thickness(elevator_fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
+	float const dz(c.dz()), thickness(fc_thick_scale*dz), dir_sign(c.dir ? 1.0 : -1.0), signed_thickness(dir_sign*thickness);
 	cube_t floor(c), ceil(c), back(c);
 	floor.z2() = floor.z1() + thickness;
 	ceil. z1() = ceil. z2() - thickness;
@@ -1158,7 +1158,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { 
 		paneling_mat.add_cube_to_verts(front, WHITE, tex_origin, (get_face_mask(c.dim, !c.dir) & side_skip_faces), !c.dim); // draw front and inside side
 	}
 	// add button panel
-	cube_t const panel(get_elevator_car_panel(c));
+	cube_t const panel(get_elevator_car_panel(c, fc_thick_scale));
 	get_untextured_material(0, 1).add_cube_to_verts(panel, DK_GRAY, all_zeros, ~get_face_mask(c.dim, c.dir));
 	// add floor numbers to either the panel (or the buttons themselves?)
 	unsigned const num_floors(c.drawer_flags), cur_floor(c.item_flags);
@@ -1197,7 +1197,7 @@ void building_room_geom_t::add_elevator(room_object_t const &c, float tscale) { 
 	} // for f
 }
 
-void building_room_geom_t::add_elevator_doors(elevator_t const &e) {
+void building_room_geom_t::add_elevator_doors(elevator_t const &e, float fc_thick_scale) {
 	float const spacing(e.get_wall_thickness()), closed_door_width(0.99*0.5*e.get_sz_dim(!e.dim)), open_door_width(1.12*e.get_frame_width());
 	rgeom_mat_t &mat(get_untextured_material(1, 1));
 	float open_z1(e.z1()), open_z2(e.z2());
@@ -1205,7 +1205,7 @@ void building_room_geom_t::add_elevator_doors(elevator_t const &e) {
 	if (e.open_amt > 0.0) { // only draw the doors as open for the floor the elevator car is on
 		assert(e.car_obj_id < objs.size());
 		room_object_t const &car(objs[e.car_obj_id]); // elevator car for this elevator
-		float const z_shrink(0.8*elevator_fc_thick_scale*car.dz()); // shrink slightly to avoid clipping through the ceiling and floor
+		float const z_shrink(0.8*fc_thick_scale*car.dz()); // shrink slightly to avoid clipping through the ceiling and floor
 		open_z1 = car.z1() + z_shrink; open_z2 = car.z2() - z_shrink;
 		assert(open_z1 < open_z2);
 	}

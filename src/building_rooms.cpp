@@ -2937,7 +2937,7 @@ void set_floor_text_for_sign(room_object_t &sign, unsigned floor_ix, ostringstre
 void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 
 	float const window_vspacing(get_window_vspace()), floor_thickness(get_floor_thickness()), half_thick(0.5*floor_thickness);
-	float const wall_thickness(get_wall_thickness()), elevator_car_z1_add(0.05*floor_thickness);
+	float const wall_thickness(get_wall_thickness()), elevator_car_z1_add(0.05*floor_thickness), fc_thick_scale(get_elevator_fc_thick_scale());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	ostringstream oss; // reused across elevators/floors
 
@@ -2967,7 +2967,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 	for (auto i = interior->elevators.begin(); i != interior->elevators.end(); ++i) {
 		// add light
 		i->light_obj_id = objs.size();
-		cube_t light(point(i->xc(), i->yc(), (i->z1() + elevator_car_z1_add + (1.0 - elevator_fc_thick_scale)*window_vspacing))); // starts on the first floor
+		cube_t light(point(i->xc(), i->yc(), (i->z1() + elevator_car_z1_add + (1.0 - fc_thick_scale)*window_vspacing))); // starts on the first floor
 		light.z1() -= 0.02*window_vspacing;
 		light.expand_by_xy(0.06*window_vspacing);
 		objs.emplace_back(light, TYPE_LIGHT, i->room_id, i->dim, i->dir, (RO_FLAG_NOCOLL | RO_FLAG_IN_ELEV | RO_FLAG_LIT), 0.0, SHAPE_CYLIN, WHITE);
@@ -3008,7 +3008,7 @@ void building_t::add_stairs_and_elevators(rand_gen_t &rgen) {
 		cube_t elevator_car(*i);
 		elevator_car.z1() += elevator_car_z1_add;
 		elevator_car.z2()  = elevator_car.z1() + window_vspacing; // currently at the bottom floor
-		cube_t const panel(get_elevator_car_panel(room_object_t(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, 0)));
+		cube_t const panel(get_elevator_car_panel(room_object_t(elevator_car, TYPE_ELEVATOR, elevator_id, i->dim, i->dir, 0), fc_thick_scale));
 		float const dz(panel.dz()), button_spacing(dz/(num_floors + 1)); // add extra spacing on bottom and top of panel
 		float const inner_button_radius(min(button_radius, min(0.35f*button_spacing, 0.25f*panel.get_sz_dim(!i->dim)))); // may need to be smaller
 		point pos;

@@ -17,11 +17,10 @@ unsigned const NUM_STAIRS_PER_FLOOR= 12;
 unsigned const NUM_STAIRS_PER_FLOOR_U = 16;
 float const FLOOR_THICK_VAL_HOUSE  = 0.10; // 10% of floor spacing
 float const FLOOR_THICK_VAL_OFFICE = 0.11; // thicker for office buildings
+float const FLOOR_THICK_VAL_WINDOWLESS = 0.12; // even thicker for windowless office buildings
 float const WALL_THICK_VAL         = 0.05; // 5% of floor spacing
 float const DOOR_THICK_TO_WIDTH    = 0.04; // ratio of door thickness to width for doors opening to the side
 float const DEF_CITY_MIN_ALPHA     = 0.01;
-
-float const elevator_fc_thick_scale(1.005*0.5*FLOOR_THICK_VAL_OFFICE);
 
 unsigned const NUM_BOTTLE_TYPES = 5;
 unsigned const NUM_BOOK_COLORS  = 16;
@@ -606,8 +605,8 @@ struct building_room_geom_t {
 	void add_dresser_drawers(room_object_t const &c, float tscale);
 	void add_stair(room_object_t const &c, float tscale, vector3d const &tex_origin);
 	void add_stairs_wall(room_object_t const &c, vector3d const &tex_origin, tid_nm_pair_t const &wall_tex);
-	void add_elevator(room_object_t const &c, float tscale);
-	void add_elevator_doors(elevator_t const &e);
+	void add_elevator(room_object_t const &c, float tscale, float fc_thick_scale);
+	void add_elevator_doors(elevator_t const &e, float fc_thick_scale);
 	void add_light(room_object_t const &c, float tscale);
 	void add_rug(room_object_t const &c);
 	void add_picture(room_object_t const &c);
@@ -936,8 +935,10 @@ struct building_t : public building_geom_t {
 	colorRGBA get_avg_detail_color() const {return detail_color.modulate_with(get_material().roof_tex.get_avg_color());}
 	building_mat_t const &get_material() const;
 	bool has_windows() const {return get_material().add_windows;}
+	float get_floor_thick_val() const {return (is_house ? FLOOR_THICK_VAL_HOUSE : (has_windows() ? FLOOR_THICK_VAL_OFFICE : FLOOR_THICK_VAL_WINDOWLESS));}
+	float get_elevator_fc_thick_scale() const {return 1.005*0.5*get_floor_thick_val();}
 	float get_window_vspace  () const {return get_material().get_floor_spacing();}
-	float get_floor_thickness() const {return (is_house ? FLOOR_THICK_VAL_HOUSE : FLOOR_THICK_VAL_OFFICE)*get_window_vspace();}
+	float get_floor_thickness() const {return get_floor_thick_val()*get_window_vspace();}
 	float get_wall_thickness () const {return WALL_THICK_VAL*get_window_vspace();}
 	float get_trim_thickness () const {return 0.1*get_wall_thickness();}
 	float get_door_height    () const {return 0.95f*(get_window_vspace() - get_floor_thickness());} // set height based on window spacing, 95% of ceiling height (may be too large)
@@ -1315,7 +1316,7 @@ void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]);
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
 float get_cabinet_doors(room_object_t const &c, vect_cube_t &doors);
 void get_cabinet_or_counter_doors(room_object_t const &c, vect_cube_t &doors);
-cube_t get_elevator_car_panel(room_object_t const &c);
+cube_t get_elevator_car_panel(room_object_t const &c, float fc_thick_scale);
 void set_rand_pos_for_sz(cube_t &c, bool dim, float length, float width, rand_gen_t &rgen);
 template<typename T> bool has_bcube_int_xy(cube_t const &bcube, vector<T> const &bcubes, float pad_dist=0.0);
 bool door_opens_inward(door_stack_t const &door, cube_t const &room);
