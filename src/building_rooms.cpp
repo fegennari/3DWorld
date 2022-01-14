@@ -1821,6 +1821,7 @@ bool building_t::add_rug_to_room(rand_gen_t rgen, cube_t const &room, float zval
 
 // return value: 0=invalid, 1=valid and good, 2=valid but could be better
 int building_t::check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const {
+	assert(interior != nullptr);
 	float const wall_thickness(get_wall_thickness()), clearance(4.0*wall_thickness), side_clearance(1.0*wall_thickness);
 	cube_t tc(c), keepout(c);
 	tc.expand_in_dim(!dim, 0.1*width); // expand slightly to account for frame
@@ -1833,6 +1834,29 @@ int building_t::check_valid_picture_placement(room_t const &room, cube_t const &
 	// Note: it's not legal to guard the below check with (room.has_stairs || room.has_elevator) because room.has_stairs may not be set for stack connector stairs that split a wall
 	if (interior->is_blocked_by_stairs_or_elevator(tc, 4.0*wall_thickness)) return 0; // check stairs and elevators
 	if (!inc_open && !room.is_hallway && is_cube_close_to_doorway(tc, room, 0.0, 1)) return 2; // success, but could be better (doors never open into hallway)
+
+	if (has_complex_floorplan) { // check for office building whiteboards placed on room sides that aren't true walls
+		cube_t test_cube(c);
+		test_cube.expand_by_xy(2.0*wall_thickness); // max sure it extends through the wall
+		unsigned num_parts_int(0);
+
+		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
+			if (p->intersects(test_cube)) {++num_parts_int;}
+		}
+		assert(num_parts_int > 0);
+
+		if (num_parts_int > 1) { // on the border between two parts, check if there's a wall between them
+			cube_t wall_mount(c);
+			wall_mount.d[dim][0] = wall_mount.d[dim][1] = c.d[dim][dir] + (dir ? 1.0 : -1.0)*0.5*wall_thickness; // should be in the center of the wall
+			vect_cube_t const &walls(interior->walls[dim]);
+			bool found_wall(0);
+
+			for (auto const &w: walls) {
+				if (w.contains_cube(wall_mount)) {found_wall = 1; break;}
+			}
+			if (!found_wall) return 0;
+		}
+	}
 	return 1; // success
 }
 
