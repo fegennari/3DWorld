@@ -2307,7 +2307,6 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 /*static*/ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
 
 	unsigned const base_tsize(NORM_TEXELS);
-	std::ostringstream oss; // reused
 
 	for (int i = 0; i < NTEX_DIRT; ++i) {
 		int const tid(lttex_dirt[i].id);
@@ -2316,9 +2315,9 @@ colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
 		unsigned const tu_id(start_tu_id + i), nm_tu_id(i + 16); // tu_id 16-20 for normal maps
 		select_multitex(tid, tu_id);
 		select_multitex(nm_tid, nm_tu_id);
-		oss.str("");
-		oss << tu_id;
-		string const tu_id_str(oss.str());
+		assert(tu_id <= 9); // must map to a single character
+		string tu_id_str;
+		tu_id_str.push_back('0' + tu_id);
 		s.add_uniform_int(  ("tex"  + tu_id_str).c_str(), tu_id);
 		s.add_uniform_float(("ts"   + tu_id_str).c_str(), tscale);
 		s.add_uniform_float(("cs"   + tu_id_str).c_str(), mesh_tex_cscale[i]);
