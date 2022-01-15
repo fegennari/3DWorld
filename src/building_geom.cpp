@@ -237,8 +237,9 @@ void building_t::gen_geometry(int rseed1, int rseed2) {
 	bool const not_too_small(min(bcube.dx(), bcube.dy()) > 4.0*abs_min_edge_move);
 	assert(height > 0.0);
 
-	if (!do_split && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3)) {
-		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others)
+	if (!do_split && not_too_small && (rgen.rand()&3) < (was_cube ? 2 : 3) && !has_windows()) {
+		// oddly shaped multi-sided overlapping sections (50% chance for cube buildings and 75% chance for others);
+		// this tends to create some strange interior rooms, so skip this building type for secondary buildings with windows that the player can see through
 		has_complex_floorplan = 1;
 		point const sz(base.get_size());
 		parts.reserve(num_levels); // at least this many
@@ -1404,8 +1405,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 		}
 		return;
 	}
-	bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool());
-	bool const has_windows(get_material().add_windows);
+	bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool()), has_windows(has_windows());
 	bool used[4] = {0,0,0,0}; // per-side, not per-base cube
 	unsigned const min_doors((parts.size() > 1) ? 2 : 1); // at least 2 doors unless it's a small rectangle (large rectangle will have a central hallway with doors at each end)
 	unsigned const max_doors(has_windows ? 3 : 4); // buildings with windows have at most 3 doors since they're smaller
