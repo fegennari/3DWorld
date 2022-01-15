@@ -1410,9 +1410,6 @@
     <None Include="shaders\screen_space_ao_v2.frag">
       <Filter>Shaders\frag\Fullscreen</Filter>
     </None>
-    <None Include="shaders\screen_space_ao_xenko.frag">
-      <Filter>Shaders\frag\Fullscreen</Filter>
-    </None>
     <None Include="shaders\mirror_reflection.vert">
       <Filter>Shaders\vert</Filter>
     </None>

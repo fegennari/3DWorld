@@ -1194,7 +1194,6 @@
     <None Include="shaders\recolor.frag" />
     <None Include="shaders\screen_space_ao.frag" />
     <None Include="shaders\screen_space_ao_v2.frag" />
-    <None Include="shaders\screen_space_ao_xenko.frag" />
     <None Include="shaders\screen_space_blur.frag" />
     <None Include="shaders\screen_space_blur_1d.frag" />
     <None Include="shaders\shadow_map.part" />

@@ -100,7 +100,6 @@ void add_ssao() {
 	s.set_vert_shader("no_lighting_tex_coord");
 	s.set_frag_shader("depth_utils.part+screen_space_ao"); // too blocky, doesn't work on transparent objects, sky/clouds, or grass
 	//s.set_frag_shader("depth_utils.part+screen_space_ao_v2"); // black checkerboard patterns, needs blurring
-	//s.set_frag_shader("depth_utils.part+screen_space_ao_xenko"); // ported from HLSL, doesn't work
 	s.begin_shader();
 	setup_depth_tex(s, 0);
 	fill_screen_white_and_end_shader(s);
