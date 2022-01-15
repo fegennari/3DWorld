@@ -74,29 +74,34 @@ bool building_t::check_bcube_overlap_xy_one_dir(building_t const &b, float expan
 	return 0;
 }
 
+// called for players and butterfiles
 bool building_t::test_coll_with_sides(point &pos, point const &p_last, float radius, cube_t const &part, vector<point> &points, vector3d *cnorm) const {
 
 	building_draw_utils::calc_poly_pts(*this, part, points); // without the expand
 	point quad_pts[4]; // quads
-	bool updated(0);
+	unsigned const num_steps(max(1U, min(100U, (unsigned)ceil(2.0*p2p_dist_xy(pos, p_last)/radius))));
+	vector3d const step_delta((pos - p_last)/num_steps);
+	pos = p_last;
 
-	// FIXME: if the player is moving too quickly, the intersection with a side polygon may be missed,
-	// which allows the player to travel through the building, but using a line intersection test from p_last to pos has other problems
-	for (unsigned S = 0; S < num_sides; ++S) { // generate vertex data quads
-		for (unsigned d = 0, ix = 0; d < 2; ++d) {
-			point const &p(points[(S+d)%num_sides]);
-			for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, part.d[2][d^e]);}
-		}
-		vector3d const normal(get_poly_norm(quad_pts));
-		float const rdist(dot_product_ptv(normal, pos, quad_pts[0]));
-		if (rdist < 0.0 || rdist >= radius) continue; // too far or wrong side
-		if (!sphere_poly_intersect(quad_pts, 4, pos, normal, rdist, radius)) continue;
-		pos += normal*(radius - rdist);
-		if (cnorm) {*cnorm = normal;}
-		updated = 1;
-	} // for S
-	if (updated) return 1;
+	// if the player is moving too quickly, the intersection with a side polygon may be missed, which allows the player to travel through the building;
+	// so we split the test into multiple smaller sphere collision steps
+	for (unsigned step = 0; step < num_steps; ++step) {
+		pos += step_delta;
 
+		for (unsigned S = 0; S < num_sides; ++S) { // generate vertex data quads
+			for (unsigned d = 0, ix = 0; d < 2; ++d) {
+				point const &p(points[(S+d)%num_sides]);
+				for (unsigned e = 0; e < 2; ++e) {quad_pts[ix++].assign(p.x, p.y, part.d[2][d^e]);}
+			}
+			vector3d const normal(get_poly_norm(quad_pts));
+			float const rdist(dot_product_ptv(normal, pos, quad_pts[0]));
+			if (rdist < 0.0 || rdist >= radius) continue; // too far or wrong side
+			if (!sphere_poly_intersect(quad_pts, 4, pos, normal, rdist, radius)) continue;
+			pos += normal*(radius - rdist);
+			if (cnorm) {*cnorm = normal;}
+			return 1;
+		} // for S
+	} // for step
 	if (max(pos.z, p_last.z) > part.z2() && point_in_polygon_2d(pos.x, pos.y, points.data(), num_sides, 0, 1)) { // test top plane (sphere on top of polygon?)
 		pos.z = part.z2() + radius; // make sure it doesn't intersect the roof
 		if (cnorm) {*cnorm = plus_z;}
