@@ -740,6 +740,7 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 
 							if (p2->d[dim][0] == p->d[dim][0] && p2->d[dim][1] == p->d[dim][1]) { // same xy values, must only vary in z
 								if (p2->z2() < p->z2()) continue; // add wall only on one side (arbitrary)
+								if (has_complex_floorplan && p2->z2() == p->z2() && dir == 0) continue; // two abutting walls in complex floorplan: skip the one with dir==0
 							}
 							cube_t wall;
 							wall.z1() = max(p->z1(), p2->z1()) + fc_thick; // shared Z range
