@@ -3669,7 +3669,7 @@ bool tile_t::add_or_remove_grass_at(point const &pos, float rradius, bool add_gr
 					for (unsigned i = 0; i < 4 && grass_added > 0; ++i) { // remove other weights until weights are balanced
 						if ((int)i == grass_tex_ix) continue; // skip grass
 						if (weight_data[off+i] == 0) continue; // none of this layer
-						unsigned char const num_rem(min(weight_data[off+i], grass_added)); // FIXME: should depend on ratio of other weights (but rounding is difficult)
+						unsigned char const num_rem(min(weight_data[off+i], grass_added)); // should depend on ratio of other weights (but rounding is difficult)
 						weight_data[off+i] -= num_rem;
 						grass_added        -= num_rem;
 					}
@@ -3805,7 +3805,7 @@ void inf_terrain_fire_weapon() {
 void inf_terrain_undo_hmap_mod() {
 
 	if (!inf_terrain_fire_mode) return; // ignore
-	// FIXME: case to handle tree and grass edits
+	// Note: doesn't handle tree and grass edits, only terrain height edits
 	if (!using_tiled_terrain_hmap_tex()) return; // height editing only supported for hmap terrain
 	tex_mod_map_manager_t::hmap_brush_t brush;
 	if (!terrain_hmap_manager.pop_last_brush(brush)) return;

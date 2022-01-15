@@ -870,7 +870,7 @@ void check_cobj_alignment(unsigned index) {
 			//cout << TXT(supported) << TXT(support_pts.size())<< ", normal: " << normal.str() << ", rot axis: " << rot_val.axis.str() << endl;
 		
 			if (rot_val.axis != zero_vector) { // apply rotation if not stable at rest
-				float const angle(0.1); // FIXME
+				float const angle(0.1); // need to calculate this
 				cobj.rotate_about(rot_val.pt, rot_val.axis, angle);
 				return;
 			}

@@ -226,7 +226,7 @@ unsigned add_path_to_lmcs(lmap_manager_t *lmgr, cube_t *bcube, point p1, point c
 	vector3d const step((p2 - p1)/nsteps); // at least two points
 	if (!first_pt) {p1 += step;} // move past the first step so we don't double count
 
-	// FIXME: probably better time vs. quality tradeoff using a proper line drawing algorithm that chooses step size by distance to closest grid boundary and multiplies weight by segment length
+	// better time vs. quality tradeoff using a proper line drawing algorithm that chooses step size by distance to closest grid boundary and multiplies weight by segment length?
 	if (dynamic) { // it's a local lighting volume
 		light_volume_local &lvol(get_local_light_volume(ltype));
 

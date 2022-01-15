@@ -226,7 +226,7 @@ void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but coul
 	rotate_vector3d_multi(axis, TO_RADIANS*(double)angle, v, 2); // angle is in degrees
 	dir = v[0]; upv = v[1]; // renormalize?
 	orthogonalize_up_dir();
-	// FIXME: what about pos?
+	// rotation is around pos, so pos doesn't change
 }
 
 void pos_dir_up::apply_dim_mirror(unsigned dim, float val) {

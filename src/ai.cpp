@@ -830,10 +830,9 @@ float player_state::get_pos_cost(int smiley_id, point pos, point const &opos, po
 		float const dist(p2p_dist(pos, target_pos));
 		float const range(weapon_range(1));
 		if (check_dists && dist > range) return (3.0 + 0.01*dist); // out of weapon range
-		// TODO: use target_in_range()?
 
 		if (is_targeting_smiley(target, smiley_id, pos)) { // enemy (or camera) is targeting me
-			float const enemy_range(sstates[target].weapon_range(1)); // use sstates[target].target_in_range?
+			float const enemy_range(sstates[target].weapon_range(1)); // TODO: use sstates[target].target_in_range?
 			if (range > 2.0*enemy_range && dist < enemy_range) return (2.5f + 0.01f*(enemy_range - dist)); // too close to enemy weapon range
 		}
 		float const min_dist(min(0.25*range, 8.0*radius));

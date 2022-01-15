@@ -459,8 +459,7 @@ void platform::write_to_cobj_file(std::ostream &out) const {
 	
 	for (auto i = lights.begin(); i != lights.end(); ++i) {
 		assert(*i < light_sources_d.size());
-		//light_source_trig const &ls(light_sources_d[*i]);
-		//ls.write_to_cobj_file(out, 1);
+		//light_sources_d[*i].write_to_cobj_file(out, 1);
 		// FIXME: see 'L' command - need to output lights bound to this platform here
 	}
 	sensor.write_end_sensor_to_cobj_file(out);

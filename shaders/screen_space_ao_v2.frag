@@ -50,7 +50,7 @@ vec3 GetCameraVec(vec2 uv) {
     // This vector is not normalized.
     // The nice thing about this setup is that the returned vector from this function can be simply multiplied with the linear depth to get pixel's position relative to camera position.
     // This particular function does not account for camera rotation or position or FOV at all (since we don't need it for AO)
-    // TODO: AO is dependent on FOV, this function is not!
+    // TO DO: AO is dependent on FOV, this function is not!
     // The outcome of using this simplified function is that the effective AO range is larger when using larger FOV
     // Use something more accurate to get proper FOV-independent world-space range, however you will likely also have to adjust the SSAO constants below
     float aspect = xy_step[1]/xy_step[0]; // Used to get vector from camera to pixel
