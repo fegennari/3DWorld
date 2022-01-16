@@ -73,6 +73,9 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "max_road_slope") {
 		if (!read_float(fp, max_road_slope) || max_road_slope <= 0.0) {return read_error(str);}
 	}
+	else if (str == "max_track_slope") {
+		if (!read_float(fp, max_track_slope) || max_track_slope <= 0.0) {return read_error(str);}
+	}
 	else if (str == "make_4_way_ints") {
 		if (!read_uint(fp, make_4_way_ints) || make_4_way_ints > 3) {return read_error(str);}
 	}

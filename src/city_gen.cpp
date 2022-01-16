@@ -606,15 +606,18 @@ public:
 				cube_t tracks_bcube(p1, p2);
 				if (has_bcube_int_xy(tracks_bcube, blockers,            width)) continue; // check cities
 				if (has_bcube_int_xy(tracks_bcube, dim_tracks[dim], 8.0*width)) continue; // check prev placed tracks in same dim
-				dim_tracks[dim].push_back(tracks_bcube); // add to dim_tracks, but not to blockers, since we want roads to cross tracks
-				tracks.emplace_back(p1, p2, width, dim, (p2.z < p1.z), n); // Note: zvals are at 0, but should be unused
+				road_t const track(p1, p2, width, dim, (p2.z < p1.z), n); // Note: zvals are at 0, but should be unused
 				p2[dim] = (p1[dim] + step_sz); // back to starting segment
+				unsigned const segs_start(track_segs.size());
+				bool valid(1);
 
 				while (p1[dim] < seg_end) { // split into per-tile segments
 					p1.z = hq.get_road_zval_at_pt(p1);
 					p2.z = hq.get_road_zval_at_pt(p2);
+					float const seg_len(fabs(p1[dim] - p2[dim])), dz(fabs(p2.z - p1.z));
+					// TODO: if not valid, and (tries > city_params.num_conn_tries/2), allow the end points to shrink
+					if (dz/seg_len > city_params.max_track_slope) {valid = 0; break;} // check the max slope
 					bool const slope(p2.z < p1.z);
-					float const seg_len(fabs(p1[dim] - p2[dim]));
 					unsigned const num_segs(unsigned(ceil(seg_len/max_seg_len)));
 					vector3d const step_delta((p2 - p1)/num_segs);
 
@@ -625,8 +628,10 @@ public:
 					p1[dim] += step_sz;
 					p2[dim]  = min((p1[dim] + step_sz), seg_end);
 				} // end while
+				if (!valid) {track_segs.resize(segs_start); continue;} // if not valid, clear any partial segs and try another location
+				tracks.push_back(track);
+				dim_tracks[dim].push_back(tracks_bcube); // add to dim_tracks, but not to blockers, since we want roads to cross tracks
 				// TODO: check for collisions with roads and handle them with intersections, bridges, or tunnels
-				// TODO: handle slopes that are too steep
 				break; // success
 			} // for tries
 		} // for n
