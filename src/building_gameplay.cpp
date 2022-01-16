@@ -127,6 +127,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 1, 0, 1, 2, 10.0,  0.25,  "clothes"); // teeshirt, shirt, pants, etc.
 	bldg_obj_types[TYPE_FESCAPE   ] = bldg_obj_type_t(1, 1, 0, 1, 1, 1, 10000, 4000,  "fire escape"); // technically exterior, not interior
 	bldg_obj_types[TYPE_CUP       ] = bldg_obj_type_t(0, 0, 1, 0, 1, 2, 5.0,   0.2,   "cup");
+	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 0, 0, 1, 2, 0.0,   1.0,   "rat"); // not something that can really be picked up yet
 	//                                                pc ac pu at im ls value  weight  name [capacity]
 }
 

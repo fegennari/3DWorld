@@ -4,15 +4,25 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "buildings.h"
+#include "city_model.h" // for object_model_loader_t
 
 extern float fticks;
 extern building_params_t global_building_params;
+extern object_model_loader_t building_obj_model_loader;
 
 void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen);
 
 
+cube_t rat_t::get_bcube() const {
+	cube_t bcube(pos, pos);
+	bcube.expand_by_xy(radius);
+	bcube.z2() += radius;
+	return bcube;
+}
+
 void building_t::update_animals(unsigned building_ix) {
-	if (!has_room_geom() || interior->rooms.empty() || global_building_params.num_rats == 0) return;
+	if (is_rotated() || !has_room_geom() || interior->rooms.empty() || global_building_params.num_rats == 0) return;
+	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, mat_ix+1); // unique per building
 	vector<rat_t> &rats(interior->room_geom->rats);
@@ -67,13 +77,15 @@ void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
 }
 
 void building_t::scare_animals(point const &scare_pos, float sight_amt, float sound_amt) {
+	vector<rat_t> &rats(interior->room_geom->rats);
+	if (rats.empty()) return; // nothing to do
 	float const amount(min((sight_amt + sound_amt), 1.0f)); // for now we don't differentiate between sight and sound for rats
 	assert(amount > 0.0);
 	float const max_scare_dist(3.0*get_window_vspace()), scare_dist(max_scare_dist*amount);
 	int const scare_room(get_room_containing_pt(scare_pos));
 	if (scare_room < 0) return; // error?
 
-	for (auto &rat : interior->room_geom->rats) {
+	for (auto &rat : rats) {
 		if (rat.fear > 0.99) continue; // already max fearful (optimization)
 		float const dist(p2p_dist(rat.pos, scare_pos));
 		if (dist < scare_dist) continue; // optimization
@@ -93,10 +105,15 @@ void building_t::scare_animals(point const &scare_pos, float sight_amt, float so
 	} // for rat
 }
 
-void building_t::draw_animals(shader_t &s, vector3d const &xlate) const {
-	if (!has_room_geom()) return;
-	
-	for (auto &rat : interior->room_geom->rats) {
-		// TODO: draw a 3D model
+bool building_room_geom_t::draw_animals(shader_t &s, vector3d const &xlate, bool shadow_only, bool reflection_pass) const {
+	bool any_drawn(0);
+	bool const animate(0); // TODO
+
+	for (auto &rat : rats) {
+		if (!camera_pdu.cube_visible(rat.pos + xlate)) continue; // VFC
+		// TODO: building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)
+		building_obj_model_loader.draw_model(s, rat.pos, rat.get_bcube(), rat.dir, WHITE, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
+		any_drawn = 1;
 	} // for rat
+	return any_drawn;
 }

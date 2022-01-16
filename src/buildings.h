@@ -79,6 +79,7 @@ struct rat_t {
 	float radius, speed, fear;
 
 	rat_t(point const &pos_, float radius_) : pos(pos_), dest(pos), dir(plus_x), radius(radius_), speed(0.0), fear(0.0) {}
+	cube_t get_bcube() const;
 };
 
 struct building_occlusion_state_t {
@@ -332,7 +333,7 @@ enum {
 	TYPE_LAPTOP, TYPE_FPLACE, TYPE_LBASKET, TYPE_WHEATER, TYPE_TAPE,
 	/* these next ones are all 3D models - see logic in room_object_t::is_obj_model_type() */
 	TYPE_TOILET, TYPE_SINK, TYPE_TUB, TYPE_FRIDGE, TYPE_STOVE, TYPE_TV, TYPE_MONITOR, TYPE_COUCH, TYPE_OFF_CHAIR, TYPE_URINAL,
-	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_CUP, NUM_ROBJ_TYPES};
+	TYPE_LAMP, TYPE_WASHER, TYPE_DRYER, TYPE_KEY, TYPE_HANGER, TYPE_CLOTHES, TYPE_FESCAPE, TYPE_CUP, TYPE_RAT, NUM_ROBJ_TYPES};
 typedef uint8_t room_object;
 enum {SHAPE_CUBE=0, SHAPE_CYLIN, SHAPE_SPHERE, SHAPE_STAIRS_U, SHAPE_TALL, SHAPE_SHORT, SHAPE_ANGLED};
 typedef uint8_t room_obj_shape;
@@ -347,7 +348,7 @@ typedef uint8_t stairs_shape;
 enum {ROOM_WALL_INT=0, ROOM_WALL_SEP, ROOM_WALL_EXT};
 enum {/*building models*/ OBJ_MODEL_TOILET=0, OBJ_MODEL_SINK, OBJ_MODEL_TUB, OBJ_MODEL_FRIDGE, OBJ_MODEL_STOVE, OBJ_MODEL_TV, OBJ_MODEL_MONITOR, OBJ_MODEL_COUCH,
 	OBJ_MODEL_OFFICE_CHAIR, OBJ_MODEL_URINAL, OBJ_MODEL_LAMP, OBJ_MODEL_WASHER, OBJ_MODEL_DRYER, OBJ_MODEL_KEY, OBJ_MODEL_HANGER, OBJ_MODEL_CLOTHES,
-	OBJ_MODEL_FESCAPE, OBJ_MODEL_CUP,
+	OBJ_MODEL_FESCAPE, OBJ_MODEL_CUP, OBJ_MODEL_RAT,
 	/*city models*/ OBJ_MODEL_FHYDRANT, OBJ_MODEL_SUBSTATION, OBJ_MODEL_UMBRELLA, NUM_OBJ_MODELS};
 
 // object flags
@@ -715,6 +716,7 @@ struct building_room_geom_t {
 	unsigned allocate_dynamic_state();
 	room_obj_dstate_t &get_dstate(room_object_t const &obj);
 private:
+	bool draw_animals(shader_t &s, vector3d const &xlate, bool shadow_only, bool reflection_pass) const;
 	static void add_closet_objects(room_object_t const &c, vector<room_object_t> &objects);
 	static unsigned get_shelves_for_object(room_object_t const &c, cube_t shelves[4]);
 	static void get_shelf_objects(room_object_t const &c_in, cube_t const shelves[4], unsigned num_shelves, vector<room_object_t> &objects);
@@ -1079,7 +1081,6 @@ private:
 	// animals
 public:
 	void update_animals(unsigned building_ix);
-	void draw_animals(shader_t &s, vector3d const &xlate) const;
 	void scare_animals(point const &scare_pos, float sight_amt, float sound_amt);
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;

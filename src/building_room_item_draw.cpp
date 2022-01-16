@@ -1040,6 +1040,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			obj_drawn = 1;
 		} // for i
 	}
+	if (player_in_building && !shadow_only) {obj_drawn |= draw_animals(s, xlate, shadow_only, reflection_pass);} // only drawn for the player building; no shadows
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
