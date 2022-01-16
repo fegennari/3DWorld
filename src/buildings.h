@@ -73,6 +73,14 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 	bottle_params_t("bottle of poison", "yuck.png", BLACK, 5.0),
 };
 
+struct rat_t {
+	point pos, dest, fear_pos;
+	vector3d dir;
+	float radius, speed, fear;
+
+	rat_t(point const &pos_, float radius_) : pos(pos_), dest(pos), dir(plus_x), radius(radius_), speed(0.0), fear(0.0) {}
+};
+
 struct building_occlusion_state_t {
 	int exclude_bix;
 	bool skip_cont_camera;
@@ -224,6 +232,9 @@ struct building_params_t {
 	unsigned ai_opens_doors; // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
 	unsigned ai_player_vis_test; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 
+	// building animal params
+	unsigned num_rats; // should this be a range? per-floor?
+
 	// gameplay state
 	float player_weight_limit;
 
@@ -238,7 +249,7 @@ struct building_params_t {
 		add_office_basements(0), num_place(num), num_tries(10), cur_prob(1), max_shadow_maps(32), buildings_rand_seed(0), ao_factor(0.0), sec_extra_spacing(0.0),
 		player_coll_radius_scale(1.0), interior_view_dist_scale(1.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0),
 		wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), open_door_prob(1.0), locked_door_prob(0.0), basement_prob(0.5), ball_prob(0.3),
-		ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), player_weight_limit(100.0), range_translate(zero_vector) {}
+		ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), num_rats(0), player_weight_limit(100.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}
@@ -571,6 +582,7 @@ struct building_room_geom_t {
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<unsigned> moved_obj_ids;
+	vector<rat_t> rats;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;
@@ -1046,20 +1058,34 @@ struct building_t : public building_geom_t {
 	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
 	void update_stats(building_stats_t &s) const;
-	void build_nav_graph() const;
-	unsigned count_connected_room_components();
 	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;
 	bool is_room_adjacent_to_ext_door(cube_t const &room, bool front_door_only=0) const;
 	room_t const &get_room(unsigned room_ix) const {assert(interior && room_ix < interior->rooms.size()); return interior->rooms[room_ix];}
 	point get_center_of_room(unsigned room_ix) const {return get_room(room_ix).get_cube_center();}
+
+	// building AI people
+	unsigned count_connected_room_components();
+	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor);
+private:
+	void build_nav_graph() const;
 	bool choose_dest_goal(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	int  choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player) const;
 	bool find_route_to_point(pedestrian_t const &person, float radius, bool is_first_path, bool is_moving_target, bool following_player, vector<point> &path) const;
 	void find_nearest_stairs(point const &p1, point const &p2, vector<unsigned> &nearest_stairs, bool straight_only, int part_ix=-1) const;
-	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor=1);
 	void ai_room_lights_update(building_ai_state_t const &state, pedestrian_t const &person, vector<pedestrian_t> const &people, unsigned person_ix);
 	void move_person_to_not_collide(pedestrian_t &person, pedestrian_t const &other, point const &new_pos, float rsum, float coll_dist) const;
+
+	// animals
+public:
+	void update_animals(unsigned building_ix);
+	void draw_animals(shader_t &s, vector3d const &xlate) const;
+	void scare_animals(point const &scare_pos, float sight_amt, float sound_amt);
+private:
+	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
+	void update_rat(rat_t &rat, rand_gen_t &rgen) const;
+
+public:
 	int get_room_containing_pt(point const &pt) const;
 	bool room_containing_pt_has_stairs(point const &pt) const;
 	bool maybe_teleport_to_screenshot() const;

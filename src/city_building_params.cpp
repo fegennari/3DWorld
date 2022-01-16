@@ -530,6 +530,10 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "ai_player_vis_test") { // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 		if (!read_uint(fp, global_building_params.ai_player_vis_test)) {buildings_file_err(str, error);}
 	}
+	// animals
+	else if (str == "num_rats") {
+		if (!read_uint(fp, global_building_params.num_rats)) {buildings_file_err(str, error);}
+	}
 	// gameplay state
 	else if (str == "player_weight_limit") {
 		if (!read_float(fp, global_building_params.player_weight_limit)) {buildings_file_err(str, error);}

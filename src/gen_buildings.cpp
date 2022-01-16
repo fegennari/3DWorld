@@ -2486,6 +2486,8 @@ public:
 						this_frame_player_in_basement |= b.is_pos_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()));
 						player_building = &b;
 						if (display_mode & 0x10) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
+						b.update_animals(bi->ix);
+						b.draw_animals(s, xlate);
 						// run any player interaction logic here
 						if (toggle_room_light  ) {b.toggle_room_light(camera_xlated);}
 						if (building_action_key) {b.apply_player_action_key(camera_xlated, cview_dir, (building_action_key-1), 0);} // check_only=0
