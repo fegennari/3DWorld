@@ -594,7 +594,7 @@ public:
 
 		for (T i = begin; i != end; ++i) {
 			if (!i->intersects_xy(seg_bcube)) continue;
-			// shouldn't break here because any intersection with a road parallel to the track should also intersect a city;
+			// shouldn't return here because any intersection with a road parallel to the track should also intersect a city;
 			// however, this is safer for the cases where a jog is allowed in a road
 			if (i->dim == dim) return 0; // failed, invalid track pos
 			float const prev_center(i->get_center_dim(dim)), cur_center(p1[!dim]);
