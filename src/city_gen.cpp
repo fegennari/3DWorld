@@ -1175,33 +1175,34 @@ public:
 	bool cube_overlaps_pl_or_dw_xy(cube_t const &c) const {
 		return (cube_overlaps_tile_group_xy(city_obj_placer.parking_lots, c, TYPE_PARK_LOT) || cube_overlaps_tile_group_xy(city_obj_placer.driveways, c, TYPE_DRIVEWAY));
 	}
+	template<typename T> static bool check_vect_cube_contains_pt_xy(vector<T> const &cubes, point const &pos) {
+		for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+			if (i->contains_pt_xy(pos)) return 1;
+		}
+		return 0;
+	}
 	int get_color_at_xy(point const &pos, colorRGBA &color) const { // Note: return value is currently unused, but it could be used for something in the future
 		// Note: query results are mutually exclusive since there's no overlap, so can early terminate on true
 		if (!bcube.contains_pt_xy(pos)) return 0;
+		if (check_vect_cube_contains_pt_xy(tunnels, pos)) {color = BROWN; return INT_ROAD;}
 			
 		for (auto i = bridges.begin(); i != bridges.end(); ++i) {
 			if (i->contains_pt_xy_exp(pos, 1.0*city_params.road_width)) {color = WHITE; return INT_ROAD;}
 		}
-		for (auto i = tunnels.begin(); i != tunnels.end(); ++i) {
-			if (i->contains_pt_xy(pos)) {color = BROWN; return INT_ROAD;}
-		}
 		if (!conn_roads.empty()) { // global_rn connector roads - use this vector because we only care about XY projection (not Z), and conn_roads is smaller than roads
-			for (auto i = conn_roads.begin(); i != conn_roads.end(); ++i) {
-				if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
-			}
+			if (check_vect_cube_contains_pt_xy(conn_roads, pos)) {color = GRAY; return INT_ROAD;}
 		}
 		else {
-			for (auto i = roads.begin(); i != roads.end(); ++i) {
-				if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
-			}
+			if (check_vect_cube_contains_pt_xy(roads,      pos)) {color = GRAY; return INT_ROAD;}
 		}
 		for (auto i = tracks.begin(); i != tracks.end(); ++i) {
-			if (i->contains_pt_xy(pos)) {color = LT_BROWN; return INT_ROAD;} // counts as road intersection (for now)
+			if (!i->contains_pt_xy(pos)) continue;
+			float const width(i->get_sz_dim(!i->dim)), edge_dist(fabs(pos[!i->dim] - i->get_center_dim(!i->dim))), val(edge_dist/width);
+			color = ((val > 0.2 && val < 0.3) ? GRAY : LT_BROWN);
+			return INT_TRACK;
 		}
-		if (plots.empty()) { // connector road
-			for (auto i = isecs[0].begin(); i != isecs[0].end(); ++i) { // 2-way intersections
-				if (i->contains_pt_xy(pos)) {color = GRAY; return INT_ROAD;}
-			}
+		if (plots.empty()) { // check connector road bends
+			if (check_vect_cube_contains_pt_xy(isecs[0], pos)) {color = GRAY; return INT_ROAD;} // 2-way intersections
 		}
 		if (check_tile_group_contains_pt_xy(city_obj_placer.parking_lots, pos, TYPE_PARK_LOT)) {color = DK_GRAY; return INT_PARKING;}
 		if (check_tile_group_contains_pt_xy(city_obj_placer.driveways,    pos, TYPE_DRIVEWAY)) {color = LT_GRAY; return INT_PARKING;}
