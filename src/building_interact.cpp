@@ -593,7 +593,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 	interior->update_elevators(*this, player_pos);
 	if (!has_room_geom()) return; // nothing else to do
 	float const player_radius(get_scaled_player_radius()), player_z1(player_pos.z - camera_zh - player_radius), player_z2(player_pos.z);
-	float const fc_thick(0.5*get_floor_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
+	float const fc_thick(get_fc_thickness()), fticks_stable(min(fticks, 1.0f)); // cap to 1/40s to improve stability
 	static float last_sound_tfticks(0);
 	static point last_sound_pt(all_zeros), last_player_pos(all_zeros);
 	vect_cube_t ped_bcubes;

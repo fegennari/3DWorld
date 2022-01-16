@@ -3184,7 +3184,7 @@ void building_t::add_sign_by_door(tquad_with_ix_t const &door, bool outside, std
 		c.z2() = door_bcube.z2() + 0.1*height;
 	}
 	else { // inside, place hanging near the top of the door
-		c.z2() = door_bcube.z1() + get_window_vspace() - 0.5*get_floor_thickness(); // right against the ceiling
+		c.z2() = door_bcube.z1() + get_window_vspace() - get_fc_thickness(); // right against the ceiling
 	}
 	c.z1() = c.z2() - 0.05*height;
 	float const sign_width(0.8*text.size()*c.dz()), shrink(0.5f*(width - sign_width));

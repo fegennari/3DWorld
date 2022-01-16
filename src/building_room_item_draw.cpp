@@ -1134,7 +1134,7 @@ bool building_t::check_obj_occluded(cube_t const &c, point const &viewer_in, occ
 	else if (!c_is_building_part && is_simple_cube()) { // player above this building; check if object is occluded by the roof
 		for (auto p = parts.begin(); p != get_real_parts_end(); ++p) {
 			cube_t roof(*p);
-			roof.z1() = roof.z2() - 0.5*get_floor_thickness();
+			roof.z1() = roof.z2() - get_fc_thickness();
 			bool not_occluded(0);
 
 			for (unsigned p = 0; p < npts; ++p) {

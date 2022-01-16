@@ -587,7 +587,7 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 	if (!has_room_geom()) return; // error?
 	point const camera_bs(camera_pdu.pos - xlate), building_center(bcube.get_cube_center()); // camera in building space
 	if ((display_mode & 0x08) && !bcube.contains_pt_xy(camera_bs) && is_entire_building_occluded(camera_bs, oc)) return; // check occlusion (optimization)
-	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(0.5*get_floor_thickness());
+	float const window_vspacing(get_window_vspace()), wall_thickness(get_wall_thickness()), fc_thick(get_fc_thickness());
 	float const camera_z(camera_bs.z), room_xy_expand(0.75*wall_thickness);
 	bool const check_building_people(enable_building_people_ai());
 	vect_cube_t &light_bcubes(interior->room_geom->light_bcubes);
