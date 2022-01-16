@@ -235,6 +235,7 @@ bool parse_buildings_option(FILE *fp) {
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);
+	bool unmatched(0);
 
 	// global parameters
 	if (str == "flatten_mesh") {
@@ -450,7 +451,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "house_ceil_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.house_ceil_tex,  error);}
 	else if (str == "house_floor_specular") {read_building_mat_specular(fp, str, global_building_params.cur_mat.house_floor_tex, error);}
 	// windows
-	else if (str == "window_width") {
+	// Note: this should be an else-if, but I have to split this if/else tree due to a MSVS compiler limit
+	else {unmatched = 1;}
+	/*else*/ if (str == "window_width") {
 		if (!read_float(fp, global_building_params.window_width) || !check_01(global_building_params.window_width)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_height") {
@@ -545,7 +548,7 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "enable_rotated_room_geom") {
 		if (!read_bool(fp, global_building_params.enable_rotated_room_geom)) {buildings_file_err(str, error);}
 	}
-	else {
+	else if (unmatched) {
 		cout << "Unrecognized buildings keyword in input file: " << str << endl;
 		error = 1;
 	}
