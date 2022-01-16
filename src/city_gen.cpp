@@ -591,13 +591,13 @@ public:
 		assert(region.dx() > 0.0 && region.dy() > 0.0);
 		if (region.dx() <= 2.0*width || region.dy() <= 2.0*width) return; // region too small (shouldn't happen)
 		vect_cube_t dim_tracks[2]; // one in each dim, for collision detection with tracks going in the other dim
+		float const step_sz(city_params.conn_road_seg_len), max_seg_len(city_params.road_spacing);
 
 		for (unsigned n = 0; n < num; ++n) {
 			for (unsigned tries = 0; tries < city_params.num_conn_tries; ++tries) {
 				bool const dim(rgen.rand_bool());
 				float const rv(rgen.rand_uniform(0.2, 0.8)); // use center area
 				float const pos(region.d[!dim][0]*(1.0f - rv) + region.d[!dim][1]*rv);
-				float const step_sz(city_params.conn_road_seg_len);
 				float const seg_end(region.d[dim][1]);
 				point p1, p2;
 				p1[!dim] = p2[!dim] = pos;
@@ -613,19 +613,27 @@ public:
 				while (p1[dim] < seg_end) { // split into per-tile segments
 					p1.z = hq.get_road_zval_at_pt(p1);
 					p2.z = hq.get_road_zval_at_pt(p2);
-					track_segs.emplace_back(p1, p2, width, dim, (p2.z < p1.z), n);
+					bool const slope(p2.z < p1.z);
+					float const seg_len(fabs(p1[dim] - p2[dim]));
+					unsigned const num_segs(unsigned(ceil(seg_len/max_seg_len)));
+					vector3d const step_delta((p2 - p1)/num_segs);
+
+					for (unsigned s = 0; s < num_segs; ++s) { // split smaller so that segments are within the shadow map bounds
+						point const p1s(p1 + s*step_delta);
+						track_segs.emplace_back(p1s, (p1s + step_delta), width, dim, slope, n);
+					}
 					p1[dim] += step_sz;
 					p2[dim]  = min((p1[dim] + step_sz), seg_end);
 				} // end while
 				// TODO: check for collisions with roads and handle them with intersections, bridges, or tunnels
-				// TODO: handle slopes that are too steep and have shadow artifacts
+				// TODO: handle slopes that are too steep
 				break; // success
 			} // for tries
 		} // for n
 		for (unsigned pass = 0; pass < 2; ++pass) { // flatten mesh after placing all tracks: regular, decrease_only
 			for (auto i = track_segs.begin(); i != track_segs.end(); ++i) {hq.flatten_for_road(*i, city_params.road_border, 0, (pass == 1));}
 		}
-		cout << "track segments: " << track_segs.size() << endl;
+		cout << "tracks: " << num << ", track segments: " << track_segs.size() << endl;
 	}
 	void calc_bcube_from_roads() { // Note: ignores isecs, plots, and bridges, which should be bounded by roads
 		if (roads.empty()) return; // no roads (assumes also no tracks)
@@ -940,7 +948,7 @@ public:
 		isecs[0].emplace_back(int_bcube, road_ix_x, road_ix_y, conns[2*dy + dx], true);
 		//blockers.push_back(int_bcube); // ???
 	}
-	void split_connector_roads(float road_spacing) {
+	void split_connector_roads(float road_spacing) { // required for correct shadow maps, since default segments may be too long
 		// Note: here we use segs, maybe 2-way isecs for bends, but not plots
 		for (auto r = roads.begin(); r != roads.end(); ++r) {
 			bool const d(r->dim), slope(r->slope);
