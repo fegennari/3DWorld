@@ -586,36 +586,6 @@ public:
 		}
 		return 1;
 	}
-	// can be called on roads or tracks
-	bool check_for_and_handle_track_road_int(point &p1, point &p2, float width, bool dim,
-		vector<road_t> const &rt, vector<road_t>::const_iterator &cur_int_road, heightmap_query_t const &hq)
-	{
-		cube_t seg_bcube(p1, p2);
-		seg_bcube.expand_in_dim(!dim, 0.5*width);
-
-		for (auto road = rt.begin(); road != rt.end(); ++road) {
-			if (road == cur_int_road) continue; // don't intersect the same road again (may still intersect if this is the second half of the split track)
-			if (!road->intersects_xy(seg_bcube)) continue;
-			// shouldn't break here because any intersection with a road parallel to the track should also intersect a city;
-			// however, this is safer for the cases where a jog is allowed in a road
-			if (road->dim == dim) return 0; // failed, invalid track pos
-			float const road_center(road->get_center_dim(dim)), t((road_center - p1[dim])/(p2[dim] - p1[dim]));
-			point p_int(p1);
-			p_int[dim] = road_center;
-			float const z_track(p1.z + t*(p2.z - p1.z)); // interpolated from endpoints, assuming track is a constant slope
-			float const z_road (hq.get_road_zval_at_pt(p_int)); // assumes road placement has already modified the terrain height
-			float const delta_z(z_track - z_road); // positive: track is above the road; negative: track is below the road
-			if      (0 && delta_z >  4.0*width) {} // bridge
-			else if (0 && delta_z < -4.0*width) {} // tunnel
-			else { // adjust the tracks to meet the road
-				p2   = p_int; // this segment will end at the road's center
-				p2.z = z_road;
-			}
-			cur_int_road = road;
-			return 1; // assume we can hit at most one road
-		} // for rt
-		return 1;
-	}
 	void gen_railroad_tracks(float width, unsigned num, cube_t const &region, vect_cube_t const &blockers, heightmap_query_t &hq) { // global connector road only, for now
 		rand_gen_t rgen;
 		assert(region.dx() > 0.0 && region.dy() > 0.0);
@@ -639,20 +609,43 @@ public:
 				if (has_bcube_int_xy(track, blockers,            width)) continue; // check cities
 				if (has_bcube_int_xy(track, dim_tracks[dim], 8.0*width)) continue; // check prev placed tracks in same dim
 				p2[dim] = (p1[dim] + step_sz); // back to starting segment
+				p2.z = hq.get_road_zval_at_pt(p1); // will be used as the initial p1 zval
 				unsigned const segs_start(track_segs.size());
-				vector<road_t>::const_iterator cur_int_road(roads.end()); // could point to roads or tracks
+				vector<road_t>::const_iterator cur_int_track(roads.end()); // could point to roads or tracks
 				bool valid(1);
 
 				while (p1[dim] < seg_end) { // split into per-tile segments
-					p1.z = hq.get_road_zval_at_pt(p1);
+					p1.z = p2.z;
 					p2.z = hq.get_road_zval_at_pt(p2);
-					// check for collisions with roads and handle them with intersections, bridges, or tunnels
-					// FIXME: roads haven't been placed yet
-					// FIXME: mesh height hasn't been modified for previous tracks yet - do we want to use track_segs and interpolate the zval?
-					// FIXME: even if we meet roads/tracks at intersections, flattening will modify the heights around the cross roads
-					if (!check_for_and_handle_track_road_int(p1, p2, width, dim, roads,  cur_int_road, hq)) {valid = 0; break;} // check connector roads
-					if (!check_for_and_handle_track_road_int(p1, p2, width, dim, tracks, cur_int_road, hq)) {valid = 0; break;} // check previously placed tracks
-					float const seg_len(fabs(p1[dim] - p2[dim])), dz(fabs(p2.z - p1.z));
+					// check for collisions with previously placed tracks and handle them with intersections, bridges, or tunnels
+					cube_t seg_bcube(p1, p2);
+					seg_bcube.expand_in_dim(!dim, 0.5*width);
+
+					for (auto r = track_segs.begin(); r != track_segs.begin()+segs_start; ++r) {
+						if (r == cur_int_track) continue; // don't intersect the same road again (may still intersect if this is the second half of the split track)
+						if (!r->intersects_xy(seg_bcube)) continue;
+						// shouldn't break here because any intersection with a road parallel to the track should also intersect a city;
+						// however, this is safer for the cases where a jog is allowed in a road
+						if (r->dim == dim) {valid = 0; break;} // failed, invalid track pos
+						float const prev_center(r->get_center_dim(dim)), cur_center(p1[!dim]);
+						float const tt((prev_center - p1[dim])/(p2[dim] - p1[dim]));
+						float const tr((cur_center  - r->d[!dim][0])/r->get_length());
+						if (tt < 0.0 || tt > 1.0 || tr < 0.0 || tr > 1.0) continue; // intersection, but centerlines not crossing - some other segment intersects
+						point p_int(p1);
+						p_int[dim] = prev_center;
+						float const z_track(p1.z + tt*(p2.z - p1.z)); // interpolated from endpoints, assuming track is a constant slope
+						float const z_road(r->get_start_z() + tr*(r->get_end_z() - r->get_start_z())); // interpolated from endpoints, assuming road seg is a constant slope
+						float const delta_z(z_track - z_road); // positive: track is above the road; negative: track is below the road
+						if      (0 && delta_z >  4.0*width) {} // bridge?
+						else if (0 && delta_z < -4.0*width) {} // tunnel?
+						else { // adjust the tracks to meet the road
+							p2   = p_int; // this segment will end at the road's center
+							p2.z = z_road;
+						}
+						cur_int_track = r;
+						break; // assume we can hit at most one road
+					} // for rt
+					float const seg_len(p2[dim] - p1[dim]), dz(fabs(p2.z - p1.z));
 	
 					if (dz/seg_len > city_params.max_track_slope) { // check the max slope
 						if (tries < num_tries/2) {valid = 0; break;} // first half of tries: no slope violations are tolerated, tracks must span the entire region
