@@ -592,31 +592,46 @@ public:
 		if (region.dx() <= 2.0*width || region.dy() <= 2.0*width) return; // region too small (shouldn't happen)
 		vect_cube_t dim_tracks[2]; // one in each dim, for collision detection with tracks going in the other dim
 		float const step_sz(city_params.conn_road_seg_len), max_seg_len(city_params.road_spacing);
+		unsigned const num_tries(2*city_params.num_conn_tries); // twice as many tries as connector roads: try full length, then shorter lengths
+		tracks.reserve(num); // to avoid iterator invalidation
 
 		for (unsigned n = 0; n < num; ++n) {
-			for (unsigned tries = 0; tries < city_params.num_conn_tries; ++tries) {
+			for (unsigned tries = 0; tries < num_tries; ++tries) {
 				bool const dim(rgen.rand_bool());
 				float const rv(rgen.rand_uniform(0.2, 0.8)); // use center area
 				float const pos(region.d[!dim][0]*(1.0f - rv) + region.d[!dim][1]*rv);
-				float const seg_end(region.d[dim][1]);
+				float const seg_start(region.d[dim][0]), seg_end(region.d[dim][1]);
 				point p1, p2;
 				p1[!dim] = p2[!dim] = pos;
-				p1[dim]  = region.d[dim][0]; p2[dim] = seg_end; // full segment for blockers check
+				p1[dim]  = seg_start; p2[dim] = seg_end; // full segment for blockers check
 				p1.z = p2.z = region.z1();
-				cube_t tracks_bcube(p1, p2);
-				if (has_bcube_int_xy(tracks_bcube, blockers,            width)) continue; // check cities
-				if (has_bcube_int_xy(tracks_bcube, dim_tracks[dim], 8.0*width)) continue; // check prev placed tracks in same dim
-				road_t const track(p1, p2, width, dim, (p2.z < p1.z), n); // Note: zvals are at 0, but should be unused
+				road_t track(p1, p2, width, dim, (p2.z < p1.z), n); // Note: zvals are at 0, but should be unused
+				if (has_bcube_int_xy(track, blockers,            width)) continue; // check cities
+				if (has_bcube_int_xy(track, dim_tracks[dim], 8.0*width)) continue; // check prev placed tracks in same dim
 				p2[dim] = (p1[dim] + step_sz); // back to starting segment
 				unsigned const segs_start(track_segs.size());
+				vector<road_t>::const_iterator cur_int_road(roads.end()); // could point to roads or tracks
 				bool valid(1);
 
 				while (p1[dim] < seg_end) { // split into per-tile segments
 					p1.z = hq.get_road_zval_at_pt(p1);
 					p2.z = hq.get_road_zval_at_pt(p2);
 					float const seg_len(fabs(p1[dim] - p2[dim])), dz(fabs(p2.z - p1.z));
-					// TODO: if not valid, and (tries > city_params.num_conn_tries/2), allow the end points to shrink
-					if (dz/seg_len > city_params.max_track_slope) {valid = 0; break;} // check the max slope
+	
+					if (dz/seg_len > city_params.max_track_slope) { // check the max slope
+						if (tries < num_tries/2) {valid = 0; break;} // first half of tries: no slope violations are tolerated, tracks must span the entire region
+						bool const is_halfway((p1[dim] - seg_start) > 0.5*(seg_end - seg_start));
+
+						if (is_halfway) { // we've reached the halfway point
+							track.d[dim][1] = p1[dim]; // end the tracks before this segment starts
+							if (track.get_sz_dim(dim) < 0.5*region.get_sz_dim(dim)) {valid = 0;} // must be at least half the full length to be accepted
+							break;
+						}
+						else { // not yet halfway; can get here multiple times
+							track.d[dim][0] = p2[dim]; // begin the tracks at the end of this segment
+							track_segs.resize(segs_start); // clear any previous tracks
+						}
+					}
 					bool const slope(p2.z < p1.z);
 					unsigned const num_segs(unsigned(ceil(seg_len/max_seg_len)));
 					vector3d const step_delta((p2 - p1)/num_segs);
@@ -625,13 +640,12 @@ public:
 						point const p1s(p1 + s*step_delta);
 						track_segs.emplace_back(p1s, (p1s + step_delta), width, dim, slope, n);
 					}
-					p1[dim] += step_sz;
-					p2[dim]  = min((p1[dim] + step_sz), seg_end);
+					p1[dim] = p2[dim];
+					p2[dim] = min((p1[dim] + step_sz), seg_end);
 				} // end while
 				if (!valid) {track_segs.resize(segs_start); continue;} // if not valid, clear any partial segs and try another location
 				tracks.push_back(track);
-				dim_tracks[dim].push_back(tracks_bcube); // add to dim_tracks, but not to blockers, since we want roads to cross tracks
-				// TODO: check for collisions with roads and handle them with intersections, bridges, or tunnels
+				dim_tracks[dim].push_back(track); // add to dim_tracks, but not to blockers, since we want roads to cross tracks
 				break; // success
 			} // for tries
 		} // for n
