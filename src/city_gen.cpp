@@ -588,7 +588,7 @@ public:
 	}
 
 	// called on road (road_seg_t) or track (road_t) segments
-	template<typename T> bool handle_crossings(T begin, T end, point &p1, point &p2, float width, bool dim) {
+	template<typename T> bool handle_crossings(T begin, T end, point &p1, point &p2, float width, bool dim, vector<road_t> &to_re_flatten) {
 		cube_t seg_bcube(p1, p2);
 		seg_bcube.expand_in_dim(!dim, 0.5*width);
 
@@ -610,25 +610,27 @@ public:
 			if      (0 && delta_z >  4.0*width) {} // bridge?
 			else if (0 && delta_z < -4.0*width) {} // tunnel?
 			else { // adjust the tracks to meet the road
-				// TODO: still not correct: since the slopes won't match, the terrain surrounding the road may be flattened in a way that leaves dirt on a road/track
 				p2   = p_int; // this segment will end at the road's center
 				p2.z = z_prev;
+				to_re_flatten.push_back(*i);
 			}
 			return 1; // assume we can hit at most one road
 		} // for i
 		return 1;
 	}
-	void gen_railroad_tracks(float width, unsigned num, vect_cube_t const &blockers, heightmap_query_t &hq) { // global connector road only, for now
+	void gen_railroad_tracks(vect_cube_t const &blockers, heightmap_query_t &hq) { // global connector road only, for now
+		float const width(TRACKS_WIDTH*city_params.road_width);
 		cube_t const region(calc_cubes_bcube(blockers));
 		assert(region.dx() > 0.0 && region.dy() > 0.0);
 		if (region.dx() <= 2.0*width || region.dy() <= 2.0*width) return; // region too small (shouldn't happen)
 		vect_cube_t dim_tracks[2]; // one in each dim, for collision detection with tracks going in the other dim
 		float const step_sz(city_params.conn_road_seg_len), max_seg_len(city_params.road_spacing);
 		unsigned const num_tries(2*city_params.num_conn_tries); // twice as many tries as connector roads: try full length, then shorter lengths
-		tracks.reserve(num); // to avoid iterator invalidation
+		tracks.reserve(city_params.num_rr_tracks); // to avoid iterator invalidation
 		rand_gen_t rgen;
+		vector<road_t> to_re_flatten;
 
-		for (unsigned n = 0; n < num; ++n) {
+		for (unsigned n = 0; n < city_params.num_rr_tracks; ++n) {
 			for (unsigned tries = 0; tries < num_tries; ++tries) {
 				bool const dim(rgen.rand_bool());
 				float const rv(rgen.rand_uniform(0.2, 0.8)); // use center area
@@ -637,12 +639,12 @@ public:
 				point p1, p2;
 				p1[!dim] = p2[!dim] = pos;
 				p1[dim]  = seg_start; p2[dim] = seg_end; // full segment for blockers check
-				p1.z = p2.z = region.z1();
+				p1.z     = p2.z = region.z1();
 				road_t track(p1, p2, width, dim, (p2.z < p1.z), n); // Note: zvals are at 0, but should be unused
 				if (has_bcube_int_xy(track, blockers,            width)) continue; // check cities
 				if (has_bcube_int_xy(track, dim_tracks[dim], 8.0*width)) continue; // check prev placed tracks in same dim
 				p2[dim] = (p1[dim] + step_sz); // back to starting segment
-				p2.z = hq.get_road_zval_at_pt(p1); // will be used as the initial p1 zval
+				p2.z    = hq.get_road_zval_at_pt(p1); // will be used as the initial p1 zval
 				unsigned const segs_start(track_segs.size());
 				bool valid(1);
 
@@ -650,8 +652,9 @@ public:
 					p1.z = p2.z;
 					p2.z = hq.get_road_zval_at_pt(p2);
 					// check for collisions with previously placed tracks and connector roads, and handle them with intersections, bridges, or tunnels
-					if (!handle_crossings(track_segs.begin(), track_segs.begin()+segs_start, p1, p2, width, dim)) {valid = 0; break;} // check previously placed tracks
-					if (!handle_crossings(segs.begin(),       segs.end(),                    p1, p2, width, dim)) {valid = 0; break;} // check connector roads
+					auto track_segs_end(track_segs.begin() + segs_start);
+					if (!handle_crossings(track_segs.begin(), track_segs_end, p1, p2, width, dim, to_re_flatten)) {valid = 0; break;} // check prev placed tracks
+					if (!handle_crossings(segs.begin(),       segs.end(),     p1, p2, width, dim, to_re_flatten)) {valid = 0; break;} // check connector roads
 					float const seg_len(p2[dim] - p1[dim]), dz(fabs(p2.z - p1.z));
 	
 					if (dz/seg_len > city_params.max_track_slope) { // check the max slope
@@ -686,9 +689,12 @@ public:
 			} // for tries
 		} // for n
 		for (unsigned pass = 0; pass < 2; ++pass) { // flatten mesh after placing all tracks: regular, decrease_only
-			for (auto i = track_segs.begin(); i != track_segs.end(); ++i) {hq.flatten_for_road(*i, city_params.road_border, 0, (pass == 1));}
+			for (auto const &t : track_segs) {hq.flatten_for_road(t, TRACKS_WIDTH*city_params.road_border, 0, (pass == 1));}
 		}
-		cout << "tracks: " << num << ", track segments: " << track_segs.size() << endl;
+		for (auto const &r : to_re_flatten) { // flatten out the previous segments again to avoid piles of dirt
+			hq.flatten_for_road(r, city_params.road_border, 0, 1); // decrease_only=1
+		}
+		cout << "tracks: " << tracks.size() << ", track segments: " << track_segs.size() << endl;
 	}
 
 	void calc_bcube_from_roads() { // Note: ignores isecs, plots, and bridges, which should be bounded by roads
@@ -2374,10 +2380,10 @@ public:
 			} // for j
 		} // for i
 		assign_city_clusters();
-		global_rn.calc_bcube_from_roads();
 		global_rn.split_connector_roads(road_spacing);
 		// place railroad tracks after connector roads are placed and split into segs so that intersections will be properly handled
-		global_rn.gen_railroad_tracks(TRACKS_WIDTH*city_params.road_width, city_params.num_rr_tracks, city_blockers, hq);
+		global_rn.gen_railroad_tracks(city_blockers, hq);
+		global_rn.calc_bcube_from_roads(); // must be after placing tracks
 		global_rn.finalize_bridges_and_tunnels();
 		
 		// only connect cities with transmission lines if there are no secondary buildings in the way;
