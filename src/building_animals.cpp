@@ -13,10 +13,24 @@ extern object_model_loader_t building_obj_model_loader;
 void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen);
 
 
+float get_rat_height(float radius) {
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // 3878, 861, 801
+	return 2.0*radius*sz.z/max(sz.x, sz.y); // use max of x/y size; the x/y size represents the bcube across rotations
+}
+
 cube_t rat_t::get_bcube() const {
 	cube_t bcube(pos, pos);
 	bcube.expand_by_xy(radius);
-	bcube.z2() += radius;
+	bcube.z2() += get_rat_height(radius);
+	return bcube;
+}
+cube_t rat_t::get_bcube_with_dir() const {
+	bool const pri_dim(fabs(dir.x) < fabs(dir.y));
+	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT));
+	cube_t bcube(pos, pos);
+	bcube.expand_in_dim( pri_dim, radius); // larger dim
+	bcube.expand_in_dim(!pri_dim, radius*min(sz.x, sz.y)/max(sz.x, sz.y)); // smaller dim
+	bcube.z2() += get_rat_height(radius);
 	return bcube;
 }
 
@@ -46,10 +60,10 @@ point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
 		unsigned const room_ix(rgen.rand() % interior->rooms.size());
 		room_t const &room(interior->rooms[room_ix]);
 		if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
-		cube_t place_area(room);
+		cube_t place_area(room); // will represent the usable floor area
 		place_area.expand_by_xy(-(radius + get_wall_thickness()));
-		place_area.z1() += get_fc_thickness(); // on top of the floor
-		vector3d const sz(radius, radius, 0.5*radius); // height is half radius
+		place_area.z2() = place_area.z1() + get_fc_thickness(); // on top of the floor
+		vector3d const sz(radius, radius, get_rat_height(radius));
 		cube_t cand;
 		gen_xy_pos_for_cube_obj(cand, place_area, sz, sz.z, rgen);
 		// TODO: check for object collisions
