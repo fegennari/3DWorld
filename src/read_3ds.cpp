@@ -401,7 +401,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				pts[n] = verts[n].v;
 			}
 			if (use_vertex_normals) {
-				vector3d normal(get_poly_norm(pts));
+				vector3d normal(-get_poly_norm(pts)); // Note: it seems like the calculated normal is backwards and needs to be negated, at least for the rat model
 				if (use_vertex_normals > 1) {normal *= polygon_area(pts, 3);} // weight normal by face area
 				UNROLL_3X(normals[i->ix[i_]].add_normal(normal);)
 			}
