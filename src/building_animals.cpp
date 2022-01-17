@@ -104,16 +104,3 @@ void building_t::scare_animals(point const &scare_pos, float sight_amt, float so
 		rat.fear_pos = scare_pos;
 	} // for rat
 }
-
-bool building_room_geom_t::draw_animals(shader_t &s, vector3d const &xlate, bool shadow_only, bool reflection_pass) const {
-	bool any_drawn(0);
-	bool const animate(0); // TODO
-
-	for (auto &rat : rats) {
-		if (!camera_pdu.cube_visible(rat.pos + xlate)) continue; // VFC
-		// TODO: building.check_obj_occluded(*i, camera_bs, oc, reflection_pass)
-		building_obj_model_loader.draw_model(s, rat.pos, rat.get_bcube(), rat.dir, WHITE, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
-		any_drawn = 1;
-	} // for rat
-	return any_drawn;
-}

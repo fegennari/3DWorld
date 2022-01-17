@@ -1040,7 +1040,18 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			obj_drawn = 1;
 		} // for i
 	}
-	if (player_in_building && !shadow_only) {obj_drawn |= draw_animals(s, xlate, shadow_only, reflection_pass);} // only drawn for the player building; no shadows
+	if (player_in_building && !shadow_only) { // only drawn for the player building; no shadows
+		for (auto &rat : rats) {
+			cube_t bcube(rat.get_bcube());
+			bcube.translate_dim(2, 0.5*rat.radius); // FIXME: should not be needed
+			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
+			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
+			point const pos(bcube.get_cube_center());
+			bool const animate(0); // TODO
+			building_obj_model_loader.draw_model(s, pos, bcube, rat.dir, WHITE, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
+			obj_drawn = 1;
+		} // for rat
+	}
 	if (disable_cull_face) {glEnable(GL_CULL_FACE);}
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
