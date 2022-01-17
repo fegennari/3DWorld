@@ -79,6 +79,7 @@ struct rat_t {
 	float radius, speed, fear;
 
 	rat_t(point const &pos_, float radius_) : pos(pos_), dest(pos), dir(plus_x), radius(radius_), speed(0.0), fear(0.0) {}
+	bool is_moving() const {return (speed > 0.0);}
 	cube_t get_bcube() const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
 };

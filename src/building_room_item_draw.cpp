@@ -1040,8 +1040,8 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			obj_drawn = 1;
 		} // for i
 	}
-	if (player_in_building /*&& !shadow_only*/) { // only drawn for the player building; no shadows
-		for (auto &rat : rats) {
+	if (player_in_building /*&& !shadow_only*/) { // only drawn for the player building
+		for (rat_t &rat : rats) {
 			cube_t const bcube(rat.get_bcube());
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;

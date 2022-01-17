@@ -139,6 +139,9 @@ city fire_hydrant_model ../models/fire_hydrant/Fire_Hydrant.model3d  1 0 0  0 -1
 city substation_model   ../models/substation/SubstationBig.model3d   0 0 0  -1 -1 0  1 1.0 1.0
 city umbrella_model     ../models/umbrella/UmbrellaOpen.model3d      0 0 0  0 -1 270  0 1.0 1.0
 
+# building animal models
+city rat_model    ../models/interiors/rat/rat.3DS           1 0 0  0 -1 90 1 1.0 1.0
+
 city max_lights 1024
 city max_shadow_maps 40
 city smap_size 0 # 0 = default

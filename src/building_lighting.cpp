@@ -637,6 +637,11 @@ void building_t::add_room_lights(vector3d const &xlate, unsigned building_id, bo
 			if (i->is_visible() && i->is_moving()) {moving_objs.push_back(*i);}
 		}
 	}
+	if (camera_in_building) {
+		for (rat_t const &rat : interior->room_geom->rats) {
+			if (rat.is_moving()) {moving_objs.push_back(rat.get_bcube());}
+		}
+	}
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (!i->is_lit() || !i->is_light_type()) continue; // light not on, or not a light or lamp
 		point lpos(i->get_cube_center()); // centered in the light fixture

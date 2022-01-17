@@ -50,7 +50,7 @@ void building_t::update_animals(unsigned building_ix) {
 			rats.emplace_back(pos, radius);
 		}
 	}
-	for (auto &rat : rats) {update_rat(rat, rgen);}
+	for (rat_t &rat : rats) {update_rat(rat, rgen);}
 }
 
 point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
@@ -83,6 +83,7 @@ void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
 		// TODO: set speed
 		rat.dir = (rat.dest - rat.pos).get_norm(); // TODO: slow turn (like people)
 	}
+	rotate_vector3d(plus_z, 0.005*fticks, rat.dir); rat.dir.normalize(); // TESTING
 }
 
 void building_t::scare_animals(point const &scare_pos, float sight_amt, float sound_amt) {
@@ -94,7 +95,7 @@ void building_t::scare_animals(point const &scare_pos, float sight_amt, float so
 	int const scare_room(get_room_containing_pt(scare_pos));
 	if (scare_room < 0) return; // error?
 
-	for (auto &rat : rats) {
+	for (rat_t &rat : rats) {
 		if (rat.fear > 0.99) continue; // already max fearful (optimization)
 		float const dist(p2p_dist(rat.pos, scare_pos));
 		if (dist < scare_dist) continue; // optimization
