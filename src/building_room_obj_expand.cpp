@@ -31,17 +31,21 @@ bool add_if_not_intersecting(room_object_t const &obj, vector<room_object_t> &ob
 	cubes.push_back(obj);
 	return 1;
 }
-void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen) {
+point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen) {
 	point center;
-	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the bounds of the shelf
-	C.set_from_point(center);
+	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(S.d[d][0]+sz[d], S.d[d][1]-sz[d]);} // randomly placed within the specified bounds
+	return center;
+}
+point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen) {
+	return gen_xy_pos_in_area(S, vector3d(radius, radius, 0.0), rgen);
+}
+void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen) {
+	C.set_from_point(gen_xy_pos_in_area(S, sz, rgen));
 	set_cube_zvals(C, S.z2(), S.z2()+height);
 	C.expand_by_xy(sz);
 }
 void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0) {
-	point center;
-	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((S.d[d][0] + spacing), (S.d[d][1] - spacing));} // place at least spacing from edge
-	C.set_from_sphere(center, radius);
+	C.set_from_sphere(gen_xy_pos_in_area(S, spacing, rgen), radius); // place at least spacing from edge
 	float const place_z(place_at_z1 ? S.z1() : S.z2());
 	set_cube_zvals(C, place_z, place_z+height);
 }
@@ -53,14 +57,12 @@ void add_boxes_to_space(room_object_t const &c, vector<room_object_t> &objects, 
 	room_object_t C(c);
 	C.flags = flags; // Note: also clears open flag
 	vector3d sz;
-	point center;
 
 	for (unsigned n = 0; n < num_boxes; ++n) {
 		for (unsigned d = 0; d < 2; ++d) {
-			sz    [d] = min(xy_scale*rgen.rand_uniform(0.5, 1.0), 0.99f*0.5f*bounds_sz[d]); // x,y half width; clamp to slightly smaller than bounds to avoid an assert
-			center[d] = rgen.rand_uniform(bounds.d[d][0]+sz[d], bounds.d[d][1]-sz[d]); // randomly placed within the bounds of the closet
+			sz[d] = min(xy_scale*rgen.rand_uniform(0.5, 1.0), 0.99f*0.5f*bounds_sz[d]); // x,y half width; clamp to slightly smaller than bounds to avoid an assert
 		}
-		C.set_from_point(center);
+		C.set_from_point(gen_xy_pos_in_area(bounds, sz, rgen)); // randomly placed within the bounds of the closet
 		set_cube_zvals(C, bounds.z1(), (bounds.z1() + rgen.rand_uniform(hmin, hmax)));
 		C.expand_by_xy(sz);
 		if (has_bcube_int(C, cubes)) continue; // intersects - just skip it, don't try another placement
@@ -88,10 +90,8 @@ void add_obj_to_closet(room_object_t const &c, cube_t const &interior, vector<ro
 	rand_gen_t &rgen, vector3d const &sz, unsigned obj_type, unsigned flags, room_obj_shape shape=SHAPE_CUBE)
 {
 	for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
-		point center;
-		for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(interior.d[d][0]+sz[d], interior.d[d][1]-sz[d]);}
 		cube_t obj;
-		obj.set_from_point(center);
+		obj.set_from_point(gen_xy_pos_in_area(interior, sz, rgen));
 		set_cube_zvals(obj, interior.z1(), (interior.z1() + sz.z));
 		obj.expand_by_xy(sz);
 
@@ -114,18 +114,18 @@ void building_room_geom_t::add_closet_objects(room_object_t const &c, vector<roo
 	unsigned const num_boxes((rgen.rand()%3) + (rgen.rand()%4)); // 0-5
 	vect_cube_t &cubes(get_temp_cubes());
 	add_boxes_to_space(c, objects, interior, cubes, rgen, num_boxes, box_sz, 0.8*box_sz, 1.5*box_sz, 0, flags); // allow_crates=0
-	vector3d sz;
-	point center;
 
 	if (!c.is_small_closet()) { // larger closets have more random items
+		vector3d sz;
+
 		if (rgen.rand_bool()) { // maybe add a lamp in the closet
 			float const height(0.25*window_vspacing), width(height*get_lamp_width_scale()), radius(0.5*width);
 
 			if (width > 0.0 && width < 0.9*min(interior.dx(), interior.dy())) { // check if lamp model is valid and lamp fits in closet
-				center.assign(0.0, 0.0, interior.z1());
 
 				for (unsigned n = 0; n < 4; ++n) { // make up to 4 attempts
-					for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform(interior.d[d][0]+radius, interior.d[d][1]-radius);}
+					point center(gen_xy_pos_in_area(interior, radius, rgen));
+					center.z = interior.z1();
 					cube_t lamp(get_cube_height_radius(center, radius, height));
 
 					if (!has_bcube_int(lamp, cubes)) { // check for intersection with boxes

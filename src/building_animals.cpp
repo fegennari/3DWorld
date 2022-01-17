@@ -1,4 +1,4 @@
-// 3D World - Building Animals (rats, etc)
+// 3D World - Building Animals (rats, etc.)
 // by Frank Gennari 1/16/22
 
 #include "3DWorld.h"
@@ -9,8 +9,6 @@
 extern float fticks;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
-
-void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, float height, rand_gen_t &rgen);
 
 
 float get_rat_height(float radius) {
@@ -62,12 +60,9 @@ point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
 		if (room.z1() > ground_floor_z1) continue; // not on the ground floor or basement
 		cube_t place_area(room); // will represent the usable floor area
 		place_area.expand_by_xy(-(radius + get_wall_thickness()));
-		place_area.z2() = place_area.z1() + get_fc_thickness(); // on top of the floor
-		vector3d const sz(radius, radius, get_rat_height(radius));
-		cube_t cand;
-		gen_xy_pos_for_cube_obj(cand, place_area, sz, sz.z, rgen);
-		// TODO: check for object collisions
-		return point(cand.xc(), cand.yc(), cand.z1());
+		point pos(gen_xy_pos_in_area(place_area, radius, rgen));
+		pos.z = place_area.z1() + get_fc_thickness(); // on top of the floor
+		if (is_valid_ai_placement(pos, radius)) {return pos;} // success
 	} // for n
 	return all_zeros; // failed
 }

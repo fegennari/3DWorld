@@ -1495,10 +1495,8 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	// add a random office chair if there's space
 	if (!is_house && min(crate_bounds.dx(), crate_bounds.dy()) > 1.2*window_vspacing && building_obj_model_loader.is_model_valid(OBJ_MODEL_OFFICE_CHAIR)) {
 		float const chair_height(0.425*window_vspacing), chair_radius(0.5f*chair_height*get_radius_for_square_model(OBJ_MODEL_OFFICE_CHAIR));
-		cube_t place_area(crate_bounds);
-		point pos(0.0, 0.0, zval);
-		place_area.expand_by_xy(-chair_radius);
-		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);}
+		point pos(gen_xy_pos_in_area(crate_bounds, chair_radius, rgen));
+		pos.z = zval;
 		cube_t chair(get_cube_height_radius(pos, chair_radius, chair_height));
 		
 		// for now, just make one random attempt; if it fails then there's no chair in this room
@@ -1507,13 +1505,11 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 		}
 	}
 	for (unsigned n = 0; n < 4*num_crates; ++n) { // make up to 4 attempts for every crate/box
-		point pos(0.0, 0.0, zval);
 		vector3d sz; // half size relative to window_vspacing
 		gen_crate_sz(sz, rgen, window_vspacing*(is_house ? (is_basement ? 0.75 : 0.5) : 1.0)); // smaller for houses
-		cube_t place_area(crate_bounds);
-		place_area.expand_by_xy(-sz);
-		if (!place_area.is_strictly_normalized()) continue; // too large for this room
-		for (unsigned d = 0; d < 2; ++d) {pos[d] = rgen.rand_uniform(place_area.d[d][0], place_area.d[d][1]);}
+		if (crate_bounds.dx() <= 2.0*sz.x || crate_bounds.dy() <= 2.0*sz.y) continue; // too large for this room
+		point pos(gen_xy_pos_in_area(crate_bounds, sz, rgen));
+		pos.z = zval;
 		cube_t crate(get_cube_height_radius(pos, sz, 2.0*sz.z)); // multiply by 2 since this is a size rather than half size/radius
 		if (has_bcube_int(crate, exclude)) continue; // don't place crates between the door and the center of the room
 		bool bad_placement(0);

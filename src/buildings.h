@@ -1057,7 +1057,6 @@ struct building_t : public building_geom_t {
 		unsigned building_ix, int ped_ix, bool shadow_only, bool reflection_pass, bool inc_small, bool player_in_building);
 	void add_split_roof_shadow_quads(building_draw_t &bdraw) const;
 	void clear_room_geom(bool force);
-	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	void update_grass_exclude_at_pos(point const &pos, vector3d const &xlate, bool camera_in_building) const;
 	void update_stats(building_stats_t &s) const;
 	bool are_rooms_connected_without_using_room(unsigned room1, unsigned room2, unsigned room_exclude) const;
@@ -1067,9 +1066,11 @@ struct building_t : public building_geom_t {
 
 	// building AI people
 	unsigned count_connected_room_components();
+	bool place_person(point &ppos, float radius, rand_gen_t &rgen) const;
 	int ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vector<pedestrian_t> &people, float delta_dir, unsigned person_ix, bool stay_on_one_floor);
 private:
 	void build_nav_graph() const;
+	bool is_valid_ai_placement(point const &pos, float radius) const;
 	bool choose_dest_goal(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	int  choose_dest_room(building_ai_state_t &state, pedestrian_t &person, rand_gen_t &rgen, bool same_floor) const;
 	void get_avoid_cubes(float zval, float height, float radius, vect_cube_t &avoid, bool following_player) const;
@@ -1372,6 +1373,8 @@ void draw_buildings_ext_paint();
 void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out);
 bool have_secondary_buildings();
 bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos);
+point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen);
+point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen);
 // functions in building_interact.cc and building_gameplay.cc
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, float gain_scale=1.0, bool skip_if_already_playing=0);
 inline void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float pitch=1.0) {gen_sound_thread_safe(id, get_camera_pos(), gain, pitch);}
