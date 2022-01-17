@@ -1211,7 +1211,6 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 	assert(has_room_geom());
 	vector<room_object_t> &objs(interior->room_geom->objs);
 	assert(objs_start <= objs.size());
-	bool const first_floor(room.z1() < ground_floor_z1 + get_floor_thickness());
 	blockers.clear();
 	int table_blocker_ix(-1);
 
@@ -1232,7 +1231,9 @@ int building_t::gather_room_placement_blockers(cube_t const &room, unsigned objs
 
 	for (auto s = interior->stairwells.begin(); s != interior->stairwells.end(); ++s) {
 		cube_t tc(*s);
-		if (first_floor) {tc.d[s->dim][!s->dir] += (s->dir ? -1.0 : 1.0);} // first floor, expand only in stairs entrance dim (could do the opposite for top floor)
+		// expand only in stairs entrance dim for the first floor (could do the opposite for top floor)
+		bool const first_floor(room.z1() <= s->z1() + get_floor_thickness()); // for these stairs, not for the building
+		if (first_floor) {tc.d[s->dim][!s->dir] += (s->dir ? -1.0 : 1.0);}
 		else {tc.expand_in_dim(s->dim, doorway_width);} // add extra space at both ends of stairs
 		if (tc.intersects(bcube)) {blockers.push_back(tc);}
 	}
