@@ -44,7 +44,7 @@ void gen_xy_pos_for_cube_obj(cube_t &C, cube_t const &S, vector3d const &sz, flo
 	set_cube_zvals(C, S.z2(), S.z2()+height);
 	C.expand_by_xy(sz);
 }
-void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0) {
+void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1) {
 	C.set_from_sphere(gen_xy_pos_in_area(S, spacing, rgen), radius); // place at least spacing from edge
 	float const place_z(place_at_z1 ? S.z1() : S.z2());
 	set_cube_zvals(C, place_z, place_z+height);

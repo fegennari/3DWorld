@@ -1374,8 +1374,10 @@ void draw_buildings_ext_paint();
 void subtract_cube_xy(cube_t const &c, cube_t const &r, cube_t *out);
 bool have_secondary_buildings();
 bool get_building_door_pos_closest_to(unsigned building_id, point const &target_pos, point &door_pos);
+// functions in building_room_obj_expand.cc
 point gen_xy_pos_in_area(cube_t const &S, vector3d const &sz, rand_gen_t &rgen);
 point gen_xy_pos_in_area(cube_t const &S, float radius, rand_gen_t &rgen);
+void gen_xy_pos_for_round_obj(cube_t &C, cube_t const &S, float radius, float height, float spacing, rand_gen_t &rgen, bool place_at_z1=0);
 // functions in building_interact.cc and building_gameplay.cc
 void gen_sound_thread_safe(unsigned id, point const &pos, float gain=1.0, float pitch=1.0, float gain_scale=1.0, bool skip_if_already_playing=0);
 inline void gen_sound_thread_safe_at_player(unsigned id, float gain=1.0, float pitch=1.0) {gen_sound_thread_safe(id, get_camera_pos(), gain, pitch);}

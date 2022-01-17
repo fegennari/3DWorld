@@ -1689,11 +1689,8 @@ void building_t::place_book_on_obj(rand_gen_t &rgen, room_object_t const &place_
 }
 
 cube_t place_cylin_object(rand_gen_t rgen, cube_t const &place_on, float radius, float height, float dist_from_edge) {
-	point center;
-	for (unsigned d = 0; d < 2; ++d) {center[d] = rgen.rand_uniform((place_on.d[d][0] + dist_from_edge), (place_on.d[d][1] - dist_from_edge));} // place at dist_from_edge from edge
 	cube_t c;
-	c.set_from_sphere(center, radius);
-	set_cube_zvals(c, place_on.z2(), place_on.z2()+height);
+	gen_xy_pos_for_round_obj(c, place_on, radius, height, dist_from_edge, rgen); // place at dist_from_edge from edge
 	return c;
 }
 
