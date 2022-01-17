@@ -84,6 +84,11 @@ struct rat_t {
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
 };
 
+struct vect_rat_t : public vector<rat_t> {
+	bool placed;
+	vect_rat_t() : placed(0) {}
+};
+
 struct building_occlusion_state_t {
 	int exclude_bix;
 	bool skip_cont_camera;
@@ -236,7 +241,8 @@ struct building_params_t {
 	unsigned ai_player_vis_test; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 
 	// building animal params
-	unsigned num_rats; // should this be a range? per-floor?
+	unsigned num_rats_min, num_rats_max;
+	float rat_speed;
 
 	// gameplay state
 	float player_weight_limit;
@@ -252,7 +258,8 @@ struct building_params_t {
 		add_office_basements(0), num_place(num), num_tries(10), cur_prob(1), max_shadow_maps(32), buildings_rand_seed(0), ao_factor(0.0), sec_extra_spacing(0.0),
 		player_coll_radius_scale(1.0), interior_view_dist_scale(1.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0),
 		wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), open_door_prob(1.0), locked_door_prob(0.0), basement_prob(0.5), ball_prob(0.3),
-		ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), num_rats(0), player_weight_limit(100.0), range_translate(zero_vector) {}
+		ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), num_rats_min(0), num_rats_max(0), rat_speed(0.0),
+		player_weight_limit(100.0), range_translate(zero_vector) {}
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}
@@ -585,7 +592,7 @@ struct building_room_geom_t {
 	vector<room_obj_dstate_t> obj_dstate;
 	vector<obj_model_inst_t> obj_model_insts;
 	vector<unsigned> moved_obj_ids;
-	vector<rat_t> rats;
+	vect_rat_t rats;
 	// {large static, small static, dynamic, lights, alpha mask, transparent, door} materials
 	building_materials_t mats_static, mats_small, mats_dynamic, mats_lights, mats_amask, mats_alpha, mats_doors;
 	vect_cube_t light_bcubes;

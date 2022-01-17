@@ -24,7 +24,9 @@ buildings ai_follow_player 0 # enable player following in gameplay mode by defau
 buildings ai_player_vis_test 1 # 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 
 # building animals
-buildings num_rats 0
+buildings num_rats_min 0
+buildings num_rats_max 0
+buildings rat_speed 0.0005
 
 # building gameplay state
 buildings player_weight_limit 200 # in lbs

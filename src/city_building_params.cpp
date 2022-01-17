@@ -531,8 +531,14 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_uint(fp, global_building_params.ai_player_vis_test)) {buildings_file_err(str, error);}
 	}
 	// animals
-	else if (str == "num_rats") {
-		if (!read_uint(fp, global_building_params.num_rats)) {buildings_file_err(str, error);}
+	else if (str == "num_rats_min") {
+		if (!read_uint(fp, global_building_params.num_rats_min)) {buildings_file_err(str, error);}
+	}
+	else if (str == "num_rats_max") {
+		if (!read_uint(fp, global_building_params.num_rats_max)) {buildings_file_err(str, error);}
+	}
+	else if (str == "rat_speed") {
+		if (!read_float(fp, global_building_params.rat_speed)) {buildings_file_err(str, error);}
 	}
 	// gameplay state
 	else if (str == "player_weight_limit") {

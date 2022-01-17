@@ -33,22 +33,26 @@ cube_t rat_t::get_bcube_with_dir() const {
 }
 
 void building_t::update_animals(unsigned building_ix) {
-	if (is_rotated() || !has_room_geom() || interior->rooms.empty() || global_building_params.num_rats == 0) return;
+	if (is_rotated() || !has_room_geom() || interior->rooms.empty() || global_building_params.num_rats_max == 0) return;
+	vect_rat_t &rats(interior->room_geom->rats);
+	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
 	rand_gen_t rgen;
 	rgen.set_state(building_ix+1, mat_ix+1); // unique per building
-	vector<rat_t> &rats(interior->room_geom->rats);
 
-	if (rats.empty()) { // new building - place rats
+	if (!rats.placed) { // new building - place rats
 		float const base_radius(0.1*get_window_vspace());
-		rats.reserve(global_building_params.num_rats);
+		unsigned const rmin(global_building_params.num_rats_min), rmax(global_building_params.num_rats_max);
+		unsigned const num(rmin + ((rmin == rmax) ? 0 : (rgen.rand() % (rmax - rmin + 1))));
+		rats.reserve(num);
 
-		for (unsigned n = 0; n < global_building_params.num_rats; ++n) {
+		for (unsigned n = 0; n < num; ++n) {
 			float const radius(base_radius*rgen.rand_uniform(0.8, 1.2));
 			point const pos(gen_rat_pos(radius, rgen));
 			if (pos == all_zeros) continue; // bad pos? skip this rat
 			rats.emplace_back(pos, radius);
 		}
+		rats.placed = 1; // even if there were no rats placed
 	}
 	for (rat_t &rat : rats) {update_rat(rat, rgen);}
 }
@@ -69,18 +73,18 @@ point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
 
 void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
 	if (rat.speed > 0.0) {
-		// TODO: movement logic, collision detection
+		// TODO: collision detection
 		rat.pos += rat.speed*rat.dir;
 	}
 	if (rat.fear > 0.0) {
 		// TODO: hide (in opposite direction from fear_pos?)
 		rat.fear = max(0.0, (rat.fear - 0.1*(fticks/TICKS_PER_SECOND))); // reduce fear over 10s
 	}
-	else {
-		// explore
+	else if (dist_less_than(rat.pos, rat.dest, 0.1*rat.radius)) { // no dest/at dest - choose a new dest
+		// TODO: choose a new destination
+		if (0) {rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.5, 1.0);}
 	}
 	if (rat.dest != rat.pos) {
-		// TODO: set speed
 		rat.dir = (rat.dest - rat.pos).get_norm(); // TODO: slow turn (like people)
 	}
 	rotate_vector3d(plus_z, 0.005*fticks, rat.dir); rat.dir.normalize(); // TESTING
