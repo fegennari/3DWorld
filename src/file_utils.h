@@ -14,6 +14,8 @@ inline bool read_int  (FILE *fp, int      &val) {return (fscanf(fp, "%i", &val) 
 inline bool read_uint (FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) == 1);}
 inline bool read_nonzero_uint(FILE *fp, unsigned &val) {return (fscanf(fp, "%u", &val) == 1 && val > 0);}
 inline bool read_float(FILE *fp, float    &val) {return (fscanf(fp, "%f", &val) == 1);}
+inline bool read_pos_float     (FILE *fp, float &val) {return (read_float(fp, val) && val >  0.0);}
+inline bool read_non_neg_float (FILE *fp, float &val) {return (read_float(fp, val) && val >= 0.0);}
 inline bool read_zero_one_float(FILE *fp, float &val) {return (read_float(fp, val) && val >= 0.0 && val <= 1.0);}
 inline bool read_str  (FILE *fp, char     *val) {return (fscanf(fp, "%255s", val) == 1);}
 
@@ -68,7 +70,8 @@ inline bool read_type_t(FILE *fp, char      *val) {return read_str   (fp, val);}
 inline bool read_type_t(FILE *fp, std::string &val) {return read_string(fp, val);}
 inline bool read_type_t(FILE *fp, vector3d  &val) {return read_vector(fp, val);}
 inline bool read_type_t(FILE *fp, colorRGBA &val) {return read_color (fp, val);}
-inline bool read_type_t(FILE *fp,     bool  &val) {return read_bool  (fp, val);}
+inline bool read_type_t(FILE *fp, bool      &val) {return read_bool  (fp, val);}
+inline bool read_type_t(FILE *fp, cube_t    &val) {return read_cube  (fp, val);}
 
 bool read_float_reset_pos_on_fail(FILE *fp, float &v);
 bool read_int_reset_pos_on_fail(FILE *fp, int &v);

@@ -56,25 +56,25 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!read_uint(fp, slope_width)) {return read_error(str);}
 	}
 	else if (str == "road_width") {
-		if (!read_float(fp, road_width) || road_width < 0.0) {return read_error(str);}
+		if (!read_non_neg_float(fp, road_width)) {return read_error(str);}
 	}
 	else if (str == "road_spacing") {
-		if (!read_float(fp, road_spacing) || road_spacing < 0.0) {return read_error(str);}
+		if (!read_non_neg_float(fp, road_spacing)) {return read_error(str);}
 	}
 	else if (str == "road_spacing_rand") {
-		if (!read_float(fp, road_spacing_rand) || road_spacing_rand < 0.0) {return read_error(str);}
+		if (!read_non_neg_float(fp, road_spacing_rand)) {return read_error(str);}
 	}
 	else if (str == "road_spacing_xy_add") {
-		if (!read_float(fp, road_spacing_xy_add) || road_spacing_xy_add < 0.0) {return read_error(str);}
+		if (!read_non_neg_float(fp, road_spacing_xy_add)) {return read_error(str);}
 	}
 	else if (str == "conn_road_seg_len") {
-		if (!read_float(fp, conn_road_seg_len) || conn_road_seg_len <= 0.0) {return read_error(str);}
+		if (!read_pos_float(fp, conn_road_seg_len)) {return read_error(str);}
 	}
 	else if (str == "max_road_slope") {
-		if (!read_float(fp, max_road_slope) || max_road_slope <= 0.0) {return read_error(str);}
+		if (!read_pos_float(fp, max_road_slope)) {return read_error(str);}
 	}
 	else if (str == "max_track_slope") {
-		if (!read_float(fp, max_track_slope) || max_track_slope <= 0.0) {return read_error(str);}
+		if (!read_pos_float(fp, max_track_slope)) {return read_error(str);}
 	}
 	else if (str == "make_4_way_ints") {
 		if (!read_uint(fp, make_4_way_ints) || make_4_way_ints > 3) {return read_error(str);}
@@ -83,7 +83,7 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!read_uint(fp, add_tlines) || add_tlines > 2) {return read_error(str);}
 	}
 	else if (str == "residential_probability") {
-		if (!read_float(fp, residential_probability)) {return read_error(str);}
+		if (!read_zero_one_float(fp, residential_probability)) {return read_error(str);}
 	}
 	else if (str == "assign_house_plots") {
 		if (!read_bool(fp, assign_house_plots)) {return read_error(str);}
@@ -96,13 +96,13 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!read_uint(fp, num_cars)) {return read_error(str);}
 	}
 	else if (str == "car_speed") {
-		if (!read_float(fp, car_speed) || car_speed < 0.0) {return read_error(str);}
+		if (!read_non_neg_float(fp, car_speed)) {return read_error(str);}
 	}
 	else if (str == "traffic_balance_val") {
-		if (!read_float(fp, traffic_balance_val) || traffic_balance_val > 1.0 || traffic_balance_val < 0.0) {return read_error(str);}
+		if (!read_zero_one_float(fp, traffic_balance_val)) {return read_error(str);}
 	}
 	else if (str == "new_city_prob") {
-		if (!read_float(fp, new_city_prob) || new_city_prob < 0.0) {return read_error(str);}
+		if (!read_zero_one_float(fp, new_city_prob)) {return read_error(str);}
 	}
 	else if (str == "enable_car_path_finding") {
 		if (!read_bool(fp, enable_car_path_finding)) {return read_error(str);}
@@ -134,7 +134,7 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!read_uint(fp, num_building_peds)) {return read_error(str);}
 	}
 	else if (str == "ped_speed") {
-		if (!read_float(fp, ped_speed) || ped_speed < 0.0) {return read_error(str);}
+		if (!read_non_neg_float(fp, ped_speed)) {return read_error(str);}
 	}
 	else if (str == "ped_model") {
 		city_model_t ped_model;
@@ -153,10 +153,10 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!read_uint(fp, min_park_rows)) {return read_error(str);}
 	}
 	else if (str == "min_park_density") {
-		if (!read_float(fp, min_park_density)) {return read_error(str);}
+		if (!read_zero_one_float(fp, min_park_density)) {return read_error(str);}
 	}
 	else if (str == "max_park_density") {
-		if (!read_float(fp, max_park_density) || max_park_density < 0.0) {return read_error(str);}
+		if (!read_zero_one_float(fp, max_park_density)) {return read_error(str);}
 	}
 	// lighting
 	else if (str == "max_lights") {
@@ -176,7 +176,7 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!read_uint(fp, max_trees_per_plot)) {return read_error(str);}
 	}
 	else if (str == "tree_spacing") {
-		if (!read_float(fp, tree_spacing) || tree_spacing <= 0.0) {return read_error(str);}
+		if (!read_pos_float(fp, tree_spacing)) {return read_error(str);}
 	}
 	// detail objects
 	else if (str == "max_benches_per_plot") {
