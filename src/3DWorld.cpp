@@ -1585,6 +1585,7 @@ template<typename T> bool kw_to_val_map_t<T>::maybe_set_from_fp(string const &st
 	if (!read_type_t(fp, *it->second)) {cfg_err(opt_prefix + str + " keyword", error);}
 	return 1;
 }
+template class kw_to_val_map_t<colorRGBA>; // explicit instantiation of this one because it's used for buildings but not here
 
 
 bool bmp_file_to_binary_array(char const *const fn, unsigned char **&data) {

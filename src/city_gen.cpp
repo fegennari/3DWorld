@@ -625,7 +625,7 @@ public:
 		if (region.dx() <= 2.0*width || region.dy() <= 2.0*width) return; // region too small (shouldn't happen)
 		vect_cube_t dim_tracks[2]; // one in each dim, for collision detection with tracks going in the other dim
 		float const step_sz(city_params.conn_road_seg_len), max_seg_len(city_params.road_spacing);
-		unsigned const num_tries(2*city_params.num_conn_tries); // twice as many tries as connector roads: try full length, then shorter lengths
+		unsigned const num_tries(2*max(city_params.num_conn_tries, 1U)); // twice as many tries as connector roads: try full length, then shorter lengths
 		tracks.reserve(city_params.num_rr_tracks); // to avoid iterator invalidation
 		rand_gen_t rgen;
 		vector<road_t> to_re_flatten;
@@ -2887,7 +2887,7 @@ public:
 	bool gen_city(city_params_t const &params, cube_t &cities_bcube) {
 		unsigned x1(0), y1(0), x2(0), y2(0);
 		if (!find_best_city_location(params.city_size_min, params.city_size_min, params.city_size_max, params.city_size_max,
-			params.city_border, params.slope_width, params.num_samples, x1, y1, x2, y2)) return 0;
+			params.city_border, params.slope_width, max(params.num_samples, 1U), x1, y1, x2, y2)) return 0;
 		float const elevation(flatten_region(x1, y1, x2, y2, params.slope_width));
 		cube_t const pos_range(add_plot(x1, y1, x2, y2, elevation));
 		if (cities_bcube.is_all_zeros()) {cities_bcube = pos_range;} else {cities_bcube.union_with_cube(pos_range);}

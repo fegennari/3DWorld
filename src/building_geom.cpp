@@ -28,7 +28,7 @@ void building_t::gen_rotation(rand_gen_t &rgen) {
 
 	float const max_rot_angle(get_material().max_rot_angle);
 	if (max_rot_angle == 0.0) return;
-	float const rot_angle(rgen.rand_uniform(0.0, max_rot_angle));
+	float const rot_angle(rgen.rand_uniform(0.0, TO_RADIANS*max_rot_angle)); // max_rot_angle is specified in degrees
 	rot_sin = sin(rot_angle);
 	rot_cos = cos(rot_angle);
 	parts.clear();

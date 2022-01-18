@@ -20,23 +20,40 @@ bool city_params_t::read_option(FILE *fp) {
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);
+	int error(0);
+	kw_to_val_map_t<bool     > kwmb(error, "city");
+	kw_to_val_map_t<unsigned > kwmu(error, "city");
+	kwmu.add("num_cities",     num_cities);
+	kwmu.add("num_rr_tracks",  num_rr_tracks);
+	kwmu.add("num_samples",    num_samples);
+	kwmu.add("num_conn_tries", num_conn_tries);
+	kwmu.add("plots_to_parks_ratio", park_rate);
+	kwmu.add("city_border", city_border); // in heightmap texels/mesh grids
+	kwmu.add("road_border", road_border); // in heightmap texels/mesh grids
+	kwmu.add("slope_width", slope_width); // in heightmap texels/mesh grids
+	kwmb.add("assign_house_plots",     assign_house_plots);
+	kwmb.add("new_city_conn_road_alg", new_city_conn_road_alg);
+	kwmb.add("convert_model_files",    convert_model_files); // to model3d format; applies to cars, people, building items, etc.
+	// cars / pedestrians
+	kwmu.add("num_cars", num_cars);
+	kwmb.add("enable_car_path_finding", enable_car_path_finding);
+	kwmb.add("cars_use_driveways",      cars_use_driveways);
+	kwmu.add("num_peds", num_peds);
+	kwmu.add("num_building_peds",   num_building_peds);
+	kwmb.add("ped_respawn_at_dest", ped_respawn_at_dest);
+	// parking lots / trees / detail objects
+	kwmu.add("min_park_spaces", min_park_spaces); // with default road parameters, can be up to 28
+	kwmu.add("min_park_rows",   min_park_rows  ); // with default road parameters, can be up to 8
+	kwmu.add("max_trees_per_plot",   max_trees_per_plot);
+	kwmu.add("max_benches_per_plot", max_benches_per_plot);
+	// lighting
+	kwmu.add("max_lights",      max_lights);
+	kwmu.add("max_shadow_maps", max_shadow_maps);
+	kwmb.add("car_shadows",     car_shadows);
+	if (kwmb.maybe_set_from_fp(str, fp)) return 1;
+	if (kwmu.maybe_set_from_fp(str, fp)) return 1;
 
-	if (str == "num_cities") {
-		if (!read_uint(fp, num_cities)) {return read_error(str);}
-	}
-	else if (str == "num_rr_tracks") {
-		if (!read_uint(fp, num_rr_tracks)) {return read_error(str);}
-	}
-	else if (str == "num_samples") {
-		if (!read_uint(fp, num_samples) || num_samples == 0) {return read_error(str);}
-	}
-	else if (str == "num_conn_tries") {
-		if (!read_uint(fp, num_conn_tries) || num_conn_tries == 0) {return read_error(str);}
-	}
-	else if (str == "plots_to_parks_ratio") {
-		if (!read_uint(fp, park_rate)) {return read_error(str);}
-	}
-	else if (str == "city_size_min") {
+	if (str == "city_size_min") {
 		if (!read_uint(fp, city_size_min)) {return read_error(str);}
 		if (city_size_max == 0) {city_size_max = city_size_min;}
 		if (city_size_max < city_size_min) {return read_error(str);}
@@ -45,15 +62,6 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!read_uint(fp, city_size_max)) {return read_error(str);}
 		if (city_size_min == 0) {city_size_min = city_size_max;}
 		if (city_size_max < city_size_min) {return read_error(str);}
-	}
-	else if (str == "city_border") {
-		if (!read_uint(fp, city_border)) {return read_error(str);}
-	}
-	else if (str == "road_border") {
-		if (!read_uint(fp, road_border)) {return read_error(str);}
-	}
-	else if (str == "slope_width") {
-		if (!read_uint(fp, slope_width)) {return read_error(str);}
 	}
 	else if (str == "road_width") {
 		if (!read_non_neg_float(fp, road_width)) {return read_error(str);}
@@ -85,16 +93,7 @@ bool city_params_t::read_option(FILE *fp) {
 	else if (str == "residential_probability") {
 		if (!read_zero_one_float(fp, residential_probability)) {return read_error(str);}
 	}
-	else if (str == "assign_house_plots") {
-		if (!read_bool(fp, assign_house_plots)) {return read_error(str);}
-	}
-	else if (str == "new_city_conn_road_alg") {
-		if (!read_bool(fp, new_city_conn_road_alg)) {return read_error(str);}
-	}
 	// cars
-	else if (str == "num_cars") {
-		if (!read_uint(fp, num_cars)) {return read_error(str);}
-	}
 	else if (str == "car_speed") {
 		if (!read_non_neg_float(fp, car_speed)) {return read_error(str);}
 	}
@@ -103,15 +102,6 @@ bool city_params_t::read_option(FILE *fp) {
 	}
 	else if (str == "new_city_prob") {
 		if (!read_zero_one_float(fp, new_city_prob)) {return read_error(str);}
-	}
-	else if (str == "enable_car_path_finding") {
-		if (!read_bool(fp, enable_car_path_finding)) {return read_error(str);}
-	}
-	else if (str == "convert_model_files") {
-		if (!read_bool(fp, convert_model_files)) {return read_error(str);}
-	}
-	else if (str == "cars_use_driveways") {
-		if (!read_bool(fp, cars_use_driveways)) {return read_error(str);}
 	}
 	else if (str == "car_model") { // multiple car models
 		city_model_t car_model;
@@ -127,12 +117,6 @@ bool city_params_t::read_option(FILE *fp) {
 		hc_model_files.push_back(hc_model);
 	}
 	// pedestrians
-	else if (str == "num_peds") {
-		if (!read_uint(fp, num_peds)) {return read_error(str);}
-	}
-	else if (str == "num_building_peds") {
-		if (!read_uint(fp, num_building_peds)) {return read_error(str);}
-	}
 	else if (str == "ped_speed") {
 		if (!read_non_neg_float(fp, ped_speed)) {return read_error(str);}
 	}
@@ -142,45 +126,18 @@ bool city_params_t::read_option(FILE *fp) {
 		if (!ped_model.check_filename()) {cerr << "Error: ped_model file '" << ped_model.fn << "' does not exist; skipping" << endl; return 1;} // nonfatal
 		ped_model_files.push_back(ped_model); // Note: no ped_model_scale
 	}
-	else if (str == "ped_respawn_at_dest") {
-		if (!read_bool(fp, ped_respawn_at_dest)) {return read_error(str);}
-	}
-	// parking lots
-	else if (str == "min_park_spaces") { // with default road parameters, can be up to 28
-		if (!read_uint(fp, min_park_spaces)) {return read_error(str);}
-	}
-	else if (str == "min_park_rows") { // with default road parameters, can be up to 8
-		if (!read_uint(fp, min_park_rows)) {return read_error(str);}
-	}
+	// other
 	else if (str == "min_park_density") {
 		if (!read_zero_one_float(fp, min_park_density)) {return read_error(str);}
 	}
 	else if (str == "max_park_density") {
 		if (!read_zero_one_float(fp, max_park_density)) {return read_error(str);}
 	}
-	// lighting
-	else if (str == "max_lights") {
-		if (!read_uint(fp, max_lights)) {return read_error(str);}
-	}
-	else if (str == "max_shadow_maps") {
-		if (!read_uint(fp, max_shadow_maps)) {return read_error(str);}
-	}
-	else if (str == "smap_size") {
-		if (!read_uint(fp, smap_size) || smap_size > 4096) {return read_error(str);}
-	}
-	else if (str == "car_shadows") {
-		if (!read_bool(fp, car_shadows)) {return read_error(str);}
-	}
-	// trees
-	else if (str == "max_trees_per_plot") {
-		if (!read_uint(fp, max_trees_per_plot)) {return read_error(str);}
-	}
 	else if (str == "tree_spacing") {
 		if (!read_pos_float(fp, tree_spacing)) {return read_error(str);}
 	}
-	// detail objects
-	else if (str == "max_benches_per_plot") {
-		if (!read_uint(fp, max_benches_per_plot)) {return read_error(str);}
+	else if (str == "smap_size") {
+		if (!read_uint(fp, smap_size) || smap_size > 4096) {return read_error(str);}
 	}
 	else {
 		for (unsigned i = 0; i < NUM_OBJ_MODELS; ++i) { // check for object models
@@ -230,81 +187,98 @@ void read_building_mat_specular(FILE *fp, string const &str, tid_nm_pair_t &tex,
 
 bool parse_buildings_option(FILE *fp) {
 
-	int error(0);
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);
-	bool unmatched(0);
-
+	int error(0);
+	kw_to_val_map_t<bool     > kwmb(error, "buildings");
+	kw_to_val_map_t<unsigned > kwmu(error, "buildings");
+	kw_to_val_map_t<float    > kwmf(error, "buildings");
+	kw_to_val_map_t<colorRGBA> kwmc(error, "buildings");
 	// global parameters
-	if (str == "flatten_mesh") {
-		if (!read_bool(fp, global_building_params.flatten_mesh)) {buildings_file_err(str, error);}
-	}
-	else if (str == "num_place") {
-		if (!read_uint(fp, global_building_params.num_place)) {buildings_file_err(str, error);}
-	}
-	else if (str == "num_tries") {
-		if (!read_uint(fp, global_building_params.num_tries)) {buildings_file_err(str, error);}
-	}
-	else if (str == "rand_seed") {
-		if (!read_uint(fp, global_building_params.buildings_rand_seed)) {buildings_file_err(str, error);}
-	}
-	else if (str == "max_shadow_maps") {
-		if (!read_uint(fp, global_building_params.max_shadow_maps)) {buildings_file_err(str, error);}
-	}
-	else if (str == "ao_factor") {
-		if (!read_zero_one_float(fp, global_building_params.ao_factor)) {buildings_file_err(str, error);}
-	}
-	else if (str == "sec_extra_spacing") {
-		if (!read_float(fp, global_building_params.sec_extra_spacing)) {buildings_file_err(str, error);}
-	}
-	else if (str == "player_coll_radius_scale") {
-		if (!read_float(fp, global_building_params.player_coll_radius_scale)) {buildings_file_err(str, error);}
-	}
-	else if (str == "max_floorplan_window_xscale") {
-		if (!read_float(fp, global_building_params.max_fp_wind_xscale)) {buildings_file_err(str, error);}
-	}
-	else if (str == "max_floorplan_window_yscale") {
-		if (!read_float(fp, global_building_params.max_fp_wind_yscale)) {buildings_file_err(str, error);}
-	}
-	else if (str == "interior_view_dist_scale") {
-		if (!read_float(fp, global_building_params.interior_view_dist_scale)) {buildings_file_err(str, error);}
-	}
-	else if (str == "tt_only") {
-		if (!read_bool(fp, global_building_params.tt_only)) {buildings_file_err(str, error);}
-	}
-	else if (str == "infinite_buildings") {
-		if (!read_bool(fp, global_building_params.infinite_buildings)) {buildings_file_err(str, error);}
-	}
-	else if (str == "add_secondary_buildings") {
-		if (!read_bool(fp, global_building_params.add_secondary_buildings)) {buildings_file_err(str, error);}
-	}
-	else if (str == "add_office_basements") {
-		if (!read_bool(fp, global_building_params.add_office_basements)) {buildings_file_err(str, error);}
-	}
-	else if (str == "enable_people_ai") {
-		if (!read_bool(fp, global_building_params.enable_people_ai)) {buildings_file_err(str, error);}
-	}
+	kwmb.add("flatten_mesh", global_building_params.flatten_mesh);
+	kwmu.add("num_place", global_building_params.num_place);
+	kwmu.add("num_tries", global_building_params.num_tries);
+	kwmu.add("rand_seed", global_building_params.buildings_rand_seed);
+	kwmu.add("max_shadow_maps", global_building_params.max_shadow_maps);
+	kwmf.add("ao_factor", global_building_params.ao_factor);
+	kwmf.add("sec_extra_spacing", global_building_params.sec_extra_spacing);
+	kwmf.add("player_coll_radius_scale", global_building_params.player_coll_radius_scale);
+	kwmf.add("max_floorplan_window_xscale", global_building_params.max_fp_wind_xscale);
+	kwmf.add("max_floorplan_window_yscale", global_building_params.max_fp_wind_yscale);
+	kwmf.add("interior_view_dist_scale", global_building_params.interior_view_dist_scale);
+	kwmb.add("tt_only", global_building_params.tt_only);
+	kwmb.add("infinite_buildings", global_building_params.infinite_buildings);
+	kwmb.add("add_secondary_buildings", global_building_params.add_secondary_buildings);
+	kwmb.add("add_office_basements", global_building_params.add_office_basements);
+	kwmb.add("enable_people_ai", global_building_params.enable_people_ai);
 	// material parameters
-	else if (str == "range_translate") { // x,y only
+	kwmf.add("place_radius", global_building_params.cur_mat.place_radius);
+	kwmf.add("max_delta_z", global_building_params.cur_mat.max_delta_z);
+	kwmf.add("min_level_height", global_building_params.cur_mat.min_level_height);
+	kwmu.add("min_levels", global_building_params.cur_mat.min_levels);
+	kwmu.add("max_levels", global_building_params.cur_mat.max_levels);
+	kwmf.add("min_flat_side_amt", global_building_params.cur_mat.min_fsa);
+	kwmf.add("max_flat_side_amt", global_building_params.cur_mat.max_fsa);
+	kwmf.add("min_alt_step_factor", global_building_params.cur_mat.min_asf);
+	kwmf.add("max_alt_step_factor", global_building_params.cur_mat.max_asf);
+	kwmf.add("min_altitude",  global_building_params.cur_mat.min_alt);
+	kwmf.add("max_altitude",  global_building_params.cur_mat.max_alt);
+	kwmf.add("max_rot_angle", global_building_params.cur_mat.max_rot_angle);
+	kwmb.add("dome_roof",  global_building_params.dome_roof);
+	kwmb.add("onion_roof", global_building_params.onion_roof);
+	kwmb.add("no_city",    global_building_params.cur_mat.no_city);
+	// material textures / colors
+	kwmb.add("texture_mirror", global_building_params.tex_mirror);
+	kwmb.add("texture_inv_y",  global_building_params.tex_inv_y);
+	kwmf.add("side_tscale_x",  global_building_params.cur_mat.side_tex.tscale_x);
+	kwmf.add("side_tscale_y",  global_building_params.cur_mat.side_tex.tscale_y);
+	kwmf.add("side_color_grayscale_rand", global_building_params.cur_mat.side_color.grayscale_rand);
+	kwmf.add("roof_color_grayscale_rand", global_building_params.cur_mat.roof_color.grayscale_rand);
+	kwmc.add("side_color_min", global_building_params.cur_mat.side_color.cmin);
+	kwmc.add("side_color_max", global_building_params.cur_mat.side_color.cmax);
+	kwmc.add("roof_color_min", global_building_params.cur_mat.roof_color.cmin);
+	kwmc.add("roof_color_max", global_building_params.cur_mat.roof_color.cmax);
+	// windows (mostly per-material)
+	kwmf.add("window_xoff", global_building_params.cur_mat.wind_xoff);
+	kwmf.add("window_yoff", global_building_params.cur_mat.wind_yoff);
+	kwmf.add("wall_split_thresh", global_building_params.wall_split_thresh);
+	kwmb.add("add_windows",       global_building_params.cur_mat.add_windows);
+	kwmb.add("add_window_lights", global_building_params.cur_mat.add_wind_lights);
+	kwmc.add("window_color", global_building_params.cur_mat.window_color);
+	kwmc.add("wall_color",   global_building_params.cur_mat.wall_color);
+	kwmc.add("ceil_color",   global_building_params.cur_mat.ceil_color);
+	kwmc.add("floor_color",  global_building_params.cur_mat.floor_color);
+	kwmc.add("house_ceil_color",  global_building_params.cur_mat.house_ceil_color);
+	kwmc.add("house_floor_color", global_building_params.cur_mat.house_floor_color);
+	// AI logic
+	kwmu.add("ai_opens_doors",     global_building_params.ai_opens_doors); // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
+	kwmb.add("ai_target_player",   global_building_params.ai_target_player);
+	kwmb.add("ai_follow_player",   global_building_params.ai_follow_player);
+	kwmu.add("ai_player_vis_test", global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+	// animals
+	kwmu.add("num_rats_min", global_building_params.num_rats_min);
+	kwmu.add("num_rats_max", global_building_params.num_rats_max);
+	kwmf.add("rat_speed",    global_building_params.rat_speed);
+	// gameplay state
+	kwmf.add("player_weight_limit", global_building_params.player_weight_limit);
+	// special commands
+	kwmu.add("probability",              global_building_params.cur_prob); // for building materials
+	kwmb.add("add_city_interiors",       global_building_params.add_city_interiors);
+	kwmb.add("gen_building_interiors",   global_building_params.gen_building_interiors);
+	kwmb.add("enable_rotated_room_geom", global_building_params.enable_rotated_room_geom);
+	if (kwmb.maybe_set_from_fp(str, fp)) return 1;
+	if (kwmu.maybe_set_from_fp(str, fp)) return 1;
+	if (kwmf.maybe_set_from_fp(str, fp)) return 1;
+	if (kwmc.maybe_set_from_fp(str, fp)) return 1;
+
+	// material parameters
+	if (str == "range_translate") { // x,y only
 		if (!(read_float(fp, global_building_params.range_translate.x) &&
-			read_float(fp, global_building_params.range_translate.y))) {buildings_file_err(str, error);}
+			  read_float(fp, global_building_params.range_translate.y))) {buildings_file_err(str, error);}
 	}
 	else if (str == "pos_range") {
 		if (!read_cube(fp, global_building_params.cur_mat.pos_range, 1)) {buildings_file_err(str, error);}
-	}
-	else if (str == "place_radius") {
-		if (!read_float(fp, global_building_params.cur_mat.place_radius)) {buildings_file_err(str, error);}
-	}
-	else if (str == "max_delta_z") {
-		if (!read_float(fp, global_building_params.cur_mat.max_delta_z)) {buildings_file_err(str, error);}
-	}
-	else if (str == "min_level_height") {
-		if (!read_float(fp, global_building_params.cur_mat.min_level_height)) {buildings_file_err(str, error);}
-	}
-	else if (str == "max_rot_angle") {
-		if (!read_float(fp, global_building_params.cur_mat.max_rot_angle)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.max_rot_angle *= TO_RADIANS; // specified in degrees, stored in radians
 	}
 	else if (str == "split_prob") {
 		if (!read_zero_one_float(fp, global_building_params.cur_mat.split_prob)) {buildings_file_err(str, error);}
@@ -318,12 +292,6 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "alt_step_factor_prob") {
 		if (!read_zero_one_float(fp, global_building_params.cur_mat.asf_prob)) {buildings_file_err(str, error);}
 	}
-	else if (str == "min_levels") {
-		if (!read_uint(fp, global_building_params.cur_mat.min_levels)) {buildings_file_err(str, error);}
-	}
-	else if (str == "max_levels") {
-		if (!read_uint(fp, global_building_params.cur_mat.max_levels)) {buildings_file_err(str, error);}
-	}
 	else if (str == "min_sides") {
 		if (!read_uint(fp, global_building_params.cur_mat.min_sides)) {buildings_file_err(str, error);}
 		if (global_building_params.cur_mat.min_sides < 3) {buildings_file_err(str+" (< 3)", error);}
@@ -332,50 +300,11 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_uint(fp, global_building_params.cur_mat.max_sides)) {buildings_file_err(str, error);}
 		if (global_building_params.cur_mat.max_sides < 3) {buildings_file_err(str+" (< 3)", error);}
 	}
-	else if (str == "min_flat_side_amt") {
-		if (!read_float(fp, global_building_params.cur_mat.min_fsa)) {buildings_file_err(str, error);}
-	}
-	else if (str == "max_flat_side_amt") {
-		if (!read_float(fp, global_building_params.cur_mat.max_fsa)) {buildings_file_err(str, error);}
-	}
-	else if (str == "min_alt_step_factor") {
-		if (!read_float(fp, global_building_params.cur_mat.min_asf)) {buildings_file_err(str, error);}
-	}
-	else if (str == "max_alt_step_factor") {
-		if (!read_float(fp, global_building_params.cur_mat.max_asf)) {buildings_file_err(str, error);}
-	}
 	else if (str == "size_range") {
 		if (!read_cube(fp, global_building_params.cur_mat.sz_range)) {buildings_file_err(str, error);}
 	}
-	else if (str == "min_altitude") {
-		if (!read_float(fp, global_building_params.cur_mat.min_alt)) {buildings_file_err(str, error);}
-	}
-	else if (str == "max_altitude") {
-		if (!read_float(fp, global_building_params.cur_mat.max_alt)) {buildings_file_err(str, error);}
-	}
-	else if (str == "dome_roof") {
-		if (!read_bool(fp, global_building_params.dome_roof)) {buildings_file_err(str, error);}
-	}
-	else if (str == "onion_roof") {
-		if (!read_bool(fp, global_building_params.onion_roof)) {buildings_file_err(str, error);}
-	}
-	else if (str == "no_city") {
-		if (!read_bool(fp, global_building_params.cur_mat.no_city)) {buildings_file_err(str, error);}
-	}
 	// material textures
-	else if (str == "texture_mirror") {
-		if (!read_bool(fp, global_building_params.tex_mirror)) {buildings_file_err(str, error);}
-	}
-	else if (str == "texture_inv_y") {
-		if (!read_bool(fp, global_building_params.tex_inv_y)) {buildings_file_err(str, error);}
-	}
-	else if (str == "side_tscale") {read_building_tscale(fp, global_building_params.cur_mat.side_tex, str, error);} // both X and Y
-	else if (str == "side_tscale_x") {
-		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale_x)) {buildings_file_err(str, error);}
-	}
-	else if (str == "side_tscale_y") {
-		if (!read_float(fp, global_building_params.cur_mat.side_tex.tscale_y)) {buildings_file_err(str, error);}
-	}
+	else if (str == "side_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.side_tex,  str, error);} // both X and Y
 	else if (str == "roof_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.roof_tex,  str, error);} // both X and Y
 	else if (str == "wall_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.wall_tex,  str, error);} // both X and Y
 	else if (str == "ceil_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.ceil_tex,  str, error);} // both X and Y
@@ -406,7 +335,7 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_zero_one_float(fp, global_building_params.open_door_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "locked_door_prob") {
-	if (!read_zero_one_float(fp, global_building_params.locked_door_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, global_building_params.locked_door_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "basement_prob") {
 		if (!read_zero_one_float(fp, global_building_params.basement_prob)) {buildings_file_err(str, error);}
@@ -419,27 +348,9 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_color(fp, global_building_params.cur_mat.side_color.cmin)) {buildings_file_err(str, error);}
 		global_building_params.cur_mat.side_color.cmax = global_building_params.cur_mat.side_color.cmin; // same
 	}
-	else if (str == "side_color_min") {
-		if (!read_color(fp, global_building_params.cur_mat.side_color.cmin)) {buildings_file_err(str, error);}
-	}
-	else if (str == "side_color_max") {
-		if (!read_color(fp, global_building_params.cur_mat.side_color.cmax)) {buildings_file_err(str, error);}
-	}
-	else if (str == "side_color_grayscale_rand") {
-		if (!read_float(fp, global_building_params.cur_mat.side_color.grayscale_rand)) {buildings_file_err(str, error);}
-	}
 	else if (str == "roof_color") {
 		if (!read_color(fp, global_building_params.cur_mat.roof_color.cmin)) {buildings_file_err(str, error);}
 		global_building_params.cur_mat.roof_color.cmax = global_building_params.cur_mat.roof_color.cmin; // same
-	}
-	else if (str == "roof_color_min") {
-		if (!read_color(fp, global_building_params.cur_mat.roof_color.cmin)) {buildings_file_err(str, error);}
-	}
-	else if (str == "roof_color_max") {
-		if (!read_color(fp, global_building_params.cur_mat.roof_color.cmax)) {buildings_file_err(str, error);}
-	}
-	else if (str == "roof_color_grayscale_rand") {
-		if (!read_float(fp, global_building_params.cur_mat.roof_color.grayscale_rand)) {buildings_file_err(str, error);}
 	}
 	// specular
 	else if (str == "side_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.side_tex,  error);}
@@ -463,49 +374,16 @@ bool parse_buildings_option(FILE *fp) {
 		if (!read_zero_one_float(fp, global_building_params.window_yspace)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_xscale") {
-		if (!read_float(fp, global_building_params.cur_mat.wind_xscale) || global_building_params.cur_mat.wind_xscale < 0.0) {buildings_file_err(str, error);}
+		if (!read_non_neg_float(fp, global_building_params.cur_mat.wind_xscale)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_yscale") {
-		if (!read_float(fp, global_building_params.cur_mat.wind_yscale) || global_building_params.cur_mat.wind_yscale < 0.0) {buildings_file_err(str, error);}
-	}
-	else if (str == "window_xoff") {
-		if (!read_float(fp, global_building_params.cur_mat.wind_xoff)) {buildings_file_err(str, error);}
-	}
-	else if (str == "window_yoff") {
-		if (!read_float(fp, global_building_params.cur_mat.wind_yoff)) {buildings_file_err(str, error);}
-	}
-	else if (str == "wall_split_thresh") {
-		if (!read_float(fp, global_building_params.wall_split_thresh)) {buildings_file_err(str, error);}
-	}
-	else if (str == "add_windows") { // per-material
-		if (!read_bool(fp, global_building_params.cur_mat.add_windows)) {buildings_file_err(str, error);}
-	}
-	else if (str == "add_window_lights") { // per-material
-		if (!read_bool(fp, global_building_params.cur_mat.add_wind_lights)) {buildings_file_err(str, error);}
+		if (!read_non_neg_float(fp, global_building_params.cur_mat.wind_yscale)) {buildings_file_err(str, error);}
 	}
 	else if (str == "house_prob") { // per-material
-		if (!read_float(fp, global_building_params.cur_mat.house_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, global_building_params.cur_mat.house_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "house_scale_range") { // per-material
 		if (!read_float(fp, global_building_params.cur_mat.house_scale_min) || !read_float(fp, global_building_params.cur_mat.house_scale_max)) {buildings_file_err(str, error);}
-	}
-	else if (str == "window_color") { // per-material
-		if (!read_color(fp, global_building_params.cur_mat.window_color)) {buildings_file_err(str, error);}
-	}
-	else if (str == "wall_color") { // per-material
-		if (!read_color(fp, global_building_params.cur_mat.wall_color)) {buildings_file_err(str, error);}
-	}
-	else if (str == "ceil_color") { // per-material
-		if (!read_color(fp, global_building_params.cur_mat.ceil_color)) {buildings_file_err(str, error);}
-	}
-	else if (str == "floor_color") { // per-material
-		if (!read_color(fp, global_building_params.cur_mat.floor_color)) {buildings_file_err(str, error);}
-	}
-	else if (str == "house_ceil_color") { // per-material
-		if (!read_color(fp, global_building_params.cur_mat.house_ceil_color)) {buildings_file_err(str, error);}
-	}
-	else if (str == "house_floor_color") { // per-material
-		if (!read_color(fp, global_building_params.cur_mat.house_floor_color)) {buildings_file_err(str, error);}
 	}
 	// room objects/textures
 	else if (str == "add_rug_texture"    ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.rug_tids    );}
@@ -513,48 +391,9 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "add_desktop_texture") {read_texture_and_add_if_valid(fp, str, error, global_building_params.desktop_tids);}
 	else if (str == "add_sheet_texture"  ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.sheet_tids  );}
 	else if (str == "add_paper_texture"  ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.paper_tids  );}
-	// AI logic
-	else if (str == "ai_opens_doors") { // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
-		if (!read_uint(fp, global_building_params.ai_opens_doors)) {buildings_file_err(str, error);}
-	}
-	else if (str == "ai_target_player") {
-		if (!read_bool(fp, global_building_params.ai_target_player)) {buildings_file_err(str, error);}
-	}
-	else if (str == "ai_follow_player") {
-		if (!read_bool(fp, global_building_params.ai_follow_player)) {buildings_file_err(str, error);}
-	}
-	else if (str == "ai_player_vis_test") { // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
-		if (!read_uint(fp, global_building_params.ai_player_vis_test)) {buildings_file_err(str, error);}
-	}
-	// animals
-	else if (str == "num_rats_min") {
-		if (!read_uint(fp, global_building_params.num_rats_min)) {buildings_file_err(str, error);}
-	}
-	else if (str == "num_rats_max") {
-		if (!read_uint(fp, global_building_params.num_rats_max)) {buildings_file_err(str, error);}
-	}
-	else if (str == "rat_speed") {
-		if (!read_float(fp, global_building_params.rat_speed)) {buildings_file_err(str, error);}
-	}
-	// gameplay state
-	else if (str == "player_weight_limit") {
-		if (!read_float(fp, global_building_params.player_weight_limit)) {buildings_file_err(str, error);}
-	}
 	// special commands
-	else if (str == "probability") {
-		if (!read_uint(fp, global_building_params.cur_prob)) {buildings_file_err(str, error);}
-	}
 	else if (str == "add_material") {global_building_params.add_cur_mat();}
-	else if (str == "add_city_interiors") {
-		if (!read_bool(fp, global_building_params.add_city_interiors)) {buildings_file_err(str, error);}
-	}
-	else if (str == "gen_building_interiors") {
-		if (!read_bool(fp, global_building_params.gen_building_interiors)) {buildings_file_err(str, error);}
-	}
-	else if (str == "enable_rotated_room_geom") {
-		if (!read_bool(fp, global_building_params.enable_rotated_room_geom)) {buildings_file_err(str, error);}
-	}
-	else if (unmatched) {
+	else {
 		cout << "Unrecognized buildings keyword in input file: " << str << endl;
 		error = 1;
 	}
