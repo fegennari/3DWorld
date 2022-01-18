@@ -1353,7 +1353,7 @@ void building_t::get_all_drawn_window_verts(building_draw_t &bdraw, bool lights_
 	int const window_tid(building_texture_mgr.get_window_tid());
 	if (window_tid < 0) return; // not allocated - error?
 	if (mat.wind_xscale == 0.0 || mat.wind_yscale == 0.0) return; // no windows for this material?
-	tid_nm_pair_t tex(window_tid, -1, mat.get_window_tx(), mat.get_window_ty(), mat.wind_xoff, mat.wind_yoff);
+	tid_nm_pair_t tex(window_tid, -1, mat.get_window_tx(), mat.get_window_ty(), mat.wind_xoff, -mat.wind_yoff); // Note: wind_yoff is negated
 	colorRGBA color;
 
 	if (lights_pass) { // slight yellow-blue tinting using bcube x1/y1 as a hash

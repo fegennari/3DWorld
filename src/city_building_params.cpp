@@ -199,7 +199,6 @@ void buildings_file_err(string const &str, int &error) {
 	cout << "Error reading buildings config option " << str << "." << endl;
 	error = 1;
 }
-bool check_01(float v) {return (v >= 0.0 && v <= 1.0);}
 
 bool check_texture_file_exists(string const &filename);
 
@@ -404,16 +403,16 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "basement_floor_tid"   ) {global_building_params.cur_mat.basement_floor_tex.tid    = read_building_texture(fp, str, error);}
 	else if (str == "basement_floor_nm_tid") {global_building_params.cur_mat.basement_floor_tex.nm_tid = read_building_texture(fp, str, error);}
 	else if (str == "open_door_prob") {
-		if (!read_float(fp, global_building_params.open_door_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, global_building_params.open_door_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "locked_door_prob") {
-	if (!read_float(fp, global_building_params.locked_door_prob)) {buildings_file_err(str, error);}
+	if (!read_zero_one_float(fp, global_building_params.locked_door_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "basement_prob") {
-		if (!read_float(fp, global_building_params.basement_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, global_building_params.basement_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "ball_prob") {
-		if (!read_float(fp, global_building_params.ball_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, global_building_params.ball_prob)) {buildings_file_err(str, error);}
 	}
 	// material colors
 	else if (str == "side_color") {
@@ -451,19 +450,17 @@ bool parse_buildings_option(FILE *fp) {
 	else if (str == "house_ceil_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.house_ceil_tex,  error);}
 	else if (str == "house_floor_specular") {read_building_mat_specular(fp, str, global_building_params.cur_mat.house_floor_tex, error);}
 	// windows
-	// Note: this should be an else-if, but I have to split this if/else tree due to a MSVS compiler limit
-	else {unmatched = 1;}
-	/*else*/ if (str == "window_width") {
-		if (!read_float(fp, global_building_params.window_width) || !check_01(global_building_params.window_width)) {buildings_file_err(str, error);}
+	else if (str == "window_width") {
+		if (!read_zero_one_float(fp, global_building_params.window_width)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_height") {
-		if (!read_float(fp, global_building_params.window_height) || !check_01(global_building_params.window_height)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, global_building_params.window_height)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_xspace") {
-		if (!read_float(fp, global_building_params.window_xspace) || !check_01(global_building_params.window_xspace)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, global_building_params.window_xspace)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_yspace") {
-		if (!read_float(fp, global_building_params.window_yspace) || !check_01(global_building_params.window_yspace)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, global_building_params.window_yspace)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_xscale") {
 		if (!read_float(fp, global_building_params.cur_mat.wind_xscale) || global_building_params.cur_mat.wind_xscale < 0.0) {buildings_file_err(str, error);}
@@ -476,7 +473,6 @@ bool parse_buildings_option(FILE *fp) {
 	}
 	else if (str == "window_yoff") {
 		if (!read_float(fp, global_building_params.cur_mat.wind_yoff)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.wind_yoff *= -1.0; // invert Y
 	}
 	else if (str == "wall_split_thresh") {
 		if (!read_float(fp, global_building_params.wall_split_thresh)) {buildings_file_err(str, error);}
