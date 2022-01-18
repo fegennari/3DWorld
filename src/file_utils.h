@@ -77,3 +77,17 @@ std::string read_quoted_string(FILE *fp, unsigned &line_num);
 struct geom_xform_t;
 unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c);
 
+template<typename T> class kw_to_val_map_t : private map<std::string, T*> {
+	int &error;
+	std::string opt_prefix;
+
+public:
+	kw_to_val_map_t(int &error_, std::string const &opt_prefix_="") : error(error_), opt_prefix(opt_prefix_) {}
+
+	void add(std::string const &k, T &v) {
+		bool const did_ins(this->insert(make_pair(k, &v)).second);
+		assert(did_ins);
+	}
+	bool maybe_set_from_fp(std::string const &str, FILE *fp);
+};
+

@@ -1551,21 +1551,16 @@ string get_all_gl_extensions() {
 	return ext;
 }
 
-
 bool has_extension(string const &ext) { // is this always correct?
-
 	return (strstr(get_all_gl_extensions().c_str(), ext.c_str()) != NULL);
 }
 
-
 bool open_file(FILE *&fp, char const *const fn, string const &file_type, char const *const mode) {
-
 	fp = fopen(fn, mode);
 	if (fp != nullptr) return 1;
 	cout << "*** Error: Could not open " << file_type << " file '" << fn << "'." << endl;
 	return 0;
 }
-
 
 void cfg_err(string const &str, int &error) {
 	cout << "Error reading " << str << " from config file." << endl;
@@ -1584,24 +1579,12 @@ void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) { // <filen
 }
 
 
-template<typename T> class kw_to_val_map_t : private map<string, T*> {
-
-	int &error;
-
-public:
-	kw_to_val_map_t(int &error_) : error(error_) {}
-
-	void add(string const &k, T &v) {
-		bool const did_ins(this->insert(make_pair(k, &v)).second);
-		assert(did_ins);
-	}
-	bool maybe_set_from_fp(string const &str, FILE *fp) {
-		auto it(this->find(str));
-		if (it == this->end()) return 0;
-		if (!read_type_t(fp, *it->second)) {cfg_err(str + " keyword", error);}
-		return 1;
-	}
-};
+template<typename T> bool kw_to_val_map_t<T>::maybe_set_from_fp(string const &str, FILE *fp) {
+	auto it(this->find(str));
+	if (it == this->end()) return 0;
+	if (!read_type_t(fp, *it->second)) {cfg_err(opt_prefix + str + " keyword", error);}
+	return 1;
+}
 
 
 bool bmp_file_to_binary_array(char const *const fn, unsigned char **&data) {
