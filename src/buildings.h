@@ -260,6 +260,7 @@ struct building_params_t {
 		wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), open_door_prob(1.0), locked_door_prob(0.0), basement_prob(0.5), ball_prob(0.3),
 		ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), num_rats_min(0), num_rats_max(0), rat_speed(0.0),
 		player_weight_limit(100.0), range_translate(zero_vector) {}
+	bool parse_buildings_option(FILE *fp);
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
 	bool gen_inf_buildings() const {return (infinite_buildings && world_mode == WMODE_INF_TERRAIN);}
@@ -281,6 +282,9 @@ struct building_params_t {
 	float get_max_house_size() const;
 	void set_pos_range(cube_t const &pos_range);
 	void restore_prev_pos_range();
+private:
+	int read_building_texture(FILE *fp, std::string const &str, int &error, bool check_filename=0);
+	void read_texture_and_add_if_valid(FILE *fp, std::string const &str, int &error, vector<unsigned> &tids);
 };
 
 class building_draw_t;

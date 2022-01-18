@@ -21,6 +21,7 @@ bool city_params_t::read_option(FILE *fp) {
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);
 	int error(0);
+	// TODO: make these members of city_params_t to avoid recreating them for every option
 	kw_to_val_map_t<bool     > kwmb(error, "city");
 	kw_to_val_map_t<unsigned > kwmu(error, "city");
 	kwmu.add("num_cities",     num_cities);
@@ -159,7 +160,7 @@ void buildings_file_err(string const &str, int &error) {
 
 bool check_texture_file_exists(string const &filename);
 
-int read_building_texture(FILE *fp, string const &str, int &error, bool check_filename=0) {
+int building_params_t::read_building_texture(FILE *fp, string const &str, int &error, bool check_filename) {
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) {buildings_file_err(str, error);}
 
@@ -167,11 +168,11 @@ int read_building_texture(FILE *fp, string const &str, int &error, bool check_fi
 		std::cerr << "Warning: Skipping texture '" << strc << "' that can't be loaded" << endl;
 		return -1; // texture filename doesn't exist
 	}
-	int const ret(get_texture_by_name(std::string(strc), 0, global_building_params.tex_inv_y, global_building_params.get_wrap_mir()));
+	int const ret(get_texture_by_name(std::string(strc), 0, tex_inv_y, get_wrap_mir()));
 	//cout << "texture filename: " << str << ", ID: " << ret << endl;
 	return ret;
 }
-void read_texture_and_add_if_valid(FILE *fp, string const &str, int &error, vector<unsigned> &tids) {
+void building_params_t::read_texture_and_add_if_valid(FILE *fp, string const &str, int &error, vector<unsigned> &tids) {
 	// Note: this version doesn't accept numbered texture IDs, but it also doesn't fail on missing files
 	int const tid(read_building_texture(fp, str, error, 1)); // check_filename=1
 	if (tid >= 0) {tids.push_back(tid);}
@@ -185,88 +186,89 @@ void read_building_mat_specular(FILE *fp, string const &str, tid_nm_pair_t &tex,
 	if (read_float(fp, mag) && read_float(fp, shine)) {tex.set_specular(mag, shine);} else {buildings_file_err(str, error);}
 }
 
-bool parse_buildings_option(FILE *fp) {
+bool building_params_t::parse_buildings_option(FILE *fp) {
 
 	char strc[MAX_CHARS] = {0};
 	if (!read_str(fp, strc)) return 0;
 	string const str(strc);
 	int error(0);
+	// TODO: make these members of city_params_t to avoid recreating them for every option
 	kw_to_val_map_t<bool     > kwmb(error, "buildings");
 	kw_to_val_map_t<unsigned > kwmu(error, "buildings");
 	kw_to_val_map_t<float    > kwmf(error, "buildings");
 	kw_to_val_map_t<colorRGBA> kwmc(error, "buildings");
 	// global parameters
-	kwmb.add("flatten_mesh", global_building_params.flatten_mesh);
-	kwmu.add("num_place", global_building_params.num_place);
-	kwmu.add("num_tries", global_building_params.num_tries);
-	kwmu.add("rand_seed", global_building_params.buildings_rand_seed);
-	kwmu.add("max_shadow_maps", global_building_params.max_shadow_maps);
-	kwmf.add("ao_factor", global_building_params.ao_factor);
-	kwmf.add("sec_extra_spacing", global_building_params.sec_extra_spacing);
-	kwmf.add("player_coll_radius_scale", global_building_params.player_coll_radius_scale);
-	kwmf.add("max_floorplan_window_xscale", global_building_params.max_fp_wind_xscale);
-	kwmf.add("max_floorplan_window_yscale", global_building_params.max_fp_wind_yscale);
-	kwmf.add("interior_view_dist_scale", global_building_params.interior_view_dist_scale);
-	kwmb.add("tt_only", global_building_params.tt_only);
-	kwmb.add("infinite_buildings", global_building_params.infinite_buildings);
-	kwmb.add("add_secondary_buildings", global_building_params.add_secondary_buildings);
-	kwmb.add("add_office_basements", global_building_params.add_office_basements);
-	kwmb.add("enable_people_ai", global_building_params.enable_people_ai);
+	kwmb.add("flatten_mesh", flatten_mesh);
+	kwmu.add("num_place", num_place);
+	kwmu.add("num_tries", num_tries);
+	kwmu.add("rand_seed", buildings_rand_seed);
+	kwmu.add("max_shadow_maps", max_shadow_maps);
+	kwmf.add("ao_factor", ao_factor);
+	kwmf.add("sec_extra_spacing", sec_extra_spacing);
+	kwmf.add("player_coll_radius_scale", player_coll_radius_scale);
+	kwmf.add("max_floorplan_window_xscale", max_fp_wind_xscale);
+	kwmf.add("max_floorplan_window_yscale", max_fp_wind_yscale);
+	kwmf.add("interior_view_dist_scale", interior_view_dist_scale);
+	kwmb.add("tt_only", tt_only);
+	kwmb.add("infinite_buildings", infinite_buildings);
+	kwmb.add("add_secondary_buildings", add_secondary_buildings);
+	kwmb.add("add_office_basements", add_office_basements);
+	kwmb.add("enable_people_ai", enable_people_ai);
 	// material parameters
-	kwmf.add("place_radius", global_building_params.cur_mat.place_radius);
-	kwmf.add("max_delta_z", global_building_params.cur_mat.max_delta_z);
-	kwmf.add("min_level_height", global_building_params.cur_mat.min_level_height);
-	kwmu.add("min_levels", global_building_params.cur_mat.min_levels);
-	kwmu.add("max_levels", global_building_params.cur_mat.max_levels);
-	kwmf.add("min_flat_side_amt", global_building_params.cur_mat.min_fsa);
-	kwmf.add("max_flat_side_amt", global_building_params.cur_mat.max_fsa);
-	kwmf.add("min_alt_step_factor", global_building_params.cur_mat.min_asf);
-	kwmf.add("max_alt_step_factor", global_building_params.cur_mat.max_asf);
-	kwmf.add("min_altitude",  global_building_params.cur_mat.min_alt);
-	kwmf.add("max_altitude",  global_building_params.cur_mat.max_alt);
-	kwmf.add("max_rot_angle", global_building_params.cur_mat.max_rot_angle);
-	kwmb.add("dome_roof",  global_building_params.dome_roof);
-	kwmb.add("onion_roof", global_building_params.onion_roof);
-	kwmb.add("no_city",    global_building_params.cur_mat.no_city);
+	kwmf.add("place_radius", cur_mat.place_radius);
+	kwmf.add("max_delta_z", cur_mat.max_delta_z);
+	kwmf.add("min_level_height", cur_mat.min_level_height);
+	kwmu.add("min_levels", cur_mat.min_levels);
+	kwmu.add("max_levels", cur_mat.max_levels);
+	kwmf.add("min_flat_side_amt", cur_mat.min_fsa);
+	kwmf.add("max_flat_side_amt", cur_mat.max_fsa);
+	kwmf.add("min_alt_step_factor", cur_mat.min_asf);
+	kwmf.add("max_alt_step_factor", cur_mat.max_asf);
+	kwmf.add("min_altitude",  cur_mat.min_alt);
+	kwmf.add("max_altitude",  cur_mat.max_alt);
+	kwmf.add("max_rot_angle", cur_mat.max_rot_angle);
+	kwmb.add("dome_roof",  dome_roof);
+	kwmb.add("onion_roof", onion_roof);
+	kwmb.add("no_city",    cur_mat.no_city);
 	// material textures / colors
-	kwmb.add("texture_mirror", global_building_params.tex_mirror);
-	kwmb.add("texture_inv_y",  global_building_params.tex_inv_y);
-	kwmf.add("side_tscale_x",  global_building_params.cur_mat.side_tex.tscale_x);
-	kwmf.add("side_tscale_y",  global_building_params.cur_mat.side_tex.tscale_y);
-	kwmf.add("side_color_grayscale_rand", global_building_params.cur_mat.side_color.grayscale_rand);
-	kwmf.add("roof_color_grayscale_rand", global_building_params.cur_mat.roof_color.grayscale_rand);
-	kwmc.add("side_color_min", global_building_params.cur_mat.side_color.cmin);
-	kwmc.add("side_color_max", global_building_params.cur_mat.side_color.cmax);
-	kwmc.add("roof_color_min", global_building_params.cur_mat.roof_color.cmin);
-	kwmc.add("roof_color_max", global_building_params.cur_mat.roof_color.cmax);
+	kwmb.add("texture_mirror", tex_mirror);
+	kwmb.add("texture_inv_y",  tex_inv_y);
+	kwmf.add("side_tscale_x",  cur_mat.side_tex.tscale_x);
+	kwmf.add("side_tscale_y",  cur_mat.side_tex.tscale_y);
+	kwmf.add("side_color_grayscale_rand", cur_mat.side_color.grayscale_rand);
+	kwmf.add("roof_color_grayscale_rand", cur_mat.roof_color.grayscale_rand);
+	kwmc.add("side_color_min", cur_mat.side_color.cmin);
+	kwmc.add("side_color_max", cur_mat.side_color.cmax);
+	kwmc.add("roof_color_min", cur_mat.roof_color.cmin);
+	kwmc.add("roof_color_max", cur_mat.roof_color.cmax);
 	// windows (mostly per-material)
-	kwmf.add("window_xoff", global_building_params.cur_mat.wind_xoff);
-	kwmf.add("window_yoff", global_building_params.cur_mat.wind_yoff);
-	kwmf.add("wall_split_thresh", global_building_params.wall_split_thresh);
-	kwmb.add("add_windows",       global_building_params.cur_mat.add_windows);
-	kwmb.add("add_window_lights", global_building_params.cur_mat.add_wind_lights);
-	kwmc.add("window_color", global_building_params.cur_mat.window_color);
-	kwmc.add("wall_color",   global_building_params.cur_mat.wall_color);
-	kwmc.add("ceil_color",   global_building_params.cur_mat.ceil_color);
-	kwmc.add("floor_color",  global_building_params.cur_mat.floor_color);
-	kwmc.add("house_ceil_color",  global_building_params.cur_mat.house_ceil_color);
-	kwmc.add("house_floor_color", global_building_params.cur_mat.house_floor_color);
+	kwmf.add("window_xoff", cur_mat.wind_xoff);
+	kwmf.add("window_yoff", cur_mat.wind_yoff);
+	kwmf.add("wall_split_thresh", wall_split_thresh);
+	kwmb.add("add_windows",       cur_mat.add_windows);
+	kwmb.add("add_window_lights", cur_mat.add_wind_lights);
+	kwmc.add("window_color", cur_mat.window_color);
+	kwmc.add("wall_color",   cur_mat.wall_color);
+	kwmc.add("ceil_color",   cur_mat.ceil_color);
+	kwmc.add("floor_color",  cur_mat.floor_color);
+	kwmc.add("house_ceil_color",  cur_mat.house_ceil_color);
+	kwmc.add("house_floor_color", cur_mat.house_floor_color);
 	// AI logic
-	kwmu.add("ai_opens_doors",     global_building_params.ai_opens_doors); // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
-	kwmb.add("ai_target_player",   global_building_params.ai_target_player);
-	kwmb.add("ai_follow_player",   global_building_params.ai_follow_player);
-	kwmu.add("ai_player_vis_test", global_building_params.ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
+	kwmu.add("ai_opens_doors",     ai_opens_doors); // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
+	kwmb.add("ai_target_player",   ai_target_player);
+	kwmb.add("ai_follow_player",   ai_follow_player);
+	kwmu.add("ai_player_vis_test", ai_player_vis_test); // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 	// animals
-	kwmu.add("num_rats_min", global_building_params.num_rats_min);
-	kwmu.add("num_rats_max", global_building_params.num_rats_max);
-	kwmf.add("rat_speed",    global_building_params.rat_speed);
+	kwmu.add("num_rats_min", num_rats_min);
+	kwmu.add("num_rats_max", num_rats_max);
+	kwmf.add("rat_speed",    rat_speed);
 	// gameplay state
-	kwmf.add("player_weight_limit", global_building_params.player_weight_limit);
+	kwmf.add("player_weight_limit", player_weight_limit);
 	// special commands
-	kwmu.add("probability",              global_building_params.cur_prob); // for building materials
-	kwmb.add("add_city_interiors",       global_building_params.add_city_interiors);
-	kwmb.add("gen_building_interiors",   global_building_params.gen_building_interiors);
-	kwmb.add("enable_rotated_room_geom", global_building_params.enable_rotated_room_geom);
+	kwmu.add("probability",              cur_prob); // for building materials
+	kwmb.add("add_city_interiors",       add_city_interiors);
+	kwmb.add("gen_building_interiors",   gen_building_interiors);
+	kwmb.add("enable_rotated_room_geom", enable_rotated_room_geom);
 	if (kwmb.maybe_set_from_fp(str, fp)) return 1;
 	if (kwmu.maybe_set_from_fp(str, fp)) return 1;
 	if (kwmf.maybe_set_from_fp(str, fp)) return 1;
@@ -274,131 +276,132 @@ bool parse_buildings_option(FILE *fp) {
 
 	// material parameters
 	if (str == "range_translate") { // x,y only
-		if (!(read_float(fp, global_building_params.range_translate.x) &&
-			  read_float(fp, global_building_params.range_translate.y))) {buildings_file_err(str, error);}
+		if (!(read_float(fp, range_translate.x) && read_float(fp, range_translate.y))) {buildings_file_err(str, error);}
 	}
 	else if (str == "pos_range") {
-		if (!read_cube(fp, global_building_params.cur_mat.pos_range, 1)) {buildings_file_err(str, error);}
+		if (!read_cube(fp, cur_mat.pos_range, 1)) {buildings_file_err(str, error);}
 	}
 	else if (str == "split_prob") {
-		if (!read_zero_one_float(fp, global_building_params.cur_mat.split_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, cur_mat.split_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "cube_prob") {
-		if (!read_zero_one_float(fp, global_building_params.cur_mat.cube_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, cur_mat.cube_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "round_prob") {
-		if (!read_zero_one_float(fp, global_building_params.cur_mat.round_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, cur_mat.round_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "alt_step_factor_prob") {
-		if (!read_zero_one_float(fp, global_building_params.cur_mat.asf_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, cur_mat.asf_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "min_sides") {
-		if (!read_uint(fp, global_building_params.cur_mat.min_sides)) {buildings_file_err(str, error);}
-		if (global_building_params.cur_mat.min_sides < 3) {buildings_file_err(str+" (< 3)", error);}
+		if (!read_uint(fp, cur_mat.min_sides)) {buildings_file_err(str, error);}
+		if (cur_mat.min_sides < 3) {buildings_file_err(str+" (< 3)", error);}
 	}
 	else if (str == "max_sides") {
-		if (!read_uint(fp, global_building_params.cur_mat.max_sides)) {buildings_file_err(str, error);}
-		if (global_building_params.cur_mat.max_sides < 3) {buildings_file_err(str+" (< 3)", error);}
+		if (!read_uint(fp, cur_mat.max_sides)) {buildings_file_err(str, error);}
+		if (cur_mat.max_sides < 3) {buildings_file_err(str+" (< 3)", error);}
 	}
 	else if (str == "size_range") {
-		if (!read_cube(fp, global_building_params.cur_mat.sz_range)) {buildings_file_err(str, error);}
+		if (!read_cube(fp, cur_mat.sz_range)) {buildings_file_err(str, error);}
 	}
 	// material textures
-	else if (str == "side_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.side_tex,  str, error);} // both X and Y
-	else if (str == "roof_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.roof_tex,  str, error);} // both X and Y
-	else if (str == "wall_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.wall_tex,  str, error);} // both X and Y
-	else if (str == "ceil_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.ceil_tex,  str, error);} // both X and Y
-	else if (str == "floor_tscale") {read_building_tscale(fp, global_building_params.cur_mat.floor_tex, str, error);} // both X and Y
-	else if (str == "house_ceil_tscale")  {read_building_tscale(fp, global_building_params.cur_mat.house_ceil_tex,  str, error);} // both X and Y
-	else if (str == "house_floor_tscale") {read_building_tscale(fp, global_building_params.cur_mat.house_floor_tex, str, error);} // both X and Y
-	else if (str == "basement_floor_tscale") {read_building_tscale(fp, global_building_params.cur_mat.basement_floor_tex, str, error);} // both X and Y
+	else if (str == "side_tscale")  {read_building_tscale(fp, cur_mat.side_tex,  str, error);} // both X and Y
+	else if (str == "roof_tscale")  {read_building_tscale(fp, cur_mat.roof_tex,  str, error);} // both X and Y
+	else if (str == "wall_tscale")  {read_building_tscale(fp, cur_mat.wall_tex,  str, error);} // both X and Y
+	else if (str == "ceil_tscale")  {read_building_tscale(fp, cur_mat.ceil_tex,  str, error);} // both X and Y
+	else if (str == "floor_tscale") {read_building_tscale(fp, cur_mat.floor_tex, str, error);} // both X and Y
+	else if (str == "house_ceil_tscale")  {read_building_tscale(fp, cur_mat.house_ceil_tex,  str, error);} // both X and Y
+	else if (str == "house_floor_tscale") {read_building_tscale(fp, cur_mat.house_floor_tex, str, error);} // both X and Y
+	else if (str == "basement_floor_tscale") {read_building_tscale(fp, cur_mat.basement_floor_tex, str, error);} // both X and Y
 	// building textures
 	// Warning: setting options such as tex_inv_y for textures that have already been loaded will have no effect!
-	else if (str == "side_tid"    ) {global_building_params.cur_mat.side_tex.tid     = read_building_texture(fp, str, error);}
-	else if (str == "side_nm_tid" ) {global_building_params.cur_mat.side_tex.nm_tid  = read_building_texture(fp, str, error);}
-	else if (str == "roof_tid"    ) {global_building_params.cur_mat.roof_tex.tid     = read_building_texture(fp, str, error);}
-	else if (str == "roof_nm_tid" ) {global_building_params.cur_mat.roof_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "side_tid"    ) {cur_mat.side_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "side_nm_tid" ) {cur_mat.side_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "roof_tid"    ) {cur_mat.roof_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "roof_nm_tid" ) {cur_mat.roof_tex.nm_tid  = read_building_texture(fp, str, error);}
 	// interiors
-	else if (str == "wall_tid"    ) {global_building_params.cur_mat.wall_tex.tid     = read_building_texture(fp, str, error);}
-	else if (str == "wall_nm_tid" ) {global_building_params.cur_mat.wall_tex.nm_tid  = read_building_texture(fp, str, error);}
-	else if (str == "floor_tid"   ) {global_building_params.cur_mat.floor_tex.tid    = read_building_texture(fp, str, error);}
-	else if (str == "floor_nm_tid") {global_building_params.cur_mat.floor_tex.nm_tid = read_building_texture(fp, str, error);}
-	else if (str == "ceil_tid"    ) {global_building_params.cur_mat.ceil_tex.tid     = read_building_texture(fp, str, error);}
-	else if (str == "ceil_nm_tid" ) {global_building_params.cur_mat.ceil_tex.nm_tid  = read_building_texture(fp, str, error);}
-	else if (str == "house_floor_tid"   ) {global_building_params.cur_mat.house_floor_tex.tid    = read_building_texture(fp, str, error);}
-	else if (str == "house_floor_nm_tid") {global_building_params.cur_mat.house_floor_tex.nm_tid = read_building_texture(fp, str, error);}
-	else if (str == "house_ceil_tid"    ) {global_building_params.cur_mat.house_ceil_tex.tid     = read_building_texture(fp, str, error);}
-	else if (str == "house_ceil_nm_tid" ) {global_building_params.cur_mat.house_ceil_tex.nm_tid  = read_building_texture(fp, str, error);}
-	else if (str == "basement_floor_tid"   ) {global_building_params.cur_mat.basement_floor_tex.tid    = read_building_texture(fp, str, error);}
-	else if (str == "basement_floor_nm_tid") {global_building_params.cur_mat.basement_floor_tex.nm_tid = read_building_texture(fp, str, error);}
+	else if (str == "wall_tid"    ) {cur_mat.wall_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "wall_nm_tid" ) {cur_mat.wall_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "floor_tid"   ) {cur_mat.floor_tex.tid    = read_building_texture(fp, str, error);}
+	else if (str == "floor_nm_tid") {cur_mat.floor_tex.nm_tid = read_building_texture(fp, str, error);}
+	else if (str == "ceil_tid"    ) {cur_mat.ceil_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "ceil_nm_tid" ) {cur_mat.ceil_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "house_floor_tid"   ) {cur_mat.house_floor_tex.tid    = read_building_texture(fp, str, error);}
+	else if (str == "house_floor_nm_tid") {cur_mat.house_floor_tex.nm_tid = read_building_texture(fp, str, error);}
+	else if (str == "house_ceil_tid"    ) {cur_mat.house_ceil_tex.tid     = read_building_texture(fp, str, error);}
+	else if (str == "house_ceil_nm_tid" ) {cur_mat.house_ceil_tex.nm_tid  = read_building_texture(fp, str, error);}
+	else if (str == "basement_floor_tid"   ) {cur_mat.basement_floor_tex.tid    = read_building_texture(fp, str, error);}
+	else if (str == "basement_floor_nm_tid") {cur_mat.basement_floor_tex.nm_tid = read_building_texture(fp, str, error);}
 	else if (str == "open_door_prob") {
-		if (!read_zero_one_float(fp, global_building_params.open_door_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, open_door_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "locked_door_prob") {
-		if (!read_zero_one_float(fp, global_building_params.locked_door_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, locked_door_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "basement_prob") {
-		if (!read_zero_one_float(fp, global_building_params.basement_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, basement_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "ball_prob") {
-		if (!read_zero_one_float(fp, global_building_params.ball_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, ball_prob)) {buildings_file_err(str, error);}
 	}
 	// material colors
 	else if (str == "side_color") {
-		if (!read_color(fp, global_building_params.cur_mat.side_color.cmin)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.side_color.cmax = global_building_params.cur_mat.side_color.cmin; // same
+		if (!read_color(fp, cur_mat.side_color.cmin)) {buildings_file_err(str, error);}
+		cur_mat.side_color.cmax = cur_mat.side_color.cmin; // same
 	}
 	else if (str == "roof_color") {
-		if (!read_color(fp, global_building_params.cur_mat.roof_color.cmin)) {buildings_file_err(str, error);}
-		global_building_params.cur_mat.roof_color.cmax = global_building_params.cur_mat.roof_color.cmin; // same
+		if (!read_color(fp, cur_mat.roof_color.cmin)) {buildings_file_err(str, error);}
+		cur_mat.roof_color.cmax = cur_mat.roof_color.cmin; // same
 	}
 	// specular
-	else if (str == "side_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.side_tex,  error);}
-	else if (str == "roof_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.roof_tex,  error);}
-	else if (str == "wall_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.wall_tex,  error);}
-	else if (str == "ceil_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.ceil_tex,  error);}
-	else if (str == "floor_specular") {read_building_mat_specular(fp, str, global_building_params.cur_mat.floor_tex, error);}
-	else if (str == "house_ceil_specular" ) {read_building_mat_specular(fp, str, global_building_params.cur_mat.house_ceil_tex,  error);}
-	else if (str == "house_floor_specular") {read_building_mat_specular(fp, str, global_building_params.cur_mat.house_floor_tex, error);}
+	else if (str == "side_specular" ) {read_building_mat_specular(fp, str, cur_mat.side_tex,  error);}
+	else if (str == "roof_specular" ) {read_building_mat_specular(fp, str, cur_mat.roof_tex,  error);}
+	else if (str == "wall_specular" ) {read_building_mat_specular(fp, str, cur_mat.wall_tex,  error);}
+	else if (str == "ceil_specular" ) {read_building_mat_specular(fp, str, cur_mat.ceil_tex,  error);}
+	else if (str == "floor_specular") {read_building_mat_specular(fp, str, cur_mat.floor_tex, error);}
+	else if (str == "house_ceil_specular" ) {read_building_mat_specular(fp, str, cur_mat.house_ceil_tex,  error);}
+	else if (str == "house_floor_specular") {read_building_mat_specular(fp, str, cur_mat.house_floor_tex, error);}
 	// windows
 	else if (str == "window_width") {
-		if (!read_zero_one_float(fp, global_building_params.window_width)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, window_width)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_height") {
-		if (!read_zero_one_float(fp, global_building_params.window_height)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, window_height)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_xspace") {
-		if (!read_zero_one_float(fp, global_building_params.window_xspace)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, window_xspace)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_yspace") {
-		if (!read_zero_one_float(fp, global_building_params.window_yspace)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, window_yspace)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_xscale") {
-		if (!read_non_neg_float(fp, global_building_params.cur_mat.wind_xscale)) {buildings_file_err(str, error);}
+		if (!read_non_neg_float(fp, cur_mat.wind_xscale)) {buildings_file_err(str, error);}
 	}
 	else if (str == "window_yscale") {
-		if (!read_non_neg_float(fp, global_building_params.cur_mat.wind_yscale)) {buildings_file_err(str, error);}
+		if (!read_non_neg_float(fp, cur_mat.wind_yscale)) {buildings_file_err(str, error);}
 	}
 	else if (str == "house_prob") { // per-material
-		if (!read_zero_one_float(fp, global_building_params.cur_mat.house_prob)) {buildings_file_err(str, error);}
+		if (!read_zero_one_float(fp, cur_mat.house_prob)) {buildings_file_err(str, error);}
 	}
 	else if (str == "house_scale_range") { // per-material
-		if (!read_float(fp, global_building_params.cur_mat.house_scale_min) || !read_float(fp, global_building_params.cur_mat.house_scale_max)) {buildings_file_err(str, error);}
+		if (!read_float(fp, cur_mat.house_scale_min) || !read_float(fp, cur_mat.house_scale_max)) {buildings_file_err(str, error);}
 	}
 	// room objects/textures
-	else if (str == "add_rug_texture"    ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.rug_tids    );}
-	else if (str == "add_picture_texture") {read_texture_and_add_if_valid(fp, str, error, global_building_params.picture_tids);}
-	else if (str == "add_desktop_texture") {read_texture_and_add_if_valid(fp, str, error, global_building_params.desktop_tids);}
-	else if (str == "add_sheet_texture"  ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.sheet_tids  );}
-	else if (str == "add_paper_texture"  ) {read_texture_and_add_if_valid(fp, str, error, global_building_params.paper_tids  );}
+	else if (str == "add_rug_texture"    ) {read_texture_and_add_if_valid(fp, str, error, rug_tids    );}
+	else if (str == "add_picture_texture") {read_texture_and_add_if_valid(fp, str, error, picture_tids);}
+	else if (str == "add_desktop_texture") {read_texture_and_add_if_valid(fp, str, error, desktop_tids);}
+	else if (str == "add_sheet_texture"  ) {read_texture_and_add_if_valid(fp, str, error, sheet_tids  );}
+	else if (str == "add_paper_texture"  ) {read_texture_and_add_if_valid(fp, str, error, paper_tids  );}
 	// special commands
-	else if (str == "add_material") {global_building_params.add_cur_mat();}
+	else if (str == "add_material") {add_cur_mat();}
 	else {
 		cout << "Unrecognized buildings keyword in input file: " << str << endl;
 		error = 1;
 	}
 	return !error;
 }
+
+bool parse_buildings_option(FILE *fp) {return global_building_params.parse_buildings_option(fp);}
 
 
 void building_params_t::add_cur_mat() {
