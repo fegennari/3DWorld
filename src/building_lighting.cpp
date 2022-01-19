@@ -70,7 +70,9 @@ bool follow_ray_through_cubes_recur(point const &p1, point const &p2, point cons
 	} // for c
 	return 0;
 }
-
+bool building_t::ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const {
+	return follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), cnorm, t);
+}
 // Note: static objects only; excludes people; pos in building space
 bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const {
 
@@ -86,7 +88,7 @@ bool building_t::ray_cast_interior(point const &pos, vector3d const &dir, cube_b
 	cpos = p2; // use far clip point for clip cube if there is no hit
 
 	// check parts (exterior walls); should chimneys and porch roofs be included?
-	if (follow_ray_through_cubes_recur(p1, p2, p1, parts, get_real_parts_end_inc_sec(), parts.end(), cnorm, t)) { // interior ray - find furthest exit point
+	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) { // interior ray - find furthest exit point
 		ccolor = mat.wall_color.modulate_with(mat.wall_tex.get_avg_color());
 		p2  = p1 + (p2 - p1)*t; t = 1.0; // clip p2 to t (minor optimization)
 		hit = 1;

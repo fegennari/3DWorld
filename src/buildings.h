@@ -79,8 +79,11 @@ struct rat_t {
 	vector3d dir;
 	float radius, speed, fear;
 
-	rat_t(point const &pos_, float radius_) : pos(pos_), dest(pos), dir(plus_x), radius(radius_), speed(0.0), fear(0.0) {}
+	rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), fear(0.0) {}
 	bool is_moving() const {return (speed > 0.0);}
+	float get_length() const {return radius;} // this is the bounding radius, so it represents the longest dim (length)
+	float get_width () const;
+	float get_height() const;
 	cube_t get_bcube() const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
 };
@@ -1001,6 +1004,7 @@ struct building_t : public building_geom_t {
 	unsigned check_line_coll(point const &p1, point const &p2, float &t, vector<point> &points, bool occlusion_only=0, bool ret_any_pt=0, bool no_coll_pt=0) const;
 	bool check_point_or_cylin_contained(point const &pos, float xy_radius, vector<point> &points) const;
 	bool check_point_xy_in_part(point const &pos) const;
+	bool ray_cast_exterior_walls(point const &p1, point const &p2, vector3d &cnorm, float &t) const;
 	bool ray_cast_interior(point const &pos, vector3d const &dir, cube_bvh_t const &bvh, point &cpos, vector3d &cnorm, colorRGBA &ccolor) const;
 	void create_building_volume_light_texture(unsigned bix, point const &target, unsigned &tid) const;
 	bool ray_cast_camera_dir(point const &camera_bs, point &cpos, colorRGBA &ccolor) const;
@@ -1104,6 +1108,7 @@ public:
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
 	void update_rat(rat_t &rat, rand_gen_t &rgen) const;
+	bool check_line_of_sight(point const &p1, point const &p2, float radius, float height) const;
 
 public:
 	int get_room_containing_pt(point const &pt) const;
