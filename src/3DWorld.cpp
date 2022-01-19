@@ -1913,9 +1913,7 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "num_items") { // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 			for (unsigned n = 0; n < sizeof(init_item_counts)/sizeof(unsigned); ++n) {
-				if (!read_uint(fp, init_item_counts[n])) {
-					cfg_err("number of items", error); break;
-				}
+				if (!read_uint(fp, init_item_counts[n])) {cfg_err("number of items", error); break;}
 			}
 		}
 		else if (str == "window_width") {

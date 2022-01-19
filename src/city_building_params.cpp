@@ -7,6 +7,7 @@
 
 
 extern building_params_t global_building_params;
+bool parse_buildings_option(FILE *fp) {return global_building_params.parse_buildings_option(fp);}
 
 
 string const model_opt_names[NUM_OBJ_MODELS] =
@@ -393,8 +394,6 @@ bool building_params_t::parse_buildings_option(FILE *fp) {
 	}
 	return !read_error;
 }
-
-bool parse_buildings_option(FILE *fp) {return global_building_params.parse_buildings_option(fp);}
 
 
 void building_params_t::add_cur_mat() {
