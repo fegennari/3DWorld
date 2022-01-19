@@ -12,7 +12,7 @@
 bool const DYNAMIC_HELICOPTERS = 1;
 float const MIN_CAR_STOP_SEP   = 0.25; // in units of car lengths
 
-extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key;
+extern bool tt_fire_button_down, enable_hcopter_shadows, city_action_key, camera_in_building, player_in_basement;
 extern int display_mode, game_mode, map_mode, animate2;
 extern float FAR_CLIP;
 extern point pre_smap_player_pos;
@@ -1268,10 +1268,11 @@ void car_manager_t::helicopters_next_frame(float car_speed) {
 			}
 		} // end moving case
 	} // for i
-	// player a looping helicopter sound if close, but don't attenuate the gain with distance because it will only be updated at the beginning of each loop
-	if (dist_less_than(closest_pos, camera_bs, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+	// player a looping helicopter sound if close and not in a basement, but don't attenuate the gain with dist because it will only be updated at the beginning of each loop
+	if (!player_in_basement && dist_less_than(closest_pos, camera_bs, 0.25f*(X_SCENE_SIZE + Y_SCENE_SIZE))) {
+		float const gain(camera_in_building ? 0.5 : 1.0); // quieter when the player is in a building
 #pragma omp critical(gen_sound)
-		gen_sound(SOUND_HELICOPTER, closest_pos, 1.0, 1.0, 0, zero_vector, 1); // skip_if_already_playing=1
+		gen_sound(SOUND_HELICOPTER, closest_pos, gain, 1.0, 0, zero_vector, 1); // skip_if_already_playing=1
 	}
 	// show flight path debug lines?
 }
