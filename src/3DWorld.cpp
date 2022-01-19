@@ -1895,7 +1895,7 @@ int load_config(string const &config_file) {
 			if (!load_config(include_fname )) cfg_err("nested include file", error);
 		}
 		else if (str == "grass_size") {
-			if (!read_float(fp, grass_length) || !read_float(fp, grass_width) || grass_length <= 0.0 || grass_width <= 0.0) {
+			if (!read_pos_float(fp, grass_length) || !read_pos_float(fp, grass_width)) {
 				cfg_err("grass size", error);
 			}
 		}
@@ -1903,11 +1903,11 @@ int load_config(string const &config_file) {
 			if (!read_int(fp, force_tree_class) || force_tree_class >= NUM_TREE_CLASSES) cfg_err("force_tree_class", error);
 		}
 		else if (str == "nleaves_scale") {
-			if (!read_float(fp, nleaves_scale) || nleaves_scale <= 0.0) cfg_err("nleaves_scale", error);
+			if (!read_pos_float(fp, nleaves_scale)) cfg_err("nleaves_scale", error);
 		}
 		else if (str == "tree_lod_scale") {
 			for (unsigned i = 0; i < 4; ++i) {
-				if (!read_float(fp, tree_lod_scales[i]) || tree_lod_scales[i] < 0.0) cfg_err("tree_lod_scale", error);
+				if (!read_non_neg_float(fp, tree_lod_scales[i])) cfg_err("tree_lod_scale", error);
 			}
 			if (tree_lod_scales[0] < tree_lod_scales[1] || tree_lod_scales[2] < tree_lod_scales[3]) {cfg_err("tree_lod_scale values", error);}
 		}
@@ -1940,13 +1940,13 @@ int load_config(string const &config_file) {
 			read_float(fp, water_h_off_rel); // optional
 		}
 		else if (str == "lm_dz_adj") {
-			if (!read_float(fp, lm_dz_adj) || lm_dz_adj < 0.0) cfg_err("lm_dz_adj command", error);
+			if (!read_non_neg_float(fp, lm_dz_adj)) cfg_err("lm_dz_adj command", error);
 		}
 		else if (str == "wind_velocity") {
 			if (!read_vector(fp, wind)) cfg_err("wind_velocity command", error);
 		}
 		else if (str == "camera_height") {
-			if (fscanf(fp, "%lf", &camera_zh) != 1) cfg_err("camera_height command", error);
+			if (!read_double(fp, camera_zh)) cfg_err("camera_height command", error);
 		}
 		else if (str == "player_start") {
 			if (!read_vector(fp, surface_pos)) cfg_err("player_start command", error);
@@ -1957,11 +1957,11 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "tree_size") {
 			float tree_size(1.0);
-			if (!read_float(fp, tree_size)) cfg_err("tree size command", error);
+			if (!read_pos_float(fp, tree_size)) cfg_err("tree size command", error);
 			tree_scale = 1.0/tree_size;
 		}
 		else if (str == "tree_branch_radius") {
-			if (!read_float(fp, branch_radius_scale) || branch_radius_scale <= 0.0) cfg_err("tree_branch_radius command", error);
+			if (!read_pos_float(fp, branch_radius_scale)) cfg_err("tree_branch_radius command", error);
 		}
 		else if (str == "bush_probability") {
 			for (unsigned i = 0; i < NUM_TREE_TYPES; ++i) { // read a list of floating-point numbers (could allow a partial set to be read)
@@ -2095,7 +2095,7 @@ int load_config(string const &config_file) {
 		}
 		// snow
 		else if (str == "snow_depth") {
-			if (!read_float(fp, snow_depth) || snow_depth < 0.0) cfg_err("snow_depth command", error);
+			if (!read_non_neg_float(fp, snow_depth)) cfg_err("snow_depth command", error);
 		}
 		else if (str == "snow_file") {
 			alloc_if_req(snow_file, NULL);
