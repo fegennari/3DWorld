@@ -7,6 +7,7 @@
 #include "gl_ext_arb.h" // for vbo_wrap_t
 #include "transform_obj.h" // for xform_matrix
 #include "draw_utils.h" // for quad_batch_draw
+#include "file_utils.h" // for kw_to_val_map_t
 
 bool const EXACT_MULT_FLOOR_HEIGHT = 1;
 bool const ENABLE_MIRROR_REFLECTIONS = 1;
@@ -234,24 +235,27 @@ struct building_params_t {
 	float ao_factor, sec_extra_spacing, player_coll_radius_scale, interior_view_dist_scale;
 	float window_width, window_height, window_xspace, window_yspace; // windows
 	float wall_split_thresh, max_fp_wind_xscale, max_fp_wind_yscale, open_door_prob, locked_door_prob, basement_prob, ball_prob; // interiors
-
 	// building AI params
 	bool ai_target_player, ai_follow_player;
 	unsigned ai_opens_doors; // 0=don't open doors, 1=only open if player closed door after path selection; 2=always open doors
 	unsigned ai_player_vis_test; // 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
-
 	// building animal params
 	unsigned num_rats_min, num_rats_max;
 	float rat_speed;
-
 	// gameplay state
 	float player_weight_limit;
-
+	// materials
 	vector3d range_translate; // used as a temporary to add to material pos_range
 	building_mat_t cur_mat;
 	vector<building_mat_t> materials;
 	vector<unsigned> mat_gen_ix, mat_gen_ix_city, mat_gen_ix_nocity, mat_gen_ix_res; // {any, city_only, non_city, residential}
 	vector<unsigned> rug_tids, picture_tids, desktop_tids, sheet_tids, paper_tids;
+	// use for option reading
+	int read_error;
+	kw_to_val_map_t<bool     > kwmb;
+	kw_to_val_map_t<unsigned > kwmu;
+	kw_to_val_map_t<float    > kwmf;
+	kw_to_val_map_t<colorRGBA> kwmc;
 
 	building_params_t(unsigned num=0) : flatten_mesh(0), has_normal_map(0), tex_mirror(0), tex_inv_y(0), tt_only(0), infinite_buildings(0), dome_roof(0),
 		onion_roof(0), enable_people_ai(0), gen_building_interiors(1), add_city_interiors(0), enable_rotated_room_geom(0), add_secondary_buildings(0),
@@ -259,7 +263,8 @@ struct building_params_t {
 		player_coll_radius_scale(1.0), interior_view_dist_scale(1.0), window_width(0.0), window_height(0.0), window_xspace(0.0), window_yspace(0.0),
 		wall_split_thresh(4.0), max_fp_wind_xscale(0.0), max_fp_wind_yscale(0.0), open_door_prob(1.0), locked_door_prob(0.0), basement_prob(0.5), ball_prob(0.3),
 		ai_target_player(1), ai_follow_player(0), ai_opens_doors(1), ai_player_vis_test(0), num_rats_min(0), num_rats_max(0), rat_speed(0.0),
-		player_weight_limit(100.0), range_translate(zero_vector) {}
+		player_weight_limit(100.0), range_translate(zero_vector), read_error(0),
+		kwmb(read_error, "buildings"), kwmu(read_error, "buildings"), kwmf(read_error, "buildings"), kwmc(read_error, "buildings") {init_kw_maps();}
 	bool parse_buildings_option(FILE *fp);
 	int get_wrap_mir() const {return (tex_mirror ? 2 : 1);}
 	bool windows_enabled  () const {return (window_width > 0.0 && window_height > 0.0 && window_xspace > 0.0 && window_yspace);} // all must be specified as nonzero
@@ -283,6 +288,7 @@ struct building_params_t {
 	void set_pos_range(cube_t const &pos_range);
 	void restore_prev_pos_range();
 private:
+	void init_kw_maps();
 	int read_building_texture(FILE *fp, std::string const &str, int &error, bool check_filename=0);
 	void read_texture_and_add_if_valid(FILE *fp, std::string const &str, int &error, vector<unsigned> &tids);
 };
