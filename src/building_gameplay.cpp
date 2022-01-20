@@ -65,7 +65,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CABINET   ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "kitchen cabinet");
 	bldg_obj_types[TYPE_KSINK     ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "kitchen sink");
 	bldg_obj_types[TYPE_BRSINK    ] = bldg_obj_type_t(1, 1, 0, 1, 0, 1, 0.0,   0.0,   "bathroom sink"); // for office building bathrooms
-	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 3, 18.0,  8.0,   "potted plant");
+	bldg_obj_types[TYPE_PLANT     ] = bldg_obj_type_t(0, 1, 1, 0, 0, 3, 18.0,  8.0,   "potted plant"); // AI collides with plants on the floor
 	bldg_obj_types[TYPE_DRESSER   ] = bldg_obj_type_t(1, 1, 0, 0, 0, 3, 120.0, 110.0, "dresser"); // Note: can't pick up until drawers can be opened and items removed from them
 	bldg_obj_types[TYPE_NIGHTSTAND] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 60.0,  45.0,  "nightstand");
 	bldg_obj_types[TYPE_FLOORING  ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 0.0,   0.0,   "flooring");
@@ -82,7 +82,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_RDESK     ] = bldg_obj_type_t(1, 1, 0, 0, 0, 1, 800.0, 300.0, "reception desk");
 	bldg_obj_types[TYPE_BOTTLE    ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 1.0,   1.0,   "bottle");
 	bldg_obj_types[TYPE_WINE_RACK ] = bldg_obj_type_t(1, 1, 1, 0, 0, 3, 75.0,  40.0,  "wine rack");
-	bldg_obj_types[TYPE_COMPUTER  ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 500.0, 20.0,  "computer");
+	bldg_obj_types[TYPE_COMPUTER  ] = bldg_obj_type_t(0, 1, 1, 0, 0, 2, 500.0, 20.0,  "computer"); // rats can collide with computers
 	bldg_obj_types[TYPE_MWAVE     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 1, 100.0, 50.0,  "microwave oven");
 	bldg_obj_types[TYPE_PAPER     ] = bldg_obj_type_t(0, 0, 1, 0, 0, 2, 0.0,   0.0,   "sheet of paper"); // will have a random value that's often 0
 	bldg_obj_types[TYPE_BLINDS    ] = bldg_obj_type_t(0, 0, 0, 1, 0, 1, 50.0,  7.0,   "window blinds");
