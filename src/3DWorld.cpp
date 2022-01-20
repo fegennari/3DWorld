@@ -1558,12 +1558,12 @@ bool has_extension(string const &ext) { // is this always correct?
 bool open_file(FILE *&fp, char const *const fn, string const &file_type, char const *const mode) {
 	fp = fopen(fn, mode);
 	if (fp != nullptr) return 1;
-	cout << "*** Error: Could not open " << file_type << " file '" << fn << "'." << endl;
+	cerr << "*** Error: Could not open " << file_type << " file '" << fn << "'." << endl;
 	return 0;
 }
 
 void cfg_err(string const &str, int &error) {
-	cout << "Error reading " << str << " from config file." << endl;
+	cerr << "Error reading " << str << " from config file." << endl;
 	error = 1;
 }
 
@@ -1895,9 +1895,7 @@ int load_config(string const &config_file) {
 			if (!load_config(include_fname )) cfg_err("nested include file", error);
 		}
 		else if (str == "grass_size") {
-			if (!read_pos_float(fp, grass_length) || !read_pos_float(fp, grass_width)) {
-				cfg_err("grass size", error);
-			}
+			if (!read_pos_float(fp, grass_length) || !read_pos_float(fp, grass_width)) {cfg_err("grass size", error);}
 		}
 		else if (str == "force_tree_class") {
 			if (!read_int(fp, force_tree_class) || force_tree_class >= NUM_TREE_CLASSES) cfg_err("force_tree_class", error);

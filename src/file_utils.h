@@ -67,6 +67,7 @@ inline int read_cube(FILE *fp, cube_t &c, bool z_is_optional=0) { // x1 x2 y1 y2
 inline bool read_type_t(FILE *fp, int       &val) {return read_int   (fp, val);}
 inline bool read_type_t(FILE *fp, unsigned  &val) {return read_uint  (fp, val);}
 inline bool read_type_t(FILE *fp, float     &val) {return read_float (fp, val);}
+inline bool read_type_t(FILE *fp, double    &val) {return read_double(fp, val);}
 inline bool read_type_t(FILE *fp, char      *val) {return read_str   (fp, val);}
 inline bool read_type_t(FILE *fp, std::string &val) {return read_string(fp, val);}
 inline bool read_type_t(FILE *fp, vector3d  &val) {return read_vector(fp, val);}
@@ -75,8 +76,8 @@ inline bool read_type_t(FILE *fp, bool      &val) {return read_bool  (fp, val);}
 inline bool read_type_t(FILE *fp, cube_t    &val) {return read_cube  (fp, val);}
 
 bool read_float_reset_pos_on_fail(FILE *fp, float &v);
-bool read_int_reset_pos_on_fail(FILE *fp, int &v);
-std::string read_quoted_string(FILE *fp, unsigned &line_num);
+bool read_int_reset_pos_on_fail  (FILE *fp, int &v);
+std::string read_quoted_string   (FILE *fp, unsigned &line_num);
 
 struct geom_xform_t;
 unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c);
@@ -84,7 +85,6 @@ unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c);
 template<typename T> class kw_to_val_map_t : private map<std::string, T*> {
 	int &error;
 	std::string opt_prefix;
-
 public:
 	kw_to_val_map_t(int &error_, std::string const &opt_prefix_="") : error(error_), opt_prefix(opt_prefix_) {}
 
