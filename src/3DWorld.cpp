@@ -1580,9 +1580,26 @@ void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) { // <filen
 
 
 template<typename T> bool kw_to_val_map_t<T>::maybe_set_from_fp(string const &str, FILE *fp) {
-	auto it(this->find(str));
-	if (it == this->end()) return 0;
+	auto it(m.find(str));
+	if (it == m.end()) return 0;
 	if (!read_type_t(fp, *it->second)) {cfg_err(opt_prefix + str + " keyword", error);}
+	return 1;
+}
+bool kw_to_val_map_float_check_t::map_val_t::check_val() const {
+	switch (check_mode) {
+	case FP_CHECK_NONE  : return 1;
+	case FP_CHECK_POS   : return (*v > 0.0);
+	case FP_CHECK_NONNEG: return (*v >= 0.0);
+	case FP_CHECK_01    : return (*v >= 0.0 && *v <= 1.0);
+	default: assert(0);
+	}
+	return 1; // never gets here
+}
+bool kw_to_val_map_float_check_t::maybe_set_from_fp(string const &str, FILE *fp) {
+	auto it(m.find(str));
+	if (it == m.end()) return 0;
+	if (!read_type_t(fp, *it->second.v)) {cfg_err(opt_prefix + str + " keyword", error);}
+	if (!it->second.check_val()) {cerr << "Illegal value: " << *it->second.v << "; "; cfg_err(opt_prefix + str + " keyword", error);}
 	return 1;
 }
 template class kw_to_val_map_t<colorRGBA>; // explicit instantiation of this one because it's used for buildings but not here
@@ -1846,6 +1863,13 @@ int load_config(string const &config_file) {
 	kwmf.add("hmap_volcano_width",  hmap_params.volcano_width);
 	kwmf.add("hmap_volcano_height", hmap_params.volcano_height);
 
+	kw_to_val_map_float_check_t kwmr(error);
+	kwmr.add("nleaves_scale",       nleaves_scale,       FP_CHECK_POS);
+	kwmr.add("lm_dz_adj",           lm_dz_adj,           FP_CHECK_NONNEG);
+	kwmr.add("tree_branch_radius",  branch_radius_scale, FP_CHECK_POS);
+	kwmr.add("model3d_alpha_thresh",model3d_alpha_thresh,FP_CHECK_01);
+	kwmr.add("snow_depth",          snow_depth,          FP_CHECK_NONNEG);
+
 	kw_to_val_map_t<string> kwms(error);
 	kwms.add("cobjs_out_filename", cobjs_out_fn);
 	kwms.add("coll_damage_name",   coll_damage_name);
@@ -1864,6 +1888,7 @@ int load_config(string const &config_file) {
 		if (kwmi.maybe_set_from_fp(str, fp)) continue;
 		if (kwmu.maybe_set_from_fp(str, fp)) continue;
 		if (kwmf.maybe_set_from_fp(str, fp)) continue;
+		if (kwmr.maybe_set_from_fp(str, fp)) continue;
 		if (kwms.maybe_set_from_fp(str, fp)) continue;
 
 		if (str.size() >= 2 && str[0] == '/' && str[1] == '*') { // start of block comment
@@ -1900,9 +1925,6 @@ int load_config(string const &config_file) {
 		else if (str == "force_tree_class") {
 			if (!read_int(fp, force_tree_class) || force_tree_class >= NUM_TREE_CLASSES) cfg_err("force_tree_class", error);
 		}
-		else if (str == "nleaves_scale") {
-			if (!read_pos_float(fp, nleaves_scale)) cfg_err("nleaves_scale", error);
-		}
 		else if (str == "tree_lod_scale") {
 			for (unsigned i = 0; i < 4; ++i) {
 				if (!read_non_neg_float(fp, tree_lod_scales[i])) cfg_err("tree_lod_scale", error);
@@ -1935,9 +1957,6 @@ int load_config(string const &config_file) {
 			water_h_off_rel = 0.0;
 			read_float(fp, water_h_off_rel); // optional
 		}
-		else if (str == "lm_dz_adj") {
-			if (!read_non_neg_float(fp, lm_dz_adj)) cfg_err("lm_dz_adj command", error);
-		}
 		else if (str == "wind_velocity") {
 			if (!read_vector(fp, wind)) cfg_err("wind_velocity command", error);
 		}
@@ -1955,9 +1974,6 @@ int load_config(string const &config_file) {
 			float tree_size(1.0);
 			if (!read_pos_float(fp, tree_size)) cfg_err("tree size command", error);
 			tree_scale = 1.0/tree_size;
-		}
-		else if (str == "tree_branch_radius") {
-			if (!read_pos_float(fp, branch_radius_scale)) cfg_err("tree_branch_radius command", error);
 		}
 		else if (str == "bush_probability") {
 			for (unsigned i = 0; i < NUM_TREE_TYPES; ++i) { // read a list of floating-point numbers (could allow a partial set to be read)
@@ -1995,9 +2011,6 @@ int load_config(string const &config_file) {
 		else if (str == "toggle_reflections" ) {display_mode ^= 0x10;}
 		else if (str == "player_name") {
 			if (!read_str(fp, player_name)) cfg_err("player name", error);
-		}
-		else if (str == "model3d_alpha_thresh") {
-			if (!read_zero_one_float(fp, model3d_alpha_thresh)) cfg_err("model3d_alpha_thresh command", error);
 		}
 		else if (str == "create_voxel_landscape") {
 			if (!read_uint(fp, create_voxel_landscape) || create_voxel_landscape > 2) cfg_err("create_voxel_landscape command", error);
@@ -2090,9 +2103,6 @@ int load_config(string const &config_file) {
 			if (fscanf(fp, "%f%f%f", &mesh_color_scale.R, &mesh_color_scale.G, &mesh_color_scale.B) != 3) cfg_err("mesh_color_scale command", error);
 		}
 		// snow
-		else if (str == "snow_depth") {
-			if (!read_non_neg_float(fp, snow_depth)) cfg_err("snow_depth command", error);
-		}
 		else if (str == "snow_file") {
 			alloc_if_req(snow_file, NULL);
 			int write_mode(0);

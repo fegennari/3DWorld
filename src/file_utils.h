@@ -82,14 +82,37 @@ std::string read_quoted_string   (FILE *fp, unsigned &line_num);
 struct geom_xform_t;
 unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c);
 
-template<typename T> class kw_to_val_map_t : private map<std::string, T*> {
+template<typename T> class kw_to_val_map_t {
+	map<std::string, T*> m;
 	int &error;
 	std::string opt_prefix;
 public:
 	kw_to_val_map_t(int &error_, std::string const &opt_prefix_="") : error(error_), opt_prefix(opt_prefix_) {}
 
 	void add(std::string const &k, T &v) {
-		bool const did_ins(this->insert(make_pair(k, &v)).second);
+		bool const did_ins(m.insert(make_pair(k, &v)).second);
+		assert(did_ins);
+	}
+	bool maybe_set_from_fp(std::string const &str, FILE *fp);
+};
+
+enum {FP_CHECK_NONE=0, FP_CHECK_POS, FP_CHECK_NONNEG, FP_CHECK_01};
+
+class kw_to_val_map_float_check_t {
+	struct map_val_t {
+		float *v;
+		unsigned check_mode;
+		map_val_t(float *v_, unsigned check_mode_) : v(v_), check_mode(check_mode_) {}
+		bool check_val() const;
+	};
+	map<std::string, map_val_t> m;
+	int &error;
+	std::string opt_prefix;
+public:
+	kw_to_val_map_float_check_t(int &error_, std::string const &opt_prefix_="") : error(error_), opt_prefix(opt_prefix_) {}
+
+	void add(std::string const &k, float &v, unsigned check_mode=FP_CHECK_NONE) {
+		bool const did_ins(m.insert(make_pair(k, map_val_t(&v, check_mode))).second);
 		assert(did_ins);
 	}
 	bool maybe_set_from_fp(std::string const &str, FILE *fp);
