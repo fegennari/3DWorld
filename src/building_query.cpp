@@ -322,9 +322,10 @@ unsigned check_bed_collision(room_object_t const &c, point &pos, point const &p_
 	coll_ret |= (check_cubes_collision(cubes, 4, pos, p_last, radius, cnorm) << 5); // check legs
 	return coll_ret;
 }
-unsigned check_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm, bool is_desk) {
+// actually applies to tables, desks, dressers, and nightstands
+unsigned check_table_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
 	cube_t cubes[5];
-	get_table_cubes(c, cubes, is_desk);
+	get_table_cubes(c, cubes); // body and legs
 	return check_cubes_collision(cubes, 5, pos, p_last, radius, cnorm);
 }
 unsigned check_chair_collision(room_object_t const &c, point &pos, point const &p_last, float radius, vector3d *cnorm) {
@@ -514,7 +515,7 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			c->type == TYPE_DRAIN || c->type == TYPE_CRACK || c->type == TYPE_SWITCH) continue;
 		if (!sphere_cube_intersect(pos, radius, ((c->type == TYPE_CLOSET) ? get_closet_bcube_including_door(*c) : *c))) continue; // no intersection (optimization)
 		unsigned coll_ret(0);
-		// add special handling for things like elevators, cubicles, and bathroom stalls? right now these are only in office buildings, where there are no dynamic objects
+		// add special handling for things like elevators and cubicles? right now these are only in office buildings, where there are no dynamic objects
 
 		if (c->shape == SHAPE_CYLIN) { // vertical cylinder (including table)
 			cylinder_3dw const cylin(c->get_cylinder());
@@ -537,8 +538,8 @@ bool building_interior_t::check_sphere_coll(building_t const &building, point &p
 			// some object types are special because they're common collision objects and they're not filled cubes
 			if      (c->type == TYPE_CLOSET) {coll_ret |= check_closet_collision(*c, pos, p_last, radius, &cnorm);} // special case to handle closet interiors
 			else if (c->type == TYPE_BED  )  {coll_ret |= check_bed_collision   (*c, pos, p_last, radius, &cnorm);}
-			else if (c->type == TYPE_TABLE)  {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm, 0);}
-			else if (c->type == TYPE_DESK )  {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm, 1);}
+			else if (c->type == TYPE_TABLE)  {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
+			else if (c->type == TYPE_DESK )  {coll_ret |= check_table_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_CHAIR)  {coll_ret |= check_chair_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_STALL  && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_stall_collision (*c, pos, p_last, radius, &cnorm);}
 			else if (c->type == TYPE_SHOWER && maybe_inside_room_object(*c, pos, radius)) {coll_ret |= (unsigned)check_shower_collision(*c, pos, p_last, radius, &cnorm);}

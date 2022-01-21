@@ -71,13 +71,16 @@ colorRGBA apply_light_color(room_object_t const &o, colorRGBA const &c) {
 colorRGBA building_room_geom_t::apply_wood_light_color(room_object_t const &o) const {return apply_light_color(o, wood_color);}
 colorRGBA apply_light_color(room_object_t const &o) {return apply_light_color(o, o.color);} // use object color
 
-void get_table_cubes(room_object_t const &c, cube_t cubes[5], bool is_desk) {
+// actually applies to tables, desks, dressers, and nightstands
+void get_table_cubes(room_object_t const &c, cube_t cubes[5]) {
 	assert(c.shape != SHAPE_CYLIN); // can't call this on cylindrical table
+	bool const is_desk(c.type == TYPE_DESK), is_dns(c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND);
 	cube_t top(c), legs_bcube(c);
-	top.z1() += (is_desk ? 0.85 : 0.88)*c.dz(); // Note: default table with top_dz=0.12, leg_width=0.08; desk is 0.15/0.06
+	// Note: default table with top_dz=0.12, leg_width=0.08; desk is 0.15/0.06; dresser is 0.88/0.10
+	top.z1() += (is_desk ? 0.85 : (is_dns ? 0.12 : 0.88))*c.dz();
 	legs_bcube.z2() = top.z1();
 	cubes[0] = top;
-	get_tc_leg_cubes(legs_bcube, (is_desk ? 0.06 : 0.08), (cubes+1));
+	get_tc_leg_cubes(legs_bcube, (is_desk ? 0.06 : (is_dns ? 0.10 : 0.08)), (cubes+1));
 }
 void building_room_geom_t::add_table(room_object_t const &c, float tscale, float top_dz, float leg_width) { // 6 quads for top + 4 quads per leg = 22 quads = 88 verts
 	cube_t top(c), legs_bcube(c);
@@ -135,7 +138,7 @@ room_object_t get_dresser_middle(room_object_t const &c) {
 }
 void building_room_geom_t::add_dresser(room_object_t const &c, float tscale, bool inc_lg, bool inc_sm) { // or nightstand
 	if (inc_lg) {
-		add_table(c, tscale, 0.06, 0.10);
+		add_table(c, tscale, 0.06, 0.10); // Note: legs extend across middle to the top surface
 		get_wood_material(tscale).add_cube_to_verts(get_dresser_middle(c), apply_wood_light_color(c), c.get_llc()); // all faces drawn
 	}
 	if (inc_sm) { // add drawers

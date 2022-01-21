@@ -1363,7 +1363,7 @@ unsigned get_street_dir(cube_t const &inner, cube_t const &outer);
 cube_t get_open_closet_door(room_object_t const &c, cube_t const &closed_door);
 void get_closet_cubes(room_object_t const &c, cube_t cubes[5], bool for_collision=0);
 void get_bed_cubes   (room_object_t const &c, cube_t cubes[6]);
-void get_table_cubes (room_object_t const &c, cube_t cubes[5], bool is_desk);
+void get_table_cubes (room_object_t const &c, cube_t cubes[5]);
 void get_chair_cubes (room_object_t const &c, cube_t cubes[3]);
 void get_tc_leg_cubes(cube_t const &c, float width, cube_t cubes[4]);
 float get_drawer_cubes(room_object_t const &c, vect_cube_t &drawers, bool front_only, bool inside_only);
