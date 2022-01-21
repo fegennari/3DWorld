@@ -16,6 +16,8 @@ extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
 extern bldg_obj_type_t bldg_obj_types[];
 
+bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius);
+
 
 float rat_t::get_width () const {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L, W, H
@@ -86,6 +88,12 @@ bool line_int_cube_exp(point const &p1, point const &p2, cube_t const &cube, vec
 	tc.expand_by(expand);
 	return tc.line_intersects(p1, p2);
 }
+bool line_int_cubes_exp(point const &p1, point const &p2, cube_t const *const cubes, unsigned num_cubes, vector3d const &expand) {
+	for (unsigned n = 0; n < num_cubes; ++n) {
+		if (line_int_cube_exp(p1, p2, cubes[n], expand)) return 1;
+	}
+	return 0;
+}
 template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, vector<T> const &cubes, vector3d const &expand) {
 	for (auto const &c : cubes) {
 		if (line_int_cube_exp(p1, p2, c, expand)) return 1;
@@ -110,10 +118,16 @@ bool building_t::check_line_of_sight(point const &p1, point const &p2, float rad
 	}
 	for (auto const &door : interior->doors) {
 		if (door.open) {
-			// TODO: see building_interior_t::check_sphere_coll_walls_elevators_doors()
+			cube_t door_bounds(door);
+			door_bounds.expand_by_xy(door.get_width());
+			if (!line_int_cube_exp(p1, p2, door_bounds, expand)) continue; // optimization
+			tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
+			door_bounds = door_tq.get_bcube(); // somewhat more accurate
+			door_bounds.expand_by_xy(door.get_thickness()); // conservative
+			if (line_int_cube_exp(p1, p2, door_bounds, expand)) return 0;
 		}
-		else if (line_int_cube_exp(p1, p2, door, expand)) return 0; // what about open doors? (see code for ball collision)
-	}
+		else if (line_int_cube_exp(p1, p2, door, expand)) return 0;
+	} // for door
 	if (line_int_cubes_exp(p1, p2, interior->stairwells, expand)) return 0;
 	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand)) return 0;
 	// check exterior walls
@@ -126,17 +140,44 @@ bool building_t::check_line_of_sight(point const &p1, point const &p2, float rad
 	float const obj_z1(p1.z - hheight), obj_z2(p1.z + hheight);
 
 	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-		if (c->no_coll() || !bldg_obj_types[c->type].ai_coll) continue; // skip non-colliding objects; why does trashcan not work?
+		if (c->no_coll() || !bldg_obj_types[c->type].ai_coll) continue; // skip non-colliding objects
 		if (c->z1() > obj_z2 || c->z2() < obj_z1)   continue; // wrong floor
 		if (!line_int_cube_exp(p1, p2, *c, expand)) continue;
-		
-		if (can_hide_under(*c)) { // check for objects we can hide under
-			// TODO: detailed collision with only object legs, and maybe bottom if obj_z2 is low enough
+
+		if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+			cylinder_3dw cylin(c->get_cylinder());
+			cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
+			cylin.r1   += radius ; cylin.r2   += radius;
+			//return !line_int_cylinder(p1, p2, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 0, t); // check_ends=0
+			return !line_intersect_cylinder_with_t(p1, p2, cylin, 0, t); // check_ends=0
 		}
-		else if (c->type == TYPE_CLOSET ) {} // TODO
-		else if (c->type == TYPE_STALL  ) {} // TODO
-		else if (c->type == TYPE_CUBICLE) {} // TODO
-		return 0;
+		if (c->type == TYPE_CLOSET) {
+			cube_t cubes[5];
+			get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
+			// skip check of open doors for large closets since this case is more complex
+			return !line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand);
+		}
+		else if (c->type == TYPE_BED) {
+			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+			get_bed_cubes(*c, cubes);
+			if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 0; // check bed frame (in case p1.z is high enough)
+			get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
+			return !line_int_cubes_exp(p1, p2, cubes, 4, expand); // check legs
+		}
+		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) {
+			cube_t cubes[5];
+			get_table_cubes(*c, cubes); // body and legs
+			return !line_int_cubes_exp(p1, p2, cubes, 5, expand);
+		}
+		else if (c->type == TYPE_CHAIR) {
+			cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
+			get_chair_cubes(*c, cubes);
+			if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 0; // check seat
+			get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
+			return !line_int_cubes_exp(p1, p2, leg_cubes, 4, expand); // check legs
+		}
+		else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // TODO - inside test only applied to end point
+		return 0; // intersection: no line of sight
 	} // for c
 	return 1;
 }
@@ -184,7 +225,11 @@ void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
 			break; // success
 		} // for n
 	}
-	if (rat.dest != rat.pos) {rat.dir = (rat.dest - rat.pos).get_norm();} // TODO: slow turn (like people)
+	if (rat.dest != rat.pos) {
+		float const delta_dir(min(1.0f, 1.5f*(1.0f - pow(0.7f, fticks))));
+		vector3d const new_dir((rat.dest - rat.pos).get_norm());
+		rat.dir = (delta_dir*new_dir + (1.0 - delta_dir)*rat.dir).get_norm();
+	}
 	assert(rat.dir.z == 0.0); // must be in XY plane
 }
 
@@ -207,9 +252,9 @@ void building_t::scare_animals(point const &scare_pos, float sight_amt, float so
 		if (rat_room != scare_room) continue; // only scared if in the same room
 		float fear(amount);
 
-		if (sight_amt > 0.0) { // check line of sight
-			bool is_visible(1);
-			// TODO: visibility check
+		if (sight_amt > 0.0 && !check_line_of_sight(rat.pos, scare_pos, 0.0, 0.0)) { // check line of sight with zero radius/height line
+			if (sound_amt == 0.0) continue; // not visible and no sound = no fear
+			fear = min(sound_amt, 1.0f); // fear from sound only
 		}
 		fear = fear*max_scare_dist - dist;
 		if (fear <= 0.0) continue;
