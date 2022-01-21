@@ -1104,12 +1104,13 @@ private:
 
 	// animals
 public:
-	void update_animals(unsigned building_ix);
-	void scare_animals(point const &scare_pos, float sight_amt, float sound_amt);
+	void update_animals(point const &camera_bs, unsigned building_ix);
+	void scare_animals(point const &scare_pos, float amount, bool by_sight);
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
 	void update_rat(rat_t &rat, rand_gen_t &rgen) const;
-	bool check_line_of_sight(point const &p1, point const &p2, float radius, float height) const;
+	bool check_line_of_sight_expand(point const &p1, point const &p2, float radius, float height) const;
+	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
 
 public:
 	int get_room_containing_pt(point const &pt) const;

@@ -25,7 +25,7 @@ extern bldg_obj_type_t bldg_obj_types[];
 bool in_building_gameplay_mode();
 bool ai_follow_player() {return (global_building_params.ai_follow_player || in_building_gameplay_mode());}
 bool can_ai_follow_player(pedestrian_t const &person);
-bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
+float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority=0);
 int register_ai_player_coll(bool &has_key, float height);
 

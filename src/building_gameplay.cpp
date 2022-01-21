@@ -1534,7 +1534,7 @@ void building_t::add_blood_decal(point const &pos) {
 
 // sound/audio tracking
 
-void register_building_sound(point const &pos, float volume) {
+void register_building_sound(point const &pos, float volume) { // Note: pos is in building space
 	if (volume == 0.0 || !(show_bldg_pickup_crosshair || in_building_gameplay_mode())) return; // only when in gameplay/item pickup mode
 	assert(volume > 0.0); // can't be negative
 #pragma omp critical(building_sounds_update)
@@ -1555,7 +1555,7 @@ void register_building_sound_at_player(float volume) {
 	register_building_sound(get_camera_building_space(), 1.0);
 }
 
-bool get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing) {
+float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing) {
 	if (cur_sounds.empty()) return 0;
 	float max_vol(0.0); // 1.0 at a sound=1.0 volume at a distance of floor_spacing
 
@@ -1565,7 +1565,8 @@ bool get_closest_building_sound(point const &at_pos, point &sound_pos, float flo
 		if (vol > max_vol) {max_vol = vol; sound_pos = i->pos;}
 	} // for i
 	//cout << TXT(cur_sounds.size()) << TXT(max_vol) << endl;
-	return (max_vol*floor_spacing > 0.06f);
+	float const rel_vol(max_vol*floor_spacing);
+	return ((rel_vol > 0.06f) ? rel_vol : 0.0);
 }
 
 void maybe_play_zombie_sound(point const &sound_pos_bs, unsigned zombie_ix, bool alert_other_zombies, bool high_priority) {
