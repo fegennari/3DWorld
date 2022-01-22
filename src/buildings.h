@@ -1111,6 +1111,7 @@ private:
 	void scare_rat(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool check_line_of_sight_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
+	bool check_dynamic_obj_coll(point const &pos, float radius, point const &camera_bs) const;
 
 public:
 	int get_room_containing_pt(point const &pt) const;

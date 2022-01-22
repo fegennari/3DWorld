@@ -12,6 +12,7 @@ float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 
 extern int animate2, camera_surf_collide, frame_counter;
 extern float fticks;
+extern double camera_zh;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -208,6 +209,26 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 	return 1;
 }
 
+// collision detection with dynamic objects: balls, the player? people? other rats?
+bool building_t::check_dynamic_obj_coll(point const &pos, float radius, point const &camera_bs) const {
+	if (camera_surf_collide) { // check the player
+		float const player_radius(CAMERA_RADIUS), player_xy_radius(player_radius*global_building_params.player_coll_radius_scale);
+		float const z1(pos.z - radius), z2(pos.z + radius);
+
+		if (z1 < (camera_bs.z - player_radius) && z2 > (camera_bs.z + player_radius + camera_zh)) {
+			if (dist_xy_less_than(pos, camera_bs, (radius + player_xy_radius))) return 1;
+		}
+	}
+	assert(has_room_geom());
+
+	for (rat_t &rat : interior->room_geom->rats) {
+		if (rat.pos == pos) continue; // skip ourself
+		if (dist_less_than(pos, rat.pos, (radius + rat.radius))) return 1;
+	}
+	// TODO: check dynamic objects such as balls
+	return 0;
+}
+
 bool can_hide_under(room_object_t const &c, float &zbot) {
 	if (c.shape != SHAPE_CUBE ) return 0; // cubes only for now
 
@@ -247,8 +268,13 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 
 	// move the rat
 	if (rat.speed > 0.0) {
-		// TODO: collision detection with dynamic objects: doors, balls, the player? people? other rats?
+		point const prev_pos(rat.pos);
 		rat.pos += move_dist*rat.dir; // apply movement
+
+		if (0 && check_dynamic_obj_coll(rat.pos, rat.radius, camera_bs)) { // TODO
+			rat.pos   = prev_pos; // restore pos
+			rat.speed = 0.0; // stop moving for now; will likely choose a new dest below
+		}
 	}
 	vector3d const center_dz(0.0, 0.0, hheight);
 	point const p1(rat.pos + center_dz);
