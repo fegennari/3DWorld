@@ -7,7 +7,8 @@
 
 
 extern bool draw_building_interiors, player_near_toilet, player_is_hiding, player_in_elevator;
-extern int player_in_closet;
+extern float CAMERA_RADIUS;
+extern int player_in_closet, camera_surf_collide;
 extern double camera_zh;
 extern building_params_t global_building_params;
 extern bldg_obj_type_t bldg_obj_types[];
@@ -896,5 +897,143 @@ bool building_t::check_for_wall_ceil_floor_int(point const &p1, point const &p2)
 	for (unsigned d = 0; d < 2; ++d) {if (has_cube_line_coll(p1, p2, interior->walls[d])) return 1;}
 	if (has_cube_line_coll(p1, p2, interior->ceilings) || has_cube_line_coll(p1, p2, interior->floors)) return 1; // or is only checking one good enough?
 	return check_line_intersect_doors(p1, p2);
+}
+
+bool line_int_cube_exp(point const &p1, point const &p2, cube_t const &cube, vector3d const &expand) {
+	cube_t tc(cube);
+	tc.expand_by(expand);
+	return tc.line_intersects(p1, p2);
+}
+bool line_int_cubes_exp(point const &p1, point const &p2, cube_t const *const cubes, unsigned num_cubes, vector3d const &expand) {
+	for (unsigned n = 0; n < num_cubes; ++n) {
+		if (line_int_cube_exp(p1, p2, cubes[n], expand)) return 1;
+	}
+	return 0;
+}
+template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, vector<T> const &cubes, vector3d const &expand) {
+	for (auto const &c : cubes) {
+		if (line_int_cube_exp(p1, p2, c, expand)) return 1;
+	}
+	return 0;
+}
+template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes) {
+	for (auto const &c : cubes) {
+		if (c.line_intersects(p1, p2)) return 1;
+	}
+	return 0;
+}
+
+// collision query used for rats: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
+bool building_t::check_line_of_sight_expand(point const &p1, point const &p2, float radius, float hheight) const {
+	assert(interior != nullptr);
+	float const trim_thickness(get_trim_thickness());
+	vector3d const expand(radius, radius, hheight);
+	vector3d const expand_walls(expand + vector3d(trim_thickness, trim_thickness, 0.0)); // include the wall trim width
+
+	// check interior walls, doors, stairwells, and elevators
+	for (unsigned d = 0; d < 2; ++d) {
+		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls)) return 0;
+	}
+	for (auto const &door : interior->doors) {
+		if (door.open) {
+			cube_t door_bounds(door);
+			door_bounds.expand_by_xy(door.get_width());
+			if (!line_int_cube_exp(p1, p2, door_bounds, expand)) continue; // optimization
+			tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
+			door_bounds = door_tq.get_bcube(); // somewhat more accurate
+			door_bounds.expand_by_xy(door.get_thickness()); // conservative
+			if (line_int_cube_exp(p1, p2, door_bounds, expand)) return 0;
+		}
+		else if (line_int_cube_exp(p1, p2, door, expand)) return 0;
+	} // for door
+	if (line_int_cubes_exp(p1, p2, interior->stairwells, expand)) return 0; // TODO: what about the space under the bottom flight of stairs?
+	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand)) return 0;
+	// check exterior walls
+	vector3d cnorm; // unused
+	float t(0.0); // unused
+	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) return 0; // what about trim_thickness?
+	if (!has_room_geom()) return 1; // done (but really shouldn't get here)
+	// check room objects; ignore expanded objects for now
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
+
+	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+		if (c->no_coll() || !bldg_obj_types[c->type].ai_coll) continue; // skip non-colliding objects
+		if (c->z1() > obj_z2 || c->z2() < obj_z1)   continue; // wrong floor
+		cube_t c_extended(*c);
+		if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
+		if (!line_int_cube_exp(p1, p2, c_extended, expand)) continue;
+
+		if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+			cylinder_3dw cylin(c->get_cylinder());
+			cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
+			cylin.r1   += radius ; cylin.r2   += radius;
+			//if (line_int_cylinder(p1, p2, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 0, t)) return 0; // check_ends=0
+			if (line_intersect_cylinder_with_t(p1, p2, cylin, 0, t)) return 0; // check_ends=0
+		}
+		else if (c->type == TYPE_CLOSET) {
+			cube_t cubes[5];
+			get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
+			// skip check of open doors for large closets since this case is more complex
+			if (line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand)) return 0;
+		}
+		else if (c->type == TYPE_BED) {
+			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+			get_bed_cubes(*c, cubes);
+			if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 0; // check bed frame (in case p1.z is high enough)
+			get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
+			if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 0; // check legs
+		}
+		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) {
+			cube_t cubes[5];
+			get_table_cubes(*c, cubes); // body and legs
+			if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 0;
+		}
+		else if (c->type == TYPE_CHAIR) {
+			cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
+			get_chair_cubes(*c, cubes);
+			if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 0; // check seat
+			get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
+			if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 0; // check legs
+		}
+		//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // TODO - inside test only applied to end point
+		else return 0; // intersection: no line of sight
+	} // for c
+	return 1;
+}
+
+// visibility query used for rats: ignores exterior walls and room objects
+bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2) const {
+	assert(interior != nullptr);
+	if (line_int_cubes(p1, p2, interior->ceilings)) return 0; // only need to check one of {ceilings, floors}; likely fastest test
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (line_int_cubes(p1, p2, interior->walls[d])) return 0;
+	}
+	for (auto const &door : interior->doors) { // check closed interior doors
+		if (!door.open && door.line_intersects(p1, p2)) return 0;
+	}
+	if (line_int_cubes(p1, p2, interior->elevators)) return 0; // check elevators only because stairs aren't solid visual blockers
+	return 1;
+}
+
+// collision detection with dynamic objects: balls, the player? people? other rats?
+bool building_t::check_dynamic_obj_coll(point const &pos, float radius, point const &camera_bs) const {
+	if (camera_surf_collide) { // check the player
+		float const player_radius(CAMERA_RADIUS), player_xy_radius(player_radius*global_building_params.player_coll_radius_scale);
+		float const z1(pos.z - radius), z2(pos.z + radius);
+
+		if (z1 < (camera_bs.z - player_radius) && z2 > (camera_bs.z + player_radius + camera_zh)) {
+			if (dist_xy_less_than(pos, camera_bs, (radius + player_xy_radius))) return 1;
+		}
+	}
+	assert(has_room_geom());
+
+	for (rat_t &rat : interior->room_geom->rats) {
+		if (rat.pos == pos) continue; // skip ourself
+		if (dist_less_than(pos, rat.pos, (radius + rat.radius))) return 1;
+	}
+	// TODO: check dynamic objects such as balls
+	return 0;
 }
 
