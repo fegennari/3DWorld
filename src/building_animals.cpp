@@ -113,11 +113,13 @@ template<typename T> bool line_int_cubes(point const &p1, point const &p2, vecto
 // collision query: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 bool building_t::check_line_of_sight_expand(point const &p1, point const &p2, float radius, float hheight) const {
 	assert(interior != nullptr);
+	float const trim_thickness(get_trim_thickness());
 	vector3d const expand(radius, radius, hheight);
+	vector3d const expand_walls(expand + vector3d(trim_thickness, trim_thickness, 0.0)); // include the wall trim width
 	
 	// check interior walls, doors, stairwells, and elevators
 	for (unsigned d = 0; d < 2; ++d) {
-		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand)) return 0;
+		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls)) return 0;
 	}
 	for (auto const &door : interior->doors) {
 		if (door.open) {
@@ -136,7 +138,7 @@ bool building_t::check_line_of_sight_expand(point const &p1, point const &p2, fl
 	// check exterior walls
 	vector3d cnorm; // unused
 	float t(0.0); // unused
-	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) return 0;
+	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) return 0; // what about trim_thickness?
 	if (!has_room_geom()) return 1; // done (but really shouldn't get here)
 	// check room objects; ignore expanded objects for now
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
