@@ -1040,14 +1040,16 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			obj_drawn = 1;
 		} // for i
 	}
-	if (player_in_building /*&& !shadow_only*/) { // only drawn for the player building
+	if (player_in_building) { // only drawn for the player building
 		for (rat_t &rat : rats) {
 			cube_t const bcube(rat.get_bcube());
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			point const pos(bcube.get_cube_center());
 			bool const animate(0); // TODO
-			building_obj_model_loader.draw_model(s, pos, rat.get_bcube_with_dir(), rat.dir, WHITE, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
+			colorRGBA const color(GRAY); // make the rat's fur darker
+			//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
+			building_obj_model_loader.draw_model(s, pos, rat.get_bcube_with_dir(), rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
 			obj_drawn = 1;
 		} // for rat
 	}
