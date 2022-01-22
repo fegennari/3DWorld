@@ -18,7 +18,7 @@ bldg_obj_type_t bldg_obj_types[NUM_ROBJ_TYPES];
 vector<sphere_t> cur_sounds; // radius = sound volume
 
 extern bool camera_in_building, player_is_hiding;
-extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key;
+extern int window_width, window_height, display_framerate, display_mode, game_mode, building_action_key, frame_counter;
 extern float fticks, CAMERA_RADIUS;
 extern double tfticks, camera_zh;
 extern building_params_t global_building_params;
@@ -1534,12 +1534,35 @@ void building_t::add_blood_decal(point const &pos) {
 
 // sound/audio tracking
 
+class sound_tracker_t {
+	point pos;
+	float volume;
+	int cur_frame;
+
+public:
+	sound_tracker_t() : volume(0.0), cur_frame(0) {}
+
+	void register_sound(point const &pos_, float volume_) {
+		if (cur_frame == frame_counter && volume_ < volume) return; // not the loudest sound this frame
+		pos = pos_; volume = volume_; cur_frame = frame_counter;
+	}
+	sphere_t get_for_cur_frame() const {
+		if (volume == 0.0 || cur_frame+1 < frame_counter) return sphere_t(); // no sound, or sound is more than one frame old
+		return sphere_t(pos, volume); // encode pos and volume in a sphere
+	}
+};
+sound_tracker_t sound_tracker; // used for rats
+sphere_t get_cur_frame_loudest_sound() {return sound_tracker.get_for_cur_frame();}
+
 void register_building_sound(point const &pos, float volume) { // Note: pos is in building space
-	if (volume == 0.0 || !(show_bldg_pickup_crosshair || in_building_gameplay_mode())) return; // only when in gameplay/item pickup mode
+	if (volume == 0.0) return;
 	assert(volume > 0.0); // can't be negative
+	bool const in_gameplay(in_building_gameplay_mode());
+
 #pragma omp critical(building_sounds_update)
 	{ // since this can be called by both the draw thread and the AI update thread, it should be in a critical section
-		if (volume > ALERT_THRESH && cur_sounds.size() < 100) { // cap at 100 sounds in case they're not being cleared
+	  // only used by building AI, so only needed in gameplay mode; cap at 100 sounds in case they're not being cleared
+		if (in_gameplay && volume > ALERT_THRESH && cur_sounds.size() < 100) {
 			float const max_merge_dist(0.5*CAMERA_RADIUS);
 			bool merged(0);
 
@@ -1548,7 +1571,8 @@ void register_building_sound(point const &pos, float volume) { // Note: pos is i
 			}
 			if (!merged) {cur_sounds.emplace_back(pos, volume);} // Note: volume is stored in radius field of sphere_t
 		}
-		cur_building_sound_level += volume;
+		if (in_gameplay) {cur_building_sound_level += volume;} // only needed in gameplay and pickup modes
+		sound_tracker.register_sound(pos, volume); // always done; assumes player is in/near a building; needed for rats
 	}
 }
 void register_building_sound_at_player(float volume) {
@@ -1662,11 +1686,11 @@ void building_gameplay_next_frame() {
 			if (i->radius > ALERT_THRESH) {*(o++) = *i;} // keep if above thresh
 		}
 		cur_sounds.erase(o, cur_sounds.end());
+		cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
 	}
 	player_held_object = carried_item_t();
 	player_inventory.next_frame();
 	// reset state for next frame
-	cur_building_sound_level = min(1.2f, max(0.0f, (cur_building_sound_level - 0.01f*fticks))); // gradual decrease
 	can_pickup_bldg_obj = 0;
 	do_room_obj_pickup  = city_action_key = can_do_building_action = 0;
 }

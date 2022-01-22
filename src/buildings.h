@@ -81,10 +81,10 @@ struct rat_t {
 
 	rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), fear(0.0) {}
 	bool is_moving() const {return (speed > 0.0);}
-	float get_length() const {return radius;} // this is the bounding radius, so it represents the longest dim (length)
-	float get_width () const;
-	float get_height() const;
-	cube_t get_bcube() const; // used for collision detection and VFC; bounding cube across rotations
+	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
+	float get_hwidth () const;
+	float get_height () const;
+	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
 };
 
@@ -1105,10 +1105,10 @@ private:
 	// animals
 public:
 	void update_animals(point const &camera_bs, unsigned building_ix);
-	void scare_animals(point const &scare_pos, float amount, bool by_sight);
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
-	void update_rat(rat_t &rat, rand_gen_t &rgen) const;
+	void update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen) const;
+	void scare_rat(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool check_line_of_sight_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
 

@@ -18,9 +18,10 @@ extern bldg_obj_type_t bldg_obj_types[];
 
 bool maybe_inside_room_object(room_object_t const &obj, point const &pos, float radius);
 float get_closest_building_sound(point const &at_pos, point &sound_pos, float floor_spacing);
+sphere_t get_cur_frame_loudest_sound();
 
 
-float rat_t::get_width () const {
+float rat_t::get_hwidth () const {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L, W, H
 	return radius*sz.y/sz.x; // scale radius by ratio of width to length
 }
@@ -67,13 +68,8 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 		}
 		rats.placed = 1; // even if there were no rats placed
 	}
-	// scare rats
-	if (camera_surf_collide) {scare_animals(camera_bs, 0.25, 1);} // the sight of the player walking in the building scares the rats
-	point sound_pos;
-	float const sound_vol(get_closest_building_sound(camera_bs, sound_pos, get_window_vspace())); // get sound closest to the player; TODO: should be per-rat
-	if (sound_vol > 0.0) {scare_animals(sound_pos, sound_vol, 0);}
 	// update rats
-	for (rat_t &rat : rats) {update_rat(rat, rgen);}
+	for (rat_t &rat : rats) {update_rat(rat, camera_bs, rgen);}
 }
 
 point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
@@ -232,13 +228,13 @@ bool can_hide_under(room_object_t const &c, float &zbot) {
 	return 0;
 }
 
-void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
-	float const floor_spacing(get_window_vspace()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
-	float const length(rat.get_length()), width(rat.get_width()), height(rat.get_height()), hheight(0.5*height);
-	float const coll_radius(1.2*width); // maybe should use length so that the rat doesn't collide when turning?
-	float const line_project_dist(0.5*1.1*(length - width)); // extra space in front of the target destination
+void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen) const {
+	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
+	float const hlength(rat.get_hlength()), hwidth(rat.get_hwidth()), height(rat.get_height()), hheight(0.5*height);
+	float const coll_radius(1.2f*hwidth); // slightly larger than half-width; maybe should use length so that the rat doesn't collide when turning?
+	float const line_project_dist(max(1.1f*(hlength - coll_radius), 0.0f)); // extra space in front of the target destination
 	float const move_dist(fticks*rat.speed), dist_thresh(max(0.05f*rat.radius, 1.5f*move_dist));
-	assert(width <= length); // otherwise the model is probably in the wrong orientation
+	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
 
 	// move the rat
 	if (rat.speed > 0.0) {
@@ -249,6 +245,10 @@ void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
 	point const p1(rat.pos + center_dz);
 	vector3d dir_to_fear;
 	bool has_fear_dest(0);
+	// apply scare logic
+	if (camera_surf_collide) {scare_rat(rat, camera_bs, 0.25, 1);} // the sight of the player walking in the building scares the rats
+	sphere_t const cur_sound(get_cur_frame_loudest_sound());
+	if (cur_sound.radius > 0.0) {scare_rat(rat, cur_sound.pos, cur_sound.radius, 0);}
 
 	// determine destination
 	if (rat.fear > 0.0) { // find hiding spot (in opposite direction from fear_pos?)
@@ -266,11 +266,11 @@ void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
 			if (!can_hide_under(*c, zbot)) continue;
 			float const top_gap(zbot - rat_z2); // space between the top of the rat and the bottom of the object
 			if (top_gap < 0.0) continue; // rat can't fit under this object
-			float const side_coverage(0.5f*(min(c->dx(), c->dy()) - length)); // amount of overhang of the object around the rat's extents
+			float const side_coverage(0.5f*min(c->dx(), c->dy()) - hlength); // amount of overhang of the object around the rat's extents
 			point const center(c->xc(), c->yc(), p1.z);
 			float const dist(p2p_dist(p1, center));
 			float const danger_dp(dot_product((center - p1)/dist, dir_to_fear)); // -1 = away from danger, 1.0 = toward danger
-			float const score((width + side_coverage - top_gap)*(1.0 - danger_dp)/dist); // want large side coverage, small top gap, and small distance
+			float const score((side_coverage - top_gap)*(1.0 - danger_dp)/dist); // want large side coverage, small top gap, and small distance
 			//cout << TXT(top_gap) << TXT(side_coverage) << TXT(dist) << TXT(danger_dp) << TXT(score) << TXT(best_score) << endl; // TESTING
 			if (best_score != 0.0 && score <= best_score) continue;
 			if (!check_line_of_sight_expand(p1, center, coll_radius, hheight)) continue;
@@ -284,10 +284,11 @@ void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
 			has_fear_dest = 1;
 			assert(rat.pos.z == rat.dest.z);
 		}
-		// TODO: sometimes doesn't reduce?
 		rat.fear = max(0.0f, (rat.fear - 0.2f*(fticks/TICKS_PER_SECOND))); // reduce fear over 5s
 	}
 	if (!has_fear_dest && dist_less_than(rat.pos, rat.dest, dist_thresh)) { // no dest/at dest - choose a new dest
+		cube_t valid_area(bcube);
+		valid_area.expand_by_xy(-(hlength + trim_thickness));
 		float target_fov_dp(RAT_FOV_DP), target_max_dist(view_dist); // start at nominal/max values
 		rat.speed = 0.0; // stop until we've found a valid destination
 
@@ -301,10 +302,10 @@ void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
 			if (dot_product(rat.dir, vdir) < target_fov_dp) continue; // not in field of view, use a new direction
 			float const dist(rgen.rand_uniform(0.1, 1.0)*target_max_dist); // random distance out to max view dist
 			point const cand(rat.pos + dist*vdir);
-			if (!bcube.contains_pt_xy_exp(cand, -coll_radius)) continue; // check for end point inside building bcube
+			if (!valid_area.contains_pt_xy(cand)) continue; // check for end point inside building bcube
 			point const p2(cand + line_project_dist*vdir + center_dz); // extend in vdir so that the head doesn't collide
-			// TODO: fix getting stuck at the edge of an object by adjusting p1 to not intersect
-			if (!check_line_of_sight_expand(p1, p2, coll_radius, hheight)) continue;
+			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
+			if (!check_line_of_sight_expand(p1_ext, p2, coll_radius, hheight)) continue;
 			rat.dest  = cand;
 			rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.5, 1.0); // random speed
 			break; // success
@@ -325,26 +326,21 @@ void building_t::update_rat(rat_t &rat, rand_gen_t &rgen) const {
 	assert(rat.dir.z == 0.0); // must be in XY plane
 }
 
-void building_t::scare_animals(point const &scare_pos, float amount, bool by_sight) {
-	if (!animate2) return; // don't accumulate fear when AI is not updating
-	vector<rat_t> &rats(interior->room_geom->rats);
-	if (rats.empty()) return; // nothing to do
+void building_t::scare_rat(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const {
 	assert(amount > 0.0);
 	float const max_scare_dist(RAT_VIEW_FLOORS*get_window_vspace()), scare_dist(max_scare_dist*amount);
 	int const scare_room(get_room_containing_pt(scare_pos));
 	if (scare_room < 0) return; // error?
-
-	for (rat_t &rat : rats) {
-		if (rat.fear > 0.99) continue; // already max fearful (optimization)
-		float const fear((scare_dist - p2p_dist(rat.pos, scare_pos))/max_scare_dist);
-		if (fear <= 0.0) continue;
-		int const rat_room(get_room_containing_pt(rat.pos));
-		assert(rat_room >= 0);
-		if (rat_room != scare_room) continue; // only scared if in the same room
-		//if (by_sight && !check_line_of_sight_expand(rat.pos, scare_pos, 0.0, 0.0)) continue; // check line of sight with zero radius/height line
-		if (by_sight && !check_line_of_sight_large_objs(rat.pos, scare_pos)) continue; // check line of sight
-		//cout << TXT(rat.fear) << TXT(fear) << TXT(amount) << TXT(scare_dist) << endl; // TESTING
-		rat.fear     = min(1.0f, (rat.fear + fear));
-		rat.fear_pos = scare_pos;
-	} // for rat
+	if (rat.fear > 0.99) return; // already max fearful (optimization)
+	float const fear((scare_dist - p2p_dist(rat.pos, scare_pos))/max_scare_dist);
+	if (fear <= 0.0) return;
+	int const rat_room(get_room_containing_pt(rat.pos));
+	assert(rat_room >= 0);
+	if (rat_room != scare_room) return; // only scared if in the same room
+	//if (by_sight && !check_line_of_sight_expand(rat.pos, scare_pos, 0.0, 0.0)) continue; // check line of sight with zero radius/height line
+	if (by_sight && !check_line_of_sight_large_objs(rat.pos, scare_pos)) return; // check line of sight
+	//cout << TXT(rat.fear) << TXT(fear) << TXT(amount) << TXT(scare_dist) << endl; // TESTING
+	rat.fear     = min(1.0f, (rat.fear + fear));
+	rat.fear_pos = scare_pos;
 }
+
