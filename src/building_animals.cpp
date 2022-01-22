@@ -10,7 +10,7 @@ float const RAT_FOV_DEG     = 60.0; // field of view in degrees
 float const RAT_VIEW_FLOORS = 4.0; // view distance in floors
 float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 
-extern int animate2, camera_surf_collide;
+extern int animate2, camera_surf_collide, frame_counter;
 extern float fticks;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
@@ -51,10 +51,10 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 	vect_rat_t &rats(interior->room_geom->rats);
 	if (rats.placed && rats.empty()) return; // no rats placed in this building
 	if (!building_obj_model_loader.is_model_valid(OBJ_MODEL_RAT)) return; // no rat model
-	rand_gen_t rgen;
-	rgen.set_state(building_ix+1, mat_ix+1); // unique per building
 
 	if (!rats.placed) { // new building - place rats
+		rand_gen_t rgen;
+		rgen.set_state(building_ix+1, mat_ix+1); // unique per building
 		float const base_radius(0.1*get_window_vspace());
 		unsigned const rmin(global_building_params.num_rats_min), rmax(global_building_params.num_rats_max);
 		unsigned const num(rmin + ((rmin == rmax) ? 0 : (rgen.rand() % (rmax - rmin + 1))));
@@ -69,6 +69,9 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) {
 		rats.placed = 1; // even if there were no rats placed
 	}
 	// update rats
+	rand_gen_t rgen;
+	rgen.set_state(building_ix+1, frame_counter+1); // unique per building and per frame
+
 	for (rat_t &rat : rats) {
 		rgen.rand_mix(); // make sure it's different per rat
 		update_rat(rat, camera_bs, rgen);
