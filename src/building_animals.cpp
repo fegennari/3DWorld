@@ -142,10 +142,11 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	vector3d dir_to_fear;
 	bool has_fear_dest(0);
 	// apply scare logic
+	bool const was_scared(rat.fear > 0.0);
 	if (camera_surf_collide) {scare_rat(rat, camera_bs, 0.5, 1);} // the sight of the player walking in the building scares the rats
 	sphere_t const cur_sound(get_cur_frame_loudest_sound());
 	if (cur_sound.radius > 0.0) {scare_rat(rat, cur_sound.pos, 4.0*cur_sound.radius, 0);}
-	bool const is_scared(rat.fear > 0.0);
+	bool const is_scared(rat.fear > 0.0), newly_scared(is_scared && !was_scared);
 
 	// determine destination
 	if (is_scared) {
@@ -186,10 +187,12 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		}
 		rat.fear = max(0.0f, (rat.fear - 0.2f*(fticks/TICKS_PER_SECOND))); // reduce fear over 5s
 	}
-	if (!has_fear_dest && (rat.speed == 0.0 || dist_less_than(rat.pos, rat.dest, dist_thresh))) { // stopped/no dest/at dest - choose a new dest
+	if (!has_fear_dest && (rat.speed == 0.0 || newly_scared || dist_less_than(rat.pos, rat.dest, dist_thresh))) {
+		// stopped, no dest, at dest, or newly scared - choose a new dest
 		cube_t valid_area(bcube);
 		valid_area.expand_by_xy(-(hlength + trim_thickness));
 		float target_fov_dp(RAT_FOV_DP), target_max_dist(view_dist); // start at nominal/max values
+		float const dist_upper_bound((rat.fear > 0.8) ? 0.2 : 1.0); // shorten the distance if very scared, so that we can avoid more easily
 		rat.speed = 0.0; // stop until we've found a valid destination
 
 		for (unsigned n = 0; n < 200; ++n) { // make 100 tries
@@ -200,7 +203,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			vector3d const vdir(rgen.signed_rand_vector_xy().get_norm()); // random XY direction
 			if (is_scared && n <= 100 && dot_product(dir_to_fear, vdir) > 0.0) continue; // don't move toward danger; may make the rat back into a corner
 			if (dot_product(rat.dir, vdir) < target_fov_dp) continue; // not in field of view, use a new direction
-			float const dist(rgen.rand_uniform(0.1, 1.0)*target_max_dist); // random distance out to max view dist
+			float const dist(rgen.rand_uniform(0.1, dist_upper_bound)*target_max_dist); // random distance out to max view dist
 			if (dist <= dist_thresh) continue; // distance is too short
 			point const cand(rat.pos + dist*vdir);
 			if (!valid_area.contains_pt_xy(cand)) continue; // check for end point inside building bcube
@@ -208,7 +211,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
 			if (!check_line_of_sight_expand(p1_ext, p2, coll_radius, hheight)) continue;
 			rat.dest  = cand;
-			rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.5, 1.0); // random speed
+			rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.5, 1.0)*(is_scared ? 1.5 : 1.0); // random speed
 			break; // success
 		} // for n
 		assert(rat.pos.z == rat.dest.z);
