@@ -159,36 +159,36 @@ bool building_t::check_line_of_sight_expand(point const &p1, point const &p2, fl
 			cylinder_3dw cylin(c->get_cylinder());
 			cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
 			cylin.r1   += radius ; cylin.r2   += radius;
-			//return !line_int_cylinder(p1, p2, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 0, t); // check_ends=0
-			return !line_intersect_cylinder_with_t(p1, p2, cylin, 0, t); // check_ends=0
+			//if (line_int_cylinder(p1, p2, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 0, t)) return 0; // check_ends=0
+			if (line_intersect_cylinder_with_t(p1, p2, cylin, 0, t)) return 0; // check_ends=0
 		}
-		if (c->type == TYPE_CLOSET) {
+		else if (c->type == TYPE_CLOSET) {
 			cube_t cubes[5];
 			get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
 			// skip check of open doors for large closets since this case is more complex
-			return !line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand);
+			if (line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand)) return 0;
 		}
 		else if (c->type == TYPE_BED) {
 			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
 			get_bed_cubes(*c, cubes);
 			if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 0; // check bed frame (in case p1.z is high enough)
 			get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
-			return !line_int_cubes_exp(p1, p2, cubes, 4, expand); // check legs
+			if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 0; // check legs
 		}
 		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) {
 			cube_t cubes[5];
 			get_table_cubes(*c, cubes); // body and legs
-			return !line_int_cubes_exp(p1, p2, cubes, 5, expand);
+			if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 0;
 		}
 		else if (c->type == TYPE_CHAIR) {
 			cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
 			get_chair_cubes(*c, cubes);
 			if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 0; // check seat
 			get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
-			return !line_int_cubes_exp(p1, p2, leg_cubes, 4, expand); // check legs TODO: doesn't seem to work
+			if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 0; // check legs
 		}
-		else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // TODO - inside test only applied to end point
-		return 0; // intersection: no line of sight
+		//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // TODO - inside test only applied to end point
+		else return 0; // intersection: no line of sight
 	} // for c
 	return 1;
 }
@@ -247,7 +247,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 
 	// move the rat
 	if (rat.speed > 0.0) {
-		// TODO: collision detection with dynamic objects: doors, balls, the player? people? other animals?
+		// TODO: collision detection with dynamic objects: doors, balls, the player? people? other rats?
 		rat.pos += move_dist*rat.dir; // apply movement
 	}
 	vector3d const center_dz(0.0, 0.0, hheight);
