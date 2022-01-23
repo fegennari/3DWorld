@@ -165,9 +165,22 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			if (!can_hide_under(*c, zbot)) continue;
 			float const top_gap(zbot - rat_z2); // space between the top of the rat and the bottom of the object
 			if (top_gap < 0.0) continue; // rat can't fit under this object
-			point const center(c->xc(), c->yc(), p1.z);
-			float const side_coverage(0.5f*min(c->dx(), c->dy()) - hlength); // amount of overhang of the object around the rat's extents
-			float const dist(p2p_dist(p1, center));
+			point center(c->xc(), c->yc(), p1.z);
+			float misalign(0.0);
+			bool is_occupied(0);
+
+			for (rat_t &other_rat : interior->room_geom->rats) {
+				if (&other_rat == &rat) continue; // skip ourself
+				float const move_dist(0.75f*(rat.radius + other_rat.radius) - p2p_dist_xy(center, other_rat.pos)); // smaller dist (head can overlap tail)
+				
+				if (move_dist > 0.0) { // another rat is in this spot
+					center     += (p1 - center).get_norm()*move_dist; // move our target in front of this other rat
+					misalign   += move_dist;
+					is_occupied = 1;
+				}
+			} // for other_rat
+			float const side_coverage(0.5f*min(c->dx(), c->dy()) - hlength - misalign); // amount of overhang of the object around the rat's extents
+			float const dist(p2p_dist(p1, center)*(is_occupied ? 1.5 : 1.0)); // less desirable if occupied
 			if (dist < dist_thresh) {has_fear_dest = 1; rat.speed = 0.0; break;} // already at this location, and it's valid, so stay there
 			// Note: I tried using the dot product between this vector and dir_to_fear, but that causes instability when the rat is between two objects
 			float const dist_to_fear(p2p_dist(rat.fear_pos, center));
