@@ -2274,7 +2274,7 @@ int main(int argc, char** argv) {
 		init_game_state();
 		check_gl_error(7776);
 
-		if (game_mode) {
+		if (game_mode && world_mode == WMODE_GROUND) {
 			gamemode_rand_appear();
 			camera_mode = 1; // on the ground
 		}

@@ -3,6 +3,8 @@
 def_texture_aniso 4.0 # better quality over default value of 2.0
 reverse_3ds_vert_winding_order 0
 
+init_game_mode 0 # set to 2 to start in building gameplay mode
+
 # buildings
 include building_params.txt
 buildings num_place 100000

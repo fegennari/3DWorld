@@ -1453,7 +1453,7 @@ void init_sstate(int id, bool w_start) {
 	}
 	remove_player_translocator(id);
 
-	if (begin_motion) { // create spawn effect
+	if (begin_motion && frame_counter > 0) { // create spawn effect if not the first frame
 		bool const is_player(id == CAMERA_ID);
 		colorRGBA const color(get_smiley_team_color(id));
 		point const &pos(is_player ? camera_pos : obj_groups[coll_id[SMILEY]].get_obj(id).pos);
