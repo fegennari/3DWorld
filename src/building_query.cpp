@@ -946,7 +946,16 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 		}
 		else if (line_int_cube_exp(p1, p2, door, expand)) return 1;
 	} // for door
-	if (line_int_cubes_exp(p1, p2, interior->stairwells, expand)) return 1; // TODO: what about the space under the bottom flight of stairs?
+	for (auto const &s : interior->stairwells) {
+		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
+		if (s.z1() < min(p1.z, p2.z) - 0.5f*get_window_vspace()) return 1; // not the ground floor - definitely a collision
+
+		// maybe we're under the stairs; check for individual stairs collisions
+		for (auto c = interior->room_geom->get_stairs_start(); c != interior->room_geom->objs.end(); ++c) {
+			if (c->no_coll() || c->type != TYPE_STAIR) continue;
+			if (line_int_cube_exp(p1, p2, *c, expand)) return 1;
+		}
+	} // for s
 	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand)) return 1;
 	// check exterior walls
 	vector3d cnorm; // unused
