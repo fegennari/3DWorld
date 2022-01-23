@@ -471,6 +471,8 @@ void advance_camera(int dir) { // player movement processing
 		if (sstates[CAMERA_ID].freeze_time > 0) return; // can't move
 		dist *= sstates[CAMERA_ID].get_rspeed_scale();
 	}
+	// Note: the player can hold down both forward and sidestep keys at the same time and move diagonally a bit faster than they can move using forward alone;
+	// while I'm sure it's possible to fix this by tracking which keys are held down each frame, I've gotten used to it, and it doesn't affect gameplay much
 	switch (dir) {
 	case MOVE_BACK: // backward
 		dist  = -dist;
