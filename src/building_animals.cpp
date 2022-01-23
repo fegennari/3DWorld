@@ -184,7 +184,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			float const dist_to_fear(p2p_dist(rat.fear_pos, center));
 			float const score((side_coverage - 0.5f*top_gap + 0.2f*dist_to_fear)/max(dist, dist_thresh)); // can be positive or negative
 			if (best_score != 0.0 && score <= best_score) continue;
-			if (!check_line_of_sight_expand(p1, center, coll_radius, hheight)) continue;
+			if (check_line_coll_expand(p1, center, coll_radius, hheight)) continue;
 			best_dest  = point(center.x, center.y, rat.pos.z); // keep zval on the floor
 			best_score = score;
 			if (center.x == rat.dest.x && center.y == rat.dest.y) break; // keep the same dest (optimization)
@@ -220,7 +220,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			if (!valid_area.contains_pt_xy(cand)) continue; // check for end point inside building bcube
 			point const p2(cand + line_project_dist*vdir + center_dz); // extend in vdir so that the head doesn't collide
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
-			if (!check_line_of_sight_expand(p1_ext, p2, coll_radius, hheight)) continue;
+			if (check_line_coll_expand(p1_ext, p2, coll_radius, hheight)) continue;
 			rat.dest  = cand;
 			rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.5, 1.0)*(is_scared ? 1.5 : 1.0); // random speed
 			break; // success

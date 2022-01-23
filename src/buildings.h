@@ -1109,7 +1109,7 @@ private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
 	void update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
-	bool check_line_of_sight_expand(point const &p1, point const &p2, float radius, float height) const;
+	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
 	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const;
 
