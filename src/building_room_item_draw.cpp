@@ -1046,10 +1046,21 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 			if (!camera_pdu.cube_visible(bcube + xlate)) continue; // VFC
 			if ((display_mode & 0x08) && building.check_obj_occluded(bcube, camera_bs, oc, reflection_pass)) continue;
 			point const pos(bcube.get_cube_center());
-			bool const animate(0); // TODO
+			bool const animate(rat.anim_time > 0.0);
+			
+			if (animate) {
+				int const animation_id = 7; // custom rat animation
+				s.add_uniform_int  ("animation_id",   animation_id);
+				s.add_uniform_float("animation_time", rat.anim_time);
+			}
 			colorRGBA const color(GRAY); // make the rat's fur darker
 			//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
 			building_obj_model_loader.draw_model(s, pos, rat.get_bcube_with_dir(), rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
+
+			if (animate) { // reset animations; could be done outside the loop, but there usually isn't more than one rat visible
+				s.add_uniform_int  ("animation_id",   0);
+				s.add_uniform_float("animation_time", 0.0);
+			}
 			obj_drawn = 1;
 		} // for rat
 	}

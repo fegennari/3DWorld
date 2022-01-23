@@ -123,13 +123,16 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	float const hlength(rat.get_hlength()), hwidth(rat.get_hwidth()), height(rat.get_height()), hheight(0.5*height);
 	float const coll_radius(1.2f*hwidth); // slightly larger than half-width; maybe should use length so that the rat doesn't collide when turning?
 	float const line_project_dist(max(1.1f*(hlength - coll_radius), 0.0f)); // extra space in front of the target destination
+	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
-	float const move_dist(fticks*rat.speed), dist_thresh(2.0f*fticks*max(rat.speed, global_building_params.rat_speed));
+	float const move_dist(timestep*rat.speed), dist_thresh(2.0f*timestep*max(rat.speed, global_building_params.rat_speed));
 	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
 
 	// move the rat
-	if (rat.speed > 0.0) {
-		rat.pos += move_dist*rat.dir; // apply movement
+	if (rat.speed == 0.0) {rat.anim_time = 0.0;} // reset animation to rest pos
+	else {
+		rat.pos       += move_dist*rat.dir; // apply movement
+		rat.anim_time += timestep*rat.speed;
 
 		if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs)) {
 			// what do we do here? Setting rat.speed=0.0 may get us stuck
@@ -197,7 +200,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			has_fear_dest = 1; // set to avoid triggering the code below if close to dest
 			assert(rat.pos.z == rat.dest.z);
 		}
-		rat.fear = max(0.0f, (rat.fear - 0.2f*(fticks/TICKS_PER_SECOND))); // reduce fear over 5s
+		rat.fear = max(0.0f, (rat.fear - 0.2f*(timestep/TICKS_PER_SECOND))); // reduce fear over 5s
 	}
 	if (!has_fear_dest && (rat.speed == 0.0 || newly_scared || dist_less_than(rat.pos, rat.dest, dist_thresh))) {
 		// stopped, no dest, at dest, or newly scared - choose a new dest
@@ -236,7 +239,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	// else dir is unchanged
 
 	if (new_dir != zero_vector) { // update dir if new_dir was set above
-		float const delta_dir((is_scared ? 2.0 : 1.0)*min(1.0f, 1.5f*(1.0f - pow(0.7f, fticks)))); // higher turning rate when scared
+		float const delta_dir((is_scared ? 2.0 : 1.0)*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep)))); // higher turning rate when scared
 		rat.dir = (delta_dir*new_dir + (1.0 - delta_dir)*rat.dir).get_norm();
 	}
 	if (rat.dir == zero_vector) {rat.dir = rgen.signed_rand_vector_xy().get_norm();} // dir must always be valid

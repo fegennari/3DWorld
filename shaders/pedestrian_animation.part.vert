@@ -85,4 +85,7 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 			}
 		}
 	}
+	else if (animation_id == 7) { // rats
+		// TODO
+	}
 }
