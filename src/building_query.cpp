@@ -999,7 +999,7 @@ bool building_t::check_line_of_sight_expand(point const &p1, point const &p2, fl
 			get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
 			if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 0; // check legs
 		}
-		//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // TODO - inside test only applied to end point
+		//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // is this useful? inside test only applied to end point
 		else return 0; // intersection: no line of sight
 	} // for c
 	return 1;
@@ -1020,23 +1020,42 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 	return 1;
 }
 
-// collision detection with dynamic objects: balls, the player? people? other rats?
-bool building_t::check_dynamic_obj_coll(point const &pos, float radius, point const &camera_bs) const {
+bool handle_vcylin_vcylin_int(point &p1, point const &p2, float rsum) {
+	if (!dist_xy_less_than(p1, p2, rsum)) return 0; // no collision
+	vector3d const delta(p1.x-p2.x, p1.y-p2.y, 0.0); // ignore zvals
+	p1 += delta*(rsum - delta.mag());
+	return 1;
+}
+
+// vertical cylinder collision detection with dynamic objects: balls, the player? people? other rats?
+// only handles the first collision
+bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const {
+	float const z2(pos.z + height);
+
 	if (camera_surf_collide) { // check the player
 		float const player_radius(CAMERA_RADIUS), player_xy_radius(player_radius*global_building_params.player_coll_radius_scale);
-		float const z1(pos.z - radius), z2(pos.z + radius);
 
-		if (z1 < (camera_bs.z - player_radius) && z2 > (camera_bs.z + player_radius + camera_zh)) {
-			if (dist_xy_less_than(pos, camera_bs, (radius + player_xy_radius))) return 1;
+		if (pos.z < (camera_bs.z + player_radius + camera_zh) && z2 > (camera_bs.z - player_radius)) {
+			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + player_xy_radius))) return 1;
 		}
 	}
 	assert(has_room_geom());
 
 	for (rat_t &rat : interior->room_geom->rats) {
 		if (rat.pos == pos) continue; // skip ourself
-		if (dist_less_than(pos, rat.pos, (radius + rat.radius))) return 1;
+		if (pos.z > (rat.pos.z + rat.get_height()) || z2 < rat.pos.z) continue; // different floors
+		if (handle_vcylin_vcylin_int(pos, rat.pos, (radius + rat.radius))) return 1;
 	}
-	// TODO: check dynamic objects such as balls
+	// check dynamic objects such as balls
+	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+
+	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
+		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
+		if (pos.z > c->z2() || z2 < c->z1())  continue; // different floors
+		// treat the ball as a vertical cylinder because it's too complex to find the collision point of a vertical cylinder with a sphere
+		if (handle_vcylin_vcylin_int(pos, c->get_cube_center(), (radius + c->get_radius()))) return 1;
+	}
 	return 0;
 }
 

@@ -19,7 +19,7 @@ float get_closest_building_sound(point const &at_pos, point &sound_pos, float fl
 sphere_t get_cur_frame_loudest_sound();
 
 
-float rat_t::get_hwidth () const {
+float rat_t::get_hwidth() const {
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L, W, H
 	return radius*sz.y/sz.x; // scale radius by ratio of width to length
 }
@@ -129,12 +129,10 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 
 	// move the rat
 	if (rat.speed > 0.0) {
-		point const prev_pos(rat.pos);
 		rat.pos += move_dist*rat.dir; // apply movement
 
-		if (0 && check_dynamic_obj_coll(rat.pos, rat.radius, camera_bs)) { // TODO
-			rat.pos   = prev_pos; // restore pos
-			rat.speed = 0.0; // stop moving for now; will likely choose a new dest below
+		if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs)) {
+			// what do we do here? Setting rat.speed=0.0 may get us stuck
 		}
 	}
 	vector3d const center_dz(0.0, 0.0, hheight);
