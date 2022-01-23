@@ -958,8 +958,8 @@ bool building_t::check_line_of_sight_expand(point const &p1, point const &p2, fl
 	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
 
 	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-		if (c->no_coll() || !bldg_obj_types[c->type].ai_coll) continue; // skip non-colliding objects
-		if (c->z1() > obj_z2 || c->z2() < obj_z1)   continue; // wrong floor
+		if (c->type != TYPE_LG_BALL && (c->no_coll() || !bldg_obj_types[c->type].ai_coll)) continue; // skip non-colliding objects except for balls
+		if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 		cube_t c_extended(*c);
 		if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
 		if (!line_int_cube_exp(p1, p2, c_extended, expand)) continue;
@@ -968,8 +968,11 @@ bool building_t::check_line_of_sight_expand(point const &p1, point const &p2, fl
 			cylinder_3dw cylin(c->get_cylinder());
 			cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
 			cylin.r1   += radius ; cylin.r2   += radius;
-			//if (line_int_cylinder(p1, p2, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 0, t)) return 0; // check_ends=0
 			if (line_intersect_cylinder_with_t(p1, p2, cylin, 0, t)) return 0; // check_ends=0
+		}
+		else if (c->shape == SHAPE_SPHERE) { // sphere (ball)
+			float const rsum(radius + c->get_radius());
+			if (sphere_test_comp(p1, c->get_cube_center(), (p1 - p2), rsum*rsum, t)) return 0; // approx; uses radius rather than height in z
 		}
 		else if (c->type == TYPE_CLOSET) {
 			cube_t cubes[5];
