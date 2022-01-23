@@ -144,6 +144,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	if (camera_surf_collide) {scare_rat(rat, camera_bs, 0.5, 1);} // the sight of the player walking in the building scares the rats
 	sphere_t const cur_sound(get_cur_frame_loudest_sound());
 	if (cur_sound.radius > 0.0) {scare_rat(rat, cur_sound.pos, 4.0*cur_sound.radius, 0);}
+	// what about fear from sudden light changes? maybe it's enough that the light switch makes a click sound
 	bool const is_scared(rat.fear > 0.0), newly_scared(is_scared && !was_scared);
 
 	// determine destination
@@ -161,7 +162,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
 			if (c->z1() > rat_z2 || c->z2() < rat_z1) continue; // wrong floor
 			if (!can_hide_under(*c, zbot)) continue;
-			float const top_gap(zbot - rat_z2); // space between the top of the rat and the bottom of the object
+			float const top_gap(zbot - (rat_z2 - 0.1*height)); // space between top of rat and bottom of object; allow the rat to squish a bit
 			if (top_gap < 0.0) continue; // rat can't fit under this object
 			point center(c->xc(), c->yc(), p1.z);
 			float misalign(0.0);
