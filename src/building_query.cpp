@@ -1032,7 +1032,8 @@ bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2
 bool handle_vcylin_vcylin_int(point &p1, point const &p2, float rsum) {
 	if (!dist_xy_less_than(p1, p2, rsum)) return 0; // no collision
 	vector3d const delta(p1.x-p2.x, p1.y-p2.y, 0.0); // ignore zvals
-	p1 += delta*(rsum - delta.mag());
+	float const delta_mag(delta.mag());
+	p1 += delta*((rsum - delta_mag)/delta_mag);
 	return 1;
 }
 
@@ -1053,7 +1054,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	for (rat_t &rat : interior->room_geom->rats) {
 		if (rat.pos == pos) continue; // skip ourself
 		if (pos.z > (rat.pos.z + rat.get_height()) || z2 < rat.pos.z) continue; // different floors
-		if (handle_vcylin_vcylin_int(pos, rat.pos, (radius + rat.radius))) return 1;
+		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.75f*(radius + rat.radius))) return 1; // allow them to get a bit closer together, since radius is conservative
 	}
 	// check dynamic objects such as balls
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
