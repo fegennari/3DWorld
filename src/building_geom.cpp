@@ -1405,10 +1405,10 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 		}
 		return;
 	}
-	bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool()), has_windows(has_windows());
+	bool const pref_dim(rgen.rand_bool()), pref_dir(rgen.rand_bool()), bldg_has_windows(has_windows());
 	bool used[4] = {0,0,0,0}; // per-side, not per-base cube
 	unsigned const min_doors((parts.size() > 1) ? 2 : 1); // at least 2 doors unless it's a small rectangle (large rectangle will have a central hallway with doors at each end)
-	unsigned const max_doors(has_windows ? 3 : 4); // buildings with windows have at most 3 doors since they're smaller
+	unsigned const max_doors(bldg_has_windows ? 3 : 4); // buildings with windows have at most 3 doors since they're smaller
 	unsigned const num_doors(min_doors + (rgen.rand() % (max_doors - min_doors + 1)));
 
 	for (unsigned num = 0; num < num_doors; ++num) {
@@ -1417,7 +1417,7 @@ void building_t::gen_building_doors_if_needed(rand_gen_t &rgen) { // for office 
 		for (auto b = parts.begin(); b != get_real_parts_end() && !placed; ++b) { // try all different ground floor parts
 			if (is_basement(b)) continue; // skip the basement
 			unsigned const part_ix(b - parts.begin());
-			if (has_windows && part_ix >= 4) break; // only first 4 parts can have doors - must match first floor window removal logic
+			if (bldg_has_windows && part_ix >= 4) break; // only first 4 parts can have doors - must match first floor window removal logic
 			if (b->z1() > ground_floor_z1)   break; // moved off the ground floor
 
 			for (unsigned n = 0; n < 4; ++n) {
