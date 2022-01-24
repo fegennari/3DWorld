@@ -1054,7 +1054,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	for (rat_t &rat : interior->room_geom->rats) {
 		if (rat.pos == pos) continue; // skip ourself
 		if (pos.z > (rat.pos.z + rat.get_height()) || z2 < rat.pos.z) continue; // different floors
-		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.75f*(radius + rat.radius))) return 1; // allow them to get a bit closer together, since radius is conservative
+		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.7f*(radius + rat.radius))) return 1; // allow them to get a bit closer together, since radius is conservative
 	}
 	// check dynamic objects such as balls
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators

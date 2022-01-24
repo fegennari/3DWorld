@@ -127,16 +127,14 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
 	float const move_dist(timestep*rat.speed), dist_thresh(2.0f*timestep*max(rat.speed, global_building_params.rat_speed));
 	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
+	bool collided(0);
 
 	// move the rat
 	if (rat.speed == 0.0) {rat.anim_time = 0.0;} // reset animation to rest pos
 	else {
 		rat.pos       += move_dist*rat.dir; // apply movement
 		rat.anim_time += timestep*rat.speed;
-
-		if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs)) {
-			// what do we do here? Setting rat.speed=0.0 may get us stuck
-		}
+		collided       = check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs);
 	}
 	vector3d const center_dz(0.0, 0.0, hheight);
 	point const p1(rat.pos + center_dz);
@@ -173,7 +171,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 
 			for (rat_t &other_rat : interior->room_geom->rats) {
 				if (&other_rat == &rat) continue; // skip ourself
-				float const move_dist(0.75f*(rat.radius + other_rat.radius) - p2p_dist_xy(center, other_rat.pos)); // smaller dist (head can overlap tail)
+				float const move_dist(0.8f*(rat.radius + other_rat.radius) - p2p_dist_xy(center, other_rat.pos)); // smaller dist (head can overlap tail)
 				
 				if (move_dist > 0.0) { // another rat is in this spot
 					center     += (p1 - center).get_norm()*move_dist; // move our target in front of this other rat
@@ -202,8 +200,8 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		}
 		rat.fear = max(0.0f, (rat.fear - 0.2f*(timestep/TICKS_PER_SECOND))); // reduce fear over 5s
 	}
-	if (!has_fear_dest && (rat.speed == 0.0 || newly_scared || dist_less_than(rat.pos, rat.dest, dist_thresh))) {
-		// stopped, no dest, at dest, or newly scared - choose a new dest
+	if (!has_fear_dest && (rat.speed == 0.0 || newly_scared || collided || dist_less_than(rat.pos, rat.dest, dist_thresh))) {
+		// stopped, no dest, at dest, collided, or newly scared - choose a new dest
 		cube_t valid_area(bcube);
 		valid_area.expand_by_xy(-(hlength + trim_thickness));
 		float target_fov_dp(RAT_FOV_DP), target_max_dist(view_dist); // start at nominal/max values
