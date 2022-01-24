@@ -2840,7 +2840,7 @@ void gamemode_rand_appear() {
 	gen_smiley_or_player_pos(surface_pos, CAMERA_ID);
 	camera_last_pos = surface_pos;
 	free_dodgeballs(1, 0);
-	init_sstate(CAMERA_ID, (game_mode == 1));
+	init_sstate(CAMERA_ID, (game_mode == 1), 1); // show_appear_effect=1
 }
 
 

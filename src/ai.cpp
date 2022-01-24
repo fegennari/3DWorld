@@ -33,7 +33,7 @@ extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id, init_num_balls;
 extern float fticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage, base_gravity, NEAR_CLIP, FAR_CLIP;
 extern double camera_zh, tfticks;
-extern point orig_camera, orig_cdir;
+extern point orig_camera, orig_cdir, surface_pos;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
@@ -1234,7 +1234,7 @@ void init_smiley(int smiley_id) {
 	obj_group &objg(obj_groups[cid]);
 	if (!objg.enabled) return;
 	init_smiley_texture(smiley_id);
-	init_sstate(smiley_id, (game_mode == 1));
+	init_sstate(smiley_id, (game_mode == 1), 1); // show_appear_effect=1
 	sstates[smiley_id].check_switch_weapon(smiley_id);
 	dwobject &obj(objg.get_obj(smiley_id));
 	obj.direction     = 0;
@@ -1443,7 +1443,7 @@ void clear_cached_waypoints() {
 }
 
 
-void init_sstate(int id, bool w_start) {
+void init_sstate(int id, bool w_start, bool show_appear_effect) {
 
 	assert(sstates != NULL && id >= CAMERA_ID && id < num_smileys);
 	sstates[id].init(w_start);
@@ -1453,10 +1453,10 @@ void init_sstate(int id, bool w_start) {
 	}
 	remove_player_translocator(id);
 
-	if (begin_motion && frame_counter > 0) { // create spawn effect if not the first frame
+	if (show_appear_effect && begin_motion && frame_counter > 0) { // create spawn effect if not the first frame
 		bool const is_player(id == CAMERA_ID);
 		colorRGBA const color(get_smiley_team_color(id));
-		point const &pos(is_player ? camera_pos : obj_groups[coll_id[SMILEY]].get_obj(id).pos);
+		point const &pos(is_player ? surface_pos : obj_groups[coll_id[SMILEY]].get_obj(id).pos);
 		gen_sound(SOUND_POWERUP, pos, 0.5, 0.75);
 		add_dynamic_light(12.0*CAMERA_RADIUS, pos, color);
 		add_blastr(pos, plus_z, 6.0*CAMERA_RADIUS, 0.0, int(1.0*TICKS_PER_SECOND), NO_SOURCE, WHITE, color, ETYPE_NUCLEAR, nullptr, 1);

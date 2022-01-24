@@ -138,7 +138,7 @@ string get_weapon_qualifier(int type, int index, int source);
 void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const &coll_dir, float blood_v, float md, float mv, int type, float health);
 int  damage_done(int type, int index);
 void blood_on_camera(unsigned num_spots);
-void init_sstate(int id, bool w_start);
+void init_sstate(int id, bool w_start, bool show_appear_effect=0);
 colorRGBA get_laser_beam_color(int shooter);
 int  get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos);
 point projectile_test(point const &pos, vector3d const &vcf_, float firing_error, float damage, int shooter,
