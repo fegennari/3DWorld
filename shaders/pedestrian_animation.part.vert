@@ -86,6 +86,13 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 		}
 	}
 	else if (animation_id == 7) { // rats
-		// TODO
+		// y = up/down, x = left/right, z = front/back; x and z are centered around 0, y is about [0, height]
+		float height = 14.0*model_delta_height;
+
+		if (vertex.y < 0.14*height && vertex.z > -1.2*height) { // legs
+			float lr_sign = ((vertex.x < 0.0) ? -1.0 : 1.0); // left/right
+			float fb_sign = ((vertex.z < 0.0) ? -1.0 : 1.0); // front back
+			vertex.y += max(0.0, 0.05*anim_scale*abs(sin(5.0*anim_val + 0.25*PI*lr_sign*fb_sign)));
+		}
 	}
 }
