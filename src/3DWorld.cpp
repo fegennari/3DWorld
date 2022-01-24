@@ -788,6 +788,10 @@ void update_precip_rate_verbose(float val) {
 	cout << ((val > 1.0) ? "increase" : "decrease") << " precip to " << obj_groups[coll_id[PRECIP]].max_objs << endl;
 }
 
+void show_bool_option_change(string const &name, bool new_val) {
+	print_text_onscreen((name + (new_val ? " ON" : " OFF")), WHITE, 1.0, 1.0*TICKS_PER_SECOND);
+}
+
 
 // This function is called whenever there is a keyboard input;
 // key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127);
@@ -805,6 +809,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'A':
 		enable_multisample ^= 1;
+		show_bool_option_change("Multisample", enable_multisample);
 		if (!enable_multisample) {glDisable(GL_MULTISAMPLE);}
 		break;
 
@@ -848,11 +853,13 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 	case 't': // animation - movement (freeze frame on objects), show star streams in universe mode
 		animate2 = !animate2;
+		show_bool_option_change("Timestep Update", animate2);
 		if (animate2) {reset_timing = 1;}
 		break;
 
 	case 'b': // begin motion animation
 		begin_motion = !begin_motion;
+		show_bool_option_change("Physics Update", begin_motion);
 		free_dodgeballs(1, 1);
 		break;
 
@@ -926,6 +933,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		camera_change       = 1;
 		// reset last_pos so that the camera doesn't snap back to the old pos when clipping is re-enabled
 		if (camera_surf_collide) {camera_last_pos = surface_pos;}
+		//show_bool_option_change("Player Collision", camera_surf_collide);
 		break;
 
 	case 'j': // smooth camera collision detection / hold fighters / teleport to screenshot
@@ -956,10 +964,11 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'o': // toggle vsync
 		vsync_enabled ^= 1;
+		show_bool_option_change("Vsync", vsync_enabled);
 		set_vsync();
 		break;
 	case 'u': // toggle timing profiler
-		toggle_timing_profiler();
+		toggle_timing_profiler(); // show_bool_option_change()?
 		break;
 
 	case '=': // increase temp
@@ -1177,9 +1186,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case '3': // toggle water/ice
 		display_mode ^= 0x04;   break;
 	case '4': // toggle occlusion culling / tiled terrain/voxel/mesh detail normal maps
-		display_mode ^= 0x08;   break;
+		display_mode ^= 0x08;   show_bool_option_change("Occlusion Culling", (display_mode & 0x08)); break;
 	case '5': // walk on snow/ship shadows/reflections/debugging
-		display_mode ^= 0x10;   break;
+		display_mode ^= 0x10;   show_bool_option_change("Debug Mode", (display_mode & 0x10)); break;
 	case '6': // toggle water reflections, bump maps, bloom, and map view lighting/shadows
 		display_mode ^= 0x20;   break;
 	case '7': // toggle snow accumulation, clouds, and universe mode multithreading
@@ -1365,6 +1374,7 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 		if (!spectate && (num_smileys == 0 || !obj_groups[coll_id[SMILEY]].enabled)) break;
 		if (spectate) {camera_reset = camera_change = 1;}
 		spectate = !spectate;
+		show_bool_option_change("Spectate", spectate);
 		break;
 
 	case GLUT_KEY_F9: // unused
@@ -1373,12 +1383,15 @@ void keyboard2(int key, int x, int y) { // handling of special keys
 	case GLUT_KEY_F10: // switch cloud model / toggle smoke_dlights
 		cloud_model = !cloud_model;
 		smoke_dlights ^= 1;
+		show_bool_option_change("Smoke Dynamic Lights", smoke_dlights);
 		break;
 	case GLUT_KEY_F11: // temporary toggle of core context mode
 		use_core_context ^= 1;
+		show_bool_option_change("Core Context", use_core_context);
 		break;
 	case GLUT_KEY_F12: // toggle volumetric lighting
 		volume_lighting ^= 1;
+		show_bool_option_change("Volume Lighting", volume_lighting);
 		break;
 	}
 	post_window_redisplay();
