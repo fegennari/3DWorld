@@ -87,12 +87,16 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 	}
 	else if (animation_id == 7) { // rats
 		// y = up/down, x = left/right, z = front/back; x and z are centered around 0, y is about [0, height]
-		float height = 14.0*model_delta_height;
+		float height  = 14.0*model_delta_height;
+		float leg_top = 0.4*height;
 
-		if (vertex.y < 0.14*height && vertex.z > -1.2*height) { // legs
-			float lr_sign = ((vertex.x < 0.0) ? -1.0 : 1.0); // left/right
-			float fb_sign = ((vertex.z < 0.0) ? -1.0 : 1.0); // front back
-			vertex.y += max(0.0, 0.05*anim_scale*abs(sin(5.0*anim_val + 0.25*PI*lr_sign*fb_sign)));
+		if (vertex.y < leg_top && vertex.z > -1.2*height && abs(vertex.x) > ((vertex.z < 0.0) ? 0.25 : 0.15)*height) { // legs
+			float move_amt  = 0.012*anim_scale*(leg_top - vertex.y)/model_delta_height;
+			float lr_sign   = ((vertex.x < 0.0) ? -1.0 : 1.0); // left/right
+			float fb_sign   = ((vertex.z < 0.0) ? -1.0 : 1.0); // front back
+			float cycle_pos = 10.0*anim_val + 0.5*PI*lr_sign*fb_sign;
+			vertex.y += max(0.0, 0.5*move_amt*(cos(cycle_pos) - 0.05)); // up and down; always positive
+			vertex.z += move_amt*sin(cycle_pos); // forward and backward
 		}
 	}
 }

@@ -125,7 +125,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	float const line_project_dist(max(1.1f*(hlength - coll_radius), 0.0f)); // extra space in front of the target destination
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
-	float const move_dist(timestep*rat.speed), dist_thresh(2.0f*timestep*max(rat.speed, global_building_params.rat_speed));
+	float const move_dist(timestep*rat.speed), dist_thresh(3.0f*timestep*max(rat.speed, global_building_params.rat_speed));
 	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
 	bool collided(0);
 
