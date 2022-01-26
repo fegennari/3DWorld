@@ -962,55 +962,60 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	float t(0.0); // unused
 	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) return 1; // what about trim_thickness?
 	if (!has_room_geom()) return 0; // done (but really shouldn't get here)
-	// check room objects; ignore expanded objects for now
-	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	// check room objects and expanded objects (from closets)
 	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
 
-	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-		if (c->type != TYPE_LG_BALL && (c->no_coll() || !bldg_obj_types[c->type].ai_coll)) continue; // skip non-colliding objects except for balls
-		if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
-		cube_t c_extended(*c);
-		if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
-		if (!line_int_cube_exp(p1, p2, c_extended, expand)) continue;
+	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
+		auto const &obj_vect((vect_id == 1) ? interior->room_geom->expanded_objs : interior->room_geom->objs);
+		auto objs_end((vect_id == 1) ? obj_vect.end() : interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 
-		if (c->shape == SHAPE_CYLIN) { // vertical cylinder
-			cylinder_3dw cylin(c->get_cylinder());
-			cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
-			cylin.r1   += radius ; cylin.r2   += radius;
-			if (line_intersect_cylinder_with_t(p1, p2, cylin, 0, t)) return 1; // check_ends=0
-		}
-		else if (c->shape == SHAPE_SPHERE) { // sphere (ball)
-			float const rsum(radius + c->get_radius());
-			if (sphere_test_comp(p1, c->get_cube_center(), (p1 - p2), rsum*rsum, t)) return 1; // approx; uses radius rather than height in z
-		}
-		else if (c->type == TYPE_CLOSET) {
-			cube_t cubes[5];
-			get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
-			// skip check of open doors for large closets since this case is more complex
-			if (line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand)) return 1;
-		}
-		else if (c->type == TYPE_BED) {
-			cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
-			get_bed_cubes(*c, cubes);
-			if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 1; // check bed frame (in case p1.z is high enough)
-			get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
-			if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 1; // check legs
-		}
-		else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) {
-			cube_t cubes[5];
-			get_table_cubes(*c, cubes); // body and legs
-			if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 1;
-		}
-		else if (c->type == TYPE_CHAIR) {
-			cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
-			get_chair_cubes(*c, cubes);
-			if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 1; // check seat
-			get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
-			if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 1; // check legs
-		}
-		//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // is this useful? inside test only applied to end point
-		else return 1; // intersection
-	} // for c
+		for (auto c = obj_vect.begin(); c != objs_end; ++c) {
+			// skip non-colliding objects except for balls and expanded objects from closets (since rats must collide with these)
+			if (c->type != TYPE_LG_BALL && ((c->no_coll() && !c->was_expanded()) || !bldg_obj_types[c->type].ai_coll)) continue;
+			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
+			cube_t c_extended(*c);
+			if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
+			if (!line_int_cube_exp(p1, p2, c_extended, expand)) continue;
+
+			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
+				cylinder_3dw cylin(c->get_cylinder());
+				cylin.p1.z -= hheight; cylin.p2.z += hheight; // extend top and bottom
+				cylin.r1   += radius ; cylin.r2   += radius;
+				if (line_intersect_cylinder_with_t(p1, p2, cylin, 0, t)) return 1; // check_ends=0
+			}
+			else if (c->shape == SHAPE_SPHERE) { // sphere (ball)
+				float const rsum(radius + c->get_radius());
+				if (sphere_test_comp(p1, c->get_cube_center(), (p1 - p2), rsum*rsum, t)) return 1; // approx; uses radius rather than height in z
+			}
+			else if (c->type == TYPE_CLOSET) {
+				cube_t cubes[5];
+				get_closet_cubes(*c, cubes, 1); // get cubes for walls and door; for_collision=1
+				// skip check of open doors for large closets since this case is more complex
+				if (line_int_cubes_exp(p1, p2, cubes, ((c->is_open() && !c->is_small_closet()) ? 4U : 5U), expand)) return 1;
+			}
+			else if (c->type == TYPE_BED) {
+				cube_t cubes[6]; // frame, head, foot, mattress, pillow, legs_bcube
+				get_bed_cubes(*c, cubes);
+				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 1; // check bed frame (in case p1.z is high enough)
+				get_tc_leg_cubes(cubes[5], 0.04, cubes); // head_width=0.04
+				if (line_int_cubes_exp(p1, p2, cubes, 4, expand)) return 1; // check legs
+			}
+			else if (c->type == TYPE_DESK || c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND || c->type == TYPE_TABLE) {
+				cube_t cubes[5];
+				get_table_cubes(*c, cubes); // body and legs
+				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 1;
+			}
+			else if (c->type == TYPE_CHAIR) {
+				cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
+				get_chair_cubes(*c, cubes);
+				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 1; // check seat
+				get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
+				if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 1; // check legs
+			}
+			//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // is this useful? inside test only applied to end point
+			else return 1; // intersection
+		} // for c
+	} // for vect_id
 	return 0;
 }
 
