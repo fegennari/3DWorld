@@ -125,16 +125,32 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	float const line_project_dist(max(1.1f*(hlength - coll_radius), 0.0f)); // extra space in front of the target destination
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
-	float const move_dist(timestep*rat.speed), dist_thresh(3.0f*timestep*max(rat.speed, global_building_params.rat_speed));
+	float const move_dist(timestep*rat.speed), dist_thresh(2.0f*timestep*max(rat.speed, global_building_params.rat_speed));
 	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
-	bool collided(0);
+	bool collided(0), update_path(0);
+	point coll_pos;
+	vector3d coll_dir;
 
 	// move the rat
-	if (rat.speed == 0.0) {rat.anim_time = 0.0;} // reset animation to rest pos
-	else {
-		rat.pos       += move_dist*rat.dir; // apply movement
-		rat.anim_time += timestep*rat.speed;
-		collided       = check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs);
+	if (rat.speed == 0.0) {
+		rat.anim_time = 0.0; // reset animation to rest pos
+	}
+	else { // apply movement and check for collisions with dynamic objects
+		point const new_pos(rat.pos + move_dist*rat.dir);
+
+		if (p2p_dist_xy_sq(rat.pos, rat.dest) < p2p_dist_xy_sq(new_pos, rat.dest)) {
+			// new pos is further from our dest; stop moving (but don't set speed=0), and turn in the correct dir to avoid overshooting dest and spinning in place
+		}
+		else { // apply movement
+			rat.anim_time += move_dist;
+			rat.pos        = new_pos;
+		}
+		if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos)) {
+			// update the path about every 30 frames of colliding; this prevents the rat from being stuck while also avoiding jittering due to frequent dest updates
+			collided    = 1;
+			update_path = ((rgen.rand()%30) == 0);
+			coll_dir    = (point(coll_pos.x, coll_pos.y, rat.pos.z) - rat.pos).get_norm(); // points toward the collider in the XY plane
+		}
 	}
 	vector3d const center_dz(0.0, 0.0, hheight);
 	point const p1(rat.pos + center_dz);
@@ -206,6 +222,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		valid_area.expand_by_xy(-(hlength + trim_thickness));
 		float target_fov_dp(RAT_FOV_DP), target_max_dist(view_dist); // start at nominal/max values
 		float const dist_upper_bound((rat.fear > 0.8) ? 0.2 : 1.0); // shorten the distance if very scared, so that we can avoid more easily
+		float const min_step(min(dist_thresh, 0.05f*rat.radius));
 		rat.speed = 0.0; // stop until we've found a valid destination
 
 		for (unsigned n = 0; n < 200; ++n) { // make 100 tries
@@ -215,9 +232,15 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			}
 			vector3d const vdir(rgen.signed_rand_vector_xy().get_norm()); // random XY direction
 			if (is_scared && n <= 100 && dot_product(dir_to_fear, vdir) > 0.0) continue; // don't move toward danger; may make the rat back into a corner
-			if (dot_product(rat.dir, vdir) < target_fov_dp) continue; // not in field of view, use a new direction
-			float const dist(rgen.rand_uniform(0.1, dist_upper_bound)*target_max_dist); // random distance out to max view dist
-			if (dist <= dist_thresh) continue; // distance is too short
+
+			if (collided && coll_dir != zero_vector) {
+				if (dot_product(coll_dir, vdir) > 0.0) continue; // must move away from the collision direction
+			}
+			else {
+				if (dot_product(rat.dir, vdir) < target_fov_dp) continue; // not in field of view, use a new direction
+			}
+			float dist(rgen.rand_uniform(0.1, dist_upper_bound)*target_max_dist); // random distance out to max view dist
+			max_eq(dist, min_step); // make sure distance isn't too short
 			point const cand(rat.pos + dist*vdir);
 			if (!valid_area.contains_pt_xy(cand)) continue; // check for end point inside building bcube
 			point const p2(cand + line_project_dist*vdir + center_dz); // extend in vdir so that the head doesn't collide
@@ -237,7 +260,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	// else dir is unchanged
 
 	if (new_dir != zero_vector) { // update dir if new_dir was set above
-		float const delta_dir((is_scared ? 2.0 : 1.0)*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep)))); // higher turning rate when scared
+		float const delta_dir((is_scared ? 1.2 : 1.0)*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep)))); // higher turning rate when scared
 		rat.dir = (delta_dir*new_dir + (1.0 - delta_dir)*rat.dir).get_norm();
 	}
 	if (rat.dir == zero_vector) {rat.dir = rgen.signed_rand_vector_xy().get_norm();} // dir must always be valid

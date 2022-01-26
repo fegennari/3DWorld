@@ -1039,14 +1039,14 @@ bool handle_vcylin_vcylin_int(point &p1, point const &p2, float rsum) {
 
 // vertical cylinder collision detection with dynamic objects: balls, the player? people? other rats?
 // only handles the first collision
-bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs) const {
+bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs, point &coll_pos) const {
 	float const z2(pos.z + height);
 
 	if (camera_surf_collide) { // check the player
 		float const player_radius(CAMERA_RADIUS), player_xy_radius(player_radius*global_building_params.player_coll_radius_scale);
 
 		if (pos.z < (camera_bs.z + player_radius + camera_zh) && z2 > (camera_bs.z - player_radius)) {
-			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + player_xy_radius))) return 1;
+			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + player_xy_radius))) {coll_pos = camera_bs; return 1;}
 		}
 	}
 	assert(has_room_geom());
@@ -1054,7 +1054,8 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	for (rat_t &rat : interior->room_geom->rats) {
 		if (rat.pos == pos) continue; // skip ourself
 		if (pos.z > (rat.pos.z + rat.get_height()) || z2 < rat.pos.z) continue; // different floors
-		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.7f*(radius + rat.radius))) return 1; // allow them to get a bit closer together, since radius is conservative
+		// allow them to get a bit closer together, since radius is conservative
+		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.7f*(radius + rat.radius))) {coll_pos = rat.pos; return 1;}
 	}
 	// check dynamic objects such as balls
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
@@ -1064,7 +1065,8 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
 		if (pos.z > c->z2() || z2 < c->z1())  continue; // different floors
 		// treat the ball as a vertical cylinder because it's too complex to find the collision point of a vertical cylinder with a sphere
-		if (handle_vcylin_vcylin_int(pos, c->get_cube_center(), (radius + c->get_radius()))) return 1;
+		point const center(c->get_cube_center());
+		if (handle_vcylin_vcylin_int(pos, center, (radius + c->get_radius()))) {coll_pos = center; return 1;}
 	}
 	return 0;
 }
