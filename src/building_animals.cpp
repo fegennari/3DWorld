@@ -136,7 +136,6 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	if (rat.is_sleeping()) {
 		if ((float)tfticks > rat.wake_time) {rat.wake_time = rat.speed = 0.0;} // time to wake up
 		check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos); // check for collisions but ignore the return values
-		//rat.wake_time = (float)tfticks + rgen.rand_uniform(1.0, 2.0)*TICKS_PER_SECOND;
 	}
 	else if (rat.speed == 0.0) {
 		rat.anim_time = 0.0; // reset animation to rest pos
@@ -148,8 +147,9 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			// new pos is further from our dest; stop moving (but don't set speed=0), and turn in the correct dir to avoid overshooting dest and spinning in place
 		}
 		else { // apply movement
-			rat.anim_time += move_dist;
-			rat.pos        = new_pos;
+			rat.pos               = new_pos;
+			rat.anim_time        += move_dist;
+			rat.dist_since_sleep += move_dist;
 		}
 		if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos)) {
 			// update the path about every 30 frames of colliding; this prevents the rat from being stuck while also avoiding jittering due to frequent dest updates
@@ -222,7 +222,16 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		}
 		rat.fear = max(0.0f, (rat.fear - 0.2f*(timestep/TICKS_PER_SECOND))); // reduce fear over 5s
 	}
-	if (!has_fear_dest && !rat.is_sleeping() && (rat.speed == 0.0 || newly_scared || update_path || dist_less_than(rat.pos, rat.dest, dist_thresh))) {
+	bool const is_at_dest(dist_less_than(rat.pos, rat.dest, dist_thresh));
+
+	if (!is_scared && !rat.is_sleeping() && is_at_dest && rat.dist_since_sleep > 1.5*floor_spacing && (rgen.rand()&2) == 0) { // 25% chance of taking a rest
+		rat.wake_time        = (float)tfticks + rgen.rand_uniform(0.0, 4.0)*TICKS_PER_SECOND; // 0-4s
+		rat.dist_since_sleep = 0.0; // reset the counter
+		rat.speed            = 0.0; // will reset anim_time in the next frame
+	}
+	else if (!has_fear_dest && !rat.is_sleeping() &&
+		(rat.speed == 0.0 || newly_scared || update_path || is_at_dest || check_line_coll_expand(rat.pos, rat.dest, coll_radius, hheight)))
+	{
 		// stopped, no dest, at dest, collided, or newly scared - choose a new dest
 		cube_t valid_area(bcube);
 		valid_area.expand_by_xy(-(hlength + trim_thickness));
