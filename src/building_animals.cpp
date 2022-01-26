@@ -202,8 +202,15 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 				}
 			} // for other_rat
 			float const side_coverage(0.5f*min(c->dx(), c->dy()) - hlength - misalign); // amount of overhang of the object around the rat's extents
-			float const dist(p2p_dist(p1, center)*(is_occupied ? 1.5 : 1.0)); // less desirable if occupied
-			if (dist < dist_thresh) {has_fear_dest = 1; rat.speed = 0.0; break;} // already at this location, and it's valid, so stay there
+			float dist(p2p_dist(p1, center));
+			
+			if (dist < dist_thresh) { // already at this location
+				if (check_line_coll_expand(p1, center, coll_radius, hheight)) {update_path = 1; continue;} // location is invalid, need to update the path below
+				has_fear_dest = 1; // it's valid, so stay there
+				rat.speed     = 0.0;
+				break;
+			}
+			if (is_occupied) {dist *= 1.5;} // less desirable if occupied
 			// Note: I tried using the dot product between this vector and dir_to_fear, but that causes instability when the rat is between two objects
 			float const dist_to_fear(p2p_dist(rat.fear_pos, center));
 			float const score((side_coverage - 0.5f*top_gap + 0.2f*dist_to_fear)/max(dist, dist_thresh)); // can be positive or negative
