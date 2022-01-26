@@ -518,7 +518,7 @@ void building_room_geom_t::add_vert_roll_to_material(room_object_t const &c, rge
 	mat.add_vcylin_to_verts(roll, apply_light_color(c), 1, 1); // paper/plastic roll
 }
 void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
-	if (c.flags & RO_FLAG_WAS_EXP) { // bare TP roll from a box
+	if (c.was_expanded()) { // bare TP roll from a box
 		add_vert_roll_to_material(c, get_untextured_material(1, 0, 1)); // shadowed, small
 		return;
 	}
@@ -542,7 +542,7 @@ void building_room_geom_t::add_tproll(room_object_t const &c) { // is_small=1
 void building_room_geom_t::add_tape(room_object_t const &c) { // is_small=1
 	rgeom_mat_t &mat(get_untextured_material(1, 0, 1));
 	
-	if (c.flags & RO_FLAG_WAS_EXP) {
+	if (c.was_expanded()) {
 		// if tape was in a drawer, then the hole won't properly blend with the wood under it, making the floor visible; this applies to some boxes as well;
 		// draw a cardboard colored circle under the hole before drawing the roll to sort of cover this up (though it's not textured);
 		cube_t bot_fill(c);
@@ -630,7 +630,7 @@ void building_room_geom_t::add_box(room_object_t const &c) { // is_small=1
 			unsigned ix(verts_start + 4*side);
 			for (unsigned n = 0; n < 4; ++n) {mat.quad_verts[ix+n].set_tc(ts[n], tt[n]);}
 		}
-		if (!(c.flags & RO_FLAG_WAS_EXP)) { // draw open box flaps, but not if box is in drawer/shelf/closet because there may not be space for flaps
+		if (!c.was_expanded()) { // draw open box flaps, but not if box is in drawer/shelf/closet because there may not be space for flaps
 			vector3d const box_sz(c.get_size());
 			float const flap_len(0.485*min(box_sz.x, box_sz.y)); // same length in both dims; slightly less than half-width because this is the base of the triangle
 			color_wrapper const cw(color);
@@ -908,7 +908,7 @@ void building_room_geom_t::add_bottle(room_object_t const &c) {
 	mat.add_ortho_cylin_to_verts(neck, color, dim, (is_empty && c.dir), (is_empty && !c.dir), 0, 0, (c.dir ? 0.85 : 1.0), (c.dir ? 1.0 : 0.85), 1.0, 1.0, 0, bottle_ndiv);
 
 	if (!is_empty) { // draw cap if nonempty
-		bool const draw_bot(c.flags & RO_FLAG_WAS_EXP);
+		bool const draw_bot(c.was_expanded());
 		mat.add_ortho_cylin_to_verts(cap, apply_light_color(c, cap_colors[bool(c.obj_id & 64)]), dim, (draw_bot || c.dir), (draw_bot || !c.dir), 0, 0, 1.0, 1.0, 1.0, 1.0, 0, bottle_ndiv);
 	}
 	// add the label
@@ -1325,7 +1325,7 @@ void building_room_geom_t::add_book_title(string const &title, cube_t const &tit
 
 void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool inc_sm, float tilt_angle, unsigned extra_skip_faces, bool no_title, float z_rot_angle) {
 	bool const is_held(z_rot_angle != 0.0); // held by the player, and need to draw the bottom
-	bool const draw_cover_as_small((c.flags & RO_FLAG_WAS_EXP) || is_held); // books in drawers, held, or dropped are always drawn as small objects
+	bool const draw_cover_as_small(c.was_expanded() || is_held); // books in drawers, held, or dropped are always drawn as small objects
 	if (draw_cover_as_small && !inc_sm) return; // nothing to draw
 	bool const is_open(c.is_open()), upright(c.get_sz_dim(!c.dim) < c.dz()); // on a bookshelf
 	bool const tdir(upright ? (c.dim ^ c.dir ^ bool(c.obj_id%7)) : 1); // sometimes upside down when upright
