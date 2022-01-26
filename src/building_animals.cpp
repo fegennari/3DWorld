@@ -278,7 +278,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	bool const is_close(dist_less_than(rat.pos, rat.dest, dist_thresh));
 	vector3d new_dir;
 	if      (!is_close) {new_dir = (rat.dest - rat.pos).get_norm();} // point toward our destination
-	else if (is_scared) {new_dir = dir_to_fear;} // point toward what we fear
+	else if (is_scared) {new_dir = dir_to_fear; rat.dist_since_sleep = 0.0;} // point toward what we fear and rest
 	// else dir is unchanged
 
 	if (new_dir != zero_vector) { // update dir if new_dir was set above
