@@ -12,6 +12,7 @@ float const RAT_FOV_DP(cos(0.5*RAT_FOV_DEG*TO_RADIANS));
 
 extern int animate2, camera_surf_collide, frame_counter;
 extern float fticks;
+extern double tfticks;
 extern building_params_t global_building_params;
 extern object_model_loader_t building_obj_model_loader;
 
@@ -132,7 +133,12 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	vector3d coll_dir;
 
 	// move the rat
-	if (rat.speed == 0.0) {
+	if (rat.is_sleeping()) {
+		if ((float)tfticks > rat.wake_time) {rat.wake_time = rat.speed = 0.0;} // time to wake up
+		check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos); // check for collisions but ignore the return values
+		//rat.wake_time = (float)tfticks + rgen.rand_uniform(1.0, 2.0)*TICKS_PER_SECOND;
+	}
+	else if (rat.speed == 0.0) {
 		rat.anim_time = 0.0; // reset animation to rest pos
 	}
 	else { // apply movement and check for collisions with dynamic objects
@@ -216,7 +222,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		}
 		rat.fear = max(0.0f, (rat.fear - 0.2f*(timestep/TICKS_PER_SECOND))); // reduce fear over 5s
 	}
-	if (!has_fear_dest && (rat.speed == 0.0 || newly_scared || collided || dist_less_than(rat.pos, rat.dest, dist_thresh))) {
+	if (!has_fear_dest && !rat.is_sleeping() && (rat.speed == 0.0 || newly_scared || update_path || dist_less_than(rat.pos, rat.dest, dist_thresh))) {
 		// stopped, no dest, at dest, collided, or newly scared - choose a new dest
 		cube_t valid_area(bcube);
 		valid_area.expand_by_xy(-(hlength + trim_thickness));

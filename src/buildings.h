@@ -77,10 +77,11 @@ bottle_params_t const bottle_params[NUM_BOTTLE_TYPES] = {
 struct rat_t {
 	point pos, dest, fear_pos;
 	vector3d dir;
-	float radius, speed, fear, anim_time;
+	float radius, speed, fear, anim_time, wake_time;
 
-	rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), fear(0.0), anim_time(0.0) {}
-	bool is_moving() const {return (speed > 0.0);}
+	rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_), speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0) {}
+	bool is_moving   () const {return (speed > 0.0);}
+	bool is_sleeping () const {return (wake_time > 0.0);}
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
 	float get_hwidth () const;
 	float get_height () const;
