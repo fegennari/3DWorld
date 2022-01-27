@@ -148,7 +148,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		}
 		else { // apply movement
 			rat.pos               = new_pos;
-			rat.anim_time        += move_dist;
+			rat.anim_time        += move_dist/rat.radius; // scale with size so that small rats' legs move faster
 			rat.dist_since_sleep += move_dist;
 		}
 		if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos)) {

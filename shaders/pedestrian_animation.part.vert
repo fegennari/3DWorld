@@ -94,7 +94,7 @@ void apply_vertex_animation(inout vec4 vertex, inout vec3 normal) {
 			float move_amt  = 0.012*anim_scale*(leg_top - vertex.y)/model_delta_height;
 			float lr_sign   = ((vertex.x < 0.0) ? -1.0 : 1.0); // left/right
 			float fb_sign   = ((vertex.z < 0.0) ? -1.0 : 1.0); // front back
-			float cycle_pos = 10.0*anim_val + 0.5*PI*lr_sign*fb_sign;
+			float cycle_pos = 0.06*anim_val + 0.5*PI*lr_sign*fb_sign;
 			vertex.y += max(0.0, 0.5*move_amt*(cos(cycle_pos) - 0.05)); // up and down; always positive
 			vertex.z += move_amt*sin(cycle_pos); // forward and backward
 		}
