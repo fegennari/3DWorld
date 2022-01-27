@@ -938,7 +938,7 @@ unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
 // collision query used for rats: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 bool building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const {
 	assert(interior != nullptr);
-	float const trim_thickness(get_trim_thickness());
+	float const trim_thickness(get_trim_thickness()), zmin(min(p1.z, p2.z));
 	vector3d const expand(radius, radius, hheight);
 	vector3d const expand_walls(expand + vector3d(trim_thickness, trim_thickness, 0.0)); // include the wall trim width
 
@@ -960,7 +960,8 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	} // for door
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
-		if (s.z1() < min(p1.z, p2.z) - 0.5f*get_window_vspace()) return 1; // not the ground floor - definitely a collision
+		if (zmin < ground_floor_z1) return 1; // basement stairs are walled off - definitely a collision
+		if (s.z1() < zmin - 0.5f*get_window_vspace()) return 1; // not the ground floor - definitely a collision
 
 		// maybe we're under the stairs; check for individual stairs collisions
 		for (auto c = interior->room_geom->get_stairs_start(); c != interior->room_geom->objs.end(); ++c) {
@@ -970,20 +971,31 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	} // for s
 	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand)) return 1;
 	// check exterior walls
-	vector3d cnorm; // unused
-	float t(0.0); // unused
-	if (ray_cast_exterior_walls(p1, p2, cnorm, t)) return 1; // what about trim_thickness?
+	// ray_cast_exterior_walls() doesn't really work here; instead we create a test cube and step it for every radius interval, and check if it ever exits the building
+	unsigned const num_steps(min(100U, unsigned(ceil(p2p_dist(p1, p2)/radius))));
+
+	if (num_steps > 1) {
+		vector3d delta((p2 - p1)/num_steps);
+		cube_t test_cube(p1, p1);
+		test_cube.expand_by(expand_walls);
+
+		for (unsigned step = 0; step < num_steps-1; ++step) { // take one less step (skip p2)
+			test_cube += delta; // take one step first (skip p1)
+			if (!is_cube_contained_in_parts(test_cube)) return 1; // extends outside the building walls
+		}
+	}
 	if (!has_room_geom()) return 0; // done (but really shouldn't get here)
 	// check room objects and expanded objects (from closets)
 	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
+	float t(0.0);
 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
 		auto const &obj_vect((vect_id == 1) ? interior->room_geom->expanded_objs : interior->room_geom->objs);
 		auto objs_end((vect_id == 1) ? obj_vect.end() : interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto c = obj_vect.begin(); c != objs_end; ++c) {
-			// skip non-colliding objects except for balls and expanded objects from closets (since rats must collide with these)
-			if (c->type != TYPE_LG_BALL && ((c->no_coll() && !c->was_expanded()) || !bldg_obj_types[c->type].ai_coll)) continue;
+			// skip non-colliding objects except for balls, computers under desks, expanded objects from closets (since rats must collide with these)
+			if (c->type != TYPE_LG_BALL && ((c->no_coll() && !c->was_expanded() && c->type != TYPE_COMPUTER) || !bldg_obj_types[c->type].ai_coll)) continue;
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 			cube_t c_extended(*c);
 			if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
@@ -1016,6 +1028,13 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 				cube_t cubes[5];
 				get_table_cubes(*c, cubes); // body and legs
 				if (line_int_cubes_exp(p1, p2, cubes, 5, expand)) return 1;
+
+				if (c->type == TYPE_DRESSER || c->type == TYPE_NIGHTSTAND) {
+					if (line_int_cube_exp(p1, p2, get_dresser_middle(*c), expand)) return 1;
+				}
+				else if (c->type == TYPE_DESK && c->desk_has_drawers()) {
+					if (line_int_cube_exp(p1, p2, get_desk_drawers_part(*c), expand)) return 1;
+				}
 			}
 			else if (c->type == TYPE_CHAIR) {
 				cube_t cubes[3], leg_cubes[4]; // seat, back, legs_bcube
