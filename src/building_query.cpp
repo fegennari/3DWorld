@@ -923,6 +923,18 @@ template<typename T> bool line_int_cubes(point const &p1, point const &p2, vecto
 	return 0;
 }
 
+unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
+	assert(sink.type == TYPE_KSINK);
+	cube_t dishwasher;
+	if (!get_dishwasher_for_ksink(sink, dishwasher)) {cubes[0] = sink; return 1;} // no dishwahser - 1 cube
+	room_object_t cabinet(sink);
+	cubes[0] = split_cabinet_at_dishwasher(cabinet, dishwasher); // left part
+	cubes[1] = cabinet; // right part
+	cubes[2] = dishwasher;
+	cubes[2].d[sink.dim][!sink.dir] = sink.d[sink.dim][!sink.dir]; // use the back of the cabinet, not the back of the dishwasher door
+	return 3;
+}
+
 // collision query used for rats: p1 and p2 are line end points; radius applies in X and Y, hheight is half height and applies in +/- z
 bool building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const {
 	assert(interior != nullptr);
@@ -1011,6 +1023,10 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 				if (line_int_cube_exp(p1, p2, cubes[0], expand)) return 1; // check seat
 				get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
 				if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 1; // check legs
+			}
+			else if (c->type == TYPE_KSINK) {
+				cube_t cubes[3];
+				if (line_int_cubes_exp(p1, p2, cubes, get_ksink_cubes(*c, cubes), expand)) return 1; // 1 or 3 sink parts
 			}
 			//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // is this useful? inside test only applied to end point
 			else return 1; // intersection

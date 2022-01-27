@@ -25,8 +25,6 @@ extern building_params_t global_building_params;
 
 
 void place_player_at_xy(float xval, float yval);
-room_object_t get_dresser_middle(room_object_t const &c);
-room_object_t get_desk_drawers_part(room_object_t const &c);
 void show_key_icon();
 bool is_shirt_model(room_object_t const &obj);
 bool is_pants_model(room_object_t const &obj);

@@ -91,8 +91,9 @@ point building_t::gen_rat_pos(float radius, rand_gen_t &rgen) const {
 	return all_zeros; // failed
 }
 
-bool can_hide_under(room_object_t const &c, float &zbot) {
+bool can_hide_under(room_object_t const &c, float &zbot, cube_t &hide_area) {
 	if (c.shape != SHAPE_CUBE ) return 0; // cubes only for now
+	cube_t dishwasher; // used below
 
 	if (c.type == TYPE_CLOSET && c.is_open() && c.is_small_closet()) { // open small closet
 		zbot = c.z2(); // closet ceiling
@@ -104,10 +105,15 @@ bool can_hide_under(room_object_t const &c, float &zbot) {
 		zbot = cubes[0].z1(); // frame bottom
 		return 1;
 	}
-	else if (c.type == TYPE_DESK || c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND || c.type == TYPE_TABLE) {
+	else if (c.type == TYPE_DESK || c.type == TYPE_TABLE) {
 		cube_t cubes[5];
 		get_table_cubes(c, cubes); // body and legs
 		zbot = cubes[0].z1(); // body bottom
+		return 1;
+	}
+	else if (c.type == TYPE_DRESSER || c.type == TYPE_NIGHTSTAND) {
+		hide_area = get_dresser_middle(c);
+		zbot = hide_area.z1();
 		return 1;
 	}
 	else if (c.type == TYPE_CHAIR) {
@@ -116,12 +122,21 @@ bool can_hide_under(room_object_t const &c, float &zbot) {
 		zbot = cubes[0].z1(); // seat bottom
 		return 1;
 	}
+	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) {
+		hide_area = dishwasher;
+		hide_area.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // use the back of the cabinet, not the back of the dishwasher door
+		zbot = hide_area.z1();
+		return 1;
+	}
+	//else if (c.type == TYPE_COUCH) {} // too low?
+	//else if (c.type == TYPE_BCASE) {} // too low?
 	return 0;
 }
 
 void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
 	float const hlength(rat.get_hlength()), hwidth(rat.get_hwidth()), height(rat.get_height()), hheight(0.5*height);
+	float const squish_hheight(0.75*hheight); // rats can squish to get under low objects and walk onto small steps
 	float const coll_radius(1.2f*hwidth); // slightly larger than half-width; maybe should use length so that the rat doesn't collide when turning?
 	float const line_project_dist(max(1.1f*(hlength - coll_radius), 0.0f)); // extra space in front of the target destination
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
@@ -158,7 +173,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			coll_dir    = (point(coll_pos.x, coll_pos.y, rat.pos.z) - rat.pos).get_norm(); // points toward the collider in the XY plane
 		}
 	}
-	vector3d const center_dz(0.0, 0.0, hheight);
+	vector3d const center_dz(0.0, 0.0, hheight); // or squish_hheight?
 	point const p1(rat.pos + center_dz);
 	vector3d dir_to_fear;
 	bool has_fear_dest(0);
@@ -175,7 +190,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		// find hiding spot (pref in opposite direction from fear_pos);
 		// we must check this each frame in case the player took or moved the object we were hiding under
 		auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
-		float const rat_z1(rat.pos.z), rat_z2(rat.pos.z + height);
+		float const rat_z1(rat.pos.z), rat_z2(rat.pos.z + height), rat_squish_z2(p1.z + squish_hheight);
 		point best_dest;
 		float best_score(0.0), zbot(0.0);
 		dir_to_fear   = (rat.fear_pos - rat.pos);
@@ -184,10 +199,12 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 
 		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
 			if (c->z1() > rat_z2 || c->z2() < rat_z1) continue; // wrong floor
-			if (!can_hide_under(*c, zbot)) continue;
-			float const top_gap(zbot - (rat_z2 - 0.1*height)); // space between top of rat and bottom of object; allow the rat to squish a bit
-			if (top_gap < 0.0) continue; // rat can't fit under this object
-			point center(c->xc(), c->yc(), p1.z);
+			cube_t hide_area;
+			if (!can_hide_under(*c, zbot, hide_area)) continue;
+			float const top_gap(zbot - rat_squish_z2); // space between top of rat and bottom of object
+			if (top_gap < 0.0) continue; // rat can't fit under this object; allowed area is waived
+			cube_t const &target(hide_area.is_all_zeros() ? *c : hide_area); // use hide_area if set (can be a subset of the object)
+			point center(target.xc(), target.yc(), p1.z);
 			float misalign(0.0);
 			bool is_occupied(0);
 
@@ -201,11 +218,11 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 					is_occupied = 1;
 				}
 			} // for other_rat
-			float const side_coverage(0.5f*min(c->dx(), c->dy()) - hlength - misalign); // amount of overhang of the object around the rat's extents
+			float const side_coverage(0.5f*min(target.dx(), target.dy()) - hlength - misalign); // amount of overhang of the object around the rat's extents
 			float dist(p2p_dist(p1, center));
 			
 			if (dist < dist_thresh) { // already at this location
-				if (check_line_coll_expand(p1, center, coll_radius, hheight)) {update_path = 1; continue;} // location is invalid, need to update the path below
+				if (check_line_coll_expand(p1, center, coll_radius, squish_hheight)) {update_path = 1; continue;} // location is invalid, need to update the path below
 				has_fear_dest = 1; // it's valid, so stay there
 				rat.speed     = 0.0;
 				break;
@@ -215,7 +232,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			float const dist_to_fear(p2p_dist(rat.fear_pos, center));
 			float const score((side_coverage - 0.5f*top_gap + 0.2f*dist_to_fear)/max(dist, dist_thresh)); // can be positive or negative
 			if (best_score != 0.0 && score <= best_score) continue;
-			if (check_line_coll_expand(p1, center, coll_radius, hheight)) continue;
+			if (check_line_coll_expand(p1, center, coll_radius, squish_hheight)) continue; // skip for zero length line segments from allowed_area
 			best_dest  = point(center.x, center.y, rat.pos.z); // keep zval on the floor
 			best_score = score;
 			if (center.x == rat.dest.x && center.y == rat.dest.y) break; // keep the same dest (optimization)
@@ -267,7 +284,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			if (!valid_area.contains_pt_xy(cand)) continue; // check for end point inside building bcube
 			point const p2(cand + line_project_dist*vdir + center_dz); // extend in vdir so that the head doesn't collide
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
-			if (check_line_coll_expand(p1_ext, p2, coll_radius, hheight)) continue;
+			if (check_line_coll_expand(p1_ext, p2, coll_radius, squish_hheight)) continue;
 			rat.dest  = cand;
 			rat.speed = global_building_params.rat_speed*rgen.rand_uniform(0.5, 1.0)*(is_scared ? 1.5 : 1.0); // random speed
 			break; // success
