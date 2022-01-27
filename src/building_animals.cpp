@@ -257,8 +257,9 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		(rat.speed == 0.0 || newly_scared || update_path || is_at_dest || check_line_coll_expand(rat.pos, rat.dest, coll_radius, hheight)))
 	{
 		// stopped, no dest, at dest, collided, or newly scared - choose a new dest
+		float const xy_pad(hlength + trim_thickness);
 		cube_t valid_area(bcube);
-		valid_area.expand_by_xy(-(hlength + trim_thickness));
+		valid_area.expand_by_xy(-xy_pad);
 		float target_fov_dp(RAT_FOV_DP), target_max_dist(view_dist); // start at nominal/max values
 		float const dist_upper_bound((rat.fear > 0.8) ? 0.2 : 1.0); // shorten the distance if very scared, so that we can avoid more easily
 		float const min_step(min(dist_thresh, 0.05f*rat.radius));
@@ -282,6 +283,10 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 			max_eq(dist, min_step); // make sure distance isn't too short
 			point const cand(rat.pos + dist*vdir);
 			if (!valid_area.contains_pt_xy(cand)) continue; // check for end point inside building bcube
+			cube_t req_area(cand, cand);
+			req_area.expand_by_xy(xy_pad);
+			req_area.z2() += hheight;
+			if (!is_cube_contained_in_parts(req_area)) continue; // outside the valid area
 			point const p2(cand + line_project_dist*vdir + center_dz); // extend in vdir so that the head doesn't collide
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
 			if (check_line_coll_expand(p1_ext, p2, coll_radius, squish_hheight)) continue;
@@ -309,13 +314,14 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 void building_t::scare_rat(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const {
 	assert(amount > 0.0);
 	if (rat.fear > 0.99 && dist_less_than(rat.fear_pos, scare_pos, rat.radius)) return; // already max fearful of this location (optimization)
-	int const scare_room(get_room_containing_pt(scare_pos)), rat_room(get_room_containing_pt(rat.pos));
+	point const pos(rat.get_center()); // use center zval, not floor zval
+	int const scare_room(get_room_containing_pt(scare_pos)), rat_room(get_room_containing_pt(pos));
 	assert(rat_room >= 0);
 	if (rat_room != scare_room) {amount *= 0.67;} // less fearful if in a different room
 	float const max_scare_dist(RAT_VIEW_FLOORS*get_window_vspace()), scare_dist(max_scare_dist*min(amount, 1.0f));
-	float const fear((scare_dist - p2p_dist(rat.pos, scare_pos))/max_scare_dist);
+	float const fear((scare_dist - p2p_dist(pos, scare_pos))/max_scare_dist);
 	if (fear <= 0.0) return;
-	if (by_sight && !check_line_of_sight_large_objs(rat.pos, scare_pos)) return; // check line of sight
+	if (by_sight && !check_line_of_sight_large_objs(pos, scare_pos)) return; // check line of sight
 	rat.fear     = min(1.0f, (rat.fear + fear));
 	rat.fear_pos = scare_pos;
 }

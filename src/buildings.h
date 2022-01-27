@@ -86,6 +86,7 @@ struct rat_t {
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
 	float get_hwidth () const;
 	float get_height () const;
+	point get_center () const {return point(pos.x, pos.y, (pos.z + 0.5f*get_height()));}
 	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
 };
@@ -1153,6 +1154,7 @@ private:
 	void clip_cube_to_parts(cube_t &c, vect_cube_t &cubes) const;
 	bool move_sphere_to_valid_part(point &pos, point const &p_last, float radius) const;
 	cube_t get_walkable_room_bounds(room_t const &room) const;
+	bool is_cube_contained_in_parts(cube_t const &c) const;
 	void get_exclude_cube(point const &pos, cube_t const &skip, cube_t &exclude, bool camera_in_building) const;
 	void move_door_to_other_side_of_wall(tquad_with_ix_t &door, float dist_mult, bool invert_normal) const;
 	void clip_door_to_interior(tquad_with_ix_t &door, bool clip_to_floor) const;

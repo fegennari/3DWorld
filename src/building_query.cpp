@@ -1092,3 +1092,13 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	return 0;
 }
 
+bool building_t::is_cube_contained_in_parts(cube_t const &c) const {
+	float cont_vol(0); // total shared volume
+
+	for (auto p = parts.begin(); p != get_real_parts_end_inc_sec(); ++p) {
+		if (!p->intersects(c)) continue;
+		cont_vol += (min(c.x2(), p->x2()) - max(c.x1(), p->x1()))*(min(c.y2(), p->y2()) - max(c.y1(), p->y1()))*(min(c.z2(), p->z2()) - max(c.z1(), p->z1()));
+	}
+	return (cont_vol > 0.99*c.get_volume()); // add a bit of tolerance
+}
+
