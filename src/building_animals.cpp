@@ -54,13 +54,13 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) { 
 	if (!rats.placed) { // new building - place rats
 		rand_gen_t rgen;
 		rgen.set_state(building_ix+1, mat_ix+1); // unique per building
-		float const base_radius(0.1*get_window_vspace());
+		float const floor_spacing(get_window_vspace());
 		unsigned const rmin(global_building_params.num_rats_min), rmax(global_building_params.num_rats_max);
 		unsigned const num(rmin + ((rmin == rmax) ? 0 : (rgen.rand() % (rmax - rmin + 1))));
 		rats.reserve(num);
 
 		for (unsigned n = 0; n < num; ++n) {
-			float const radius(base_radius*rgen.rand_uniform(0.8, 1.2));
+			float const radius(0.5f*floor_spacing*rgen.rand_uniform(global_building_params.rat_size_min, global_building_params.rat_size_max));
 			point const pos(gen_rat_pos(radius, rgen));
 			if (pos == all_zeros) continue; // bad pos? skip this rat
 			rats.emplace_back(pos, radius, rgen.signed_rand_vector_xy().get_norm());

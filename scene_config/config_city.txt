@@ -29,6 +29,8 @@ buildings ai_player_vis_test 1 # 0=no test, 1=LOS, 2=LOS+FOV, 3=LOS+FOV+lit
 buildings num_rats_min 2
 buildings num_rats_max 3
 buildings rat_speed 0.0005
+buildings rat_size_min 0.10 # length relative to floor spacing
+buildings rat_size_max 0.20 # length relative to floor spacing
 
 # building gameplay state
 buildings player_weight_limit 200 # in lbs

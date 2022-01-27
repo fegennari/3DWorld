@@ -232,6 +232,8 @@ void building_params_t::init_kw_maps() {
 	kwmu.add("num_rats_min", num_rats_min);
 	kwmu.add("num_rats_max", num_rats_max);
 	kwmf.add("rat_speed",    rat_speed);
+	kwmr.add("rat_size_min", rat_size_min, FP_CHECK_POS);
+	kwmr.add("rat_size_max", rat_size_max, FP_CHECK_POS);
 	// gameplay state
 	kwmr.add("open_door_prob",   open_door_prob,   FP_CHECK_01);
 	kwmr.add("locked_door_prob", locked_door_prob, FP_CHECK_01);
