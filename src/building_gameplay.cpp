@@ -843,7 +843,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	if (has_doors) {get_cabinet_or_counter_doors(obj, drawers);}
 	else {
 		if (obj.type == TYPE_DESK) {
-			if (!(obj.room_id & 3)) return 0; // no drawers for this desk
+			if (!obj.desk_has_drawers()) return 0; // no drawers for this desk
 			drawers_part = get_desk_drawers_part(obj);
 			bool const side(obj.obj_id & 1);
 			drawers_part.d[!obj.dim][side] -= (side ? 1.0 : -1.0)*0.85*get_tc_leg_width(obj, 0.06);

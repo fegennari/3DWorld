@@ -1612,7 +1612,7 @@ void building_room_geom_t::add_desk(room_object_t const &c, float tscale, bool i
 		get_wood_material(tscale).add_cube_to_verts(top, color, tex_origin); // all faces drawn
 		add_tc_legs(legs_bcube, color, 0.06, tscale);
 	}
-	if (c.room_id & 3) { // add drawers 75% of the time
+	if (c.desk_has_drawers()) { // add drawers 75% of the time
 		room_object_t drawers(get_desk_drawers_part(c));
 		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(drawers, color, tex_origin);} // all faces drawn
 

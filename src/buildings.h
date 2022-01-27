@@ -463,6 +463,7 @@ struct room_object_t : public cube_t {
 	bool is_obj_model_type() const {return (type >= TYPE_TOILET && type < NUM_ROBJ_TYPES);}
 	bool is_small_closet() const {return (get_sz_dim(!dim) < 1.2*dz());}
 	bool is_bottle_empty() const {return ((obj_id & 192) == 192);} // empty if both bits 6 and 7 are set
+	bool desk_has_drawers()const {return bool(room_id & 3);} // 75% of the time
 	bool can_use        () const;
 	bool is_interactive () const {return (has_dstate() || can_use());}
 	bool can_place_onto () const;
