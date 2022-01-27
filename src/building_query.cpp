@@ -1070,6 +1070,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + player_xy_radius))) {coll_pos = camera_bs; return 1;}
 		}
 	}
+	//if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, building_ix, ped_bcubes);}
 	assert(has_room_geom());
 
 	for (rat_t &rat : interior->room_geom->rats) {

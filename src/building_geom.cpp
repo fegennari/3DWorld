@@ -814,7 +814,7 @@ void building_t::gen_house(cube_t const &base, rand_gen_t &rgen) {
 		}
 		add_door(door, door_part, door_dim, door_dir, 0);
 		if (doors.size() == 2) {swap(doors[0], doors[1]);} // make sure the house door comes before the garage/shed door
-		float const tot_area(parts[0].dx()*parts[0].dy() + (two_parts ? parts[1].dx()*parts[1].dy() : 0.0f));
+		float const tot_area(parts[0].get_area_xy() + (two_parts ? parts[1].get_area_xy() : 0.0f));
 
 		if (tot_area > 25.0f*floor_spacing*floor_spacing) { // if house is large enough, add a back door
 			bool added_door(0);
