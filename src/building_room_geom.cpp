@@ -131,7 +131,7 @@ void building_room_geom_t::add_chair(room_object_t const &c, float tscale) { // 
 
 room_object_t get_dresser_middle(room_object_t const &c) {
 	room_object_t middle(c);
-	middle.z1() += 0.12*c.dz();
+	middle.z1() += 0.14*c.dz(); // bottom of drawers section
 	middle.z2() -= 0.06*c.dz(); // at bottom of top surface
 	middle.expand_by_xy(-0.5*get_tc_leg_width(c, 0.10)); // shrink by half leg width
 	return middle;
@@ -2120,9 +2120,9 @@ bool get_dishwasher_for_ksink(room_object_t const &c, cube_t &dishwasher) {
 	if (width <= 3.5*depth) return 0; // too small to fit a dishwasher
 	dishwasher = c;
 	bool const side((c.flags & RO_FLAG_ADJ_LO) ? 1 : ((c.flags & RO_FLAG_ADJ_HI) ? 0 : (c.obj_id & 1))); // left/right of the sink
-	dishwasher.z1() += 0.05*dz;
+	dishwasher.z1() += 0.06*dz;
 	dishwasher.z2() -= 0.05*dz;
-	dishwasher.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir] - dir_sign*0.1*depth;
+	dishwasher.d[ c.dim][!c.dir]  = c.d[c.dim][c.dir] - dir_sign*0.1*depth; // back
 	dishwasher.d[ c.dim][ c.dir] += dir_sign*0.05*depth; // front
 	dishwasher.d[!c.dim][!side ]  = c.get_center_dim(!c.dim) + (side ? 1.0 : -1.0)*0.66*depth;
 	dishwasher.d[!c.dim][ side ]  = dishwasher.d[!c.dim][!side] + (side ? 1.0 : -1.0)*1.05*depth;
