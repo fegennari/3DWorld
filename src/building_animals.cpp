@@ -44,7 +44,7 @@ cube_t rat_t::get_bcube_with_dir() const {
 	return bcube;
 }
 
-void building_t::update_animals(point const &camera_bs, unsigned building_ix) { // 0.01ms for 2 rats
+void building_t::update_animals(point const &camera_bs, unsigned building_ix, int ped_ix) { // 0.01ms for 2 rats
 	if (global_building_params.num_rats_max == 0 || !animate2) return;
 	if (is_rotated() || !has_room_geom() || interior->rooms.empty()) return;
 	vect_rat_t &rats(interior->room_geom->rats);
@@ -76,7 +76,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) { 
 
 	for (rat_t &rat : rats) {
 		rgen.rand_mix(); // make sure it's different per rat
-		update_rat(rat, camera_bs, rgen); // ~0.01ms per rat
+		update_rat(rat, camera_bs, ped_ix, rgen); // ~0.01ms per rat
 	}
 }
 
@@ -142,7 +142,7 @@ bool can_hide_under(room_object_t const &c, float &zbot, cube_t &hide_area) {
 	return 0;
 }
 
-void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen) const {
+void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
 	float const hlength(rat.get_hlength()), hwidth(rat.get_hwidth()), height(rat.get_height()), hheight(0.5*height);
 	float const squish_hheight(0.75*hheight); // rats can squish to get under low objects and walk onto small steps
@@ -188,10 +188,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	bool has_fear_dest(0);
 	// apply scare logic
 	bool const was_scared(rat.fear > 0.0);
-	if (camera_surf_collide) {scare_rat(rat, camera_bs, 0.5, 1);} // the sight of the player walking in the building scares the rats
-	sphere_t const cur_sound(get_cur_frame_loudest_sound());
-	if (cur_sound.radius > 0.0) {scare_rat(rat, cur_sound.pos, 4.0*cur_sound.radius, 0);}
-	// what about fear from sudden light changes? maybe it's enough that the light switch makes a click sound
+	scare_rat(rat, camera_bs, ped_ix);
 	bool const is_scared(rat.fear > 0.0), newly_scared(is_scared && !was_scared);
 
 	// determine destination
@@ -205,6 +202,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		dir_to_fear   = (rat.fear_pos - rat.pos);
 		dir_to_fear.z = 0.0; // XY plane only
 		dir_to_fear.normalize();
+		rat.wake_time = 0.0; // wake up
 
 		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
 			if (c->z1() > rat_z2 || c->z2() < rat_z1) continue; // wrong floor
@@ -320,8 +318,24 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	assert(rat.dir.z == 0.0); // must be in XY plane
 }
 
-void building_t::scare_rat(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const {
+void building_t::scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const {
+	// Note: later calls to scare_rat_at_pos() have priority and will set rat.fear_pos, but all calls will accumulate fear
+	float const sight_scare_amt = 0.5;
+	vect_cube_t ped_bcubes;
+	if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, ped_bcubes, 1);} // moving_only=1
+
+	for (cube_t const &c : ped_bcubes) { // only the cube center is needed
+		scare_rat_at_pos(rat, point(c.xc(), c.yc(), c.z1()), sight_scare_amt, 1); // other people in the building scare the rats
+	}
+	if (camera_surf_collide) {scare_rat_at_pos(rat, camera_bs, sight_scare_amt, 1);} // the sight of the player walking in the building scares the rats
+	sphere_t const cur_sound(get_cur_frame_loudest_sound());
+	if (cur_sound.radius > 0.0) {scare_rat_at_pos(rat, cur_sound.pos, 4.0*cur_sound.radius, 0);}
+	// what about fear from sudden light changes? maybe it's enough that the light switch makes a click sound
+}
+
+void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const {
 	assert(amount > 0.0);
+	if (fabs(rat.pos.z - scare_pos.z) > get_window_vspace()) return; // on a different floor, ignore
 	if (rat.fear > 0.99 && dist_less_than(rat.fear_pos, scare_pos, rat.radius)) return; // already max fearful of this location (optimization)
 	point const pos(rat.get_center()); // use center zval, not floor zval
 	int const scare_room(get_room_containing_pt(scare_pos)), rat_room(get_room_containing_pt(pos));

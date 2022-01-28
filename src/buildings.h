@@ -1109,11 +1109,12 @@ private:
 
 	// animals
 public:
-	void update_animals(point const &camera_bs, unsigned building_ix);
+	void update_animals(point const &camera_bs, unsigned building_ix, int ped_ix);
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
-	void update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen) const;
-	void scare_rat(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
+	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand_gen_t &rgen) const;
+	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;
+	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
 	bool check_line_coll_expand(point const &p1, point const &p2, float radius, float height) const;
 	bool check_line_of_sight_large_objs(point const &p1, point const &p2) const;
 	bool check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs, point &coll_pos) const;

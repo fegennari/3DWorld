@@ -1088,14 +1088,14 @@ bool handle_vcylin_vcylin_int(point &p1, point const &p2, float rsum) {
 bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, float height, point const &camera_bs, point &coll_pos) const {
 	float const z2(pos.z + height);
 
-	if (camera_surf_collide) { // check the player
+	if (camera_surf_collide) { // check the player; unclear if this is really needed, or if it actually works
 		float const player_radius(CAMERA_RADIUS), player_xy_radius(player_radius*global_building_params.player_coll_radius_scale);
 
 		if (pos.z < (camera_bs.z + player_radius + camera_zh) && z2 > (camera_bs.z - player_radius)) {
 			if (handle_vcylin_vcylin_int(pos, camera_bs, (radius + player_xy_radius))) {coll_pos = camera_bs; return 1;}
 		}
 	}
-	//if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, ped_bcubes);}
+	// what about people in the building? maybe since rats are scared of them, they won't collide with people?
 	assert(has_room_geom());
 
 	for (rat_t &rat : interior->room_geom->rats) {
