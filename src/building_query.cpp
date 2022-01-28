@@ -970,18 +970,21 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 		}
 	} // for s
 	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand)) return 1;
+	
 	// check exterior walls
-	// ray_cast_exterior_walls() doesn't really work here; instead we create a test cube and step it for every radius interval, and check if it ever exits the building
-	unsigned const num_steps(min(100U, unsigned(ceil(p2p_dist(p1, p2)/radius))));
+	if (real_num_parts > 1) { // only need to do this for multi-part buildings because the caller is assumed to check the building bcube
+		// ray_cast_exterior_walls() doesn't really work here; instead we create a test cube and step it for every radius interval, and check if it ever exits the building
+		unsigned const num_steps(min(100U, unsigned(ceil(p2p_dist(p1, p2)/radius))));
 
-	if (num_steps > 1) {
-		vector3d delta((p2 - p1)/num_steps);
-		cube_t test_cube(p1, p1);
-		test_cube.expand_by(expand_walls);
+		if (num_steps > 1) {
+			vector3d delta((p2 - p1)/num_steps);
+			cube_t test_cube(p1, p1);
+			test_cube.expand_by(expand_walls);
 
-		for (unsigned step = 0; step < num_steps-1; ++step) { // take one less step (skip p2)
-			test_cube += delta; // take one step first (skip p1)
-			if (!is_cube_contained_in_parts(test_cube)) return 1; // extends outside the building walls
+			for (unsigned step = 0; step < num_steps-1; ++step) { // take one less step (skip p2)
+				test_cube += delta; // take one step first (skip p1)
+				if (!is_cube_contained_in_parts(test_cube)) return 1; // extends outside the building walls
+			}
 		}
 	}
 	if (!has_room_geom()) return 0; // done (but really shouldn't get here)
