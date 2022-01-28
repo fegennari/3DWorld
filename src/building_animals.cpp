@@ -55,12 +55,15 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) { 
 		rand_gen_t rgen;
 		rgen.set_state(building_ix+1, mat_ix+1); // unique per building
 		float const floor_spacing(get_window_vspace());
+		float const min_sz(global_building_params.rat_size_min), max_sz(global_building_params.rat_size_max);
 		unsigned const rmin(global_building_params.num_rats_min), rmax(global_building_params.num_rats_max);
 		unsigned const num(rmin + ((rmin == rmax) ? 0 : (rgen.rand() % (rmax - rmin + 1))));
 		rats.reserve(num);
 
 		for (unsigned n = 0; n < num; ++n) {
-			float const radius(0.5f*floor_spacing*rgen.rand_uniform(global_building_params.rat_size_min, global_building_params.rat_size_max));
+			// there's no error check for min_sz <= max_sz, so just use min_sz in that case
+			float const sz_scale((min_sz >= max_sz) ? min_sz : rgen.rand_uniform(min_sz, max_sz));
+			float const radius(0.5f*floor_spacing*sz_scale);
 			point const pos(gen_rat_pos(radius, rgen));
 			if (pos == all_zeros) continue; // bad pos? skip this rat
 			rats.emplace_back(pos, radius, rgen.signed_rand_vector_xy().get_norm());
@@ -73,7 +76,7 @@ void building_t::update_animals(point const &camera_bs, unsigned building_ix) { 
 
 	for (rat_t &rat : rats) {
 		rgen.rand_mix(); // make sure it's different per rat
-		update_rat(rat, camera_bs, rgen);
+		update_rat(rat, camera_bs, rgen); // ~0.01ms per rat
 	}
 }
 
@@ -300,7 +303,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 	bool const is_close(dist_less_than(rat.pos, rat.dest, dist_thresh));
 	vector3d new_dir;
 	if      (!is_close) {new_dir = (rat.dest - rat.pos).get_norm();} // point toward our destination
-	else if (is_scared) {new_dir = dir_to_fear; rat.dist_since_sleep = 0.0;} // point toward what we fear and rest
+	else if (is_scared) {new_dir = dir_to_fear; rat.speed = rat.dist_since_sleep = 0.0;} // stop, rest, and point toward what we fear
 	// else dir is unchanged
 
 	if (new_dir != zero_vector) { // update dir if new_dir was set above
