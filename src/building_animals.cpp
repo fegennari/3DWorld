@@ -270,7 +270,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, rand_gen_t &rgen
 		cube_t valid_area(bcube);
 		valid_area.expand_by_xy(-xy_pad);
 		float target_fov_dp(RAT_FOV_DP), target_max_dist(view_dist); // start at nominal/max values
-		float const dist_upper_bound((rat.fear > 0.8) ? 0.2 : 1.0); // shorten the distance if very scared, so that we can avoid more easily
+		float const dist_upper_bound(0.12 + 0.88*(1.0 - rat.fear)); // shorten the distance based on the amount of fear to evade more easily
 		float const min_step(min(dist_thresh, 0.05f*rat.radius));
 		rat.speed = 0.0; // stop until we've found a valid destination
 
