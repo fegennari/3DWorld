@@ -2493,7 +2493,7 @@ public:
 						else {can_do_building_action = b.apply_player_action_key(camera_xlated, cview_dir, 0, 1);} // mode=0, check_only=1
 						b.player_pickup_object(camera_xlated, cview_dir);
 						if (teleport_to_screenshot) {b.maybe_teleport_to_screenshot();}
-						if (animate2) {b.update_player_interact_objects(camera_xlated, bi->ix, ped_ix);} // update dynamic objects if the player is in the building
+						if (animate2) {b.update_player_interact_objects(camera_xlated, ped_ix);} // update dynamic objects if the player is in the building
 					} // for bi
 				} // for g
 			} // for i
@@ -2905,7 +2905,7 @@ public:
 					if (check_interior) {
 						ped_bcubes.clear();
 						int const ped_ix(get_ped_ix_for_bix(b->ix));
-						if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, b->ix, ped_bcubes);}
+						if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, ped_bcubes);}
 					}
 					if (get_building(b->ix).check_sphere_coll(pos, p_last, ped_bcubes, xlate, radius, xy_only, points, cnorm, check_interior)) return 1;
 				} // for b

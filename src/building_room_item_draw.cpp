@@ -871,7 +871,7 @@ void building_t::gen_and_draw_room_geom(brg_batch_draw_t *bbd, shader_t &s, occl
 		rand_gen_t rgen;
 		rgen.set_state(building_ix, parts.size()); // set to something canonical per building
 		ped_bcubes.clear();
-		if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, building_ix, ped_bcubes);}
+		if (ped_ix >= 0) {get_ped_bcubes_for_building(ped_ix, ped_bcubes);}
 		gen_room_details(rgen, ped_bcubes, building_ix); // generate so that we can draw it
 		assert(has_room_geom());
 	}

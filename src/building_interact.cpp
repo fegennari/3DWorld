@@ -588,7 +588,7 @@ bool check_ball_kick(room_object_t &ball, vector3d &velocity, point &new_center,
 	return 1;
 }
 
-void building_t::update_player_interact_objects(point const &player_pos, unsigned building_ix, int first_ped_ix) {
+void building_t::update_player_interact_objects(point const &player_pos, int first_ped_ix) {
 	assert(interior);
 	interior->update_elevators(*this, player_pos);
 	if (!has_room_geom()) return; // nothing else to do
@@ -597,7 +597,7 @@ void building_t::update_player_interact_objects(point const &player_pos, unsigne
 	static float last_sound_tfticks(0);
 	static point last_sound_pt(all_zeros), last_player_pos(all_zeros);
 	vect_cube_t ped_bcubes;
-	if (first_ped_ix >= 0) {get_ped_bcubes_for_building(first_ped_ix, building_ix, ped_bcubes);}
+	if (first_ped_ix >= 0) {get_ped_bcubes_for_building(first_ped_ix, ped_bcubes);}
 	bool const player_is_moving(player_pos != last_player_pos);
 	last_player_pos = player_pos;
 	auto &objs(interior->room_geom->objs), &expanded_objs(interior->room_geom->expanded_objs);

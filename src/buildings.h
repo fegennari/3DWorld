@@ -1129,7 +1129,7 @@ public:
 		float zval, unsigned room_id, float tot_light_amt, cube_t const &place_area, unsigned objs_start, float front_clearance=0.0,
 		unsigned pref_orient=4, bool pref_centered=0, colorRGBA const &color=WHITE, bool not_at_window=0);
 	int check_valid_picture_placement(room_t const &room, cube_t const &c, float width, float zval, bool dim, bool dir, unsigned objs_start) const;
-	void update_player_interact_objects(point const &player_pos, unsigned building_ix, int first_ped_ix);
+	void update_player_interact_objects(point const &player_pos, int first_ped_ix);
 	bool line_intersect_walls(point const &p1, point const &p2) const;
 	bool is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) const;
 	bool is_rot_cube_visible(cube_t const &c, vector3d const &xlate) const;
@@ -1426,7 +1426,7 @@ void enable_animations_for_shader(shader_t &s);
 void setup_city_lights(vector3d const &xlate);
 void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv); // from city_gen.cpp
 void get_locations_of_peds_in_building(int first_ped_ix, vector<point> &locs); // from city_gen.cpp
-void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes, bool moving_only=0); // from city_gen.cpp
+void get_ped_bcubes_for_building(int first_ped_ix, vect_cube_t &bcubes, bool moving_only=0); // from city_gen.cpp
 void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 vector3d get_nom_car_size();

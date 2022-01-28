@@ -930,7 +930,7 @@ public:
 	void draw(vector3d const &xlate, bool use_dlights, bool shadow_only, bool is_dlight_shadows);
 	void draw_peds_in_building(int first_ped_ix, ped_draw_vars_t const &pdv);
 	void get_locations_of_peds_in_building(int first_ped_ix, vector<point> &locs) const;
-	void get_ped_bcubes_for_building(int first_ped_ix, unsigned bix, vect_cube_t &bcubes, bool moving_only) const;
+	void get_ped_bcubes_for_building(int first_ped_ix, vect_cube_t &bcubes, bool moving_only) const;
 	void register_person_hit(unsigned person_ix, room_object_t const &obj, vector3d const &velocity);
 	void draw_player_model(shader_t &s, vector3d const &xlate, bool shadow_only);
 	void free_context() {ped_model_loader.free_context();}
