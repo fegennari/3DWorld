@@ -1446,48 +1446,55 @@ void building_room_geom_t::add_book(room_object_t const &c, bool inc_lg, bool in
 	} // end titles
 }
 
+void get_bookcase_cubes(room_object_t const &c, cube_t &top, cube_t &middle, cube_t &back, cube_t lr[2], bool no_shelves, float sides_scale) {
+	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)), height(c.dz()), side_thickness(0.06*sides_scale*width);
+	middle = c;
+
+	for (unsigned d = 0; d < 2; ++d) { // left/right sides
+		lr[d] = c;
+		lr[d] .d[!c.dim][ d] += (d ? -1.0f : 1.0f)*(width - side_thickness);
+		middle.d[!c.dim][!d]  = lr[d].d[!c.dim][d];
+	}
+	top = middle;
+	top.z1()   += height - side_thickness; // make same width as sides
+	middle.z2() = top.z1();
+	if (!no_shelves) {middle.z1() += 0.07*height;} // only sides extend to the floor
+	back = middle;
+	back  .d[c.dim][ c.dir] += 0.94*depth;
+	middle.d[c.dim][!c.dir]  = back.d[c.dim][c.dir];
+}
+
 void building_room_geom_t::add_bookcase(room_object_t const &c, bool inc_lg, bool inc_sm, float tscale, bool no_shelves, float sides_scale,
 	point const *const use_this_tex_origin, vector<room_object_t> *books)
 {
 	colorRGBA const color(apply_wood_light_color(c));
+	point const tex_origin(use_this_tex_origin ? *use_this_tex_origin : c.get_llc());
 	unsigned const skip_faces(c.was_moved() ? 0 : ~get_face_mask(c.dim, !c.dir)); // skip back face, unless moved by the player and no longer against the wall
 	unsigned const skip_faces_shelves(skip_faces | get_skip_mask_for_xy(!c.dim)); // skip back face and sides
-	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)); // signed depth
-	float const side_thickness(0.06*sides_scale*width);
-	point const tex_origin(use_this_tex_origin ? *use_this_tex_origin : c.get_llc());
-	cube_t middle(c);
+	float const width(c.get_sz_dim(!c.dim)), depth((c.dir ? -1.0 : 1.0)*c.get_sz_dim(c.dim)), height(c.dz()); // signed depth
+	cube_t top, middle, back, lr[2];
+	get_bookcase_cubes(c, top, middle, back, lr, no_shelves, sides_scale);
 
-	for (unsigned d = 0; d < 2; ++d) { // left/right sides
-		cube_t lr(c);
-		lr.d[!c.dim][d] += (d ? -1.0f : 1.0f)*(width - side_thickness);
-		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(lr, color, tex_origin, (skip_faces | EF_Z1));} // side
-		middle.d[!c.dim][!d] = lr.d[!c.dim][d];
-	}
-	cube_t top(middle);
-	top.z1()   += c.dz() - side_thickness; // make same width as sides
-	middle.z2() = top.z1();
-	if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(top, color, tex_origin, skip_faces_shelves);} // top
-	cube_t back(middle);
-	back.d[c.dim] [c.dir]  += 0.94*depth;
-	middle.d[c.dim][!c.dir] = back.d[c.dim][c.dir];
-	
 	if (inc_lg) {
 		unsigned const back_skip_faces(c.was_moved() ? ~get_skip_mask_for_xy(c.dim) : get_face_mask(c.dim, c.dir)); // back - only face oriented outward
-		get_wood_material(tscale).add_cube_to_verts(back, color, tex_origin, back_skip_faces);
+		rgeom_mat_t &wood_mat(get_wood_material(tscale));
+		wood_mat.add_cube_to_verts(top,  color, tex_origin, skip_faces_shelves); // top
+		wood_mat.add_cube_to_verts(back, color, tex_origin, back_skip_faces   ); // back
+		for (unsigned d = 0; d < 2; ++d) {wood_mat.add_cube_to_verts(lr[d], color, tex_origin, (skip_faces | EF_Z1));} // left/right sides
 	}
 	if (no_shelves) return;
 	// add shelves
 	rand_gen_t rgen;
 	c.set_rand_gen_state(rgen);
 	unsigned const num_shelves(3 + ((17*c.room_id + int(1000.0*fabs(c.z1())))%3)); // 3-5, randomly selected by room ID and floor
-	float const shelf_dz(middle.dz()/(num_shelves+0.25)), shelf_thick(0.03*c.dz());
+	float const shelf_dz(middle.dz()/num_shelves), shelf_thick(0.03*height);
 	unsigned const skip_book_flags(c.get_combined_flags());
 	cube_t shelves[5];
 	
 	for (unsigned i = 0; i < num_shelves; ++i) {
 		cube_t &shelf(shelves[i]);
 		shelf = middle; // copy XY parts
-		shelf.z1() += (i+0.25)*shelf_dz;
+		shelf.z1() += i*shelf_dz;
 		shelf.z2()  = shelf.z1() + shelf_thick;
 		if (inc_lg) {get_wood_material(tscale).add_cube_to_verts(shelf, color, tex_origin, skip_faces_shelves);} // Note: mat reference may be invalidated by adding books
 	}

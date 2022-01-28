@@ -1043,6 +1043,12 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 				get_tc_leg_cubes(cubes[2], 0.15, leg_cubes); // width=0.15
 				if (line_int_cubes_exp(p1, p2, leg_cubes, 4, expand)) return 1; // check legs
 			}
+			else if (c->type == TYPE_BCASE) {
+				cube_t top, middle, back, lr[2];
+				get_bookcase_cubes(*c, top, middle, back, lr);
+				cube_t const all_cubes[5] = {top, middle, back, lr[0], lr[1]}; // probably don't need to check the top and back, but okay to do so
+				if (line_int_cubes_exp(p1, p2, all_cubes, 5, expand)) return 1;
+			}
 			else if (c->type == TYPE_KSINK) {
 				cube_t cubes[3];
 				if (line_int_cubes_exp(p1, p2, cubes, get_ksink_cubes(*c, cubes), expand)) return 1; // 1 or 3 sink parts

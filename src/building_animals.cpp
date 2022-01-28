@@ -125,14 +125,20 @@ bool can_hide_under(room_object_t const &c, float &zbot, cube_t &hide_area) {
 		zbot = cubes[0].z1(); // seat bottom
 		return 1;
 	}
-	if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) {
+	else if (c.type == TYPE_BCASE) {
+		cube_t top, middle, back, lr[2];
+		get_bookcase_cubes(c, top, middle, back, lr);
+		hide_area = middle;
+		zbot = hide_area.z1();
+		return 1;
+	}
+	else if (c.type == TYPE_KSINK && get_dishwasher_for_ksink(c, dishwasher)) {
 		hide_area = dishwasher;
 		hide_area.d[c.dim][!c.dir] = c.d[c.dim][!c.dir]; // use the back of the cabinet, not the back of the dishwasher door
 		zbot = hide_area.z1();
 		return 1;
 	}
 	//else if (c.type == TYPE_COUCH) {} // too low?
-	//else if (c.type == TYPE_BCASE) {} // too low?
 	return 0;
 }
 
