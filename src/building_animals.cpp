@@ -138,7 +138,12 @@ bool can_hide_under(room_object_t const &c, float &zbot, cube_t &hide_area) {
 		zbot = hide_area.z1();
 		return 1;
 	}
-	//else if (c.type == TYPE_COUCH) {} // too low?
+	else if (c.type == TYPE_COUCH) {
+		hide_area = c;
+		hide_area.z1() += 0.06*c.dz(); // there's space under the couch
+		zbot = hide_area.z1();
+		return 1;
+	}
 	return 0;
 }
 

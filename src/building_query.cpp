@@ -1053,6 +1053,11 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 				cube_t cubes[3];
 				if (line_int_cubes_exp(p1, p2, cubes, get_ksink_cubes(*c, cubes), expand)) return 1; // 1 or 3 sink parts
 			}
+			else if (c->type == TYPE_COUCH) {
+				cube_t couch_body(*c);
+				couch_body.z1() += 0.06*c->dz(); // there's space under the couch
+				if (line_int_cube_exp(p1, p2, couch_body, expand)) return 1;
+			}
 			//else if (c->type == TYPE_STALL && maybe_inside_room_object(*c, p2, radius)) {} // is this useful? inside test only applied to end point
 			else return 1; // intersection
 		} // for c
