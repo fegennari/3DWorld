@@ -155,6 +155,7 @@ public:
 		add_new_sound("metal_door.wav" ); // SOUND_METAL_DOOR
 		add_new_sound("doorbell.wav"   ); // SOUND_DOORBELL
 		add_new_sound("helicopter.wav" ); // SOUND_HELICOPTER
+		add_new_sound("rat_squeak.wav" ); // SOUND_RAT_SQUEAK
 		cout << endl;
 
 		// create sources

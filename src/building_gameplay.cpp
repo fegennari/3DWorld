@@ -682,7 +682,8 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 			room_object_t rat(rats[rat_ix].get_bcube_with_dir(), TYPE_RAT, 0); // no room
 			if (!register_player_object_pickup(rat, at_pos)) return 0;
 			player_inventory.add_item(rat);
-			// TODO: play squeak sound
+			gen_sound_thread_safe(SOUND_RAT_SQUEAK, building.local_to_camera_space(rats[rat_ix].pos));
+			register_building_sound(rats[rat_ix].pos, 0.8);
 			rats.erase(rats.begin() + rat_ix); // remove the rat from the building
 			return 1;
 		}
