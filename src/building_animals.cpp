@@ -309,11 +309,17 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 		assert(rat.pos.z == rat.dest.z);
 	}
 	// update direction
-	bool const is_close(dist_less_than(rat.pos, rat.dest, dist_thresh));
 	vector3d new_dir;
-	if      (!is_close) {new_dir = (rat.dest - rat.pos).get_norm();} // point toward our destination
-	else if (is_scared) {new_dir = dir_to_fear; rat.speed = rat.dist_since_sleep = 0.0;} // stop, rest, and point toward what we fear
+
+	if (!dist_less_than(rat.pos, rat.dest, dist_thresh)) {
+		new_dir = (rat.dest - rat.pos).get_norm(); // point toward our destination
+	}
+	else if (has_fear_dest) { // stop, rest, and point toward what we fear
+		new_dir   = dir_to_fear;
+		rat.speed = rat.dist_since_sleep = 0.0;
+	}
 	// else dir is unchanged
+	rat.is_hiding = (has_fear_dest && dist_less_than(rat.pos, rat.dest, 2.0*dist_thresh)); // close to fear_dest
 
 	if (new_dir != zero_vector) { // update dir if new_dir was set above
 		float const delta_dir((is_scared ? 1.2 : 1.0)*min(1.0f, 1.5f*(1.0f - pow(0.7f, timestep)))); // higher turning rate when scared

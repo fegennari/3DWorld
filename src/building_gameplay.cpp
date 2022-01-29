@@ -125,7 +125,7 @@ void setup_bldg_obj_types() {
 	bldg_obj_types[TYPE_CLOTHES   ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 10.0,  0.25,  "clothes"); // teeshirt, shirt, pants, etc.
 	bldg_obj_types[TYPE_FESCAPE   ] = bldg_obj_type_t(1, 1, 0, 1, 1, 0, 10000, 4000,  "fire escape"); // technically exterior, not interior
 	bldg_obj_types[TYPE_CUP       ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 5.0,   0.2,   "cup");
-	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 0, 0, 1, 0, 8.99,  1.0,   "rat"); // not something that can really be picked up yet
+	bldg_obj_types[TYPE_RAT       ] = bldg_obj_type_t(0, 0, 1, 0, 1, 0, 8.99,  1.0,   "rat"); // not a room object, but can be picked up
 	//                                                pc ac pu at im ls value  weight  name [capacity]
 }
 
@@ -656,12 +656,38 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 	point at_pos_rot(at_pos);
 	vector3d in_dir_rot(in_dir);
 	building.maybe_inv_rotate_pos_dir(at_pos_rot, in_dir_rot);
-	float const range(3.0*CAMERA_RADIUS), drawer_range_max(2.5*CAMERA_RADIUS);
-	float drawer_range(drawer_range_max), obj_dist(0.0);
+	float const range_max(3.0*CAMERA_RADIUS), drawer_range_max(2.5*CAMERA_RADIUS);
+	float range(range_max), obj_dist(0.0);
+	int rat_ix(-1);
+
+	if (bldg_obj_types[TYPE_RAT].pickup) { // check rats
+		for (auto r = rats.begin(); r != rats.end(); ++r) {
+			if (r->is_hiding) continue; // can't pick up when hiding
+			point p1c(at_pos), p2c(at_pos + in_dir*range);
+			if (!do_line_clip(p1c, p2c, r->get_bcube().d)) continue; // test ray intersection vs. bcube
+			float const dist(p2p_dist(at_pos, p1c));
+			if (dist >= range) continue; // too far
+			if (building.check_for_wall_ceil_floor_int(at_pos, p1c)) continue; // check for occlusion
+			range  = dist;
+			rat_ix = (r - rats.begin());
+		} // for r
+	}
 	int const obj_id(find_nearest_pickup_object(building, at_pos_rot, in_dir_rot, range, obj_dist));
+	float drawer_range(min(range, drawer_range_max));
 	if (obj_id >= 0) {min_eq(drawer_range, obj_dist);} // only include drawers that are closer than the pickup object
 	if (open_nearest_drawer(building, at_pos_rot, in_dir_rot, drawer_range_max, 1, 0)) return 1; // try objects in drawers; pickup_item=1
-	if (obj_id < 0) return 0; // no object to pick up
+	
+	if (obj_id < 0) { // no room object to pick up
+		if (rat_ix >= 0) { // can pick up a rat
+			room_object_t rat(rats[rat_ix].get_bcube_with_dir(), TYPE_RAT, 0); // no room
+			if (!register_player_object_pickup(rat, at_pos)) return 0;
+			player_inventory.add_item(rat);
+			// TODO: play squeak sound
+			rats.erase(rats.begin() + rat_ix); // remove the rat from the building
+			return 1;
+		}
+		return 0;
+	}
 	room_object_t &obj(get_room_object_by_index(obj_id));
 
 	if (obj.type == TYPE_SHELVES || (obj.type == TYPE_WINE_RACK && !(obj.flags & RO_FLAG_EXPANDED))) { // shelves or unexpanded wine rack

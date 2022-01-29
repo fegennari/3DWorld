@@ -78,9 +78,10 @@ struct rat_t {
 	point pos, dest, fear_pos;
 	vector3d dir;
 	float radius, speed, fear, anim_time, wake_time, dist_since_sleep;
+	bool is_hiding;
 
 	rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_),
-		speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0), dist_since_sleep(0.0) {}
+		speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0), dist_since_sleep(0.0), is_hiding(0) {}
 	bool is_moving   () const {return (speed > 0.0);}
 	bool is_sleeping () const {return (wake_time > 0.0);}
 	float get_hlength() const {return radius;} // this is the bounding radius, so it represents the longest dim (half length)
