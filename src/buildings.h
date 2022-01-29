@@ -710,7 +710,7 @@ struct building_room_geom_t {
 	void add_potted_plant(room_object_t const &c, bool inc_pot, bool inc_plant);
 	void add_lg_ball(room_object_t const &c);
 	static void draw_lg_ball_in_building   (room_object_t  const &c, shader_t &s);
-	static void draw_interactive_player_obj(carried_item_t const &c, shader_t &s);
+	static void draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate);
 	// functions for expanding nested objects
 	void expand_shelves(room_object_t const &c);
 	void get_bookcase_books(room_object_t const &c, vector<room_object_t> &books) {add_bookcase(c, 0, 0, 1.0, 0, 1.0, nullptr, &books);} // Note: technically const
@@ -1113,6 +1113,7 @@ public:
 	void update_animals(point const &camera_bs, unsigned building_ix, int ped_ix);
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
+	void add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from);
 	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;

@@ -44,6 +44,13 @@ cube_t rat_t::get_bcube_with_dir() const {
 	return bcube;
 }
 
+void building_t::add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from) {
+	rat_t rat(pos, 0.5*length, vector3d(dir.x, dir.y, 0.0).get_norm()); // dir in XY plane
+	rat.fear_pos = placed_from;
+	rat.fear     = 1.0; // starts off with max fear
+	interior->room_geom->rats.push_back(rat);
+}
+
 void building_t::update_animals(point const &camera_bs, unsigned building_ix, int ped_ix) { // 0.01ms for 2 rats
 	if (global_building_params.num_rats_max == 0 || !animate2) return;
 	if (is_rotated() || !has_room_geom() || interior->rooms.empty()) return;

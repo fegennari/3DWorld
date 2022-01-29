@@ -1186,29 +1186,40 @@ bool building_t::maybe_use_last_pickup_room_object(point const &player_pos) {
 		else if (obj.type == TYPE_TAPE) {
 			tape_manager.toggle_use(obj, this);
 		}
-		else if (obj.type == TYPE_BOOK) {
+		else if (obj.type == TYPE_BOOK || obj.type == TYPE_RAT) { // items that can be dropped
+			bool const is_rat(obj.type == TYPE_RAT);
 			float const half_width(0.5*max(max(obj.dx(), obj.dy()), obj.dz()));
 			point dest(player_pos + (1.2f*(get_scaled_player_radius() + half_width))*cview_dir);
-			if (!get_zval_for_obj_placement(dest, half_width, dest.z, 0)) return 0; // no suitable placement found; add_z_bias=0
-			// orient based on the player's primary direction
-			bool const place_dim(fabs(cview_dir.y) < fabs(cview_dir.x));
 
-			if (obj.dim != place_dim) {
-				float const dx(obj.dx()), dy(obj.dy());
-				obj.x2() = obj.x1() + dy;
-				obj.y2() = obj.y1() + dx;
+			if (is_rat) {
+				gen_sound_thread_safe(SOUND_RAT_SQUEAK, (get_camera_pos() + (obj.get_cube_center() - player_pos))); // play the sound whether or not we can drop the rat
+				register_building_sound(player_pos, 0.8);
+				if (!get_zval_of_floor(dest, half_width, dest.z)) return 0; // place on the floor, skip if there's no floor here
+				add_rat(dest, max(obj.dx(), obj.dy()), cview_dir, player_pos); // facing away from the player
 			}
-			obj.dim    = place_dim;
-			obj.dir    = ((cview_dir[!place_dim] > 0) ^ place_dim);
-			obj.flags |= (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP);
-			obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
-			if (!interior->room_geom->add_room_object(obj, *this)) return 0;
+			else { // book; orient based on the player's primary direction
+				if (!get_zval_for_obj_placement(dest, half_width, dest.z, 0)) return 0; // no suitable placement found; add_z_bias=0
+				bool const place_dim(fabs(cview_dir.y) < fabs(cview_dir.x));
+
+				if (obj.dim != place_dim) {
+					float const dx(obj.dx()), dy(obj.dy());
+					obj.x2() = obj.x1() + dy;
+					obj.y2() = obj.y1() + dx;
+				}
+				obj.dim    = place_dim;
+				obj.dir    = ((cview_dir[!place_dim] > 0) ^ place_dim);
+				obj.flags |= (RO_FLAG_TAKEN1 | RO_FLAG_WAS_EXP);
+				obj.translate(dest - point(obj.xc(), obj.yc(), obj.z1()));
+				if (!interior->room_geom->add_room_object(obj, *this)) return 0;
+			}
 			player_inventory.return_object_to_building(obj); // re-add this object's value
 			player_inventory.remove_last_item(); // used
 			play_obj_fall_sound(obj, player_pos);
 			delay_use = 1;
 		}
-		else if (obj.type == TYPE_PHONE) {phone_manager.player_action();}
+		else if (obj.type == TYPE_PHONE) {
+			phone_manager.player_action();
+		}
 		else {assert(0);}
 	}
 	else {assert(0);}
@@ -1521,7 +1532,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 }
 
 bool room_object_t::can_use() const { // excludes dynamic objects
-	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE);
+	return (type == TYPE_SPRAYCAN || type == TYPE_MARKER || type == TYPE_TPROLL || type == TYPE_BOOK || type == TYPE_PHONE || type == TYPE_TAPE || type == TYPE_RAT);
 }
 bool room_object_t::can_place_onto() const {
 	return (type == TYPE_TABLE || type == TYPE_DESK || type == TYPE_DRESSER || type == TYPE_NIGHTSTAND || type == TYPE_COUNTER || type == TYPE_KSINK ||

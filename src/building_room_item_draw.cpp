@@ -9,6 +9,7 @@
 #include "profiler.h"
 
 unsigned const MAX_ROOM_GEOM_GEN_PER_FRAME = 1;
+colorRGBA const rat_color(GRAY); // make the rat's fur darker
 
 object_model_loader_t building_obj_model_loader;
 
@@ -752,7 +753,7 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 	}
 }
 
-/*static*/ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s) {
+/*static*/ void building_room_geom_t::draw_interactive_player_obj(carried_item_t const &c, shader_t &s, vector3d const &xlate) {
 	static rgeom_mat_t mat; // allocated memory is reused across frames; VBO is recreated every time
 	bool needs_blend(0);
 
@@ -795,6 +796,11 @@ void apply_room_obj_rotate(room_object_t &obj, obj_model_inst_t &inst) {
 		else {mat.add_cube_to_verts(c, BLACK, all_zeros, ~EF_Z2);} // screen drawn as black
 		mat.add_cube_to_verts(c, c.color, all_zeros, EF_Z2);
 		rotate_verts(mat.quad_verts, plus_z, z_rot_angle, c.get_cube_center(), 0); // rotate all quad verts about Z axis
+	}
+	else if (c.type == TYPE_RAT) { // draw the rat facing the player
+		building_obj_model_loader.draw_model(s, c.get_cube_center(), c, cview_dir, rat_color, xlate, OBJ_MODEL_RAT, 0); // facing away from the player; shadow_pass=0
+		check_mvm_update();
+		return; // don't need to run the code below
 	}
 	else {assert(0);}
 	if (needs_blend) {enable_blend();}
@@ -1053,7 +1059,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 				s.add_uniform_int  ("animation_id",   animation_id);
 				s.add_uniform_float("animation_time", rat.anim_time);
 			}
-			colorRGBA const color(GRAY); // make the rat's fur darker
+			colorRGBA const color(rat_color); // make the rat's fur darker
 			//colorRGBA const color(blend_color(RED, WHITE, rat.fear, 0)); // used for debugging fear
 			building_obj_model_loader.draw_model(s, pos, rat.get_bcube_with_dir(), rat.dir, color, xlate, OBJ_MODEL_RAT, shadow_only, 0, animate);
 
@@ -1084,7 +1090,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 		point const obj_pos((reflection_pass ? pre_smap_player_pos : camera_bs) + CAMERA_RADIUS*cview_dir - vector3d(0.0, 0.0, 0.5*CAMERA_RADIUS));
 		player_held_object.translate(obj_pos - player_held_object.get_cube_center());
 		if (player_held_object.type == TYPE_LG_BALL) {draw_lg_ball_in_building(player_held_object, s);} // the only supported dynamic object type
-		else if (player_held_object.can_use()) {draw_interactive_player_obj(player_held_object, s);}
+		else if (player_held_object.can_use()) {draw_interactive_player_obj(player_held_object, s, xlate);}
 		else {assert(0);}
 	}
 	// alpha blended, should be drawn near last
