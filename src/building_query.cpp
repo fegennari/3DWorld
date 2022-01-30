@@ -998,7 +998,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 
 		for (auto c = obj_vect.begin(); c != objs_end; ++c) {
 			// skip non-colliding objects except for balls, computers under desks, expanded objects from closets (since rats must collide with these)
-			if (c->type != TYPE_LG_BALL && ((c->no_coll() && !c->was_expanded() && c->type != TYPE_COMPUTER) || !bldg_obj_types[c->type].ai_coll)) continue;
+			if (((c->no_coll() && !c->was_expanded() && c->type != TYPE_COMPUTER) || !bldg_obj_types[c->type].ai_coll) && c->type != TYPE_LG_BALL) continue;
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 			cube_t c_extended(*c);
 			if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
@@ -1108,7 +1108,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 
 	for (rat_t &rat : interior->room_geom->rats) {
 		if (rat.pos == pos) continue; // skip ourself
-		if (pos.z > (rat.pos.z + rat.get_height()) || z2 < rat.pos.z) continue; // different floors
+		if (pos.z > (rat.pos.z + rat.height) || z2 < rat.pos.z) continue; // different floors
 		// allow them to get a bit closer together, since radius is conservative
 		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.7f*(radius + rat.radius))) {coll_pos = rat.pos; return 1;}
 	}

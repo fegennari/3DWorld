@@ -20,18 +20,17 @@ float get_closest_building_sound(point const &at_pos, point &sound_pos, float fl
 sphere_t get_cur_frame_loudest_sound();
 
 
-float rat_t::get_hwidth() const {
-	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L, W, H
-	return radius*sz.y/sz.x; // scale radius by ratio of width to length
-}
-float rat_t::get_height() const {
+rat_t::rat_t(point const &pos_, float radius_, vector3d const &dir_) : pos(pos_), dest(pos), dir(dir_), radius(radius_),
+speed(0.0), fear(0.0), anim_time(0.0), wake_time(0.0), dist_since_sleep(0.0), is_hiding(0)
+{
 	vector3d const sz(building_obj_model_loader.get_model_world_space_size(OBJ_MODEL_RAT)); // L=3878, W=861, H=801
-	return 2.0*radius*sz.z/max(sz.x, sz.y); // use max of x/y size; the x/y size represents the bcube across rotations
+	hwidth = radius*sz.y/sz.x; // scale radius by ratio of width to length
+	height = 2.0*radius*sz.z/max(sz.x, sz.y); // use max of x/y size; the x/y size represents the bcube across rotations
 }
 cube_t rat_t::get_bcube() const {
 	cube_t bcube(pos, pos);
 	bcube.expand_by_xy(radius);
-	bcube.z2() += get_height();
+	bcube.z2() += height;
 	return bcube;
 }
 cube_t rat_t::get_bcube_with_dir() const {
@@ -40,7 +39,7 @@ cube_t rat_t::get_bcube_with_dir() const {
 	cube_t bcube(pos, pos);
 	bcube.expand_in_dim( pri_dim, radius); // larger dim
 	bcube.expand_in_dim(!pri_dim, radius*min(sz.x, sz.y)/max(sz.x, sz.y)); // smaller dim
-	bcube.z2() += get_height();
+	bcube.z2() += height;
 	return bcube;
 }
 
@@ -157,7 +156,7 @@ bool can_hide_under(room_object_t const &c, float &zbot, cube_t &hide_area) {
 
 void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
-	float const hlength(rat.get_hlength()), hwidth(rat.get_hwidth()), height(rat.get_height()), hheight(0.5*height);
+	float const hlength(rat.get_hlength()), hwidth(rat.hwidth), height(rat.height), hheight(0.5*height);
 	float const squish_hheight(0.75*hheight); // rats can squish to get under low objects and walk onto small steps
 	float const coll_radius(1.2f*hwidth); // slightly larger than half-width; maybe should use length so that the rat doesn't collide when turning?
 	float const line_project_dist(max(1.1f*(hlength - coll_radius), 0.0f)); // extra space in front of the target destination
