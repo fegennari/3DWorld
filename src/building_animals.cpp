@@ -324,6 +324,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 	else if (has_fear_dest) { // stop, rest, and point toward what we fear
 		new_dir   = dir_to_fear;
 		rat.speed = rat.dist_since_sleep = 0.0;
+		rat.pos   = rat.dest; // just move it to the dest to prevent instability
 	}
 	// else dir is unchanged
 	rat.is_hiding = (has_fear_dest && dist_less_than(rat.pos, rat.dest, 2.0*dist_thresh)); // close to fear_dest
