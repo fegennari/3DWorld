@@ -73,6 +73,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 }
 
 void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) {
+	assert(has_room_geom());
 	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 	bool updated(0);
 
@@ -88,6 +89,11 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 	gen_sound_thread_safe(SOUND_CLICK, local_to_camera_space(sound_pos));
 	register_building_sound(sound_pos, 0.1);
 	//interior->room_geom->modified_by_player = 1; // should light state always be preserved?
+	float const fear_amt(light.is_lit() ? 1.0 : 0.5); // max fear from lights turning on
+
+	for (rat_t &rat : interior->room_geom->rats) { // light change scares rats
+		if (get_room_containing_pt(rat.pos) == light.room_id) {scare_rat_at_pos(rat, sound_pos, fear_amt, 0);} // scare if in the same room
+	}
 }
 
 bool building_t::set_room_light_state_to(room_t const &room, float zval, bool make_on) { // called by AI people

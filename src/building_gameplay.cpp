@@ -685,6 +685,7 @@ bool building_room_geom_t::player_pickup_object(building_t &building, point cons
 			gen_sound_thread_safe(SOUND_RAT_SQUEAK, building.local_to_camera_space(rats[rat_ix].pos));
 			register_building_sound(rats[rat_ix].pos, 0.8);
 			rats.erase(rats.begin() + rat_ix); // remove the rat from the building
+			modified_by_player = 1;
 			return 1;
 		}
 		return 0;

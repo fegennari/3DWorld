@@ -49,6 +49,7 @@ void building_t::add_rat(point const &pos, float length, vector3d const &dir, po
 	rat.fear_pos = placed_from;
 	rat.fear     = 1.0; // starts off with max fear
 	interior->room_geom->rats.push_back(rat);
+	interior->room_geom->modified_by_player = 1;
 }
 
 void building_t::update_animals(point const &camera_bs, unsigned building_ix, int ped_ix) { // 0.01ms for 2 rats
@@ -349,7 +350,6 @@ void building_t::scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const
 	if (camera_surf_collide) {scare_rat_at_pos(rat, camera_bs, sight_scare_amt, 1);} // the sight of the player walking in the building scares the rats
 	sphere_t const cur_sound(get_cur_frame_loudest_sound());
 	if (cur_sound.radius > 0.0) {scare_rat_at_pos(rat, cur_sound.pos, 4.0*cur_sound.radius, 0);}
-	// what about fear from sudden light changes? maybe it's enough that the light switch makes a click sound
 }
 
 void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const {
