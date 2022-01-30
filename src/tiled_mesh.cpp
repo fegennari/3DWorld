@@ -2693,7 +2693,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		to_draw.emplace_back(dist, tile);
 		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
 	} // for i
-	cout << TXT(occluders.size()) << TXT(tiles.size()) << TXT(to_draw.size()) << TXT(occluded_tiles.size()) << endl; // 5, 341, 63, 34
+	//cout << TXT(occluders.size()) << TXT(tiles.size()) << TXT(to_draw.size()) << TXT(occluded_tiles.size()) << endl; // 5, 341, 63, 34
 	occluders.clear();
 	occluder_ixs.clear();
 	sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
