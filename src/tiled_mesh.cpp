@@ -2685,10 +2685,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 						}
 					} // for s
 				} // for S
-				if (!sub_tile_occluded) {
-					if (!camera_pdu.cube_visible(sub_cube)) continue; // not visible, doesn't need to be occluded, skip; doesn't help runtime
-					tile_occluded = 0; break;
-				}
+				if (!sub_tile_occluded) {tile_occluded = 0; break;} // Note: must mark as not occluded, even if this sub-tile is not visible to the camera
 			} // for t
 			tile->set_last_occluded(tile_occluded);
 			if (tile_occluded) {occluded_tiles.push_back(tile); continue;}
@@ -2696,7 +2693,7 @@ void tile_draw_t::draw(int reflection_pass) { // reflection_pass: 0=none, 1=wate
 		to_draw.emplace_back(dist, tile);
 		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
 	} // for i
-	//cout << TXT(occluders.size()) << TXT(tiles.size()) << TXT(to_draw.size()) << TXT(occluded_tiles.size()) << endl; // 5, 341, 59, 38
+	cout << TXT(occluders.size()) << TXT(tiles.size()) << TXT(to_draw.size()) << TXT(occluded_tiles.size()) << endl; // 5, 341, 63, 34
 	occluders.clear();
 	occluder_ixs.clear();
 	sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
