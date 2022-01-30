@@ -357,7 +357,7 @@ void building_t::scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amou
 	if (rat.fear > 0.99 && dist_less_than(rat.fear_pos, scare_pos, rat.radius)) return; // already max fearful of this location (optimization)
 	point const pos(rat.get_center()); // use center zval, not floor zval
 	int const scare_room(get_room_containing_pt(scare_pos)), rat_room(get_room_containing_pt(pos));
-	assert(rat_room >= 0);
+	//assert(rat_room >= 0); // this generally doesn't fail, unless rats collide with each other and push each other outside of a room
 	if (rat_room != scare_room) {amount *= 0.67;} // less fearful if in a different room
 	float const max_scare_dist(RAT_VIEW_FLOORS*get_window_vspace()), scare_dist(max_scare_dist*min(amount, 1.0f));
 	float const fear((scare_dist - p2p_dist(pos, scare_pos))/max_scare_dist);
