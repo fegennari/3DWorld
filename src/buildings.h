@@ -87,6 +87,7 @@ struct rat_t {
 	point get_center () const {return point(pos.x, pos.y, (pos.z + 0.5f*height));}
 	cube_t get_bcube () const; // used for collision detection and VFC; bounding cube across rotations
 	cube_t get_bcube_with_dir() const; // used for model drawing; must be correct aspect ratio
+	void sleep_for(float time_secs_min, float time_secs_max);
 };
 
 struct vect_rat_t : public vector<rat_t> {

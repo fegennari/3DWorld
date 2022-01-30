@@ -42,6 +42,9 @@ cube_t rat_t::get_bcube_with_dir() const {
 	bcube.z2() += height;
 	return bcube;
 }
+void rat_t::sleep_for(float time_secs_min, float time_secs_max) {
+	wake_time = (float)tfticks + rand_uniform(time_secs_min, time_secs_max)*TICKS_PER_SECOND;
+}
 
 void building_t::add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from) {
 	rat_t rat(pos, 0.5*length, vector3d(dir.x, dir.y, 0.0).get_norm()); // dir in XY plane
@@ -171,7 +174,10 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 	// move the rat
 	if (rat.is_sleeping()) {
 		if ((float)tfticks > rat.wake_time) {rat.wake_time = rat.speed = 0.0;} // time to wake up
-		check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos); // check for collisions but ignore the return values
+		
+		if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos)) { // check for collisions
+			rat.sleep_for(0.1, 0.5); // 0.1-0.5s
+		}
 	}
 	else if (rat.speed == 0.0) {
 		rat.anim_time = 0.0; // reset animation to rest pos
@@ -268,7 +274,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 	bool const is_at_dest(dist_less_than(rat.pos, rat.dest, dist_thresh));
 
 	if (!is_scared && !rat.is_sleeping() && is_at_dest && rat.dist_since_sleep > 1.5*floor_spacing && (rgen.rand()&2) == 0) { // 25% chance of taking a rest
-		rat.wake_time        = (float)tfticks + rgen.rand_uniform(0.0, 4.0)*TICKS_PER_SECOND; // 0-4s
+		rat.sleep_for(0.0, 4.0); // 0-4s
 		rat.dist_since_sleep = 0.0; // reset the counter
 		rat.speed            = 0.0; // will reset anim_time in the next frame
 	}
