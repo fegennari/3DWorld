@@ -977,13 +977,24 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 		unsigned const num_steps(min(100U, unsigned(ceil(p2p_dist(p1, p2)/radius))));
 
 		if (num_steps > 1) {
-			vector3d delta((p2 - p1)/num_steps);
-			cube_t test_cube(p1, p1);
-			test_cube.expand_by(expand_walls);
+			bool same_part(0);
+			auto parts_end(get_real_parts_end_inc_sec());
+			cube_t p2_cube(p1, p2);
+			p2_cube.expand_by_xy(radius);
 
-			for (unsigned step = 0; step < num_steps-1; ++step) { // take one less step (skip p2)
-				test_cube += delta; // take one step first (skip p1)
-				if (!is_cube_contained_in_parts(test_cube)) return 1; // extends outside the building walls
+			for (auto i = parts.begin(); i != parts_end; ++i) { // includes garage/shed
+				if (!i->contains_pt(p1)) continue;
+				same_part = (i->contains_cube_xy(p2_cube));
+			}
+			if (!same_part) { // only need to check for going outside the part if p1 and p2 are in different parts (optimization)
+				vector3d delta((p2 - p1)/num_steps);
+				cube_t test_cube(p1, p1);
+				test_cube.expand_by(expand_walls);
+
+				for (unsigned step = 0; step < num_steps-1; ++step) { // take one less step (skip p2)
+					test_cube += delta; // take one step first (skip p1)
+					if (!is_cube_contained_in_parts(test_cube)) return 1; // extends outside the building walls
+				}
 			}
 		}
 	}
