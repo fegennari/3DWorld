@@ -910,15 +910,15 @@ bool line_int_cubes_exp(point const &p1, point const &p2, cube_t const *const cu
 	}
 	return 0;
 }
-template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, vector<T> const &cubes, vector3d const &expand) {
+template<typename T> bool line_int_cubes_exp(point const &p1, point const &p2, vector<T> const &cubes, vector3d const &expand, cube_t const &line_bcube) {
 	for (auto const &c : cubes) {
-		if (line_int_cube_exp(p1, p2, c, expand)) return 1;
+		if (line_bcube.intersects(c) && line_int_cube_exp(p1, p2, c, expand)) return 1;
 	}
 	return 0;
 }
-template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes) {
+template<typename T> bool line_int_cubes(point const &p1, point const &p2, vector<T> const &cubes, cube_t const &line_bcube) {
 	for (auto const &c : cubes) {
-		if (c.line_intersects(p1, p2)) return 1;
+		if (line_bcube.intersects(c) && c.line_intersects(p1, p2)) return 1;
 	}
 	return 0;
 }
@@ -941,10 +941,12 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	float const trim_thickness(get_trim_thickness()), zmin(min(p1.z, p2.z));
 	vector3d const expand(radius, radius, hheight);
 	vector3d const expand_walls(expand + vector3d(trim_thickness, trim_thickness, 0.0)); // include the wall trim width
+	cube_t line_bcube(p1, p2);
+	line_bcube.expand_by(expand_walls); // use the larger/conservative expand
 
 	// check interior walls, doors, stairwells, and elevators
 	for (unsigned d = 0; d < 2; ++d) {
-		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls)) return 1;
+		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls, line_bcube)) return 1;
 	}
 	for (auto const &door : interior->doors) {
 		if (door.open) {
@@ -960,7 +962,8 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	} // for door
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
-		if (zmin < ground_floor_z1) return 1; // basement stairs are walled off - definitely a collision
+		if (s.shape != SHAPE_STRAIGHT) return 1; // walled and U-shaped stairs always collide
+		if (zmin < ground_floor_z1)    return 1; // basement stairs are walled off - definitely a collision
 		if (s.z1() < zmin - 0.5f*get_window_vspace()) return 1; // not the ground floor - definitely a collision
 
 		// maybe we're under the stairs; check for individual stairs collisions
@@ -969,7 +972,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 			if (line_int_cube_exp(p1, p2, *c, expand)) return 1;
 		}
 	} // for s
-	if (line_int_cubes_exp(p1, p2, interior->elevators,  expand)) return 1;
+	if (line_int_cubes_exp(p1, p2, interior->elevators, expand, line_bcube)) return 1;
 	
 	// check exterior walls
 	if (real_num_parts > 1) { // only need to do this for multi-part buildings because the caller is assumed to check the building bcube
@@ -1008,12 +1011,12 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 		auto objs_end((vect_id == 1) ? obj_vect.end() : interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto c = obj_vect.begin(); c != objs_end; ++c) {
+			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 			// skip non-colliding objects except for balls, computers under desks, expanded objects from closets (since rats must collide with these)
 			if (((c->no_coll() && !c->was_expanded() && c->type != TYPE_COMPUTER) || !bldg_obj_types[c->type].ai_coll) && c->type != TYPE_LG_BALL) continue;
-			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
 			cube_t c_extended(*c);
 			if (c->type == TYPE_CLOSET) {c_extended = get_closet_bcube_including_door(*c);}
-			if (!line_int_cube_exp(p1, p2, c_extended, expand)) continue;
+			if (!line_bcube.intersects(*c) || !line_int_cube_exp(p1, p2, c_extended, expand)) continue;
 
 			if (c->shape == SHAPE_CYLIN) { // vertical cylinder
 				cylinder_3dw cylin(c->get_cylinder());
@@ -1082,15 +1085,16 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 // visibility query used for rats: ignores exterior walls and room objects
 bool building_t::check_line_of_sight_large_objs(point const &p1, point const &p2) const {
 	assert(interior != nullptr);
-	if (line_int_cubes(p1, p2, interior->ceilings)) return 0; // only need to check one of {ceilings, floors}; likely fastest test
+	cube_t line_bcube(p1, p2);
+	if (line_int_cubes(p1, p2, interior->ceilings, line_bcube)) return 0; // only need to check one of {ceilings, floors}; likely fastest test
 
 	for (unsigned d = 0; d < 2; ++d) {
-		if (line_int_cubes(p1, p2, interior->walls[d])) return 0;
+		if (line_int_cubes(p1, p2, interior->walls[d], line_bcube)) return 0;
 	}
 	for (auto const &door : interior->doors) { // check closed interior doors
-		if (!door.open && door.line_intersects(p1, p2)) return 0;
+		if (!door.open && line_bcube.intersects(door) && door.line_intersects(p1, p2)) return 0;
 	}
-	if (line_int_cubes(p1, p2, interior->elevators)) return 0; // check elevators only because stairs aren't solid visual blockers
+	if (line_int_cubes(p1, p2, interior->elevators, line_bcube)) return 0; // check elevators only because stairs aren't solid visual blockers
 	return 1;
 }
 
