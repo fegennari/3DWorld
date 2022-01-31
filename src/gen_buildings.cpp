@@ -2469,6 +2469,7 @@ public:
 						b.get_nearby_ext_door_verts(ext_door_draw, s, camera_xlated, door_open_dist); // and draw opened door
 						bool const camera_in_building(b.check_point_or_cylin_contained(camera_xlated, 0.0, points));
 						if (!reflection_pass) {b.update_grass_exclude_at_pos(camera_xlated, xlate, camera_in_building);} // disable any grass inside the building part(s) containing the player
+						if (!reflection_pass) {b.update_animals(camera_xlated, bi->ix, ped_ix);}
 						// Note: if we skip this check and treat all walls/windows as front/containing part, this almost works, but will skip front faces of other buildings
 						if (!camera_in_building) continue; // camera not in building
 						// pass in camera pos to only include the part that contains the camera to avoid drawing artifacts when looking into another part of the building
@@ -2479,14 +2480,13 @@ public:
 						b.get_all_drawn_window_verts(interior_wind_draw, 0, -0.1, &pt_ag);
 						assert(bcs_ix < int_wall_draw_front.size() && bcs_ix < int_wall_draw_back.size());
 						b.get_split_int_window_wall_verts(int_wall_draw_front[bcs_ix], int_wall_draw_back[bcs_ix], pt_ag, 0);
-						building_cont_player = &b; // there can be only one
+						building_cont_player    = &b; // there can be only one
 						per_bcs_exclude[bcs_ix] = b.ext_side_qv_range;
 						if (reflection_pass) continue; // don't execute the code below
 						this_frame_camera_in_building  = 1;
 						this_frame_player_in_basement |= b.is_pos_in_basement(camera_xlated - vector3d(0.0, 0.0, BASEMENT_ENTRANCE_SCALE*b.get_floor_thickness()));
 						player_building = &b;
 						if (display_mode & 0x10) {indir_bcs_ix = bcs_ix; indir_bix = bi->ix;} // compute indirect lighting for this building
-						b.update_animals(camera_xlated, bi->ix, ped_ix);
 						// run any player interaction logic here
 						if (toggle_room_light  ) {b.toggle_room_light(camera_xlated);}
 						if (building_action_key) {b.apply_player_action_key(camera_xlated, cview_dir, (building_action_key-1), 0);} // check_only=0
