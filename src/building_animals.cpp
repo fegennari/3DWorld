@@ -246,6 +246,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 			cube_t const &target(hide_area.is_all_zeros() ? *c : hide_area); // use hide_area if set (can be a subset of the object)
 			point center(target.xc(), target.yc(), p1.z);
 			float const dist(p2p_dist(p1, center));
+			if (dist > view_dist) continue; // too far away to see
 			
 			if (dist < dist_thresh) { // already at this location
 				if (check_line_coll_expand(p1, center, coll_radius, squish_hheight)) {update_path = 1; continue;} // location is invalid, need to update the path below
