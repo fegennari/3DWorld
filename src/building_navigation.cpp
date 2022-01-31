@@ -883,6 +883,7 @@ bool building_t::is_valid_ai_placement(point const &pos, float radius) const { /
 		auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 
 		for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
+			if (i->type == TYPE_FLOORING || i->type == TYPE_BLOCKER) continue; // okay to place on flooring; ignore blockers, which are used for placement clearance
 			if (i->intersects(ai_bcube)) return 0;
 		}
 	}
