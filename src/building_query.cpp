@@ -939,6 +939,7 @@ unsigned get_ksink_cubes(room_object_t const &sink, cube_t cubes[3]) {
 bool building_t::check_line_coll_expand(point const &p1, point const &p2, float radius, float hheight) const {
 	assert(interior != nullptr);
 	float const trim_thickness(get_trim_thickness()), zmin(min(p1.z, p2.z));
+	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
 	vector3d const expand(radius, radius, hheight);
 	vector3d const expand_walls(expand + vector3d(trim_thickness, trim_thickness, 0.0)); // include the wall trim width
 	cube_t line_bcube(p1, p2);
@@ -949,17 +950,19 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 		if (line_int_cubes_exp(p1, p2, interior->walls[d], expand_walls, line_bcube)) return 1;
 	}
 	for (auto const &door : interior->doors) {
+		if (door.z1() > obj_z2 || door.z2() < obj_z1) continue; // wrong floor
+
 		if (door.open) {
 			cube_t door_bounds(door);
 			door_bounds.expand_by_xy(door.get_width());
-			if (!line_bcube.intersects(door)) continue; // optimization
+			if (!line_bcube.intersects(door_bounds)) continue; // optimization
 			if (!line_int_cube_exp(p1, p2, door_bounds, expand)) continue; // optimization
 			tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
 			door_bounds = door_tq.get_bcube(); // somewhat more accurate
 			door_bounds.expand_by_xy(door.get_thickness()); // conservative
 			if (line_int_cube_exp(p1, p2, door_bounds, expand)) return 1;
 		}
-		else if (line_int_cube_exp(p1, p2, door, expand)) return 1;
+		else if (line_bcube.intersects(door) && line_int_cube_exp(p1, p2, door, expand)) return 1;
 	} // for door
 	for (auto const &s : interior->stairwells) {
 		if (!line_int_cube_exp(p1, p2, s, expand)) continue;
@@ -1004,7 +1007,6 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 	}
 	if (!has_room_geom()) return 0; // done (but really shouldn't get here)
 	// check room objects and expanded objects (from closets)
-	float const obj_z1(min(p1.z, p2.z) - hheight), obj_z2(max(p1.z, p2.z) + hheight);
 	float t(0.0);
 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
