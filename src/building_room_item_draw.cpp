@@ -660,7 +660,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
 		auto const &obj_vect((vect_id == 1) ? expanded_objs : objs);
 		unsigned const obj_id_offset((vect_id == 1) ? objs.size() : 0);
-		auto objs_end((vect_id == 1) ? expanded_objs.end() : get_std_objs_end()); // skip buttons/stairs/elevators
+		auto objs_end((vect_id == 1) ? expanded_objs.end() : get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 		for (auto i = obj_vect.begin(); i != objs_end; ++i) {
 			if (!i->is_visible() || !i->is_obj_model_type()) continue;
@@ -681,7 +681,7 @@ void building_room_geom_t::create_obj_model_insts(building_t const &building) { 
 void building_room_geom_t::create_lights_vbos(building_t const &building) {
 	//highres_timer_t timer("Gen Room Geom Light"); // 0.3ms
 	float const tscale(2.0/obj_scale);
-	auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->is_visible() && i->type == TYPE_LIGHT) {add_light(*i, tscale);}
@@ -693,7 +693,7 @@ void building_room_geom_t::create_dynamic_vbos(building_t const &building) {
 	//highres_timer_t timer(string("Gen Room Geom Dynamic ") + (building.is_house ? "house" : "office"));
 	
 	if (!obj_dstate.empty()) { // we have an object with dynamic state
-		auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
+		auto objs_end(get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (!i->is_dynamic() || !i->is_visible()) continue; // only visible + dynamic objects; can't do VFC because this is not updated every frame
@@ -1074,7 +1074,7 @@ void building_room_geom_t::draw(brg_batch_draw_t *bbd, shader_t &s, building_t c
 	if (obj_drawn) {check_mvm_update();} // needed after popping model transform matrix
 
 	if (player_in_building && !shadow_only) { // draw water for sinks that are turned on
-		auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
+		auto objs_end(get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 		for (auto i = objs.begin(); i != objs_end; ++i) {
 			if (i->type != TYPE_KSINK && i->type != TYPE_BRSINK) continue; // TYPE_SINK is handled above

@@ -52,7 +52,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 	}
 	room_t const &room(get_room(room_id));
 	vector<room_object_t> &objs(interior->room_geom->objs);
-	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 	float closest_dist_sq(0.0);
 	int closest_light(-1);
 
@@ -74,7 +74,7 @@ bool building_t::toggle_room_light(point const &closest_to, bool sound_from_clos
 
 void building_t::toggle_light_object(room_object_t const &light, point const &sound_pos) {
 	assert(has_room_geom());
-	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 	bool updated(0);
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) { // toggle all lights on this floor of this room
@@ -99,7 +99,7 @@ void building_t::toggle_light_object(room_object_t const &light, point const &so
 bool building_t::set_room_light_state_to(room_t const &room, float zval, bool make_on) { // called by AI people
 	if (!has_room_geom()) return 0; // error?
 	if (room.is_hallway)  return 0; // don't toggle lights for hallways, which can have more than one light
-	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 	float const window_vspacing(get_window_vspace());
 	bool updated(0);
 
@@ -116,7 +116,7 @@ bool building_t::set_room_light_state_to(room_t const &room, float zval, bool ma
 void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit_state) {
 	assert(has_room_geom());
 	float const light_intensity(get_room(room_id).light_intensity);
-	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 	float const obj_zmin(light_z2 - get_window_vspace()); // get_floor_thickness()?
 	bool was_updated(0);
 
@@ -141,7 +141,7 @@ void building_t::set_obj_lit_state_to(unsigned room_id, float light_z2, bool lit
 }
 
 bool building_room_geom_t::closet_light_is_on(cube_t const &closet) const {
-	auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		if (i->type == TYPE_LIGHT && (i->flags & RO_FLAG_IN_CLOSET) && closet.contains_cube(*i)) {return i->is_lit();}
@@ -927,7 +927,7 @@ bool building_t::is_pt_lit(point const &pt) const {
 	int const room_id(get_room_containing_pt(pt)); // call this only once on center in is_sphere_lit()?
 	if (room_id < 0) return 0; // outside building?
 	room_t const &room(get_room(room_id));
-	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (!i->is_light_type() || !i->is_lit()) continue; // not a light, or light not on
@@ -1010,7 +1010,7 @@ bool building_t::get_zval_for_obj_placement(point const &pos, float radius, floa
 	if (!get_zval_of_floor(pos, radius, zval)) return 0; // if there's no floor, then there's probably no object to place on either
 	if (!has_room_geom()) return 1; // probably can't get here
 	float const z_bias(add_z_bias ? 0.0005*get_window_vspace() : 0.0); // maybe add a tiny bias to prevent z-fighting
-	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 	for (auto i = interior->room_geom->objs.begin(); i != objs_end; ++i) {
 		if (!i->can_place_onto())    continue; // can't place on this object type

@@ -842,7 +842,7 @@ bool building_room_geom_t::open_nearest_drawer(building_t &building, point const
 	int closest_obj_id(-1);
 	float dmin_sq(0.0);
 	point const p2(at_pos + in_dir*range);
-	auto objs_end(get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 	for (auto i = objs.begin(); i != objs_end; ++i) {
 		bool const is_counter_type(is_counter(*i) || i->type == TYPE_CABINET);
@@ -1438,7 +1438,7 @@ bool building_t::apply_paint(point const &pos, vector3d const &dir, colorRGBA co
 		}
 	}
 	// check for rugs, pictures, and whiteboards, which can all be painted over; also check for walls from closets
-	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 	bool const is_wall(normal.x != 0.0 || normal.y != 0.0), is_floor(normal == plus_z);
 	bool walls_blocked(0);
 

@@ -1009,7 +1009,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 
 	for (unsigned vect_id = 0; vect_id < 2; ++vect_id) {
 		auto const &obj_vect((vect_id == 1) ? interior->room_geom->expanded_objs : interior->room_geom->objs);
-		auto objs_end((vect_id == 1) ? obj_vect.end() : interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+		auto objs_end((vect_id == 1) ? obj_vect.end() : interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 		for (auto c = obj_vect.begin(); c != objs_end; ++c) {
 			if (c->z1() > obj_z2 || c->z2() < obj_z1) continue; // wrong floor
@@ -1131,7 +1131,7 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	// check dynamic objects such as balls; currently, we only check this for houses because they have balls on the floor;
 	// in theory, the player can put a ball in an office building, but we don't handle that case because office buildings have tons of objects and this is too slow
 	if (is_house) {
-		auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 
 		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
 			if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag

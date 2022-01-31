@@ -228,7 +228,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 	if (is_scared) {
 		// find hiding spot (pref in opposite direction from fear_pos);
 		// we must check this each frame in case the player took or moved the object we were hiding under
-		auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
 		float const rat_z1(rat.pos.z), rat_z2(rat.pos.z + height), rat_squish_z2(p1.z + squish_hheight);
 		point best_dest;
 		float best_score(0.0), zbot(0.0);
