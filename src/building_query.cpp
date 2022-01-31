@@ -1128,16 +1128,19 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 		// allow them to get a bit closer together, since radius is conservative
 		if (handle_vcylin_vcylin_int(pos, rat.pos, 0.7f*(radius + rat.radius))) {coll_pos = rat.pos; return 1;}
 	}
-	// check dynamic objects such as balls
-	auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
+	// check dynamic objects such as balls; currently, we only check this for houses because they have balls on the floor;
+	// in theory, the player can put a ball in an office building, but we don't handle that case because office buildings have tons of objects and this is too slow
+	if (is_house) {
+		auto objs_end(interior->room_geom->get_std_objs_end()); // skip buttons/stairs/elevators
 
-	for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
-		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
-		if (pos.z > c->z2() || z2 < c->z1())  continue; // different floors
-		// treat the ball as a vertical cylinder because it's too complex to find the collision point of a vertical cylinder with a sphere
-		point const center(c->get_cube_center());
-		if (handle_vcylin_vcylin_int(pos, center, (radius + c->get_radius()))) {coll_pos = center; return 1;}
+		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
+			if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
+			assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
+			if (pos.z > c->z2() || z2 < c->z1())  continue; // different floors
+			// treat the ball as a vertical cylinder because it's too complex to find the collision point of a vertical cylinder with a sphere
+			point const center(c->get_cube_center());
+			if (handle_vcylin_vcylin_int(pos, center, (radius + c->get_radius()))) {coll_pos = center; return 1;}
+		}
 	}
 	return 0;
 }
