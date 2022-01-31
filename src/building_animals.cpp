@@ -256,8 +256,8 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 			}
 			float side_cov(0.5f*min(target.dx(), target.dy()) - hlength); // amount of overhang of the object around the rat's extents
 			float const dist_to_fear(p2p_dist(rat.fear_pos, center));
-			float score((side_cov - 0.5f*top_gap + 0.2f*dist_to_fear)/max(dist, dist_thresh)); // can be positive or negative
-			if (best_score != 0.0 && score <= best_score) continue; // check score before iterating over other rats; int can only decrease below
+			float score(side_cov - 0.5f*top_gap + 0.2f*dist_to_fear - 0.1f*max(dist, dist_thresh)); // can be positive or negative
+			if (best_score != 0.0 && score <= best_score) continue; // check score before iterating over other rats; it can only decrease below
 
 			for (rat_t &other_rat : interior->room_geom->rats) {
 				if (&other_rat == &rat) continue; // skip ourself
@@ -266,8 +266,8 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 				if (move_dist > 0.0) { // another rat is in this spot
 					center   += (p1 - center).get_norm()*move_dist; // move our target in front of this other rat
 					side_cov -= move_dist; // moving to this misaligned position loses side coverage
-					score     = (side_cov - 0.5f*top_gap + 0.2f*dist_to_fear)/max(dist, dist_thresh); // update score
-					score    *= 0.67; // less desirable if occupied
+					score     = side_cov - 0.5f*top_gap + 0.2f*dist_to_fear - 0.1*max(dist, dist_thresh); // update score
+					score    -= 0.2*dist; // less desirable when occupied
 				}
 			} // for other_rat
 			// Note: I tried using the dot product between this vector and dir_to_fear, but that causes instability when the rat is between two objects
