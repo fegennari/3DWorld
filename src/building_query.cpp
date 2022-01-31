@@ -952,6 +952,7 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 		if (door.open) {
 			cube_t door_bounds(door);
 			door_bounds.expand_by_xy(door.get_width());
+			if (!line_bcube.intersects(door)) continue; // optimization
 			if (!line_int_cube_exp(p1, p2, door_bounds, expand)) continue; // optimization
 			tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));
 			door_bounds = door_tq.get_bcube(); // somewhat more accurate
