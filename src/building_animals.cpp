@@ -157,6 +157,14 @@ bool can_hide_under(room_object_t const &c, float &zbot, cube_t &hide_area) {
 	return 0;
 }
 
+bool building_t::is_rat_inside_building(point const &pos, float xy_pad, float hheight) const {
+	if (!bcube.contains_pt_xy_exp(pos, -xy_pad)) return 0; // check for end point inside building bcube
+	cube_t req_area(pos, pos);
+	req_area.expand_by_xy(xy_pad);
+	req_area.z2() += hheight;
+	return is_cube_contained_in_parts(req_area);
+}
+
 void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand_gen_t &rgen) const {
 	float const floor_spacing(get_window_vspace()), trim_thickness(get_trim_thickness()), view_dist(RAT_VIEW_FLOORS*floor_spacing);
 	float const hlength(rat.get_hlength()), hwidth(rat.hwidth), height(rat.height), hheight(0.5*height);
@@ -199,19 +207,9 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 		collided    = 1;
 		update_path = ((rgen.rand()%30) == 0);
 		coll_dir    = (point(coll_pos.x, coll_pos.y, rat.pos.z) - rat.pos).get_norm(); // points toward the collider in the XY plane
+
 		// check if new pos is valid
-		bool is_valid(0);
-
-		if (bcube.contains_pt_xy_exp(rat.pos, -xy_pad)) { // check for end point inside building bcube
-			cube_t req_area(rat.pos, rat.pos);
-			req_area.expand_by_xy(xy_pad);
-			req_area.z2() += hheight;
-
-			if (is_cube_contained_in_parts(req_area)) { // check if outside the valid area
-				is_valid = !check_line_coll_expand((prev_pos + center_dz), (rat.pos + center_dz), coll_radius, squish_hheight);
-			}
-		}
-		if (!is_valid) {
+		if (!is_rat_inside_building(rat.pos, xy_pad, hheight) || check_line_coll_expand((prev_pos + center_dz), (rat.pos + center_dz), coll_radius, squish_hheight)) {
 			rat.pos = prev_pos; // restore previous pos if invalid
 			rat.sleep_for(0.1, 0.2); // wait 0.1-0.2s so that we don't immediately collide again
 		}
@@ -270,6 +268,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 					score    -= 0.2*dist; // less desirable when occupied
 				}
 			} // for other_rat
+			if (!is_rat_inside_building(center, xy_pad, hheight)) continue; // check if outside the valid area
 			// Note: I tried using the dot product between this vector and dir_to_fear, but that causes instability when the rat is between two objects
 			if (best_score != 0.0 && score <= best_score) continue;
 			if (check_line_coll_expand(p1, center, coll_radius, squish_hheight)) continue; // skip for zero length line segments from allowed_area
@@ -319,11 +318,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 			float dist(rgen.rand_uniform(0.1, dist_upper_bound)*target_max_dist); // random distance out to max view dist
 			max_eq(dist, min_step); // make sure distance isn't too short
 			point const cand(rat.pos + dist*vdir);
-			if (!bcube.contains_pt_xy_exp(cand, -xy_pad)) continue; // check for end point inside building bcube
-			cube_t req_area(cand, cand);
-			req_area.expand_by_xy(xy_pad);
-			req_area.z2() += hheight;
-			if (!is_cube_contained_in_parts(req_area)) continue; // check if outside the valid area
+			if (!is_rat_inside_building(cand, xy_pad, hheight)) continue; // check if outside the valid area
 			point const p2(cand + line_project_dist*vdir + center_dz); // extend in vdir so that the head doesn't collide
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
 			if (check_line_coll_expand(p1_ext, p2, coll_radius, squish_hheight)) continue;

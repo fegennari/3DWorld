@@ -1113,6 +1113,7 @@ public:
 private:
 	point gen_rat_pos(float radius, rand_gen_t &rgen) const;
 	void add_rat(point const &pos, float length, vector3d const &dir, point const &placed_from);
+	bool is_rat_inside_building(point const &pos, float xy_pad, float hheight) const;
 	void update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand_gen_t &rgen) const;
 	void scare_rat(rat_t &rat, point const &camera_bs, int ped_ix) const;
 	void scare_rat_at_pos(rat_t &rat, point const &scare_pos, float amount, bool by_sight) const;
