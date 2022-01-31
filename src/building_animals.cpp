@@ -166,6 +166,8 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 	float const timestep(min(fticks, 4.0f)); // clamp fticks to 100ms
 	// set dist_thresh based on the distance we can move this frame; if set too low, we may spin in circles trying to turn to stop on the right spot
 	float const move_dist(timestep*rat.speed), dist_thresh(2.0f*timestep*max(rat.speed, global_building_params.rat_speed));
+	float const xy_pad(hlength + trim_thickness);
+	vector3d const center_dz(0.0, 0.0, hheight); // or squish_hheight?
 	assert(hwidth <= hlength); // otherwise the model is probably in the wrong orientation
 	bool collided(0), update_path(0);
 	point coll_pos;
@@ -174,10 +176,6 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 	// move the rat
 	if (rat.is_sleeping()) {
 		if ((float)tfticks > rat.wake_time) {rat.wake_time = rat.speed = 0.0;} // time to wake up
-		
-		if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos)) { // check for collisions
-			rat.sleep_for(0.1, 0.5); // 0.1-0.5s
-		}
 	}
 	else if (rat.speed == 0.0) {
 		rat.anim_time = 0.0; // reset animation to rest pos
@@ -193,14 +191,31 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 			rat.anim_time        += move_dist/rat.radius; // scale with size so that small rats' legs move faster
 			rat.dist_since_sleep += move_dist;
 		}
-		if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos)) {
-			// update the path about every 30 frames of colliding; this prevents the rat from being stuck while also avoiding jittering due to frequent dest updates
-			collided    = 1;
-			update_path = ((rgen.rand()%30) == 0);
-			coll_dir    = (point(coll_pos.x, coll_pos.y, rat.pos.z) - rat.pos).get_norm(); // points toward the collider in the XY plane
+	}
+	point const prev_pos(rat.pos);
+
+	if (check_and_handle_dynamic_obj_coll(rat.pos, rat.radius, height, camera_bs, coll_pos)) { // check for collisions
+		// update the path about every 30 frames of colliding; this prevents the rat from being stuck while also avoiding jittering due to frequent dest updates
+		collided    = 1;
+		update_path = ((rgen.rand()%30) == 0);
+		coll_dir    = (point(coll_pos.x, coll_pos.y, rat.pos.z) - rat.pos).get_norm(); // points toward the collider in the XY plane
+		// check if new pos is valid
+		bool is_valid(0);
+
+		if (bcube.contains_pt_xy_exp(rat.pos, -xy_pad)) { // check for end point inside building bcube
+			cube_t req_area(rat.pos, rat.pos);
+			req_area.expand_by_xy(xy_pad);
+			req_area.z2() += hheight;
+
+			if (is_cube_contained_in_parts(req_area)) { // check if outside the valid area
+				is_valid = !check_line_coll_expand((prev_pos + center_dz), (rat.pos + center_dz), coll_radius, squish_hheight);
+			}
+		}
+		if (!is_valid) {
+			rat.pos = prev_pos; // restore previous pos if invalid
+			rat.sleep_for(0.1, 0.2); // wait 0.1-0.2s so that we don't immediately collide again
 		}
 	}
-	vector3d const center_dz(0.0, 0.0, hheight); // or squish_hheight?
 	point const p1(rat.pos + center_dz);
 	vector3d dir_to_fear;
 	bool has_fear_dest(0);
@@ -282,9 +297,6 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 		(rat.speed == 0.0 || newly_scared || update_path || is_at_dest || check_line_coll_expand(rat.pos, rat.dest, coll_radius, hheight)))
 	{
 		// stopped, no dest, at dest, collided, or newly scared - choose a new dest
-		float const xy_pad(hlength + trim_thickness);
-		cube_t valid_area(bcube);
-		valid_area.expand_by_xy(-xy_pad);
 		float target_fov_dp(RAT_FOV_DP), target_max_dist(view_dist); // start at nominal/max values
 		float const dist_upper_bound(0.12 + 0.88*(1.0 - rat.fear)); // shorten the distance based on the amount of fear to evade more easily
 		float const min_step(min(dist_thresh, 0.05f*rat.radius));
@@ -307,11 +319,11 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 			float dist(rgen.rand_uniform(0.1, dist_upper_bound)*target_max_dist); // random distance out to max view dist
 			max_eq(dist, min_step); // make sure distance isn't too short
 			point const cand(rat.pos + dist*vdir);
-			if (!valid_area.contains_pt_xy(cand)) continue; // check for end point inside building bcube
+			if (!bcube.contains_pt_xy_exp(cand, -xy_pad)) continue; // check for end point inside building bcube
 			cube_t req_area(cand, cand);
 			req_area.expand_by_xy(xy_pad);
 			req_area.z2() += hheight;
-			if (!is_cube_contained_in_parts(req_area)) continue; // outside the valid area
+			if (!is_cube_contained_in_parts(req_area)) continue; // check if outside the valid area
 			point const p2(cand + line_project_dist*vdir + center_dz); // extend in vdir so that the head doesn't collide
 			point const p1_ext(p1 + coll_radius*vdir); // move the line slightly toward the dest to prevent collisions at the initial location
 			if (check_line_coll_expand(p1_ext, p2, coll_radius, squish_hheight)) continue;
