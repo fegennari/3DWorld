@@ -1160,6 +1160,17 @@ bool handle_vcylin_vcylin_int(point &p1, point const &p2, float rsum) {
 	p1 += delta*((rsum - delta_mag)/delta_mag);
 	return 1;
 }
+bool handle_dynamic_room_objs_coll(vect_room_object_t::const_iterator begin, vect_room_object_t::const_iterator end, point &pos, float radius, float z2, point &coll_pos) {
+	for (auto c = begin; c != end; ++c) {
+		if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
+		assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
+		if (pos.z > c->z2() || z2 < c->z1())  continue; // different floors
+		// treat the ball as a vertical cylinder because it's too complex to find the collision point of a vertical cylinder with a sphere
+		point const center(c->get_cube_center());
+		if (handle_vcylin_vcylin_int(pos, center, (radius + c->get_radius()))) {coll_pos = center; return 1;} // early exit on first hit
+	} // for c
+	return 0;
+}
 
 // vertical cylinder collision detection with dynamic objects: balls, the player? people? other rats?
 // only handles the first collision
@@ -1185,15 +1196,13 @@ bool building_t::check_and_handle_dynamic_obj_coll(point &pos, float radius, flo
 	// check dynamic objects such as balls; currently, we only check this for houses because they have balls on the floor;
 	// in theory, the player can put a ball in an office building, but we don't handle that case because office buildings have tons of objects and this is too slow
 	if (is_house) {
-		auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
-
-		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-			if (c->no_coll() || !c->has_dstate()) continue; // Note: no test of player_coll flag
-			assert(c->type == TYPE_LG_BALL); // currently, only large balls have has_dstate()
-			if (pos.z > c->z2() || z2 < c->z1())  continue; // different floors
-			// treat the ball as a vertical cylinder because it's too complex to find the collision point of a vertical cylinder with a sphere
-			point const center(c->get_cube_center());
-			if (handle_vcylin_vcylin_int(pos, center, (radius + c->get_radius()))) {coll_pos = center; return 1;}
+		if (z2 < get_ground_floor_z_thresh()) { // optimized for the case of rats where most are on the ground floor or basement
+			cached_room_objs.ensure_cached(*this);
+			handle_dynamic_room_objs_coll(cached_room_objs.objs.begin(), cached_room_objs.objs.end(), pos, radius, z2, coll_pos);
+		}
+		else {
+			auto objs_end(interior->room_geom->get_placed_objs_end()); // skip trim/buttons/stairs/elevators
+			handle_dynamic_room_objs_coll(interior->room_geom->objs.begin(), objs_end, pos, radius, z2, coll_pos);
 		}
 	}
 	return 0;
