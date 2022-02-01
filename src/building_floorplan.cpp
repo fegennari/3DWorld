@@ -851,24 +851,6 @@ void building_t::gen_interior_int(rand_gen_t &rgen, bool has_overlapping_cubes) 
 	}
 }
 
-template<typename T> void ensure_door_opens_outward(cube_t const &room, float expand, vector<T> &doors) {
-	cube_t room_exp(room);
-	room_exp.expand_by_xy(expand);
-
-	for (auto d = doors.begin(); d != doors.end(); ++d) {
-		if (!d->intersects(room_exp)) continue;
-
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				cube_t wall(room);
-				wall.d[dim][!dir] = wall.d[dim][dir]; // shrink to zero width
-				wall.expand_in_dim(dim, expand); // expand wall outward
-				if (d->intersects(wall)) {d->open_dir = dir;}
-			}
-		}
-	} // for d
-}
-
 int building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	assert(interior != nullptr);
 	vector<room_t> &rooms(interior->rooms);
@@ -917,8 +899,30 @@ int building_t::maybe_assign_interior_garage(bool &gdim, bool &gdir) {
 	assert((unsigned)best_room < rooms.size());
 	room_t &room(rooms[best_room]);
 	room.assign_to(RTYPE_GARAGE, 0);
-	ensure_door_opens_outward(room, wall_thickness, interior->doors);
-	ensure_door_opens_outward(room, wall_thickness, interior->door_stacks);
+	cube_t room_exp(room);
+	room_exp.expand_by_xy(wall_thickness);
+
+	// ensure all doors connected to the garage open outward from the garage so that they won't clip through cars (though it's generally the opposite for real houses)
+	for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
+		if (!d->intersects(room_exp)) continue;
+
+		for (unsigned dim = 0; dim < 2; ++dim) {
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				cube_t wall(room);
+				wall.d[dim][!dir] = wall.d[dim][dir]; // shrink to zero width
+				wall.expand_in_dim(dim, wall_thickness); // expand wall outward
+				if (!d->intersects(wall)) continue;
+				d->open_dir = dir; // update the door stack
+				assert(d->first_door_ix < interior->doors.size());
+
+				for (unsigned dix = d->first_door_ix; dix < interior->doors.size(); ++dix) {
+					door_t &door(interior->doors[dix]);
+					if (!d->is_same_stack(door)) break; // moved to a different stack, done
+					door.open_dir = dir; // update the doors themselves
+				}
+			} // for dir
+		} // for dim
+	} // for d
 	return best_room;
 }
 

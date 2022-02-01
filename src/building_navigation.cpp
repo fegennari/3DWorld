@@ -402,7 +402,7 @@ public:
 		door_t const &first_door(doors[door_ix]);
 
 		for (auto i = (doors.begin() + door_ix); i != doors.end(); ++i) {
-			if (i->x1() != first_door.x1() || i->y1() != first_door.y1()) break; // we've reached the end of the vertical stack of doors
+			if (!i->is_same_stack(first_door)) break; // we've reached the end of the vertical stack of doors
 			if (zval < i->z1() || zval > i->z2()) continue; // not the correct floor
 			return (i->open || (global_building_params.ai_opens_doors && (!i->locked || has_key)));
 		}
@@ -491,16 +491,16 @@ void building_t::build_nav_graph() const { // Note: does not depend on room geom
 		c.expand_by_xy(wall_width); // to include adjacent doors
 		if (is_room_adjacent_to_ext_door(c)) {ng.mark_exit(r);}
 
-		for (auto d = interior->doors.begin(); d != interior->doors.end(); ++d) { // can we use door_stacks instead and map that to the first door in the stack for door_ix?
+		for (auto d = interior->door_stacks.begin(); d != interior->door_stacks.end(); ++d) {
 			// if SPLIT_DOOR_PER_FLOOR, we should only add this door if it's on the same floor as our graph but that doesn't work because the graph is shared across all floors,
 			// so instead we'll have to record the door index and check the correct door during path finding; it's not valid to test door open/locked state here
 			if (!c.intersects_no_adj(*d)) continue; // door not adjacent to this room
 			cube_t dc(*d);
 			dc.expand_by_xy(wall_width); // to include adjacent rooms
-			unsigned const door_ix(d - interior->doors.begin());
+			assert(d->first_door_ix < interior->doors.size());
 
 			for (unsigned r2 = r+1; r2 < num_rooms; ++r2) { // check rooms with higher index (since graph is bidirectional)
-				if (dc.intersects_no_adj(interior->rooms[r2])) {ng.connect_rooms(r, r2, door_ix, *d); break;}
+				if (dc.intersects_no_adj(interior->rooms[r2])) {ng.connect_rooms(r, r2, d->first_door_ix, *d); break;}
 			}
 		} // for d
 		for (unsigned s = 0; s < num_stairs; ++s) { // stairs
@@ -1139,24 +1139,27 @@ int building_t::ai_room_update(building_ai_state_t &state, rand_gen_t &rgen, vec
 	bool const might_have_closed_door(global_building_params.open_door_prob < 1.0 || (player_in_this_building && has_basement()));
 
 	if (interior->door_state_updated || (global_building_params.ai_opens_doors == 2 && might_have_closed_door)) {
-		if (player_in_this_building || ((person_ix + frame_counter)&3) == 0) { // every 4th frame, unless the player is in this building (optimization)
-			// check for any doors that started open or the player has closed;
-			// this can be slow, so we only enable it for buildings where the player changed the door state, or when the AI can open all doors
-			for (auto i = interior->doors.begin(); i != interior->doors.end(); ++i) {
-				if (i->open) continue; // doors tend to block the player, don't collide with them unless they're closed
-				if (new_pos.z < i->z1() || new_pos.z > i->z2())         continue; // wrong part/floor
-				if (!sphere_cube_intersect(new_pos, person.radius, *i)) continue; // no intersection with door
-				if (!i->get_true_bcube().line_intersects(person.pos, person.target_pos)) continue; // check if path goes through door, to allow for "glancing blows" when pushed or turning
+		for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) { // can be slow, but not as slow as iterating over doors
+			if (new_pos.z < i->z1() || new_pos.z > i->z2())         continue; // wrong part/floor
+			if (!sphere_cube_intersect(new_pos, person.radius, *i)) continue; // no intersection with door
+			if (!i->get_true_bcube().line_intersects(person.pos, person.target_pos)) continue; // check if path goes through door, to allow for "glancing blows" when pushed or turning
+			assert(i->first_door_ix < interior->doors.size());
 
-				if (global_building_params.ai_opens_doors && !i->is_locked_or_blocked(person.has_key)) { // can open the door
-					toggle_door_state((i - interior->doors.begin()), player_in_this_building, 0, person.pos.z); // by_player=0
+			for (unsigned dix = i->first_door_ix; dix < interior->doors.size(); ++dix) {
+				door_t const &door(interior->doors[dix]);
+				if (!i->is_same_stack(door)) break; // moved to a different stack, done
+				if (door.z1() > person.pos.z || door.z2() < person.pos.z) continue; // wrong floor
+				if (door.open) continue; // doors tend to block the AI, don't collide with them unless they're closed
+
+				if (global_building_params.ai_opens_doors && !door.is_locked_or_blocked(person.has_key)) { // can open the door
+					toggle_door_state(dix, player_in_this_building, 0, person.pos.z); // by_player=0
 				}
 				else { // can't open the door
 					person.wait_for(5.0); // wait for 5s and then choose a new desination
 					return AI_WAITING; // cut the path short at this closed door
 				}
-			} // for i
-		}
+			} // for dix
+		} // for i
 	}
 	handle_vert_cylin_tape_collision(new_pos, person.pos, person.get_z1(), person.get_z2(), person.radius, 0); // should be okay to use zvals from old pos; is_player=0
 	// logic to clip this person to correct room Z-bounds in case something went wrong; remove if/when this is fixed

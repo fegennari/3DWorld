@@ -953,7 +953,7 @@ bool building_t::is_sphere_lit(point const &center, float radius) const {
 
 // room objects
 
-bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) const {
+bool building_t::is_obj_pos_valid(room_object_t const &obj, bool keep_in_room) const { // used for pushing objects
 	assert(interior);
 	room_t const &room(get_room(obj.room_id));
 

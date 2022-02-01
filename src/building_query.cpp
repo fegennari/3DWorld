@@ -691,7 +691,7 @@ void update_closest_pt(cube_t const &cube, point const &pos, point &closest, flo
 void update_closest_pt(vect_cube_t const &cubes, point const &pos, point &closest, float pad_dist, float &dmin_sq) {
 	for (auto c = cubes.begin(); c != cubes.end(); ++c) {update_closest_pt(*c, pos, closest, pad_dist, dmin_sq);}
 }
-point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const {
+point building_interior_t::find_closest_pt_on_obj_to_pos(building_t const &building, point const &pos, float pad_dist, bool no_ceil_floor) const { // for tape
 	float dmin_sq(-1.0); // start at an invalid value
 	point closest(pos); // start at pt - will keep this value if there are no objects
 
@@ -988,8 +988,8 @@ bool building_t::check_line_coll_expand(point const &p1, point const &p2, float 
 
 		for (unsigned dix = ds.first_door_ix; dix < interior->doors.size(); ++dix) {
 			door_t const &door(interior->doors[dix]);
-			if (door.x1() != ds.x1() || door.x2() != ds.x2()) break; // moved to a different stack, done
-			if (door.z1() >  obj_z2  || door.z2() <  obj_z1 ) continue; // wrong floor
+			if (!ds.is_same_stack(door)) break; // moved to a different stack, done
+			if (door.z1() > obj_z2 || door.z2() < obj_z1) continue; // wrong floor
 
 			if (door.open) {
 				tquad_with_ix_t const door_tq(set_interior_door_from_cube(door));

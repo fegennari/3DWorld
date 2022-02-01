@@ -1450,6 +1450,7 @@ bool building_t::add_storage_objs(rand_gen_t rgen, room_t const &room, float zva
 	set_cube_zvals(test_cube, zval, zval+wall_thickness); // reduce to a small z strip for this floor to avoid picking up doors on floors above or below
 	unsigned num_placed(0), num_doors(0);
 
+	// first pass to count the number of doors in this room
 	for (auto i = interior->door_stacks.begin(); i != interior->door_stacks.end(); ++i) {
 		num_doors += is_cube_close_to_door(test_cube, 0.0, 0, *i, 2); // check both dirs
 	}

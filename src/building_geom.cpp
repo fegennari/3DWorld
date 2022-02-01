@@ -513,7 +513,7 @@ bool building_t::add_chimney(cube_t const &part, bool dim, bool dir, float chimn
 			cube_t test_cube(fplace);
 			test_cube.expand_by_xy(0.5*hwidth);
 			bool bad_pos(0);
-			for (auto d = doors.begin(); d != doors.end() && !bad_pos; ++d) {bad_pos = test_cube.intersects(d->get_bcube());} // check doors
+			for (auto d = doors.begin(); d != doors.end() && !bad_pos; ++d) {bad_pos = test_cube.intersects(d->get_bcube());} // check exterior doors
 
 			if (interior) { // check walls
 				for (auto w = interior->walls[!dim].begin(); w != interior->walls[!dim].end() && !bad_pos; ++w) {
