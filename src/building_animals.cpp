@@ -154,6 +154,12 @@ bool can_hide_under(room_object_t const &c, float &zbot, cube_t &hide_area) {
 		zbot = hide_area.z1();
 		return 1;
 	}
+	else if (c.type == TYPE_BRSINK) { // office building bathroom sink
+		// not a very good hiding spot, but there aren't many in office buildings;
+		// this is just a placeholder anyway, since sinks don't extend down to the floor and won't pass the rat zval test
+		zbot = c.z1(); // bottom of sink
+		return 1;
+	}
 	return 0;
 }
 
@@ -236,7 +242,7 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 		rat.wake_time = 0.0; // wake up
 
 		for (auto c = interior->room_geom->objs.begin(); c != objs_end; ++c) {
-			if (c->z1() > rat_z2 || c->z2() < rat_z1) continue; // wrong floor
+			if (c->z1() > rat_z2 || c->z2() < rat_z1) continue; // wrong floor, or object not on the floor
 			cube_t hide_area;
 			if (!can_hide_under(*c, zbot, hide_area)) continue;
 			float const top_gap(zbot - rat_squish_z2); // space between top of rat and bottom of object
@@ -256,18 +262,23 @@ void building_t::update_rat(rat_t &rat, point const &camera_bs, int ped_ix, rand
 			float const dist_to_fear(p2p_dist(rat.fear_pos, center));
 			float score(side_cov - 0.5f*top_gap + 0.2f*dist_to_fear - 0.1f*max(dist, dist_thresh)); // can be positive or negative
 			if (best_score != 0.0 && score <= best_score) continue; // check score before iterating over other rats; it can only decrease below
+			float tot_mdist(0.0);
+			bool skip(0);
 
 			for (rat_t &other_rat : interior->room_geom->rats) {
 				if (&other_rat == &rat) continue; // skip ourself
 				float const move_dist(0.8f*(rat.radius + other_rat.radius) - p2p_dist_xy(center, other_rat.pos)); // smaller dist (head can overlap tail)
 
 				if (move_dist > 0.0) { // another rat is in this spot
-					center   += (p1 - center).get_norm()*move_dist; // move our target in front of this other rat
-					side_cov -= move_dist; // moving to this misaligned position loses side coverage
-					score     = side_cov - 0.5f*top_gap + 0.2f*dist_to_fear - 0.1*max(dist, dist_thresh); // update score
-					score    -= 0.2*dist; // less desirable when occupied
+					center    += (p1 - center).get_norm()*move_dist; // move our target in front of this other rat
+					side_cov  -= move_dist; // moving to this misaligned position loses side coverage
+					score      = side_cov - 0.5f*top_gap + 0.2f*dist_to_fear - 0.1*max(dist, dist_thresh); // update score
+					score     -= 0.2*dist; // less desirable when occupied
+					tot_mdist += move_dist;
+					if (tot_mdist > 4.0*rat.radius) {skip = 1; break;} // moved too far, there must be too many other rats at this location, skip it
 				}
 			} // for other_rat
+			if (skip) continue;
 			if (!is_rat_inside_building(center, xy_pad, hheight)) continue; // check if outside the valid area
 			// Note: I tried using the dot product between this vector and dir_to_fear, but that causes instability when the rat is between two objects
 			if (best_score != 0.0 && score <= best_score) continue;
